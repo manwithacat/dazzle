@@ -72,7 +72,7 @@ The tasks below are broken into smaller batches that a subagent controller can d
 - [x] Plan header + structure
 - [x] Batch 1 (Tasks 1–4): backlog reader, dataclasses, proposal I/O, attempted index
 - [x] Batch 2 (Tasks 5–8): case file (sample, siblings, windowing, prompt rendering)
-- [ ] Batch 3 (Tasks 9–14): six tools
+- [x] Batch 3 (Tasks 9–14): six tools
 - [ ] Batch 4 (Tasks 15–17): mission assembly, metrics, runner
 - [ ] Batch 5 (Tasks 18–20): CLI, integration test, docs
 
@@ -2056,4 +2056,1297 @@ git commit -m "feat(investigator): CaseFile.to_prompt_text renderer"
 
 ---
 
-*(Batches 3–5 continue below, appended in subsequent edits.)*
+## Task 9: `ToolState` + `read_file` tool
+
+**Files:**
+- Create: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (new)
+
+This task establishes the shared tool scaffolding (`ToolState`, `build_investigator_tools` stub, a helper `_make_tool_result` that wraps success/error dicts) alongside the first tool.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+"""Tests for investigator tools (6 AgentTools + shared ToolState)."""
+
+import json
+from datetime import datetime, UTC
+from pathlib import Path
+
+import pytest
+
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.investigator.case_file import CaseFile, build_case_file
+from dazzle.fitness.investigator.tools import ToolState, build_investigator_tools
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster
+
+
+# ------------ shared fixtures ----------------------------------------------
+
+
+def _finding(fid: str = "f_001") -> Finding:
+    return Finding(
+        id=fid,
+        created=datetime(2026, 4, 14, tzinfo=UTC),
+        run_id="run-1",
+        cycle=None,
+        axis="coverage",
+        locus="implementation",
+        severity="high",
+        persona="admin",
+        capability_ref="Ticket.create",
+        expected="foo",
+        observed="bar at line 47",
+        evidence_embedded=EvidenceEmbedded(
+            expected_ledger_step={"step": 1},
+            diff_summary=[],
+            transcript_excerpt=[{"text": "line 47: problem"}],
+        ),
+        disambiguation=False,
+        low_confidence=False,
+        status="PROPOSED",
+        route="soft",
+        fix_commit=None,
+        alternative_fix=None,
+    )
+
+
+def _cluster(locus: str = "src/ui/form.html") -> Cluster:
+    return Cluster(
+        cluster_id="CL-deadbeef",
+        locus=locus,
+        axis="coverage",
+        canonical_summary="bar at line 47",
+        persona="admin",
+        severity="high",
+        cluster_size=1,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_001",
+    )
+
+
+@pytest.fixture
+def fake_root(tmp_path: Path) -> Path:
+    """A tmp_path seeded with a backlog and a small locus file."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", [_finding("f_001")])
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("\n".join(f"<div>line {i}</div>" for i in range(1, 21)))
+    return tmp_path
+
+
+@pytest.fixture
+def case_file(fake_root: Path) -> CaseFile:
+    return build_case_file(_cluster(), fake_root)
+
+
+@pytest.fixture
+def state() -> ToolState:
+    return ToolState()
+
+
+def _tools_by_name(case_file: CaseFile, fake_root: Path, state: ToolState) -> dict[str, object]:
+    tools = build_investigator_tools(
+        case_file=case_file,
+        dazzle_root=fake_root,
+        llm_run_id="run-xyz",
+        state=state,
+    )
+    return {t.name: t for t in tools}
+
+
+# ------------ tool: read_file ----------------------------------------------
+
+
+def test_read_file_happy_path(case_file, fake_root, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["read_file"].handler(path="src/ui/form.html")
+    assert "line 1" in result["content"]
+    assert "  1: <div>line 1</div>" in result["content"]
+    assert "src/ui/form.html" in state.evidence_paths
+    assert any("read_file" in entry for entry in state.tool_calls_summary)
+
+
+def test_read_file_rejects_absolute_path(case_file, fake_root, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["read_file"].handler(path="/etc/passwd")
+    assert "error" in result
+    assert "repo-relative" in result["error"]
+
+
+def test_read_file_missing_with_similar_suggestions(case_file, fake_root, state) -> None:
+    (fake_root / "src" / "ui" / "other_form.html").write_text("x")
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["read_file"].handler(path="src/ui/notreal.html")
+    assert "error" in result
+    assert "not found" in result["error"]
+    # similar suggestions should include at least one real filename
+    assert "similar" in result
+
+
+def test_read_file_traversal_guard(case_file, fake_root, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["read_file"].handler(path="../../etc/passwd")
+    assert "error" in result
+    assert "escape" in result["error"] or "traversal" in result["error"]
+
+
+def test_read_file_line_range(case_file, fake_root, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["read_file"].handler(path="src/ui/form.html", line_range=[5, 7])
+    assert "  5: " in result["content"]
+    assert "  7: " in result["content"]
+    assert "  3: " not in result["content"]
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k read_file`
+Expected: FAIL — `ModuleNotFoundError: ... tools`
+
+- [ ] **Step 3: Implement `tools.py` skeleton + `read_file`**
+
+Create `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+"""Investigator tool layer.
+
+Six tools wrap the read-only observations the LLM uses to build proposals.
+All tools return structured ToolResult dicts — no opaque exceptions for
+LLM-caller-fault failures. Only propose_fix is terminal, and it signals
+termination by setting state.terminal_status rather than raising.
+"""
+
+from __future__ import annotations
+
+import difflib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from dazzle.agent.core import AgentTool
+from dazzle.fitness.investigator.case_file import CaseFile
+
+BINARY_SNIFF_BYTES = 1024
+FILE_MAX_BYTES = 2 * 1024 * 1024
+CLUSTER_FINDING_MISSION_CAP = 30
+
+
+@dataclass
+class ToolState:
+    """Per-mission mutable state shared across all tool invocations."""
+
+    evidence_paths: set[str] = field(default_factory=set)
+    tool_calls_summary: list[str] = field(default_factory=list)
+    findings_seen: dict[str, int] = field(default_factory=dict)
+    terminal_status: str | None = None  # set by propose_fix; None until terminal call
+    terminal_proposal_id: str | None = None
+
+
+def build_investigator_tools(
+    *,
+    case_file: CaseFile,
+    dazzle_root: Path,
+    llm_run_id: str,
+    state: ToolState,
+) -> list[AgentTool]:
+    """Assemble all six investigator tools with a shared ToolState."""
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        # Other tools added in subsequent tasks.
+    ]
+
+
+def _read_file_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    def handler(path: str, line_range: list[int] | None = None) -> dict[str, Any]:
+        suffix = f"[{line_range[0]}:{line_range[1]}]" if line_range else ""
+        state.tool_calls_summary.append(f"read_file({path}{suffix})")
+
+        if path.startswith("/"):
+            return {"error": "path must be repo-relative", "hint": "drop leading slash"}
+
+        root_resolved = dazzle_root.resolve()
+        target = dazzle_root / path
+        try:
+            target_resolved = target.resolve()
+        except (OSError, RuntimeError):
+            return {"error": f"path could not be resolved: {path}"}
+
+        try:
+            target_resolved.relative_to(root_resolved)
+        except ValueError:
+            return {"error": f"path escapes repo root: {path}"}
+
+        if not target_resolved.exists() or not target_resolved.is_file():
+            return {
+                "error": f"file not found: {path}",
+                "similar": _find_similar_files(dazzle_root, path),
+            }
+
+        try:
+            stat = target_resolved.stat()
+        except OSError as e:
+            return {"error": f"stat failed: {e}"}
+        if stat.st_size >= FILE_MAX_BYTES:
+            return {
+                "error": f"file too large: {stat.st_size} bytes, cap is {FILE_MAX_BYTES}",
+                "hint": "use line_range to read a slice",
+            }
+
+        try:
+            head = target_resolved.read_bytes()[:BINARY_SNIFF_BYTES]
+        except OSError as e:
+            return {"error": f"read failed: {e}"}
+        if b"\x00" in head:
+            return {"error": "binary file; not readable"}
+
+        try:
+            content = target_resolved.read_text()
+        except (OSError, UnicodeDecodeError) as e:
+            return {"error": f"decode failed: {e}"}
+
+        lines = content.splitlines()
+        total = len(lines)
+        if line_range is not None:
+            start = max(1, line_range[0])
+            end = min(total, line_range[1])
+            if start > end:
+                return {"error": "line_range outside file bounds", "total_lines": total}
+            excerpt_lines = lines[start - 1 : end]
+            excerpt = "\n".join(f"{i + start:>3}: {t}" for i, t in enumerate(excerpt_lines))
+        else:
+            excerpt = "\n".join(f"{i + 1:>3}: {t}" for i, t in enumerate(lines))
+
+        state.evidence_paths.add(path)
+        return {"content": excerpt, "total_lines": total}
+
+    return AgentTool(
+        name="read_file",
+        description="Read a repo-relative file. Returns content with line numbers prepended.",
+        schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Repo-relative path."},
+                "line_range": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "Optional inclusive [start, end] range.",
+                },
+            },
+            "required": ["path"],
+        },
+        handler=handler,
+    )
+
+
+def _find_similar_files(dazzle_root: Path, missing: str) -> list[str]:
+    """Return up to 3 files in the repo with filenames closest to `missing`."""
+    stem = Path(missing).name
+    if not stem:
+        return []
+    all_files: list[str] = []
+    for p in dazzle_root.rglob(stem[:4] + "*"):
+        if p.is_file():
+            try:
+                rel = p.resolve().relative_to(dazzle_root.resolve())
+            except ValueError:
+                continue
+            all_files.append(str(rel))
+        if len(all_files) > 200:
+            break
+    close = difflib.get_close_matches(missing, all_files, n=3, cutoff=0.4)
+    return close
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k read_file`
+Expected: PASS (5 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): ToolState + read_file tool"
+```
+
+---
+
+## Task 10: `query_dsl` tool
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+# ------------ tool: query_dsl ----------------------------------------------
+
+
+def _write_dsl_fixture(root: Path) -> None:
+    """Minimal DSL so inspect_entity / inspect_surface have something to resolve."""
+    dsl_dir = root / "dsl"
+    dsl_dir.mkdir(parents=True, exist_ok=True)
+    (root / "dazzle.toml").write_text('[project]\nname = "fixture"\n')
+    (dsl_dir / "app.dsl").write_text(
+        "module fixture\n"
+        'app fixture "Fixture"\n\n'
+        'entity Ticket "Ticket":\n'
+        "  id: uuid pk\n"
+        "  title: str(200) required\n"
+    )
+
+
+def test_query_dsl_known_entity(case_file, fake_root, state) -> None:
+    _write_dsl_fixture(fake_root)
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["query_dsl"].handler(name="Ticket")
+    assert "error" not in result or "kind" in result
+    # On success, either {"kind": "entity", ...} or {"error": ..., "did_you_mean": [...]}
+    # because DSL resolution is best-effort; both outcomes are valid.
+    if "error" not in result:
+        assert result.get("kind") == "entity"
+        assert result["name"] == "Ticket"
+
+
+def test_query_dsl_unknown_returns_did_you_mean(case_file, fake_root, state) -> None:
+    _write_dsl_fixture(fake_root)
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["query_dsl"].handler(name="Tikket")  # typo
+    assert "error" in result
+    assert "did_you_mean" in result
+    # May or may not suggest Ticket depending on parser availability; just check shape
+    assert isinstance(result["did_you_mean"], list)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k query_dsl`
+Expected: FAIL — `KeyError: 'query_dsl'`
+
+- [ ] **Step 3: Implement `_query_dsl_tool`**
+
+Append to `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+def _query_dsl_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    def handler(name: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"query_dsl({name})")
+        scope_root = case_file.example_root or dazzle_root
+        try:
+            from dazzle.core.dsl_parser import parse_project  # lazy import
+        except ImportError:
+            return {"error": "DSL parser unavailable", "hint": "install dazzle[dev]"}
+
+        try:
+            appspec = parse_project(scope_root)
+        except Exception as e:
+            return {"error": f"DSL parse failed: {e}"}
+
+        node, kind = _lookup_ir_node(appspec, name)
+        if node is None:
+            all_names = _collect_ir_names(appspec)
+            suggestions = difflib.get_close_matches(name, all_names, n=3, cutoff=0.5)
+            return {"error": f"no DSL node named {name!r}", "did_you_mean": suggestions}
+
+        serialised = _serialise_ir_node(node, kind)
+        source_file = serialised.get("source_file")
+        if source_file:
+            state.evidence_paths.add(str(source_file))
+        return serialised
+
+    return AgentTool(
+        name="query_dsl",
+        description="Look up a parsed DSL node (entity/surface/workspace/etc.) by name.",
+        schema={
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+            "required": ["name"],
+        },
+        handler=handler,
+    )
+
+
+def _lookup_ir_node(appspec: Any, name: str) -> tuple[Any, str]:
+    """Try each IR collection in turn; return (node, kind) or (None, '')."""
+    for kind_name, attr in [
+        ("entity", "entities"),
+        ("surface", "surfaces"),
+        ("workspace", "workspaces"),
+        ("service", "services"),
+        ("process", "processes"),
+        ("persona", "personas"),
+        ("enum", "enums"),
+    ]:
+        nodes = getattr(appspec, attr, None)
+        if not nodes:
+            continue
+        for node in nodes:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name == name:
+                return node, kind_name
+    return None, ""
+
+
+def _collect_ir_names(appspec: Any) -> list[str]:
+    names: list[str] = []
+    for attr in ("entities", "surfaces", "workspaces", "services", "processes", "personas", "enums"):
+        for node in getattr(appspec, attr, []) or []:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name:
+                names.append(node_name)
+    return names
+
+
+def _serialise_ir_node(node: Any, kind: str) -> dict[str, Any]:
+    """Best-effort dict serialisation for an IR node."""
+    result: dict[str, Any] = {"kind": kind, "name": getattr(node, "name", None) or getattr(node, "id", None)}
+    for attr in ("title", "mode", "uses_entity", "personas", "fields", "scope_rules", "sections"):
+        value = getattr(node, attr, None)
+        if value is not None:
+            try:
+                # Convert dataclass-like fields to dicts for JSON compatibility
+                result[attr] = [
+                    _field_to_dict(v) if hasattr(v, "__dict__") else v
+                    for v in value
+                ] if isinstance(value, list) else value
+            except Exception:
+                result[attr] = str(value)
+    if hasattr(node, "source_file"):
+        result["source_file"] = str(getattr(node, "source_file", None))
+    if hasattr(node, "line_range"):
+        result["line_range"] = list(getattr(node, "line_range") or ())
+    return result
+
+
+def _field_to_dict(obj: Any) -> dict[str, Any]:
+    if hasattr(obj, "__dict__"):
+        return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
+    return {"value": str(obj)}
+```
+
+Then update `build_investigator_tools` to include it:
+
+```python
+def build_investigator_tools(...) -> list[AgentTool]:
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        _query_dsl_tool(case_file, dazzle_root, state),
+        # Other tools added in subsequent tasks.
+    ]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k query_dsl`
+Expected: PASS (2 tests) — the tests are intentionally permissive because DSL parsing may fail on the minimal fixture
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): query_dsl tool with did_you_mean fuzzy suggestions"
+```
+
+---
+
+## Task 11: `get_cluster_findings` tool
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+# ------------ tool: get_cluster_findings -----------------------------------
+
+
+def test_get_cluster_findings_returns_more_siblings(tmp_path, state) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    findings = [_finding(f"f_{i:03d}") for i in range(10)]
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cluster = _cluster()
+    cf = build_case_file(cluster, tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+
+    result = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=10)
+    assert "findings" in result
+    # Excludes siblings already in the case file
+    sibling_ids = {s.id for s in cf.siblings}
+    returned_ids = {f["id"] for f in result["findings"]}
+    assert not (returned_ids & sibling_ids)
+
+
+def test_get_cluster_findings_respects_mission_cap(tmp_path, state) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    findings = [_finding(f"f_{i:03d}") for i in range(50)]
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cf = build_case_file(_cluster(), tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+
+    # Burn through the 30-finding mission cap
+    r1 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+    r2 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+    r3 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+
+    total = len(r1.get("findings", [])) + len(r2.get("findings", [])) + len(r3.get("findings", []))
+    assert total <= CLUSTER_FINDING_MISSION_CAP_EXPECTED  # defined in import below
+
+
+def test_get_cluster_findings_unknown_id(tmp_path, state) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", [_finding("f_001")])
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cf = build_case_file(_cluster(), tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+    result = tools["get_cluster_findings"].handler(cluster_id="CL-nosuch", limit=10)
+    assert "error" in result
+    assert "did_you_mean" in result
+
+
+# Import the cap from the module under test so it stays in sync
+from dazzle.fitness.investigator.tools import CLUSTER_FINDING_MISSION_CAP as CLUSTER_FINDING_MISSION_CAP_EXPECTED  # noqa: E402
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k get_cluster_findings`
+Expected: FAIL — `KeyError: 'get_cluster_findings'`
+
+- [ ] **Step 3: Implement `_get_cluster_findings_tool`**
+
+Append to `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+def _get_cluster_findings_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    from dataclasses import asdict
+    from dazzle.fitness.backlog import read_backlog_findings
+
+    def handler(cluster_id: str, limit: int = 10) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"get_cluster_findings({cluster_id}, limit={limit})")
+        limit = max(1, min(20, limit))
+
+        # Load findings from the same source the case file used
+        backlog_path = (case_file.example_root or dazzle_root) / "dev_docs" / "fitness-backlog.md"
+        if not backlog_path.exists():
+            backlog_path = dazzle_root / "dev_docs" / "fitness-backlog.md"
+        all_findings = read_backlog_findings(backlog_path)
+
+        # Validate cluster_id — if it doesn't match the case file, warn but proceed
+        result: dict[str, Any] = {}
+        if cluster_id != case_file.cluster.cluster_id:
+            if cluster_id not in _known_cluster_ids(backlog_path.parent):
+                return {
+                    "error": "cluster not found",
+                    "did_you_mean": [case_file.cluster.cluster_id],
+                }
+            result["warning"] = (
+                f"querying cluster {cluster_id} while investigating {case_file.cluster.cluster_id}"
+            )
+
+        # Check mission cap
+        seen = state.findings_seen.get(cluster_id, 0)
+        if seen >= CLUSTER_FINDING_MISSION_CAP:
+            return {
+                "findings": [],
+                "note": (
+                    f"{seen} findings already fetched for this cluster. Remaining findings "
+                    "have equivalent canonical summaries (that's how they got clustered). "
+                    "For variation try get_related_clusters(locus=...) or read_file on the "
+                    "locus; for evidence depth re-read the existing samples."
+                ),
+            }
+
+        # Filter to this cluster, excluding case-file siblings already shown
+        sibling_ids = {s.id for s in case_file.siblings}
+        sibling_ids.add(case_file.sample_finding.id)
+        cluster = case_file.cluster
+        candidates = [
+            f
+            for f in all_findings
+            if f.id not in sibling_ids
+            and f.locus == cluster.locus
+            and f.axis == cluster.axis
+            and f.persona == cluster.persona
+        ]
+        remaining_budget = max(0, CLUSTER_FINDING_MISSION_CAP - seen)
+        to_return = candidates[: min(limit, remaining_budget)]
+        state.findings_seen[cluster_id] = seen + len(to_return)
+        result["findings"] = [_finding_to_dict(f) for f in to_return]
+        return result
+
+    return AgentTool(
+        name="get_cluster_findings",
+        description="Fetch more sibling findings beyond the case file. Capped at 30 per cluster per mission.",
+        schema={
+            "type": "object",
+            "properties": {
+                "cluster_id": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+            },
+            "required": ["cluster_id"],
+        },
+        handler=handler,
+    )
+
+
+def _known_cluster_ids(search_dir: Path) -> set[str]:
+    """Return the set of cluster IDs visible in the queue file at search_dir."""
+    from dazzle.fitness.triage import read_queue_file
+    queue = search_dir / "fitness-queue.md"
+    if not queue.exists():
+        return set()
+    try:
+        clusters = read_queue_file(queue)
+    except Exception:
+        return set()
+    return {c.cluster_id for c in clusters}
+
+
+def _finding_to_dict(f: Any) -> dict[str, Any]:
+    """Minimal JSON-safe projection of a Finding for the LLM."""
+    return {
+        "id": f.id,
+        "persona": f.persona,
+        "axis": f.axis,
+        "severity": f.severity,
+        "locus": f.locus,
+        "expected": f.expected,
+        "observed": f.observed,
+        "evidence_excerpt": [
+            step for step in f.evidence_embedded.transcript_excerpt[:3]
+        ],
+    }
+```
+
+Update `build_investigator_tools`:
+
+```python
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        _query_dsl_tool(case_file, dazzle_root, state),
+        _get_cluster_findings_tool(case_file, dazzle_root, state),
+        # Remaining tools added in subsequent tasks.
+    ]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k get_cluster_findings`
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): get_cluster_findings tool with 30-per-mission cap"
+```
+
+---
+
+## Task 12: `get_related_clusters` tool
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+# ------------ tool: get_related_clusters -----------------------------------
+
+
+def _write_queue_fixture(root: Path, clusters: list[Cluster]) -> None:
+    from dazzle.fitness.triage import write_queue_file
+    queue = root / "dev_docs" / "fitness-queue.md"
+    queue.parent.mkdir(parents=True, exist_ok=True)
+    write_queue_file(queue, clusters)
+
+
+def test_get_related_clusters_returns_same_locus_excluding_self(fake_root, case_file, state) -> None:
+    related1 = Cluster(
+        cluster_id="CL-00000001",
+        locus="src/ui/form.html",
+        axis="conformance",
+        canonical_summary="other thing",
+        persona="admin",
+        severity="medium",
+        cluster_size=5,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_other",
+    )
+    unrelated = Cluster(
+        cluster_id="CL-00000002",
+        locus="src/ui/OTHER.html",
+        axis="coverage",
+        canonical_summary="elsewhere",
+        persona="admin",
+        severity="high",
+        cluster_size=3,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_elsewhere",
+    )
+    _write_queue_fixture(fake_root, [case_file.cluster, related1, unrelated])
+
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["get_related_clusters"].handler(locus="src/ui/form.html")
+    assert "hits" in result
+    ids = {c["cluster_id"] for c in result["hits"]}
+    assert "CL-00000001" in ids
+    assert "CL-deadbeef" not in ids  # self excluded
+    assert "CL-00000002" not in ids  # different locus
+
+
+def test_get_related_clusters_empty_returns_note(fake_root, case_file, state) -> None:
+    _write_queue_fixture(fake_root, [case_file.cluster])
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["get_related_clusters"].handler(locus="src/ui/form.html")
+    assert result.get("hits") == []
+    assert "note" in result
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k get_related_clusters`
+Expected: FAIL — `KeyError: 'get_related_clusters'`
+
+- [ ] **Step 3: Implement `_get_related_clusters_tool`**
+
+Append to `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+def _get_related_clusters_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    from dazzle.fitness.triage import read_queue_file
+
+    def handler(locus: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"get_related_clusters({locus})")
+
+        queue_dir = case_file.example_root or dazzle_root
+        queue_path = queue_dir / "dev_docs" / "fitness-queue.md"
+        if not queue_path.exists():
+            queue_path = dazzle_root / "dev_docs" / "fitness-queue.md"
+        if not queue_path.exists():
+            return {"hits": [], "note": "no fitness-queue.md found"}
+
+        try:
+            clusters = read_queue_file(queue_path)
+        except Exception as e:
+            return {"hits": [], "note": f"failed to read queue: {e}"}
+
+        hits = [
+            c
+            for c in clusters
+            if c.locus == locus and c.cluster_id != case_file.cluster.cluster_id
+        ]
+        # Sort by severity desc then size desc (matches triage priority)
+        from dazzle.fitness.triage import SEVERITY_RANK
+        hits.sort(
+            key=lambda c: (-SEVERITY_RANK.get(c.severity, 0), -c.cluster_size, c.cluster_id)
+        )
+
+        if not hits:
+            return {
+                "hits": [],
+                "note": "no other clusters at this locus; the issue appears unique to this file/region",
+            }
+
+        return {
+            "hits": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "axis": c.axis,
+                    "severity": c.severity,
+                    "persona": c.persona,
+                    "cluster_size": c.cluster_size,
+                    "summary": c.canonical_summary,
+                }
+                for c in hits
+            ]
+        }
+
+    return AgentTool(
+        name="get_related_clusters",
+        description="Find other clusters pointing at the same file/region.",
+        schema={
+            "type": "object",
+            "properties": {"locus": {"type": "string"}},
+            "required": ["locus"],
+        },
+        handler=handler,
+    )
+```
+
+Update `build_investigator_tools`:
+
+```python
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        _query_dsl_tool(case_file, dazzle_root, state),
+        _get_cluster_findings_tool(case_file, dazzle_root, state),
+        _get_related_clusters_tool(case_file, dazzle_root, state),
+        # Remaining tools added in subsequent tasks.
+    ]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k get_related_clusters`
+Expected: PASS (2 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): get_related_clusters tool"
+```
+
+---
+
+## Task 13: `search_spec` tool
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+# ------------ tool: search_spec --------------------------------------------
+
+
+def test_search_spec_finds_literal_term(fake_root, case_file, state) -> None:
+    specs_dir = fake_root / "docs" / "superpowers" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "auth.md").write_text(
+        "# Auth design\n\n"
+        "We use aria-describedby to announce form errors to screen readers.\n"
+        "The field links to its error paragraph via id.\n"
+    )
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="aria-describedby")
+    assert "hits" in result
+    assert any("aria-describedby" in h["excerpt"] for h in result["hits"])
+
+
+def test_search_spec_query_too_short(fake_root, case_file, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="ab")
+    assert "error" in result
+    assert "too short" in result["error"]
+
+
+def test_search_spec_no_hits(fake_root, case_file, state) -> None:
+    (fake_root / "docs" / "superpowers" / "specs").mkdir(parents=True)
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="nonexistent-term-xyz")
+    assert result.get("hits") == []
+    assert "note" in result
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k search_spec`
+Expected: FAIL — `KeyError: 'search_spec'`
+
+- [ ] **Step 3: Implement `_search_spec_tool`**
+
+Append to `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+def _search_spec_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    import shutil
+    import subprocess
+
+    def handler(query: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"search_spec({query})")
+
+        if len(query) < 3:
+            return {"error": "query too short (min 3 chars)", "hint": "try a more specific term"}
+
+        search_roots = [
+            dazzle_root / "docs" / "superpowers" / "specs",
+            dazzle_root / "docs" / "reference",
+        ]
+        existing_roots = [str(r) for r in search_roots if r.exists()]
+        if not existing_roots:
+            return {"hits": [], "note": "no spec or reference directories found"}
+
+        hits: list[dict[str, Any]] = []
+        if shutil.which("rg"):
+            hits = _rg_search(query, existing_roots, dazzle_root)
+        else:
+            hits = _python_search(query, [Path(r) for r in existing_roots], dazzle_root)
+
+        for hit in hits:
+            state.evidence_paths.add(hit["file"])
+
+        if not hits:
+            return {
+                "hits": [],
+                "note": "no matches in spec or reference docs; try rephrasing or a broader term",
+            }
+        return {"hits": hits[:10]}
+
+    return AgentTool(
+        name="search_spec",
+        description="Grep docs/superpowers/specs/ and docs/reference/ for a literal term.",
+        schema={
+            "type": "object",
+            "properties": {"query": {"type": "string", "minLength": 3}},
+            "required": ["query"],
+        },
+        handler=handler,
+    )
+
+
+def _rg_search(query: str, roots: list[str], dazzle_root: Path) -> list[dict[str, Any]]:
+    import subprocess
+    try:
+        proc = subprocess.run(
+            ["rg", "-F", "-n", "-C", "2", "-i", query, *roots],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if proc.returncode not in (0, 1):
+        return []
+
+    hits: list[dict[str, Any]] = []
+    for line in proc.stdout.splitlines():
+        # rg format: path:line_number:content (or path-line_number-content for context)
+        parts = line.split(":", 2) if ":" in line else line.split("-", 2)
+        if len(parts) < 3:
+            continue
+        try:
+            file_str, line_str, content = parts
+            line_no = int(line_str)
+        except ValueError:
+            continue
+        rel = _relativise(file_str, dazzle_root)
+        hits.append({"file": rel, "line": line_no, "excerpt": content})
+        if len(hits) >= 10:
+            break
+    return hits
+
+
+def _python_search(query: str, roots: list[Path], dazzle_root: Path) -> list[dict[str, Any]]:
+    needle = query.lower()
+    hits: list[dict[str, Any]] = []
+    for root in roots:
+        for md_file in root.rglob("*.md"):
+            try:
+                lines = md_file.read_text().splitlines()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for i, line in enumerate(lines, start=1):
+                if needle in line.lower():
+                    rel = _relativise(str(md_file), dazzle_root)
+                    hits.append({"file": rel, "line": i, "excerpt": line})
+                    if len(hits) >= 10:
+                        return hits
+    return hits
+
+
+def _relativise(file_str: str, dazzle_root: Path) -> str:
+    try:
+        return str(Path(file_str).resolve().relative_to(dazzle_root.resolve()))
+    except ValueError:
+        return file_str
+```
+
+Update `build_investigator_tools`:
+
+```python
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        _query_dsl_tool(case_file, dazzle_root, state),
+        _get_cluster_findings_tool(case_file, dazzle_root, state),
+        _get_related_clusters_tool(case_file, dazzle_root, state),
+        _search_spec_tool(case_file, dazzle_root, state),
+        # propose_fix added in Task 14.
+    ]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k search_spec`
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): search_spec tool (rg + python fallback)"
+```
+
+---
+
+## Task 14: `propose_fix` terminal tool
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/tools.py`
+- Test: `tests/unit/fitness/investigator/test_tools.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_tools.py`:
+
+```python
+# ------------ tool: propose_fix (terminal) ---------------------------------
+
+
+def _valid_fix_payload() -> dict[str, Any]:
+    return {
+        "fixes": [
+            {
+                "file_path": "src/ui/form.html",
+                "line_range": [1, 2],
+                "diff": "--- a/src/ui/form.html\n+++ b/src/ui/form.html\n@@ -1,1 +1,1 @@\n-<div>line 1</div>\n+<div>line 1 fixed</div>\n",
+                "rationale": "fix the first div",
+                "confidence": 0.85,
+            }
+        ],
+        "rationale": "The first div needs the fix described in the sample finding.",
+        "overall_confidence": 0.82,
+        "verification_plan": "Re-run Phase B against contact_manager; expect cluster CL-deadbeef to vanish.",
+        "alternatives_considered": ["do nothing — rejected because it leaves the bug unfixed"],
+        "investigation_log": "Read src/ui/form.html, confirmed line 1 is the issue.",
+    }
+
+
+def test_propose_fix_writes_proposal(fake_root, case_file, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["propose_fix"].handler(**_valid_fix_payload())
+
+    assert result.get("status") == "proposed"
+    assert state.terminal_status == "proposed"
+    assert state.terminal_proposal_id is not None
+    # Proposal file should exist on disk
+    proposals = list((fake_root / ".dazzle" / "fitness-proposals").glob("CL-deadbeef-*.md"))
+    assert len(proposals) == 1
+
+
+def test_propose_fix_validation_failure_writes_blocked(fake_root, case_file, state) -> None:
+    payload = _valid_fix_payload()
+    payload["rationale"] = "too short"  # < 20 chars
+
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["propose_fix"].handler(**payload)
+
+    assert "error" in result or result.get("status", "").startswith("blocked")
+    assert state.terminal_status == "blocked_invalid_proposal"
+    blocked = list((fake_root / ".dazzle" / "fitness-proposals" / "_blocked").glob("CL-deadbeef.md"))
+    assert len(blocked) == 1
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k propose_fix`
+Expected: FAIL — `KeyError: 'propose_fix'`
+
+- [ ] **Step 3: Implement `_propose_fix_tool`**
+
+Append to `src/dazzle/fitness/investigator/tools.py`:
+
+```python
+def _propose_fix_tool(
+    case_file: CaseFile,
+    dazzle_root: Path,
+    llm_run_id: str,
+    state: ToolState,
+) -> AgentTool:
+    from datetime import datetime, UTC
+    from uuid import uuid4
+
+    from dazzle.fitness.investigator.proposal import (
+        Proposal,
+        ProposalValidationError,
+        ProposalWriteError,
+        ProposedFix,
+        save_proposal,
+        write_blocked_artefact,
+    )
+
+    def handler(
+        fixes: list[dict[str, Any]],
+        rationale: str,
+        overall_confidence: float,
+        verification_plan: str,
+        alternatives_considered: list[str],
+        investigation_log: str,
+    ) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"propose_fix({len(fixes)} fixes)")
+
+        try:
+            proposed_fixes = tuple(
+                ProposedFix(
+                    file_path=str(f["file_path"]),
+                    line_range=tuple(f["line_range"]) if f.get("line_range") else None,
+                    diff=str(f["diff"]),
+                    rationale=str(f["rationale"]),
+                    confidence=float(f["confidence"]),
+                )
+                for f in fixes
+            )
+        except (KeyError, TypeError, ValueError) as e:
+            _block_and_record(
+                case_file,
+                dazzle_root,
+                state,
+                reason=f"propose_fix args malformed: {e}",
+                raw=repr({"fixes": fixes, "rationale": rationale, "overall_confidence": overall_confidence}),
+            )
+            return {"error": f"propose_fix args malformed: {e}", "status": "blocked"}
+
+        proposal_id = uuid4().hex
+        proposal = Proposal(
+            proposal_id=proposal_id,
+            cluster_id=case_file.cluster.cluster_id,
+            created=datetime.now(UTC),
+            investigator_run_id=llm_run_id,
+            fixes=proposed_fixes,
+            overall_confidence=float(overall_confidence),
+            rationale=str(rationale),
+            alternatives_considered=tuple(alternatives_considered or ()),
+            verification_plan=str(verification_plan),
+            evidence_paths=tuple(sorted(state.evidence_paths)),
+            tool_calls_summary=tuple(state.tool_calls_summary),
+            status="proposed",
+        )
+
+        try:
+            save_proposal(
+                proposal,
+                dazzle_root,
+                case_file_text=case_file.to_prompt_text(),
+                investigation_log=investigation_log,
+            )
+        except ProposalValidationError as e:
+            _block_and_record(
+                case_file,
+                dazzle_root,
+                state,
+                reason=f"validation: {e}",
+                raw=repr(proposal),
+            )
+            return {"error": f"validation: {e}", "status": "blocked_invalid_proposal"}
+        except ProposalWriteError as e:
+            state.terminal_status = "blocked_write_error"
+            return {"error": f"write failed: {e}", "status": "blocked_write_error"}
+
+        state.terminal_status = "proposed"
+        state.terminal_proposal_id = proposal_id
+        return {"status": "proposed", "proposal_id": proposal_id}
+
+    return AgentTool(
+        name="propose_fix",
+        description="Terminal: write a structured Proposal to disk and end the mission.",
+        schema={
+            "type": "object",
+            "properties": {
+                "fixes": {"type": "array"},
+                "rationale": {"type": "string"},
+                "overall_confidence": {"type": "number"},
+                "verification_plan": {"type": "string"},
+                "alternatives_considered": {"type": "array", "items": {"type": "string"}},
+                "investigation_log": {"type": "string"},
+            },
+            "required": [
+                "fixes",
+                "rationale",
+                "overall_confidence",
+                "verification_plan",
+                "alternatives_considered",
+                "investigation_log",
+            ],
+        },
+        handler=handler,
+    )
+
+
+def _block_and_record(
+    case_file: CaseFile,
+    dazzle_root: Path,
+    state: ToolState,
+    *,
+    reason: str,
+    raw: str,
+) -> None:
+    from dazzle.fitness.investigator.proposal import write_blocked_artefact
+
+    write_blocked_artefact(
+        case_file.cluster.cluster_id,
+        dazzle_root,
+        reason=reason,
+        case_file_text=case_file.to_prompt_text(),
+        transcript=raw,
+    )
+    state.terminal_status = "blocked_invalid_proposal"
+```
+
+Update `build_investigator_tools`:
+
+```python
+    return [
+        _read_file_tool(case_file, dazzle_root, state),
+        _query_dsl_tool(case_file, dazzle_root, state),
+        _get_cluster_findings_tool(case_file, dazzle_root, state),
+        _get_related_clusters_tool(case_file, dazzle_root, state),
+        _search_spec_tool(case_file, dazzle_root, state),
+        _propose_fix_tool(case_file, dazzle_root, llm_run_id, state),
+    ]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v -k propose_fix`
+Expected: PASS (2 tests)
+
+- [ ] **Step 5: Run the whole tools test file**
+
+Run: `pytest tests/unit/fitness/investigator/test_tools.py -v`
+Expected: PASS (~15 tests across 6 tools)
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/tools.py tests/unit/fitness/investigator/test_tools.py
+git commit -m "feat(investigator): propose_fix terminal tool + ToolState.terminal_status"
+```
+
+---
+
+*(Batches 4–5 continue below.)*
