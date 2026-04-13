@@ -127,6 +127,8 @@ async def test_engine_runs_contract_walk_in_pass1(tmp_path: Path) -> None:
     call_kwargs = mock_walk.call_args.kwargs
     assert call_kwargs["contract"].component_name == "test-component"
     assert len(call_kwargs["contract"].quality_gates) == 2
+    # The engine must forward its stored observer to the walker verbatim
+    assert call_kwargs["observer"] is engine._contract_observer
 
     # pass1_run_count reflects the contract walk (no stories in this appspec)
     assert result.pass1_run_count == 1
