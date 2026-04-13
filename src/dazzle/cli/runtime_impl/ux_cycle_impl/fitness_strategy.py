@@ -4,10 +4,12 @@ Invoked by the top-level ux_cycle runner when it rotates to FITNESS. Owns
 example-app lifecycle (starts runtime, runs the engine, tears down) and
 aggregates the result into a /ux-cycle outcome.
 
-v1.0.1 wires the real dependencies: ``_launch_example_app`` spins up the
-example via ``dazzle.qa.server``, ``_build_engine`` loads the example's
-``AppSpec`` + ``FitnessConfig`` and constructs a Playwright-backed
-``FitnessEngine``, and ``_stop_example_app`` tears down the subprocess.
+v1.0.1 wires the real dependencies across three tasks: ``_launch_example_app``
+spins up the example via ``dazzle.qa.server`` (Task 3), ``_build_engine``
+loads the example's ``AppSpec`` + ``FitnessConfig`` and constructs a
+Playwright-backed ``FitnessEngine`` (Task 4), and ``_stop_example_app`` tears
+down the subprocess (Task 3). Until both land, the helpers raise
+``NotImplementedError`` and the unit tests patch them.
 """
 
 from __future__ import annotations

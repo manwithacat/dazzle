@@ -43,7 +43,7 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
     assert fake_engine.run.await_count == 1
     assert "r1" in outcome.summary
     assert mock_launch.call_count == 1
-    assert mock_stop.call_count == 1
+    mock_stop.assert_called_once_with(fake_handle)
     assert mock_build.call_count == 1
 
 
@@ -74,4 +74,4 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
     ):
         await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
 
-    assert mock_stop.call_count == 1
+    mock_stop.assert_called_once_with(fake_handle)
