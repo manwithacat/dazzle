@@ -1849,6 +1849,25 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 126 — 2026-04-13 — UX-010 widget:datepicker → qa:FAIL (96 findings) — **real bug surfaced**
+
+**Row:** UX-010 widget:datepicker (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 96 findings (admin=49, agent=47), degraded=False. Run IDs: admin=ab6bf804-e87d-44b3-a1cb-8ebe51cff464, agent=7b263d14-4f91-4a0d-a9f2-df116d8bd324. Attempts 1 → 2.
+
+**Real bug captured by walker observations:** `"created_by: Field required"` — a validation error surfaced on the ticket-create form where the `created_by` field doesn't exist in the visible DOM. Classic server-client mismatch — likely the server's entity schema declares `created_by` as required (without a default) but the template compiler doesn't render it (presumably because it's auto-populated from the session user). The walker's transcript shows it hitting the error but being unable to satisfy it because there's no field to type into. **High-value finding** — this is a blocker for any admin/agent trying to create a ticket via the UI. First priority candidate for the investigator subsystem once it ships.
+
+**Admin 403 anomaly — same anchor, new signal:** cycles 122 (UX-017) and 124 (UX-019) both walked `/app/ticket/create` with `personas=[admin, agent]` without the walker reporting a 403 for admin. This cycle the walker explicitly observed a Forbidden response for admin at the same anchor. Three possibilities: (a) admin RBAC is session-flaky (intermittent); (b) the QA magic-link session got invalidated mid-cycle; (c) the walker's prior runs didn't actually reach the 403 before the error made it bail out. No conclusion yet — worth noting for the investigator's `get_related_clusters(/app/ticket/create)` query to correlate across UX-017/019/010.
+
+**Walker JSON parse bug #5:** two more warnings, same prose-before-JSON shape.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 126   | UX-010 widget:datepicker | admin, agent | 96 (49+47) | FAIL |
+
+---
+
 ## Cycle 125 — 2026-04-13 — UX-009 widget:combobox → qa:FAIL (20 findings)
 
 **Row:** UX-009 widget:combobox (canonical: contact_manager)
