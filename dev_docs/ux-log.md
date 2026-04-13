@@ -4,6 +4,22 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T03:37Z — Cycle 39
+
+**Selected row:** UX-036 continuation — reset_password.html adopter (4/7).
+
+**Refactor:** Adopted `auth_page_card` macro. Dropped DaisyUI tokens: `card`, `bg-base-100`, `card-body`, `card-title`, `form-control`, `label`/`label-text`, `input input-bordered`, `btn btn-primary`, `link link-primary`, `alert alert-error`, `bg-base-200`, plus legacy `dz-auth-*` wrappers. Hidden token input preserved. Two password fields (new + confirm), both `minlength=8` and `autocomplete="new-password"`, share the login/signup field grammar. No subtitle, no success alert — simpler shape than forgot_password. Dropped `method="POST"` (JS handler via `_reset_password_script.html`).
+
+**Phase A:** N/A — auth pages not in example-app contract surface. Verified by grep-sweep: zero DaisyUI tokens remain.
+
+**Phase B:** Deferred — no running-app cycle for auth pages yet.
+
+**Progress:** Auth 4/7. Remaining: 2fa_challenge, 2fa_setup, 2fa_settings.
+
+**Next cycle:** 2fa_challenge.html (likely has an OTP input field — may need a new field variant or reuse the existing grammar).
+
+---
+
 ## 2026-04-13T03:32Z — Cycle 38
 
 **Selected row:** UX-036 continuation — forgot_password.html adopter (3/7).

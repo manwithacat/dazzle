@@ -53,7 +53,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-033 | base-layout        | READY_FOR_QA | DONE     | DONE     | PENDING | ops_dashboard     | all                                                              | 1        | 2026-04-12 | base.html; Cycle 30 — body bg-base-200 + toast toast-end + alert alert-* all token-driven |
 | UX-034 | report-e2e-journey | DONE        | DONE     | DONE     | PASS    | —                 | internal                                                         | 1        | 2026-04-12 | Cycle 31 — **out-of-scope for token governance**; standalone diagnostic report with own palette; 5/5 gates pass |
 | UX-035 | region-wrapper     | READY_FOR_QA | DONE     | PARTIAL  | PENDING | ops_dashboard     | all workspace regions                                            | 14       | 2026-04-13 | + detail.html. **14/16 adopters.** 2 remaining (funnel_chart, tab_data). Detail DL uses uppercase muted labels; `badge_class` filter still returns DaisyUI classes — follow-up. |
-| UX-036 | auth-page          | READY_FOR_QA | DONE     | PARTIAL  | PENDING | —                 | login,signup,forgot_password,reset_password,2fa_*                | 3        | 2026-04-13 | forgot_password.html adopted (Cycle 38 — 3/7). **impl: PARTIAL** — 4 auth files remain: reset_password, 2fa_challenge, 2fa_setup, 2fa_settings |
+| UX-036 | auth-page          | READY_FOR_QA | DONE     | PARTIAL  | PENDING | —                 | login,signup,forgot_password,reset_password,2fa_*                | 4        | 2026-04-13 | reset_password.html adopted (Cycle 39 — 4/7). **impl: PARTIAL** — 3 auth files remain: 2fa_challenge, 2fa_setup, 2fa_settings |
 
 ## Exploration Findings
 
