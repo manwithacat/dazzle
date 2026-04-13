@@ -1,47 +1,46 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
-    {% if heatmap_matrix %}
-    <div class="overflow-x-auto">
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th></th>
-            {% for col in heatmap_col_values %}
-            <th class="text-center">{{ col }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in heatmap_matrix %}
-          <tr>
-            <td class="font-medium">{{ row.row }}</td>
-            {% for cell in row.cells %}
-            <td class="text-center cursor-pointer hover:opacity-80
-              {%- if heatmap_thresholds|length >= 2 -%}
-                {%- if cell.value < heatmap_thresholds[0] %} bg-error/20
-                {%- elif cell.value < heatmap_thresholds[1] %} bg-warning/20
-                {%- else %} bg-success/20
-                {%- endif -%}
-              {%- elif heatmap_thresholds|length == 1 -%}
-                {%- if cell.value < heatmap_thresholds[0] %} bg-error/20
-                {%- else %} bg-success/20
-                {%- endif -%}
-              {%- endif -%}"
-              {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-              {{ "%.1f"|format(cell.value) }}
-            </td>
-            {% endfor %}
-          </tr>
+{# Heatmap region — UX-035 adopter #13. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+  {% if heatmap_matrix %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-[13px] border-collapse">
+      <thead>
+        <tr class="border-b border-[hsl(var(--border))]">
+          <th class="py-1 px-2"></th>
+          {% for col in heatmap_col_values %}
+          <th class="py-1 px-2 text-center font-medium text-[hsl(var(--muted-foreground))]">{{ col }}</th>
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% if total > items|length %}
-    <p class="text-xs opacity-50 mt-2">Showing {{ items|length }} of {{ total }}</p>
-    {% endif %}
-    {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
-    {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in heatmap_matrix %}
+        <tr class="border-b border-[hsl(var(--border))] last:border-0">
+          <td class="py-1 px-2 font-medium text-[hsl(var(--foreground))]">{{ row.row }}</td>
+          {% for cell in row.cells %}
+          <td class="py-1 px-2 text-center cursor-pointer transition-opacity duration-[80ms] hover:opacity-80
+            {%- if heatmap_thresholds|length >= 2 -%}
+              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(0_72%_51%/0.15)] text-[hsl(0_72%_35%)]
+              {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(38_92%_50%/0.15)] text-[hsl(38_92%_35%)]
+              {%- else %} bg-[hsl(142_71%_45%/0.15)] text-[hsl(142_71%_30%)]
+              {%- endif -%}
+            {%- elif heatmap_thresholds|length == 1 -%}
+              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(0_72%_51%/0.15)] text-[hsl(0_72%_35%)]
+              {%- else %} bg-[hsl(142_71%_45%/0.15)] text-[hsl(142_71%_30%)]
+              {%- endif -%}
+            {%- endif -%}"
+            {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+            {{ "%.1f"|format(cell.value) }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-</div>
+  {% if total > items|length %}
+  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items|length }} of {{ total }}</p>
+  {% endif %}
+  {% else %}
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+{% endcall %}

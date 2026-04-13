@@ -1231,3 +1231,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Note on semantic colours:** success and warning HSL values are inlined rather than referenced as design tokens because `--success` and `--warning` are not yet declared in `design-system.css`. v0.2 of the token system (open question §15.6 of fitness spec) should land these as first-class variables so this inlining can be replaced with `hsl(var(--success))`.
 
 ---
+
+## Cycle 37 — 2026-04-13 — heatmap.html (UX-035 adopter #13)
+
+**Row:** UX-035 region-wrapper
+**Phases:** REFACTOR only
+
+**Actions:**
+- Refactored `src/dazzle_ui/templates/workspace/regions/heatmap.html` to use `region_card` macro
+- `table table-sm` → plain `<table>` with border-collapse + row borders from `hsl(var(--border))`
+- Cell background tints: `bg-error/20`, `bg-warning/20`, `bg-success/20` → inline HSL triplets with 15% alpha for three-threshold and two-threshold branches
+- Text colours on cells: darker variant of same HSL for contrast
+- Hover transition uses the design-system timing (80ms cubic-bezier equivalent via Tailwind `duration-[80ms]` + `transition-opacity`)
+
+**Outcome:** 13/16 adopters complete. 3 remaining: detail, funnel_chart, tab_data.
+
+**Follow-on:** this cycle also keeps the tactic of inlining semantic HSL (red/amber/green) pending the `--success/--warning/--destructive-subtle` token landing. Destructive already exists; success and warning are still missing.
+
+---
