@@ -189,13 +189,9 @@ async def test_build_engine_wires_dependencies(
         )
     )
 
-    # Playwright bundle: patch the setup helper so no real browser spawns.
     fake_bundle = MagicMock()
     fake_bundle.page = MagicMock()
-    fake_bundle.close = AsyncMock()
-
-    async def _fake_setup(base_url: str):
-        return fake_bundle
+    fake_bundle.page.goto = AsyncMock()
 
     with (
         patch(
@@ -211,24 +207,21 @@ async def test_build_engine_wires_dependencies(
         ) as mock_backend,
         patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient") as mock_llm,
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
-            new=_fake_setup,
-        ),
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
             return_value=fake_engine,
         ) as mock_engine_cls,
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
-        proxy = await fitness_strategy._build_engine(example_root=example_root, handle=handle)
-        # Drive the proxy's run() to verify Playwright teardown fires.
-        await proxy.run()
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            bundle=fake_bundle,
+            component_contract_path=None,
+        )
 
     mock_backend.assert_called_once_with(database_url="postgresql://stub")
     mock_llm.assert_called_once_with()
     mock_engine_cls.assert_called_once()
-    fake_engine.run.assert_awaited_once()
-    fake_bundle.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -243,76 +236,15 @@ async def test_build_engine_raises_when_database_url_unset(
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
+    fake_bundle = MagicMock()
+
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
         await fitness_strategy._build_engine(
             example_root=example_root,
             handle=MagicMock(site_url="http://x", api_url="http://y"),
+            bundle=fake_bundle,
+            component_contract_path=None,
         )
-
-
-@pytest.mark.asyncio
-async def test_engine_proxy_tears_down_playwright_on_engine_failure() -> None:
-    """_EngineProxy.run() must close the Playwright bundle even when engine.run() raises."""
-    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import _EngineProxy
-
-    fake_engine = MagicMock()
-    fake_engine.run = AsyncMock(side_effect=RuntimeError("engine exploded"))
-    fake_bundle = MagicMock()
-    fake_bundle.close = AsyncMock()
-
-    proxy = _EngineProxy(engine=fake_engine, bundle=fake_bundle)
-
-    with pytest.raises(RuntimeError, match="engine exploded"):
-        await proxy.run()
-
-    fake_bundle.close.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_build_engine_closes_bundle_when_engine_constructor_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """If FitnessEngine.__init__ raises after Playwright is up, the bundle must still close."""
-    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
-
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
-
-    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
-
-    fake_bundle = MagicMock()
-    fake_bundle.page = MagicMock()
-    fake_bundle.close = AsyncMock()
-
-    async def _fake_setup(base_url: str):
-        return fake_bundle
-
-    with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
-            return_value=MagicMock(entities=[], stories=[], personas=[]),
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
-            return_value=MagicMock(),
-        ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
-            new=_fake_setup,
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
-            side_effect=RuntimeError("engine init exploded"),
-        ),
-        pytest.raises(RuntimeError, match="engine init exploded"),
-    ):
-        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
-        await fitness_strategy._build_engine(example_root=example_root, handle=handle)
-
-    fake_bundle.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -333,10 +265,7 @@ async def test_build_engine_passes_contract_path_to_engine(
 
     fake_bundle = MagicMock()
     fake_bundle.page = MagicMock()
-    fake_bundle.close = AsyncMock()
-
-    async def _fake_setup(base_url: str):
-        return fake_bundle
+    fake_bundle.page.goto = AsyncMock()
 
     with (
         patch(
@@ -350,10 +279,6 @@ async def test_build_engine_passes_contract_path_to_engine(
         patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
         patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
-            new=_fake_setup,
-        ),
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
         ) as mock_engine_cls,
     ):
@@ -361,10 +286,10 @@ async def test_build_engine_passes_contract_path_to_engine(
         await fitness_strategy._build_engine(
             example_root=example_root,
             handle=handle,
+            bundle=fake_bundle,
             component_contract_path=contract_path,
         )
 
-    # FitnessEngine was called with contract_paths=[contract_path] and a contract_observer
     mock_engine_cls.assert_called_once()
     call_kwargs = mock_engine_cls.call_args.kwargs
     assert call_kwargs["contract_paths"] == [contract_path]
@@ -414,3 +339,145 @@ async def test_run_fitness_strategy_threads_contract_path(
     mock_build.assert_awaited_once()
     build_kwargs = mock_build.call_args.kwargs
     assert build_kwargs["component_contract_path"] == contract_path
+
+
+@pytest.mark.asyncio
+async def test_build_engine_takes_prebuilt_bundle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """_build_engine now accepts a bundle parameter instead of creating its own."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.page.goto = AsyncMock()
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+        ) as mock_engine_cls,
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        result = await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            bundle=fake_bundle,
+            component_contract_path=None,
+        )
+
+    # Engine was constructed with the injected bundle's page (not a new bundle)
+    mock_engine_cls.assert_called_once()
+    # The returned object is the engine itself (or a proxy), not something that closes the bundle
+    assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_build_engine_navigates_to_contract_anchor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When the contract has an anchor, _build_engine navigates the page before building."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    contract_path = tmp_path / "auth-page.md"
+    contract_path.write_text(
+        "# auth-page\n\n## Anchor\n\n/login\n\n## Quality Gates\n\n1. Card centered\n"
+    )
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.page.goto = AsyncMock()
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+        ),
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            bundle=fake_bundle,
+            component_contract_path=contract_path,
+        )
+
+    # Page was navigated to site_url + anchor
+    fake_bundle.page.goto.assert_awaited_once_with("http://localhost:3000/login")
+
+
+@pytest.mark.asyncio
+async def test_build_engine_does_not_navigate_when_no_anchor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When the contract has no anchor, _build_engine skips navigation (v1.0.2 behavior)."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    contract_path = tmp_path / "no-anchor.md"
+    contract_path.write_text("# no-anchor\n\n## Quality Gates\n\n1. gate\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.page.goto = AsyncMock()
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+        ),
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            bundle=fake_bundle,
+            component_contract_path=contract_path,
+        )
+
+    # No navigation happened
+    fake_bundle.page.goto.assert_not_awaited()

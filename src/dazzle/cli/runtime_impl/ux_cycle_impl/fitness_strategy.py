@@ -20,6 +20,7 @@ from typing import Any, cast
 
 from dazzle.agent.core import DazzleAgent
 from dazzle.agent.executor import PlaywrightExecutor
+from dazzle.agent.missions._shared import ComponentContract, parse_component_contract
 from dazzle.agent.observer import PlaywrightObserver
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.fitness.config import load_fitness_config
@@ -48,18 +49,25 @@ async def run_fitness_strategy(
     """Run one fitness cycle against ``example_app`` and return a summary.
 
     Owns the example-app subprocess lifecycle via try/finally, so teardown
-    runs even if the engine raises.
+    runs even if the engine raises. Also owns the Playwright bundle lifecycle
+    in v1.0.3+ — the browser is launched once and torn down in the outer
+    finally, regardless of how many personas run against it.
     """
     example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
     handle = await _launch_example_app(example_root=example_root)
+    bundle: Any = None
     try:
+        bundle = await _setup_playwright(base_url=handle.site_url)
         engine = await _build_engine(
             example_root=example_root,
             handle=handle,
+            bundle=bundle,
             component_contract_path=component_contract_path,
         )
         result = await engine.run()
     finally:
+        if bundle is not None:
+            await bundle.close()
         _stop_example_app(handle)
 
     summary = (
@@ -134,17 +142,19 @@ async def _setup_playwright(base_url: str) -> _PlaywrightBundle:
 
 
 class _EngineProxy:
-    """Wraps a ``FitnessEngine`` so ``run()`` also tears down Playwright."""
+    """Wraps a ``FitnessEngine`` so the strategy can pass around a uniform run() surface.
+
+    v1.0.2 owned bundle teardown inside the proxy. v1.0.3 moves that
+    responsibility up to the strategy so multi-persona runs can share the
+    same browser across iterations. The proxy now just forwards run().
+    """
 
     def __init__(self, engine: Any, bundle: Any) -> None:
         self._engine = engine
         self._bundle = bundle
 
     async def run(self) -> Any:
-        try:
-            return await self._engine.run()
-        finally:
-            await self._bundle.close()
+        return await self._engine.run()
 
 
 class _ContractObserver:
@@ -164,13 +174,18 @@ class _ContractObserver:
 async def _build_engine(
     example_root: Path,
     handle: Any,
+    bundle: Any,
     component_contract_path: Path | None = None,
 ) -> Any:
     """Construct a ``FitnessEngine`` for the given example app.
 
-    Reads ``DATABASE_URL`` from env to wire the snapshot source. Returns an
-    ``_EngineProxy`` whose ``run()`` tears down the Playwright bundle when
-    the engine finishes.
+    Reads ``DATABASE_URL`` from env to wire the snapshot source. Takes a
+    pre-built Playwright ``bundle`` — the caller owns bundle lifecycle.
+    If ``component_contract_path`` points at a contract with a ``## Anchor``
+    section, navigates ``bundle.page`` to ``handle.site_url + anchor`` before
+    building the engine, so the contract walker observes the right component.
+    Returns an ``_EngineProxy`` whose ``run()`` forwards to the wrapped
+    engine; the proxy no longer owns bundle teardown (the strategy does).
     """
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -186,29 +201,32 @@ async def _build_engine(
     snapshot_source = PgSnapshotSource(backend)
     llm = LLMAPIClient()
 
-    bundle = await _setup_playwright(base_url=handle.site_url)
-    try:
-        agent = DazzleAgent(
-            observer=PlaywrightObserver(page=bundle.page),
-            executor=PlaywrightExecutor(page=bundle.page),
-        )
+    # Parse the contract once so we can (a) pass the path to the engine and
+    # (b) navigate to the anchor URL before the walker snapshots the page.
+    contract: ComponentContract | None = None
+    if component_contract_path is not None:
+        contract = parse_component_contract(component_contract_path)
+        if contract.anchor is not None:
+            await bundle.page.goto(handle.site_url + contract.anchor)
 
-        contract_paths: list[Path] = [component_contract_path] if component_contract_path else []
-        contract_observer = _ContractObserver(page=bundle.page) if component_contract_path else None
+    agent = DazzleAgent(
+        observer=PlaywrightObserver(page=bundle.page),
+        executor=PlaywrightExecutor(page=bundle.page),
+    )
 
-        engine = FitnessEngine(
-            project_root=example_root,
-            config=config,
-            app_spec=app_spec,
-            spec_md_path=example_root / "SPEC.md",
-            agent=agent,
-            executor=PlaywrightExecutor(page=bundle.page),
-            snapshot_source=snapshot_source,
-            llm=llm,
-            contract_paths=contract_paths,
-            contract_observer=contract_observer,
-        )
-    except BaseException:
-        await bundle.close()
-        raise
+    contract_paths: list[Path] = [component_contract_path] if component_contract_path else []
+    contract_observer = _ContractObserver(page=bundle.page) if component_contract_path else None
+
+    engine = FitnessEngine(
+        project_root=example_root,
+        config=config,
+        app_spec=app_spec,
+        spec_md_path=example_root / "SPEC.md",
+        agent=agent,
+        executor=PlaywrightExecutor(page=bundle.page),
+        snapshot_source=snapshot_source,
+        llm=llm,
+        contract_paths=contract_paths,
+        contract_observer=contract_observer,
+    )
     return _EngineProxy(engine=engine, bundle=bundle)
