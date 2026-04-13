@@ -1095,6 +1095,39 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Fitness Triage (read-only — regenerate via CLI)
+        # =====================================================================
+        Tool(
+            name="fitness",
+            description=(
+                "Agent-Led Fitness Methodology queries (read-only). "
+                "Operations: queue (ranked deduped finding clusters for "
+                "a project). To regenerate the queue, use CLI: "
+                "dazzle fitness triage."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["queue"],
+                        "description": "Operation to perform",
+                    },
+                    "project_root": {
+                        "type": "string",
+                        "description": "Path to an example app project",
+                    },
+                    "top": {
+                        "type": "integer",
+                        "description": "Max clusters to return (default 10)",
+                        "default": 10,
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation", "project_root"],
+            },
+        ),
+        # =====================================================================
         # Policy Analysis (RBAC access control)
         # =====================================================================
         Tool(

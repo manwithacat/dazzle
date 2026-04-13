@@ -1093,6 +1093,20 @@ handle_e2e: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 
 
 # =============================================================================
+# Fitness Triage Handler
+# =============================================================================
+
+_MOD_FITNESS = "dazzle.mcp.server.handlers.fitness"
+
+handle_fitness: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "fitness",
+    {
+        "queue": f"{_MOD_FITNESS}:fitness_queue_handler",
+    },
+)
+
+
+# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1273,6 +1287,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "graph": handle_graph,
     "discovery": handle_discovery,
     "e2e": handle_e2e,
+    "fitness": handle_fitness,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
     "composition": handle_composition,
