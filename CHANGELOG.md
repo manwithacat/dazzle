@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ux_quality` and `ux_explore` agent missions:** two new DazzleAgent missions. `ux_quality` takes a ux-architect component contract and verifies its quality gates. `ux_explore` runs bottom-up gap discovery with two strategies (missing contracts, edge cases).
 - **Flat-file signal bus:** `dazzle.cli.runtime_impl.ux_cycle_signals` — cross-loop coordination between `/ux-cycle`, `/improve`, `/ux-converge`. Signals at `.dazzle/signals/*.json` (gitignored).
 - **Component contract parser:** `parse_component_contract()` in `dazzle.agent.missions._shared` — extracts quality gates, anatomy, and primitives from ux-architect contract markdown files.
+- **DSL:** new `lifecycle:` entity block declaring ordered states and per-transition evidence predicates for the Agent-Led Fitness Methodology's progress evaluator. Orthogonal to the auto-derived `state_machine` (runtime mechanics). See ADR-0020 and `docs/reference/grammar.md`.
 
 ### Changed
 - **`auth_store` on `app.state`:** The auth subsystem now stashes `auth_store` on `app.state.auth_store` during startup. Route handlers can access the auth store without dependency injection gymnastics. Existing routes that receive auth_store via constructor are unchanged.
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Agent Guidance
 - **QA Mode workflow**: When building or modifying example apps for human QA testing, the landing page renders a dev-only Personas panel with "Log in as X" buttons. The flow uses real magic links (no auth backdoor). Persona emails follow `{persona_id}@example.test`. Passwords are not set — magic-link login only. See `docs/superpowers/specs/2026-04-12-qa-mode-design.md` for the full security model.
 - **`dazzle serve --local` env flags**: When `--local` is active, the CLI sets `DAZZLE_QA_MODE=1` and `DAZZLE_ENV=development` before uvicorn starts. Dev-only routes should double-check both flags at request time (defense in depth).
+- **Lifecycle vs state_machine:** the new `lifecycle:` block is NOT a replacement for the existing auto-derived `state_machine`. Lifecycles encode progress semantics (ordered states, evidence predicates) and are consumed by `src/dazzle/fitness/progress_evaluator.py` once fitness v1 ships. State machines encode runtime mechanics (triggers, guards, effects). Entities may declare both; a validator warning fires if their state lists disagree.
 
 ## [0.54.0] - 2026-04-12
 
