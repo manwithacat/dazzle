@@ -4,6 +4,18 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T05:07Z — Cycle 48 — explore budget exhausted
+
+**State transition.** The previous 5 cycles (43, 44, 45, 46, 47) were all explore deferrals with zero findings. Per Step 6 of the cycle script — "If count >= 30 OR the last 5 cycles produced 0 findings, skip EXPLORE and mark the cycle complete with 'No work remaining, explore budget exhausted'" — Cycle 48 is the first to report exhausted state.
+
+The counter (6/30) is left untouched because we are no longer attempting to dispatch — bumping would only matter for the cap condition, which isn't the trigger. The 5-cycle-zero-findings condition is the trigger.
+
+**What this means for subsequent cycles:** every `/ux-cycle` invocation from here forward will report "explore budget exhausted" until either a row regresses out of `READY_FOR_QA`, a new row is added to the backlog, or some other state change resets the 5-cycle window. The deferral is now sticky.
+
+**The fitness v1.0.1 work shipped earlier in the session (10 commits, `a71390b9`..`577dcaa0`, 73/73 tests green, still unpushed) remains the load-bearing path forward.** Once it ships and `_launch_example_app` is exercised against a real example, both EXPLORE mode and Phase B QA on every `READY_FOR_QA` row become unblocked.
+
+---
+
 ## 2026-04-13T04:57Z — Cycle 47 — EXPLORE deferred
 
 Counter 5 → 6. No state change since Cycle 42.
