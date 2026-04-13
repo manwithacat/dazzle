@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from dazzle.qa.server import AppConnection, connect_app, wait_for_ready
+
 
 @dataclass
 class StrategyOutcome:
@@ -36,7 +38,7 @@ async def run_fitness_strategy(example_app: str, project_root: Path) -> Strategy
     runs even if the engine raises.
     """
     example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
-    handle = _launch_example_app(example_root=example_root)
+    handle = await _launch_example_app(example_root=example_root)
     try:
         engine = _build_engine(example_root=example_root, handle=handle)
         result = await engine.run()
@@ -61,21 +63,28 @@ def _resolve_example_root(example_app: str, project_root: Path) -> Path:
     return project_root / "examples" / example_app
 
 
-def _launch_example_app(example_root: Path) -> Any:
-    """Launch the example app subprocess and wait for its API to become ready.
+async def _launch_example_app(example_root: Path) -> AppConnection:
+    """Launch the example app subprocess and wait for the API to become ready.
 
-    Returns an ``AppConnection``-compatible handle. Real implementation lands
-    in Task 3.
+    Raises:
+        RuntimeError: if the API does not respond within the readiness timeout.
     """
-    raise NotImplementedError("fitness_strategy._launch_example_app: implemented in Task 3")
+    handle: AppConnection = connect_app(project_dir=example_root)
+    try:
+        ready = await wait_for_ready(handle.api_url, timeout=120.0)
+    except Exception:
+        handle.stop()
+        raise
+
+    if not ready:
+        handle.stop()
+        raise RuntimeError(f"example app at {handle.api_url} did not become ready within 120s")
+    return handle
 
 
-def _stop_example_app(handle: Any) -> None:
-    """Terminate the example-app subprocess owned by ``handle``.
-
-    Real implementation lands in Task 3.
-    """
-    raise NotImplementedError("fitness_strategy._stop_example_app: implemented in Task 3")
+def _stop_example_app(handle: AppConnection) -> None:
+    """Terminate the example-app subprocess owned by ``handle`` (no-op if external)."""
+    handle.stop()
 
 
 def _build_engine(example_root: Path, handle: Any) -> Any:

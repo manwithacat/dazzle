@@ -28,7 +28,7 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
     with (
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            return_value=fake_handle,
+            new=AsyncMock(return_value=fake_handle),
         ) as mock_launch,
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
@@ -61,7 +61,7 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
     with (
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            return_value=fake_handle,
+            new=AsyncMock(return_value=fake_handle),
         ),
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
@@ -75,3 +75,64 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
         await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
 
     mock_stop.assert_called_once_with(fake_handle)
+
+
+@pytest.mark.asyncio
+async def test_launch_example_app_uses_qa_server(tmp_path: Path) -> None:
+    """`_launch_example_app` delegates to dazzle.qa.server.connect_app and waits for ready."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
+            return_value=fake_handle,
+        ) as mock_connect,
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
+            new=AsyncMock(return_value=True),
+        ) as mock_wait,
+    ):
+        result = await fitness_strategy._launch_example_app(example_root=example_root)
+
+    assert result is fake_handle
+    mock_connect.assert_called_once_with(project_dir=example_root)
+    mock_wait.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_launch_example_app_raises_on_health_timeout(tmp_path: Path) -> None:
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
+            return_value=fake_handle,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
+            new=AsyncMock(return_value=False),
+        ),
+        pytest.raises(RuntimeError, match="did not become ready"),
+    ):
+        await fitness_strategy._launch_example_app(example_root=example_root)
+
+    # Teardown must fire even on failed launch.
+    fake_handle.stop.assert_called_once()
+
+
+def test_stop_example_app_calls_handle_stop() -> None:
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    handle = MagicMock()
+    fitness_strategy._stop_example_app(handle)
+    handle.stop.assert_called_once()
