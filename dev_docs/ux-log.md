@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 127 — 2026-04-13 — UX-011 command-palette → qa:FAIL (46 findings)
+
+**Row:** UX-011 command-palette (canonical: ops_dashboard)
+**Outcome:** `qa: PENDING → FAIL`, 46 findings (admin=23, ops_engineer=23), degraded=False. Run IDs: admin=69ac2435-6dac-47d7-bf68-a6f556169686, ops_engineer=c3f40f70-545e-4ca4-9d05-409f4a9a795b. Attempts 1 → 2.
+
+**Admin 403 anchor pattern — now 3/3 hits on command_center:** cycles 113 (UX-001), 117 (UX-003), and now 127 (UX-011) all walk `/app/workspaces/command_center` and all report an admin 403 observation. Cycle 126 (UX-010, different anchor `/app/ticket/create`) also reported an admin 403. The pattern is **consistent per-anchor** — when a persona hits the anchor initially it sometimes gets 403, sometimes not. Strong candidate for an investigator session once the subsystem ships: `get_related_clusters(/app/workspaces/command_center)` should surface all three UX row contexts and let the investigator compare.
+
+**Walker JSON parse bug #5:** two more warnings, same prose-before-JSON shape. Now consistently present in every cycle 122-127.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 127   | UX-011 command-palette | admin, ops_engineer | 46 (23+23) | FAIL |
+
+---
+
 ## Cycle 126 — 2026-04-13 — UX-010 widget:datepicker → qa:FAIL (96 findings) — **real bug surfaced**
 
 **Row:** UX-010 widget:datepicker (canonical: support_tickets)
