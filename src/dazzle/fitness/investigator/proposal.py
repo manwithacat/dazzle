@@ -32,7 +32,7 @@ class ProposedFix:
     file_path: str  # repo-relative
     line_range: tuple[int, int] | None
     diff: str  # unified diff anchored to file_path
-    rationale: str  # one or two sentences
+    rationale: str  # one or two sentences; ≥1 char
     confidence: float  # 0.0..1.0
 
 
@@ -46,9 +46,9 @@ class Proposal:
     investigator_run_id: str  # DazzleAgent transcript anchor
     fixes: tuple[ProposedFix, ...]
     overall_confidence: float  # 0.0..1.0
-    rationale: str  # the "why"
-    alternatives_considered: tuple[str, ...]
-    verification_plan: str  # what the actor should re-run and expect
+    rationale: str  # ≥20 chars, the "why"
+    alternatives_considered: tuple[str, ...]  # ≤5 lines
+    verification_plan: str  # ≥20 chars, what the actor should re-run and expect
     evidence_paths: tuple[str, ...]  # repo-relative
     tool_calls_summary: tuple[str, ...]  # ordered
     status: ProposalStatus

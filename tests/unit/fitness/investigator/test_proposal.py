@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+import pytest
+
 from dazzle.fitness.investigator.proposal import Proposal, ProposedFix
 
 
@@ -18,12 +20,11 @@ def _fix(
 
 
 def test_proposed_fix_is_frozen() -> None:
+    import dataclasses
+
     f = _fix()
-    try:
+    with pytest.raises(dataclasses.FrozenInstanceError):
         f.confidence = 0.9  # type: ignore[misc]
-    except Exception:
-        return
-    raise AssertionError("ProposedFix should be frozen")
 
 
 def test_proposal_construction() -> None:
