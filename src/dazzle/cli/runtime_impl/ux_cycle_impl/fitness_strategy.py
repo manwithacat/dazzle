@@ -1,14 +1,9 @@
 """/ux-cycle Strategy.FITNESS wiring.
 
-Invoked by the top-level ux_cycle runner when it rotates to FITNESS. Owns
-example-app lifecycle (starts runtime, runs the engine, tears down) and
-aggregates the result into a /ux-cycle outcome.
-
-v1.0.1 wires the real dependencies across three tasks: ``_launch_example_app``
-spins up the example via ``dazzle.qa.server`` (Task 3), ``_build_engine``
-loads the example's ``AppSpec`` + ``FitnessConfig`` and constructs a
-Playwright-backed ``FitnessEngine`` (Task 4), and ``_stop_example_app`` tears
-down the subprocess (Task 3).
+Invoked by the top-level ux_cycle runner when it rotates to FITNESS. The
+caller (typically ``dazzle.e2e.runner.ModeRunner``) owns example-app lifecycle
+and passes an already-running ``AppConnection``. This module runs the fitness
+engine and aggregates the result into a /ux-cycle outcome.
 """
 
 from __future__ import annotations
@@ -28,7 +23,7 @@ from dazzle.fitness.config import load_fitness_config
 from dazzle.fitness.engine import FitnessEngine
 from dazzle.fitness.pg_snapshot_source import PgSnapshotSource
 from dazzle.llm.api_client import LLMAPIClient
-from dazzle.qa.server import AppConnection, connect_app, wait_for_ready
+from dazzle.qa.server import AppConnection
 from dazzle_back.runtime.pg_backend import PostgresBackend
 
 
@@ -43,12 +38,18 @@ class StrategyOutcome:
 
 
 async def run_fitness_strategy(
-    example_app: str,
-    project_root: Path,
+    connection: AppConnection,
+    *,
+    example_root: Path,
     component_contract_path: Path | None = None,
     personas: list[str] | None = None,
 ) -> StrategyOutcome:
     """Run one fitness cycle per persona and return an aggregated outcome.
+
+    The caller is responsible for launching + tearing down the subprocess —
+    typically via ``dazzle.e2e.runner.ModeRunner``. This function only runs
+    the fitness engine against an already-running example app reachable at
+    ``connection.site_url``.
 
     When ``personas`` is None, runs a single anonymous cycle (v1.0.2
     behavior) using the Playwright bundle's original context and page.
@@ -66,8 +67,7 @@ async def run_fitness_strategy(
     the loop — other personas continue to run. The strategy owns bundle
     teardown in the outer finally so the shared browser is always released.
     """
-    example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
-    handle = await _launch_example_app(example_root=example_root)
+    handle = connection  # local alias — rest of the function already uses `handle`
     bundle: Any = None
     outcomes: list[tuple[str | None, Any]] = []
     try:
@@ -125,38 +125,9 @@ async def run_fitness_strategy(
     finally:
         if bundle is not None:
             await bundle.close()
-        _stop_example_app(handle)
+        # handle teardown is the caller's responsibility (typically ModeRunner)
 
     return _aggregate_outcomes(outcomes)
-
-
-def _resolve_example_root(example_app: str, project_root: Path) -> Path:
-    """Resolve ``examples/<example_app>`` relative to the Dazzle repo root."""
-    return project_root / "examples" / example_app
-
-
-async def _launch_example_app(example_root: Path) -> AppConnection:
-    """Launch the example app subprocess and wait for the API to become ready.
-
-    Raises:
-        RuntimeError: if the API does not respond within the readiness timeout.
-    """
-    handle: AppConnection = connect_app(project_dir=example_root)
-    try:
-        ready = await wait_for_ready(handle.api_url, timeout=120.0)
-    except Exception:
-        handle.stop()
-        raise
-
-    if not ready:
-        handle.stop()
-        raise RuntimeError(f"example app at {handle.api_url} did not become ready within 120s")
-    return handle
-
-
-def _stop_example_app(handle: AppConnection) -> None:
-    """Terminate the example-app subprocess owned by ``handle`` (no-op if external)."""
-    handle.stop()
 
 
 @dataclass

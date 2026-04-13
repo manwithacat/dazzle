@@ -14,6 +14,7 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(
@@ -24,18 +25,13 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
             run_metadata={"run_id": "r1"},
         )
     )
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
     fake_bundle = MagicMock()
     fake_bundle.close = AsyncMock()
 
     with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ) as mock_launch,
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
-        ) as mock_stop,
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=AsyncMock(return_value=fake_bundle),
@@ -45,12 +41,12 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
             new=AsyncMock(return_value=fake_engine),
         ) as mock_build,
     ):
-        outcome = await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
+        outcome = await run_fitness_strategy(
+            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+        )
 
     assert fake_engine.run.await_count == 1
     assert "r1" in outcome.summary
-    assert mock_launch.call_count == 1
-    mock_stop.assert_called_once_with(fake_handle)
     assert mock_build.call_count == 1
 
 
@@ -60,26 +56,23 @@ async def test_fitness_strategy_records_blocked_outcome_on_engine_failure(tmp_pa
 
     v1.0.3 Task 4: engine run failures are caught and recorded as BLOCKED
     outcomes rather than propagated. The strategy still tears down the
-    bundle and subprocess, and returns a degraded StrategyOutcome.
+    bundle, and returns a degraded StrategyOutcome. Subprocess teardown is
+    the caller's responsibility (typically ModeRunner).
     """
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(side_effect=RuntimeError("boom"))
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
     fake_bundle = MagicMock()
     fake_bundle.close = AsyncMock()
 
     with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
-        ) as mock_stop,
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=AsyncMock(return_value=fake_bundle),
@@ -89,10 +82,10 @@ async def test_fitness_strategy_records_blocked_outcome_on_engine_failure(tmp_pa
             new=AsyncMock(return_value=fake_engine),
         ),
     ):
-        outcome = await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
+        outcome = await run_fitness_strategy(
+            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+        )
 
-    # Teardown still fires
-    mock_stop.assert_called_once_with(fake_handle)
     fake_bundle.close.assert_awaited_once()
     # Engine failure produces a degraded BLOCKED outcome (not a raised exception)
     assert outcome.degraded is True
@@ -100,129 +93,36 @@ async def test_fitness_strategy_records_blocked_outcome_on_engine_failure(tmp_pa
 
 
 @pytest.mark.asyncio
-async def test_fitness_strategy_stops_app_when_playwright_setup_fails(
+async def test_fitness_strategy_raises_when_playwright_setup_fails(
     tmp_path: Path,
 ) -> None:
-    """If _setup_playwright raises, _stop_example_app must still run.
+    """If _setup_playwright raises, the exception propagates to the caller.
 
-    v1.0.3 Task 2 introduced this path (bundle setup moved from _build_engine
-    to the strategy). The outer try/finally now owns bundle lifecycle, so
-    this test verifies the failure path that used to live inside _build_engine.
+    Subprocess teardown is the caller's responsibility (ModeRunner), so this
+    test just verifies the RuntimeError propagates correctly.
     """
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     async def _raising_setup(base_url: str):
         raise RuntimeError("playwright missing")
 
     with (
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
-        ) as mock_stop,
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=_raising_setup,
         ),
         pytest.raises(RuntimeError, match="playwright missing"),
     ):
-        await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
-
-    # Subprocess teardown must have fired even though playwright setup failed
-    mock_stop.assert_called_once_with(fake_handle)
-
-
-@pytest.mark.asyncio
-async def test_launch_example_app_uses_qa_server(tmp_path: Path) -> None:
-    """`_launch_example_app` delegates to dazzle.qa.server.connect_app and waits for ready."""
-    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
-
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
-
-    with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
-            return_value=fake_handle,
-        ) as mock_connect,
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
-            new=AsyncMock(return_value=True),
-        ) as mock_wait,
-    ):
-        result = await fitness_strategy._launch_example_app(example_root=example_root)
-
-    assert result is fake_handle
-    mock_connect.assert_called_once_with(project_dir=example_root)
-    mock_wait.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_launch_example_app_raises_on_health_timeout(tmp_path: Path) -> None:
-    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
-
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
-
-    with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
-            return_value=fake_handle,
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
-            new=AsyncMock(return_value=False),
-        ),
-        pytest.raises(RuntimeError, match="did not become ready"),
-    ):
-        await fitness_strategy._launch_example_app(example_root=example_root)
-
-    # Teardown must fire even on failed launch.
-    fake_handle.stop.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_launch_example_app_stops_handle_on_wait_exception(tmp_path: Path) -> None:
-    """If wait_for_ready raises, the handle must be torn down before the exception propagates."""
-    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
-
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
-
-    with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
-            return_value=fake_handle,
-        ),
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
-            new=AsyncMock(side_effect=OSError("connection refused")),
-        ),
-        pytest.raises(OSError, match="connection refused"),
-    ):
-        await fitness_strategy._launch_example_app(example_root=example_root)
-
-    fake_handle.stop.assert_called_once()
-
-
-def test_stop_example_app_calls_handle_stop() -> None:
-    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
-
-    handle = MagicMock()
-    fitness_strategy._stop_example_app(handle)
-    handle.stop.assert_called_once()
+        await run_fitness_strategy(
+            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+        )
 
 
 @pytest.mark.asyncio
@@ -365,6 +265,7 @@ async def test_run_fitness_strategy_threads_contract_path(
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(
@@ -375,25 +276,26 @@ async def test_run_fitness_strategy_threads_contract_path(
             run_metadata={"run_id": "r2"},
         )
     )
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     contract_path = tmp_path / "auth-page.md"
     contract_path.write_text("# auth-page\n\n## Quality Gates\n\n1. gate\n")
 
     with (
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=AsyncMock(return_value=MagicMock(close=AsyncMock())),
         ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
             new=AsyncMock(return_value=fake_engine),
         ) as mock_build,
     ):
         await run_fitness_strategy(
-            example_app="support_tickets",
-            project_root=tmp_path,
+            mock_connection,
+            example_root=tmp_path / "examples" / "support_tickets",
             component_contract_path=contract_path,
         )
 
@@ -748,8 +650,11 @@ async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_pers
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(
@@ -765,7 +670,7 @@ async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_pers
 
     async def _fake_new_context(**kwargs: Any) -> Any:
         new_ctx = MagicMock()
-        new_ctx.new_page = AsyncMock(return_value=MagicMock(url="http://localhost:3000/"))
+        new_ctx.new_page = AsyncMock(return_value=MagicMock(url="http://localhost:8981/"))
         new_ctx.close = AsyncMock()
         fresh_contexts.append(new_ctx)
         return new_ctx
@@ -780,11 +685,6 @@ async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_pers
 
     with (
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=_fake_setup,
         ),
@@ -798,8 +698,8 @@ async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_pers
         ) as mock_login,
     ):
         outcome = await run_fitness_strategy(
-            example_app="support_tickets",
-            project_root=tmp_path,
+            mock_connection,
+            example_root=tmp_path / "examples" / "support_tickets",
             personas=["admin", "editor", "viewer"],
         )
 
@@ -824,8 +724,11 @@ async def test_run_fitness_strategy_single_anonymous_run_backwards_compat(
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(
@@ -847,11 +750,6 @@ async def test_run_fitness_strategy_single_anonymous_run_backwards_compat(
 
     with (
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=_fake_setup,
         ),
@@ -865,8 +763,8 @@ async def test_run_fitness_strategy_single_anonymous_run_backwards_compat(
         ) as mock_login,
     ):
         outcome = await run_fitness_strategy(
-            example_app="support_tickets",
-            project_root=tmp_path,
+            mock_connection,
+            example_root=tmp_path / "examples" / "support_tickets",
             personas=None,
         )
 
@@ -885,8 +783,11 @@ async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path)
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     # Two-engine sequence: first raises, second returns a happy result
     happy_result = MagicMock(
@@ -904,7 +805,7 @@ async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path)
     fake_bundle.browser = MagicMock()
     fake_bundle.browser.new_context = AsyncMock(
         side_effect=lambda **kw: MagicMock(
-            new_page=AsyncMock(return_value=MagicMock(url="http://localhost:3000/")),
+            new_page=AsyncMock(return_value=MagicMock(url="http://localhost:8981/")),
             close=AsyncMock(),
         )
     )
@@ -914,11 +815,6 @@ async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path)
         return fake_bundle
 
     with (
-        patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=_fake_setup,
@@ -933,8 +829,8 @@ async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path)
         ),
     ):
         outcome = await run_fitness_strategy(
-            example_app="support_tickets",
-            project_root=tmp_path,
+            mock_connection,
+            example_root=tmp_path / "examples" / "support_tickets",
             personas=["failing", "happy"],
         )
 
@@ -956,8 +852,11 @@ async def test_run_fitness_strategy_closes_bundle_on_engine_construction_failure
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.qa.server import AppConnection
 
-    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    mock_connection = MagicMock(spec=AppConnection)
+    mock_connection.site_url = "http://localhost:8981"
+    mock_connection.api_url = "http://localhost:8969"
 
     fake_bundle = MagicMock()
     fake_bundle.browser = MagicMock()
@@ -968,11 +867,6 @@ async def test_run_fitness_strategy_closes_bundle_on_engine_construction_failure
 
     with (
         patch(
-            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
-            new=AsyncMock(return_value=fake_handle),
-        ),
-        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
-        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
             new=_fake_setup,
         ),
@@ -982,8 +876,8 @@ async def test_run_fitness_strategy_closes_bundle_on_engine_construction_failure
         ),
     ):
         outcome = await run_fitness_strategy(
-            example_app="support_tickets",
-            project_root=tmp_path,
+            mock_connection,
+            example_root=tmp_path / "examples" / "support_tickets",
             personas=None,
         )
 

@@ -54,7 +54,7 @@ def qa_visual(
     from dazzle.qa.evaluate import ClaudeEvaluator
     from dazzle.qa.models import QAReport
     from dazzle.qa.report import deduplicate, format_json, format_table
-    from dazzle.qa.server import connect_app, wait_for_ready
+    from dazzle.qa.server import AppConnection, wait_for_ready
 
     project_dir = _resolve_project_dir(app)
 
@@ -73,21 +73,30 @@ def qa_visual(
         typer.echo("No capture targets found (no workspaces or personas defined).", err=True)
         raise typer.Exit(code=1)
 
-    # Connect to app (external via --url or start subprocess)
-    connection = connect_app(
-        url=url,
-        project_dir=None if url else project_dir,
+    if url is None:
+        typer.echo(
+            "--url is required. Start the app in another terminal first:\n"
+            f"  dazzle e2e env start {app or '<example>'}\n"
+            "Then pass its URL:\n"
+            "  dazzle qa visual --url http://localhost:8981 ...",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    api_url_resolved = url.replace(":3000", ":8000") if ":3000" in url else url
+    connection = AppConnection(
+        site_url=url,
+        api_url=api_url_resolved,
+        process=None,
     )
 
     all_findings = []
     try:
-        # Wait for ready when we own the process
-        if not connection.is_external:
-            typer.echo("Waiting for server to be ready…")
-            ready = asyncio.run(wait_for_ready(connection.api_url))
-            if not ready:
-                typer.echo("Server did not become ready in time.", err=True)
-                raise typer.Exit(code=1)
+        typer.echo("Waiting for server to be ready…")
+        ready = asyncio.run(wait_for_ready(connection.api_url))
+        if not ready:
+            typer.echo("Server did not become ready in time.", err=True)
+            raise typer.Exit(code=1)
 
         # Capture screenshots
         typer.echo(f"Capturing {len(targets)} screen(s)…")
@@ -140,7 +149,7 @@ def qa_capture(
     """Capture screenshots only — no LLM evaluation needed."""
     from dazzle.cli.utils import load_project_appspec
     from dazzle.qa.capture import build_capture_plan, capture_screenshots
-    from dazzle.qa.server import connect_app, wait_for_ready
+    from dazzle.qa.server import AppConnection, wait_for_ready
 
     project_dir = _resolve_project_dir(app)
 
@@ -164,20 +173,29 @@ def qa_capture(
             typer.echo(f"No targets found for persona '{persona}'.", err=True)
             raise typer.Exit(code=1)
 
-    # Connect to app
-    connection = connect_app(
-        url=url,
-        project_dir=None if url else project_dir,
+    if url is None:
+        typer.echo(
+            "--url is required. Start the app in another terminal first:\n"
+            f"  dazzle e2e env start {app or '<example>'}\n"
+            "Then pass its URL:\n"
+            "  dazzle qa capture --url http://localhost:8981 ...",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    api_url_resolved = url.replace(":3000", ":8000") if ":3000" in url else url
+    connection = AppConnection(
+        site_url=url,
+        api_url=api_url_resolved,
+        process=None,
     )
 
     try:
-        # Wait for ready when we own the process
-        if not connection.is_external:
-            typer.echo("Waiting for server to be ready…")
-            ready = asyncio.run(wait_for_ready(connection.api_url))
-            if not ready:
-                typer.echo("Server did not become ready in time.", err=True)
-                raise typer.Exit(code=1)
+        typer.echo("Waiting for server to be ready…")
+        ready = asyncio.run(wait_for_ready(connection.api_url))
+        if not ready:
+            typer.echo("Server did not become ready in time.", err=True)
+            raise typer.Exit(code=1)
 
         # Capture screenshots
         typer.echo(f"Capturing {len(targets)} screen(s)…")
