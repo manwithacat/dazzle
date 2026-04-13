@@ -74,7 +74,7 @@ The tasks below are broken into smaller batches that a subagent controller can d
 - [x] Batch 2 (Tasks 5–8): case file (sample, siblings, windowing, prompt rendering)
 - [x] Batch 3 (Tasks 9–14): six tools
 - [x] Batch 4 (Tasks 15–17): mission assembly, metrics, runner
-- [ ] Batch 5 (Tasks 18–20): CLI, integration test, docs
+- [x] Batch 5 (Tasks 18–20): CLI, integration test, docs
 
 Each batch will be appended to this file as the plan is written. The implementer should execute one task at a time following TDD: red → green → commit. Type-check with `mypy src/dazzle/fitness/investigator/` after each task.
 
@@ -4299,4 +4299,654 @@ git commit -m "feat(investigator): runner (run_investigation + walk_queue) with 
 
 ---
 
-*(Batch 5 continues below.)*
+## Task 18: `dazzle fitness investigate` CLI subcommand
+
+**Files:**
+- Modify: `src/dazzle/cli/fitness.py`
+- Test: `tests/unit/fitness/test_investigate_cli.py` (new)
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/fitness/test_investigate_cli.py`:
+
+```python
+"""Tests for `dazzle fitness investigate` CLI subcommand."""
+
+from datetime import datetime, UTC
+from pathlib import Path
+from unittest.mock import patch
+
+from typer.testing import CliRunner
+
+from dazzle.cli.fitness import fitness_app
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster, write_queue_file
+
+
+def _finding() -> Finding:
+    return Finding(
+        id="f_001",
+        created=datetime(2026, 4, 14, tzinfo=UTC),
+        run_id="run-1",
+        cycle=None,
+        axis="coverage",
+        locus="implementation",
+        severity="high",
+        persona="admin",
+        capability_ref="x",
+        expected="y",
+        observed="z",
+        evidence_embedded=EvidenceEmbedded(
+            expected_ledger_step={},
+            diff_summary=[],
+            transcript_excerpt=[],
+        ),
+        disambiguation=False,
+        low_confidence=False,
+        status="PROPOSED",
+        route="soft",
+        fix_commit=None,
+        alternative_fix=None,
+    )
+
+
+def _cluster() -> Cluster:
+    return Cluster(
+        cluster_id="CL-deadbeef",
+        locus="src/foo.html",
+        axis="coverage",
+        canonical_summary="z",
+        persona="admin",
+        severity="high",
+        cluster_size=1,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_001",
+    )
+
+
+def _seed_project(root: Path) -> None:
+    (root / "dev_docs").mkdir(parents=True, exist_ok=True)
+    upsert_findings(root / "dev_docs" / "fitness-backlog.md", [_finding()])
+    write_queue_file(root / "dev_docs" / "fitness-queue.md", [_cluster()])
+    (root / "src").mkdir(exist_ok=True)
+    (root / "src" / "foo.html").write_text("<div>line 1</div>\n")
+
+
+def test_investigate_dry_run_prints_case_file(tmp_path: Path) -> None:
+    _seed_project(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(
+        fitness_app,
+        ["investigate", "--cluster", "CL-deadbeef", "--dry-run", "--project", str(tmp_path)],
+    )
+    assert result.exit_code == 0
+    assert "# Case File" in result.output
+    assert "CL-deadbeef" in result.output
+
+
+def test_investigate_cluster_not_in_queue_exits_2(tmp_path: Path) -> None:
+    _seed_project(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(
+        fitness_app,
+        ["investigate", "--cluster", "CL-nosuch", "--dry-run", "--project", str(tmp_path)],
+    )
+    assert result.exit_code == 2
+    assert "not in queue" in result.output.lower()
+
+
+def test_investigate_top_empty_queue_exits_1(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    (tmp_path / "dev_docs" / "fitness-queue.md").write_text("# empty\n")
+    runner = CliRunner()
+    result = runner.invoke(
+        fitness_app,
+        ["investigate", "--top", "1", "--project", str(tmp_path)],
+    )
+    assert result.exit_code == 1
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/test_investigate_cli.py -v`
+Expected: FAIL — `Error: No such command 'investigate'`
+
+- [ ] **Step 3: Add the subcommand to `src/dazzle/cli/fitness.py`**
+
+Read the existing file first, then append the new command at the end:
+
+```python
+@fitness_app.command("investigate")
+def investigate_command(
+    top: int = typer.Option(1, "--top", help="Investigate the top N clusters from the queue."),
+    cluster: str | None = typer.Option(None, "--cluster", help="Investigate a specific cluster ID."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Build + print case file; no LLM."),
+    force: bool = typer.Option(False, "--force", help="Re-investigate clusters that already have a proposal."),
+    project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)."),
+    model: str | None = typer.Option(None, "--model", help="LLM model override."),
+) -> None:
+    """Run the investigator on one or more clusters from the fitness queue."""
+    import asyncio
+    from dazzle.fitness.investigator.runner import run_investigation, walk_queue
+    from dazzle.fitness.triage import read_queue_file
+
+    project_root = project or Path.cwd()
+    queue_path = project_root / "dev_docs" / "fitness-queue.md"
+
+    # Validate --cluster if provided
+    selected_cluster = None
+    if cluster is not None:
+        if not queue_path.exists():
+            typer.echo("error: fitness-queue.md not found", err=True)
+            raise typer.Exit(code=2)
+        try:
+            clusters = read_queue_file(queue_path)
+        except Exception as e:
+            typer.echo(f"error: failed to read queue: {e}", err=True)
+            raise typer.Exit(code=2)
+        matching = [c for c in clusters if c.cluster_id == cluster]
+        if not matching:
+            typer.echo(f"error: cluster {cluster!r} not in queue", err=True)
+            raise typer.Exit(code=2)
+        selected_cluster = matching[0]
+
+    # Build LLM client
+    llm_client = _build_llm_client(model=model, dry_run=dry_run)
+
+    async def _run() -> int:
+        if selected_cluster is not None:
+            result = await run_investigation(
+                cluster=selected_cluster,
+                dazzle_root=project_root,
+                llm_client=llm_client,
+                force=force,
+                dry_run=dry_run,
+            )
+            return 0 if (result is not None or dry_run) else 1
+        else:
+            if not queue_path.exists():
+                typer.echo("error: fitness-queue.md not found", err=True)
+                return 1
+            results = await walk_queue(
+                dazzle_root=project_root,
+                llm_client=llm_client,
+                top=top,
+                force=force,
+                dry_run=dry_run,
+            )
+            if not results:
+                typer.echo("nothing to do: queue empty or all clusters already investigated")
+                return 1
+            produced = sum(1 for r in results if r is not None)
+            if produced == 0 and not dry_run:
+                return 1
+            return 0
+
+    exit_code = asyncio.run(_run())
+    raise typer.Exit(code=exit_code)
+
+
+def _build_llm_client(model: str | None, dry_run: bool) -> object:
+    """Build the LLM client for the investigator.
+
+    In --dry-run mode, returns a placeholder that will never be called.
+    In real mode, returns an LLMAPIClient from dazzle.llm.api_client.
+    """
+    class _DryRunClient:
+        run_id = "dry-run"
+        model = model or "claude-sonnet-4-6"
+
+    if dry_run:
+        return _DryRunClient()
+
+    from dazzle.llm.api_client import LLMAPIClient
+    return LLMAPIClient(model=model or "claude-sonnet-4-6", temperature=0.2)
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/test_investigate_cli.py -v`
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Smoke-test the CLI manually**
+
+Run: `dazzle fitness investigate --help`
+Expected: Typer help output showing `--top`, `--cluster`, `--dry-run`, `--force`, `--project`, `--model`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/cli/fitness.py tests/unit/fitness/test_investigate_cli.py
+git commit -m "feat(cli): dazzle fitness investigate subcommand"
+```
+
+---
+
+## Task 19: Integration smoke test (real LLM, gated)
+
+**Files:**
+- Create: `tests/integration/fitness/test_investigator_real.py`
+- Create: `tests/integration/fitness/__init__.py` (empty)
+- Create: `fixtures/investigator_smoke/` — minimal fixture project
+
+- [ ] **Step 1: Create the fixture project**
+
+```bash
+mkdir -p /Volumes/SSD/Dazzle/fixtures/investigator_smoke/src/ui
+mkdir -p /Volumes/SSD/Dazzle/fixtures/investigator_smoke/dev_docs
+mkdir -p /Volumes/SSD/Dazzle/fixtures/investigator_smoke/.dazzle
+```
+
+Create `fixtures/investigator_smoke/src/ui/form.html` with a deliberately-broken snippet:
+
+```bash
+cat > /Volumes/SSD/Dazzle/fixtures/investigator_smoke/src/ui/form.html << 'HTML'
+<form>
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email">
+  <p class="error" role="alert">Email is required</p>
+</form>
+HTML
+```
+
+(The error paragraph is missing `aria-describedby` wiring — a predictable target for an investigator fix.)
+
+Create a minimal `fitness-backlog.md` and `fitness-queue.md` with one finding/cluster pointing at the file. You can generate these programmatically:
+
+```bash
+python - << 'PY'
+from datetime import datetime, UTC
+from pathlib import Path
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster, write_queue_file
+
+root = Path("/Volumes/SSD/Dazzle/fixtures/investigator_smoke")
+finding = Finding(
+    id="f_smoke_001",
+    created=datetime(2026, 4, 14, tzinfo=UTC),
+    run_id="smoke-run",
+    cycle=None,
+    axis="coverage",
+    locus="implementation",
+    severity="high",
+    persona="admin",
+    capability_ref="Form.submit",
+    expected="error <p> linked to control via aria-describedby",
+    observed="error <p> present at src/ui/form.html:4 but no describedby wiring",
+    evidence_embedded=EvidenceEmbedded(
+        expected_ledger_step={"step": 1, "description": "check describedby"},
+        diff_summary=[],
+        transcript_excerpt=[{"text": "line 4: error paragraph missing describedby link"}],
+    ),
+    disambiguation=False,
+    low_confidence=False,
+    status="PROPOSED",
+    route="soft",
+    fix_commit=None,
+    alternative_fix=None,
+)
+upsert_findings(root / "dev_docs" / "fitness-backlog.md", [finding])
+
+cluster = Cluster(
+    cluster_id="CL-smoke001",
+    locus="src/ui/form.html",
+    axis="coverage",
+    canonical_summary="error p present but no describedby wiring",
+    persona="admin",
+    severity="high",
+    cluster_size=1,
+    first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+    last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+    sample_id="f_smoke_001",
+)
+write_queue_file(root / "dev_docs" / "fitness-queue.md", [cluster])
+print("fixture seeded")
+PY
+```
+
+- [ ] **Step 2: Write the integration test**
+
+Create `tests/integration/fitness/__init__.py` (empty).
+
+Create `tests/integration/fitness/test_investigator_real.py`:
+
+```python
+"""Integration smoke test — real LLM against a fixture cluster.
+
+Gated behind @pytest.mark.e2e. Runs only when `pytest --runintegration`
+is passed (or in CI with the e2e marker enabled).
+
+Costs real tokens. Expected to catch prompt regressions, not assert on
+specific fix content.
+"""
+
+import os
+from pathlib import Path
+
+import pytest
+
+from dazzle.fitness.investigator.proposal import load_proposal
+from dazzle.fitness.investigator.runner import run_investigation
+from dazzle.fitness.triage import read_queue_file
+
+FIXTURE_ROOT = Path(__file__).resolve().parents[2] / "fixtures" / "investigator_smoke"
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_investigator_real_llm_produces_proposal(tmp_path: Path) -> None:
+    """Run the investigator against a real LLM and verify a Proposal is written.
+
+    This is a smoke test. We assert the pipeline runs end-to-end and a
+    well-formed proposal exists; we do NOT assert on the specific fix
+    content because the LLM is non-deterministic.
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        pytest.skip("ANTHROPIC_API_KEY not set")
+
+    # Copy the fixture into tmp_path so we don't pollute the real fixture dir
+    import shutil
+    shutil.copytree(FIXTURE_ROOT, tmp_path / "smoke")
+    project_root = tmp_path / "smoke"
+
+    # Load the fixture cluster
+    clusters = read_queue_file(project_root / "dev_docs" / "fitness-queue.md")
+    assert len(clusters) == 1
+    cluster = clusters[0]
+
+    # Build a real LLM client
+    from dazzle.llm.api_client import LLMAPIClient
+    llm = LLMAPIClient(model="claude-sonnet-4-6", temperature=0.2)
+
+    result = await run_investigation(
+        cluster=cluster,
+        dazzle_root=project_root,
+        llm_client=llm,
+        force=False,
+        dry_run=False,
+    )
+
+    # Assertions:
+    # 1. A proposal file exists
+    proposals = list((project_root / ".dazzle" / "fitness-proposals").glob("CL-smoke001-*.md"))
+    assert len(proposals) >= 1, "expected at least one proposal file"
+
+    # 2. The proposal loads and parses cleanly
+    proposal = load_proposal(proposals[0])
+    assert proposal.cluster_id == "CL-smoke001"
+    assert len(proposal.fixes) >= 1
+    assert 0.0 <= proposal.overall_confidence <= 1.0
+
+    # 3. The metrics file got an entry
+    metrics = project_root / ".dazzle" / "fitness-proposals" / "_metrics.jsonl"
+    assert metrics.exists()
+    lines = metrics.read_text().strip().split("\n")
+    assert len(lines) >= 1
+```
+
+- [ ] **Step 3: Register the `e2e` marker if not already registered**
+
+Check `pyproject.toml` for `[tool.pytest.ini_options]` markers section. If `e2e` isn't listed, add it:
+
+```toml
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests that hit real services (slow, opt-in)",
+]
+```
+
+- [ ] **Step 4: Run the test manually (optional — costs real tokens)**
+
+```bash
+ANTHROPIC_API_KEY=... pytest tests/integration/fitness/test_investigator_real.py -v -m e2e
+```
+
+Expected: PASS (1 test). If it fails due to prompt issues, that's data for the "there will be bugs" iteration phase — note the failure mode and continue.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add fixtures/investigator_smoke/ tests/integration/fitness/__init__.py tests/integration/fitness/test_investigator_real.py pyproject.toml
+git commit -m "test(investigator): integration smoke test against real LLM (e2e-gated)"
+```
+
+---
+
+## Task 20: Documentation + CHANGELOG + CLAUDE.md pointer
+
+**Files:**
+- Create: `docs/reference/fitness-investigator.md`
+- Modify: `CHANGELOG.md`
+- Modify: `.claude/CLAUDE.md`
+
+- [ ] **Step 1: Write `docs/reference/fitness-investigator.md`**
+
+Create `docs/reference/fitness-investigator.md`:
+
+```markdown
+# Fitness Investigator
+
+Agent-led investigation of ranked fitness clusters. Reads a cluster from
+`fitness-queue.md`, gathers context via read-only tools, and writes a
+structured `Proposal` to disk for a later actor subsystem to apply.
+
+## What it does
+
+Given a cluster like:
+
+    CL-a1b2c3d4  form-field  coverage:high  persona=admin  size=17
+
+the investigator:
+
+1. Loads the sample finding + up to 5 diverse siblings from
+   `dev_docs/fitness-backlog.md`.
+2. Loads the locus file (full content if ≤ 500 lines, windowed otherwise).
+3. Hands the case file to an LLM agent with 6 tools: `read_file`,
+   `query_dsl`, `get_cluster_findings`, `get_related_clusters`,
+   `search_spec`, and the terminal `propose_fix`.
+4. The agent investigates (≤ 25 steps), then calls `propose_fix` with
+   a concrete diff, rationale, verification plan, and alternatives.
+5. A `Proposal` file lands at
+   `.dazzle/fitness-proposals/<cluster_id>-<proposal_id[:8]>.md`.
+
+## CLI
+
+    dazzle fitness investigate                     # investigate top 1
+    dazzle fitness investigate --top 5             # top 5
+    dazzle fitness investigate --cluster CL-...    # target one cluster
+    dazzle fitness investigate --dry-run           # print case file, no LLM call
+    dazzle fitness investigate --force             # re-investigate even if proposal exists
+    dazzle fitness investigate --model claude-opus-4-6
+
+Exit codes:
+- `0`: at least one proposal written, or dry-run completed.
+- `1`: nothing to do (queue empty or already investigated).
+- `2`: invalid arguments (`--cluster` not in queue).
+- `3`: infrastructure failure.
+
+## Reading a proposal file
+
+Proposals are markdown with YAML frontmatter. The frontmatter is the
+machine-readable contract for the actor; the body is for humans.
+
+Key fields:
+- `proposal_id` — stable per investigation run.
+- `cluster_id` — back-reference to the queue cluster.
+- `overall_confidence` — investigator's self-assessment. The actor uses
+  this to decide between auto-apply and flag-for-review.
+- `fixes` — list of per-file diffs with per-fix rationales.
+- `verification_plan` — what the actor should run after applying.
+- `alternatives_considered` — short list of rejected approaches.
+- `evidence_paths` — what the investigator actually read.
+- `tool_calls_summary` — one line per tool call, in order.
+- `status` — `proposed` | `applied` | `verified` | `reverted` | `rejected`.
+
+## Debugging blocked investigations
+
+When the investigator cannot produce a proposal, it writes a blocked
+artefact to `.dazzle/fitness-proposals/_blocked/<cluster_id>.md`. The
+blocked file contains the case file and a transcript excerpt describing
+why the run stopped:
+
+- `step_cap`: 25 LLM steps without terminal action.
+- `stagnation`: 4 consecutive steps with no tool call.
+- `validation`: `propose_fix` was called but the proposal violated a
+  validation rule (short rationale, bad diff, etc.). The raw LLM args are
+  embedded for prompt-tuning.
+- `write_error`: disk write failure.
+
+## Idempotence
+
+`dazzle fitness investigate` skips clusters that already have a proposal
+on disk. The `_attempted.json` file is a rebuildable cache — if it's
+deleted or corrupt, the next run reconstructs it by scanning the
+proposal files.
+
+Use `--force` to re-investigate.
+
+## Metrics
+
+Every investigation attempt appends one line to
+`.dazzle/fitness-proposals/_metrics.jsonl`:
+
+    {"cluster_id":"CL-a1b2c3d4","status":"proposed","tokens_in":8234,"tokens_out":1456,"tool_calls":6,"duration_ms":12400,"created":"...","model":"claude-sonnet-4-6"}
+
+Use standard JSONL tools (`jq`) to analyse trends.
+
+## Design
+
+See `docs/superpowers/specs/2026-04-14-fitness-investigator-design.md`
+for the full design spec and `docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md`
+for the implementation plan.
+```
+
+- [ ] **Step 2: Add CHANGELOG entry**
+
+Read `CHANGELOG.md`, find the `## [Unreleased]` section, add:
+
+```markdown
+### Added
+- **Fitness investigator subsystem** — agent-led investigation of ranked
+  fitness clusters. `dazzle fitness investigate` reads a cluster from
+  `fitness-queue.md`, gathers context via six read-only tools (file reads,
+  DSL queries, spec search, cluster expansion, related-cluster lookup),
+  and writes a structured `Proposal` to `.dazzle/fitness-proposals/`.
+  Read-only at the codebase level — applying proposals is a separate
+  (future) actor subsystem. See `docs/reference/fitness-investigator.md`.
+
+### Agent Guidance
+- The investigator is the Option-3 ship on the path to full autonomous
+  fix loops. Proposals are accumulated on disk but not applied until the
+  actor subsystem lands. Run `dazzle fitness investigate --dry-run` to
+  inspect a case file without burning tokens.
+```
+
+- [ ] **Step 3: Add CLAUDE.md pointer**
+
+Read `.claude/CLAUDE.md`, find the "Extending" section. Add after existing entries:
+
+```markdown
+### Fitness investigator
+```bash
+dazzle fitness investigate --top 1          # investigate highest-priority cluster
+dazzle fitness investigate --cluster CL-... --dry-run
+```
+Proposals land at `.dazzle/fitness-proposals/`. See `docs/reference/fitness-investigator.md`.
+```
+
+- [ ] **Step 4: Verify docs render**
+
+Run: `grep -l "Fitness investigator\|fitness-investigator" docs/ .claude/ CHANGELOG.md 2>/dev/null`
+Expected: all three files listed.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add docs/reference/fitness-investigator.md CHANGELOG.md .claude/CLAUDE.md
+git commit -m "docs(investigator): user reference + CHANGELOG + CLAUDE.md pointer"
+```
+
+---
+
+## Final: run the full investigator test suite
+
+- [ ] **Step 1: Run everything**
+
+```bash
+pytest tests/unit/fitness/investigator/ tests/unit/fitness/test_investigate_cli.py -v
+```
+
+Expected: PASS (~50 tests across 8 test modules).
+
+- [ ] **Step 2: Type-check the whole package**
+
+```bash
+mypy src/dazzle/fitness/investigator/ --ignore-missing-imports
+```
+
+Expected: no new errors.
+
+- [ ] **Step 3: Lint**
+
+```bash
+ruff check src/dazzle/fitness/investigator/ tests/unit/fitness/investigator/ --fix && ruff format src/dazzle/fitness/investigator/ tests/unit/fitness/investigator/
+```
+
+- [ ] **Step 4: Final commit**
+
+If step 3 produced any autofixes:
+
+```bash
+git add src/dazzle/fitness/investigator/ tests/unit/fitness/investigator/
+git commit -m "chore(investigator): ruff autofixes"
+```
+
+- [ ] **Step 5: Bump the patch version and ship**
+
+```
+/bump patch
+/ship
+```
+
+---
+
+## Spec coverage checklist
+
+Cross-check each section of `docs/superpowers/specs/2026-04-14-fitness-investigator-design.md` against the plan:
+
+| Spec section | Implementing task(s) |
+|---|---|
+| Architecture: 8 modules | Tasks 2 (proposal), 4 (attempted), 5 (case_file), 9 (tools), 15 (mission+backends), 16 (metrics), 17 (runner) |
+| Architecture: CLI touchpoint | Task 18 |
+| Architecture: layer responsibilities | Baked into each module's task |
+| Architecture: invariants | Enforced via validation (Task 3), traversal guards (Tasks 5/9), mutable ToolState (Task 9), `_attempted.json` (Task 4) |
+| Architecture: failure modes table | Tasks 3 (write_blocked_artefact), 14 (propose_fix blocked paths), 17 (runner metric emission) |
+| Section 1 CaseFile | Tasks 5–8 |
+| Section 2 Proposal | Tasks 2–3 |
+| Section 3 AttemptedIndex | Task 4 |
+| Section 4 Tools (all 6) | Tasks 9–14 |
+| Section 4 "no opaque errors" rule | Tasks 9–13 (each tool tests error payloads) |
+| Section 5 Mission + system prompt | Task 15 |
+| Section 5 LLM parameters (temp 0.2, model default) | Task 18 CLI `_build_llm_client` |
+| Section 6 Runner (run_investigation, walk_queue) | Task 17 |
+| Section 6 CLI | Task 18 |
+| Section 6 Metrics sink | Task 16 |
+| Section 6 Testing strategy | Tasks 1–17 (unit), 18 (CLI), 19 (integration) |
+| Docs (ref + CHANGELOG + CLAUDE.md) | Task 20 |
+
+**Gaps:** none. Every section in the spec has at least one task.
+
+---
+
+## Execution handoff
+
+Plan complete and saved to `docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md`. Two execution options:
+
+**1. Subagent-Driven (recommended)** — dispatch a fresh subagent per task, two-stage review (spec compliance then code quality), fast iteration.
+
+**2. Inline Execution** — execute tasks in this session using executing-plans, batch execution with checkpoints.
+
+Which approach?
