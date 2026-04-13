@@ -1056,6 +1056,45 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # E2E Environment Operations
+        # =====================================================================
+        Tool(
+            name="e2e",
+            description=(
+                "E2E environment operations (read-only). "
+                "Operations: list_modes (available runner modes), "
+                "describe_mode (single mode details), "
+                "status (lock + runtime + log-tail for an example app), "
+                "list_baselines (hash-tagged db snapshot files for an example). "
+                "Process operations (start/stop) live in the CLI only."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "list_modes",
+                            "describe_mode",
+                            "status",
+                            "list_baselines",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Mode name (for describe_mode)",
+                    },
+                    "project_root": {
+                        "type": "string",
+                        "description": "Path to an example app (for status/list_baselines)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Policy Analysis (RBAC access control)
         # =====================================================================
         Tool(

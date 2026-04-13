@@ -1076,6 +1076,23 @@ handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 
 
 # =============================================================================
+# E2E Environment Handler
+# =============================================================================
+
+_MOD_E2E = "dazzle.mcp.server.handlers.e2e"
+
+handle_e2e: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "e2e",
+    {
+        "list_modes": f"{_MOD_E2E}:e2e_list_modes_handler",
+        "describe_mode": f"{_MOD_E2E}:e2e_describe_mode_handler",
+        "status": f"{_MOD_E2E}:e2e_status_handler",
+        "list_baselines": f"{_MOD_E2E}:e2e_list_baselines_handler",
+    },
+)
+
+
+# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1255,6 +1272,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,
+    "e2e": handle_e2e,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
     "composition": handle_composition,
