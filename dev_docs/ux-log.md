@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 124 — 2026-04-13 — UX-019 form-validation → qa:FAIL (97 findings)
+
+**Row:** UX-019 form-validation (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 97 findings (admin=49, agent=48), degraded=False. Shares `/app/ticket/create` anchor with UX-017 form-field so finding counts are similar in magnitude. Walker planned real `select` actions on `#field-priority` — interactive form depth was reached. Attempts 1 → 2. Run IDs: admin=7e6b7a1c-0780-4f3f-8b1e-660f752859ed, agent=5b7783d0-9d1e-4610-b428-f75c7c6d21fa.
+
+**Anchor overlap note:** UX-017 (form-field) and UX-019 (form-validation) both contract against `/app/ticket/create`. That means their 99 + 97 = 196 findings will heavily overlap after triage — the dedupe key (`locus, axis, canonical_summary, persona`) should collapse them aggressively. Good stress test for the triage rubric.
+
+**Walker JSON parse bug #5:** two more warnings this run with the same prose-before-JSON shape. Still non-blocking. Pattern: Claude 4.6 is always producing a reasoning sentence before the JSON. The walker's strict parser needs either a looser `raw.strip().split("\\n", 1)[-1]` shim or a prompt tweak to force JSON-only output. Filing this as a concrete bug-fix candidate for the investigator's first real target.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 124   | UX-019 form-validation | admin, agent | 97 (49+48) | FAIL |
+
+---
+
 ## Cycle 123 — 2026-04-13 — UX-018 form-wizard → qa:FAIL (24 findings)
 
 **Row:** UX-018 form-wizard (canonical: contact_manager)
