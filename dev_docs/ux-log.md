@@ -1849,6 +1849,48 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 113 — 2026-04-13 — **first real row advancement: UX-001 dashboard-grid → qa:FAIL (46 findings)**
+
+**Row:** UX-001 dashboard-grid (canonical: ops_dashboard)
+**Outcome:** First-ever real Phase B on a top-priority backlog row. `qa: PENDING → FAIL` per the runbook rule (`FAIL if findings_count > 0`). 46 findings produced, degraded=False. Attempts counter 1 → 2.
+
+### What ran
+
+- Bootstrapped `ops_dashboard` this cycle: `createdb dazzle_ops_dashboard` + wrote `examples/ops_dashboard/.env` + one Mode A launch to auto-create DSL tables (Alert, System, DeployHistory) + framework tables. Dev personas (admin, ops_engineer) provisioned cleanly thanks to cycle 112's bcrypt fix.
+- Phase B run via `run_fitness_strategy` against `dashboard-grid.md` (anchor `/app/workspaces/command_center`) with `personas=["admin", "ops_engineer"]`, `db_policy=preserve`.
+- Both personas logged in via QA magic-link, each ran their own FitnessEngine:
+  - **admin**: run `7bfe75c8-2cad-4031-b7e7-3c63e293b759`, 23 findings
+  - **ops_engineer**: run `7ce13cc6-e0ff-46f6-adc4-b9e40b3fdc17`, 23 findings
+- Findings landed in `examples/ops_dashboard/dev_docs/fitness-backlog.md` (1390 lines).
+
+### Walker observation: admin RBAC inconsistency
+
+The walker's prose log noted that **admin sometimes sees the dashboard and sometimes gets 403 at `/app/workspaces/command_center`**. One mission plan said "I can see the 403 error page is displayed correctly. This shows that the admin persona does not have permission to access the command center workspace." Another said "I'll start by exploring this Operations Dashboard as an admin user. I can see there are three main sections: Active Alerts, System Status, Health Summary."
+
+This is either:
+- A legitimate finding about ops_dashboard's RBAC (admin shouldn't or can't access the ops command center, which would be intentional in an "admin ≠ operator" model)
+- A session lifecycle bug where the magic-link login doesn't always establish a full cookie chain before the walker navigates
+
+Worth investigating in a dedicated cycle once the walker JSON parse error (bug #5 from cycle 110) is fixed so we get consistent action records.
+
+### Example apps bootstrapped so far
+
+| Example | DB | .env | Dev personas | READY_FOR_QA rows unblocked |
+|---------|----|----|--------------|------------------------------|
+| support_tickets | dazzle_support_tickets | ✅ | admin, customer, agent, manager | UX-017, UX-019, UX-026, UX-027, UX-030 |
+| ops_dashboard | dazzle_ops_dashboard | ✅ | admin, ops_engineer | UX-001, UX-011, UX-015, UX-031, UX-033 |
+| contact_manager | — | — | — | UX-002, UX-005, UX-007, UX-008, UX-009, UX-012, UX-014, UX-022, UX-028, UX-029, UX-032 |
+| fieldtest_hub | — | — | — | UX-023, UX-024, UX-025 |
+| simple_task | — | — | — | UX-004, UX-013 |
+
+Bootstrapping the remaining 3 example apps (contact_manager, fieldtest_hub, simple_task) would unblock 15 more backlog rows for real Phase B verification. Tasks #32–34 created for follow-up cycles.
+
+### Interpretation caveat
+
+`qa: FAIL` for UX-001 doesn't mean the dashboard-grid component is BAD. The 46 findings include both contract-walk observations (from the walk_contract mission) and Pass 2a story_drift (from structural independence analysis). The aggregator doesn't distinguish them. Future work: separate contract-walk findings from Pass 2a findings in `StrategyOutcome` so rows can advance on contract compliance without being blocked by unrelated drift. For now, the row stays `READY_FOR_QA` with `qa: FAIL` as the runbook dictates, and a human reviewer can classify the specific findings in `fitness-backlog.md`.
+
+---
+
 ## Cycle 112 — 2026-04-13 — **multi-persona Phase B unblocked** (bcrypt + CSRF fixes)
 
 **Outcome:** The first successful **multi-persona** Phase B run. Summary: `fitness run [admin:e2409c19..., agent:1821a32d...]: 89 findings total (admin=41, agent=48), independence=0.000 (max)`, `degraded=False`. Both personas logged in via the QA magic-link flow, the fitness engine ran per-persona, findings aggregated cleanly.
