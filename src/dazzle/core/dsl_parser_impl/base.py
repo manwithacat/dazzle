@@ -567,6 +567,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.MANUAL,
     # ADR-0020 Lifecycle keyword (allowed as identifier in patterns tags etc.)
     TokenType.LIFECYCLE,
+    # Agent-Led Fitness v1 — fitness keyword allowed as identifier (e.g. field name)
+    TokenType.FITNESS,
     TokenType.DAYS,
     TokenType.HOURS,
     TokenType.MINUTES,

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .fitness import parse_fitness_block
 from .lifecycle import parse_lifecycle_block
 
 
@@ -73,6 +74,8 @@ class EntityParserMixin:
         graph_node: ir.GraphNodeSpec | None = None
         # ADR-0020: Lifecycle evidence predicates
         lifecycle: ir.LifecycleSpec | None = None
+        # Agent-Led Fitness v1: per-entity repr_fields
+        fitness_spec: ir.FitnessSpec | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -648,6 +651,18 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # Agent-Led Fitness v1: fitness: block
+            if self.match(TokenType.FITNESS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                declared_field_names = {f.name for f in fields}
+                fitness_spec = parse_fitness_block(
+                    self,  # type: ignore[arg-type]
+                    declared_field_names,
+                )
+                self.skip_newlines()
+                continue
+
             # v0.44.0: display_field: <field_name>
             if self.match(TokenType.DISPLAY_FIELD):
                 self.advance()
@@ -754,6 +769,7 @@ class EntityParserMixin:
             bulk=bulk_config,
             state_machine=state_machine,
             lifecycle=lifecycle,
+            fitness=fitness_spec,
             examples=examples,
             publishes=publishes,
             seed_template=seed_template,

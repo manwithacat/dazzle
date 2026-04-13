@@ -17,6 +17,7 @@ from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
 from .eventing import PublishSpec
 from .fields import FieldModifier, FieldSpec
+from .fitness_repr import FitnessSpec
 from .invariant import InvariantSpec
 from .lifecycle import LifecycleSpec
 from .location import SourceLocation
@@ -309,6 +310,8 @@ class EntitySpec(BaseModel):
     state_machine: StateMachineSpec | None = None
     # ADR-0020: Lifecycle evidence predicates (orthogonal to state_machine)
     lifecycle: LifecycleSpec | None = None
+    # Agent-Led Fitness v1: per-entity repr_fields projection for diff tracking
+    fitness: FitnessSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
     # v0.18.0: Event publishing
     publishes: list[PublishSpec] = Field(default_factory=list)

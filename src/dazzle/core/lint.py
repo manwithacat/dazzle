@@ -7,6 +7,7 @@ from .validator import (
     validate_entities,
     validate_event_payload_secrets,
     validate_experiences,
+    validate_fitness_repr_fields,
     validate_foreign_models,
     validate_governance_policies,
     validate_graph_declarations,
@@ -148,6 +149,11 @@ def lint_appspec(
 
     # Lifecycle block validation (ADR-0020)
     errors, warnings = validate_lifecycles(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Fitness repr_fields declaration (Agent-Led Fitness v1)
+    errors, warnings = validate_fitness_repr_fields(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

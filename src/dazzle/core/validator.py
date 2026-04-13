@@ -2395,3 +2395,30 @@ def validate_lifecycles(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 )
 
     return errors, warnings
+
+
+def validate_fitness_repr_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Warn if any entity lacks fitness.repr_fields.
+
+    Part of the Agent-Led Fitness v1 methodology. v1 ships as a warning;
+    v1.1 will promote this to an error. Entities without repr_fields are
+    skipped by the fitness evaluator.
+
+    Framework-synthetic entities (``domain == "platform"``, e.g. SystemHealth,
+    AIJob, FeedbackReport) are exempt — they are code-generated and cannot
+    carry a user-authored fitness block.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    for entity in appspec.domain.entities:
+        # Skip framework-synthetic platform entities (generated from code)
+        if entity.domain == "platform":
+            continue
+        if entity.fitness is None or not entity.fitness.repr_fields:
+            warnings.append(
+                f"Entity {entity.name!r}: no fitness.repr_fields declared — "
+                f"fitness evaluation will skip this entity. Add a "
+                f"`fitness:\n  repr_fields: [...]` block with domain-essential "
+                f"fields."
+            )
+    return errors, warnings

@@ -34,6 +34,9 @@ entity Task "Task":
   title: str(200) required
   status: enum[todo,done]=todo
 
+  fitness:
+    repr_fields: [title, status]
+
 surface task_list "Tasks":
   uses entity Task
   mode: list

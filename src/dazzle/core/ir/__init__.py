@@ -209,6 +209,11 @@ from .fields import (
     RelationshipBehavior,
 )
 
+# Fitness (Agent-Led Fitness v1 — per-entity repr_fields)
+from .fitness_repr import (
+    FitnessSpec,
+)
+
 # Foreign Models
 from .foreign_models import (
     ForeignConstraint,
@@ -942,6 +947,8 @@ __all__ = [
     "LifecycleSpec",
     "LifecycleStateSpec",
     "LifecycleTransitionSpec",
+    # Fitness (Agent-Led Fitness v1)
+    "FitnessSpec",
     # Personas (v0.8.5)
     "PersonaSpec",
     # Triples (v0.50.0 IR Triple Enrichment)

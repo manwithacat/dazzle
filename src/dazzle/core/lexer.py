@@ -504,6 +504,9 @@ class TokenType(Enum):
     # ADR-0020 Lifecycle evidence predicates
     LIFECYCLE = "lifecycle"
 
+    # Agent-Led Fitness v1 — per-entity repr_fields block
+    FITNESS = "fitness"
+
     # v0.43.0 External Action Links
     EXTERNAL = "external"
 
