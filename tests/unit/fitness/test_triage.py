@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
 
 from dazzle.fitness.triage import (
     SEVERITY_RANK,
@@ -11,6 +14,8 @@ from dazzle.fitness.triage import (
     cluster_findings,
     compute_cluster_id,
     dedupe_key_for,
+    read_queue_file,
+    write_queue_file,
 )
 
 
@@ -113,8 +118,6 @@ class TestComputeClusterID:
 
 class TestDedupeKeyFrozen:
     def test_is_frozen(self) -> None:
-        import pytest
-
         key = DedupeKey(locus="l", axis="a", canonical_summary="s", persona="p")
         with pytest.raises((AttributeError, TypeError)):
             key.locus = "x"  # type: ignore[misc]
@@ -236,3 +239,77 @@ class TestClusterUnknownSeverity:
         # aggregated severity field so callers see the raw value.
         assert len(clusters) == 1
         assert clusters[0].severity == "wonky"
+
+
+class TestWriteQueueFile:
+    def test_writes_file_with_header(self, tmp_path: Path) -> None:
+        path = tmp_path / "fitness-queue.md"
+        clusters = cluster_findings([_row(persona="Admin")])
+        write_queue_file(
+            path,
+            clusters,
+            project_name="demo",
+            raw_findings_count=1,
+        )
+        content = path.read_text()
+        assert "# Fitness Queue" in content
+        assert "**Project:** demo" in content
+        assert "**Raw findings:** 1" in content
+        assert "**Clusters:** 1" in content
+        assert "| rank | cluster_id |" in content
+
+    def test_writes_file_atomically(self, tmp_path: Path) -> None:
+        path = tmp_path / "fitness-queue.md"
+        clusters = cluster_findings([_row()])
+        write_queue_file(path, clusters, project_name="demo", raw_findings_count=1)
+        # The canonical file exists, the .tmp file does NOT.
+        assert path.exists()
+        assert not path.with_suffix(path.suffix + ".tmp").exists()
+
+    def test_dedup_ratio_in_header(self, tmp_path: Path) -> None:
+        path = tmp_path / "fitness-queue.md"
+        rows = [_row(finding_id=f"FIND-{i}") for i in range(20)]
+        clusters = cluster_findings(rows)
+        assert len(clusters) == 1  # all 20 rows collapse into 1 cluster
+        write_queue_file(path, clusters, project_name="demo", raw_findings_count=20)
+        content = path.read_text()
+        assert "**Dedup ratio:** 20.0×" in content
+
+
+class TestReadQueueFile:
+    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        path = tmp_path / "nonexistent.md"
+        assert read_queue_file(path) == []
+
+    def test_round_trip_preserves_cluster_order(self, tmp_path: Path) -> None:
+        rows = [
+            _row(finding_id="FIND-1", persona="A", severity="low"),
+            _row(finding_id="FIND-2", persona="B", severity="critical"),
+            _row(finding_id="FIND-3", persona="C", severity="medium"),
+        ]
+        original = cluster_findings(rows)
+        path = tmp_path / "fitness-queue.md"
+        write_queue_file(path, original, project_name="demo", raw_findings_count=3)
+
+        roundtripped = read_queue_file(path)
+        assert len(roundtripped) == len(original)
+        for a, b in zip(original, roundtripped, strict=True):
+            assert a.cluster_id == b.cluster_id
+            assert a.severity == b.severity
+            assert a.locus == b.locus
+            assert a.axis == b.axis
+            assert a.persona == b.persona
+            assert a.cluster_size == b.cluster_size
+
+    def test_round_trip_preserves_first_last_seen(self, tmp_path: Path) -> None:
+        rows = [
+            _row(finding_id="FIND-1", created="2026-04-13T19:00:00+00:00"),
+            _row(finding_id="FIND-2", created="2026-04-13T20:00:00+00:00"),
+        ]
+        original = cluster_findings(rows)
+        path = tmp_path / "fitness-queue.md"
+        write_queue_file(path, original, project_name="demo", raw_findings_count=2)
+
+        roundtripped = read_queue_file(path)
+        assert roundtripped[0].first_seen == original[0].first_seen
+        assert roundtripped[0].last_seen == original[0].last_seen
