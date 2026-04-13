@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from dazzle.agent.core import DazzleAgent
 from dazzle.agent.executor import PlaywrightExecutor
@@ -158,7 +158,7 @@ class _ContractObserver:
         self._page = page
 
     async def snapshot(self) -> str:
-        return await self._page.content()
+        return cast(str, await self._page.content())
 
 
 async def _build_engine(
