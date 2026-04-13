@@ -201,22 +201,25 @@ class ModeRunner:
 
         if self.db_policy == "fresh" or self.fresh:
             mgr = BaselineManager(self.project_root, db_url)
-            subprocess.run(
-                [sys.executable, "-m", "dazzle", "db", "reset", "--yes"],
-                cwd=self.project_root,
-                check=True,
-            )
-            subprocess.run(
-                [sys.executable, "-m", "dazzle", "db", "upgrade"],
-                cwd=self.project_root,
-                check=True,
-            )
-            if mgr._has_demo_config():
+            try:
                 subprocess.run(
-                    [sys.executable, "-m", "dazzle", "demo", "generate"],
+                    [sys.executable, "-m", "dazzle", "db", "reset", "--yes"],
                     cwd=self.project_root,
                     check=True,
                 )
+                subprocess.run(
+                    [sys.executable, "-m", "dazzle", "db", "upgrade"],
+                    cwd=self.project_root,
+                    check=True,
+                )
+                if mgr._has_demo_config():
+                    subprocess.run(
+                        [sys.executable, "-m", "dazzle", "demo", "generate"],
+                        cwd=self.project_root,
+                        check=True,
+                    )
+            except subprocess.CalledProcessError as e:
+                raise ModeLaunchError(f"db fresh pipeline failed: {e}") from e
             return
 
         if self.db_policy == "restore":
@@ -231,7 +234,7 @@ class ModeRunner:
         return env
 
     async def _poll_runtime_file(self, path: Path) -> dict[str, Any]:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         deadline = loop.time() + RUNTIME_POLL_BUDGET_SECONDS
         while loop.time() < deadline:
             if path.exists():
@@ -299,13 +302,6 @@ class ModeRunner:
                 try:
                     self._proc.wait(timeout=2.0)
                 except subprocess.TimeoutExpired:
-                    pass
-
-            # For fake Popens that don't propagate signals, mark terminated
-            if self._proc is not None and hasattr(self._proc, "terminated"):
-                try:
-                    self._proc.terminate()
-                except Exception:
                     pass
 
         # Close log handle

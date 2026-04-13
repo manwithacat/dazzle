@@ -40,41 +40,44 @@ def _write_runtime_file(project_root: Path, ui_port: int = 8981, api_port: int =
     )
 
 
-class _FakePopen:
-    """Drop-in replacement for subprocess.Popen that records interactions."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.args = args
-        self.kwargs = kwargs
-        self.pid = 4242
-        self.terminated = False
-        self.killed = False
-        self._exit_code: int | None = None
-
-    def poll(self) -> int | None:
-        return self._exit_code
-
-    def terminate(self) -> None:
-        self.terminated = True
-        self._exit_code = 0
-
-    def kill(self) -> None:
-        self.killed = True
-        self._exit_code = -9
-
-    def wait(self, timeout: float | None = None) -> int:
-        return self._exit_code or 0
-
-
 @pytest.fixture
-def fake_popen(monkeypatch: pytest.MonkeyPatch) -> list[_FakePopen]:
-    """Patch subprocess.Popen to record instances."""
-    instances: list[_FakePopen] = []
+def fake_popen(monkeypatch: pytest.MonkeyPatch) -> list[MagicMock]:
+    """Patch subprocess.Popen to record instances.
 
-    def factory(*args: Any, **kwargs: Any) -> _FakePopen:
-        p = _FakePopen(*args, **kwargs)
-        instances.append(p)
-        return p
+    Each fake Popen:
+      - Starts with poll() returning None (alive).
+      - After terminate() is called, poll() returns 0 (exited).
+      - wait() returns 0.
+    """
+    instances: list[MagicMock] = []
+
+    def factory(*args: Any, **kwargs: Any) -> MagicMock:
+        fake = MagicMock()
+        fake.pid = 4242 + len(instances)
+        fake.args_received = args
+        fake.kwargs = kwargs
+        # poll returns None until terminate() is called
+        state = {"terminated": False}
+
+        def _poll() -> int | None:
+            return 0 if state["terminated"] else None
+
+        def _terminate() -> None:
+            state["terminated"] = True
+
+        def _kill() -> None:
+            state["terminated"] = True
+
+        def _wait(timeout: float | None = None) -> int:
+            state["terminated"] = True
+            return 0
+
+        fake.poll.side_effect = _poll
+        fake.terminate.side_effect = _terminate
+        fake.kill.side_effect = _kill
+        fake.wait.side_effect = _wait
+        instances.append(fake)
+        return fake
 
     monkeypatch.setattr("dazzle.e2e.runner.subprocess.Popen", factory)
     return instances
@@ -88,10 +91,16 @@ def fake_wait_for_ready(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 
 @pytest.fixture(autouse=True)
-def _disable_killpg(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Prevent runner from sending real signals to fake PIDs."""
-    monkeypatch.setattr("dazzle.e2e.runner.os.killpg", lambda pid, sig: None, raising=False)
+def killpg_recorder(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Record os.killpg pids — lets tests verify subprocess termination."""
+    calls: list[int] = []
+
+    def fake_killpg(pid: int, sig: int) -> None:
+        calls.append(pid)
+
+    monkeypatch.setattr("dazzle.e2e.runner.os.killpg", fake_killpg, raising=False)
     monkeypatch.setattr("dazzle.e2e.runner.os.getpgid", lambda pid: pid, raising=False)
+    return calls
 
 
 @pytest.mark.asyncio
@@ -99,8 +108,9 @@ class TestModeRunnerHappyPath:
     async def test_yields_app_connection(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
+        killpg_recorder: list[int],
     ) -> None:
         _write_runtime_file(project_root)
         mode = get_mode("a")
@@ -115,15 +125,15 @@ class TestModeRunnerHappyPath:
             assert conn.api_url == "http://localhost:8969"
             assert conn.process is fake_popen[0]
 
-        # After teardown: lock released
+        # After teardown: lock released and killpg was called
         lock_path = project_root / ".dazzle" / "mode_a.lock"
         assert not lock_path.exists()
-        assert fake_popen[0].terminated
+        assert killpg_recorder
 
     async def test_qa_flags_auto_set_when_personas_non_empty(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
     ) -> None:
         _write_runtime_file(project_root)
@@ -144,7 +154,7 @@ class TestModeRunnerHappyPath:
     async def test_qa_flags_not_set_when_personas_none(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -196,9 +206,10 @@ class TestModeRunnerFailurePaths:
     async def test_raises_runtime_file_timeout(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
+        killpg_recorder: list[int],
     ) -> None:
         # Don't write runtime.json — triggers timeout
         monkeypatch.setattr("dazzle.e2e.runner.RUNTIME_POLL_BUDGET_SECONDS", 0.2)
@@ -214,14 +225,15 @@ class TestModeRunnerFailurePaths:
             ):
                 pass
 
-        assert fake_popen[0].terminated
+        assert killpg_recorder
         assert not (project_root / ".dazzle" / "mode_a.lock").exists()
 
     async def test_raises_health_check_timeout(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         monkeypatch: pytest.MonkeyPatch,
+        killpg_recorder: list[int],
     ) -> None:
         _write_runtime_file(project_root)
         monkeypatch.setattr("dazzle.e2e.runner.wait_for_ready", AsyncMock(return_value=False))
@@ -236,14 +248,15 @@ class TestModeRunnerFailurePaths:
             ):
                 pass
 
-        assert fake_popen[0].terminated
+        assert killpg_recorder
         assert not (project_root / ".dazzle" / "mode_a.lock").exists()
 
     async def test_caller_exception_propagates_with_teardown(
         self,
         project_root: Path,
-        fake_popen: list[_FakePopen],
+        fake_popen: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
+        killpg_recorder: list[int],
     ) -> None:
         _write_runtime_file(project_root)
         mode = get_mode("a")
@@ -260,5 +273,5 @@ class TestModeRunnerFailurePaths:
             ):
                 raise BoomError("fitness crashed")
 
-        assert fake_popen[0].terminated
+        assert killpg_recorder
         assert not (project_root / ".dazzle" / "mode_a.lock").exists()
