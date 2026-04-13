@@ -565,6 +565,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.AFTER,
     TokenType.ROLE,
     TokenType.MANUAL,
+    # ADR-0020 Lifecycle keyword (allowed as identifier in patterns tags etc.)
+    TokenType.LIFECYCLE,
     TokenType.DAYS,
     TokenType.HOURS,
     TokenType.MINUTES,

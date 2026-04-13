@@ -501,6 +501,9 @@ class TokenType(Enum):
     # v0.39.0 Transition Side Effects
     ON_TRANSITION = "on_transition"
 
+    # ADR-0020 Lifecycle evidence predicates
+    LIFECYCLE = "lifecycle"
+
     # v0.43.0 External Action Links
     EXTERNAL = "external"
 

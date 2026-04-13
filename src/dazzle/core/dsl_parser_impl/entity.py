@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .lifecycle import parse_lifecycle_block
 
 
 class EntityParserMixin:
@@ -70,6 +71,8 @@ class EntityParserMixin:
         # v0.46.0: Graph semantics (#619)
         graph_edge: ir.GraphEdgeSpec | None = None
         graph_node: ir.GraphNodeSpec | None = None
+        # ADR-0020: Lifecycle evidence predicates
+        lifecycle: ir.LifecycleSpec | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -637,6 +640,14 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # ADR-0020: lifecycle: block
+            if self.match(TokenType.LIFECYCLE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                lifecycle = parse_lifecycle_block(self)  # type: ignore[arg-type]
+                self.skip_newlines()
+                continue
+
             # v0.44.0: display_field: <field_name>
             if self.match(TokenType.DISPLAY_FIELD):
                 self.advance()
@@ -742,6 +753,7 @@ class EntityParserMixin:
             soft_delete=soft_delete,
             bulk=bulk_config,
             state_machine=state_machine,
+            lifecycle=lifecycle,
             examples=examples,
             publishes=publishes,
             seed_template=seed_template,
