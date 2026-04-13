@@ -90,6 +90,23 @@ def test_rebuild_from_blocked_artefact(tmp_path: Path) -> None:
     assert index.clusters["CL-33334444"].status == "blocked"
 
 
+def test_rebuild_proposal_wins_over_blocked(tmp_path: Path) -> None:
+    """When both a proposal and a blocked artefact exist for the same cluster,
+    the proposal's status wins — the blocked artefact is treated as stale history."""
+    save_proposal(_proposal(), tmp_path, case_file_text="", investigation_log="")
+    write_blocked_artefact(
+        "CL-deadbeef",
+        tmp_path,
+        reason="step_cap",
+        case_file_text="",
+        transcript="",
+    )
+
+    index = rebuild_attempted(tmp_path)
+    assert index.clusters["CL-deadbeef"].status == "proposed"
+    assert "abc12345ef678901" in index.clusters["CL-deadbeef"].proposal_ids
+
+
 def test_load_attempted_handles_corrupt_index(tmp_path: Path) -> None:
     proposals_dir = tmp_path / ".dazzle" / "fitness-proposals"
     proposals_dir.mkdir(parents=True)
