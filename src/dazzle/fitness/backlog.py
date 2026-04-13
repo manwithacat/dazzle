@@ -129,6 +129,26 @@ def read_backlog_findings(path: Path) -> list[Finding]:
     return findings
 
 
+def _reconstruct_row_change(entry: object) -> RowChange:
+    """Rebuild a RowChange from a JSON-deserialised dict.
+
+    dataclasses.asdict() converts RowChange.field_deltas tuple values to lists
+    during serialisation. This helper restores them back to tuples so the
+    dataclass's type contract holds on round-trip.
+    """
+    if not isinstance(entry, dict):
+        raise TypeError(f"expected dict, got {type(entry).__name__}")
+    field_deltas = entry.get("field_deltas") or {}
+    restored = {k: tuple(v) for k, v in field_deltas.items()}
+    return RowChange(
+        table=entry["table"],
+        row_id=entry["row_id"],
+        kind=entry["kind"],
+        semantic_repr=entry.get("semantic_repr", ""),
+        field_deltas=restored,
+    )
+
+
 def _payload_to_finding(payload: dict[str, object]) -> Finding:
     """Reconstruct a Finding from the JSON envelope payload."""
     # Cast to dict[str, Any] — if ev is not a dict, .get() raises AttributeError which
@@ -136,10 +156,7 @@ def _payload_to_finding(payload: dict[str, object]) -> Finding:
     ev: dict[str, Any] = payload["evidence_embedded"]  # type: ignore[assignment]
     evidence = EvidenceEmbedded(
         expected_ledger_step=ev.get("expected_ledger_step") or {},
-        diff_summary=[
-            RowChange(**entry) if isinstance(entry, dict) else entry
-            for entry in (ev.get("diff_summary") or [])
-        ],
+        diff_summary=[_reconstruct_row_change(e) for e in (ev.get("diff_summary") or [])],
         transcript_excerpt=ev.get("transcript_excerpt") or [],
     )
     # may raise ValueError/TypeError — caller catches

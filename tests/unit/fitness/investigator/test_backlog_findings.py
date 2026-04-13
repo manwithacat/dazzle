@@ -78,7 +78,7 @@ def test_read_backlog_findings_round_trip_with_diff_summary(tmp_path: Path) -> N
         row_id="row-42",
         kind="update",
         semantic_repr="tickets/row-42: status=open",
-        field_deltas={},
+        field_deltas={"status": ("open", "closed")},
     )
     original = Finding(
         id="f_diff_001",
@@ -114,6 +114,12 @@ def test_read_backlog_findings_round_trip_with_diff_summary(tmp_path: Path) -> N
     assert rc.row_id == "row-42"
     assert rc.kind == "update"
     assert rc.semantic_repr == "tickets/row-42: status=open"
+
+    # Verify field_deltas round-trip preserves tuple values (not lists).
+    assert rc.field_deltas == {"status": ("open", "closed")}
+    # Explicit tuple type check — asdict() converts tuples to lists during serialisation,
+    # and the reader must restore them.
+    assert isinstance(rc.field_deltas["status"], tuple)
 
 
 def test_read_backlog_findings_ignores_table_only_rows(tmp_path: Path) -> None:
