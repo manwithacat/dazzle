@@ -4,6 +4,30 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T04:18Z — Cycle 43 — EXPLORE deferred (no-op)
+
+**OBSERVE:** No row matches the priority rules. Every backlog row is `READY_FOR_QA` — no REGRESSION, no `PENDING + contract MISSING`, no `PENDING + contract DRAFT`, no `DONE + qa: PENDING`, no `VERIFIED`. UX-036 (the seven-cycle adopter series that landed in Cycles 33 + 37–42) just transitioned from `IN_PROGRESS`/`PARTIAL` to `READY_FOR_QA`/`DONE`, so it joins the rest of the backlog in the awaiting-Phase-B-QA queue.
+
+**Step 6 (EXPLORE) decision:** explore counter at `.dazzle/ux-cycle-explore-count` = 1 (now bumped to 2). Neither skip condition fires:
+- Counter (2) is well below 30
+- The "last 5 cycles produced 0 findings" rule is meant for explore cycles specifically, and only one explore cycle has run in the project's history — there isn't a 5-cycle window to evaluate yet
+
+So per the cycle script I should dispatch a `build_ux_explore_mission` against a rotating persona. **But the explore mission requires the same infrastructure that Phase B QA needs:** a running example app + Playwright observer/executor + LLM session. Without it, the discovery mission stagnates immediately because there's nothing to observe. Per the per-phase 3-minute stagnation rule, that dispatch would just BLOCK its own row.
+
+**Pragmatic decision:** treat this cycle as a no-op specifically blocked on running-app infrastructure, bump the explore counter (so the budget eventually exhausts even without dispatching), and commit the log entry. This is the same blocker that holds back Phase B QA on every `READY_FOR_QA` row. **Both will unblock together** when one of:
+1. Fitness v1.0.1 (the `_build_engine` wiring shipped earlier in this session as commits `a71390b9`..`577dcaa0`) is exercised against a running example app — its `_launch_example_app` lifecycle is exactly the running-app harness needed for Phase B
+2. A separate running-app cycle daemon is configured outside `/ux-cycle`
+
+**Counter:** bumped 1 → 2. Once it reaches 30 (or once 5 consecutive explore cycles produce 0 findings), `/ux-cycle` will switch to "explore budget exhausted" reporting and stop trying.
+
+**Phase A:** N/A.
+**Phase B:** N/A.
+**Files changed:** `.dazzle/ux-cycle-explore-count`, `dev_docs/ux-log.md`. No source code touched.
+
+**Next cycle:** the same no-op repeats until either (a) fitness v1.0.1 ships and a running-app cycle exists, or (b) a row regresses out of `READY_FOR_QA` into `REGRESSION`/`PENDING`/`DRAFT`, or (c) the explore counter hits 30.
+
+---
+
 ## 2026-04-13T04:08Z — Cycle 42 — UX-036 COMPLETE
 
 **Selected row:** UX-036 final continuation — 2fa_settings.html adopter (7/7).
