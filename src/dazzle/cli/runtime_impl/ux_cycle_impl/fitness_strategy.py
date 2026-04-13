@@ -13,6 +13,7 @@ down the subprocess (Task 3).
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -125,33 +126,47 @@ async def _login_as_persona(page: Any, persona_id: str, api_url: str) -> None:
     Raises:
         RuntimeError: if any step fails. Distinguishing messages let the
             strategy loop record BLOCKED outcomes with useful context:
-            - "QA mode not enabled" (404 on generator)
+            - "magic-link endpoint returned 404" (404 on generator — QA flags
+              missing OR persona not provisioned; see qa_routes.py:59,65)
             - "magic-link generation failed: HTTP {status}" (other non-2xx)
             - "persona login rejected: magic-link consumer did not create a session"
-              (final page URL still contains /login)
+              (final page path is /auth/login or /login — path-exact check)
     """
     generator_url = f"{api_url}/qa/magic-link"
     response = await page.request.post(
         generator_url,
-        data={"persona_id": persona_id},
+        data=json.dumps({"persona_id": persona_id}),
+        headers={"Content-Type": "application/json"},
     )
     if not response.ok:
         if response.status == 404:
+            # 404 covers two distinct cases per qa_routes.py:
+            #  (a) QA mode env flags not set (DAZZLE_ENV + DAZZLE_QA_MODE)
+            #  (b) persona email not provisioned in the auth store
             raise RuntimeError(
-                f"QA mode not enabled: magic-link endpoint returned 404 at {generator_url}"
+                f"magic-link endpoint returned 404 for persona {persona_id!r} at "
+                f"{generator_url} — check DAZZLE_ENV=development + DAZZLE_QA_MODE=1, "
+                f"or that the persona is provisioned"
             )
         raise RuntimeError(
             f"magic-link generation failed: HTTP {response.status} at {generator_url}"
         )
 
-    token_payload = await response.json()
-    token = token_payload["token"]
+    magic_link_payload = await response.json()
+    # The QA endpoint (dazzle_back/runtime/qa_routes.py:79) returns
+    # MagicLinkResponse(url=f"/auth/magic/{token}") — a server-relative path.
+    magic_link_path = magic_link_payload["url"]
 
-    consumer_url = f"{api_url}/auth/magic/{token}?next=/"
+    consumer_url = f"{api_url}{magic_link_path}?next=/"
     await page.goto(consumer_url)
 
-    # Detect token rejection: consumer redirects to /login on failure.
-    if "/login" in page.url:
+    # Detect token rejection: consumer redirects to /auth/login (or /login) on failure.
+    # Use path-exact match to avoid false positives on unrelated routes that
+    # happen to contain "login" (e.g. /app/logins, /admin/login-history).
+    from urllib.parse import urlparse
+
+    final_path = urlparse(page.url).path
+    if final_path in ("/auth/login", "/login"):
         raise RuntimeError(
             f"persona login rejected: magic-link consumer did not create a session "
             f"for persona {persona_id!r} (final URL: {page.url})"

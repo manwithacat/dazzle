@@ -572,13 +572,20 @@ async def test_build_engine_normalizes_anchor_without_leading_slash(
 
 @pytest.mark.asyncio
 async def test_login_as_persona_happy_path() -> None:
-    """_login_as_persona calls POST /qa/magic-link then navigates /auth/magic/{token}."""
+    """_login_as_persona calls POST /qa/magic-link then navigates /auth/magic/{token}.
+
+    The QA endpoint returns MagicLinkResponse(url="/auth/magic/<token>") — a
+    server-relative path keyed as "url", not "token".  The POST must be JSON
+    with an explicit Content-Type header so the Pydantic body model accepts it.
+    """
+    import json as _json
+
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
     fake_response = MagicMock()
     fake_response.ok = True
     fake_response.status = 200
-    fake_response.json = AsyncMock(return_value={"token": "abc123"})
+    fake_response.json = AsyncMock(return_value={"url": "/auth/magic/abc123"})
 
     fake_request = MagicMock()
     fake_request.post = AsyncMock(return_value=fake_response)
@@ -596,14 +603,17 @@ async def test_login_as_persona_happy_path() -> None:
 
     fake_request.post.assert_awaited_once_with(
         "http://localhost:8000/qa/magic-link",
-        data={"persona_id": "admin"},
+        data=_json.dumps({"persona_id": "admin"}),
+        headers={"Content-Type": "application/json"},
     )
     fake_page.goto.assert_awaited_once_with("http://localhost:8000/auth/magic/abc123?next=/")
 
 
 @pytest.mark.asyncio
 async def test_login_as_persona_raises_when_qa_mode_disabled() -> None:
-    """If POST /qa/magic-link returns 404, raise with 'QA mode not enabled'."""
+    """If POST /qa/magic-link returns 404, raise with a helpful hint about
+    DAZZLE_QA_MODE flags + persona provisioning (both are possible 404 causes
+    per qa_routes.py:59,65)."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
     fake_response = MagicMock()
@@ -616,7 +626,7 @@ async def test_login_as_persona_raises_when_qa_mode_disabled() -> None:
     fake_page = MagicMock()
     fake_page.request = fake_request
 
-    with pytest.raises(RuntimeError, match="QA mode not enabled"):
+    with pytest.raises(RuntimeError, match="magic-link endpoint returned 404"):
         await fitness_strategy._login_as_persona(
             page=fake_page,
             persona_id="admin",
@@ -649,13 +659,17 @@ async def test_login_as_persona_raises_when_magic_link_generation_fails() -> Non
 
 @pytest.mark.asyncio
 async def test_login_as_persona_raises_when_token_rejected() -> None:
-    """If after goto the page URL contains '/login', the token was rejected."""
+    """If after goto the page path is /auth/login, the token was rejected.
+
+    Uses the real failure URL from magic_link_routes.py:54,62 for fidelity
+    with the production server response.
+    """
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
     fake_response = MagicMock()
     fake_response.ok = True
     fake_response.status = 200
-    fake_response.json = AsyncMock(return_value={"token": "expired"})
+    fake_response.json = AsyncMock(return_value={"url": "/auth/magic/expired"})
 
     fake_request = MagicMock()
     fake_request.post = AsyncMock(return_value=fake_response)
@@ -663,7 +677,7 @@ async def test_login_as_persona_raises_when_token_rejected() -> None:
     fake_page = MagicMock()
     fake_page.request = fake_request
     fake_page.goto = AsyncMock()
-    fake_page.url = "http://localhost:3000/login?error=token_expired"
+    fake_page.url = "http://localhost:3000/auth/login?error=invalid_magic_link"
 
     with pytest.raises(RuntimeError, match="persona login rejected"):
         await fitness_strategy._login_as_persona(
@@ -671,3 +685,34 @@ async def test_login_as_persona_raises_when_token_rejected() -> None:
             persona_id="admin",
             api_url="http://localhost:8000",
         )
+
+
+@pytest.mark.asyncio
+async def test_login_as_persona_does_not_false_positive_on_login_substring() -> None:
+    """URL containing 'login' as a substring but not as a path does NOT raise.
+
+    Regression guard for the tightened path-exact login-rejection check.
+    /app/logins contains "login" but is not a login redirect target.
+    """
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    fake_response = MagicMock()
+    fake_response.ok = True
+    fake_response.status = 200
+    fake_response.json = AsyncMock(return_value={"url": "/auth/magic/ok"})
+
+    fake_request = MagicMock()
+    fake_request.post = AsyncMock(return_value=fake_response)
+
+    fake_page = MagicMock()
+    fake_page.request = fake_request
+    fake_page.goto = AsyncMock()
+    # URL contains "login" as a substring but the path is /app/logins
+    fake_page.url = "http://localhost:3000/app/logins"
+
+    # Should NOT raise — /app/logins is not a login page
+    await fitness_strategy._login_as_persona(
+        page=fake_page,
+        persona_id="admin",
+        api_url="http://localhost:8000",
+    )
