@@ -4,6 +4,39 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T03:57Z — Cycle 41
+
+**Selected row:** UX-036 continuation — 2fa_setup.html adopter (6/7).
+
+**Refactor:** Most complex adopter in the series. Template has three sections (TOTP / Email OTP / Recovery codes) plus a sticky "Back to App" link, and the original contained **seven distinct DaisyUI button variants** that all needed equivalents:
+
+- **`btn btn-outline btn-primary`** (Generate QR Code) → `h-9 border-[hsl(var(--primary))] bg-transparent text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.08)]`
+- **`btn btn-primary`** (Verify & Enable) → standard filled primary, `h-9 bg-[hsl(var(--primary))]`
+- **`btn btn-outline`** (Enable Email OTP) → `w-full h-9 border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]`
+- **`btn btn-ghost`** (Back to App) → styled as a tall `<a>` element with `h-9 leading-9 text-center` + muted-foreground text that transitions to foreground on hover
+- Inline `<code>` for the manual secret → `text-[11px] font-mono bg-[hsl(var(--muted))] px-1 py-0.5 rounded-[3px]`
+
+**Other DaisyUI token replacements:**
+- `card` / `bg-base-100` / `card-body` / `card-title` → `auth_page_card` macro (the outer chrome)
+- `divider` → plain `<hr class="my-6 border-[hsl(var(--border))]">` (no OR label needed here)
+- `alert alert-error` → macro-provided `#dz-auth-error`
+- `alert alert-success` → inline `#dz-auth-success` with primary-tone (matches forgot_password adopter)
+- `alert alert-warning` (Save Your Recovery Codes) → neutral callout — `rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)] p-3`. No dedicated `--warning` token in the design system, so I chose a visually prominent but semantically neutral style. Text hierarchy (bold title + muted body) carries the importance.
+- `form-control` / `label` / `label-text` / `input input-bordered text-center text-2xl tracking-widest` → standard UX-036 OTP input grammar (`h-10 tracking-[0.4em]`)
+- `badge badge-lg badge-outline` (in JS) → extracted into a `RECOVERY_CODE_CLASSES` constant at the top of the IIFE: `rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 py-2 text-center text-[12px] text-[hsl(var(--foreground))]`. Keeping the class list in one place means any future tweak to the recovery-code style touches a single location.
+
+**Design decision on width:** the original used a `dz-auth-container--wide` class, but the macro's standard `max-w-sm` (384px) comfortably fits a 200×200 QR with the card's `p-6` padding (content width ≈ 336px). Recovery-code grid at `grid-cols-2 font-mono text-[12px]` also fits. No macro variant needed.
+
+**Phase A:** N/A — auth pages not in example-app contract surface. Grep-sweep on the full DaisyUI token vocabulary returns zero matches in 2fa_setup.html.
+
+**Phase B:** Deferred.
+
+**Progress:** Auth 6/7. One file remains: **2fa_settings.html** — the final UX-036 adopter.
+
+**Next cycle:** 2fa_settings.html (the last auth-page adopter — likely a list view of enabled methods with revoke buttons).
+
+---
+
 ## 2026-04-13T03:47Z — Cycle 40
 
 **Selected row:** UX-036 continuation — 2fa_challenge.html adopter (5/7).
