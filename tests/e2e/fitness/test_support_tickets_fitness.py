@@ -57,3 +57,42 @@ async def test_support_tickets_induced_regression_is_caught() -> None:
     v1.0.3 work — requires the replay harness that does not yet exist.
     """
     pytest.skip("v1.0.3 — regression-comparator replay harness not yet implemented")
+
+
+@pytest.mark.asyncio
+async def test_support_tickets_multi_persona_cycle_completes() -> None:
+    """Multi-persona fitness cycle against support_tickets returns an aggregated outcome.
+
+    Assertions are intentionally loose — the point is that the multi-persona
+    loop runs end-to-end without crashing. Coverage assertions live in unit
+    tests.
+    """
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    if not os.environ.get("DATABASE_URL"):
+        pytest.skip("DATABASE_URL not set — required for PgSnapshotSource")
+
+    dazzle_root = Path(__file__).parents[3]
+    example_root = dazzle_root / "examples" / "support_tickets"
+    assert example_root.exists(), f"missing example dir: {example_root}"
+
+    # NOTE: persona IDs here must match the DSL personas declared in
+    # examples/support_tickets/dsl/app.dsl. If the DSL changes, update this list.
+    outcome = await run_fitness_strategy(
+        example_app="support_tickets",
+        project_root=dazzle_root,
+        personas=["admin", "customer", "agent", "manager"],
+    )
+
+    assert outcome.strategy == "FITNESS"
+    # Multi-persona summary format is bracketed and contains all persona IDs
+    assert "[" in outcome.summary
+    assert "admin" in outcome.summary
+    assert "customer" in outcome.summary
+    assert "agent" in outcome.summary
+    assert "manager" in outcome.summary
+    # Engine must have written its log + backlog files
+    assert (example_root / "dev_docs" / "fitness-log.md").exists()
+    assert (example_root / "dev_docs" / "fitness-backlog.md").exists()
