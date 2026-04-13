@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 129 — 2026-04-13 — UX-013 toast → qa:FAIL (76 findings) — plan complete
+
+**Row:** UX-013 toast (canonical: simple_task)
+**Outcome:** `qa: PENDING → FAIL`, 76 findings (admin=35, manager=41), degraded=False. Walker engaged with `/app/task/create` and planned real `type` actions on `#field-title`. Run IDs: admin=2bdb78c8-942b-4b63-a46f-ee7143c6c673, manager=a8fb4d2a-da67-44f0-ab3c-4378beb165e6.
+
+**Investigator plan now complete:** all 5 batches committed (28454400, d7229d0d, 68b010a5, 258af82a, 95d3e076). Plan file at `docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md` — 4952 lines, 20 tasks + final sweep, ~114 TDD steps, zero placeholders. Spec coverage checklist verifies every spec section has an implementing task. Ready for subagent-driven-development execution.
+
+**Walker JSON parse bug #5:** two more warnings. Consistently reproducing in every cycle 122-129 (8 cycles in a row). Top-priority investigator target.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 129   | UX-013 toast | admin, manager | 76 (35+41) | FAIL |
+
+---
+
 ## Cycle 128 — 2026-04-13 — UX-012 slide-over → qa:FAIL (20 findings)
 
 **Row:** UX-012 slide-over (canonical: contact_manager)
