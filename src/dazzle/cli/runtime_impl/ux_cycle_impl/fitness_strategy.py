@@ -8,17 +8,26 @@ v1.0.1 wires the real dependencies across three tasks: ``_launch_example_app``
 spins up the example via ``dazzle.qa.server`` (Task 3), ``_build_engine``
 loads the example's ``AppSpec`` + ``FitnessConfig`` and constructs a
 Playwright-backed ``FitnessEngine`` (Task 4), and ``_stop_example_app`` tears
-down the subprocess (Task 3). Until both land, the helpers raise
-``NotImplementedError`` and the unit tests patch them.
+down the subprocess (Task 3).
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from dazzle.agent.core import DazzleAgent
+from dazzle.agent.executor import PlaywrightExecutor
+from dazzle.agent.observer import PlaywrightObserver
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.fitness.config import load_fitness_config
+from dazzle.fitness.engine import FitnessEngine
+from dazzle.fitness.pg_snapshot_source import PgSnapshotSource
+from dazzle.llm.api_client import LLMAPIClient
 from dazzle.qa.server import AppConnection, connect_app, wait_for_ready
+from dazzle_back.runtime.pg_backend import PostgresBackend
 
 
 @dataclass
@@ -40,7 +49,7 @@ async def run_fitness_strategy(example_app: str, project_root: Path) -> Strategy
     example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
     handle = await _launch_example_app(example_root=example_root)
     try:
-        engine = _build_engine(example_root=example_root, handle=handle)
+        engine = await _build_engine(example_root=example_root, handle=handle)
         result = await engine.run()
     finally:
         _stop_example_app(handle)
@@ -87,9 +96,85 @@ def _stop_example_app(handle: AppConnection) -> None:
     handle.stop()
 
 
-def _build_engine(example_root: Path, handle: Any) -> Any:
+@dataclass
+class _PlaywrightBundle:
+    """Playwright resources owned by the strategy for one fitness cycle."""
+
+    playwright: Any
+    browser: Any
+    context: Any
+    page: Any
+
+    async def close(self) -> None:
+        await self.context.close()
+        await self.browser.close()
+        await self.playwright.stop()
+
+
+async def _setup_playwright(base_url: str) -> _PlaywrightBundle:
+    """Spin up a headless Chromium page pointed at ``base_url``.
+
+    Separate from ``_build_engine`` so tests can patch it cleanly.
+    """
+    from playwright.async_api import async_playwright
+
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(headless=True)
+    context = await browser.new_context(base_url=base_url)
+    page = await context.new_page()
+    return _PlaywrightBundle(playwright=pw, browser=browser, context=context, page=page)
+
+
+class _EngineProxy:
+    """Wraps a ``FitnessEngine`` so ``run()`` also tears down Playwright."""
+
+    def __init__(self, engine: Any, bundle: Any) -> None:
+        self._engine = engine
+        self._bundle = bundle
+
+    async def run(self) -> Any:
+        try:
+            return await self._engine.run()
+        finally:
+            await self._bundle.close()
+
+
+async def _build_engine(example_root: Path, handle: Any) -> Any:
     """Construct a ``FitnessEngine`` for the given example app.
 
-    Real implementation lands in Task 4.
+    Reads ``DATABASE_URL`` from env to wire the snapshot source. Returns an
+    ``_EngineProxy`` whose ``run()`` tears down the Playwright bundle when
+    the engine finishes.
     """
-    raise NotImplementedError("fitness_strategy._build_engine: implemented in Task 4")
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError(
+            "fitness_strategy._build_engine: DATABASE_URL env var must be set "
+            "so PgSnapshotSource can read the example app's database"
+        )
+
+    app_spec = load_project_appspec(example_root)
+    config = load_fitness_config(example_root)
+
+    backend = PostgresBackend(database_url=database_url)
+    snapshot_source = PgSnapshotSource(backend)
+    llm = LLMAPIClient()
+
+    bundle = await _setup_playwright(base_url=handle.site_url)
+
+    agent = DazzleAgent(
+        observer=PlaywrightObserver(page=bundle.page),
+        executor=PlaywrightExecutor(page=bundle.page),
+    )
+
+    engine = FitnessEngine(
+        project_root=example_root,
+        config=config,
+        app_spec=app_spec,
+        spec_md_path=example_root / "SPEC.md",
+        agent=agent,
+        executor=PlaywrightExecutor(page=bundle.page),
+        snapshot_source=snapshot_source,
+        llm=llm,
+    )
+    return _EngineProxy(engine=engine, bundle=bundle)

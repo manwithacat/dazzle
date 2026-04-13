@@ -35,7 +35,7 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
         ) as mock_stop,
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
-            return_value=fake_engine,
+            new=AsyncMock(return_value=fake_engine),
         ) as mock_build,
     ):
         outcome = await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
@@ -68,7 +68,7 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
         ) as mock_stop,
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
-            return_value=fake_engine,
+            new=AsyncMock(return_value=fake_engine),
         ),
         pytest.raises(RuntimeError, match="boom"),
     ):
@@ -162,3 +162,89 @@ def test_stop_example_app_calls_handle_stop() -> None:
     handle = MagicMock()
     fitness_strategy._stop_example_app(handle)
     handle.stop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_build_engine_wires_dependencies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_build_engine` assembles AppSpec + FitnessConfig + agent + snapshot source + LLM."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_app_spec = MagicMock(entities=[], stories=[], personas=[])
+    fake_config = MagicMock()
+    fake_engine = MagicMock()
+    fake_engine.run = AsyncMock(
+        return_value=MagicMock(
+            findings=[],
+            profile=MagicMock(degraded=False),
+            independence_jaccard=0.0,
+            run_metadata={"run_id": "r1"},
+        )
+    )
+
+    # Playwright bundle: patch the setup helper so no real browser spawns.
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str):
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=fake_app_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=fake_config,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"
+        ) as mock_backend,
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient") as mock_llm,
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+            return_value=fake_engine,
+        ) as mock_engine_cls,
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        proxy = await fitness_strategy._build_engine(example_root=example_root, handle=handle)
+        # Drive the proxy's run() to verify Playwright teardown fires.
+        await proxy.run()
+
+    mock_backend.assert_called_once_with(database_url="postgresql://stub")
+    mock_llm.assert_called_once_with()
+    mock_engine_cls.assert_called_once()
+    fake_engine.run.assert_awaited_once()
+    fake_bundle.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_engine_raises_when_database_url_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=MagicMock(site_url="http://x", api_url="http://y"),
+        )
