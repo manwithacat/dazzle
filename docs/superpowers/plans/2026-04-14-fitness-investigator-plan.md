@@ -71,7 +71,7 @@ The tasks below are broken into smaller batches that a subagent controller can d
 **Batch status:**
 - [x] Plan header + structure
 - [x] Batch 1 (Tasks 1–4): backlog reader, dataclasses, proposal I/O, attempted index
-- [ ] Batch 2 (Tasks 5–8): case file (sample, siblings, windowing, prompt rendering)
+- [x] Batch 2 (Tasks 5–8): case file (sample, siblings, windowing, prompt rendering)
 - [ ] Batch 3 (Tasks 9–14): six tools
 - [ ] Batch 4 (Tasks 15–17): mission assembly, metrics, runner
 - [ ] Batch 5 (Tasks 18–20): CLI, integration test, docs
@@ -1166,4 +1166,894 @@ git commit -m "feat(investigator): AttemptedIndex rebuildable idempotence cache"
 
 ---
 
-*(Batches 2–5 appended in subsequent commits to the plan file.)*
+## Task 5: `LocusExcerpt` + `CaseFile` dataclasses + happy-path `build_case_file`
+
+**Files:**
+- Create: `src/dazzle/fitness/investigator/case_file.py`
+- Test: `tests/unit/fitness/investigator/test_case_file.py` (new)
+
+This task covers the dataclasses and the first-pass builder: load sample, collect siblings (up to 5, simple sort order — diversity picker is Task 6), load locus file as `mode="full"` when small (windowing is Task 7).
+
+- [ ] **Step 1: Write the failing happy-path test**
+
+Create `tests/unit/fitness/investigator/test_case_file.py`:
+
+```python
+"""Tests for build_case_file and CaseFile dataclasses."""
+
+from datetime import datetime, UTC
+from pathlib import Path
+
+import pytest
+
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.investigator.case_file import (
+    BacklogReader,
+    CaseFile,
+    CaseFileBuildError,
+    CaseFileTraversalError,
+    LocusExcerpt,
+    build_case_file,
+)
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster
+
+
+def _finding(
+    fid: str,
+    *,
+    persona: str = "admin",
+    summary_observed: str = "aria-describedby missing",
+    evidence_text: str = "line 47: control has no describedby",
+) -> Finding:
+    return Finding(
+        id=fid,
+        created=datetime(2026, 4, 14, 12, 0, tzinfo=UTC),
+        run_id="run-1",
+        cycle=None,
+        axis="coverage",
+        locus="implementation",
+        severity="high",
+        persona=persona,
+        capability_ref="Ticket.create",
+        expected="error announced via aria-describedby",
+        observed=summary_observed,
+        evidence_embedded=EvidenceEmbedded(
+            expected_ledger_step={"step": 1, "description": "check aria"},
+            diff_summary=[],
+            transcript_excerpt=[{"kind": "observe", "text": evidence_text}],
+        ),
+        disambiguation=False,
+        low_confidence=False,
+        status="PROPOSED",
+        route="soft",
+        fix_commit=None,
+        alternative_fix=None,
+    )
+
+
+def _cluster(
+    locus: str = "src/dazzle_ui/templates/form.html",
+    sample_id: str = "f_001",
+    cluster_size: int = 3,
+) -> Cluster:
+    return Cluster(
+        cluster_id="CL-deadbeef",
+        locus=locus,
+        axis="coverage",
+        canonical_summary="aria-describedby missing",
+        persona="admin",
+        severity="high",
+        cluster_size=cluster_size,
+        first_seen=datetime(2026, 4, 14, 10, 0, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, 12, 0, tzinfo=UTC),
+        sample_id=sample_id,
+    )
+
+
+def test_build_case_file_happy_path(tmp_path: Path) -> None:
+    # Arrange: create a fake dazzle_root with a backlog and a small locus file
+    (tmp_path / "dev_docs").mkdir()
+    backlog_path = tmp_path / "dev_docs" / "fitness-backlog.md"
+    upsert_findings(
+        backlog_path,
+        [
+            _finding("f_001", summary_observed="describedby missing on control"),
+            _finding("f_002", persona="admin", summary_observed="describedby missing (variant 2)"),
+        ],
+    )
+
+    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir.mkdir(parents=True)
+    locus_file = locus_dir / "form.html"
+    locus_file.write_text(
+        "\n".join(f"<div>line {i}</div>" for i in range(1, 21))
+    )
+
+    # Act
+    case_file = build_case_file(_cluster(), tmp_path)
+
+    # Assert
+    assert case_file.cluster.cluster_id == "CL-deadbeef"
+    assert case_file.sample_finding.id == "f_001"
+    assert len(case_file.siblings) == 1
+    assert case_file.siblings[0].id == "f_002"
+    assert case_file.locus is not None
+    assert case_file.locus.mode == "full"
+    assert case_file.locus.total_lines == 20
+    assert case_file.dazzle_root == tmp_path
+
+
+def test_build_case_file_missing_sample(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    # Empty backlog
+    (tmp_path / "dev_docs" / "fitness-backlog.md").write_text("# empty\n")
+
+    with pytest.raises(CaseFileBuildError, match="sample"):
+        build_case_file(_cluster(), tmp_path)
+
+
+def test_build_case_file_missing_locus_file_is_not_error(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001")],
+    )
+    # Locus file does not exist on disk; builder must not raise
+    case_file = build_case_file(_cluster(locus="does/not/exist.html"), tmp_path)
+    assert case_file.locus is None
+
+
+def test_build_case_file_traversal_guard(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001")],
+    )
+    with pytest.raises(CaseFileTraversalError):
+        build_case_file(_cluster(locus="../../../etc/passwd"), tmp_path)
+
+
+def test_build_case_file_example_root_detection(tmp_path: Path) -> None:
+    """When locus starts with examples/<name>/, example_root is set."""
+    example_dir = tmp_path / "examples" / "support_tickets" / "dev_docs"
+    example_dir.mkdir(parents=True)
+    upsert_findings(
+        example_dir / "fitness-backlog.md",
+        [_finding("f_001")],
+    )
+    locus_file = tmp_path / "examples" / "support_tickets" / "dsl" / "entities" / "ticket.dsl"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("entity Ticket: id uuid pk\n")
+
+    case_file = build_case_file(
+        _cluster(locus="examples/support_tickets/dsl/entities/ticket.dsl"),
+        tmp_path,
+    )
+    assert case_file.example_root == tmp_path / "examples" / "support_tickets"
+    assert case_file.sample_finding.id == "f_001"
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.fitness.investigator.case_file'`
+
+- [ ] **Step 3: Implement `case_file.py`**
+
+Create `src/dazzle/fitness/investigator/case_file.py`:
+
+```python
+"""CaseFile — deterministic seed context for one investigator mission run.
+
+Given a Cluster and the repo root, build_case_file produces a CaseFile
+containing: the sample Finding, up to 5 siblings, and the locus file
+(full content if ≤ 500 lines, windowed otherwise). No LLM calls, no
+mutation — pure function.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, UTC
+from pathlib import Path
+from typing import Literal, Protocol
+
+from dazzle.fitness.backlog import read_backlog_findings
+from dazzle.fitness.models import Finding
+from dazzle.fitness.triage import Cluster, canonicalize_summary
+
+LOCUS_FULL_MAX_LINES = 500
+LOCUS_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+LOCUS_BINARY_SNIFF_BYTES = 1024
+SIBLING_LIMIT = 5
+
+
+class CaseFileBuildError(Exception):
+    """Raised when the case file cannot be built."""
+
+
+class CaseFileTraversalError(CaseFileBuildError):
+    """Raised specifically when cluster.locus escapes dazzle_root."""
+
+
+class BacklogReader(Protocol):
+    """Test seam — tests inject a fake to avoid writing real backlog files."""
+
+    def findings_in(self, path: Path) -> list[Finding]: ...
+
+
+class _DefaultBacklogReader:
+    def findings_in(self, path: Path) -> list[Finding]:
+        return read_backlog_findings(path)
+
+
+@dataclass(frozen=True)
+class LocusExcerpt:
+    file_path: str  # repo-relative
+    total_lines: int
+    mode: Literal["full", "windowed"]
+    chunks: tuple[tuple[int, int, str], ...]  # (start_line, end_line, text), 1-indexed inclusive
+
+
+@dataclass(frozen=True)
+class CaseFile:
+    cluster: Cluster
+    sample_finding: Finding
+    siblings: tuple[Finding, ...]
+    locus: LocusExcerpt | None
+    dazzle_root: Path
+    example_root: Path | None
+    built_at: datetime  # informational only, NOT used for determinism
+
+    def to_prompt_text(self) -> str:
+        """Render the case file as a single text block for the system prompt.
+
+        Full implementation added in Task 8.
+        """
+        return ""  # stub — overridden in Task 8
+
+
+def build_case_file(
+    cluster: Cluster,
+    dazzle_root: Path,
+    *,
+    backlog_reader: BacklogReader | None = None,
+) -> CaseFile:
+    """Deterministic case file builder. Pure function; no LLM, no mutation."""
+    reader = backlog_reader or _DefaultBacklogReader()
+    root_resolved = dazzle_root.resolve()
+
+    # 1. Resolve example root
+    example_root = _resolve_example_root(cluster.locus, dazzle_root)
+
+    # 2. Load the sample finding
+    sample, sample_source = _load_sample(cluster, dazzle_root, example_root, reader)
+    if sample is None:
+        raise CaseFileBuildError(
+            f"sample finding {cluster.sample_id!r} not in any backlog"
+        )
+
+    # 3. Load sibling candidates from the same backlog file
+    all_findings = reader.findings_in(sample_source)
+    siblings = _pick_siblings(cluster, sample, all_findings)
+
+    # 4. Load locus file (traversal-guarded)
+    locus = _load_locus(cluster.locus, dazzle_root, root_resolved, sample, siblings)
+
+    return CaseFile(
+        cluster=cluster,
+        sample_finding=sample,
+        siblings=tuple(siblings),
+        locus=locus,
+        dazzle_root=dazzle_root,
+        example_root=example_root,
+        built_at=datetime.now(UTC),
+    )
+
+
+def _resolve_example_root(locus: str, dazzle_root: Path) -> Path | None:
+    parts = locus.split("/", 2)
+    if len(parts) >= 2 and parts[0] == "examples":
+        return dazzle_root / "examples" / parts[1]
+    return None
+
+
+def _load_sample(
+    cluster: Cluster,
+    dazzle_root: Path,
+    example_root: Path | None,
+    reader: BacklogReader,
+) -> tuple[Finding | None, Path]:
+    """Try example-scoped backlog first, then repo-scoped. Returns (finding, source_path)."""
+    candidate_sources: list[Path] = []
+    if example_root is not None:
+        candidate_sources.append(example_root / "dev_docs" / "fitness-backlog.md")
+    candidate_sources.append(dazzle_root / "dev_docs" / "fitness-backlog.md")
+
+    for source in candidate_sources:
+        findings = reader.findings_in(source)
+        for f in findings:
+            if f.id == cluster.sample_id:
+                return f, source
+    # Return the first candidate source path even on miss so callers have
+    # something to report; the caller will raise anyway.
+    return None, candidate_sources[0]
+
+
+def _pick_siblings(
+    cluster: Cluster,
+    sample: Finding,
+    all_findings: list[Finding],
+) -> list[Finding]:
+    """Stable sort-order picker. Diversity scoring is added in Task 6."""
+    pool = [
+        f
+        for f in all_findings
+        if f.id != sample.id
+        and f.locus == cluster.locus
+        and f.axis == cluster.axis
+        and f.persona == cluster.persona
+        and canonicalize_summary(_summary_text(f)) == cluster.canonical_summary
+    ]
+    pool.sort(key=lambda f: (f.persona, f.id))
+    return pool[:SIBLING_LIMIT]
+
+
+def _summary_text(f: Finding) -> str:
+    """The finding's summary is derived from its observed text for clustering purposes."""
+    return f.observed
+
+
+def _load_locus(
+    locus_rel: str,
+    dazzle_root: Path,
+    root_resolved: Path,
+    sample: Finding,
+    siblings: list[Finding],
+) -> LocusExcerpt | None:
+    target = dazzle_root / locus_rel
+    try:
+        resolved = target.resolve()
+    except (OSError, RuntimeError):
+        return None
+
+    try:
+        resolved.relative_to(root_resolved)
+    except ValueError:
+        raise CaseFileTraversalError(
+            f"locus {locus_rel!r} escapes dazzle_root {dazzle_root}"
+        )
+
+    if not resolved.exists() or not resolved.is_file():
+        return None
+
+    try:
+        stat = resolved.stat()
+    except OSError:
+        return None
+    if stat.st_size >= LOCUS_MAX_BYTES:
+        return None
+
+    try:
+        head = resolved.read_bytes()[:LOCUS_BINARY_SNIFF_BYTES]
+    except OSError:
+        return None
+    if b"\x00" in head:
+        return None
+
+    try:
+        content = resolved.read_text()
+    except (OSError, UnicodeDecodeError):
+        return None
+
+    lines = content.splitlines()
+    total_lines = len(lines)
+
+    if total_lines <= LOCUS_FULL_MAX_LINES:
+        return LocusExcerpt(
+            file_path=locus_rel,
+            total_lines=total_lines,
+            mode="full",
+            chunks=((1, total_lines, content),),
+        )
+
+    # Windowed mode: Task 7 implements the chunk builder.
+    # For now, return a stub single-chunk with the first 200 lines.
+    head_text = "\n".join(lines[:200])
+    return LocusExcerpt(
+        file_path=locus_rel,
+        total_lines=total_lines,
+        mode="windowed",
+        chunks=((1, min(200, total_lines), head_text),),
+    )
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v`
+Expected: PASS (5 tests)
+
+- [ ] **Step 5: Type-check**
+
+Run: `mypy src/dazzle/fitness/investigator/case_file.py --ignore-missing-imports`
+Expected: clean
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/case_file.py tests/unit/fitness/investigator/test_case_file.py
+git commit -m "feat(investigator): CaseFile dataclasses + build_case_file happy path"
+```
+
+---
+
+## Task 6: Sibling diversity picker (Levenshtein-based)
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/case_file.py` (`_pick_siblings`)
+- Test: `tests/unit/fitness/investigator/test_case_file.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_case_file.py`:
+
+```python
+def test_sibling_picker_prefers_diverse_observed_text(tmp_path: Path) -> None:
+    """Given 6 siblings with 3 identical observed texts and 3 distinct,
+    the picker should return the 3 distinct first (after the initial sort-order pick)."""
+    (tmp_path / "dev_docs").mkdir()
+    findings = [
+        _finding("f_000", summary_observed="describedby missing"),
+        _finding("f_001", summary_observed="describedby missing"),  # dup of f_000
+        _finding("f_002", summary_observed="describedby missing"),  # dup of f_000
+        _finding("f_003", summary_observed="describedby absent from form control"),  # distinct
+        _finding("f_004", summary_observed="no describedby wiring to error paragraph"),  # distinct
+        _finding("f_005", summary_observed="error rendered as div role alert no describedby"),  # distinct
+    ]
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
+
+    cluster = _cluster(cluster_size=6, sample_id="f_000")
+    # Override the cluster's canonical_summary to match the raw observed texts.
+    # (In real usage the canonicalizer handles this; tests may need a fake if
+    # the real canonicalizer doesn't merge these — adjust accordingly in impl.)
+    case_file = build_case_file(cluster, tmp_path)
+
+    # sample is f_000; siblings picked from f_001..f_005
+    # After sort-order baseline, diversity picker should prefer distinct observed
+    sibling_ids = [s.id for s in case_file.siblings]
+    assert "f_003" in sibling_ids or "f_004" in sibling_ids or "f_005" in sibling_ids
+    # And should NOT return only the duplicates
+    assert set(sibling_ids) != {"f_001", "f_002"}
+```
+
+Note: the diversity picker only kicks in when sample-id-order would pick duplicates. The assertion is deliberately loose — we're checking the picker reached diversity, not the exact permutation. This keeps the test robust to minor algorithm tweaks.
+
+- [ ] **Step 2: Run test to verify it fails (or, more likely, passes trivially since canonicalize_summary collapses the variants)**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py::test_sibling_picker_prefers_diverse_observed_text -v`
+
+The existing implementation's `canonicalize_summary` merges observed texts into the cluster — if all 6 test findings canonicalize to the same summary, the pool will be all 5 siblings and the sort-order pick will deterministically return f_001..f_005 (the distinct ones are at the end). That's already correct. If the test *passes* without modification, the diversity picker may not be needed — but implement it anyway for robustness on real data where texts have minor whitespace differences that survive canonicalization.
+
+- [ ] **Step 3: Implement the Levenshtein picker**
+
+Replace the `_pick_siblings` function in `src/dazzle/fitness/investigator/case_file.py`:
+
+```python
+def _pick_siblings(
+    cluster: Cluster,
+    sample: Finding,
+    all_findings: list[Finding],
+) -> list[Finding]:
+    """Pick up to SIBLING_LIMIT siblings, preferring evidence-text diversity.
+
+    Algorithm:
+      1. Filter the pool to findings in the same cluster.
+      2. Stable-sort by (persona, id) — baseline order.
+      3. Pick the first as the seed.
+      4. For each subsequent pick: score each remaining candidate by its
+         minimum Levenshtein distance from any already-picked sibling's
+         observed text. Pick the candidate with the highest minimum distance
+         (most different from everything already picked). Ties break by
+         baseline sort order.
+    """
+    pool = [
+        f
+        for f in all_findings
+        if f.id != sample.id
+        and f.locus == cluster.locus
+        and f.axis == cluster.axis
+        and f.persona == cluster.persona
+        and canonicalize_summary(_summary_text(f)) == cluster.canonical_summary
+    ]
+    pool.sort(key=lambda f: (f.persona, f.id))
+    if len(pool) <= SIBLING_LIMIT:
+        return pool
+
+    picked: list[Finding] = [pool[0]]
+    remaining = pool[1:]
+    while len(picked) < SIBLING_LIMIT and remaining:
+        def min_distance(candidate: Finding) -> int:
+            return min(_levenshtein(candidate.observed, p.observed) for p in picked)
+
+        remaining.sort(key=lambda f: (-min_distance(f), (f.persona, f.id)))
+        picked.append(remaining.pop(0))
+    return picked
+
+
+def _levenshtein(a: str, b: str) -> int:
+    """Classic Wagner-Fischer edit distance. O(len(a)*len(b)) time and memory."""
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        curr = [i] + [0] * len(b)
+        for j, cb in enumerate(b, start=1):
+            cost = 0 if ca == cb else 1
+            curr[j] = min(
+                curr[j - 1] + 1,       # insertion
+                prev[j] + 1,           # deletion
+                prev[j - 1] + cost,    # substitution
+            )
+        prev = curr
+    return prev[-1]
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v`
+Expected: PASS (all case_file tests, including existing ones)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/case_file.py tests/unit/fitness/investigator/test_case_file.py
+git commit -m "feat(investigator): sibling diversity picker via Levenshtein distance"
+```
+
+---
+
+## Task 7: Locus windowing (evidence line numbers → ±20 windows)
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/case_file.py` (`_load_locus`)
+- Test: `tests/unit/fitness/investigator/test_case_file.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_case_file.py`:
+
+```python
+def test_locus_windowing_large_file_with_evidence_lines(tmp_path: Path) -> None:
+    """A large file (>500 lines) produces a windowed excerpt containing the
+    first 200 lines plus ±20 windows around evidence-referenced line numbers."""
+    (tmp_path / "dev_docs").mkdir()
+    # Evidence references line 750 — windowing should include ~730..770
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="form.html:750 — missing describedby")],
+    )
+
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    cluster = _cluster(locus="src/ui/large.html")
+    case_file = build_case_file(cluster, tmp_path)
+
+    assert case_file.locus is not None
+    assert case_file.locus.mode == "windowed"
+    assert case_file.locus.total_lines == 1000
+
+    # First chunk is the head
+    head_chunk = case_file.locus.chunks[0]
+    assert head_chunk[0] == 1
+    assert head_chunk[1] == 200
+
+    # Second chunk should cover ~730..770 (±20 around 750)
+    window_chunks = [c for c in case_file.locus.chunks if c[0] > 200]
+    assert window_chunks, "expected at least one evidence window beyond the head"
+    assert any(c[0] <= 750 <= c[1] for c in window_chunks)
+
+
+def test_locus_windowing_merges_overlapping_windows(tmp_path: Path) -> None:
+    """Two evidence line numbers within ±20 of each other should merge into one chunk."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [
+            _finding("f_001", evidence_text="form.html:750 here"),
+            _finding("f_002", evidence_text="form.html:755 and here", summary_observed="describedby missing"),
+        ],
+    )
+
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    case_file = build_case_file(_cluster(locus="src/ui/large.html"), tmp_path)
+    assert case_file.locus is not None
+
+    # Exactly one merged chunk covering both 750 and 755 (plus head chunk = 2 total)
+    windows = [c for c in case_file.locus.chunks if c[0] > 200]
+    assert len(windows) == 1
+    assert windows[0][0] <= 750 <= windows[0][1]
+    assert windows[0][0] <= 755 <= windows[0][1]
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v -k windowing`
+Expected: FAIL — the stub windowing returns only a single head chunk.
+
+- [ ] **Step 3: Implement windowing**
+
+At the top of `src/dazzle/fitness/investigator/case_file.py`, add:
+
+```python
+import re
+
+_EVIDENCE_LINE_RE = re.compile(r"(?:line\s+|:)(\d+)")
+LOCUS_HEAD_LINES = 200
+LOCUS_WINDOW_RADIUS = 20
+```
+
+Replace the end of `_load_locus` (the "windowed mode" block at the bottom of the function) with:
+
+```python
+    # Windowed mode: head + ±20 windows around evidence-referenced line numbers.
+    lines = content.splitlines()  # re-split for safety
+    head_end = min(LOCUS_HEAD_LINES, total_lines)
+    head_chunk = (1, head_end, "\n".join(lines[:head_end]))
+
+    evidence_lines = _extract_evidence_lines(sample, siblings)
+    raw_windows: list[tuple[int, int]] = []
+    for line_no in evidence_lines:
+        if line_no < 1 or line_no > total_lines:
+            continue
+        start = max(1, line_no - LOCUS_WINDOW_RADIUS)
+        end = min(total_lines, line_no + LOCUS_WINDOW_RADIUS)
+        raw_windows.append((start, end))
+
+    merged = _merge_and_trim_windows(raw_windows, exclude_upto=head_end)
+
+    chunks: list[tuple[int, int, str]] = [head_chunk]
+    for start, end in merged:
+        chunk_text = "\n".join(lines[start - 1 : end])
+        chunks.append((start, end, chunk_text))
+
+    return LocusExcerpt(
+        file_path=locus_rel,
+        total_lines=total_lines,
+        mode="windowed",
+        chunks=tuple(chunks),
+    )
+```
+
+And add the helper functions at the bottom of the file:
+
+```python
+def _extract_evidence_lines(sample: Finding, siblings: list[Finding]) -> list[int]:
+    """Pull line numbers out of evidence_embedded transcript excerpts.
+
+    Matches patterns like 'line 47' and 'form.html:47'. Returns sorted unique ints.
+    """
+    seen: set[int] = set()
+    for finding in [sample, *siblings]:
+        for step in finding.evidence_embedded.transcript_excerpt:
+            for value in step.values() if isinstance(step, dict) else []:
+                if isinstance(value, str):
+                    for match in _EVIDENCE_LINE_RE.finditer(value):
+                        try:
+                            seen.add(int(match.group(1)))
+                        except ValueError:
+                            continue
+    return sorted(seen)
+
+
+def _merge_and_trim_windows(
+    raw: list[tuple[int, int]],
+    *,
+    exclude_upto: int,
+) -> list[tuple[int, int]]:
+    """Sort, clip to >exclude_upto, merge overlapping/adjacent windows."""
+    # Trim to lines strictly after the head chunk
+    trimmed = [(max(start, exclude_upto + 1), end) for start, end in raw if end > exclude_upto]
+    trimmed = [(s, e) for s, e in trimmed if s <= e]
+    if not trimmed:
+        return []
+    trimmed.sort()
+
+    merged: list[tuple[int, int]] = [trimmed[0]]
+    for start, end in trimmed[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v`
+Expected: PASS (all case_file tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/case_file.py tests/unit/fitness/investigator/test_case_file.py
+git commit -m "feat(investigator): locus windowing for large files"
+```
+
+---
+
+## Task 8: `CaseFile.to_prompt_text`
+
+**Files:**
+- Modify: `src/dazzle/fitness/investigator/case_file.py` (`CaseFile.to_prompt_text`)
+- Test: `tests/unit/fitness/investigator/test_case_file.py` (extend)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/unit/fitness/investigator/test_case_file.py`:
+
+```python
+def test_to_prompt_text_structure(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", summary_observed="describedby missing on control")],
+    )
+    locus_dir = tmp_path / "src" / "ui"
+    locus_dir.mkdir(parents=True)
+    (locus_dir / "form.html").write_text("<div>hello</div>\n<div>world</div>\n")
+
+    case_file = build_case_file(_cluster(locus="src/ui/form.html"), tmp_path)
+    text = case_file.to_prompt_text()
+
+    # Section headers
+    assert "# Case File" in text
+    assert "## Cluster" in text
+    assert "## Sample Finding" in text
+    assert "## Locus File" in text
+
+    # Cluster fields
+    assert "CL-deadbeef" in text
+    assert "src/ui/form.html" in text
+    assert "persona: admin" in text
+    assert "severity: high" in text
+
+    # Sample finding shape
+    assert "f_001" in text
+    assert "describedby missing on control" in text
+
+    # Locus content with line-number prefixes
+    assert "  1: <div>hello</div>" in text
+    assert "  2: <div>world</div>" in text
+
+
+def test_to_prompt_text_locus_none_shows_note(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001")],
+    )
+    # Missing locus file
+    case_file = build_case_file(_cluster(locus="does/not/exist.html"), tmp_path)
+    text = case_file.to_prompt_text()
+    assert "Locus File" in text
+    assert "file not found" in text or "not available" in text
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v -k to_prompt_text`
+Expected: FAIL — `to_prompt_text` returns empty string stub.
+
+- [ ] **Step 3: Implement `to_prompt_text`**
+
+Replace the `to_prompt_text` method on `CaseFile` in `src/dazzle/fitness/investigator/case_file.py`:
+
+```python
+    def to_prompt_text(self) -> str:
+        lines: list[str] = ["# Case File", ""]
+
+        # Cluster section
+        lines += [
+            "## Cluster",
+            f"id: {self.cluster.cluster_id}",
+            f"locus: {self.cluster.locus}",
+            f"axis: {self.cluster.axis}",
+            f"severity: {self.cluster.severity}",
+            f"persona: {self.cluster.persona}",
+            f"summary: \"{self.cluster.canonical_summary}\"",
+            f"size: {self.cluster.cluster_size} findings",
+            f"first_seen: {self.cluster.first_seen.isoformat()}",
+            f"last_seen: {self.cluster.last_seen.isoformat()}",
+            "",
+        ]
+
+        # Sample finding section
+        lines += _render_finding_block(self.sample_finding, title_prefix="## Sample Finding")
+        lines.append("")
+
+        # Sibling findings section
+        lines.append(f"## Sibling Findings ({len(self.siblings)} shown; cluster_size={self.cluster.cluster_size})")
+        lines.append("")
+        for sibling in self.siblings:
+            lines += _render_finding_block(sibling, title_prefix="###")
+            lines.append("")
+
+        # Locus section
+        if self.locus is None:
+            lines += [
+                f"## Locus File: {self.cluster.locus} (file not found / not available)",
+                "",
+            ]
+        else:
+            lines += [
+                f"## Locus File: {self.locus.file_path} ({self.locus.total_lines} lines, mode={self.locus.mode})",
+                "",
+            ]
+            prev_end = 0
+            for start, end, text in self.locus.chunks:
+                if prev_end and start > prev_end + 1:
+                    lines.append(f"... (lines {prev_end + 1}..{start - 1} omitted)")
+                    lines.append("")
+                for offset, line_text in enumerate(text.splitlines(), start=start):
+                    lines.append(f"  {offset}: {line_text}")
+                prev_end = end
+                lines.append("")
+
+        return "\n".join(lines).rstrip() + "\n"
+
+
+def _render_finding_block(finding: Finding, *, title_prefix: str) -> list[str]:
+    """Render one finding as prompt lines."""
+    title = (
+        f"{title_prefix} ({finding.id})"
+        if title_prefix.startswith("##")
+        else f"{title_prefix} {finding.id} (persona={finding.persona})"
+    )
+    evidence = _render_evidence(finding)
+    return [
+        title,
+        f"created: {finding.created.isoformat()}",
+        f"expected: \"{finding.expected}\"",
+        f"observed: \"{finding.observed}\"",
+        "evidence:",
+        f"  {evidence}",
+    ]
+
+
+def _render_evidence(finding: Finding) -> str:
+    """Flatten the evidence transcript excerpt into a short multi-line string."""
+    parts: list[str] = []
+    for step in finding.evidence_embedded.transcript_excerpt:
+        if isinstance(step, dict):
+            for k, v in step.items():
+                if isinstance(v, str) and v:
+                    parts.append(f"{k}: {v}")
+    return "\n  ".join(parts) if parts else "(no evidence)"
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_case_file.py -v`
+Expected: PASS (all case_file tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/case_file.py tests/unit/fitness/investigator/test_case_file.py
+git commit -m "feat(investigator): CaseFile.to_prompt_text renderer"
+```
+
+---
+
+*(Batches 3–5 continue below, appended in subsequent edits.)*
