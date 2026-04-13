@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.agent.missions._shared import parse_component_contract
 from dazzle.fitness.adversary import synthesize_from_stories
 from dazzle.fitness.backlog import upsert_findings
 from dazzle.fitness.budget import BudgetController, CycleProfile
@@ -32,6 +33,7 @@ from dazzle.fitness.independence import measure_independence
 from dazzle.fitness.ledger import SnapshotSource
 from dazzle.fitness.ledger_snapshot import SnapshotLedger
 from dazzle.fitness.maturity import read_maturity
+from dazzle.fitness.missions.contract_walk import walk_contract
 from dazzle.fitness.models import Finding
 from dazzle.fitness.progress_evaluator import evaluate_progress
 from dazzle.fitness.proxy import run_proxy_mission
@@ -75,6 +77,8 @@ class FitnessEngine:
         executor: Any,
         snapshot_source: SnapshotSource,
         llm: _LlmClient,
+        contract_paths: list[Path] | None = None,
+        contract_observer: Any = None,
     ) -> None:
         self._project_root = project_root
         self._config = config
@@ -84,6 +88,8 @@ class FitnessEngine:
         self._executor = executor
         self._source = snapshot_source
         self._llm = llm
+        self._contract_paths = contract_paths or []
+        self._contract_observer = contract_observer
 
     async def run(self) -> FitnessRunResult:
         run_id = str(uuid.uuid4())
@@ -98,12 +104,27 @@ class FitnessEngine:
         ledger = SnapshotLedger(source=self._source, repr_fields=repr_map)
         ledger.open(run_id)
 
-        # Pass 1 — deterministic story walks.
+        # Pass 1 — deterministic story walks + contract walks.
         pass1_results: list[Any] = []
         if profile.run_pass1:
             for story in getattr(self._app, "stories", []):
                 result = await walk_story(story=story, executor=self._executor, ledger=ledger)
                 pass1_results.append(result)
+
+            if self._contract_paths:
+                if self._contract_observer is None:
+                    raise ValueError(
+                        "FitnessEngine: contract_paths is set but contract_observer "
+                        "is None — the contract walker cannot record observations"
+                    )
+                for contract_path in self._contract_paths:
+                    contract = parse_component_contract(contract_path)
+                    contract_result = await walk_contract(
+                        contract=contract,
+                        observer=self._contract_observer,
+                        ledger=ledger,
+                    )
+                    pass1_results.append(contract_result)
 
         findings: list[Finding] = []
         jaccard = 0.0
