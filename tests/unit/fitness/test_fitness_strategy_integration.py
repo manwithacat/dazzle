@@ -568,3 +568,106 @@ async def test_build_engine_normalizes_anchor_without_leading_slash(
 
     # Even though the contract wrote "login" without a leading slash, the URL is well-formed
     fake_bundle.page.goto.assert_awaited_once_with("http://localhost:3000/login")
+
+
+@pytest.mark.asyncio
+async def test_login_as_persona_happy_path() -> None:
+    """_login_as_persona calls POST /qa/magic-link then navigates /auth/magic/{token}."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    fake_response = MagicMock()
+    fake_response.ok = True
+    fake_response.status = 200
+    fake_response.json = AsyncMock(return_value={"token": "abc123"})
+
+    fake_request = MagicMock()
+    fake_request.post = AsyncMock(return_value=fake_response)
+
+    fake_page = MagicMock()
+    fake_page.request = fake_request
+    fake_page.goto = AsyncMock()
+    fake_page.url = "http://localhost:3000/"  # after-login state
+
+    await fitness_strategy._login_as_persona(
+        page=fake_page,
+        persona_id="admin",
+        api_url="http://localhost:8000",
+    )
+
+    fake_request.post.assert_awaited_once_with(
+        "http://localhost:8000/qa/magic-link",
+        data={"persona_id": "admin"},
+    )
+    fake_page.goto.assert_awaited_once_with("http://localhost:8000/auth/magic/abc123?next=/")
+
+
+@pytest.mark.asyncio
+async def test_login_as_persona_raises_when_qa_mode_disabled() -> None:
+    """If POST /qa/magic-link returns 404, raise with 'QA mode not enabled'."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    fake_response = MagicMock()
+    fake_response.ok = False
+    fake_response.status = 404
+
+    fake_request = MagicMock()
+    fake_request.post = AsyncMock(return_value=fake_response)
+
+    fake_page = MagicMock()
+    fake_page.request = fake_request
+
+    with pytest.raises(RuntimeError, match="QA mode not enabled"):
+        await fitness_strategy._login_as_persona(
+            page=fake_page,
+            persona_id="admin",
+            api_url="http://localhost:8000",
+        )
+
+
+@pytest.mark.asyncio
+async def test_login_as_persona_raises_when_magic_link_generation_fails() -> None:
+    """If POST /qa/magic-link returns another 4xx/5xx, raise with the status code."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    fake_response = MagicMock()
+    fake_response.ok = False
+    fake_response.status = 500
+
+    fake_request = MagicMock()
+    fake_request.post = AsyncMock(return_value=fake_response)
+
+    fake_page = MagicMock()
+    fake_page.request = fake_request
+
+    with pytest.raises(RuntimeError, match="magic-link generation failed: HTTP 500"):
+        await fitness_strategy._login_as_persona(
+            page=fake_page,
+            persona_id="admin",
+            api_url="http://localhost:8000",
+        )
+
+
+@pytest.mark.asyncio
+async def test_login_as_persona_raises_when_token_rejected() -> None:
+    """If after goto the page URL contains '/login', the token was rejected."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    fake_response = MagicMock()
+    fake_response.ok = True
+    fake_response.status = 200
+    fake_response.json = AsyncMock(return_value={"token": "expired"})
+
+    fake_request = MagicMock()
+    fake_request.post = AsyncMock(return_value=fake_response)
+
+    fake_page = MagicMock()
+    fake_page.request = fake_request
+    fake_page.goto = AsyncMock()
+    fake_page.url = "http://localhost:3000/login?error=token_expired"
+
+    with pytest.raises(RuntimeError, match="persona login rejected"):
+        await fitness_strategy._login_as_persona(
+            page=fake_page,
+            persona_id="admin",
+            api_url="http://localhost:8000",
+        )

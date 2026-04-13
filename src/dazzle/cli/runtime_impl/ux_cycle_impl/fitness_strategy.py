@@ -112,6 +112,52 @@ def _stop_example_app(handle: AppConnection) -> None:
     handle.stop()
 
 
+async def _login_as_persona(page: Any, persona_id: str, api_url: str) -> None:
+    """Log a Playwright page in as a DSL persona via QA mode's magic-link flow.
+
+    Two-step flow from issue #768:
+        1. ``POST {api_url}/qa/magic-link`` with ``{"persona_id": persona_id}`` —
+           gated by DAZZLE_ENV=development + DAZZLE_QA_MODE=1 on the example
+           subprocess. Returns a single-use token.
+        2. ``GET {api_url}/auth/magic/{token}?next=/`` — validates token,
+           creates session cookie, redirects to ``next``.
+
+    Raises:
+        RuntimeError: if any step fails. Distinguishing messages let the
+            strategy loop record BLOCKED outcomes with useful context:
+            - "QA mode not enabled" (404 on generator)
+            - "magic-link generation failed: HTTP {status}" (other non-2xx)
+            - "persona login rejected: magic-link consumer did not create a session"
+              (final page URL still contains /login)
+    """
+    generator_url = f"{api_url}/qa/magic-link"
+    response = await page.request.post(
+        generator_url,
+        data={"persona_id": persona_id},
+    )
+    if not response.ok:
+        if response.status == 404:
+            raise RuntimeError(
+                f"QA mode not enabled: magic-link endpoint returned 404 at {generator_url}"
+            )
+        raise RuntimeError(
+            f"magic-link generation failed: HTTP {response.status} at {generator_url}"
+        )
+
+    token_payload = await response.json()
+    token = token_payload["token"]
+
+    consumer_url = f"{api_url}/auth/magic/{token}?next=/"
+    await page.goto(consumer_url)
+
+    # Detect token rejection: consumer redirects to /login on failure.
+    if "/login" in page.url:
+        raise RuntimeError(
+            f"persona login rejected: magic-link consumer did not create a session "
+            f"for persona {persona_id!r} (final URL: {page.url})"
+        )
+
+
 @dataclass
 class _PlaywrightBundle:
     """Playwright resources owned by the strategy for one fitness cycle."""
