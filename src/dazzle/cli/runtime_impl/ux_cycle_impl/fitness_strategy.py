@@ -40,7 +40,11 @@ class StrategyOutcome:
     findings_count: int
 
 
-async def run_fitness_strategy(example_app: str, project_root: Path) -> StrategyOutcome:
+async def run_fitness_strategy(
+    example_app: str,
+    project_root: Path,
+    component_contract_path: Path | None = None,
+) -> StrategyOutcome:
     """Run one fitness cycle against ``example_app`` and return a summary.
 
     Owns the example-app subprocess lifecycle via try/finally, so teardown
@@ -49,7 +53,11 @@ async def run_fitness_strategy(example_app: str, project_root: Path) -> Strategy
     example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
     handle = await _launch_example_app(example_root=example_root)
     try:
-        engine = await _build_engine(example_root=example_root, handle=handle)
+        engine = await _build_engine(
+            example_root=example_root,
+            handle=handle,
+            component_contract_path=component_contract_path,
+        )
         result = await engine.run()
     finally:
         _stop_example_app(handle)
@@ -139,7 +147,25 @@ class _EngineProxy:
             await self._bundle.close()
 
 
-async def _build_engine(example_root: Path, handle: Any) -> Any:
+class _ContractObserver:
+    """Adapts a Playwright page to the fitness contract walker's _ObserverLike protocol.
+
+    v1.0.2 observes whatever the page currently shows (no navigation). A
+    future version will navigate to a contract-declared anchor URL.
+    """
+
+    def __init__(self, page: Any) -> None:
+        self._page = page
+
+    async def snapshot(self) -> str:
+        return await self._page.content()
+
+
+async def _build_engine(
+    example_root: Path,
+    handle: Any,
+    component_contract_path: Path | None = None,
+) -> Any:
     """Construct a ``FitnessEngine`` for the given example app.
 
     Reads ``DATABASE_URL`` from env to wire the snapshot source. Returns an
@@ -167,6 +193,9 @@ async def _build_engine(example_root: Path, handle: Any) -> Any:
             executor=PlaywrightExecutor(page=bundle.page),
         )
 
+        contract_paths: list[Path] = [component_contract_path] if component_contract_path else []
+        contract_observer = _ContractObserver(page=bundle.page) if component_contract_path else None
+
         engine = FitnessEngine(
             project_root=example_root,
             config=config,
@@ -176,6 +205,8 @@ async def _build_engine(example_root: Path, handle: Any) -> Any:
             executor=PlaywrightExecutor(page=bundle.page),
             snapshot_source=snapshot_source,
             llm=llm,
+            contract_paths=contract_paths,
+            contract_observer=contract_observer,
         )
     except BaseException:
         await bundle.close()

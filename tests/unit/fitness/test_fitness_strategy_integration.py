@@ -313,3 +313,104 @@ async def test_build_engine_closes_bundle_when_engine_constructor_raises(
         await fitness_strategy._build_engine(example_root=example_root, handle=handle)
 
     fake_bundle.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_engine_passes_contract_path_to_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_build_engine` with a contract_path constructs FitnessEngine with contract_paths set."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    contract_path = tmp_path / "auth-page.md"
+    contract_path.write_text("# auth-page\n\n## Quality Gates\n\n1. Card centered\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str):
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+        ) as mock_engine_cls,
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            component_contract_path=contract_path,
+        )
+
+    # FitnessEngine was called with contract_paths=[contract_path] and a contract_observer
+    mock_engine_cls.assert_called_once()
+    call_kwargs = mock_engine_cls.call_args.kwargs
+    assert call_kwargs["contract_paths"] == [contract_path]
+    assert call_kwargs["contract_observer"] is not None
+
+
+@pytest.mark.asyncio
+async def test_run_fitness_strategy_threads_contract_path(
+    tmp_path: Path,
+) -> None:
+    """run_fitness_strategy forwards component_contract_path to _build_engine."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_engine = MagicMock()
+    fake_engine.run = AsyncMock(
+        return_value=MagicMock(
+            findings=[],
+            profile=MagicMock(degraded=False),
+            independence_jaccard=0.0,
+            run_metadata={"run_id": "r2"},
+        )
+    )
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    contract_path = tmp_path / "auth-page.md"
+    contract_path.write_text("# auth-page\n\n## Quality Gates\n\n1. gate\n")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
+            new=AsyncMock(return_value=fake_engine),
+        ) as mock_build,
+    ):
+        await run_fitness_strategy(
+            example_app="support_tickets",
+            project_root=tmp_path,
+            component_contract_path=contract_path,
+        )
+
+    mock_build.assert_awaited_once()
+    build_kwargs = mock_build.call_args.kwargs
+    assert build_kwargs["component_contract_path"] == contract_path
