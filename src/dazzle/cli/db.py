@@ -652,3 +652,87 @@ def cleanup_command(
         f"\n[green]Cleanup complete: {result['total_deleted']} orphans removed "
         f"in {result['iterations']} iteration(s).[/green]"
     )
+
+
+@db_app.command(name="snapshot")
+def db_snapshot_command(
+    name: str = typer.Argument("baseline", help="Snapshot label (default: baseline)"),
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+) -> None:
+    """Capture a pg_dump of the project database to a .sql.gz file.
+
+    Writes `<project>/.dazzle/baselines/<name>.sql.gz`. For named snapshots
+    other than 'baseline', the file is used verbatim. For 'baseline', the
+    filename is hash-tagged with the Alembic revision and fixture SHA.
+    """
+    import os
+
+    from dazzle.e2e.baseline import BaselineManager
+    from dazzle.e2e.snapshot import Snapshotter
+
+    url = database_url or os.environ.get("DATABASE_URL", "")
+    if not url:
+        typer.echo("DATABASE_URL not set. Export it or pass --database-url.", err=True)
+        raise typer.Exit(code=2)
+
+    if name == "baseline":
+        mgr = BaselineManager(project, url)
+        path = mgr.ensure(fresh=True)
+        typer.echo(f"[db snapshot] wrote baseline → {path}")
+    else:
+        snap = Snapshotter()
+        dest = project / ".dazzle" / "baselines" / f"{name}.sql.gz"
+        snap.capture(url, dest)
+        typer.echo(f"[db snapshot] wrote {name} → {dest}")
+
+
+@db_app.command(name="restore")
+def db_restore_command(
+    name: str = typer.Argument("baseline", help="Snapshot label to restore"),
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+) -> None:
+    """Restore a snapshot into the project database via pg_restore --clean."""
+    import os
+
+    from dazzle.e2e.baseline import BaselineManager
+    from dazzle.e2e.snapshot import Snapshotter
+
+    url = database_url or os.environ.get("DATABASE_URL", "")
+    if not url:
+        typer.echo("DATABASE_URL not set. Export it or pass --database-url.", err=True)
+        raise typer.Exit(code=2)
+
+    if name == "baseline":
+        mgr = BaselineManager(project, url)
+        path = mgr.restore()
+        typer.echo(f"[db restore] restored baseline from {path}")
+    else:
+        snap = Snapshotter()
+        src = project / ".dazzle" / "baselines" / f"{name}.sql.gz"
+        if not src.exists():
+            typer.echo(f"Snapshot not found: {src}", err=True)
+            raise typer.Exit(code=2)
+        snap.restore(src, url)
+        typer.echo(f"[db restore] restored {name} from {src}")
+
+
+@db_app.command(name="snapshot-gc")
+def db_snapshot_gc_command(
+    keep: int = typer.Option(3, "--keep", help="Number of newest snapshots to retain"),
+    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+) -> None:
+    """Delete old baseline snapshot files, keeping the newest `keep`."""
+    import os
+
+    from dazzle.e2e.baseline import BaselineManager
+
+    url = os.environ.get("DATABASE_URL", "postgresql://localhost/unused")
+    mgr = BaselineManager(project, url)
+    deleted = mgr.gc(keep=keep)
+    if not deleted:
+        typer.echo(f"[db snapshot-gc] nothing to delete (kept newest {keep})")
+        return
+    for p in deleted:
+        typer.echo(f"[db snapshot-gc] deleted {p.name}")
