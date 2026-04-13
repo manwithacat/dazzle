@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T04:28Z — Cycle 44 — EXPLORE deferred (repeat)
+
+Same structural no-op as Cycle 43 — every backlog row is `READY_FOR_QA`, OBSERVE matches none, EXPLORE requires the running-app infrastructure that hasn't shipped yet. Counter bumped 2 → 3 (cap 30). See Cycle 43 for the full reasoning. The next cycle will repeat this until either the v1.0.1 fitness wiring is exercised against a running app or the explore counter hits 30.
+
+---
+
 ## 2026-04-13T04:18Z — Cycle 43 — EXPLORE deferred (no-op)
 
 **OBSERVE:** No row matches the priority rules. Every backlog row is `READY_FOR_QA` — no REGRESSION, no `PENDING + contract MISSING`, no `PENDING + contract DRAFT`, no `DONE + qa: PENDING`, no `VERIFIED`. UX-036 (the seven-cycle adopter series that landed in Cycles 33 + 37–42) just transitioned from `IN_PROGRESS`/`PARTIAL` to `READY_FOR_QA`/`DONE`, so it joins the rest of the backlog in the awaiting-Phase-B-QA queue.
