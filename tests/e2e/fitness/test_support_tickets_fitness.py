@@ -12,11 +12,25 @@ the default ``pytest tests/ -m "not e2e"`` run.
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 import pytest
 
 pytestmark = pytest.mark.e2e
+
+
+def _require_database_url() -> None:
+    if not os.environ.get("DATABASE_URL"):
+        pytest.skip("DATABASE_URL not set — required for PgSnapshotSource")
+
+
+def _example_root() -> Path:
+    dazzle_root = Path(__file__).parents[3]
+    example_root = dazzle_root / "examples" / "support_tickets"
+    if not example_root.exists():
+        pytest.skip(f"missing example dir: {example_root}")
+    return example_root
 
 
 @pytest.mark.asyncio
@@ -29,18 +43,22 @@ async def test_support_tickets_fitness_cycle_completes() -> None:
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.e2e.modes import get_mode
+    from dazzle.e2e.runner import ModeRunner
 
-    if not os.environ.get("DATABASE_URL"):
-        pytest.skip("DATABASE_URL not set — required for PgSnapshotSource")
+    _require_database_url()
+    example_root = _example_root()
 
-    dazzle_root = Path(__file__).parents[3]
-    example_root = dazzle_root / "examples" / "support_tickets"
-    assert example_root.exists(), f"missing example dir: {example_root}"
-
-    outcome = await run_fitness_strategy(
-        example_app="support_tickets",
-        project_root=dazzle_root,
-    )
+    async with ModeRunner(
+        mode_spec=get_mode("a"),
+        project_root=example_root,
+        personas=None,
+        db_policy="preserve",
+    ) as conn:
+        outcome = await run_fitness_strategy(
+            conn,
+            example_root=example_root,
+        )
 
     assert outcome.strategy == "FITNESS"
     assert "fitness run" in outcome.summary
@@ -64,27 +82,28 @@ async def test_support_tickets_multi_persona_cycle_completes() -> None:
     """Multi-persona fitness cycle against support_tickets returns an aggregated outcome.
 
     Assertions are intentionally loose — the point is that the multi-persona
-    loop runs end-to-end without crashing. Coverage assertions live in unit
-    tests.
+    loop runs end-to-end without crashing.
     """
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
+    from dazzle.e2e.modes import get_mode
+    from dazzle.e2e.runner import ModeRunner
 
-    if not os.environ.get("DATABASE_URL"):
-        pytest.skip("DATABASE_URL not set — required for PgSnapshotSource")
+    _require_database_url()
+    example_root = _example_root()
 
-    dazzle_root = Path(__file__).parents[3]
-    example_root = dazzle_root / "examples" / "support_tickets"
-    assert example_root.exists(), f"missing example dir: {example_root}"
-
-    # NOTE: persona IDs here must match the DSL personas declared in
-    # examples/support_tickets/dsl/app.dsl. If the DSL changes, update this list.
-    outcome = await run_fitness_strategy(
-        example_app="support_tickets",
-        project_root=dazzle_root,
+    async with ModeRunner(
+        mode_spec=get_mode("a"),
+        project_root=example_root,
         personas=["admin", "customer", "agent", "manager"],
-    )
+        db_policy="preserve",
+    ) as conn:
+        outcome = await run_fitness_strategy(
+            conn,
+            example_root=example_root,
+            personas=["admin", "customer", "agent", "manager"],
+        )
 
     assert outcome.strategy == "FITNESS"
     # Multi-persona summary format is bracketed and contains all persona IDs
@@ -96,3 +115,43 @@ async def test_support_tickets_multi_persona_cycle_completes() -> None:
     # Engine must have written its log + backlog files
     assert (example_root / "dev_docs" / "fitness-log.md").exists()
     assert (example_root / "dev_docs" / "fitness-backlog.md").exists()
+
+
+@pytest.mark.asyncio
+async def test_support_tickets_baseline_restore_idempotent() -> None:
+    """Mode A with db_policy=restore should cache the baseline between runs.
+
+    First run lazy-builds the baseline file; second run restores from the
+    cached file and should be measurably faster.
+    """
+    from dazzle.e2e.modes import get_mode
+    from dazzle.e2e.runner import ModeRunner
+
+    _require_database_url()
+    example_root = _example_root()
+
+    t1 = time.time()
+    async with ModeRunner(
+        mode_spec=get_mode("a"),
+        project_root=example_root,
+        personas=None,
+        db_policy="restore",
+    ) as conn:
+        assert conn.site_url.startswith("http://localhost:")
+    first_duration = time.time() - t1
+
+    t2 = time.time()
+    async with ModeRunner(
+        mode_spec=get_mode("a"),
+        project_root=example_root,
+        personas=None,
+        db_policy="restore",
+    ) as conn:
+        assert conn.site_url.startswith("http://localhost:")
+    second_duration = time.time() - t2
+
+    # Second run hits cached baseline; should be measurably faster.
+    # Conservative multiplier: second run at least 2× faster than first.
+    assert second_duration < first_duration / 2, (
+        f"Baseline cache ineffective: first={first_duration:.1f}s second={second_duration:.1f}s"
+    )
