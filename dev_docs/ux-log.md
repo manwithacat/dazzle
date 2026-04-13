@@ -1849,6 +1849,27 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 122 — 2026-04-13 — UX-017 form-field → qa:FAIL (99 findings), DATABASE_URL env quirk
+
+**Row:** UX-017 form-field (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 99 findings (admin=47, agent=52), degraded=False. Walker produced real Pass 2a findings for the form-field contract's 5 quality gates. Attempts 1 → 2. Run IDs: admin=c0c64226-6ec2-441b-a200-5bfbb7417f30, agent=66d5e5be-7074-4a8b-82aa-45364a41bc4f.
+
+**Pre-cycle brainstorm context:** resumed investigator-subsystem brainstorm (option 3 → option 2 end state, via hybrid context gathering). User interrupted with `/ux-cycle` mid-Q2; cycle 122 executes the QA runbook. Brainstorm resumes after cycle completes.
+
+**Infrastructure observation — DATABASE_URL propagation:** First Phase B attempt in this session failed with `PgSnapshotSource: DATABASE_URL env var must be set so PgSnapshotSource can read the example app's database`. The `examples/support_tickets/.env` file is only read by the `dazzle serve` subprocess — `PgSnapshotSource` runs in the parent Python process and needs the env var exported there too. Workaround: preload `.env` into `os.environ` before importing the fitness strategy (see `/tmp/ux_cycle_122_final.py`). Prior cycles (113–121) likely ran from shells that already had `DATABASE_URL` exported.
+
+**Suggested follow-up (not done this cycle):** either (a) have `ModeRunner` propagate `.env` into the parent process on context entry, or (b) document the precondition in the runbook. Option (a) keeps the cycle ergonomic; option (b) keeps `ModeRunner` pure.
+
+**Bug observation — walker JSON parse errors:** Bug #5 still present in Claude 4.6 responses. Walker logged two "Failed to parse action: Expecting value: line 1 column 1 (char 0)" warnings — model prefixed its action payload with conversational prose ("I expect clicking the Sign In link..." / "I expect to see a form..."). Non-blocking; downstream findings still flowed.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 122   | UX-017 form-field | admin, agent | 99 (47+52) | FAIL |
+
+---
+
 ## Cycle 117 — 2026-04-13 — UX-003 card → qa:FAIL (46 findings), brainstorm-sequencing ongoing
 
 **Row:** UX-003 card (canonical: ops_dashboard)
