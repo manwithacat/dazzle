@@ -16,14 +16,18 @@ class TestToastFragment:
     def test_renders_alert_with_level(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Saved", level="success")
-        assert "alert-success" in html
+        # Post-DaisyUI refactor: toast uses design-system tokens, not alert-success
+        assert "text-[hsl(var(--success))]" in html
+        assert "border-l-[hsl(var(--success))]" in html
         assert "Saved" in html
         assert 'remove-me="5s"' in html
 
     def test_default_level_is_info(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Hello")
-        assert "alert-info" in html
+        # info level maps to --primary in the token system
+        assert "text-[hsl(var(--primary))]" in html
+        assert "border-l-[hsl(var(--primary))]" in html
 
 
 class TestAlertBanner:
@@ -126,7 +130,9 @@ class TestModal:
         assert "<dialog" in html
         assert "Edit Item" in html
         assert "Fields" in html
-        assert "modal-backdrop" in html
+        # Post-DaisyUI refactor: native <dialog> uses CSS ::backdrop pseudo
+        # via Tailwind's `backdrop:` prefix, not a modal-backdrop class.
+        assert "backdrop:bg-black" in html
 
     def test_size_classes(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "components/modal.html" %}')

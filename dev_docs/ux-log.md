@@ -1849,6 +1849,28 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 111 — 2026-04-13 — unblock CI badge: fix 6 DaisyUI-lag template tests
+
+**Outcome:** 6 pre-existing test failures (bug #7 from cycle 110) fixed in one pass; CI Python Tests job should now go green for the first time in 10+ consecutive runs.
+
+### Failures fixed
+
+The 6 tests were written against DaisyUI class output but the templates had since been refactored to pure Tailwind tokens. Each assertion was updated to match the new token-based output. One template bug was also fixed along the way.
+
+1. `tests/unit/test_phase2_fragments.py::TestToastFragment::test_renders_alert_with_level` — `alert-success` → `text-[hsl(var(--success))]` + `border-l-[hsl(var(--success))]`
+2. `tests/unit/test_phase2_fragments.py::TestToastFragment::test_default_level_is_info` — `alert-info` → `text-[hsl(var(--primary))]` + `border-l-[hsl(var(--primary))]` (info level now maps to --primary)
+3. `tests/unit/test_phase2_fragments.py::TestModal::test_renders_dialog` — `modal-backdrop` → `backdrop:bg-black` (Tailwind's `backdrop:` prefix, native `<dialog>` ::backdrop pseudo)
+4. `tests/unit/test_phase3_fragments.py::TestPopover::test_renders_with_alpine_data` — required a **template fix** at `src/dazzle_ui/templates/fragments/popover.html`: the `{% block popover_content %}{% endblock %}` slot didn't work with `{% include %}` (blocks only fill via `{% extends %}`), so content passed as a variable was silently dropped. Fixed by adding `{{ content | safe if content else '' }}` inside the block — same pattern `modal.html` uses.
+5. `tests/unit/test_workspace_routes.py::TestWorkspaceRefLinks::test_list_ref_link_rendered` — `link-primary` → `text-[hsl(var(--primary))]`
+6. `tests/unit/test_workspace_routes.py::TestTimelineTemplate::test_timeline_renders_items` — `timeline` class → `pl-4 border-l border-[hsl(var(--border))]` (the vertical rule is how the timeline shape is now expressed)
+
+### Verification
+
+- Full run of the three test files: **122 passed, 0 failed** (was 116 passed, 6 failed).
+- No production code behaviour change — toast/modal/list/timeline templates were already rendering the new tokens; the popover template fix is a strict superset of the old behaviour (block-based consumers still work unchanged, include-based consumers now work too).
+
+---
+
 ## Cycle 110 — 2026-04-13 — **FIRST REAL PHASE B RUN** against form-field / support_tickets
 
 **Outcome:** `FITNESS / fitness run 4a6b35ff-2835-4f2e-b0d0-3803c26447a2: 49 findings, independence=0.000` — degraded=False. The first successful end-to-end Phase B in the project's history.

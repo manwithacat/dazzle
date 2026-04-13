@@ -22,6 +22,6 @@
        role="dialog"
        class="absolute z-50 mt-1 p-3 min-w-48 bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)] text-[13px] text-[hsl(var(--foreground))]"
        style="display: none">
-    {% block popover_content %}{% endblock %}
+    {% block popover_content %}{{ content | safe if content else '' }}{% endblock %}
   </div>
 </div>

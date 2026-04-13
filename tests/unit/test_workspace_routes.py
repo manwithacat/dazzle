@@ -553,7 +553,8 @@ class TestWorkspaceRefLinks:
         )
         assert "Alice" in html
         assert "/users/u1" in html
-        assert "link-primary" in html
+        # Post-DaisyUI refactor: ref links use the --primary token directly
+        assert "text-[hsl(var(--primary))]" in html
 
     def test_list_ref_no_link_without_ref_route(self) -> None:
         """Ref column without ref_route renders display name without link."""
@@ -999,7 +1000,9 @@ class TestTimelineTemplate:
         )
         assert "Created company" in html
         assert "Started CDD" in html
-        assert "timeline" in html
+        # Post-DaisyUI refactor: timeline shape is now a border-l vertical rule
+        # + space-y-3 stack instead of a named timeline class.
+        assert "pl-4 border-l border-[hsl(var(--border))]" in html
 
     def test_timeline_empty(self) -> None:
         html = render_fragment(
