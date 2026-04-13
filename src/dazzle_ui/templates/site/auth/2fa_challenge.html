@@ -1,54 +1,58 @@
 {% extends "site/site_base.html" %}
+{% from 'macros/auth_page_wrapper.html' import auth_page_card %}
 
 {% block title %}Two-Factor Authentication - {{ product_name }}{% endblock %}
 
-{% block body_class %}dz-auth-page bg-base-200{% endblock %}
+{% block body_class %}dz-auth-page{% endblock %}
 {% block body_attrs %}hx-history="false"{% endblock %}
 
 {% block body %}
-  <div class="dz-auth-container">
-    <div class="card bg-base-100 shadow-xl dz-auth-card">
-      <div class="card-body">
-        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
-        <h1 class="card-title text-2xl justify-center">Verify Your Identity</h1>
+{% call auth_page_card("Verify Your Identity", product_name) %}
+  <p class="text-center text-[13px] text-[hsl(var(--muted-foreground))] mb-4 -mt-2">
+    Enter the verification code to continue.
+  </p>
 
-        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+  <form id="dz-2fa-form" class="space-y-3">
+    <input type="hidden" id="session_token" name="session_token" value="{{ session_token }}">
+    <input type="hidden" id="method" name="method" value="{{ default_method }}">
 
-        <p class="text-center text-sm text-base-content/70 mb-4">
-          Enter the verification code to continue.
-        </p>
+    <div class="w-full space-y-1">
+      <label id="dz-code-label" for="code" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Verification Code</label>
+      <input type="text" id="code" name="code" required autocomplete="one-time-code"
+             inputmode="numeric" pattern="[0-9]*" maxlength="6"
+             placeholder="000000"
+             class="w-full h-10 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-center text-[20px] font-semibold tracking-[0.4em] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+    </div>
 
-        <form id="dz-2fa-form" method="POST">
-          <input type="hidden" id="session_token" name="session_token" value="{{ session_token }}">
-          <input type="hidden" id="method" name="method" value="{{ default_method }}">
+    <button type="submit"
+            class="w-full h-9 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] mt-4">
+      Verify
+    </button>
+  </form>
 
-          <div class="form-control w-full">
-            <label class="label" for="code">
-              <span class="label-text">Verification Code</span>
-            </label>
-            <input type="text" id="code" name="code" required autocomplete="one-time-code"
-                   inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                   class="input input-bordered w-full text-center text-2xl tracking-widest"
-                   placeholder="000000">
-          </div>
+  {% if "email_otp" in methods %}
+  <div class="text-center mt-3">
+    <button id="dz-send-otp"
+            class="h-7 px-3 text-[12px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:underline disabled:opacity-50 disabled:no-underline">
+      Send code to email
+    </button>
+  </div>
+  {% endif %}
 
-          <button type="submit" class="btn btn-primary w-full mt-4">Verify</button>
-        </form>
-
-        {% if "email_otp" in methods %}
-        <div class="text-center mt-4">
-          <button id="dz-send-otp" class="btn btn-ghost btn-sm">Send code to email</button>
-        </div>
-        {% endif %}
-
-        <div class="divider text-xs">OR</div>
-
-        <p class="text-center text-sm">
-          <a href="#" id="dz-use-recovery" class="link link-secondary">Use a recovery code</a>
-        </p>
-      </div>
+  {# Divider with centred "OR" label. Pure Tailwind replacement for DaisyUI .divider. #}
+  <div class="relative my-4" aria-hidden="true">
+    <div class="absolute inset-0 flex items-center">
+      <div class="w-full border-t border-[hsl(var(--border))]"></div>
+    </div>
+    <div class="relative flex justify-center">
+      <span class="px-2 text-[11px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] bg-[hsl(var(--card))]">OR</span>
     </div>
   </div>
+
+  <p class="text-center text-[13px]">
+    <a href="#" id="dz-use-recovery" class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:underline">Use a recovery code</a>
+  </p>
+{% endcall %}
 {% endblock %}
 
 {% block scripts_extra %}
@@ -105,11 +109,12 @@
   document.getElementById('dz-use-recovery').addEventListener('click', function(e) {
     e.preventDefault();
     document.getElementById('method').value = 'recovery';
-    document.querySelector('label[for="code"] .label-text').textContent = 'Recovery Code';
-    document.getElementById('code').maxLength = 9;
-    document.getElementById('code').pattern = '[A-Za-z0-9-]*';
-    document.getElementById('code').inputMode = 'text';
-    document.getElementById('code').placeholder = 'XXXX-XXXX';
+    document.getElementById('dz-code-label').textContent = 'Recovery Code';
+    const codeInput = document.getElementById('code');
+    codeInput.maxLength = 9;
+    codeInput.pattern = '[A-Za-z0-9-]*';
+    codeInput.inputMode = 'text';
+    codeInput.placeholder = 'XXXX-XXXX';
   });
 })();
 </script>

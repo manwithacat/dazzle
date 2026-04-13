@@ -4,6 +4,30 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T03:47Z — Cycle 40
+
+**Selected row:** UX-036 continuation — 2fa_challenge.html adopter (5/7).
+
+**Refactor:** Adopted `auth_page_card` macro. This is the most involved adopter in the series:
+
+- Dropped standard DaisyUI tokens: `card`, `bg-base-100`, `card-body`, `card-title`, `form-control`, `label`/`label-text`, `input input-bordered`, `btn btn-primary`, `alert alert-error`, `bg-base-200`, plus `dz-auth-*` wrappers.
+- **DaisyUI `.divider` replacement** — built a pure-Tailwind centred "OR" over a horizontal rule using the absolute-positioned `border-t` + `relative flex justify-center` pattern. The OR label sits on the card bg (`bg-[hsl(var(--card))]`) to mask the rule beneath it.
+- **`btn btn-ghost btn-sm` replacement** — the optional "Send code to email" button now uses a compact `h-7` link-style button with muted-foreground text that darkens on hover, matching the aesthetic of the "other page" and "use recovery code" links elsewhere in the series.
+- **`link link-secondary` replacement** — "Use a recovery code" adopts the same muted-foreground link style as the footer links in login/signup.
+- **OTP input grammar** — diverged intentionally from the standard `h-8` field. The 6-digit verification code uses `h-10` (taller), `text-[20px] font-semibold`, `tracking-[0.4em]`, and `text-center` for glanceable input. Placeholder `000000` uses muted-foreground.
+- **Inline JS fix** — the recovery-code toggle previously did `document.querySelector('label[for="code"] .label-text').textContent = 'Recovery Code'`. After refactor there is no `.label-text` span; the label is a plain element with text directly inside. Added `id="dz-code-label"` to the label and changed the JS to `document.getElementById('dz-code-label').textContent`.
+- Dropped `method="POST"` from the form (JS handler intercepts submission).
+
+**Phase A:** N/A — auth pages not in example-app contract surface. Grep-sweep confirms zero DaisyUI tokens remain (the only matches are the macro reference and a comment explaining the divider replacement).
+
+**Phase B:** Deferred — no running-app cycle for auth pages yet.
+
+**Progress:** Auth 5/7. Remaining: 2fa_setup, 2fa_settings.
+
+**Next cycle:** 2fa_setup.html (likely has a QR code display + secret key reveal + OTP verify — the most complex adopter in the series).
+
+---
+
 ## 2026-04-13T03:37Z — Cycle 39
 
 **Selected row:** UX-036 continuation — reset_password.html adopter (4/7).
