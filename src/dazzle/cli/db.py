@@ -658,7 +658,7 @@ def cleanup_command(
 def db_snapshot_command(
     name: str = typer.Argument("baseline", help="Snapshot label (default: baseline)"),
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
-    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+    project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)"),
 ) -> None:
     """Capture a pg_dump of the project database to a .sql.gz file.
 
@@ -670,6 +670,9 @@ def db_snapshot_command(
 
     from dazzle.e2e.baseline import BaselineManager
     from dazzle.e2e.snapshot import Snapshotter
+
+    if project is None:
+        project = Path.cwd()
 
     url = database_url or os.environ.get("DATABASE_URL", "")
     if not url:
@@ -691,13 +694,16 @@ def db_snapshot_command(
 def db_restore_command(
     name: str = typer.Argument("baseline", help="Snapshot label to restore"),
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
-    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+    project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)"),
 ) -> None:
     """Restore a snapshot into the project database via pg_restore --clean."""
     import os
 
     from dazzle.e2e.baseline import BaselineManager
     from dazzle.e2e.snapshot import Snapshotter
+
+    if project is None:
+        project = Path.cwd()
 
     url = database_url or os.environ.get("DATABASE_URL", "")
     if not url:
@@ -721,13 +727,19 @@ def db_restore_command(
 @db_app.command(name="snapshot-gc")
 def db_snapshot_gc_command(
     keep: int = typer.Option(3, "--keep", help="Number of newest snapshots to retain"),
-    project: Path = typer.Option(Path.cwd(), "--project", help="Project root (default: cwd)"),
+    project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)"),
 ) -> None:
     """Delete old baseline snapshot files, keeping the newest `keep`."""
     import os
 
     from dazzle.e2e.baseline import BaselineManager
 
+    if project is None:
+        project = Path.cwd()
+
+    # BaselineManager requires a db_url at construction time, but gc() is a
+    # file-only operation that never connects. Use a dummy if DATABASE_URL
+    # is absent so the command still works without infrastructure.
     url = os.environ.get("DATABASE_URL", "postgresql://localhost/unused")
     mgr = BaselineManager(project, url)
     deleted = mgr.gc(keep=keep)
