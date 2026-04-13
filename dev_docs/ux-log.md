@@ -1849,6 +1849,50 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 115 — 2026-04-13 — UX-023 widget:slider → qa:FAIL (114 findings, anchor 404) + fieldtest_hub bootstrapped
+
+**Row:** UX-023 widget:slider (canonical: fieldtest_hub)
+**Outcome:** Third row advanced. `qa: PENDING → FAIL`. 114 findings — much higher than earlier rows because the contract anchor `/app/issue-report/create` returns **404** on fieldtest_hub (the DSL has no `issue-report` surface). Both personas hit the 404 page, producing noise findings.
+
+### What ran
+
+- Bootstrapped `fieldtest_hub`: wrote `examples/fieldtest_hub/.env`, ran one Mode A launch to provision dev personas. 4 personas created: `admin`, `engineer`, `tester`, `manager`.
+- Phase B against `widget-slider.md` with `personas=["admin", "engineer"]`.
+- admin: run `ebc6cced-3460-4c89-b95c-e3c6079d2e64`, 56 findings
+- engineer: run `ca38cdf7-60ad-490e-abf6-551fbcd9dcc3`, 58 findings
+- Both walker transcripts explicitly noted: "I'll observe that the page is showing a 404 error, which suggests the issue report creation page doesn't exist or isn't properly configured."
+
+### Actionable signal (not just noise)
+
+The high finding count is in one sense noise (404 observations) but in another sense **this is exactly what fitness is supposed to catch**: the contract anchor specifies a route the app doesn't serve. Either:
+1. **The DSL needs an `issue_report` entity + `create` surface** to actually exercise widget:slider
+2. **The contract's anchor is wrong** — the widget is exercised on a different surface (possibly a demo route or a different entity's form)
+3. **widget:slider doesn't need a dedicated anchor** — it's a primitive that renders inside `form-field` and could be probed via a page where `form-field` uses the slider variant
+
+Classification: **contract-content bug, not Phase B bug.** The walker did its job. Row is correctly marked FAIL with a note pointing at the anchor mismatch.
+
+### Row advancement tally so far
+
+| Cycle | Row | Canonical | Personas | Findings | Outcome | Notes |
+|-------|-----|-----------|----------|----------|---------|-------|
+| 113 | UX-001 dashboard-grid | ops_dashboard | admin, ops_engineer | 46 | FAIL | 403 inconsistency for admin |
+| 114 | UX-002 data-table | contact_manager | admin, user | 20 | FAIL | cleanest run so far |
+| 115 | UX-023 widget:slider | fieldtest_hub | admin, engineer | 114 | FAIL | anchor 404 |
+
+### Example app coverage
+
+| Example | Status | Rows unblocked |
+|---------|--------|----|
+| support_tickets | ✅ cycle 110 | 5 |
+| ops_dashboard | ✅ cycle 113 | 5 |
+| contact_manager | ✅ cycle 114 | 11 |
+| fieldtest_hub | ✅ cycle 115 | 3 |
+| simple_task | pending (#34) | 2 |
+
+**24 of 35 READY_FOR_QA rows now have running infra** (69% coverage). simple_task is the last bootstrap away.
+
+---
+
 ## Cycle 114 — 2026-04-13 — UX-002 data-table → qa:FAIL (20 findings) + contact_manager bootstrapped
 
 **Row:** UX-002 data-table (canonical: contact_manager)
