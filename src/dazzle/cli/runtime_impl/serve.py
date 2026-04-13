@@ -32,6 +32,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
 
 from .ports import (
+    PortAllocation,
     clear_runtime_file,
     find_available_ports,
     write_runtime_file,
@@ -386,7 +387,21 @@ def serve_command(
         typer.echo(f"  API: {allocation.api_port}")
         typer.echo()
 
-    # Write runtime file for port discovery by E2E tests
+    # Write runtime file for port discovery by E2E tests.
+    #
+    # In unified mode (the default combined server path used by `dazzle serve`
+    # and `dazzle serve --local`), the API is served on the UI port — there is
+    # no separate api_port binding. Only `--backend-only` actually binds the
+    # api_port. Make runtime.json reflect what's really listening: when we
+    # know we're going to run unified, collapse api_port onto ui_port so
+    # consumers (e.g. dazzle.e2e.runner.ModeRunner) that health-check api_url
+    # hit the real listener.
+    if not backend_only and not ui_only:
+        allocation = PortAllocation(
+            ui_port=allocation.ui_port,
+            api_port=allocation.ui_port,
+            project_name=allocation.project_name,
+        )
     write_runtime_file(project_root, allocation)
 
     # Clean up runtime file on exit

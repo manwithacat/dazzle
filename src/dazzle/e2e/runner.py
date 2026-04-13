@@ -94,7 +94,7 @@ class ModeRunner:
                 f"db_policy {resolved!r} not allowed for mode {mode_spec.name!r}. "
                 f"Allowed: {sorted(mode_spec.db_policies_allowed)}"
             )
-        self.db_policy: DbPolicyValue = resolved  # type: ignore[assignment]
+        self.db_policy: DbPolicyValue = resolved
         self.fresh = fresh
 
         # Populated during __aenter__
@@ -123,6 +123,18 @@ class ModeRunner:
 
             # 3. Env prep
             env = self._build_env()
+
+            # 3a. Delete any stale runtime.json from a previous serve run.
+            # Without this, `_poll_runtime_file` could immediately read the
+            # prior run's ports and hand them to the health check, which
+            # then times out against a dead URL while the new subprocess
+            # is silently healthy on different ports.
+            stale_runtime = self.project_root / ".dazzle" / "runtime.json"
+            if stale_runtime.exists():
+                try:
+                    stale_runtime.unlink()
+                except OSError:
+                    pass
 
             # 4. Launch subprocess
             self._log_fh = self._log_path.open("wb")
@@ -239,7 +251,8 @@ class ModeRunner:
         while loop.time() < deadline:
             if path.exists():
                 try:
-                    return json.loads(path.read_text())
+                    data: dict[str, Any] = json.loads(path.read_text())
+                    return data
                 except (OSError, json.JSONDecodeError):
                     pass
             await asyncio.sleep(RUNTIME_POLL_INTERVAL_SECONDS)
