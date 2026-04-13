@@ -139,7 +139,10 @@ class LLMAPIClient:
             self.model = model
         else:
             if provider == LLMProvider.ANTHROPIC:
-                self.model = "claude-3-5-sonnet-20241022"
+                # Updated from claude-3-5-sonnet-20241022 (retired) to
+                # claude-sonnet-4-6 (current stable). The old model id
+                # returns 404 from the Anthropic API as of 2026.
+                self.model = "claude-sonnet-4-6"
             else:
                 self.model = "gpt-4-turbo"
 
