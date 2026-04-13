@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.3] - 2026-04-13
+
+### Added
+- **Fitness v1.0.3 — contract anchor navigation.** New optional `## Anchor` section in ux-architect component contracts is parsed into `ComponentContract.anchor: str | None`. The fitness strategy navigates the Playwright page to `site_url + anchor` (with leading-slash normalization) before the contract walker observes the component, closing the v1.0.2 "walker observes about:blank" gap. Existing contracts without the section continue to parse cleanly with `anchor=None`.
+- **Fitness v1.0.3 — multi-persona fan-out.** New optional `personas: list[str] | None = None` kwarg on `run_fitness_strategy`. When set, the strategy runs one fitness cycle per persona inside a single subprocess lifetime: shared Playwright browser, fresh `browser.new_context()` per persona for cookie isolation, `_login_as_persona` via the QA mode magic-link flow (#768), per-persona `FitnessEngine`, per-persona outcome. When `personas=None` (default), runs a single anonymous cycle (v1.0.2 backwards compatibility preserved by construction).
+- **`_login_as_persona` helper** at `src/dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py` — two-step Playwright-driven login reusing the QA mode endpoints from #768. Distinguishes three failure modes with targeted error messages: 404 (QA mode disabled OR persona not provisioned), other non-2xx (generation failed), post-consume URL contains `/login` or `/auth/login` (token rejected).
+- **`_aggregate_outcomes` helper** reduces per-persona results into a single `StrategyOutcome`. Single-persona format matches v1.0.2 exactly; multi-persona format uses a bracketed `[admin:r1, editor:r2]` prefix with per-persona finding counts and max-of independence scores. Per-persona failures produce `_BlockedRunResult` outcomes via continue-on-failure semantics — one persona's failure does not abort the loop.
+
+### Changed
+- **`_build_engine` refactored** to accept a pre-built Playwright `bundle` parameter instead of creating its own internally. The strategy (`run_fitness_strategy`) now owns bundle lifecycle via outer `try/finally`, allowing the shared browser to be reused across personas. `_EngineProxy.run()` no longer closes the bundle — it simply forwards to `engine.run()`.
+- **`/ux-cycle` Phase B runbook** updated to show the `personas=` kwarg with example lists (`["admin", "agent", "customer"]`) and a commented-out anonymous variant. Updated qa field mapping to note that per-persona failures inside a multi-persona run are absorbed into `outcome.degraded=True` rather than raising the whole strategy.
+
+### Agent Guidance
+- **Authoring contracts:** new ux-architect component contracts should include a `## Anchor` section with the URL the component lives at (e.g. `/login` for `auth-page`). Contracts without an anchor continue to work — the walker observes whatever page is loaded — but anchor-driven contracts produce more meaningful gate observations. The 35+ existing contracts will be backfilled with anchors as a separate one-shot data migration (not in v1.0.3 source).
+- **Multi-persona execution:** when `/ux-cycle` Phase B runs against an in-app component that needs persona-scoped verification, pass `personas=["admin", ...]` matching the example app's DSL persona declarations. For public/anonymous components (auth pages, landing pages), pass `personas=None` (the default) to run a single anonymous cycle. v1.0.4+ may add AppSpec-derived auto-derivation; for v1.0.3, the caller is the source of truth.
+- **Per-persona failure semantics:** per-persona failures (login rejected, engine crashed, anchor navigation failed) record `_BlockedRunResult` outcomes that absorb into the aggregated `StrategyOutcome.degraded=True` flag. The strategy only raises when there is nothing useful to return (subprocess failed to start, Playwright bundle couldn't spin up). Phase B `qa` field mapping treats raised strategy errors as `BLOCKED` and per-persona absorbed failures as part of the `FAIL`/`PASS` aggregate.
+
 ## [0.54.2] - 2026-04-13
 
 ### Added
