@@ -2288,3 +2288,110 @@ def _validate_graph_node(
             errors.append(f"graph_node display '{gn.display}' is not a field on {entity.name}")
     else:
         warnings.append("graph_node has no display field — labels use default fallback")
+
+
+def validate_lifecycles(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate entity lifecycle: declarations (ADR-0020).
+
+    Checks:
+    - status_field references a real field on the entity
+    - status_field is an enum-typed field
+    - Every state name matches one of the enum's declared values
+    - Order values are unique across states
+    - Every transition from_state/to_state references a declared state
+    - Evidence predicates, when present, are non-empty strings
+
+    Note: The evidence predicate's internal syntax is NOT validated here
+    (deferred to v1.1). This check only guards the structural invariants
+    of the lifecycle block itself. The lifecycle: block is treated as
+    orthogonal to the existing state_machine: block — both may coexist.
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for entity in appspec.domain.entities:
+        lc = entity.lifecycle
+        if lc is None:
+            continue
+
+        prefix = f"Entity '{entity.name}' lifecycle:"
+        field_map = {f.name: f for f in entity.fields}
+
+        # 1. status_field must reference a real field
+        status_field = field_map.get(lc.status_field)
+        if status_field is None:
+            errors.append(
+                f"{prefix} status_field '{lc.status_field}' is not a field on "
+                f"entity '{entity.name}'"
+            )
+            enum_values: set[str] = set()
+        elif status_field.type.kind != ir.FieldTypeKind.ENUM:
+            errors.append(
+                f"{prefix} status_field '{lc.status_field}' must be an enum field, "
+                f"got '{status_field.type.kind.value}'"
+            )
+            enum_values = set()
+        else:
+            enum_values = set(status_field.type.enum_values or [])
+
+        # 2. State names must match the enum's declared values
+        #    (only when we were able to resolve the enum)
+        if enum_values:
+            for state in lc.states:
+                if state.name not in enum_values:
+                    errors.append(
+                        f"{prefix} state '{state.name}' is not a declared value of "
+                        f"enum field '{lc.status_field}' "
+                        f"(expected one of: {sorted(enum_values)})"
+                    )
+
+        # 3. Order values must be unique across states
+        orders_seen: dict[int, str] = {}
+        for state in lc.states:
+            if state.order in orders_seen:
+                errors.append(
+                    f"{prefix} duplicate order {state.order} on states "
+                    f"'{orders_seen[state.order]}' and '{state.name}' — "
+                    f"order values must be unique"
+                )
+            else:
+                orders_seen[state.order] = state.name
+
+        # 4. Transition from/to must reference declared states
+        declared_states = {s.name for s in lc.states}
+        for idx, tr in enumerate(lc.transitions):
+            if tr.from_state not in declared_states:
+                errors.append(
+                    f"{prefix} transition #{idx} from_state '{tr.from_state}' "
+                    f"is not a declared state"
+                )
+            if tr.to_state not in declared_states:
+                errors.append(
+                    f"{prefix} transition #{idx} to_state '{tr.to_state}' is not a declared state"
+                )
+
+            # 5. Evidence, when present, must be a non-empty string
+            if tr.evidence is not None and not tr.evidence.strip():
+                errors.append(
+                    f"{prefix} transition {tr.from_state} -> {tr.to_state} "
+                    f"has empty evidence predicate — omit the evidence clause "
+                    f"if none is required"
+                )
+
+        # Optional: warn if both state_machine and lifecycle are present
+        # with mismatched state lists. Treated as orthogonal, so this is
+        # advisory only.
+        if entity.state_machine is not None:
+            sm_states = {(s if isinstance(s, str) else s.name) for s in entity.state_machine.states}
+            if sm_states and sm_states != declared_states:
+                warnings.append(
+                    f"{prefix} state_machine states {sorted(sm_states)} "
+                    f"differ from lifecycle states {sorted(declared_states)} — "
+                    f"these blocks are orthogonal but the mismatch may indicate "
+                    f"they are out of sync"
+                )
+
+    return errors, warnings

@@ -12,6 +12,7 @@ from .validator import (
     validate_graph_declarations,
     validate_integrations,
     validate_ledgers,
+    validate_lifecycles,
     validate_money_fields,
     validate_notifications,
     validate_scope_predicates,
@@ -142,6 +143,11 @@ def lint_appspec(
 
     # Graph semantics validation (v0.46.0 — #619)
     errors, warnings = validate_graph_declarations(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Lifecycle block validation (ADR-0020)
+    errors, warnings = validate_lifecycles(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
