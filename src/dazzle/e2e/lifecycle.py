@@ -98,6 +98,37 @@ class LockFile:
         except (OSError, json.JSONDecodeError):
             return None
 
+    def holder_pid_alive(self) -> bool:
+        """True if the current lock holder's PID is alive.
+
+        Returns False if no lock file exists, if the file is malformed,
+        if the holder record lacks a pid, or if the PID is dead.
+        """
+        holder = self.read_holder()
+        if holder is None:
+            return False
+        pid = holder.get("pid")
+        if not isinstance(pid, int):
+            return False
+        return _is_pid_alive(pid)
+
+    def holder_age_seconds(self) -> float | None:
+        """Seconds since the lock holder was acquired.
+
+        Returns None if no lock file exists, the file is malformed, or
+        the started_at field is missing/invalid.
+        """
+        holder = self.read_holder()
+        if holder is None:
+            return None
+        started = holder.get("started_at", "")
+        if not started:
+            return None
+        age = _iso_now_seconds_ago(started)
+        if age == float("inf"):
+            return None
+        return age
+
     # Internals ---------------------------------------------------------------
 
     def _maybe_delete_stale(self) -> None:

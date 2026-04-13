@@ -125,3 +125,28 @@ class TestLockFileIntegration:
         assert holder is not None
         assert holder["pid"] == os.getpid()
         assert holder["mode"] == "a"
+
+
+class TestLockFileHolderQueries:
+    def test_holder_pid_alive_returns_false_when_no_lock(self, lock_dir: Path) -> None:
+        lock = LockFile(lock_dir / "mode_a.lock")
+        assert lock.holder_pid_alive() is False
+
+    def test_holder_pid_alive_returns_true_when_current_pid(self, lock_dir: Path) -> None:
+        lock = LockFile(lock_dir / "mode_a.lock")
+        lock.acquire("a", lock_dir / "log.log")
+        assert lock.holder_pid_alive() is True
+
+    def test_holder_age_seconds_returns_small_number_when_just_acquired(
+        self, lock_dir: Path
+    ) -> None:
+        lock = LockFile(lock_dir / "mode_a.lock")
+        lock.acquire("a", lock_dir / "log.log")
+        age = lock.holder_age_seconds()
+        assert age is not None
+        assert age >= 0
+        assert age < 60  # Just acquired — should be well under a minute
+
+    def test_holder_age_seconds_returns_none_when_no_lock(self, lock_dir: Path) -> None:
+        lock = LockFile(lock_dir / "mode_a.lock")
+        assert lock.holder_age_seconds() is None

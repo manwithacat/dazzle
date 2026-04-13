@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.e2e.baseline import BaselineManager
-from dazzle.e2e.errors import BaselineKeyError, UnknownModeError
-from dazzle.e2e.lifecycle import LockFile, _is_pid_alive, _iso_now_seconds_ago
+from dazzle.e2e.errors import UnknownModeError
+from dazzle.e2e.lifecycle import LockFile
 from dazzle.e2e.modes import MODE_REGISTRY, get_mode
 from dazzle.mcp.server.handlers.common import wrap_handler_errors
 
@@ -57,16 +57,12 @@ def _status_for(project_root: Path) -> dict[str, Any]:
     holder = lock.read_holder()
 
     holder_pid: int | None = None
-    holder_alive: bool = False
-    lock_age: float | None = None
+    holder_alive = lock.holder_pid_alive()
+    lock_age = lock.holder_age_seconds()
     if holder is not None:
         raw_pid = holder.get("pid")
         if isinstance(raw_pid, int):
             holder_pid = raw_pid
-            holder_alive = _is_pid_alive(raw_pid)
-        started = holder.get("started_at", "")
-        if started:
-            lock_age = _iso_now_seconds_ago(started)
 
     runtime_data: dict[str, Any] | None = None
     if runtime_path.exists():
@@ -141,7 +137,7 @@ def e2e_list_baselines_handler(project_path: Path, args: dict[str, Any]) -> str:
     try:
         mgr = BaselineManager(root, url)
         current_filename = mgr.path_for(mgr.current_key()).name
-    except (BaselineKeyError, Exception):  # noqa: BLE001 — intentional catch-all
+    except Exception:  # noqa: BLE001 — intentional catch-all for read-only handler
         current_filename = None
 
     entries: list[dict[str, Any]] = []
