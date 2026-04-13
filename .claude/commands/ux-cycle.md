@@ -61,38 +61,39 @@ cd examples/<canonical> && dazzle ux verify --contracts
 
 If this fails, mark `qa: FAIL`, note the failures in the row's `notes`, and skip Phase B. Go to Step 5.
 
-**Phase B — Agent QA mission (slow, only if Phase A passes AND the contract has interaction primitives):**
+**Phase B — Fitness-engine contract walk (slow, only if Phase A passes AND the contract has quality gates):**
 
-For each persona in the example app, dispatch a `DazzleAgent` mission:
+Phase B now routes through the fitness engine instead of hand-rolling an
+agent dispatch. The strategy owns the example-app subprocess, the
+Playwright bundle, and the ledger; Phase B just hands it the component
+contract path and reads the aggregated outcome:
 
 ```python
-from dazzle.agent.missions._shared import parse_component_contract
-from dazzle.agent.missions.ux_quality import build_ux_quality_mission
-from dazzle.agent.core import DazzleAgent
-from dazzle.agent.observer import PlaywrightObserver
-from dazzle.agent.executor import PlaywrightExecutor
 from pathlib import Path
+from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import run_fitness_strategy
 
-contract = parse_component_contract(
-    Path.home() / ".claude/skills/ux-architect/components/<component>.md"
-)
-results = {}
-mission = build_ux_quality_mission(
-    contract=contract,
-    persona=persona,
+contract_path = Path.home() / ".claude/skills/ux-architect/components/<component>.md"
+
+outcome = await run_fitness_strategy(
     example_app="<canonical>",
-    base_url="http://localhost:<port>",
-    results=results,
+    project_root=Path("/Volumes/SSD/Dazzle"),  # Dazzle repo root
+    component_contract_path=contract_path,
 )
-agent = DazzleAgent(observer=PlaywrightObserver(...), executor=PlaywrightExecutor(...))
-agent.run(mission)
-# results now contains {gate_id: {pass, observation}} entries
 ```
 
-Aggregate results across personas. The row's `qa` field becomes:
-- `PASS` if all gates pass for all personas on all apps
-- `FAIL` if any gate fails
-- `BLOCKED` if any mission aborted on stagnation or budget
+The fitness engine's Pass 1 will parse the contract and call the new
+`walk_contract` mission — one ledger step per quality gate, with each
+gate description recorded as EXPECT and the current DOM snapshot recorded
+as OBSERVE. Findings flow through the normal engine pipeline and land in
+`dev_docs/fitness-backlog.md` under the example app.
+
+Aggregate results across personas (v1.0.2 runs a single fitness cycle
+per component; multi-persona fan-out is v1.0.3 work). The row's `qa`
+field becomes:
+- `PASS` if `outcome.degraded is False` and `outcome.findings_count == 0`
+- `FAIL` if `outcome.findings_count > 0`
+- `BLOCKED` if the strategy raised (subprocess failed to start, engine
+  construction raised, Playwright bundle couldn't spin up)
 
 ### Step 5: REPORT
 
