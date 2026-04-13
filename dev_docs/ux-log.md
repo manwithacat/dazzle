@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T05:17Z — Cycle 49 — exhausted (sticky)
+
+No state change since Cycle 48. See Cycle 48 for transition details.
+
+---
+
 ## 2026-04-13T05:07Z — Cycle 48 — explore budget exhausted
 
 **State transition.** The previous 5 cycles (43, 44, 45, 46, 47) were all explore deferrals with zero findings. Per Step 6 of the cycle script — "If count >= 30 OR the last 5 cycles produced 0 findings, skip EXPLORE and mark the cycle complete with 'No work remaining, explore budget exhausted'" — Cycle 48 is the first to report exhausted state.
