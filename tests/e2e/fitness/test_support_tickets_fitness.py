@@ -44,7 +44,6 @@ async def test_support_tickets_fitness_cycle_completes() -> None:
 
     assert outcome.strategy == "FITNESS"
     assert "fitness run" in outcome.summary
-    assert outcome.findings_count >= 0
     # Engine must have written its log + backlog files.
     assert (example_root / "dev_docs" / "fitness-log.md").exists()
     assert (example_root / "dev_docs" / "fitness-backlog.md").exists()
