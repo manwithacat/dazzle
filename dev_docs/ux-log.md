@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 128 — 2026-04-13 — UX-012 slide-over → qa:FAIL (20 findings)
+
+**Row:** UX-012 slide-over (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 20 findings (admin=10, user=10), degraded=False. Clean Phase B — both personas reached the contact list page cleanly and exercised the slide-over detail drawer. Run IDs: admin=dafc3e3e-f892-48ab-9305-13564f4445c6, user=9af1792d-0b62-4e9d-ad54-85c0fd6f6350.
+
+**Investigator plan progress (parallel):** Batches 1 + 2 of the fitness investigator implementation plan committed (commits 28454400, d7229d0d). Plan file at `docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md`. Tasks 1–8 complete: backlog reader, Proposal I/O, AttemptedIndex, CaseFile. Tasks 9–20 still pending (six tools, mission, runner, CLI, integration, docs).
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 128   | UX-012 slide-over | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 127 — 2026-04-13 — UX-011 command-palette → qa:FAIL (46 findings)
 
 **Row:** UX-011 command-palette (canonical: ops_dashboard)
