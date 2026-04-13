@@ -371,6 +371,7 @@ class ComponentContract:
     quality_gates: list[QualityGate]
     anatomy: list[str] = field(default_factory=list)
     primitives: list[str] = field(default_factory=list)
+    anchor: str | None = None
 
 
 def _derive_gate_id(description: str) -> str:
@@ -511,9 +512,22 @@ def parse_component_contract(path: Path) -> ComponentContract:
         if fm_match:
             primitives = [p.strip() for p in fm_match.group(1).split(",") if p.strip()]
 
+    # Anchor (optional) — v1.0.3. URL to navigate to before the contract
+    # walker observes the component. When absent, the walker falls back to
+    # observing whatever page is currently loaded (v1.0.2 behaviour).
+    anchor: str | None = None
+    anchor_section = _extract_section(content, "Anchor")
+    if anchor_section:
+        for line in anchor_section.splitlines():
+            stripped = line.strip()
+            if stripped:
+                anchor = stripped
+                break
+
     return ComponentContract(
         component_name=component_name,
         quality_gates=quality_gates,
         anatomy=anatomy,
         primitives=primitives,
+        anchor=anchor,
     )
