@@ -149,9 +149,8 @@ class _EngineProxy:
     same browser across iterations. The proxy now just forwards run().
     """
 
-    def __init__(self, engine: Any, bundle: Any) -> None:
+    def __init__(self, engine: Any) -> None:
         self._engine = engine
-        self._bundle = bundle
 
     async def run(self) -> Any:
         return await self._engine.run()
@@ -207,7 +206,12 @@ async def _build_engine(
     if component_contract_path is not None:
         contract = parse_component_contract(component_contract_path)
         if contract.anchor is not None:
-            await bundle.page.goto(handle.site_url + contract.anchor)
+            # Normalize leading slash — contract authors may write `anchor: login`
+            # or `anchor: /login`; both must produce a well-formed URL.
+            anchor_path = (
+                contract.anchor if contract.anchor.startswith("/") else f"/{contract.anchor}"
+            )
+            await bundle.page.goto(handle.site_url + anchor_path)
 
     agent = DazzleAgent(
         observer=PlaywrightObserver(page=bundle.page),
@@ -229,4 +233,4 @@ async def _build_engine(
         contract_paths=contract_paths,
         contract_observer=contract_observer,
     )
-    return _EngineProxy(engine=engine, bundle=bundle)
+    return _EngineProxy(engine=engine)

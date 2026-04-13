@@ -78,6 +78,45 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
+async def test_fitness_strategy_stops_app_when_playwright_setup_fails(
+    tmp_path: Path,
+) -> None:
+    """If _setup_playwright raises, _stop_example_app must still run.
+
+    v1.0.3 Task 2 introduced this path (bundle setup moved from _build_engine
+    to the strategy). The outer try/finally now owns bundle lifecycle, so
+    this test verifies the failure path that used to live inside _build_engine.
+    """
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    async def _raising_setup(base_url: str):
+        raise RuntimeError("playwright missing")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
+        ) as mock_stop,
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_raising_setup,
+        ),
+        pytest.raises(RuntimeError, match="playwright missing"),
+    ):
+        await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
+
+    # Subprocess teardown must have fired even though playwright setup failed
+    mock_stop.assert_called_once_with(fake_handle)
+
+
+@pytest.mark.asyncio
 async def test_launch_example_app_uses_qa_server(tmp_path: Path) -> None:
     """`_launch_example_app` delegates to dazzle.qa.server.connect_app and waits for ready."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
@@ -481,3 +520,51 @@ async def test_build_engine_does_not_navigate_when_no_anchor(
 
     # No navigation happened
     fake_bundle.page.goto.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_build_engine_normalizes_anchor_without_leading_slash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Anchors written without a leading / still produce well-formed URLs."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    # Anchor body has NO leading slash
+    contract_path = tmp_path / "slashless.md"
+    contract_path.write_text("# slashless\n\n## Anchor\n\nlogin\n\n## Quality Gates\n\n1. gate\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.page.goto = AsyncMock()
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+        ),
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        await fitness_strategy._build_engine(
+            example_root=example_root,
+            handle=handle,
+            bundle=fake_bundle,
+            component_contract_path=contract_path,
+        )
+
+    # Even though the contract wrote "login" without a leading slash, the URL is well-formed
+    fake_bundle.page.goto.assert_awaited_once_with("http://localhost:3000/login")
