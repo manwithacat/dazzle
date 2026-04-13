@@ -141,6 +141,7 @@
               }),
             }),
           ]),
+          'fitness': None,
           'graph_edge': None,
           'graph_node': None,
           'intent': None,
@@ -148,6 +149,7 @@
           ]),
           'is_singleton': False,
           'is_tenant_root': False,
+          'lifecycle': None,
           'name': 'Task',
           'patterns': list([
           ]),
@@ -334,6 +336,7 @@
               }),
             }),
           ]),
+          'fitness': None,
           'graph_edge': None,
           'graph_node': None,
           'intent': 'Live health-check status for each platform component',
@@ -341,6 +344,7 @@
           ]),
           'is_singleton': False,
           'is_tenant_root': False,
+          'lifecycle': None,
           'name': 'SystemHealth',
           'patterns': list([
             'system',
@@ -541,6 +545,7 @@
               }),
             }),
           ]),
+          'fitness': None,
           'graph_edge': None,
           'graph_node': None,
           'intent': 'Time-series platform metrics collected by the runtime',
@@ -548,6 +553,7 @@
           ]),
           'is_singleton': False,
           'is_tenant_root': False,
+          'lifecycle': None,
           'name': 'SystemMetric',
           'patterns': list([
             'system',
@@ -753,6 +759,7 @@
               }),
             }),
           ]),
+          'fitness': None,
           'graph_edge': None,
           'graph_node': None,
           'intent': 'Immutable record of every deployment with rollback lineage',
@@ -760,6 +767,7 @@
           ]),
           'is_singleton': False,
           'is_tenant_root': False,
+          'lifecycle': None,
           'name': 'DeployHistory',
           'patterns': list([
             'system',
