@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.2] - 2026-04-13
+
+### Added
+- **Fitness v1.0.2 — contract-driven Pass 1 walker.** New `walk_contract` mission at `src/dazzle/fitness/missions/contract_walk.py` mirrors the shape of `walker.walk_story` but drives the ledger from a parsed ux-architect `ComponentContract`. Each quality gate becomes one ledger step: expect = gate description, action_desc = `"observe contract gate"`, observed_ui = `await observer.snapshot()`. Deterministic — no LLM calls. Observer is injected via a `Protocol` so unit tests use an in-memory stub and the strategy wraps a Playwright page. Symmetric intent/observation counts per step even on observer errors.
+- **`FitnessEngine.contract_paths` + `contract_observer` kwargs.** The engine's Pass 1 loop now iterates contract paths (defaulting to `[]`) after story walks, parsing each via `parse_component_contract` and calling `walk_contract` with the injected observer. Both kwargs default to `None` so existing callers are unaffected. If `contract_paths` is non-empty but `contract_observer` is None, Pass 1 raises `ValueError` loudly rather than silently skipping the walk.
+- **Strategy plumbing + `_ContractObserver` adapter.** `run_fitness_strategy` and `_build_engine` gain an optional `component_contract_path: Path | None = None` kwarg. When set, `_build_engine` wraps the Playwright bundle's page in a new `_ContractObserver` adapter whose `snapshot()` delegates to `await page.content()`, then passes both `contract_paths=[path]` and `contract_observer=observer` through to `FitnessEngine`.
+
+### Changed
+- **`/ux-cycle` Phase B rewritten to route through `run_fitness_strategy`.** Closes the "irony gap": Phase B previously hand-rolled its own `DazzleAgent` + `PlaywrightObserver` + `PlaywrightExecutor` dispatch, completely bypassing the fitness engine's ledger + Pass 1 machinery. The new three-line snippet calls `run_fitness_strategy(component_contract_path=path)` and the fitness engine owns the contract walk. Findings flow through the normal engine pipeline and land in `dev_docs/fitness-backlog.md`.
+
+### Agent Guidance
+- **v1.0.2 does not navigate.** The contract walker observes whatever page is loaded when Pass 1 fires — `about:blank` for fresh Playwright bundles. URL inference from contract anchors is deferred to v1.0.3 along with multi-persona fan-out and the optional `walk_story` → `walk_plan` unification. If you are writing Phase B runbooks that need real component observation, navigate to the right URL before calling `run_fitness_strategy`, or wait for v1.0.3.
+
 ## [0.54.1] - 2026-04-13
 
 ### Added
