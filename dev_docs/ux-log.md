@@ -4,6 +4,22 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T02:38Z — Cycle 37
+
+**Selected row:** UX-036 continuation — signup.html adopter (2/7).
+
+**Refactor:** Adopted `auth_page_card` macro from `macros/auth_page_wrapper.html`. Dropped DaisyUI tokens: `card`, `bg-base-100`, `card-body`, `card-title`, `form-control`, `label`/`label-text`, `input input-bordered`, `btn btn-primary`, `link link-primary`, `alert alert-error`, `bg-base-200`, plus legacy `dz-auth-container`/`dz-auth-card`/`dz-auth-logo`/`dz-auth-switch`. Four form fields (name/email/password/confirm_password) now use the same Tailwind field grammar as login.html — `h-8`, `rounded-[4px]`, HSL CSS variables for bg/border/text/placeholder/ring, 120ms transition curve. Submit button matches login's `h-9` primary style. Dropped `method="POST"` (submission is JS-driven via `_auth_form_script.html`, CSRF via header). The inline `#dz-auth-error` div is now rendered by the macro itself.
+
+**Phase A:** N/A — auth pages are not in an example app's `dazzle ux verify --contracts` surface. Verified by grep-sweep: zero DaisyUI tokens remain in signup.html.
+
+**Phase B:** Deferred — no running-app cycle for auth pages yet.
+
+**Progress:** Auth 2/7. Remaining: forgot_password, reset_password, 2fa_challenge, 2fa_setup, 2fa_settings.
+
+**Next cycle:** forgot_password.html (simplest — one email field + submit, no confirm flow).
+
+---
+
 ## 2026-04-12T22:44Z — Cycle 36
 
 **Selected row:** UX-035 continuation — tabbed_list.html adopter (4/16).

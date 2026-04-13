@@ -1,56 +1,47 @@
 {% extends "site/site_base.html" %}
+{% from 'macros/auth_page_wrapper.html' import auth_page_card %}
 
 {% block title %}{{ title }} - {{ product_name }}{% endblock %}
 
-{% block body_class %}dz-auth-page bg-base-200{% endblock %}
+{% block body_class %}dz-auth-page{% endblock %}
 {% block body_attrs %}hx-history="false"{% endblock %}
 
 {% block body %}
-  <div class="dz-auth-container">
-    <div class="card bg-base-100 shadow-xl dz-auth-card">
-      <div class="card-body">
-        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
-        <h1 class="card-title text-2xl justify-center">{{ title }}</h1>
-
-        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
-
-        <form id="dz-auth-form" method="POST" action="{{ action_url }}">
-          <div class="form-control w-full">
-            <label class="label" for="name">
-              <span class="label-text">Full Name</span>
-            </label>
-            <input type="text" id="name" name="name" required autocomplete="name" class="input input-bordered w-full">
-          </div>
-          <div class="form-control w-full">
-            <label class="label" for="email">
-              <span class="label-text">Email</span>
-            </label>
-            <input type="email" id="email" name="email" required autocomplete="email" class="input input-bordered w-full">
-          </div>
-          <div class="form-control w-full">
-            <label class="label" for="password">
-              <span class="label-text">Password</span>
-            </label>
-            <input type="password" id="password" name="password" required autocomplete="current-password" class="input input-bordered w-full">
-          </div>
-          <div class="form-control w-full">
-            <label class="label" for="confirm_password">
-              <span class="label-text">Confirm Password</span>
-            </label>
-            <input type="password" id="confirm_password" name="confirm_password" required class="input input-bordered w-full">
-          </div>
-
-          <button type="submit" class="btn btn-primary w-full mt-4">
-            {{ button_text }}
-          </button>
-        </form>
-
-        <p class="dz-auth-switch text-center text-sm mt-4">
-          <a href="{{ other_page }}" class="link link-primary">{{ other_link_text }}</a>
-        </p>
-      </div>
+{% call auth_page_card(title, product_name) %}
+  {# Submission intercepted by _auth_form_script.html (preventDefault + fetch with X-CSRF-Token header). #}
+  {# `method` attribute omitted — submission is always via the JS handler; CSRF protection is header-based. #}
+  <form id="dz-auth-form" action="{{ action_url }}" class="space-y-3">
+    <div class="w-full space-y-1">
+      <label for="name" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Full Name</label>
+      <input type="text" id="name" name="name" required autocomplete="name"
+             class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
     </div>
-  </div>
+    <div class="w-full space-y-1">
+      <label for="email" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email"
+             class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+    </div>
+    <div class="w-full space-y-1">
+      <label for="password" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="new-password"
+             class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+    </div>
+    <div class="w-full space-y-1">
+      <label for="confirm_password" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Confirm Password</label>
+      <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password"
+             class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+    </div>
+
+    <button type="submit"
+            class="w-full h-9 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] mt-4">
+      {{ button_text }}
+    </button>
+  </form>
+
+  <p class="text-center text-[13px] mt-4">
+    <a href="{{ other_page }}" class="text-[hsl(var(--primary))] hover:underline">{{ other_link_text }}</a>
+  </p>
+{% endcall %}
 {% endblock %}
 
 {% block scripts_extra %}
