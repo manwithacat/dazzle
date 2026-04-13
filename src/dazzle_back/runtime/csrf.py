@@ -44,6 +44,11 @@ class CSRFConfig:
             "/dazzle/dev/",
             "/auth/",
             "/feedbackreports/",
+            # QA mode magic-link generator (#768). Dev-only — the endpoint
+            # is triple-gated by env flags, mount-time check, and request-
+            # time check inside the handler. Exempt from CSRF so automated
+            # testers (Playwright, curl) can hit it without a session.
+            "/qa/",
         ]
     )
 

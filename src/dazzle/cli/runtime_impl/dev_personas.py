@@ -8,12 +8,15 @@ Dev personas:
 - Email: {persona_id}@example.test (RFC2606 reserved TLD)
 - Role: persona_id (used as the role name — Dazzle apps typically
   name roles after their persona slugs)
-- Password: None (magic link only — there's no way to log in without
-  hitting the dev-gated generator endpoint)
+- Password: cryptographically random, never disclosed — the users table
+  has a NOT NULL password_hash column, and the QA magic-link generator
+  endpoint bypasses password verification entirely, so the password
+  never needs to be known to log in as a dev persona.
 """
 
 from __future__ import annotations
 
+import secrets
 import sys
 from dataclasses import dataclass, field
 from typing import Any
@@ -86,9 +89,14 @@ def _provision_one(
             stories=_derive_stories(appspec, persona_id),
         )
 
+    # Magic-link is the only login path for dev personas (the QA mode
+    # generator endpoint), but the users table has a NOT NULL
+    # password_hash column. Give each dev user a cryptographically random
+    # password that nobody will ever know — the QA magic-link endpoint
+    # bypasses the password check entirely.
     user = auth_store.create_user(
         email=email,
-        password=None,  # magic-link only — no password
+        password=secrets.token_urlsafe(32),
         username=display_name,
         is_superuser=False,
         roles=[persona_id],

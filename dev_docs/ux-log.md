@@ -1849,6 +1849,33 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 112 — 2026-04-13 — **multi-persona Phase B unblocked** (bcrypt + CSRF fixes)
+
+**Outcome:** The first successful **multi-persona** Phase B run. Summary: `fitness run [admin:e2409c19..., agent:1821a32d...]: 89 findings total (admin=41, agent=48), independence=0.000 (max)`, `degraded=False`. Both personas logged in via the QA magic-link flow, the fitness engine ran per-persona, findings aggregated cleanly.
+
+### Bugs fixed this cycle
+
+1. **Dev-persona bcrypt crash** (bug #4 from cycle 110) — `dev_personas._provision_one` passed `password=None` to `auth_store.create_user`, which forwards to `hash_password(None)` → `None.encode('utf-8')` → `'NoneType' object has no attribute 'encode'`. All 4 dev users failed to provision, so every persona login subsequently got 404 from the magic-link endpoint. Fix: generate a cryptographically-random `secrets.token_urlsafe(32)` password for each dev persona. The password is never disclosed or needed because the QA magic-link generator endpoint bypasses password verification — the random value just satisfies the NOT NULL column.
+
+2. **CSRF middleware 403's `/qa/magic-link`** (NEW bug discovered this cycle) — Even after the dev personas existed in the DB, Playwright's `page.request.post('/qa/magic-link', ...)` got 403 Forbidden. The handler was mounted and the env flags were set, but `CSRFMiddleware` was rejecting the POST because `/qa/` wasn't in `exempt_path_prefixes`. Fix: added `/qa/` to the prefix list. Safe because the endpoint is already triple-gated (env flag at mount time, env flag at request time, and dev users only exist when `--local` is active).
+
+### Verification flow
+
+- `dropdb dazzle_support_tickets && createdb dazzle_support_tickets` — fresh DB, no pre-existing users
+- Smoke test: `python /tmp/mode_a_smoke.py` → 4 dev users created in `users` table (`admin@example.test`, `customer@example.test`, `agent@example.test`, `manager@example.test`), confirmed via psql
+- Multi-persona Phase B: admin and agent each ran their own `FitnessEngine`, produced 41 and 48 findings respectively, and the aggregator returned `degraded=False`. No BLOCKED outcomes.
+
+### Still-filed follow-ups (not this cycle)
+
+- **Walker action parse error** (bug #5) — Claude 4.6 sometimes prefixes its JSON with prose ("I'll start by exploring the ticket creation form..."), which crashes the strict JSON parser. Walker runs continue regardless (the parse error is logged, not raised), but first-draft actions are lost. Needs prompt hardening or a more forgiving parser.
+- **Form-field anchor access control** (new discovery) — admin got "Forbidden" at `/app/ticket/create` when the contract walker navigated. Either the DSL has scope rules that block admin from creating tickets (which would be a correct observation worth tracking as a fitness finding, not a bug), or the session wasn't actually authenticated for the RBAC check. Worth investigating once walker parsing is hardened.
+
+### Impact
+
+The e2e environment strategy is now **production-ready for multi-persona Phase B runs**. Cycles 113+ can start advancing real backlog rows through actual contract-walk fitness verification. This was the primary goal of cycles 110–112 and is now achieved.
+
+---
+
 ## Cycle 111 — 2026-04-13 — unblock CI badge: fix 6 DaisyUI-lag template tests
 
 **Outcome:** 6 pre-existing test failures (bug #7 from cycle 110) fixed in one pass; CI Python Tests job should now go green for the first time in 10+ consecutive runs.
