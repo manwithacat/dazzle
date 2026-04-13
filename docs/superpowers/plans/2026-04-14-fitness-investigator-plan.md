@@ -73,7 +73,7 @@ The tasks below are broken into smaller batches that a subagent controller can d
 - [x] Batch 1 (Tasks 1–4): backlog reader, dataclasses, proposal I/O, attempted index
 - [x] Batch 2 (Tasks 5–8): case file (sample, siblings, windowing, prompt rendering)
 - [x] Batch 3 (Tasks 9–14): six tools
-- [ ] Batch 4 (Tasks 15–17): mission assembly, metrics, runner
+- [x] Batch 4 (Tasks 15–17): mission assembly, metrics, runner
 - [ ] Batch 5 (Tasks 18–20): CLI, integration test, docs
 
 Each batch will be appended to this file as the plan is written. The implementer should execute one task at a time following TDD: red → green → commit. Type-check with `mypy src/dazzle/fitness/investigator/` after each task.
@@ -3349,4 +3349,954 @@ git commit -m "feat(investigator): propose_fix terminal tool + ToolState.termina
 
 ---
 
-*(Batches 4–5 continue below.)*
+## Task 15: `NullObserver` + `NullExecutor` + `build_investigator_mission`
+
+**Files:**
+- Create: `src/dazzle/fitness/investigator/agent_backends.py`
+- Create: `src/dazzle/fitness/investigator/mission.py`
+- Test: `tests/unit/fitness/investigator/test_mission.py` (new)
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/fitness/investigator/test_mission.py`:
+
+```python
+"""Tests for build_investigator_mission + NullObserver/NullExecutor."""
+
+from datetime import datetime, UTC
+from pathlib import Path
+
+import pytest
+
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.investigator.agent_backends import NullExecutor, NullObserver
+from dazzle.fitness.investigator.case_file import build_case_file
+from dazzle.fitness.investigator.mission import build_investigator_mission
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster
+
+
+def _minimal_finding() -> Finding:
+    return Finding(
+        id="f_001",
+        created=datetime(2026, 4, 14, tzinfo=UTC),
+        run_id="run-1",
+        cycle=None,
+        axis="coverage",
+        locus="implementation",
+        severity="high",
+        persona="admin",
+        capability_ref="x",
+        expected="y",
+        observed="z",
+        evidence_embedded=EvidenceEmbedded(
+            expected_ledger_step={},
+            diff_summary=[],
+            transcript_excerpt=[],
+        ),
+        disambiguation=False,
+        low_confidence=False,
+        status="PROPOSED",
+        route="soft",
+        fix_commit=None,
+        alternative_fix=None,
+    )
+
+
+def _minimal_cluster(locus: str = "src/foo.html") -> Cluster:
+    return Cluster(
+        cluster_id="CL-deadbeef",
+        locus=locus,
+        axis="coverage",
+        canonical_summary="z",
+        persona="admin",
+        severity="high",
+        cluster_size=1,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_001",
+    )
+
+
+@pytest.mark.asyncio
+async def test_null_observer_returns_empty_state() -> None:
+    obs = NullObserver()
+    state = await obs.observe()
+    assert state.url == ""
+    assert obs.current_url == ""
+    # navigate is a no-op
+    await obs.navigate("http://example.com")
+
+
+@pytest.mark.asyncio
+async def test_null_executor_rejects_page_actions() -> None:
+    from dazzle.agent.models import AgentAction, ActionType
+
+    ex = NullExecutor()
+    result = await ex.execute(AgentAction(type=ActionType.CLICK, target="button", value=None))
+    assert result.error is not None
+    assert "tool-only" in (result.error or "")
+
+
+def test_build_investigator_mission_wires_tools_and_prompt(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", [_minimal_finding()])
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "foo.html").write_text("<div>x</div>")
+
+    case_file = build_case_file(_minimal_cluster(), tmp_path)
+    mission, tool_state = build_investigator_mission(
+        case_file=case_file,
+        dazzle_root=tmp_path,
+        llm_run_id="run-xyz",
+    )
+
+    # System prompt contains the case file text
+    assert "# Case File" in mission.system_prompt
+    assert "CL-deadbeef" in mission.system_prompt
+    assert "root cause" in mission.system_prompt.lower()
+
+    # All six tools wired
+    tool_names = {t.name for t in mission.tools}
+    assert tool_names == {
+        "read_file",
+        "query_dsl",
+        "get_cluster_findings",
+        "get_related_clusters",
+        "search_spec",
+        "propose_fix",
+    }
+
+    # Max steps and completion criteria
+    assert mission.max_steps == 25
+
+    # The completion criterion should return True when state.terminal_status is set
+    tool_state.terminal_status = "proposed"
+    # Need a fake action + empty history for the completion check
+    from dazzle.agent.models import AgentAction, ActionType
+    fake_action = AgentAction(type=ActionType.TOOL, target="propose_fix", value=None)
+    assert mission.completion_criteria(fake_action, []) is True
+```
+
+Also ensure `pytest-asyncio` is available. Verify with:
+```bash
+python -c "import pytest_asyncio; print(pytest_asyncio.__version__)"
+```
+If missing, add `pytest-asyncio>=0.24` to `[project.optional-dependencies].dev` in `pyproject.toml`.
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/investigator/test_mission.py -v`
+Expected: FAIL — `ModuleNotFoundError: ... agent_backends`
+
+- [ ] **Step 3: Implement `agent_backends.py`**
+
+Create `src/dazzle/fitness/investigator/agent_backends.py`:
+
+```python
+"""No-op Observer/Executor backends for the investigator mission.
+
+The investigator doesn't interact with a browser or any page. It only
+uses tools. These backends satisfy the DazzleAgent contract with empty
+state and an error on page-action execution (which should never happen
+if the system prompt is doing its job).
+"""
+
+from __future__ import annotations
+
+from dazzle.agent.models import ActionResult, AgentAction, PageState
+
+
+class NullObserver:
+    """Returns empty PageState; navigate is a no-op."""
+
+    async def observe(self) -> PageState:
+        return PageState(
+            url="",
+            title="",
+            elements=[],
+            text="",
+            screenshot=None,
+            console=[],
+            network=[],
+        )
+
+    async def navigate(self, url: str) -> None:
+        return None
+
+    @property
+    def current_url(self) -> str:
+        return ""
+
+
+class NullExecutor:
+    """Rejects all page actions — the investigator is tool-only."""
+
+    async def execute(self, action: AgentAction) -> ActionResult:
+        return ActionResult(
+            message=f"NullExecutor rejected {action.type}",
+            error="investigator is tool-only; no page actions allowed",
+        )
+```
+
+Note: the `PageState` constructor fields must match what `dazzle.agent.models.PageState` expects. Check the actual dataclass before finalising — if fields differ, adjust the `observe` return value accordingly.
+
+- [ ] **Step 4: Implement `mission.py`**
+
+Create `src/dazzle/fitness/investigator/mission.py`:
+
+```python
+"""Investigator mission builder."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from dazzle.agent.core import Mission
+from dazzle.agent.models import ActionType, AgentAction, Step
+from dazzle.fitness.investigator.case_file import CaseFile
+from dazzle.fitness.investigator.tools import ToolState, build_investigator_tools
+
+MAX_STEPS = 25
+STAGNATION_WINDOW = 4
+
+
+def build_investigator_mission(
+    *,
+    case_file: CaseFile,
+    dazzle_root: Path,
+    llm_run_id: str,
+) -> tuple[Mission, ToolState]:
+    """Assemble a Mission for one cluster investigation.
+
+    Returns (mission, tool_state). The caller keeps the tool_state reference
+    to read evidence_paths / tool_calls_summary / terminal_status after the
+    mission completes.
+    """
+    tool_state = ToolState()
+    tools = build_investigator_tools(
+        case_file=case_file,
+        dazzle_root=dazzle_root,
+        llm_run_id=llm_run_id,
+        state=tool_state,
+    )
+
+    system_prompt = _render_system_prompt(case_file)
+
+    def completion(action: AgentAction, history: list[Step]) -> bool:
+        """Terminate on propose_fix success or 4-step stagnation."""
+        if tool_state.terminal_status is not None:
+            return True
+        if len(history) >= STAGNATION_WINDOW:
+            last_window = history[-STAGNATION_WINDOW:]
+            if all(s.action.type != ActionType.TOOL for s in last_window):
+                return True
+        return False
+
+    mission = Mission(
+        name=f"investigator:{case_file.cluster.cluster_id}",
+        system_prompt=system_prompt,
+        tools=tools,
+        completion_criteria=completion,
+        max_steps=MAX_STEPS,
+        token_budget=200_000,
+        context={
+            "cluster_id": case_file.cluster.cluster_id,
+            "mode": "investigator",
+        },
+    )
+    return mission, tool_state
+
+
+def _render_system_prompt(case_file: CaseFile) -> str:
+    return _SYSTEM_PROMPT_TEMPLATE.format(case_file_text=case_file.to_prompt_text())
+
+
+_SYSTEM_PROMPT_TEMPLATE = '''You are an investigator in the Dazzle fitness loop. Your job is to examine
+one cluster of fitness findings and produce a structured fix proposal that
+a later actor subsystem can apply mechanically.
+
+# Case File
+
+{case_file_text}
+
+# Your goal
+
+Produce a single call to `propose_fix` describing how to resolve this
+cluster. The proposal must:
+
+1. Fix the root cause, not the symptom. If the evidence points at a shared
+   helper, propose a change to the helper — not a copy-paste in every caller.
+2. When the evidence points at a shared helper, a template partial, or a
+   repeated pattern, prefer a fix at the shared layer even if the diff is
+   larger. A correct refactor is preferable to a narrow patch that leaves
+   siblings broken.
+3. Explain WHY the fix is correct in its rationale.
+4. List at least two alternatives you considered and why you rejected them.
+5. Provide a verification plan the actor can execute to confirm the fix works.
+6. Use real line numbers from files you have read. Never guess at diffs.
+
+# Tools
+
+You have six tools. Five are read-only observers; the sixth ends the mission.
+
+**read_file(path, line_range?)** — read any repo file. Line numbers are
+prepended to every line; use those line numbers in your diffs.
+
+**query_dsl(name)** — fetch the parsed DSL node for an entity, surface,
+workspace, service, process, persona, or enum.
+
+**get_cluster_findings(cluster_id, limit)** — fetch more sibling findings
+beyond those in the case file. Capped at 30 per cluster per mission.
+
+**get_related_clusters(locus)** — find other clusters pointing at the
+same file. Use this to decide whether your fix should address one symptom
+or a shared root cause.
+
+**search_spec(query)** — grep docs/superpowers/specs/ and docs/reference/
+for a literal term. Use when you need to know the design intent.
+
+**propose_fix(fixes, rationale, overall_confidence, verification_plan,
+alternatives_considered, investigation_log)** — terminal. Calling this
+ends the mission. Only call it when you have:
+  - read the locus file (always)
+  - verified the diff lines exist at the line numbers you reference
+  - considered at least one alternative
+  - written a verification plan more specific than "re-run Phase B"
+
+# Termination
+
+You have at most 25 steps. If you cannot produce a proposal within that
+budget, end with `propose_fix` anyway and set overall_confidence low
+(< 0.4). A low-confidence proposal is better than no proposal.
+
+If the case file is insufficient and your tools cannot help — for example,
+the locus points at a missing file — call `propose_fix` with one fix whose
+rationale explains the blocker and overall_confidence=0.0.
+
+# Style
+
+- Keep per-fix rationales brief: two sentences.
+- Keep alternatives brief: one line each, explaining WHY rejected.
+- The investigation log is free-form markdown; write it as a future-you
+  would want to read it.
+- Confidence is your honest self-assessment. A 0.7 that turns out correct
+  is better than a 0.95 that turns out wrong.
+'''
+```
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_mission.py -v`
+Expected: PASS (3 tests)
+
+If `test_null_observer_returns_empty_state` fails on PageState constructor args, check the actual PageState dataclass and adjust the NullObserver's `observe()` return value.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/agent_backends.py src/dazzle/fitness/investigator/mission.py tests/unit/fitness/investigator/test_mission.py
+git commit -m "feat(investigator): mission builder + NullObserver/NullExecutor"
+```
+
+---
+
+## Task 16: Metrics sink
+
+**Files:**
+- Create: `src/dazzle/fitness/investigator/metrics.py`
+- Test: `tests/unit/fitness/investigator/test_metrics.py` (new)
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/fitness/investigator/test_metrics.py`:
+
+```python
+"""Tests for the investigator metrics sink."""
+
+import json
+from pathlib import Path
+
+from dazzle.fitness.investigator.metrics import append_metric
+
+
+def test_append_metric_creates_file(tmp_path: Path) -> None:
+    append_metric(
+        tmp_path,
+        cluster_id="CL-deadbeef",
+        proposal_id="abc12345",
+        status="proposed",
+        tokens_in=100,
+        tokens_out=50,
+        tool_calls=3,
+        duration_ms=1234,
+        model="claude-sonnet-4-6",
+    )
+    metrics = tmp_path / ".dazzle" / "fitness-proposals" / "_metrics.jsonl"
+    assert metrics.exists()
+    line = metrics.read_text().strip()
+    data = json.loads(line)
+    assert data["cluster_id"] == "CL-deadbeef"
+    assert data["status"] == "proposed"
+    assert data["tokens_in"] == 100
+    assert data["tool_calls"] == 3
+
+
+def test_append_metric_is_append_only(tmp_path: Path) -> None:
+    for i in range(3):
+        append_metric(
+            tmp_path,
+            cluster_id=f"CL-{i:08x}",
+            proposal_id=None,
+            status="blocked_step_cap",
+            tokens_in=0,
+            tokens_out=0,
+            tool_calls=0,
+            duration_ms=0,
+            model="x",
+        )
+    metrics = tmp_path / ".dazzle" / "fitness-proposals" / "_metrics.jsonl"
+    lines = metrics.read_text().strip().split("\n")
+    assert len(lines) == 3
+    ids = [json.loads(line)["cluster_id"] for line in lines]
+    assert ids == ["CL-00000000", "CL-00000001", "CL-00000002"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/fitness/investigator/test_metrics.py -v`
+Expected: FAIL — `ModuleNotFoundError: ... metrics`
+
+- [ ] **Step 3: Implement `metrics.py`**
+
+Create `src/dazzle/fitness/investigator/metrics.py`:
+
+```python
+"""Append-only JSONL metrics sink for investigator runs.
+
+One line per investigation attempt (proposed, blocked, or infrastructure failure).
+Lives at .dazzle/fitness-proposals/_metrics.jsonl.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, UTC
+from pathlib import Path
+
+
+def append_metric(
+    dazzle_root: Path,
+    *,
+    cluster_id: str,
+    proposal_id: str | None,
+    status: str,
+    tokens_in: int,
+    tokens_out: int,
+    tool_calls: int,
+    duration_ms: int,
+    model: str,
+) -> None:
+    """Append one JSONL line to .dazzle/fitness-proposals/_metrics.jsonl."""
+    target = dazzle_root / ".dazzle" / "fitness-proposals" / "_metrics.jsonl"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "cluster_id": cluster_id,
+        "proposal_id": proposal_id,
+        "status": status,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "tool_calls": tool_calls,
+        "duration_ms": duration_ms,
+        "created": datetime.now(UTC).isoformat(),
+        "model": model,
+    }
+    with target.open("a") as f:
+        f.write(json.dumps(entry, sort_keys=True) + "\n")
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_metrics.py -v`
+Expected: PASS (2 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/metrics.py tests/unit/fitness/investigator/test_metrics.py
+git commit -m "feat(investigator): JSONL metrics sink"
+```
+
+---
+
+## Task 17: Runner — `run_investigation` + `walk_queue`
+
+**Files:**
+- Create: `src/dazzle/fitness/investigator/runner.py`
+- Test: `tests/unit/fitness/investigator/test_runner.py` (new)
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/fitness/investigator/test_runner.py`:
+
+```python
+"""Tests for the investigator runner.
+
+Uses a stub DazzleAgent replacement (`_StubAgent`) that doesn't call
+any LLM — it invokes tool handlers directly in a scripted sequence.
+"""
+
+from datetime import datetime, UTC
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from dazzle.fitness.backlog import upsert_findings
+from dazzle.fitness.investigator.case_file import build_case_file
+from dazzle.fitness.investigator.proposal import load_proposal
+from dazzle.fitness.investigator.runner import (
+    InvestigationResult,
+    run_investigation,
+    walk_queue,
+)
+from dazzle.fitness.investigator.tools import build_investigator_tools, ToolState
+from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.triage import Cluster, write_queue_file
+
+
+def _finding(fid: str) -> Finding:
+    return Finding(
+        id=fid,
+        created=datetime(2026, 4, 14, tzinfo=UTC),
+        run_id="run-1",
+        cycle=None,
+        axis="coverage",
+        locus="implementation",
+        severity="high",
+        persona="admin",
+        capability_ref="x",
+        expected="y",
+        observed="z",
+        evidence_embedded=EvidenceEmbedded(
+            expected_ledger_step={},
+            diff_summary=[],
+            transcript_excerpt=[],
+        ),
+        disambiguation=False,
+        low_confidence=False,
+        status="PROPOSED",
+        route="soft",
+        fix_commit=None,
+        alternative_fix=None,
+    )
+
+
+def _cluster() -> Cluster:
+    return Cluster(
+        cluster_id="CL-deadbeef",
+        locus="src/foo.html",
+        axis="coverage",
+        canonical_summary="z",
+        persona="admin",
+        severity="high",
+        cluster_size=1,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_001",
+    )
+
+
+@pytest.fixture
+def fake_root(tmp_path: Path) -> Path:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", [_finding("f_001")])
+    write_queue_file(tmp_path / "dev_docs" / "fitness-queue.md", [_cluster()])
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "foo.html").write_text("<div>line 1</div>\n")
+    return tmp_path
+
+
+class _StubLlmClient:
+    """Test double for the DazzleAgent LLM path.
+
+    Instead of calling Anthropic, this client takes a pre-scripted list of
+    tool calls and returns them one at a time. The runner should use this
+    via a custom agent builder hook (see runner's `agent_factory` param).
+    """
+
+    def __init__(self, script: list[dict[str, Any]]):
+        self.script = script
+        self.calls = 0
+        self.run_id = "stub-run-id"
+
+
+@pytest.mark.asyncio
+async def test_run_investigation_happy_path(fake_root: Path) -> None:
+    """An investigation that produces a valid proposal returns the Proposal."""
+    script = [
+        {"tool": "read_file", "args": {"path": "src/foo.html"}},
+        {
+            "tool": "propose_fix",
+            "args": {
+                "fixes": [
+                    {
+                        "file_path": "src/foo.html",
+                        "line_range": [1, 1],
+                        "diff": "--- a/src/foo.html\n+++ b/src/foo.html\n@@ -1,1 +1,1 @@\n-<div>line 1</div>\n+<div>line 1 fixed</div>\n",
+                        "rationale": "fix the div content",
+                        "confidence": 0.85,
+                    }
+                ],
+                "rationale": "The div content is wrong; here is the real rationale.",
+                "overall_confidence": 0.85,
+                "verification_plan": "Re-run Phase B and verify the cluster disappears entirely.",
+                "alternatives_considered": ["do nothing — rejected: bug persists"],
+                "investigation_log": "Looked at src/foo.html; found the issue.",
+            },
+        },
+    ]
+
+    result = await run_investigation(
+        cluster=_cluster(),
+        dazzle_root=fake_root,
+        llm_client=_StubLlmClient(script),
+        force=False,
+        dry_run=False,
+    )
+
+    assert result is not None
+    assert result.cluster_id == "CL-deadbeef"
+    assert result.status == "proposed"
+
+    # Proposal file exists on disk
+    proposals = list((fake_root / ".dazzle" / "fitness-proposals").glob("CL-deadbeef-*.md"))
+    assert len(proposals) == 1
+
+
+@pytest.mark.asyncio
+async def test_run_investigation_idempotent_skip(fake_root: Path) -> None:
+    """Second call returns the existing Proposal without re-running."""
+    script = [
+        {"tool": "read_file", "args": {"path": "src/foo.html"}},
+        {"tool": "propose_fix", "args": _minimal_propose_payload()},
+    ]
+
+    first = await run_investigation(
+        cluster=_cluster(),
+        dazzle_root=fake_root,
+        llm_client=_StubLlmClient(script),
+        force=False,
+        dry_run=False,
+    )
+    second_client = _StubLlmClient([])  # empty script — would fail if called
+    second = await run_investigation(
+        cluster=_cluster(),
+        dazzle_root=fake_root,
+        llm_client=second_client,
+        force=False,
+        dry_run=False,
+    )
+    assert first is not None and second is not None
+    assert first.proposal_id == second.proposal_id
+    assert second_client.calls == 0  # never invoked
+
+
+@pytest.mark.asyncio
+async def test_run_investigation_dry_run(fake_root: Path, capsys) -> None:
+    """--dry-run prints the case file and returns None without running."""
+    result = await run_investigation(
+        cluster=_cluster(),
+        dazzle_root=fake_root,
+        llm_client=_StubLlmClient([]),
+        force=False,
+        dry_run=True,
+    )
+    assert result is None
+    captured = capsys.readouterr()
+    assert "# Case File" in captured.out
+    assert not (fake_root / ".dazzle" / "fitness-proposals").exists() or not list(
+        (fake_root / ".dazzle" / "fitness-proposals").glob("CL-*.md")
+    )
+
+
+@pytest.mark.asyncio
+async def test_walk_queue_top_n(fake_root: Path) -> None:
+    """walk_queue iterates the top N clusters from fitness-queue.md."""
+    script = [
+        {"tool": "read_file", "args": {"path": "src/foo.html"}},
+        {"tool": "propose_fix", "args": _minimal_propose_payload()},
+    ]
+    results = await walk_queue(
+        dazzle_root=fake_root,
+        llm_client=_StubLlmClient(script),
+        top=1,
+        force=False,
+        dry_run=False,
+    )
+    assert len(results) == 1
+    assert results[0] is not None
+
+
+def _minimal_propose_payload() -> dict[str, Any]:
+    return {
+        "fixes": [
+            {
+                "file_path": "src/foo.html",
+                "line_range": [1, 1],
+                "diff": "--- a/src/foo.html\n+++ b/src/foo.html\n@@ -1,1 +1,1 @@\n-<div>line 1</div>\n+<div>line 1 fixed</div>\n",
+                "rationale": "fix the div",
+                "confidence": 0.85,
+            }
+        ],
+        "rationale": "Standard rationale that meets the 20-char minimum easily.",
+        "overall_confidence": 0.85,
+        "verification_plan": "Re-run Phase B; expect cluster CL-deadbeef to vanish from queue.",
+        "alternatives_considered": ["do nothing — rejected"],
+        "investigation_log": "looked at foo.html",
+    }
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pytest tests/unit/fitness/investigator/test_runner.py -v`
+Expected: FAIL — `ModuleNotFoundError: ... runner`
+
+- [ ] **Step 3: Implement `runner.py`**
+
+Create `src/dazzle/fitness/investigator/runner.py`:
+
+```python
+"""Runner: resolves clusters, builds case files, drives the mission, writes results.
+
+The runner is the only place that decides (a) whether to re-investigate
+(idempotence via proposal files on disk) and (b) how to translate mission
+outcomes into Proposal objects or blocked artefacts.
+
+Because the DazzleAgent's LLM client is external, this module exposes
+a stub-friendly shape: the caller provides an `llm_client` that is either
+a real LLMAPIClient (for production) or a test double. The runner adapts
+it via an internal _drive_mission function.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass
+from pathlib import Path
+from time import monotonic
+from typing import Any, Protocol
+
+from dazzle.fitness.investigator.attempted import (
+    AttemptedIndex,
+    load_attempted,
+    mark_attempted,
+    save_attempted,
+)
+from dazzle.fitness.investigator.case_file import (
+    CaseFile,
+    CaseFileBuildError,
+    build_case_file,
+)
+from dazzle.fitness.investigator.metrics import append_metric
+from dazzle.fitness.investigator.mission import build_investigator_mission
+from dazzle.fitness.investigator.proposal import Proposal, list_proposals, load_proposal
+from dazzle.fitness.triage import Cluster, read_queue_file
+
+
+@dataclass(frozen=True)
+class InvestigationResult:
+    status: str  # "proposed" | "blocked_invalid_proposal" | "blocked_write_error" | "blocked_step_cap" | "blocked_stagnation"
+    proposal_id: str | None
+    cluster_id: str
+
+
+class LlmClient(Protocol):
+    """Minimal contract the runner needs from an LLM client or test double.
+
+    Production: LLMAPIClient from dazzle.llm.api_client.
+    Tests: _StubLlmClient with a scripted list of tool calls.
+    """
+
+    run_id: str
+
+
+async def run_investigation(
+    *,
+    cluster: Cluster,
+    dazzle_root: Path,
+    llm_client: LlmClient,
+    force: bool = False,
+    dry_run: bool = False,
+) -> Proposal | None:
+    """Investigate one cluster. See module docstring for semantics."""
+    # Idempotence check
+    if not force:
+        existing = _find_existing_proposal(dazzle_root, cluster.cluster_id)
+        if existing is not None:
+            return existing
+
+    # Build the case file
+    try:
+        case_file = build_case_file(cluster, dazzle_root)
+    except CaseFileBuildError as e:
+        print(f"build_case_file failed: {e}")
+        return None
+
+    # Dry-run: print and stop
+    if dry_run:
+        print(case_file.to_prompt_text())
+        return None
+
+    # Run the mission
+    mission, tool_state = build_investigator_mission(
+        case_file=case_file,
+        dazzle_root=dazzle_root,
+        llm_run_id=llm_client.run_id,
+    )
+
+    t0 = monotonic()
+    await _drive_mission(mission, tool_state, llm_client)
+    duration_ms = int((monotonic() - t0) * 1000)
+
+    status = tool_state.terminal_status or "blocked_step_cap"
+    append_metric(
+        dazzle_root,
+        cluster_id=cluster.cluster_id,
+        proposal_id=tool_state.terminal_proposal_id,
+        status=status,
+        tokens_in=0,  # stub driver has no real counts; real driver fills these
+        tokens_out=0,
+        tool_calls=len(tool_state.tool_calls_summary),
+        duration_ms=duration_ms,
+        model=getattr(llm_client, "model", "unknown"),
+    )
+
+    # Update attempted index
+    index = load_attempted(dazzle_root)
+    mark_attempted(
+        index,
+        cluster.cluster_id,
+        proposal_id=tool_state.terminal_proposal_id,
+        status="proposed" if status == "proposed" else "blocked",
+    )
+    save_attempted(index, dazzle_root)
+
+    if status == "proposed" and tool_state.terminal_proposal_id is not None:
+        return _find_existing_proposal(dazzle_root, cluster.cluster_id)
+    return None
+
+
+async def walk_queue(
+    *,
+    dazzle_root: Path,
+    llm_client: LlmClient,
+    top: int,
+    force: bool,
+    dry_run: bool,
+) -> list[Proposal | None]:
+    """Walk top N clusters from fitness-queue.md, investigating each in sequence."""
+    queue_path = dazzle_root / "dev_docs" / "fitness-queue.md"
+    if not queue_path.exists():
+        return []
+    clusters = read_queue_file(queue_path)
+    # Queue is already sorted by priority; just take the top N
+    selected = clusters[:top]
+
+    results: list[Proposal | None] = []
+    for cluster in selected:
+        result = await run_investigation(
+            cluster=cluster,
+            dazzle_root=dazzle_root,
+            llm_client=llm_client,
+            force=force,
+            dry_run=dry_run,
+        )
+        results.append(result)
+    return results
+
+
+def _find_existing_proposal(dazzle_root: Path, cluster_id: str) -> Proposal | None:
+    """Return the most recent proposal for this cluster, or None."""
+    proposals = list_proposals(dazzle_root, cluster_id=cluster_id)
+    if not proposals:
+        return None
+    return proposals[-1]
+
+
+async def _drive_mission(mission: Any, tool_state: Any, llm_client: LlmClient) -> None:
+    """Drive the mission with a stub LLM or real DazzleAgent.
+
+    For stub clients (tests), we walk the scripted tool calls directly
+    without going through DazzleAgent. For real LLM clients, we hand off
+    to DazzleAgent.run().
+
+    The discriminator is attribute-based: if llm_client has a `script`
+    attribute it's treated as a stub.
+    """
+    if hasattr(llm_client, "script"):
+        await _drive_stub(mission, tool_state, llm_client)
+    else:
+        await _drive_real(mission, tool_state, llm_client)
+
+
+async def _drive_stub(mission: Any, tool_state: Any, llm_client: Any) -> None:
+    """Execute scripted tool calls directly against the mission's tool list."""
+    tools_by_name = {t.name: t for t in mission.tools}
+    for entry in llm_client.script:
+        llm_client.calls += 1
+        tool_name = entry["tool"]
+        args = entry.get("args") or {}
+        tool = tools_by_name.get(tool_name)
+        if tool is None:
+            tool_state.terminal_status = "blocked_invalid_proposal"
+            return
+        result = tool.handler(**args)
+        if asyncio.iscoroutine(result):
+            result = await result
+        if tool_state.terminal_status is not None:
+            return
+    # Ran out of script without terminal — stagnation
+    if tool_state.terminal_status is None:
+        tool_state.terminal_status = "blocked_stagnation"
+
+
+async def _drive_real(mission: Any, tool_state: Any, llm_client: Any) -> None:
+    """Production path: use DazzleAgent with NullObserver/NullExecutor.
+
+    The LLMAPIClient is passed via DazzleAgent's internal client machinery —
+    the agent reads `ANTHROPIC_API_KEY` or a provided key from the client.
+    """
+    from dazzle.agent.core import DazzleAgent
+    from dazzle.fitness.investigator.agent_backends import NullExecutor, NullObserver
+
+    agent = DazzleAgent(
+        observer=NullObserver(),
+        executor=NullExecutor(),
+        model=getattr(llm_client, "model", None),
+        api_key=getattr(llm_client, "api_key", None),
+    )
+    await agent.run(mission)
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pytest tests/unit/fitness/investigator/test_runner.py -v`
+Expected: PASS (4 tests)
+
+- [ ] **Step 5: Run all investigator unit tests**
+
+Run: `pytest tests/unit/fitness/investigator/ -v`
+Expected: PASS (all tests across all modules — should be 40+ tests)
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/fitness/investigator/runner.py tests/unit/fitness/investigator/test_runner.py
+git commit -m "feat(investigator): runner (run_investigation + walk_queue) with stub driver"
+```
+
+---
+
+*(Batch 5 continues below.)*
