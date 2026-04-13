@@ -113,3 +113,6 @@ dev_docs/
 # /ux-cycle ephemeral state
 .dazzle/signals/
 .dazzle/ux-cycle.lock
+
+# Per-example secrets — template is .env.example, actual .env never committed
+examples/*/.env
