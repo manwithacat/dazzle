@@ -30,6 +30,20 @@ class TestBaselineKey:
             key.alembic_rev = "x"  # type: ignore[misc]
 
 
+@pytest.fixture(autouse=True)
+def mock_pg_binaries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pretend pg_dump/pg_restore are always on PATH.
+
+    BaselineManager instantiates a Snapshotter eagerly in __init__, which
+    probes shutil.which. Without this fixture the whole test file crashes
+    on CI runners that don't have PostgreSQL client tools installed.
+    """
+    monkeypatch.setattr(
+        "dazzle.e2e.snapshot.shutil.which",
+        lambda name: f"/usr/local/bin/{name}",
+    )
+
+
 @pytest.fixture
 def project_root(tmp_path: Path) -> Path:
     root = tmp_path / "example"
