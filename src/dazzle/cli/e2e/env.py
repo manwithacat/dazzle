@@ -80,11 +80,28 @@ def env_start(
             typer.echo(f"[mode-{mode_spec.name}] Ctrl+C to stop.")
             stop_event = asyncio.Event()
 
-            def _sigint_handler(signum: int, frame: object) -> None:
-                stop_event.set()
+            # Cooperate with asyncio's signal machinery instead of replacing
+            # ModeRunner's SIGINT handler. add_signal_handler works at a
+            # different layer than signal.signal and doesn't overwrite the
+            # runner's cleanup path.
+            loop = asyncio.get_running_loop()
+            try:
+                loop.add_signal_handler(signal.SIGINT, stop_event.set)
+            except NotImplementedError:
+                # Windows asyncio doesn't support add_signal_handler.
+                # Fall back to signal.signal there (runs in main thread).
+                signal.signal(
+                    signal.SIGINT,
+                    lambda signum, frame: stop_event.set(),
+                )
 
-            signal.signal(signal.SIGINT, _sigint_handler)
-            await stop_event.wait()
+            try:
+                await stop_event.wait()
+            finally:
+                try:
+                    loop.remove_signal_handler(signal.SIGINT)
+                except (NotImplementedError, ValueError):
+                    pass
 
     try:
         asyncio.run(_main())
