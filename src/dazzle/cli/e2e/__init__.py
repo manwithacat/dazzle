@@ -19,6 +19,10 @@ e2e_app = typer.Typer(
     no_args_is_help=True,
 )
 
+from dazzle.cli.e2e.env import env_app as _env_app  # noqa: E402
+
+e2e_app.add_typer(_env_app, name="env")
+
 
 @e2e_app.command("run")
 def e2e_run(
