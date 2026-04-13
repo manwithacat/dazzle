@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T11:17Z — Cycle 85 — exhausted (sticky)
+
+No state change since Cycle 48.
+
+---
+
 ## 2026-04-13T11:07Z — Cycle 84 — exhausted (sticky)
 
 No state change since Cycle 48.
