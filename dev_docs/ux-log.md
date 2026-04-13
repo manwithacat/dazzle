@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T13:58Z — Cycle 90 — exhausted (sticky)
+
+No state change. v1.0.3 design spec committed at `bbd77443` — awaiting user review before writing the implementation plan.
+
+---
+
 ## 2026-04-13T13:47Z — Cycle 89 — exhausted (sticky)
 
 No state change. v1.0.3 brainstorming in progress — scope: A (URL inference from contract) + B (multi-persona fan-out).
