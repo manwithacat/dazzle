@@ -4,10 +4,10 @@ Invoked by the top-level ux_cycle runner when it rotates to FITNESS. Owns
 example-app lifecycle (starts runtime, runs the engine, tears down) and
 aggregates the result into a /ux-cycle outcome.
 
-v1 ships the strategy entry point only — the real ``_build_engine`` factory
-is a v1.0.1 follow-up. It currently raises ``NotImplementedError`` so the
-wiring is testable via dependency injection but will fail loudly if a caller
-tries to run it without providing a mock engine.
+v1.0.1 wires the real dependencies: ``_launch_example_app`` spins up the
+example via ``dazzle.qa.server``, ``_build_engine`` loads the example's
+``AppSpec`` + ``FitnessConfig`` and constructs a Playwright-backed
+``FitnessEngine``, and ``_stop_example_app`` tears down the subprocess.
 """
 
 from __future__ import annotations
@@ -30,12 +30,17 @@ class StrategyOutcome:
 async def run_fitness_strategy(example_app: str, project_root: Path) -> StrategyOutcome:
     """Run one fitness cycle against ``example_app`` and return a summary.
 
-    Tests patch :func:`_build_engine` to inject a fake engine. Production
-    callers need to wait for the v1.0.1 integration that wires real
-    ``RuntimeServices`` dependencies.
+    Owns the example-app subprocess lifecycle via try/finally, so teardown
+    runs even if the engine raises.
     """
-    engine = _build_engine(example_app=example_app, project_root=project_root)
-    result = await engine.run()
+    example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
+    handle = _launch_example_app(example_root=example_root)
+    try:
+        engine = _build_engine(example_root=example_root, handle=handle)
+        result = await engine.run()
+    finally:
+        _stop_example_app(handle)
+
     summary = (
         f"fitness run {result.run_metadata.get('run_id')}: "
         f"{len(result.findings)} findings, "
@@ -49,14 +54,31 @@ async def run_fitness_strategy(example_app: str, project_root: Path) -> Strategy
     )
 
 
-def _build_engine(example_app: str, project_root: Path) -> Any:
-    """Construct a FitnessEngine for the given example app.
+def _resolve_example_root(example_app: str, project_root: Path) -> Path:
+    """Resolve ``examples/<example_app>`` relative to the Dazzle repo root."""
+    return project_root / "examples" / example_app
 
-    Factory function so tests can patch it cleanly. The real implementation
-    needs Task 0 discovery notes to wire up the snapshot source, DazzleAgent,
-    PlaywrightExecutor, and the LLM facade from the example's RuntimeServices.
+
+def _launch_example_app(example_root: Path) -> Any:
+    """Launch the example app subprocess and wait for its API to become ready.
+
+    Returns an ``AppConnection``-compatible handle. Real implementation lands
+    in Task 3.
     """
-    raise NotImplementedError(
-        "fitness_strategy._build_engine: wire RuntimeServices + DazzleAgent "
-        "after Task 0 discovery of engine dependencies"
-    )
+    raise NotImplementedError("fitness_strategy._launch_example_app: implemented in Task 3")
+
+
+def _stop_example_app(handle: Any) -> None:
+    """Terminate the example-app subprocess owned by ``handle``.
+
+    Real implementation lands in Task 3.
+    """
+    raise NotImplementedError("fitness_strategy._stop_example_app: implemented in Task 3")
+
+
+def _build_engine(example_root: Path, handle: Any) -> Any:
+    """Construct a ``FitnessEngine`` for the given example app.
+
+    Real implementation lands in Task 4.
+    """
+    raise NotImplementedError("fitness_strategy._build_engine: implemented in Task 4")
