@@ -1,27 +1,26 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
-    {% if stage_counts %}
-    <div class="flex items-center gap-2 mb-2">
-      <progress class="progress progress-primary w-full" value="{{ complete_pct }}" max="100"></progress>
-      <span class="text-sm font-medium whitespace-nowrap">{{ complete_pct }}%</span>
-    </div>
-    <div class="flex flex-wrap gap-1">
-      {% for stage in stage_counts %}
-      <span class="badge badge-sm
-        {%- if stage.complete %} badge-success
-        {%- elif stage.count > 0 %} badge-warning
-        {%- else %} badge-ghost
-        {%- endif %}">
-        {{ stage.name }} ({{ stage.count }})
-      </span>
-      {% endfor %}
-    </div>
-    {% if progress_total > 0 %}
-    <p class="text-xs opacity-50 mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
-    {% endif %}
-    {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
-    {% endif %}
+{# Progress region — UX-035 adopter #12. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+  {% if stage_counts %}
+  <div class="flex items-center gap-2 mb-2">
+    <progress data-dz-progress class="w-full h-2" value="{{ complete_pct }}" max="100"></progress>
+    <span class="text-[13px] font-medium whitespace-nowrap text-[hsl(var(--foreground))]">{{ complete_pct }}%</span>
   </div>
-</div>
+  <div class="flex flex-wrap gap-1">
+    {% for stage in stage_counts %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border
+      {%- if stage.complete %} bg-[hsl(142_71%_45%/0.12)] text-[hsl(142_71%_30%)] border-[hsl(142_71%_45%/0.3)]
+      {%- elif stage.count > 0 %} bg-[hsl(38_92%_50%/0.12)] text-[hsl(38_92%_35%)] border-[hsl(38_92%_50%/0.3)]
+      {%- else %} bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]
+      {%- endif %}">
+      {{ stage.name }} ({{ stage.count }})
+    </span>
+    {% endfor %}
+  </div>
+  {% if progress_total > 0 %}
+  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
+  {% endif %}
+  {% else %}
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
+  {% endif %}
+{% endcall %}

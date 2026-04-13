@@ -1213,3 +1213,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Plan handoff:** Both implementation plans (lifecycle ADR-0020 + fitness v1) are committed and user-approved. Next major work is subagent-driven execution of the lifecycle plan, then fitness v1.
 
 ---
+
+## Cycle 36 — 2026-04-13 — progress.html (UX-035 adopter #12)
+
+**Row:** UX-035 region-wrapper
+**Phases:** REFACTOR only
+
+**Actions:**
+- Refactored `src/dazzle_ui/templates/workspace/regions/progress.html` to use `region_card` macro
+- Replaced `card bg-base-100 shadow-sm` + `card-body` + `card-title` wrapper
+- `progress progress-primary` → `<progress data-dz-progress class="w-full h-2">` (picks up existing design-system.css override from UX-027 cycle)
+- DaisyUI badges replaced with inline semantic pills: green (success HSL 142), amber (warning HSL 38), muted (neutral tokens). Pills use border + background tinted with opacity for Linear-adjacent aesthetic.
+- Body text opacity-50 → text-[hsl(var(--muted-foreground))]
+
+**Outcome:** 12/16 adopters complete. 4 remaining: detail, heatmap, funnel_chart, tab_data.
+
+**Note on semantic colours:** success and warning HSL values are inlined rather than referenced as design tokens because `--success` and `--warning` are not yet declared in `design-system.css`. v0.2 of the token system (open question §15.6 of fitness spec) should land these as first-class variables so this inlining can be replaced with `hsl(var(--success))`.
+
+---
