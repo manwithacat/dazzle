@@ -1,25 +1,24 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
-    {% if diagram_data %}
-    <div class="overflow-x-auto">
-      <pre class="mermaid text-sm">{{ diagram_data }}</pre>
-    </div>
-    <script>
-      if (typeof mermaid === "undefined") {
-        var s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
-        s.onload = function () {
-          mermaid.initialize({ startOnLoad: true, theme: "neutral" });
-          mermaid.run();
-        };
-        document.head.appendChild(s);
-      } else {
-        mermaid.run();
-      }
-    </script>
-    {% else %}
-    <p class="text-sm opacity-60">No entity relationships to display.</p>
-    {% endif %}
+{# Diagram region — UX-035 adopter #11. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+  {% if diagram_data %}
+  <div class="overflow-x-auto">
+    <pre class="mermaid text-[13px] text-[hsl(var(--foreground))]">{{ diagram_data }}</pre>
   </div>
-</div>
+  <script>
+    if (typeof mermaid === "undefined") {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
+      s.onload = function () {
+        mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+        mermaid.run();
+      };
+      document.head.appendChild(s);
+    } else {
+      mermaid.run();
+    }
+  </script>
+  {% else %}
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">No entity relationships to display.</p>
+  {% endif %}
+{% endcall %}

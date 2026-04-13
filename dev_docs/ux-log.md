@@ -1196,3 +1196,20 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Next cycle** will pick UX-006 (filter-bar) if backlog priority puts it next — contract MISSING, impl PARTIAL.
 
 ---
+
+## Cycle 35 — 2026-04-13 — diagram.html (UX-035 adopter #11)
+
+**Row:** UX-035 region-wrapper
+**Phases:** REFACTOR only (impl PARTIAL sweep)
+
+**Actions:**
+- Refactored `src/dazzle_ui/templates/workspace/regions/diagram.html` to use `region_card` macro
+- Replaced `card bg-base-100 shadow-sm` + `card-body` + `card-title` wrapper with `{% call region_card(title) %}`
+- Body text colour tokens: `opacity-60` → `text-[hsl(var(--muted-foreground))]`
+- Preserved mermaid lazy-load script and empty state branch
+
+**Outcome:** 11/16 adopters complete. 5 remaining (detail, progress, heatmap, funnel_chart, tab_data).
+
+**Plan handoff:** Both implementation plans (lifecycle ADR-0020 + fitness v1) are committed and user-approved. Next major work is subagent-driven execution of the lifecycle plan, then fitness v1.
+
+---
