@@ -1,29 +1,29 @@
 {% extends "site/site_base.html" %}
+{% from 'macros/auth_page_wrapper.html' import auth_page_card %}
 
 {% block title %}2FA Settings - {{ product_name }}{% endblock %}
 
-{% block body_class %}dz-auth-page bg-base-200{% endblock %}
+{% block body_class %}dz-auth-page{% endblock %}
 
 {% block body %}
-  <div class="dz-auth-container dz-auth-container--wide">
-    <div class="card bg-base-100 shadow-xl dz-auth-card">
-      <div class="card-body">
-        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
-        <h1 class="card-title text-2xl justify-center">2FA Settings</h1>
+{% call auth_page_card("2FA Settings", product_name) %}
 
-        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
-        <div id="dz-auth-success" class="alert alert-success hidden" role="alert"></div>
+  {# The macro renders #dz-auth-error. Success alert is unique to this flow, so we add it inline. #}
+  <div id="dz-auth-success"
+       class="hidden flex gap-2 p-3 mb-4 rounded-[4px] border border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.08)] text-[13px] text-[hsl(var(--foreground))]"
+       role="status"></div>
 
-        <div id="dz-status" class="mt-4">
-          <p class="text-center text-sm text-base-content/70">Loading status...</p>
-        </div>
-
-        <div class="mt-6">
-          <a href="/app" class="btn btn-ghost w-full">Back to App</a>
-        </div>
-      </div>
-    </div>
+  <div id="dz-status" class="mt-2">
+    <p class="text-center text-[13px] text-[hsl(var(--muted-foreground))]">Loading status...</p>
   </div>
+
+  <div class="mt-6">
+    <a href="/app"
+       class="block w-full h-9 leading-9 text-center rounded-[4px] text-[hsl(var(--muted-foreground))] text-[13px] font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[120ms]">
+      Back to App
+    </a>
+  </div>
+{% endcall %}
 {% endblock %}
 
 {% block scripts_extra %}
@@ -32,6 +32,24 @@
   const errorDiv = document.getElementById('dz-auth-error');
   const successDiv = document.getElementById('dz-auth-success');
   const statusDiv = document.getElementById('dz-status');
+
+  // Class strings for the dynamically-generated status rows. Centralised so
+  // any future tweak to the row/button grammar touches a single location.
+  // Matches the UX-036 button vocabulary established in cycles 33–41.
+  const ROW_CLASSES =
+    'flex justify-between items-center py-3 border-b border-[hsl(var(--border))]';
+  const ROW_CLASSES_LAST =
+    'flex justify-between items-center py-3';
+  const LABEL_CLASSES =
+    'text-[13px] text-[hsl(var(--foreground))]';
+  const BTN_BASE =
+    'h-7 px-3 rounded-[4px] text-[12px] font-medium transition-colors duration-[120ms]';
+  const BTN_PRIMARY =
+    BTN_BASE + ' bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
+  const BTN_DESTRUCTIVE =
+    BTN_BASE + ' bg-[hsl(var(--destructive))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
+  const BTN_OUTLINE =
+    BTN_BASE + ' border border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]';
 
   function showError(msg) {
     errorDiv.textContent = msg;
@@ -54,18 +72,25 @@
     } catch (err) { showError('Network error'); }
   }
 
+  function makeRow(rowClasses, labelText, button) {
+    const row = document.createElement('div');
+    row.className = rowClasses;
+    const label = document.createElement('div');
+    label.className = LABEL_CLASSES;
+    label.textContent = labelText;
+    row.appendChild(label);
+    row.appendChild(button);
+    return row;
+  }
+
   function renderStatus(data) {
     statusDiv.replaceChildren();
 
     // TOTP status
-    const totpDiv = document.createElement('div');
-    totpDiv.className = 'flex justify-between items-center py-3 border-b';
-    const totpLabel = document.createElement('div');
-    totpLabel.textContent = 'Authenticator App (TOTP)';
     const totpBtn = document.createElement('button');
     if (data.totp_enabled) {
       totpBtn.textContent = 'Disable';
-      totpBtn.className = 'btn btn-error btn-sm';
+      totpBtn.className = BTN_DESTRUCTIVE;
       totpBtn.addEventListener('click', async function() {
         const resp = await fetch('/auth/2fa/totp', {method: 'DELETE'});
         if (resp.ok) { showSuccess('TOTP disabled'); loadStatus(); }
@@ -73,22 +98,16 @@
       });
     } else {
       totpBtn.textContent = 'Set Up';
-      totpBtn.className = 'btn btn-primary btn-sm';
+      totpBtn.className = BTN_PRIMARY;
       totpBtn.addEventListener('click', function() { window.location.href = '/2fa/setup'; });
     }
-    totpDiv.appendChild(totpLabel);
-    totpDiv.appendChild(totpBtn);
-    statusDiv.appendChild(totpDiv);
+    statusDiv.appendChild(makeRow(ROW_CLASSES, 'Authenticator App (TOTP)', totpBtn));
 
     // Email OTP status
-    const emailDiv = document.createElement('div');
-    emailDiv.className = 'flex justify-between items-center py-3 border-b';
-    const emailLabel = document.createElement('div');
-    emailLabel.textContent = 'Email OTP';
     const emailBtn = document.createElement('button');
     if (data.email_otp_enabled) {
       emailBtn.textContent = 'Disable';
-      emailBtn.className = 'btn btn-error btn-sm';
+      emailBtn.className = BTN_DESTRUCTIVE;
       emailBtn.addEventListener('click', async function() {
         const resp = await fetch('/auth/2fa/email-otp', {method: 'DELETE'});
         if (resp.ok) { showSuccess('Email OTP disabled'); loadStatus(); }
@@ -96,26 +115,19 @@
       });
     } else {
       emailBtn.textContent = 'Enable';
-      emailBtn.className = 'btn btn-primary btn-sm';
+      emailBtn.className = BTN_PRIMARY;
       emailBtn.addEventListener('click', async function() {
         const resp = await fetch('/auth/2fa/setup/email-otp', {method: 'POST'});
         if (resp.ok) { showSuccess('Email OTP enabled'); loadStatus(); }
         else { showError('Failed to enable email OTP'); }
       });
     }
-    emailDiv.appendChild(emailLabel);
-    emailDiv.appendChild(emailBtn);
-    statusDiv.appendChild(emailDiv);
+    statusDiv.appendChild(makeRow(ROW_CLASSES, 'Email OTP', emailBtn));
 
     // Recovery codes
-    const recoveryDiv = document.createElement('div');
-    recoveryDiv.className = 'flex justify-between items-center py-3';
-    const recoveryLabel = document.createElement('div');
-    const remaining = data.recovery_codes_remaining || 0;
-    recoveryLabel.textContent = 'Recovery Codes (' + remaining + ' remaining)';
     const recoveryBtn = document.createElement('button');
     recoveryBtn.textContent = 'Regenerate';
-    recoveryBtn.className = 'btn btn-outline btn-sm';
+    recoveryBtn.className = BTN_OUTLINE;
     recoveryBtn.addEventListener('click', async function() {
       const resp = await fetch('/auth/2fa/recovery/regenerate', {method: 'POST'});
       const rdata = await resp.json();
@@ -125,9 +137,8 @@
         loadStatus();
       } else { showError('Failed to regenerate'); }
     });
-    recoveryDiv.appendChild(recoveryLabel);
-    recoveryDiv.appendChild(recoveryBtn);
-    statusDiv.appendChild(recoveryDiv);
+    const remaining = data.recovery_codes_remaining || 0;
+    statusDiv.appendChild(makeRow(ROW_CLASSES_LAST, 'Recovery Codes (' + remaining + ' remaining)', recoveryBtn));
   }
 
   loadStatus();

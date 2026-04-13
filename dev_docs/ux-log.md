@@ -4,6 +4,58 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T04:08Z — Cycle 42 — UX-036 COMPLETE
+
+**Selected row:** UX-036 final continuation — 2fa_settings.html adopter (7/7).
+
+**Refactor:** The final adopter in the auth-page series. Template body is small (status div + back link), but the JS dynamically generates three status rows with three different DaisyUI button variants (`btn btn-error btn-sm`, `btn btn-primary btn-sm`, `btn btn-outline btn-sm`) plus a row layout class string (`flex justify-between items-center py-3 border-b`).
+
+Following the pattern established in Cycle 41 (`RECOVERY_CODE_CLASSES`), I extracted **all of these into named constants** at the top of the IIFE:
+
+```js
+const ROW_CLASSES = 'flex justify-between items-center py-3 border-b border-[hsl(var(--border))]';
+const ROW_CLASSES_LAST = 'flex justify-between items-center py-3';
+const LABEL_CLASSES = 'text-[13px] text-[hsl(var(--foreground))]';
+const BTN_BASE = 'h-7 px-3 rounded-[4px] text-[12px] font-medium transition-colors duration-[120ms]';
+const BTN_PRIMARY = BTN_BASE + ' bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
+const BTN_DESTRUCTIVE = BTN_BASE + ' bg-[hsl(var(--destructive))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
+const BTN_OUTLINE = BTN_BASE + ' border border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]';
+```
+
+Also extracted a small `makeRow(rowClasses, labelText, button)` helper so the three rows construct identically — the only previous duplication in the JS was the row-construction boilerplate which was three near-identical 8-line blocks. Now it's a single function call per row.
+
+**Other replacements:**
+- Outer `card`/`card-body`/`card-title` → `auth_page_card` macro
+- `bg-base-content/70` loading text → muted-foreground tone with the standard `text-[13px]` size
+- `btn btn-ghost w-full` Back to App → tall `<a>` with `h-9 leading-9 text-center` matching 2fa_setup
+- `dz-auth-container--wide` was unnecessary — `max-w-sm` is plenty for three text rows + buttons
+
+**Note on the inline `alert(...)` for recovery-code reveal (line 121 of the JS):** left untouched. It's a runtime UX choice (modal blocking dialog vs in-page reveal) that's outside the scope of token replacement. UX-036 is about DaisyUI sweep, not auth-flow ergonomics.
+
+**Phase A:** N/A — auth pages not in example-app contract surface. **Full-directory grep-sweep** on `src/dazzle_ui/templates/site/auth/` confirms zero DaisyUI tokens remain across all 7 files (the only matches are a comment and an HSL variable reference in the 2fa_challenge divider replacement).
+
+**Phase B:** Deferred — no running-app cycle for auth pages yet.
+
+### UX-036 SERIES COMPLETE
+
+Seven cycles (Cycle 33 + Cycles 37–42) brought all seven `site/auth/` templates under macro governance:
+
+| # | Cycle | Adopter | Notable work |
+|---|---|---|---|
+| 1/7 | 33 | login.html | Initial macro + first adopter |
+| 2/7 | 37 | signup.html | Four field grammar |
+| 3/7 | 38 | forgot_password.html | Inline #dz-auth-success preserved (primary tone) |
+| 4/7 | 39 | reset_password.html | Hidden token + two password fields |
+| 5/7 | 40 | 2fa_challenge.html | DaisyUI .divider → centred OR over HR; OTP h-10 grammar |
+| 6/7 | 41 | 2fa_setup.html | 7 button variants; JS RECOVERY_CODE_CLASSES constant |
+| 7/7 | **42** | **2fa_settings.html** | JS BTN_* constants + makeRow() helper |
+
+The row transitions from `IN_PROGRESS`/`PARTIAL` to `READY_FOR_QA`/`DONE`. Phase B QA is still pending — it requires a running-app cycle to dispatch the agent QA mission against an instance with auth flows accessible. That's a future infrastructure concern, not a UX-036 deliverable.
+
+**Next cycle:** With UX-036 done, the next /ux-cycle will need to find a different row. Looking at the backlog, every remaining row is `READY_FOR_QA` — the `OBSERVE` rules don't have a clean match for that state, so the next cycle will likely fall through to Step 6 (EXPLORE mode). The explore counter at `.dazzle/ux-cycle-explore-count` will determine whether it runs or skips with "explore budget exhausted".
+
+---
+
 ## 2026-04-13T03:57Z — Cycle 41
 
 **Selected row:** UX-036 continuation — 2fa_setup.html adopter (6/7).
