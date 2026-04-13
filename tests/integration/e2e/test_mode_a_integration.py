@@ -90,10 +90,17 @@ async def test_mode_a_concurrent_same_example_raises(
 
     task = asyncio.create_task(_inner())
     # Wait for the first runner to actually acquire the lock
+    lock_path = support_tickets_root / ".dazzle" / "mode_a.lock"
     for _ in range(40):
-        if (support_tickets_root / ".dazzle" / "mode_a.lock").exists():
+        if lock_path.exists():
             break
         await asyncio.sleep(0.1)
+    else:
+        task.cancel()
+        pytest.fail(
+            f"first runner did not acquire {lock_path} within 4s — "
+            "cannot verify concurrent-lock semantics"
+        )
 
     # Second run should fail
     try:
