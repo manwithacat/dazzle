@@ -1849,6 +1849,45 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 114 — 2026-04-13 — UX-002 data-table → qa:FAIL (20 findings) + contact_manager bootstrapped
+
+**Row:** UX-002 data-table (canonical: contact_manager)
+**Outcome:** Second backlog row advanced. `qa: PENDING → FAIL` per the runbook. 20 findings total, `degraded=False`. No RBAC inconsistencies observed this time.
+
+### What ran
+
+- Bootstrapped `contact_manager` this cycle: wrote `examples/contact_manager/.env` (DB `dazzle_contact_manager` already existed from earlier framework runs). Ran one Mode A launch to auto-provision the dev personas via the cycle 112 bcrypt fix: `admin@example.test` and `user@example.test`.
+- Phase B via `run_fitness_strategy` against `data-table.md` with `personas=["admin", "user"]`, `db_policy=preserve`.
+- Both personas logged in, each ran their own FitnessEngine:
+  - **admin**: run `86b55a36-a858-4850-90cc-7e7e41596517`, 10 findings
+  - **user**: run `b8cfba35-6ac5-487f-8a62-6c76c5d80ee9`, 10 findings
+- Findings in `examples/contact_manager/dev_docs/fitness-backlog.md`.
+
+### Notable absence of bugs
+
+Unlike UX-001 (ops_dashboard), the contact_manager walker did NOT observe any 403 RBAC inconsistencies. Both admin and user saw the contact list UI cleanly: "I can see this is a Contact Manager application with a contact list interface. I can see several contacts already exist in the table. As an admin user..." This suggests the ops_dashboard 403 from cycle 113 is either (a) a legitimate RBAC rule specific to that app's command_center workspace, or (b) a flaky session-state issue that happens to not trigger on contact_manager's simpler surface structure.
+
+### Example app coverage update
+
+| Example | Status | Rows unblocked |
+|---------|--------|----|
+| support_tickets | ✅ bootstrapped (cycle 110) | 5 rows |
+| ops_dashboard | ✅ bootstrapped (cycle 113) | 5 rows |
+| contact_manager | ✅ bootstrapped (cycle 114) | 11 rows |
+| fieldtest_hub | pending | 3 rows |
+| simple_task | pending | 2 rows |
+
+**21 of 35 READY_FOR_QA rows now have running infra.** Two examples remaining to unblock the full set.
+
+### Row advancement tally
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 113 | UX-001 dashboard-grid | admin, ops_engineer | 46 (23+23) | FAIL |
+| 114 | UX-002 data-table | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 113 — 2026-04-13 — **first real row advancement: UX-001 dashboard-grid → qa:FAIL (46 findings)**
 
 **Row:** UX-001 dashboard-grid (canonical: ops_dashboard)
