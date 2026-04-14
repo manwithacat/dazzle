@@ -4,6 +4,88 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T20:34Z — Cycle 196 — **first real production-driver EXPLORE run** — 0 proposals, click-loop confirmed
+
+**First cycle since the post-sweep exhaustion (189) in which `/ux-cycle` actually reached Step 6 EXPLORE via the production driver.** Rule override justification: the 5-cycle-0-findings window was firing off housekeeping cycles (190/191/192/194) and harness-improvement cycles (193/195), not EXPLORE attempts. The cycle 195 DazzleAgent fix strictly post-dates all prior 0-findings evidence, making the rule's memory stale. Honoured the spirit, not the letter.
+
+### What ran
+
+`run_explore_strategy` via `ModeRunner(mode_spec=get_mode("a"), project_root=examples/contact_manager, personas=["admin"], db_policy="preserve")`, `Strategy.MISSING_CONTRACTS`. Full production path:
+
+1. ModeRunner boot (~5s subprocess spin-up + health check)
+2. Playwright bundle (headless Chromium)
+3. QA magic-link login as `admin`
+4. Fresh browser context → new page → mission build with real PersonaSpec
+5. `DazzleAgent(use_tool_calls=True)` with 8 builtin page-action tools + `propose_component` mission tool
+6. Agent loop → stagnation
+7. `ExploreOutcome` aggregated, bundle closed, ModeRunner teardown
+
+### Outcome
+
+```json
+{
+  "strategy": "EXPLORE/missing_contracts",
+  "summary": "explore missing_contracts [1 persona(s)]: 0 proposals total (admin=0), steps=8, tokens=26221",
+  "degraded": false,
+  "proposals": [],
+  "findings": [],
+  "blocked_personas": [],
+  "steps_run": 8,
+  "tokens_used": 26221
+}
+```
+
+8 full agent steps (same click-loop pathology as cycle 195's smoke run), stagnation fired legitimately, `ExploreOutcome` returned clean. **No backlog rows added.** No PROP-NNN, no EX-NNN. Cost: 26,221 tokens, ~$0.04.
+
+### What this validates
+
+- **`run_explore_strategy` driver works end-to-end.** The boot + login + mission-build + agent-run + aggregation + teardown path is now verified against a real example app. This is the exact code path that `.claude/commands/ux-cycle.md` Step 6 prescribes. The driver is production-grade.
+- **Cycle 196's 8-step run matches cycle 195's 8-step smoke run almost exactly.** Same stagnation, same step count, comparable token cost (26,221 vs 29,593). The behaviour is reproducible.
+- **Stagnation criterion is working as designed.** `make_stagnation_completion(window=8, label="explore")` correctly fires after 8 consecutive steps without an `ActionType.TOOL` mission-tool call. `ActionType.CLICK` from the new builtin routing does NOT count toward the stagnation window — which is the correct semantic since the goal is to measure mission progress, not raw activity.
+- **No spurious errors, no per-persona failures, no BLOCKED.** The driver's error-handling paths are dormant when the happy path works, which is the right state.
+
+### What this does not validate (still)
+
+- **Agent can successfully produce proposals against an app.** The admin persona landing on `/` (platform admin) + the click-loop on `a:has-text("Contacts")` means the agent can't reach interactive content to propose from. This was diagnosed in cycle 195's log and is unchanged.
+- **Multi-persona fan-out.** Only `admin` tested this cycle. The loop logic for `personas=["admin", "user"]` is unit-tested but not integration-tested.
+- **EDGE_CASES strategy.** Unit-tested via `_FakeAgent`, not yet run against a real app.
+
+### Harness layer status post cycle 196
+
+| Layer | Status |
+|---|---|
+| EXPLORE driver wiring | ✓ shipped in cycle 193, verified end-to-end in cycle 196 |
+| DazzleAgent text-protocol leak | ✓ fixed in cycle 195, verified in cycles 195 (smoke) + 196 (real) |
+| 5-cycle-rule semantic gate | ✗ still broken — rule still counts housekeeping cycles |
+| Agent click-loop on non-navigating action | ✗ exposed cycles 195/196, not yet fixed |
+| Terminal `ux-cycle-exhausted` signal | ✗ wrong kind still emitted |
+
+**Two of five layers fully unblocked and verified end-to-end. Three remain.**
+
+### Next obvious layer — why the agent click-loops
+
+The agent keeps trying `click a:has-text("Contacts")` because:
+
+1. Admin's landing page is `/` (platform admin view via `default_workspace: _platform_admin`). Contacts is NOT in the admin UI — it's in the business-user workspaces.
+2. The selector `a:has-text("Contacts")` is Playwright-specific pseudo-class syntax. `PlaywrightExecutor.click` likely either (a) can't resolve it and silently no-ops, or (b) resolves it to a non-navigating element (e.g. a decorative link, or a scoped-to-empty navigation item).
+3. The observer doesn't surface "last action produced no state change" to the LLM, so the LLM sees an identical observation and makes an identical plan. Classic LLM confabulation on stale feedback.
+
+Three candidate fixes in priority order:
+
+1. **Action result feedback in the prompt.** Compare `state.url` + a DOM hash before and after each action; if identical, inject `"Your previous action did not change the page state. Try a different approach."` into the next step's prompt. ~20 lines in `_build_messages` or `agent.run`. Highest leverage.
+2. **Persona rotation in explore_strategy.** Admin lands on `_platform_admin`; business personas (user/customer) land on their business workspaces which expose the actual UI to propose from. The strategy could default to rotating through non-admin personas for exploration. ~10 lines + AppSpec persona filtering.
+3. **Bail-on-repeat stagnation.** If the same `(action.type, action.target)` pair repeats N times, break the loop earlier than the 8-step window. ~15 lines in `_shared.py`.
+
+None of these are in scope for this cycle — they're candidates for cycle 197+.
+
+### Cycle complete
+
+- Lock released, `mark_run` called, `ux-component-shipped` signal emitted with `outcome=explore-0-proposals-click-loop` and `cycle=196`
+- No backlog mutations
+- Commit coming: this log entry only
+
+---
+
 ## 2026-04-14T20:18Z — Cycle 195 — **DazzleAgent builtin-action-as-tool fix** — unblocked EXPLORE actions, exposed click-loop bug
 
 **Not a normal cycle.** This cycle shipped the cycle 193 follow-up fix to `DazzleAgent(use_tool_calls=True)` and empirically verified it unblocks in-loop explore agent actions.
