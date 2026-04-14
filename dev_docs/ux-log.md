@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 142 — 2026-04-14 — UX-032 related-displays → qa:FAIL (24 findings)
+
+**Row:** UX-032 related-displays (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 24 findings (admin=10, user=14), degraded=False. Anchor `/app/contact/1` — walker hit a 404 page (hardcoded record ID doesn't exist in the test DB). Second row with this anchor + 404 pattern (first: UX-029 cycle 139, same anchor, 20 findings). Run IDs: admin=d6e16733-acae-4b85-b991-d3a93898f2dc, user=e5c93eb3-7fc3-4bc2-a810-e4aa6df6d934.
+
+**New pattern — hardcoded-record-ID 404s:** UX-029 + UX-032 both target `/app/contact/1`. Contract-authoring gap similar to the fieldtest_hub issue-report pattern — contracts assume a contact with id=1 exists in the fixture DB but the dev_personas bootstrap doesn't create one. Fix options: (a) seed contact id=1 in the contact_manager dev_data.json fixture, (b) change contract anchors to use a listing surface (`/app/contact` instead of `/app/contact/1`), (c) make the contract builder aware of "record-with-id" contracts and auto-create fixture records.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 142   | UX-032 related-displays | admin, user | 24 (10+14) | FAIL |
+
+---
+
 ## Cycle 141 — 2026-04-14 — UX-031 app-shell → qa:FAIL (46 findings) — **command_center anchor now 5/5**
 
 **Row:** UX-031 app-shell (canonical: ops_dashboard)
