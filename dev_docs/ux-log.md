@@ -1849,6 +1849,73 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 155 — 2026-04-14 — UX-023 widget:slider with CORRECT personas → qa:FAIL (111 findings) — **two important methodology findings**
+
+**Outcome:** Investigated the admin 403 hypothesis from cycles 152/153/154 by reading `examples/fieldtest_hub/dsl/app.dsl`. Found the root cause and a structural insight about how the cycle measures FAIL.
+
+**Phase B result:** `fitness run [tester:cf2db226-7a8e-475f-9f31-6e208be2dcec, engineer:1e575180-8fcb-4915-8a6a-869ec8c53f0b]: 111 findings total (tester=55, engineer=56), independence=0.000 (max)`, `degraded=False`. attempts 3 → 4.
+
+### Finding 1: admin 403 was correct behaviour, not a bug
+
+Reading `app.dsl:118-168` (the `IssueReport` entity):
+
+```
+permit:
+  list:   role(engineer) or role(manager) or role(tester)
+  read:   role(engineer) or role(manager) or role(tester)
+  create: role(tester) or role(engineer)        ← admin NOT granted
+  update: role(engineer) or role(tester)
+  delete: role(engineer)
+```
+
+The admin persona is declared at `app.dsl:18` with `default_workspace: _platform_admin` — admin is a **platform administrator**, not a domain participant. fieldtest_hub deliberately excludes admin from issue creation. Tester (the field worker) and engineer (the engineering reviewer) are the only roles that can file issue reports.
+
+So cycles 152/153/154's "admin 403 reproduced 3/3" finding was **the cycle harness using the wrong personas for this app**, not an RBAC bug in fieldtest_hub. The walker's prose ("As an admin, I should have access to this functionality") was the LLM's own incorrect expectation — admin in this domain has no business creating issue reports.
+
+**Methodology fix going forward:** the Phase B caller must pass app-appropriate personas. fieldtest_hub IssueReport surfaces should use `["tester", "engineer"]`, not `["admin", "engineer"]`. This is a per-app caller knowledge problem until v2 auto-derives personas from DSL permits.
+
+### Finding 2: FAIL count is structural, not driven by HTTP failures
+
+Hypothesis going into this cycle: removing the admin 403 contamination would dramatically reduce findings (maybe even drop to PASS).
+
+Actual result:
+
+| Cycle | Personas | Tester/Admin | Engineer | Total |
+|-------|----------|--------------|----------|-------|
+| 152 | admin+engineer | admin=53 | engineer=56 | 109 |
+| 155 | tester+engineer | tester=55 | engineer=56 | 111 |
+
+**Total is essentially the same.** Engineer side is identical (56). Replacing admin with tester only shifted the count by 2 (53 → 55). This refutes the "admin 403 contamination is inflating FAIL" hypothesis.
+
+The walker prose this cycle is unambiguous about what's happening:
+
+> "I can see the issue report form is partially filled out with device ID, category (Overheating), severity (High), description about device overheating, and steps to reproduce. Let me continue completing..."
+
+> "I expect to fill in the required Description field since it's marked as required and is the next logical step in completing the form. {action: type, target: #field-description, value: Batt..."
+
+Both personas are doing real form interaction. The 111 findings are **Pass 2a story_drift output emitted by the engine for any contract walk** — the contract walker has 5 quality gates, the engine emits structural drift findings per gate, and both personas trigger the same volume.
+
+**This is a structural property of the cycle's qa-rule, not a real bug in any widget.** Per the runbook's qa rule (`FAIL if outcome.findings_count > 0`), every contract walk against a non-trivial app will FAIL because Pass 2a always finds drift. There is no possible PASS state for any widget contract under the current rule.
+
+### Action items promoted to follow-up queue
+
+1. **Separate contract-walk findings from Pass 2a story_drift in `StrategyOutcome`.** The aggregator currently sums them. Once separated, the qa rule can be: `PASS if all contract-walk gates passed; report Pass 2a separately`. This was already noted as future work in cycle 113's interpretation caveat. It just escalated to "blocking the entire Phase B PASS pipeline".
+2. **Per-app persona auto-derivation.** Walk the entity permit's create/update grants and select personas that have at least one role granted on the canonical surface. Avoids hand-coding per-app persona lists.
+3. **fieldtest_hub UX-023/024/025 status is the same regardless of personas.** They are FAIL not because of a fixable bug but because the qa rule is structurally pessimistic. Until #1 lands, keep them at READY_FOR_QA / FAIL.
+
+### What this cycle accomplishes
+
+- **Resolved** the cycle 152/153/154 RBAC hypothesis (confirmed: not a bug)
+- **Surfaced** a structural problem with the cycle's qa rule itself (Pass 2a contamination)
+- **Validated** that fieldtest_hub's tester+engineer personas can complete the form (engineer reaches form, walker types into fields)
+- **Did not** advance UX-023 from FAIL — the row's failure state is now correctly attributed to a methodology issue, not an app bug
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 154 — 2026-04-14 — UX-025 widget:richtext re-verify → qa:FAIL (104 findings) — **anchor-fix sweep complete (3/3), admin 403 pattern locked in**
 
 **Outcome:** Final cycle of the cycle-149 anchor-fix re-verification sweep. UX-025 last QA'd in cycle 135 against the broken anchor `/app/issue-report/create` (110 noise findings). This cycle re-runs Phase B with the corrected contract.
