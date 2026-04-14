@@ -213,5 +213,6 @@ async def _drive_real(mission: Any, tool_state: Any, llm_client: Any) -> None:
         executor=NullExecutor(),
         model=getattr(llm_client, "model", None),
         api_key=getattr(llm_client, "api_key", None),
+        use_tool_calls=True,  # bug 5b fix — use native tool use for propose_fix
     )
     await agent.run(mission)
