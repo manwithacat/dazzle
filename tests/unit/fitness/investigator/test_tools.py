@@ -377,6 +377,8 @@ def _valid_fix_payload() -> dict[str, Any]:
 
 
 def test_propose_fix_writes_proposal(fake_root, case_file, state) -> None:
+    from dazzle.fitness.investigator.proposal import load_proposal
+
     tools = _tools_by_name(case_file, fake_root, state)
     result = tools["propose_fix"].handler(**_valid_fix_payload())
 
@@ -386,6 +388,14 @@ def test_propose_fix_writes_proposal(fake_root, case_file, state) -> None:
 
     proposals = list((fake_root / ".dazzle" / "fitness-proposals").glob("CL-deadbeef-*.md"))
     assert len(proposals) == 1
+
+    # Verify the written file round-trips through load_proposal
+    loaded = load_proposal(proposals[0])
+    assert loaded.proposal_id == state.terminal_proposal_id
+    assert loaded.cluster_id == "CL-deadbeef"
+    assert loaded.status == "proposed"
+    assert len(loaded.fixes) == 1
+    assert loaded.fixes[0].file_path == "src/ui/form.html"
 
 
 def test_propose_fix_validation_failure_writes_blocked(fake_root, case_file, state) -> None:

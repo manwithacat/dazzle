@@ -82,7 +82,7 @@ def _propose_fix_tool(
             )
             return {
                 "error": f"propose_fix args malformed: {e}",
-                "status": "blocked",
+                "status": "blocked_invalid_proposal",
             }
 
         proposal_id = uuid4().hex
