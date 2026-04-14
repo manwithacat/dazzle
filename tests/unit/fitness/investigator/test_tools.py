@@ -219,9 +219,15 @@ def test_get_cluster_findings_respects_mission_cap(tmp_path, state) -> None:
     r3 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
 
     total = len(r1.get("findings", [])) + len(r2.get("findings", [])) + len(r3.get("findings", []))
-    assert total <= CLUSTER_FINDING_MISSION_CAP
-    # The third call should have hit the cap and returned a note
-    assert "note" in r3 or r3.get("findings") == []
+    # Exact match: first two calls should fill the 30-cap (20+10),
+    # third call should return nothing with a redirect note.
+    assert total == CLUSTER_FINDING_MISSION_CAP, (
+        f"expected exactly {CLUSTER_FINDING_MISSION_CAP}, got {total}"
+    )
+    assert len(r1.get("findings", [])) == 20, "first call should return full limit of 20"
+    assert len(r2.get("findings", [])) == 10, "second call should return remaining budget of 10"
+    assert r3.get("findings") == [], "third call should return empty findings (cap hit)"
+    assert "note" in r3, "third call should include a redirect note"
 
 
 def test_get_cluster_findings_unknown_id(tmp_path, state) -> None:

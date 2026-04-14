@@ -36,6 +36,7 @@ class ToolState:
     evidence_paths: set[str] = field(default_factory=set)
     tool_calls_summary: list[str] = field(default_factory=list)
     findings_seen: dict[str, int] = field(default_factory=dict)
+    findings_returned_ids: set[str] = field(default_factory=set)
     terminal_status: str | None = None  # set by propose_fix; None until terminal call
     terminal_proposal_id: str | None = None
 
@@ -357,24 +358,31 @@ def _get_cluster_findings_tool(
 
         result: dict[str, Any] = {}
 
-        # Validate cluster_id — allow querying a different cluster, but warn,
-        # and reject if it's not even in the queue file
+        # Resolve the cluster to filter against. By default use the case file's
+        # own cluster; if the LLM queries a different cluster, look it up in
+        # the queue file and use that cluster's attributes as the filter.
+        cluster_filter = case_file.cluster
         if cluster_id != case_file.cluster.cluster_id:
             queue_dir = case_file.example_root or dazzle_root
             queue_path = queue_dir / "dev_docs" / "fitness-queue.md"
             if not queue_path.exists():
                 queue_path = dazzle_root / "dev_docs" / "fitness-queue.md"
-            known_ids: set[str] = set()
+            known_clusters: list[Any] = []
             if queue_path.exists():
                 try:
-                    known_ids = {c.cluster_id for c in read_queue_file(queue_path)}
+                    known_clusters = read_queue_file(queue_path)
                 except Exception:
-                    known_ids = set()
-            if cluster_id not in known_ids:
+                    known_clusters = []
+            matched = next(
+                (c for c in known_clusters if c.cluster_id == cluster_id),
+                None,
+            )
+            if matched is None:
                 return {
                     "error": "cluster not found",
                     "did_you_mean": [case_file.cluster.cluster_id],
                 }
+            cluster_filter = matched
             result["warning"] = (
                 f"querying cluster {cluster_id} while investigating {case_file.cluster.cluster_id}"
             )
@@ -394,12 +402,13 @@ def _get_cluster_findings_tool(
             }
 
         # Load all findings from the backlog, filter to this cluster,
-        # exclude those already in the case file
+        # exclude those already in the case file AND those returned by
+        # prior calls in this mission
         all_findings = read_backlog_findings(backlog_path)
         excluded_ids = {case_file.sample_finding.id}
         excluded_ids.update(s.id for s in case_file.siblings)
+        excluded_ids.update(state.findings_returned_ids)
 
-        cluster_filter = case_file.cluster
         candidates = [
             f
             for f in all_findings
@@ -412,6 +421,7 @@ def _get_cluster_findings_tool(
         remaining_budget = max(0, CLUSTER_FINDING_MISSION_CAP - seen)
         to_return = candidates[: min(limit, remaining_budget)]
         state.findings_seen[cluster_id] = seen + len(to_return)
+        state.findings_returned_ids.update(f.id for f in to_return)
 
         result["findings"] = [_finding_to_dict(f) for f in to_return]
         return result
