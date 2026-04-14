@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Fitness investigator subsystem** — agent-led investigation of ranked
+  fitness clusters. `dazzle fitness investigate` reads a cluster from
+  `fitness-queue.md`, gathers context via six read-only tools (file reads,
+  DSL queries, spec search, cluster expansion, related-cluster lookup),
+  and writes a structured `Proposal` to `.dazzle/fitness-proposals/`.
+  Read-only at the codebase level — applying proposals is a separate
+  (future) actor subsystem. See `docs/reference/fitness-investigator.md`.
+
+### Agent Guidance
+- The investigator is the Option-3 ship on the path to full autonomous
+  fix loops. Proposals are accumulated on disk but not applied until the
+  actor subsystem lands. Run `dazzle fitness investigate --dry-run` to
+  inspect a case file without burning tokens.
+- Known v1 limitation: DazzleAgent's text-action protocol can't reliably
+  produce the complex JSON payload for `propose_fix`; stagnation is a
+  common outcome in real runs. Tracked for v2.
+
 ## [0.54.4] - 2026-04-13
 
 ## [0.54.3] - 2026-04-13

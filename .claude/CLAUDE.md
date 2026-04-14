@@ -128,6 +128,13 @@ dazzle specs openapi
 dazzle specs asyncapi
 ```
 
+### Fitness investigator
+```bash
+dazzle fitness investigate --top 1          # investigate highest-priority cluster
+dazzle fitness investigate --cluster CL-... --dry-run
+```
+Proposals land at `.dazzle/fitness-proposals/`. See `docs/reference/fitness-investigator.md`.
+
 ## Examples
 
 Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`
