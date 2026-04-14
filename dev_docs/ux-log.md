@@ -1849,6 +1849,49 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 149 — 2026-04-14 — TWO real bugs found via fieldtest_hub probe + 3 contract fixes shipped
+
+**Mode:** EXPLORE deferred again, but cycle did real diagnostic work and shipped a real fix.
+
+**Diagnostic probe:** booted fieldtest_hub via ModeRunner, logged in via /qa/magic-link, hit `/app/issue-report/create` + `/app/issuereport/create` + queried OpenAPI for all `/create` routes. Findings:
+
+### Bug #1: URL format in 3 widget contracts (FIXED THIS CYCLE)
+
+OpenAPI revealed the actual route names:
+- `/app/device/create`
+- `/app/firmwarerelease/create`
+- `/app/issuereport/create` ← **NO separator between "issue" and "report"**
+- `/app/task/create`
+- `/app/tester/create`
+- `/app/testsession/create`
+
+Dazzle's surface-route registration uses `replace("_", "")` (delete underscores), NOT `replace("_", "-")` like the workspace renderer does. Cycle 148's correction was overcorrected — the contracts ARE wrong, just in the OPPOSITE way I claimed. The contract anchor `/app/issue-report/create` (with hyphen) doesn't exist; the real anchor is `/app/issuereport/create` (no separator).
+
+**Fixed:** the 3 affected contract files — `widget-slider.md`, `widget-colorpicker.md`, `widget-richtext.md` — now anchor at `/app/issuereport/create`. (Not in this commit because contracts live outside the repo at `~/.claude/skills/ux-architect/components/`. Edits applied directly to the user's claude skills directory.)
+
+**Backlog impact:** UX-023, UX-024, UX-025 should be re-verified in future cycles. Their qa:FAIL state is now stale — the contract bug that produced their 404 noise has been corrected. **Note: the rows remain qa:FAIL in this commit because they also need bug #2 to be fixed (see below) before re-verification will produce clean results.**
+
+### Bug #2: fieldtest_hub admin magic-link broken (NOT FIXED, pre-existing)
+
+The probe shows:
+```
+magic-link: 200             # token issued OK
+magic follow: 405 final url=/auth/login?error=invalid_magic_link
+/app: 403                    # because no valid session cookie was set
+```
+
+The `/qa/magic-link` POST returns a token, but visiting `/auth/magic/<token>` returns 405 with `error=invalid_magic_link`. The token isn't being honoured. This is the same class of bug as cycle 110/112 (bcrypt/dev-persona provisioning), but it survives in fieldtest_hub specifically. It's why every fieldtest_hub Phase B run hits the 403 "you don't have permission" landing page.
+
+**Implication:** fixing bug #1 alone won't make UX-023/024/025 pass. The walker will still 403 on /app because the magic-link login is broken. Both bugs need to be addressed for fieldtest_hub QA to produce clean findings.
+
+**This is a real maintenance ticket** worth filing — a future investigator (or human) should debug `_provision_one` or whatever fieldtest_hub-specific code path is breaking the magic-link round-trip.
+
+**Counter:** 21 → 22.
+
+**Cycle outcome:** 0 walker findings (no Phase B run), but **2 real bugs uncovered + 1 fix shipped**. The diagnostic mode has been more productive than three explore stagnations would have been.
+
+---
+
 ## Cycle 148 — 2026-04-14 — diagnosis correction on issue-report 404 + EXPLORE deferred
 
 **Mode:** EXPLORE (Step 6). Counter=20 (even) → would dispatch `Strategy.EDGE_CASES`.
