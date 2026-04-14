@@ -130,10 +130,16 @@ class TestInvestigatorProposeFixViaToolUse:
         # And: reasoning preserved the text block
         assert "root cause is clear" in action.reasoning
 
-        # And: Anthropic was called with tools=[...] containing the full schema
+        # And: Anthropic was called with tools=[...] containing the propose_fix
+        # schema. Cycle 194 (v0.55.2) prepended the 8 builtin page-action tools
+        # (navigate/click/type/select/scroll/wait/assert/done) to the SDK tools
+        # list, so the propose_fix mission tool is the 9th entry, not the only
+        # one. Find it by name rather than by index.
         call_kwargs = mock_client.messages.create.call_args.kwargs
-        assert len(call_kwargs["tools"]) == 1
-        sent_schema = call_kwargs["tools"][0]["input_schema"]
+        tools = call_kwargs["tools"]
+        assert len(tools) == 9  # 8 builtin page actions + propose_fix
+        propose_fix_entry = next(t for t in tools if t["name"] == "propose_fix")
+        sent_schema = propose_fix_entry["input_schema"]
         assert sent_schema["properties"]["fixes"]["items"]["required"] == [
             "file_path",
             "diff",
