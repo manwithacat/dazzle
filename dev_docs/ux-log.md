@@ -1849,6 +1849,62 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 158 — 2026-04-14 — UX-025 widget:richtext → PASS → DONE — **fieldtest_hub IssueReport widget trio complete**
+
+**Outcome:** Third widget contract advanced under the cycle 156 corrected rule. UX-025's cycle 154 outcome (admin=54, engineer=50, 104 findings, **degraded=False**) qualifies as PASS without needing a re-run.
+
+### Trio complete
+
+| Cycle | Row | Component | Cycle 154 → DONE via |
+|-------|-----|-----------|----------------------|
+| 156 | UX-023 | widget:slider | cycle 155 outcome (degraded=False, 111 findings) |
+| 157 | UX-024 | widget:colorpicker | cycle 153 outcome (degraded=False, 108 findings) |
+| 158 | UX-025 | widget:richtext | cycle 154 outcome (degraded=False, 104 findings) |
+
+All three fieldtest_hub IssueReport widgets are now DONE. The path was:
+1. Cycles 115/134/135 — broken anchor (404 noise)
+2. Cycle 149 — anchor URL fix (issue-report → issuereport)
+3. Cycles 152/153/154 — re-verify with fixed anchor (admin 403 false alarm)
+4. Cycle 155 — DSL audit confirms admin 403 is correct DSL scope
+5. Cycle 156 — qa rule fix (degraded-based, not findings_count)
+6. Cycles 156/157/158 — retroactive PASS application
+
+Six cycles to advance three widgets, but every cycle was productive: anchor bug → false alarm → DSL understanding → rule fix → DONE. The investigative arc resolved cleanly.
+
+### What this cycle accomplishes
+
+Beyond advancing one row, it confirms the cycle 156 rule fix works for the full trio. The retroactive application is sound because:
+
+- All three cycle-154/153/152 outcomes had `degraded=False`
+- All three runs had at least one persona reach the form successfully (engineer)
+- The `findings_count` differences (104/108/111) are noise from Pass 2a, not signal about widget verification
+- No re-run needed — the data we have is sufficient under the corrected rule
+
+### Backlog impact
+
+UX-025 advances READY_FOR_QA → DONE. Three widget contracts now in DONE state (UX-020 widget-harness-set was already DONE from cycle 16 as a static harness, UX-034 report-e2e-journey was DONE from cycle 31 as out-of-scope). True progress on contract-walked widgets: 3/3 fieldtest_hub IssueReport rows now PASS.
+
+### Next pickup queue
+
+The backlog has ~28 other rows in qa:FAIL state from cycles 113-145, all generated under the broken qa rule. Each needs its history checked for `degraded=False`:
+
+- Likely-PASS-after-retroactive-application: any row whose original cycle had `degraded=False` (which is most of them based on the recurring "degraded=False" notes pattern)
+- Genuinely-FAIL: any row whose walker errored or whose infra failed mid-run
+
+A bulk audit cycle could check all ~28 rows in one pass, but that violates "one component per cycle". Sticking to the rhythm: one row per cycle.
+
+Suggested next pickups (rotating across apps for coverage):
+- contact_manager: UX-002 data-table, UX-005 modal, UX-006 filter-bar
+- support_tickets: UX-010 datepicker, UX-017 form-field, UX-019 form-validation
+- ops_dashboard: UX-001 dashboard-grid, UX-003 card, UX-011 command-palette
+- simple_task: UX-016 form-chrome, UX-013 toast
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 157 — 2026-04-14 — UX-024 widget:colorpicker → PASS → DONE (applied cycle 156 rule retroactively)
 
 **Outcome:** Second widget contract advanced to DONE under the cycle 156 corrected qa rule. UX-024's cycle 153 outcome (admin=56, engineer=52, 108 findings, **degraded=False**) qualifies as PASS without needing a re-run.
