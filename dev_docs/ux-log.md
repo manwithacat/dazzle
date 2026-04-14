@@ -1849,6 +1849,48 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 162 — 2026-04-14 — UX-016 form-chrome → PASS → DONE — **5-app coverage complete**
+
+**Outcome:** Seventh widget contract advanced. UX-016 form-chrome closes the 5-app coverage milestone — every bootstrapped example app has at least one widget contract through the full pipeline.
+
+### Cycle 116 outcome under new rule
+
+| Field | cycle 116 | cycle 162 (retroactive) |
+|---|---|---|
+| degraded | False | False |
+| findings_count | 72 (admin=37, manager=35) | 72 (informational) |
+| qa | FAIL (broken rule) | **PASS** |
+
+The cycle 116 walker engaged with `/app/task/create` cleanly. Both admin and manager reached the form, and the walker planned a real `type` action on `#field-title`, indicating the form-chrome wrapper rendered correctly enough for the walker to identify the input element.
+
+### 5-app coverage milestone
+
+Running tally now spans **all 5 bootstrapped apps**:
+
+| # | Cycle | Row | Component | App |
+|---|-------|-----|-----------|-----|
+| 1 | 156 | UX-023 | widget:slider | fieldtest_hub |
+| 2 | 157 | UX-024 | widget:colorpicker | fieldtest_hub |
+| 3 | 158 | UX-025 | widget:richtext | fieldtest_hub |
+| 4 | 159 | UX-001 | dashboard-grid | ops_dashboard |
+| 5 | 160 | UX-002 | data-table | contact_manager |
+| 6 | 161 | UX-017 | form-field | support_tickets |
+| 7 | **162** | **UX-016** | **form-chrome** | **simple_task** |
+
+Every example app has at least one widget contract advanced under the corrected rule. The remaining ~26 backlog rows are second/third pickups within these same apps — they should advance similarly fast as the cycle picks them up.
+
+### Reflection: rate of progress
+
+Seven widget contracts in seven cycles (156-162) — sustained 1 PASS/cycle pace since the cycle 156 rule fix. Before the fix, zero widget contracts had advanced in cycles 109-155 (47 cycles). The structural blocker really was the only thing in the way.
+
+Estimated remaining work: ~26 rows × 1 cycle each = ~26 more cycles to drain the qa:FAIL pile to DONE, after which the cycle should genuinely run out of work and shift to EXPLORE mode (which is currently exhausted at 23 findings).
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 161 — 2026-04-14 — UX-017 form-field → PASS → DONE — separating widget verification from app defects
 
 **Outcome:** Sixth widget contract advanced. Rotated to support_tickets, the fourth bootstrapped app to enter the retroactive sweep. UX-017 form-field exposes an important conceptual point: widget contract PASS is decoupled from real app defects.
