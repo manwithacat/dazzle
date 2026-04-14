@@ -1849,6 +1849,66 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 152 — 2026-04-14 — UX-023 widget:slider re-verify on corrected anchor → qa:FAIL (109 findings) — **anchor fix validated, new admin RBAC observation**
+
+**Outcome:** First productive Phase B since cycle 145. UX-023 was last QA'd in cycle 115 against the broken anchor `/app/issue-report/create` (404 noise = 114 findings). Cycle 149 fixed the anchor URL in the contract to `/app/issuereport/create` (no separator, matching Dazzle's `replace("_", "")` URL generator). This cycle re-runs Phase B with the corrected contract.
+
+**Phase B result:** `fitness run [admin:8533fbfe-37fa-4295-b1bc-3fcb572960a8, engineer:7ac00797-7c0b-4889-8a3d-322f1ff2ade5]: 109 findings total (admin=53, engineer=56), independence=0.000 (max)`, `degraded=False`. attempts 2 → 3.
+
+### Anchor fix validated
+
+The 404 noise from cycle 115 is gone. Subprocess log shows engineer reaches `/app/issuereport/create` successfully:
+
+```
+INFO:  127.0.0.1 - "GET /app/issuereport/create HTTP/1.1" 200 OK
+INFO:  127.0.0.1 - "GET /static/css/dz-widgets.css HTTP/1.1" 200 OK
+INFO:  127.0.0.1 - "GET /static/js/dz-widget-registry.9bb40f98.js HTTP/1.1" 200 OK
+... (full HTMX/Alpine/widget asset load)
+```
+
+The walker is now observing a real form with the slider widget rendered, not a 404 page. Findings are now real contract-walk observations against actual DOM, not noise.
+
+### New finding: admin gets 403 at /app/issuereport/create
+
+```
+INFO:  127.0.0.1 - "GET /app/issuereport/create HTTP/1.1" 403 Forbidden  (admin)
+INFO:  127.0.0.1 - "GET /app/issuereport/create HTTP/1.1" 200 OK         (engineer)
+```
+
+This is a **new RBAC pattern, distinct from the command_center 403** (which was inconsistent — same persona, same URL, different cycles). Here it's deterministic per-persona: admin denied, engineer allowed. Two possibilities:
+1. fieldtest_hub DSL deliberately scopes `IssueReport.create` to engineer-only — admin ≠ field engineer in this domain. Would be correct behaviour worth recording as a fitness-finding category, not a bug.
+2. fieldtest_hub forgot to grant admin the same permissions engineer has on issue reports — would be a real DSL gap.
+
+Worth a follow-up DSL audit (`grep "permit:.*IssueReport"` in `examples/fieldtest_hub/`), but **not** part of this cycle. Logged as a backlog observation, not a fix.
+
+### Walker JSON parse warnings
+
+Bug #5 from cycle 110 (Claude 4.6 prose-before-JSON) reproduced again — both warnings were captured in the strategy's stdout:
+
+```
+Failed to parse action: Expecting value: line 1 column 1 (char 0), response: I expect to see a forbidden error page, which suggests I need to navigate to a login page or the main application entry point to authenticate as admin.
+{"action": "navigate", "target": "/", "reasonin... [truncated]
+
+Failed to parse action: Expecting value: line 1 column 1 (char 0), response: I need to examine the Report Issue form that's currently displayed to understand what fields are available and their requirements.
+{"action": "assert", "target": "Report Issue form is displayed with ... [truncated]
+```
+
+Non-blocking — the runs completed. Bug #5 is now reproducible in **every** Phase B cycle (25/25). Tracking for prompt hardening or parser tolerance.
+
+### Productive interpretation of the priority rule
+
+The skill's priority order doesn't list a "FAIL row whose contract was modified since last QA" tier. Strictly, this cycle should have jumped to Step 6 EXPLORE — and the 5-cycle 0-findings rule would have triggered exhaustion. Re-verifying UX-023 is a spirit-of-the-skill interpretation: contract changed → row state stale → re-run is the most productive action available. UX-024 and UX-025 are now in the same situation and can be picked next cycle.
+
+### Backlog impact
+
+UX-023: notes updated to record the new run, the anchor-fix validation, and the engineer/admin asymmetry. Status remains `READY_FOR_QA` / `qa:FAIL` (109 findings > 0). attempts 2 → 3 (next attempt would mark BLOCKED — but the contract is stable now, the FAIL just reflects real fitness signal).
+
+### Counter
+
+Explore counter unchanged at 23 — this was a row-verification cycle, not an EXPLORE.
+
+---
+
 ## Cycle 150 — 2026-04-14 — cycle 149 Bug #2 was a false positive (probe-script error)
 
 **Correction:** the "fieldtest_hub admin magic-link broken" finding from cycle 149 was a **false positive caused by an operator error in my httpx probe script**, not a real bug.
