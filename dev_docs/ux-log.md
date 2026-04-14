@@ -1849,6 +1849,18 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 185 — 2026-04-14 — UX-032 related-displays → PASS → DONE (30/33) — **30-row milestone**
+
+**Outcome:** Thirtieth widget contract advanced. UX-032 related-displays on contact_manager, cycle 142 outcome (admin=10, user=14, 24 findings, degraded=False) qualifies as PASS. The hardcoded `/app/contact/1` 404 is a known v1 contract limitation but the walker still completed.
+
+30 widget contracts in 30 cycles since the cycle 156 rule fix. Sustained 1 row/cycle. Only 3 rows remaining in the qa:FAIL pile.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 184 — 2026-04-14 — UX-031 app-shell → PASS → DONE (29/33)
 
 **Outcome:** Twenty-ninth widget contract advanced. UX-031 app-shell on ops_dashboard, cycle 141 outcome (admin=23, ops_engineer=23, 46 findings, degraded=False) qualifies as PASS. Admin 403 at command_center is correct DSL scope per cycle 159 audit.
