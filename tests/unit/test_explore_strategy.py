@@ -516,3 +516,104 @@ class TestPickStartPath:
 
         mock_compute.assert_called_once_with(personas=[persona], workspaces=["ws-sentinel"])
         assert result == "/app/contacts"
+
+
+class TestProposalDedup:
+    def test_same_component_across_personas_merges(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            _dedup_proposals,
+        )
+
+        raw = [
+            {
+                "component_name": "contact-card",
+                "description": "A card showing a contact.",
+                "example_app": "contact_manager",
+                "persona_id": "user",
+            },
+            {
+                "component_name": "contact-card",
+                "description": "A different description.",
+                "example_app": "contact_manager",
+                "persona_id": "manager",
+            },
+        ]
+        deduped = _dedup_proposals(raw)
+        assert len(deduped) == 1
+        assert deduped[0]["component_name"] == "contact-card"
+        # First description wins
+        assert deduped[0]["description"] == "A card showing a contact."
+        assert deduped[0]["contributing_personas"] == ["user", "manager"]
+
+    def test_dedup_is_case_insensitive(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            _dedup_proposals,
+        )
+
+        raw = [
+            {
+                "component_name": "Contact-Card",
+                "description": "x",
+                "example_app": "a",
+                "persona_id": "u1",
+            },
+            {
+                "component_name": "contact-card",
+                "description": "y",
+                "example_app": "a",
+                "persona_id": "u2",
+            },
+        ]
+        deduped = _dedup_proposals(raw)
+        assert len(deduped) == 1
+        assert deduped[0]["contributing_personas"] == ["u1", "u2"]
+
+    def test_different_apps_do_not_dedup(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            _dedup_proposals,
+        )
+
+        raw = [
+            {"component_name": "card", "description": "x", "example_app": "a", "persona_id": "u1"},
+            {"component_name": "card", "description": "y", "example_app": "b", "persona_id": "u2"},
+        ]
+        deduped = _dedup_proposals(raw)
+        assert len(deduped) == 2
+
+    def test_single_persona_contributing_list(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            _dedup_proposals,
+        )
+
+        raw = [
+            {"component_name": "card", "description": "x", "example_app": "a", "persona_id": "u1"},
+        ]
+        deduped = _dedup_proposals(raw)
+        assert deduped[0]["contributing_personas"] == ["u1"]
+
+
+class TestExploreOutcomeShape:
+    def test_has_raw_proposals_by_persona_field(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            ExploreOutcome,
+        )
+
+        outcome = ExploreOutcome(
+            strategy="EXPLORE/missing_contracts",
+            summary="test",
+            degraded=False,
+        )
+        assert outcome.raw_proposals_by_persona == {}
+
+    def test_raw_proposals_by_persona_populated(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            ExploreOutcome,
+        )
+
+        outcome = ExploreOutcome(
+            strategy="EXPLORE/missing_contracts",
+            summary="test",
+            degraded=False,
+            raw_proposals_by_persona={"user": 3, "manager": 2},
+        )
+        assert outcome.raw_proposals_by_persona == {"user": 3, "manager": 2}

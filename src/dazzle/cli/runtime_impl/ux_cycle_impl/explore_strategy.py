@@ -66,6 +66,8 @@ class ExploreOutcome:
     blocked_personas: list[tuple[str | None, str]] = field(default_factory=list)
     steps_run: int = 0
     tokens_used: int = 0
+    # Cycle 197 — pre-dedup counts per persona, for logging and cross-persona analysis
+    raw_proposals_by_persona: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -79,6 +81,32 @@ class _PersonaRunResult:
     steps: int
     tokens: int
     error: str | None = None
+
+
+def _dedup_proposals(raw_proposals: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merge proposals with the same (example_app, component_name) key.
+
+    First-seen ordering is preserved. Each merged entry gains a
+    'contributing_personas' field listing every persona_id that proposed
+    the same component. Comparison on component_name is case-insensitive
+    to catch trivial casing variation from LLM output.
+    """
+    merged: dict[tuple[str, str], dict[str, Any]] = {}
+    order: list[tuple[str, str]] = []
+
+    for p in raw_proposals:
+        key = (p.get("example_app", ""), p.get("component_name", "").lower())
+        persona_id = p.get("persona_id")
+        if key not in merged:
+            entry = dict(p)  # shallow copy
+            entry["contributing_personas"] = [persona_id] if persona_id else []
+            merged[key] = entry
+            order.append(key)
+        else:
+            if persona_id and persona_id not in merged[key]["contributing_personas"]:
+                merged[key]["contributing_personas"].append(persona_id)
+
+    return [merged[k] for k in order]
 
 
 def pick_explore_personas(
