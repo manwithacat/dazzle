@@ -232,7 +232,19 @@ def _pick_siblings(
     sample: Finding,
     all_findings: list[Finding],
 ) -> list[Finding]:
-    """Simple stable sort-order picker. Diversity scoring is added in Task 6."""
+    """Pick up to SIBLING_LIMIT siblings, preferring evidence-text diversity.
+
+    Algorithm:
+      1. Filter the pool to findings in the same cluster (same locus/axis/persona
+         + canonicalised summary).
+      2. Stable-sort by (persona, id) — baseline order.
+      3. If the pool fits within SIBLING_LIMIT, return it unchanged.
+      4. Otherwise: pick the first as the seed. For each subsequent pick, score
+         each remaining candidate by its minimum Levenshtein distance from any
+         already-picked sibling's `observed` text. Pick the candidate with the
+         highest minimum distance (most different from everything already
+         picked). Ties broken by baseline sort order.
+    """
     pool = [
         f
         for f in all_findings
@@ -243,7 +255,42 @@ def _pick_siblings(
         and canonicalize_summary(_summary_text(f)) == cluster.canonical_summary
     ]
     pool.sort(key=lambda f: (f.persona, f.id))
-    return pool[:SIBLING_LIMIT]
+    if len(pool) <= SIBLING_LIMIT:
+        return pool
+
+    picked: list[Finding] = [pool[0]]
+    remaining = list(pool[1:])
+    while len(picked) < SIBLING_LIMIT and remaining:
+
+        def min_distance(candidate: Finding) -> int:
+            return min(_levenshtein(candidate.observed, p.observed) for p in picked)
+
+        # Sort: highest min_distance first, ties by baseline order (persona, id)
+        remaining.sort(key=lambda f: (-min_distance(f), f.persona, f.id))
+        picked.append(remaining.pop(0))
+    return picked
+
+
+def _levenshtein(a: str, b: str) -> int:
+    """Classic Wagner-Fischer edit distance. O(len(a)*len(b)) time and memory."""
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        curr = [i] + [0] * len(b)
+        for j, cb in enumerate(b, start=1):
+            cost = 0 if ca == cb else 1
+            curr[j] = min(
+                curr[j - 1] + 1,  # insertion
+                prev[j] + 1,  # deletion
+                prev[j - 1] + cost,  # substitution
+            )
+        prev = curr
+    return prev[-1]
 
 
 def _summary_text(f: Finding) -> str:
