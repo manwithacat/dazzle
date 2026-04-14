@@ -52,10 +52,19 @@ from typing import Any
 logger = logging.getLogger("dazzle.mcp.handlers.discovery.explore_spike")
 
 
-async def discovery_explore_spike_handler(args: dict[str, Any]) -> str:
+async def discovery_explore_spike_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Cycle 198 spike: Path γ explore run.
 
+    Called through the ``_make_project_handler_async`` factory, which
+    passes the resolved project root as the first argument. Since the
+    spike handler locates its target example via ``example_name`` (not
+    via the active Dazzle project), the ``project_path`` arg is
+    effectively ignored — but the signature has to match the dispatch
+    contract.
+
     Args (all from the MCP tool call):
+        ``project_path`` — resolved project root (unused by the spike;
+            the spike picks its example via ``example_name``).
         ``example_name`` — example app name (e.g. ``"contact_manager"``).
             Defaults to ``"contact_manager"``.
         ``persona_id`` — optional persona to run as. When None, the
@@ -70,6 +79,7 @@ async def discovery_explore_spike_handler(args: dict[str, Any]) -> str:
         fields plus a ``spike`` marker identifying this as cycle 198
         Path γ data.
     """
+    del project_path  # intentionally unused — the spike uses example_name
     example_name = args.get("example_name", "contact_manager")
     persona_id = args.get("persona_id")  # None = auto-pick
 

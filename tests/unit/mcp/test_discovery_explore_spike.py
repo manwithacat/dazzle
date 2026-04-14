@@ -23,7 +23,9 @@ async def test_missing_mcp_session_returns_error() -> None:
         discovery_explore_spike_handler,
     )
 
-    result_json = await discovery_explore_spike_handler({"example_name": "contact_manager"})
+    result_json = await discovery_explore_spike_handler(
+        Path("/tmp/unused"), {"example_name": "contact_manager"}
+    )
     result = json.loads(result_json)
 
     assert result["spike"] == "cycle-198-path-gamma"
@@ -41,7 +43,8 @@ async def test_missing_mcp_session_on_empty_progress_ctx() -> None:
     progress_ctx = MagicMock()
     progress_ctx.session = None
     result_json = await discovery_explore_spike_handler(
-        {"example_name": "contact_manager", "_progress": progress_ctx}
+        Path("/tmp/unused"),
+        {"example_name": "contact_manager", "_progress": progress_ctx},
     )
     result = json.loads(result_json)
     assert "error" in result
@@ -59,7 +62,8 @@ async def test_missing_example_directory_returns_error(tmp_path: Path) -> None:
 
     with patch.dict("os.environ", {"DAZZLE_PROJECT_ROOT": str(tmp_path)}):
         result_json = await discovery_explore_spike_handler(
-            {"example_name": "nonexistent", "_progress": progress_ctx}
+            tmp_path,
+            {"example_name": "nonexistent", "_progress": progress_ctx},
         )
 
     result = json.loads(result_json)
@@ -126,11 +130,12 @@ async def test_happy_path_passes_session_to_run_explore_strategy(tmp_path: Path)
         ) as mock_run,
     ):
         result_json = await discovery_explore_spike_handler(
+            tmp_path,
             {
                 "example_name": example_name,
                 "persona_id": "user",
                 "_progress": progress_ctx,
-            }
+            },
         )
 
     # Verify the run was called with Path γ kwargs
