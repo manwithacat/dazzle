@@ -397,3 +397,59 @@ def test_locus_windowing_no_evidence_lines(tmp_path: Path) -> None:
     assert case_file.locus is not None
     assert case_file.locus.mode == "windowed"
     assert len(case_file.locus.chunks) == 1  # head only, no evidence windows
+
+
+def test_to_prompt_text_structure(tmp_path: Path) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [
+            _finding(
+                "f_001",
+                summary_observed="describedby missing on control",
+                evidence_text="src/ui/form.html:1 — missing",
+            ),
+        ],
+    )
+    locus_dir = tmp_path / "src" / "ui"
+    locus_dir.mkdir(parents=True)
+    (locus_dir / "form.html").write_text("<div>hello</div>\n<div>world</div>\n")
+
+    case_file = build_case_file(_cluster(), tmp_path)
+    text = case_file.to_prompt_text()
+
+    # Section headers
+    assert "# Case File" in text
+    assert "## Cluster" in text
+    assert "## Sample Finding" in text
+    assert "## Locus File" in text
+
+    # Cluster fields
+    assert "CL-deadbeef" in text
+    assert "src/ui/form.html" in text
+    assert "persona: admin" in text
+    assert "severity: high" in text
+
+    # Sample finding shape
+    assert "f_001" in text
+    assert "describedby missing on control" in text
+
+    # Locus content with line-number prefixes
+    assert "  1: <div>hello</div>" in text
+    assert "  2: <div>world</div>" in text
+
+
+def test_to_prompt_text_locus_none_shows_note(tmp_path: Path) -> None:
+    """When locus is None (file not found or no path extracted), show a note."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="no file path here just text")],
+    )
+    case_file = build_case_file(_cluster(), tmp_path)
+    assert case_file.locus is None  # no file path in evidence
+
+    text = case_file.to_prompt_text()
+    assert "Locus File" in text
+    # Should say something like "not found" or "not available"
+    assert "not found" in text or "not available" in text

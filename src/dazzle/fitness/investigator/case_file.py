@@ -97,11 +97,62 @@ class CaseFile:
     built_at: datetime  # informational only; NOT used for determinism
 
     def to_prompt_text(self) -> str:
-        """Render the case file as a single text block for the system prompt.
+        """Render the case file as a single text block for the system prompt."""
+        lines: list[str] = ["# Case File", ""]
 
-        Full implementation added in Task 8. Stub for now.
-        """
-        return ""
+        # Cluster section
+        lines += [
+            "## Cluster",
+            f"id: {self.cluster.cluster_id}",
+            f"locus: {self.cluster.locus}",
+            f"axis: {self.cluster.axis}",
+            f"severity: {self.cluster.severity}",
+            f"persona: {self.cluster.persona}",
+            f'summary: "{self.cluster.canonical_summary}"',
+            f"size: {self.cluster.cluster_size} findings",
+            f"first_seen: {self.cluster.first_seen.isoformat()}",
+            f"last_seen: {self.cluster.last_seen.isoformat()}",
+            "",
+        ]
+
+        # Sample finding section
+        lines += _render_finding_block(self.sample_finding, title_prefix="## Sample Finding")
+        lines.append("")
+
+        # Sibling findings section
+        lines.append(
+            f"## Sibling Findings ({len(self.siblings)} shown; "
+            f"cluster_size={self.cluster.cluster_size})"
+        )
+        lines.append("")
+        for sibling in self.siblings:
+            lines += _render_finding_block(sibling, title_prefix="###")
+            lines.append("")
+
+        # Locus section
+        if self.locus is None:
+            locus_path = _extract_file_path(self.sample_finding) or "(unknown)"
+            lines += [
+                f"## Locus File: {locus_path} (file not found / not available)",
+                "",
+            ]
+        else:
+            lines += [
+                f"## Locus File: {self.locus.file_path} "
+                f"({self.locus.total_lines} lines, mode={self.locus.mode})",
+                "",
+            ]
+            prev_end = 0
+            for start, end, text in self.locus.chunks:
+                if prev_end and start > prev_end + 1:
+                    lines.append(f"... (lines {prev_end + 1}..{start - 1} omitted)")
+                    lines.append("")
+                for offset, line_text in enumerate(text.splitlines(), start=start):
+                    lines.append(f"{offset:>3}: {line_text}")
+                prev_end = end
+                lines.append("")
+
+        return "\n".join(lines).rstrip() + "\n"
 
 
 def build_case_file(
@@ -439,3 +490,35 @@ def _merge_and_trim_windows(
         else:
             merged.append((start, end))
     return merged
+
+
+def _render_finding_block(finding: Finding, *, title_prefix: str) -> list[str]:
+    """Render one finding as prompt lines.
+
+    title_prefix is either '## Sample Finding' (renders as '## Sample Finding (fid)')
+    or '###' (renders as '### fid (persona=X)').
+    """
+    if title_prefix == "## Sample Finding":
+        title = f"## Sample Finding ({finding.id})"
+    else:
+        title = f"### {finding.id} (persona={finding.persona})"
+    evidence = _render_evidence(finding)
+    return [
+        title,
+        f"created: {finding.created.isoformat()}",
+        f'expected: "{finding.expected}"',
+        f'observed: "{finding.observed}"',
+        "evidence:",
+        f"  {evidence}",
+    ]
+
+
+def _render_evidence(finding: Finding) -> str:
+    """Flatten the evidence transcript excerpt into a short multi-line string."""
+    parts: list[str] = []
+    for step in finding.evidence_embedded.transcript_excerpt:
+        if isinstance(step, dict):
+            for k, v in step.items():
+                if isinstance(v, str) and v:
+                    parts.append(f"{k}: {v}")
+    return "\n  ".join(parts) if parts else "(no evidence)"
