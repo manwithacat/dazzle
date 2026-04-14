@@ -56,7 +56,7 @@ def build_investigator_tools(
     """
     return [
         _read_file_tool(case_file, dazzle_root, state),
-        # Task 10: _query_dsl_tool(case_file, dazzle_root, state)
+        _query_dsl_tool(case_file, dazzle_root, state),
         # Task 11: _get_cluster_findings_tool(case_file, dazzle_root, state)
         # Task 12: _get_related_clusters_tool(case_file, dazzle_root, state)
         # Task 13: _search_spec_tool(case_file, dazzle_root, state)
@@ -155,6 +155,148 @@ def _read_file_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) ->
         },
         handler=handler,
     )
+
+
+def _query_dsl_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    """Build the query_dsl tool.
+
+    Fetches the parsed DSL node for an entity, surface, workspace, service,
+    process, persona, or enum by name. On unknown names returns a
+    did_you_mean list with fuzzy suggestions.
+    """
+
+    def handler(name: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"query_dsl({name})")
+        scope_root = case_file.example_root or dazzle_root
+
+        try:
+            from dazzle.core.appspec_loader import load_project_appspec
+        except ImportError:
+            return {
+                "error": "DSL parser unavailable",
+                "hint": "install dazzle[dev]",
+            }
+
+        try:
+            appspec = load_project_appspec(scope_root)
+        except Exception as e:
+            return {"error": f"DSL parse failed: {e}"}
+
+        node, kind = _lookup_ir_node(appspec, name)
+        if node is None:
+            all_names = _collect_ir_names(appspec)
+            suggestions = difflib.get_close_matches(name, all_names, n=3, cutoff=0.5)
+            return {
+                "error": f"no DSL node named {name!r}",
+                "did_you_mean": suggestions,
+            }
+
+        serialised = _serialise_ir_node(node, kind)
+        source_file = serialised.get("source_file")
+        if source_file and isinstance(source_file, str):
+            state.evidence_paths.add(source_file)
+        return serialised
+
+    return AgentTool(
+        name="query_dsl",
+        description="Look up a parsed DSL node (entity/surface/workspace/etc.) by name.",
+        schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "The IR node name."},
+            },
+            "required": ["name"],
+        },
+        handler=handler,
+    )
+
+
+def _lookup_ir_node(appspec: Any, name: str) -> tuple[Any, str]:
+    """Try each IR collection in turn; return (node, kind) or (None, '').
+
+    Note: entities live under appspec.domain.entities; services are
+    appspec.domain_services on AppSpec.
+    """
+    # Entities are nested under appspec.domain
+    domain = getattr(appspec, "domain", None)
+    if domain:
+        for node in getattr(domain, "entities", None) or []:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name == name:
+                return node, "entity"
+
+    for kind_name, attr in [
+        ("surface", "surfaces"),
+        ("workspace", "workspaces"),
+        ("service", "domain_services"),
+        ("process", "processes"),
+        ("persona", "personas"),
+        ("enum", "enums"),
+    ]:
+        nodes = getattr(appspec, attr, None)
+        if not nodes:
+            continue
+        for node in nodes:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name == name:
+                return node, kind_name
+    return None, ""
+
+
+def _collect_ir_names(appspec: Any) -> list[str]:
+    names: list[str] = []
+
+    # Entities are under domain
+    domain = getattr(appspec, "domain", None)
+    if domain:
+        for node in getattr(domain, "entities", None) or []:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name:
+                names.append(str(node_name))
+
+    for attr in (
+        "surfaces",
+        "workspaces",
+        "domain_services",
+        "processes",
+        "personas",
+        "enums",
+    ):
+        for node in getattr(appspec, attr, None) or []:
+            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            if node_name:
+                names.append(str(node_name))
+    return names
+
+
+def _serialise_ir_node(node: Any, kind: str) -> dict[str, Any]:
+    """Best-effort dict serialisation for an IR node."""
+    name = getattr(node, "name", None) or getattr(node, "id", None)
+    result: dict[str, Any] = {"kind": kind, "name": name}
+    for attr in ("title", "mode", "uses_entity", "personas", "fields", "scope_rules", "sections"):
+        value = getattr(node, attr, None)
+        if value is None:
+            continue
+        if isinstance(value, list):
+            result[attr] = [_field_to_dict(v) if hasattr(v, "__dict__") else v for v in value]
+        else:
+            result[attr] = value if isinstance(value, (str, int, float, bool)) else str(value)
+    source_file = getattr(node, "source_file", None)
+    if source_file is not None:
+        result["source_file"] = str(source_file)
+    line_range = getattr(node, "line_range", None)
+    if line_range is not None:
+        try:
+            result["line_range"] = list(line_range)
+        except TypeError:
+            pass
+    return result
+
+
+def _field_to_dict(obj: Any) -> dict[str, Any]:
+    if hasattr(obj, "__dict__"):
+        return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
+    return {"value": str(obj)}
 
 
 def _find_similar_files(dazzle_root: Path, missing: str) -> list[str]:
