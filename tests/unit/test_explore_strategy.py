@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from dazzle.agent.missions.ux_explore import Strategy
+from dazzle.core.ir.personas import PersonaSpec
 
 # ----- Fake infrastructure ---------------------------------------------------
 
@@ -69,8 +70,6 @@ def _fake_args_for_tool(tool_name: str, persona_id: str) -> dict[str, Any]:
 
 def _fake_app_spec(persona_ids: list[str]) -> MagicMock:
     """Minimal AppSpec stand-in with a ``personas`` iterable."""
-    from dazzle.core.ir.personas import PersonaSpec
-
     spec = MagicMock()
     spec.personas = [PersonaSpec(id=pid, label=pid.capitalize()) for pid in persona_ids]
     return spec
@@ -322,6 +321,100 @@ async def test_all_personas_blocked_raises(tmp_path: Path) -> None:
 
     # Bundle still torn down even though strategy raised
     bundle.close.assert_awaited_once()
+
+
+# ----- TestPickExplorePersonas -----------------------------------------------
+
+
+def _make_app_spec_with_personas(personas_list: list[PersonaSpec]) -> MagicMock:
+    spec = MagicMock()
+    spec.personas = personas_list
+    return spec
+
+
+class TestPickExplorePersonas:
+    def test_filters_platform_personas_out(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [
+                PersonaSpec(id="admin", label="Admin", default_workspace="_platform_admin"),
+                PersonaSpec(id="user", label="User", default_workspace="contacts"),
+            ]
+        )
+        result = pick_explore_personas(spec)
+        assert len(result) == 1
+        assert result[0].id == "user"
+
+    def test_sorts_business_personas_alphabetically(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [
+                PersonaSpec(id="manager", label="M", default_workspace="my_work"),
+                PersonaSpec(id="admin", label="A", default_workspace="admin_dashboard"),
+                PersonaSpec(id="user", label="U", default_workspace="my_work"),
+            ]
+        )
+        result = pick_explore_personas(spec)
+        assert [p.id for p in result] == ["admin", "manager", "user"]
+
+    def test_override_returns_in_caller_order(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [
+                PersonaSpec(id="admin", label="A", default_workspace="_platform_admin"),
+                PersonaSpec(id="customer", label="C", default_workspace="store"),
+                PersonaSpec(id="agent", label="Ag", default_workspace="support"),
+            ]
+        )
+        result = pick_explore_personas(spec, override=["customer", "admin"])
+        assert [p.id for p in result] == ["customer", "admin"]
+
+    def test_override_unknown_id_raises_value_error(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [PersonaSpec(id="user", label="U", default_workspace="x")]
+        )
+        with pytest.raises(ValueError, match="persona 'nobody' not found"):
+            pick_explore_personas(spec, override=["nobody"])
+
+    def test_all_platform_personas_returns_empty_list(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [
+                PersonaSpec(id="admin", label="A", default_workspace="_platform_admin"),
+                PersonaSpec(id="sys", label="S", default_workspace="_system"),
+            ]
+        )
+        result = pick_explore_personas(spec)
+        assert result == []
+
+    def test_persona_with_no_default_workspace_is_kept(self) -> None:
+        """Personas without default_workspace are not framework-scoped."""
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_explore_personas,
+        )
+
+        spec = _make_app_spec_with_personas(
+            [PersonaSpec(id="visitor", label="V", default_workspace=None)]
+        )
+        result = pick_explore_personas(spec)
+        assert len(result) == 1
+        assert result[0].id == "visitor"
 
 
 @pytest.mark.asyncio

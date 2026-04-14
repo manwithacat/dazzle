@@ -80,6 +80,43 @@ class _PersonaRunResult:
     error: str | None = None
 
 
+def pick_explore_personas(
+    app_spec: Any,
+    override: list[str] | None = None,
+) -> list[PersonaSpec]:
+    """Pick persona(s) for an explore run.
+
+    Auto-pick (override is None): return ALL personas whose
+    default_workspace is not framework-scoped (i.e. doesn't start with
+    an underscore), sorted alphabetically by id for determinism.
+    Returns [] if no business personas exist.
+
+    Override (list of ids): return those personas in caller order,
+    looked up from app_spec.personas. Raises ValueError if any id is
+    unknown — noisy failure is better than silently dropping a persona
+    the caller explicitly requested.
+    """
+    by_id: dict[str, PersonaSpec] = {p.id: p for p in app_spec.personas}
+
+    if override is not None:
+        missing = [pid for pid in override if pid not in by_id]
+        if missing:
+            raise ValueError(
+                f"persona '{missing[0]}' not found in app_spec.personas "
+                f"(available: {sorted(by_id.keys())})"
+            )
+        return [by_id[pid] for pid in override]
+
+    # Auto-pick: filter out framework-scoped personas
+    business = [
+        p
+        for p in app_spec.personas
+        if p.default_workspace is None or not p.default_workspace.startswith("_")
+    ]
+    business.sort(key=lambda p: p.id)
+    return business
+
+
 async def run_explore_strategy(
     connection: AppConnection,
     *,
