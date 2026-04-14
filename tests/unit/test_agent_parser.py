@@ -275,3 +275,42 @@ class TestParseActionTier3:
         # Parser strictly validates tool target against registry (task 2 change)
         assert action.type == ActionType.DONE
         assert action.success is False
+
+
+class TestCycle147Regression:
+    """Regression test for cycle 147's EXPLORE stagnation.
+
+    In cycle 147 the agent stagnated at 8 steps because Claude 4.6
+    consistently emitted prose preambles before the JSON action block.
+    The strict parser returned DONE/failure on step 1, killing the
+    mission. After task 2's parser refactor, the agent extracts the
+    action from the prose-preambled response cleanly.
+
+    This test uses the exact prose+JSON pattern captured from cycle 147's
+    logs (see dev_docs/ux-log.md cycle 147 entry for the original
+    occurrence).
+    """
+
+    def test_cycle_147_prose_preamble_pattern(self) -> None:
+        """The exact pattern from cycle 147 logs must parse cleanly."""
+        agent = _make_agent()
+        # This pattern is copied verbatim from cycle 147's parsed-action
+        # warning log message.
+        cycle_147_response = (
+            "I expect to see a forbidden error page, which suggests I need "
+            "to navigate to a login page or the main application entry point "
+            "to authenticate as admin.\n\n"
+            '{"action": "navigate", "target": "/", '
+            '"reasoning": "need to authenticate"}'
+        )
+
+        action = agent._parse_action(cycle_147_response, tool_registry={})
+
+        # Before the fix: returned AgentAction(type=DONE, success=False).
+        # After the fix: returns the parsed navigate action with prose preserved.
+        assert action.type == ActionType.NAVIGATE
+        assert action.target == "/"
+        assert action.success is True
+        assert "need to authenticate" in action.reasoning  # JSON reasoning field
+        assert "forbidden error page" in action.reasoning  # prose preserved
+        assert "[PROSE]" in action.reasoning  # marker present
