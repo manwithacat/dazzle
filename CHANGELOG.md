@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.3] - 2026-04-14
+
+### Fixed
+- **Integration test assertion stale after v0.55.2 builtin-action merge.**
+  `tests/integration/test_agent_investigator_tool_use.py::test_nested_changes_array_arrives_intact`
+  asserted `len(call_kwargs["tools"]) == 1` against the `_decide_via_anthropic_tools`
+  tools list, which v0.55.2 expanded from "1 mission tool" to "8 builtin page
+  actions + 1 mission tool". Two unit tests were updated in the same commit,
+  but the integration test was missed by the pre-push local verification
+  (`-k "agent or tool_use or explore_strategy or fitness_strategy"` was
+  scoped to `tests/unit/`). Fixed by looking up the `propose_fix` entry by
+  name and asserting `len == 9`. 10784/10784 Python tests pass. No runtime
+  behaviour change from v0.55.2 — the shipped agent code was always correct;
+  only the test's expectation was stale.
+
 ## [0.55.2] - 2026-04-14
 
 ### Fixed
