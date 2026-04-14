@@ -9,6 +9,7 @@ Both execute AgentActions and return ActionResults.
 """
 
 import asyncio
+import hashlib
 import logging
 from typing import Any, Protocol, runtime_checkable
 
@@ -34,6 +35,11 @@ class Executor(Protocol):
 # =============================================================================
 # Playwright Executor
 # =============================================================================
+
+
+def _dom_hash(html: str) -> str:
+    """16-char SHA256 prefix of page content for cheap state-change detection."""
+    return hashlib.sha256(html.encode("utf-8")).hexdigest()[:16]
 
 
 class PlaywrightExecutor:
@@ -78,68 +84,110 @@ class PlaywrightExecutor:
         return self._page.locator(selector)
 
     async def execute(self, action: AgentAction) -> ActionResult:
+        # Capture "before" state for actions that interact with the page.
+        # TOOL / DONE bypass — they don't touch the page.
+        capture_state = action.type not in (ActionType.TOOL, ActionType.DONE)
+        from_url: str | None = None
+        from_hash: str | None = None
+        if capture_state:
+            from_url = self._page.url
+            from_hash = _dom_hash(await self._page.content())
+        console_before = len(self._console_errors_buffer)
+
         try:
             if action.type == ActionType.CLICK:
                 locator = self._resolve_locator(action.target or "")
                 await locator.click(timeout=5000)
-                await self._page.wait_for_load_state("networkidle", timeout=5000)
-                return ActionResult(message=f"Clicked {action.target}")
+                try:
+                    await self._page.wait_for_load_state("networkidle", timeout=5000)
+                except Exception:
+                    pass  # wait timeout is benign here
+                base = ActionResult(message=f"Clicked {action.target}")
 
             elif action.type == ActionType.TYPE:
                 locator = self._resolve_locator(action.target or "")
                 await locator.fill(action.value or "", timeout=5000)
-                return ActionResult(message=f"Typed '{action.value}' into {action.target}")
+                base = ActionResult(message=f"Typed '{action.value}' into {action.target}")
 
             elif action.type == ActionType.SELECT:
                 locator = self._resolve_locator(action.target or "")
                 await locator.select_option(action.value, timeout=5000)
-                return ActionResult(message=f"Selected '{action.value}' in {action.target}")
+                base = ActionResult(message=f"Selected '{action.value}' in {action.target}")
 
             elif action.type == ActionType.NAVIGATE:
                 target = action.target or "/"
                 if not target.startswith("http"):
-                    base = self._page.url.split("/")[0:3]
-                    target = "/".join(base) + target
+                    base_parts = self._page.url.split("/")[0:3]
+                    target = "/".join(base_parts) + target
                 await self._page.goto(target)
-                await self._page.wait_for_load_state("networkidle")
-                return ActionResult(message=f"Navigated to {target}")
+                try:
+                    await self._page.wait_for_load_state("networkidle")
+                except Exception:
+                    pass
+                base = ActionResult(message=f"Navigated to {target}")
 
             elif action.type == ActionType.WAIT:
                 locator = self._resolve_locator(action.target or "")
                 await locator.wait_for(timeout=10000)
-                return ActionResult(message=f"Found {action.target}")
+                base = ActionResult(message=f"Found {action.target}")
 
             elif action.type == ActionType.ASSERT:
                 try:
                     locator = self._resolve_locator(action.target or "")
                     await locator.wait_for(timeout=3000)
-                    return ActionResult(message=f"Assertion passed: {action.target} is visible")
+                    base = ActionResult(message=f"Assertion passed: {action.target} is visible")
                 except Exception:
                     if await self._page.locator(f"text={action.target}").count() > 0:
-                        return ActionResult(
+                        base = ActionResult(
                             message=f"Assertion passed: text '{action.target}' found"
                         )
-                    return ActionResult(
-                        message="",
-                        error=f"Assertion failed: {action.target} not found",
-                    )
+                    else:
+                        base = ActionResult(
+                            message="",
+                            error=f"Assertion failed: {action.target} not found",
+                        )
 
             elif action.type == ActionType.SCROLL:
                 await self._page.evaluate("window.scrollBy(0, 300)")
-                return ActionResult(message="Scrolled down")
+                base = ActionResult(message="Scrolled down")
 
             elif action.type == ActionType.DONE:
-                return ActionResult(message="Agent completed mission")
+                base = ActionResult(message="Agent completed mission")
 
             elif action.type == ActionType.TOOL:
                 # Tool actions are handled by the agent core, not the executor
-                return ActionResult(message=f"Tool invocation: {action.target}")
+                base = ActionResult(message=f"Tool invocation: {action.target}")
 
             else:
-                return ActionResult(message="", error=f"Unknown action type: {action.type}")
+                base = ActionResult(message="", error=f"Unknown action type: {action.type}")
 
         except Exception as e:
-            return ActionResult(message="", error=str(e))
+            # Error path: capture available state but leave state_changed=None
+            return ActionResult(
+                message="",
+                error=str(e),
+                from_url=from_url,
+                to_url=self._page.url if capture_state else None,
+                state_changed=None,
+                console_errors_during_action=list(self._console_errors_buffer[console_before:]),
+            )
+
+        # Happy path: compute after state and populate the new fields
+        if capture_state:
+            to_url = self._page.url
+            to_hash = _dom_hash(await self._page.content())
+            base.from_url = from_url
+            base.to_url = to_url
+            if action.type == ActionType.SCROLL:
+                base.state_changed = True  # optimistic
+            elif action.type == ActionType.ASSERT:
+                base.state_changed = False  # optimistic
+            else:
+                base.state_changed = (from_url != to_url) or (from_hash != to_hash)
+        # else: TOOL / DONE leave state fields at None defaults
+
+        base.console_errors_during_action = list(self._console_errors_buffer[console_before:])
+        return base
 
 
 # =============================================================================
