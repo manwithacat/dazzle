@@ -211,29 +211,30 @@ def _query_dsl_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) ->
     )
 
 
+def _resolve_path(appspec: Any, path: tuple[str, ...]) -> Any:
+    """Walk a dotted attribute path (e.g. ('domain', 'entities'))."""
+    obj: Any = appspec
+    for part in path:
+        obj = getattr(obj, part, None)
+        if obj is None:
+            return None
+    return obj
+
+
 def _lookup_ir_node(appspec: Any, name: str) -> tuple[Any, str]:
-    """Try each IR collection in turn; return (node, kind) or (None, '').
-
-    Note: entities live under appspec.domain.entities; services are
-    appspec.domain_services on AppSpec.
-    """
-    # Entities are nested under appspec.domain
-    domain = getattr(appspec, "domain", None)
-    if domain:
-        for node in getattr(domain, "entities", None) or []:
-            node_name = getattr(node, "name", None) or getattr(node, "id", None)
-            if node_name == name:
-                return node, "entity"
-
-    for kind_name, attr in [
-        ("surface", "surfaces"),
-        ("workspace", "workspaces"),
-        ("service", "domain_services"),
-        ("process", "processes"),
-        ("persona", "personas"),
-        ("enum", "enums"),
+    """Try each IR collection in turn; return (node, kind) or (None, '')."""
+    for kind_name, path in [
+        ("entity", ("domain", "entities")),  # nested under domain
+        ("surface", ("surfaces",)),
+        ("workspace", ("workspaces",)),
+        ("experience", ("experiences",)),
+        ("island", ("islands",)),
+        ("service", ("domain_services",)),
+        ("process", ("processes",)),
+        ("persona", ("personas",)),
+        ("enum", ("enums",)),
     ]:
-        nodes = getattr(appspec, attr, None)
+        nodes = _resolve_path(appspec, path)
         if not nodes:
             continue
         for node in nodes:
@@ -245,24 +246,18 @@ def _lookup_ir_node(appspec: Any, name: str) -> tuple[Any, str]:
 
 def _collect_ir_names(appspec: Any) -> list[str]:
     names: list[str] = []
-
-    # Entities are under domain
-    domain = getattr(appspec, "domain", None)
-    if domain:
-        for node in getattr(domain, "entities", None) or []:
-            node_name = getattr(node, "name", None) or getattr(node, "id", None)
-            if node_name:
-                names.append(str(node_name))
-
-    for attr in (
-        "surfaces",
-        "workspaces",
-        "domain_services",
-        "processes",
-        "personas",
-        "enums",
+    for path in (
+        ("domain", "entities"),
+        ("surfaces",),
+        ("workspaces",),
+        ("experiences",),
+        ("islands",),
+        ("domain_services",),
+        ("processes",),
+        ("personas",),
+        ("enums",),
     ):
-        for node in getattr(appspec, attr, None) or []:
+        for node in _resolve_path(appspec, path) or []:
             node_name = getattr(node, "name", None) or getattr(node, "id", None)
             if node_name:
                 names.append(str(node_name))
@@ -278,22 +273,35 @@ def _serialise_ir_node(node: Any, kind: str) -> dict[str, Any]:
         if value is None:
             continue
         if isinstance(value, list):
-            result[attr] = [_field_to_dict(v) if hasattr(v, "__dict__") else v for v in value]
+            result[attr] = [
+                _field_to_dict(v) if hasattr(v, "model_dump") or hasattr(v, "__dict__") else v
+                for v in value
+            ]
         else:
             result[attr] = value if isinstance(value, (str, int, float, bool)) else str(value)
-    source_file = getattr(node, "source_file", None)
-    if source_file is not None:
-        result["source_file"] = str(source_file)
-    line_range = getattr(node, "line_range", None)
-    if line_range is not None:
-        try:
-            result["line_range"] = list(line_range)
-        except TypeError:
-            pass
+
+    # Source location — read from node.source (SourceLocation) if present
+    source = getattr(node, "source", None)
+    if source is not None:
+        source_file = getattr(source, "file", None)
+        if source_file:
+            result["source_file"] = str(source_file)
+        source_line = getattr(source, "line", None)
+        if source_line is not None:
+            result["source_line"] = int(source_line)
     return result
 
 
 def _field_to_dict(obj: Any) -> dict[str, Any]:
+    """Convert an IR spec element to a plain dict.
+
+    Prefers Pydantic v2's `model_dump()` for recursive serialisation of
+    nested models. Falls back to `__dict__` for non-Pydantic objects
+    (e.g., StrEnum). Final fallback is `str(obj)`.
+    """
+    if hasattr(obj, "model_dump"):
+        dumped = obj.model_dump()
+        return dumped if isinstance(dumped, dict) else {"value": dumped}
     if hasattr(obj, "__dict__"):
         return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
     return {"value": str(obj)}
