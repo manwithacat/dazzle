@@ -292,3 +292,66 @@ def test_sibling_picker_prefers_diverse_observed_text(tmp_path: Path) -> None:
     assert len(near_dup_picked) == 2, (
         f"expected exactly 2 near-duplicates picked, got {near_dup_picked}"
     )
+
+
+def test_locus_windowing_large_file_with_evidence_lines(tmp_path: Path) -> None:
+    """A large file (>500 lines) produces a windowed excerpt containing the
+    first 200 lines plus ±20 windows around evidence-referenced line numbers."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="src/ui/large.html:750 — missing describedby")],
+    )
+
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    case_file = build_case_file(_cluster(sample_id="f_001"), tmp_path)
+
+    assert case_file.locus is not None
+    assert case_file.locus.mode == "windowed"
+    assert case_file.locus.total_lines == 1000
+
+    # First chunk is the head
+    head_chunk = case_file.locus.chunks[0]
+    assert head_chunk[0] == 1
+    assert head_chunk[1] == 200
+
+    # Second chunk should cover a window around line 750
+    window_chunks = [c for c in case_file.locus.chunks if c[0] > 200]
+    assert window_chunks, "expected at least one evidence window beyond the head"
+    assert any(c[0] <= 750 <= c[1] for c in window_chunks)
+
+
+def test_locus_windowing_merges_overlapping_windows(tmp_path: Path) -> None:
+    """Two evidence line numbers within ±20 of each other merge into one chunk."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [
+            _finding(
+                "f_001",
+                summary_observed="aria-describedby missing",
+                evidence_text="src/ui/large.html:750 here",
+            ),
+            _finding(
+                "f_002",
+                summary_observed="aria-describedby missing",
+                evidence_text="src/ui/large.html:755 and here",
+            ),
+        ],
+    )
+
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    case_file = build_case_file(_cluster(sample_id="f_001"), tmp_path)
+    assert case_file.locus is not None
+
+    # Head + one merged window = 2 chunks
+    windows = [c for c in case_file.locus.chunks if c[0] > 200]
+    assert len(windows) == 1
+    assert windows[0][0] <= 750 <= windows[0][1]
+    assert windows[0][0] <= 755 <= windows[0][1]

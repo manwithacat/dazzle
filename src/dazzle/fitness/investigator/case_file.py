@@ -35,6 +35,10 @@ LOCUS_FULL_MAX_LINES = 500
 LOCUS_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
 LOCUS_BINARY_SNIFF_BYTES = 1024
 SIBLING_LIMIT = 5
+LOCUS_HEAD_LINES = 200
+LOCUS_WINDOW_RADIUS = 20
+
+_EVIDENCE_LINE_RE = re.compile(r"(?:line\s+|:)(\d+)")
 
 # Matches any path-like token starting with one or more ../ segments.
 # Used by _check_evidence_for_traversal to eagerly detect escape attempts
@@ -129,7 +133,11 @@ def build_case_file(
     siblings = _pick_siblings(cluster, sample, all_findings)
 
     # 6. Load locus file (traversal-guarded)
-    locus = _load_locus(extracted_path, dazzle_root, root_resolved) if extracted_path else None
+    locus = (
+        _load_locus(extracted_path, dazzle_root, root_resolved, sample, siblings)
+        if extracted_path
+        else None
+    )
 
     return CaseFile(
         cluster=cluster,
@@ -301,6 +309,8 @@ def _load_locus(
     locus_rel: str,
     dazzle_root: Path,
     root_resolved: Path,
+    sample: Finding,
+    siblings: list[Finding],
 ) -> LocusExcerpt | None:
     target = dazzle_root / locus_rel
     try:
@@ -355,11 +365,72 @@ def _load_locus(
             chunks=((1, total_lines, content),),
         )
 
-    # Task 7 implements windowed mode. For now, return a stub single-chunk.
-    head_text = "\n".join(lines[:200])
+    # Windowed mode: head + ±LOCUS_WINDOW_RADIUS windows around evidence lines.
+    head_end = min(LOCUS_HEAD_LINES, total_lines)
+    head_chunk = (1, head_end, "\n".join(lines[:head_end]))
+
+    evidence_lines = _extract_evidence_lines(sample, siblings)
+    raw_windows: list[tuple[int, int]] = []
+    for line_no in evidence_lines:
+        if line_no < 1 or line_no > total_lines:
+            continue
+        start = max(1, line_no - LOCUS_WINDOW_RADIUS)
+        end = min(total_lines, line_no + LOCUS_WINDOW_RADIUS)
+        raw_windows.append((start, end))
+
+    merged = _merge_and_trim_windows(raw_windows, exclude_upto=head_end)
+
+    chunks: list[tuple[int, int, str]] = [head_chunk]
+    for start, end in merged:
+        chunk_text = "\n".join(lines[start - 1 : end])
+        chunks.append((start, end, chunk_text))
+
     return LocusExcerpt(
         file_path=locus_rel,
         total_lines=total_lines,
         mode="windowed",
-        chunks=((1, min(200, total_lines), head_text),),
+        chunks=tuple(chunks),
     )
+
+
+def _extract_evidence_lines(sample: Finding, siblings: list[Finding]) -> list[int]:
+    """Pull line numbers out of evidence_embedded transcript excerpts.
+
+    Matches patterns like 'line 47' and 'form.html:47'. Returns sorted unique ints.
+    """
+    seen: set[int] = set()
+    for finding in [sample, *siblings]:
+        for step in finding.evidence_embedded.transcript_excerpt:
+            if not isinstance(step, dict):
+                continue
+            for value in step.values():
+                if not isinstance(value, str):
+                    continue
+                for match in _EVIDENCE_LINE_RE.finditer(value):
+                    try:
+                        seen.add(int(match.group(1)))
+                    except ValueError:
+                        continue
+    return sorted(seen)
+
+
+def _merge_and_trim_windows(
+    raw: list[tuple[int, int]],
+    *,
+    exclude_upto: int,
+) -> list[tuple[int, int]]:
+    """Sort, clip to >exclude_upto, merge overlapping/adjacent windows."""
+    trimmed = [(max(start, exclude_upto + 1), end) for start, end in raw if end > exclude_upto]
+    trimmed = [(s, e) for s, e in trimmed if s <= e]
+    if not trimmed:
+        return []
+    trimmed.sort()
+
+    merged: list[tuple[int, int]] = [trimmed[0]]
+    for start, end in trimmed[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+    return merged
