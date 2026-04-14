@@ -826,14 +826,22 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
             history_text = "## Previous Actions\n"
             # Show last 5 steps
             for step in self._history[-5:]:
-                line = f"{step.step_number}. {step.action.type.value}"
-                if step.action.target:
-                    line += f": {step.action.target[:40]}"
-                if step.result.error:
-                    line += f" (ERROR: {step.result.error[:60]})"
-                elif step.result.message:
-                    line += f" -> {step.result.message[:60]}"
-                history_text += line + "\n"
+                history_text += _format_history_line(step) + "\n"
+
+            # Cycle 197 — bail-nudge: if the last 3 steps all produced no state
+            # change, tell the LLM explicitly and give it an escape to `done`.
+            if _is_stuck(self._history, window=3):
+                history_text += (
+                    "\n## ⚠️ You appear to be stuck\n"
+                    "Your last 3 actions produced NO state change. The page "
+                    "hasn't moved and the selectors aren't firing anything "
+                    "useful. STOP repeating the same action. Try one of:\n"
+                    "- navigate to a different URL\n"
+                    "- click a different kind of element (button, link in a "
+                    "different section)\n"
+                    "- if you cannot find any new way to make progress, call "
+                    "the `done` tool so we can stop wasting steps\n"
+                )
 
             messages.append({"role": "user", "content": history_text})
             messages.append(

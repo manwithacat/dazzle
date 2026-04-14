@@ -167,3 +167,95 @@ class TestIsStuck:
             _make_step(3, ActionType.CLICK, result_kwargs={"state_changed": False}),
         ]
         assert _is_stuck(steps, window=3) is False
+
+
+from dazzle.agent.core import DazzleAgent  # noqa: E402
+
+
+def _make_agent() -> DazzleAgent:
+    from unittest.mock import AsyncMock
+
+    observer = AsyncMock()
+    executor = AsyncMock()
+    return DazzleAgent(observer=observer, executor=executor, api_key="test")
+
+
+class TestBuildMessagesIntegration:
+    def test_history_uses_new_format_line(self) -> None:
+        """_build_messages renders each history step via _format_history_line."""
+        agent = _make_agent()
+        agent._history = [
+            _make_step(
+                1,
+                ActionType.CLICK,
+                target="a.x",
+                result_kwargs={"from_url": "/a", "to_url": "/a", "state_changed": False},
+            ),
+        ]
+        state = PageState(url="/a", title="t")
+        messages = agent._build_messages(state)
+        # The history text is the first user message
+        history_text = messages[0]["content"]
+        assert "NO state change" in history_text
+
+    def test_bail_nudge_fires_at_three_consecutive_no_ops(self) -> None:
+        agent = _make_agent()
+        agent._history = [
+            _make_step(
+                i,
+                ActionType.CLICK,
+                target="a.stuck",
+                result_kwargs={
+                    "from_url": "/app",
+                    "to_url": "/app",
+                    "state_changed": False,
+                },
+            )
+            for i in (1, 2, 3)
+        ]
+        state = PageState(url="/app", title="t")
+        messages = agent._build_messages(state)
+        history_text = messages[0]["content"]
+        assert "You appear to be stuck" in history_text
+        assert "done" in history_text  # escape hatch mentioned
+
+    def test_bail_nudge_does_not_fire_below_threshold(self) -> None:
+        agent = _make_agent()
+        agent._history = [
+            _make_step(
+                i,
+                ActionType.CLICK,
+                result_kwargs={"state_changed": False},
+            )
+            for i in (1, 2)  # only 2 no-ops
+        ]
+        state = PageState(url="/", title="t")
+        messages = agent._build_messages(state)
+        assert "You appear to be stuck" not in messages[0]["content"]
+
+    def test_bail_nudge_continues_firing_past_three(self) -> None:
+        """Every step after the 3rd still sees the nudge."""
+        agent = _make_agent()
+        agent._history = [
+            _make_step(
+                i,
+                ActionType.CLICK,
+                result_kwargs={"state_changed": False},
+            )
+            for i in range(1, 6)  # 5 no-ops
+        ]
+        state = PageState(url="/", title="t")
+        messages = agent._build_messages(state)
+        assert "You appear to be stuck" in messages[0]["content"]
+
+    def test_empty_history_no_nudge_no_crash(self) -> None:
+        agent = _make_agent()
+        agent._history = []
+        state = PageState(url="/", title="t")
+        messages = agent._build_messages(state)
+        # Empty history means there is no history block — just the current state.
+        # Just assert we don't crash and the nudge text isn't present.
+        for m in messages:
+            content = m["content"]
+            if isinstance(content, str):
+                assert "You appear to be stuck" not in content
