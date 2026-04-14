@@ -4,6 +4,16 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T19:35Z — Cycle 191 — EXHAUSTED (sticky) — determinism check #1
+
+**Outcome:** Identical terminal state to cycle 190. Priority queue empty → Step 6 → 5-cycle-0-findings rule → skip EXPLORE → cycle complete. Log-only commit.
+
+**New observation:** `since_last_run(source="ux-cycle")` returned `[]` despite cycle 190 having emitted a `ux-component-shipped` signal. Confirmed behaviour: `mark_run` updates the cursor *after* emit within the same cycle, so a cycle's own emissions are invisible to the next run. That's actually correct semantics, not a bug — signals are meant to cross cycles, not within one — but worth recording.
+
+**Wall-clock:** ~6 seconds (cached conversation, no live work).
+
+---
+
 ## 2026-04-14T19:29Z — Cycle 190 — EXHAUSTED (sticky) — **harness-evaluation cycle**
 
 **Outcome:** Second post-sweep cycle. Identical terminal state to cycle 189: priority queue buckets 1–5 all empty, EXPLORE short-circuited by the 5-cycle-0-findings rule, no state change.
