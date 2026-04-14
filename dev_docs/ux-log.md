@@ -1849,6 +1849,27 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 145 — 2026-04-14 — UX-036 auth-page → qa:FAIL (39 findings) — **qa:PENDING pool exhausted**
+
+**Row:** UX-036 auth-page (anonymous, host: simple_task)
+**Outcome:** `qa: PENDING → FAIL`, 39 findings, degraded=False. Single-cycle run (no personas — public auth page). Walker reached interactive depth (typed into `#email`). Anchor `/login`. Run ID: d87f6956-abd9-4fc2-92b2-7d9d7e5d2ee0.
+
+**qa:PENDING pool exhausted.** UX-036 was the last READY_FOR_QA row with qa:PENDING. The next cycle will hit the "DONE where qa: PENDING" priority bucket (empty — no DONE rows with pending QA remain) and fall through to re-verification of qa:FAIL rows. Any subsequent cycle will either re-run a FAIL row or drop to EXPLORE mode.
+
+**Session grand total:** 24 rows advanced, **1263 new findings** written to the backlogs. Primary discoveries:
+- **Three high-volume single-fix-target clusters** (`/app/ticket/create` 470, `/app/issue-report/create` 330, `/app/workspaces/command_center` 321) representing ~1121 findings addressable via three single-root-cause fixes
+- **One high-severity deterministic bug** (`created_by: Field required` on ticket form, reproduced twice)
+- **Two contract-authoring gaps** (fieldtest_hub surface, contact/1 hardcoded record ID) worth cleaning up in v0.2 of the ux-architect contracts
+- **Walker JSON parse bug #5** reproduced in every single cycle 122-145 (24/24) — the top-priority prompt-tuning target for the investigator once its JSON serialization limitation is addressed
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 145   | UX-036 auth-page | anonymous | 39 | FAIL |
+
+---
+
 ## Cycle 144 — 2026-04-14 — UX-035 region-wrapper → qa:FAIL (45 findings) — **command_center anchor 7/7**
 
 **Row:** UX-035 region-wrapper (canonical: ops_dashboard, impl: PARTIAL 14/16)
