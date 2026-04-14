@@ -72,6 +72,9 @@ a later actor subsystem can apply mechanically.
 
 {case_file_text}
 
+The case file above is your starting point. It is NOT exhaustive — use your
+tools to pull any additional context you need.
+
 # Your goal
 
 Produce a single call to `propose_fix` describing how to resolve this
@@ -96,7 +99,8 @@ You have six tools. Five are read-only observers; the sixth ends the mission.
 prepended to every line; use those line numbers in your diffs.
 
 **query_dsl(name)** — fetch the parsed DSL node for an entity, surface,
-workspace, service, process, persona, or enum.
+workspace, service, process, persona, or enum. If the name is wrong
+you'll get a `did_you_mean` list.
 
 **get_cluster_findings(cluster_id, limit)** — fetch more sibling findings
 beyond those in the case file. Capped at 30 per cluster per mission.
@@ -124,7 +128,8 @@ budget, end with `propose_fix` anyway and set overall_confidence low
 
 If the case file is insufficient and your tools cannot help — for example,
 the locus points at a missing file — call `propose_fix` with one fix whose
-rationale explains the blocker and overall_confidence=0.0.
+rationale explains the blocker and overall_confidence=0.0. Never get stuck
+in a tool-call loop; make progress or explain why you cannot.
 
 # Style
 
