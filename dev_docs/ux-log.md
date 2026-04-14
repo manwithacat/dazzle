@@ -4,6 +4,16 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T19:37Z — Cycle 192 — EXHAUSTED (sticky) — determinism check #2
+
+**Outcome:** Third consecutive terminal state. Confirmed deterministic: priority queue empty → Step 6 → 5-cycle-0-findings → skip EXPLORE → complete. Cycles 189, 190, 191, 192 are functionally indistinguishable — only the timestamps and trivial log wrapping differ.
+
+**Additional observation — noisy `git add`.** `git add dev_docs/ux-log.md` emits `The following paths are ignored by one of your .gitignore files: dev_docs` every time because `dev_docs/` is listed in `.gitignore` but `ux-log.md` is tracked via a prior force-add. `git commit -am` works silently. Non-blocking, but every `/ux-cycle` run prints a scary-looking warning. Recorded as a harness polish item.
+
+**Evaluation conclusion (3-cycle sample, 190–192):** the sticky-exhausted state is fully deterministic. Running `/loop /ux-cycle` from this state is pure cost. Proceeding to harness fix (A): build the EXPLORE driver.
+
+---
+
 ## 2026-04-14T19:35Z — Cycle 191 — EXHAUSTED (sticky) — determinism check #1
 
 **Outcome:** Identical terminal state to cycle 190. Priority queue empty → Step 6 → 5-cycle-0-findings rule → skip EXPLORE → cycle complete. Log-only commit.
