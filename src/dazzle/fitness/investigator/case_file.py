@@ -116,7 +116,7 @@ class CaseFile:
         ]
 
         # Sample finding section
-        lines += _render_finding_block(self.sample_finding, title_prefix="## Sample Finding")
+        lines += _render_finding_block(self.sample_finding, kind="sample")
         lines.append("")
 
         # Sibling findings section
@@ -126,7 +126,7 @@ class CaseFile:
         )
         lines.append("")
         for sibling in self.siblings:
-            lines += _render_finding_block(sibling, title_prefix="###")
+            lines += _render_finding_block(sibling, kind="sibling")
             lines.append("")
 
         # Locus section
@@ -142,13 +142,14 @@ class CaseFile:
                 f"({self.locus.total_lines} lines, mode={self.locus.mode})",
                 "",
             ]
+            width = max(3, len(str(self.locus.total_lines)))
             prev_end = 0
             for start, end, text in self.locus.chunks:
                 if prev_end and start > prev_end + 1:
                     lines.append(f"... (lines {prev_end + 1}..{start - 1} omitted)")
                     lines.append("")
                 for offset, line_text in enumerate(text.splitlines(), start=start):
-                    lines.append(f"{offset:>3}: {line_text}")
+                    lines.append(f"{offset:>{width}}: {line_text}")
                 prev_end = end
                 lines.append("")
 
@@ -492,13 +493,20 @@ def _merge_and_trim_windows(
     return merged
 
 
-def _render_finding_block(finding: Finding, *, title_prefix: str) -> list[str]:
+def _render_finding_block(
+    finding: Finding,
+    *,
+    kind: Literal["sample", "sibling"],
+) -> list[str]:
     """Render one finding as prompt lines.
 
-    title_prefix is either '## Sample Finding' (renders as '## Sample Finding (fid)')
-    or '###' (renders as '### fid (persona=X)').
+    kind="sample" produces ``"## Sample Finding (fid)"`` — for the case file's
+    single sample finding.
+
+    kind="sibling" produces ``"### fid (persona=X)"`` — for each of the up-to-5
+    sibling findings in the case file.
     """
-    if title_prefix == "## Sample Finding":
+    if kind == "sample":
         title = f"## Sample Finding ({finding.id})"
     else:
         title = f"### {finding.id} (persona={finding.persona})"

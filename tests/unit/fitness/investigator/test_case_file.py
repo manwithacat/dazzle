@@ -453,3 +453,23 @@ def test_to_prompt_text_locus_none_shows_note(tmp_path: Path) -> None:
     assert "Locus File" in text
     # Should say something like "not found" or "not available"
     assert "not found" in text or "not available" in text
+
+
+def test_to_prompt_text_large_file_line_number_width(tmp_path: Path) -> None:
+    """Line numbers in windowed excerpts use width based on total_lines,
+    so a 1500-line file renders as 4-digit right-aligned."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="src/ui/huge.html:1250 — missing")],
+    )
+    locus_file = tmp_path / "src" / "ui" / "huge.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1501)))
+
+    case_file = build_case_file(_cluster(sample_id="f_001"), tmp_path)
+    text = case_file.to_prompt_text()
+
+    # 4-digit line numbers (1500 has 4 digits)
+    assert "   1: line 1" in text  # head-region line 1 uses 4-char width
+    assert "1250: line 1250" in text  # windowed line 1250 also 4-char
