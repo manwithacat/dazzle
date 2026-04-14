@@ -161,6 +161,12 @@ class ActionResult:
     message: str
     error: str | None = None
     data: dict[str, Any] = field(default_factory=dict)
+    # Cycle 197 — L1 action feedback
+    from_url: str | None = None
+    to_url: str | None = None
+    state_changed: bool | None = None
+    # Cycle 197 — cognition foothold (action-linked console errors)
+    console_errors_during_action: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
