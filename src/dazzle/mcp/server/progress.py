@@ -67,6 +67,17 @@ class ProgressContext:
         """True if we have a session to send notifications through."""
         return self._session is not None
 
+    @property
+    def session(self) -> Any:
+        """The underlying MCP session, if any.
+
+        Exposed so that handlers which need to call ``session.create_message(...)``
+        (MCP sampling / Path γ) can reach the same session that ``ProgressContext``
+        uses for progress notifications. Returns ``None`` when no session is
+        attached (e.g. for synchronous tools or when running outside an MCP host).
+        """
+        return self._session
+
     # --------------------------------------------------------------------- #
     # Async API (preferred for async handlers)
     # --------------------------------------------------------------------- #
