@@ -5,6 +5,7 @@ This file grows across Tasks 9-14 as each tool is added.
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -345,3 +346,58 @@ def test_search_spec_no_hits(fake_root, case_file, state) -> None:
     result = tools["search_spec"].handler(query="nonexistent-term-xyz")
     assert result.get("hits") == []
     assert "note" in result
+
+
+# ------------ tool: propose_fix (terminal) ---------------------------------
+
+
+def _valid_fix_payload() -> dict[str, Any]:
+    return {
+        "fixes": [
+            {
+                "file_path": "src/ui/form.html",
+                "line_range": [1, 2],
+                "diff": (
+                    "--- a/src/ui/form.html\n"
+                    "+++ b/src/ui/form.html\n"
+                    "@@ -1,1 +1,1 @@\n"
+                    "-<div>line 1</div>\n"
+                    "+<div>line 1 fixed</div>\n"
+                ),
+                "rationale": "fix the first div",
+                "confidence": 0.85,
+            }
+        ],
+        "rationale": "The first div needs the fix described in the sample finding.",
+        "overall_confidence": 0.82,
+        "verification_plan": "Re-run Phase B against contact_manager; expect cluster CL-deadbeef to vanish.",
+        "alternatives_considered": ["do nothing — rejected because it leaves the bug unfixed"],
+        "investigation_log": "Read src/ui/form.html, confirmed line 1 is the issue.",
+    }
+
+
+def test_propose_fix_writes_proposal(fake_root, case_file, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["propose_fix"].handler(**_valid_fix_payload())
+
+    assert result.get("status") == "proposed"
+    assert state.terminal_status == "proposed"
+    assert state.terminal_proposal_id is not None
+
+    proposals = list((fake_root / ".dazzle" / "fitness-proposals").glob("CL-deadbeef-*.md"))
+    assert len(proposals) == 1
+
+
+def test_propose_fix_validation_failure_writes_blocked(fake_root, case_file, state) -> None:
+    payload = _valid_fix_payload()
+    payload["rationale"] = "too short"  # < 20 chars → ProposalValidationError
+
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["propose_fix"].handler(**payload)
+
+    assert "error" in result or result.get("status", "").startswith("blocked")
+    assert state.terminal_status == "blocked_invalid_proposal"
+    blocked = list(
+        (fake_root / ".dazzle" / "fitness-proposals" / "_blocked").glob("CL-deadbeef.md")
+    )
+    assert len(blocked) == 1

@@ -69,6 +69,7 @@ def build_investigator_tools(
         _read_file_tool,
         _search_spec_tool,
     )
+    from dazzle.fitness.investigator.tools_write import _propose_fix_tool
 
     return [
         _read_file_tool(case_file, dazzle_root, state),
@@ -76,5 +77,5 @@ def build_investigator_tools(
         _get_cluster_findings_tool(case_file, dazzle_root, state),
         _get_related_clusters_tool(case_file, dazzle_root, state),
         _search_spec_tool(case_file, dazzle_root, state),
-        # Task 14: _propose_fix_tool(case_file, dazzle_root, llm_run_id, state)
+        _propose_fix_tool(case_file, dazzle_root, llm_run_id, state),
     ]
