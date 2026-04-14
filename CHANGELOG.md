@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.4] - 2026-04-15
+
+### Fixed
+- **Cycle 197 — Layer 4 (agent click-loop) structurally resolved.** DazzleAgent
+  now sees an explicit state-change signal on every action via the new
+  `ActionResult.from_url` / `to_url` / `state_changed` fields, plus action-linked
+  console errors via `console_errors_during_action`. `_build_messages` renders
+  these in the compressed history block so the LLM sees "NO state change (still
+  at /app)" instead of the ambiguous "Clicked X" message. A bail-nudge block is
+  appended when 3 consecutive no-ops are detected, explicitly telling the LLM to
+  try a different action or call `done`. Verified across 5 example apps with 11
+  persona-runs: every run stagnates legitimately (no click-loops) with
+  `degraded=False`.
+
+### Added
+- **`src/dazzle/agent/executor.py`**: `PlaywrightExecutor` captures before/after
+  page state (URL + DOM hash) around every action, attaches a `page.on("console")`
+  listener that buffers error-level messages, and diff-slices the buffer into
+  each `ActionResult.console_errors_during_action` for action→error attribution.
+- **`src/dazzle/agent/core.py`**: module-level pure helpers `_format_history_line`
+  and `_is_stuck` (with 12 unit tests), wired into `_build_messages` alongside
+  the bail-nudge.
+- **`src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py`**:
+  `pick_explore_personas(app_spec, override=None)` auto-picks business personas
+  by filtering out those whose `default_workspace` starts with `_` (framework-
+  scoped). `pick_start_path` delegates to `compute_persona_default_routes` for
+  per-persona start URLs. `_dedup_proposals` merges proposals by
+  `(example_app, component_name)` with a `contributing_personas` list.
+  `ExploreOutcome` gains `raw_proposals_by_persona: dict[str, int]` for
+  pre-dedup stats.
+- **`tests/e2e/test_explore_strategy_e2e.py`**: parametrised D2 verification
+  sweep across 5 examples, marked `@pytest.mark.e2e` (excluded from default
+  pytest, run manually with `pytest -m e2e`). Writes outcome JSON artefacts to
+  `dev_docs/cycle_197_verification/` (gitignored).
+
+### Changed
+- **`run_explore_strategy` semantics** (breaking): `personas=None` now
+  auto-picks business personas from the DSL (was: anonymous). `personas=[]` is
+  the new explicit anonymous escape hatch. `personas=["admin"]` is unchanged.
+  `start_path` is now `str | None = None` — if None, each persona gets its
+  DSL-computed default route; if provided, that value is used for all personas.
+  Aggregated proposals are routed through `_dedup_proposals` at the end.
+
+### Agent Guidance
+- **Mission tools must not name-collide with builtin page actions.** As of
+  v0.55.2 `DazzleAgent` exposes 8 builtin page actions (navigate/click/type/
+  select/scroll/wait/assert/done) as native SDK tools. A mission registering
+  `click` (or any builtin name) will have its tool silently dropped with a
+  warning — pick a domain-specific name like `click_record_row`.
+- **Callers who want anonymous explore must explicitly pass `personas=[]`.**
+  Passing `personas=None` now auto-picks business personas from the DSL.
+  Existing callers that relied on the old `None → anonymous` semantics need
+  updating.
+- **Layer 5 known gap (cycle 197 verification).** The Layer 4 fix shipped in
+  this release resolved the click-loop pathology, but verification exposed a
+  deeper blocker: LLM agents under-invoke `propose_component` even when
+  infrastructure permits it. 11 persona-runs across 5 examples produced 0
+  proposals despite reaching target pages, taking real actions, and receiving
+  state-change feedback. Tracked for cycle 198 follow-up — candidate fixes
+  include rewriting the bail-nudge to push toward recording (rather than
+  exploration), lowering the stagnation threshold, and A/B testing the
+  `ux_explore` mission prompt.
+
 ## [0.55.3] - 2026-04-14
 
 ### Fixed

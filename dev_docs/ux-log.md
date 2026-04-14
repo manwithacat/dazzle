@@ -4,6 +4,111 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T00:04Z — Cycle 197 — **Layer 4 shipped + Layer 5 newly exposed**
+
+**Outcome:** D2 acceptance bar NOT met, but Layer 4 (click-loop) is structurally fixed and a new Layer 5 finding is clearly documented. Twelve commits over ~6 hours delivered all planned Layer 4 infrastructure. E2E verification sweep across 5 `examples/` apps ran cleanly but produced 0 proposals, exposing a deeper LLM-behaviour blocker.
+
+### What shipped (12 commits)
+
+| # | SHA | Summary |
+|---|---|---|
+| 1 | `4d66e55c` | ActionResult gains 4 optional fields (from_url, to_url, state_changed, console_errors_during_action) |
+| 2 | `ba25142b` | PlaywrightExecutor attaches `page.on("console")` listener, buffers error-level messages |
+| 3 | `299359b9` | PlaywrightExecutor.execute wraps per-action dispatch with before/after URL + DOM-hash capture; populates ActionResult fields |
+| 4 | `dba5ea2c` | New module-level `_format_history_line` + `_is_stuck` helpers in core.py (pure, unit-tested) |
+| 5 | `74037a91` | DazzleAgent._build_messages calls the helpers and appends a bail-nudge block when 3 consecutive no-ops detected |
+| 6 | `3cfa119d` | `pick_explore_personas(app_spec, override=None)` auto-picks business personas via DSL filter |
+| 7 | `d09a349f` | `pick_start_path` delegates to `compute_persona_default_routes` for per-persona start URL |
+| 8 | `8d4deb7a` | `_dedup_proposals` + `ExploreOutcome.raw_proposals_by_persona` for cross-persona aggregation |
+| 9 | `f7682112` | `run_explore_strategy` signature change — personas=None auto-picks, personas=[] is anonymous escape hatch, fan-out + dedup wired |
+| 10 | `539c99d4` | `tests/e2e/test_explore_strategy_e2e.py` — parametrised D2 verification over 5 examples, `@pytest.mark.e2e` |
+| 11 | — | Verification sweep (this entry); no commit |
+| 12 | TBD | Cycle log + bump (this commit) |
+
+**Test counts:** 102 unit tests across all cycle-197 modules pass. Full repo ruff + mypy clean.
+
+### E2E verification sweep results
+
+Ran `pytest tests/e2e/test_explore_strategy_e2e.py -m e2e -v --tb=short` against local Postgres + Redis + ANTHROPIC_API_KEY.
+
+```
+[simple_task]      PASSED — 3 personas, 24 steps, 76k tokens, 0 proposals
+[contact_manager]  PASSED — 1 persona, 16 steps, 62k tokens, 0 proposals
+[support_tickets]  PASSED — 3 personas, 24 steps, 81k tokens, 0 proposals
+[ops_dashboard]    PASSED — 1 persona, 8 steps, 26k tokens, 0 proposals
+[fieldtest_hub]    PASSED — 3 personas, 24 steps, 84k tokens, 0 proposals
+[sweep_assertion]  FAILED — 0/5 apps had >=1 proposal (D2 bar: >=3/5)
+```
+
+Totals: **11 persona-runs** across 5 apps, **96 agent steps**, **~330k tokens** (~$0.50 at sonnet-4-6 rates), **0 proposals**, **8.5 min wall-clock**, full-sweep cost absorbed locally per session policy.
+
+### Layer 4 status: STRUCTURALLY FIXED
+
+All 5 per-example runs returned `degraded=False` with the fan-out + aggregation + dedup path executing end-to-end. Every persona-run reached its DSL-default workspace without being blocked, took real actions via native tool use, and stagnated legitimately at the 8-step window. contact_manager's user persona ran 16 steps (2× the minimum), which proves the agent took at least one state-changing action that broke the initial no-op streak — then stagnated on the next one. ops_dashboard's single persona hit stagnation at the minimum 8 steps. simple_task, support_tickets, and fieldtest_hub all produced 24 steps for 3 personas = 8 steps/persona average.
+
+No per-persona blocked outcomes, no infrastructure crashes, no login failures, no agent exceptions. Every mechanical seam built in cycle 197 works.
+
+### Layer 5: NEWLY EXPOSED — "LLM under-invokes mission tool"
+
+All 11 persona-runs produced `propose_component` calls = 0. Not `propose_component` failures (which would produce errors), not `propose_component` with empty args (which would populate `proposals` with malformed entries) — zero calls. The LLM is navigating + clicking + observing, but never reaching for the recording tool.
+
+**This is a different pathology from cycle 196.** Cycle 196 was "agent can't navigate" (text-protocol leak). Cycle 197 was supposed to replace that with "agent navigates AND records". The click-loop is gone — but the recording step never happens.
+
+Hypotheses (not yet tested):
+
+1. **Exploration vs recording priority.** The `_build_missing_contracts_prompt` tells the LLM to "navigate the app and notice the interactions you encounter" and to "aim for 3-5 proposals per run". The LLM seems to prioritize navigation over recording — clicks first, never stops to propose.
+
+2. **Bail-nudge is ambiguous about recording.** When the LLM gets stuck after 3 no-ops, the nudge tells it to "try a different URL / click a different element / call `done`". It does NOT tell the LLM "stop and propose components you have seen". The nudge reinforces exploration-mode thinking.
+
+3. **Mission prompt has no explicit "when to propose" signal.** The LLM might be waiting for some clarity signal it never gets. No example, no "propose X when you see Y" rule.
+
+4. **Tool-use bias.** Under `use_tool_calls=True`, the LLM sees `propose_component` alongside 8 builtin navigation tools. The navigation tools are more "interesting" to the LLM than the recording tool — each step picks the most action-producing tool, which is never propose_component until the agent has "seen enough".
+
+5. **Stagnation fires too early.** 8 steps may simply be too few for exploration + recording. An 8-step budget lets the LLM click twice then stagnate. A 15- or 20-step budget might give it enough runway to observe, explore, and record.
+
+### Harness layer scorecard post cycle 197
+
+| # | Layer | Before cycle 197 | After cycle 197 |
+|---|---|---|---|
+| 1 | EXPLORE driver wired | ✓ shipped in cycle 193 | ✓ verified end-to-end over 5 apps |
+| 2 | DazzleAgent tool-use integration | ✓ shipped in cycle 195 | ✓ verified — 11 persona-runs took real actions |
+| 3 | 5-cycle rule semantic gate | ✗ broken | ✗ unchanged |
+| 4 | Agent click-loop on non-navigating actions | ✗ blocks progress | **✓ no longer blocks — replaced by layer 5** |
+| **5** | **LLM under-invokes `propose_component`** | — (hidden behind layer 4) | **✗ newly exposed — no proposals from any persona-run** |
+| 6 | Terminal `ux-cycle-exhausted` signal | ✗ wrong kind | ✗ unchanged |
+
+**Progress: 2/6 → 3/6 unblocked.** Three still to go, with Layer 5 as the most important next target.
+
+### Candidate fixes for cycle 198 (Layer 5)
+
+In priority order:
+
+1. **Rewrite the bail-nudge as "propose what you've seen, then move on".** Current nudge is exploration-focused; new nudge should tell the LLM "Your last 3 actions were no-ops. STOP and call propose_component for any components you've observed on the current or previous pages, THEN navigate elsewhere." This turns the stagnation signal from "try different action" into "record and move on".
+
+2. **Add a "propose opportunity" check.** After every N steps (N=3?), inject a prompt line: "You have observed these pages so far: [URL list]. Have you recorded a `propose_component` for each distinct component you've seen? If not, do so now." Explicit call to action.
+
+3. **Lower the stagnation threshold + raise the recording priority.** Stagnation fires at 8 now. Maybe it should fire at 4, and the bail-nudge should force a propose_component call. Bounded with a separate "no propose_component calls in N steps" check that's independent from state_changed.
+
+4. **Extract mission prompt A/B testing.** Current mission prompt at `src/dazzle/agent/missions/ux_explore.py:_build_missing_contracts_prompt`. A few words of change could produce very different LLM behavior. Worth trying 2-3 variants and measuring.
+
+5. **Transcript capture in outcome artefact.** The cycle 197 e2e test has a `test_bail_nudge_demonstrably_fires` test that's currently SKIPPED because the outcome artefact doesn't include the transcript. Add transcript capture so cycle 198 can ask "was the bail-nudge text visible to the LLM on the step where stagnation fired?" and measure whether the nudge influenced the next action.
+
+### Observations worth keeping as memories
+
+- Token cost per explore run is ~$0.03-$0.08/cycle. Full sweep of 5 apps is ~$0.50. At current Claude sonnet-4-6 rates, running /loop /ux-cycle once a day with sweep verification would be ~$15/month — well within hobbyist budget.
+- Fan-out pattern works correctly: personas run serially within one subprocess, fresh browser context per persona, login via QA magic-link, no race conditions observed.
+- The stagnation criterion's "no mission-tool calls in 8 steps" measure is semantically correct. It's the mission prompt + bail-nudge that need to push the LLM toward using the mission tool.
+- The `test_bail_nudge_demonstrably_fires` skip is a known gap for cycle 198.
+
+### Cycle complete
+
+- Lock released, mark_run called, signal emitted (kind=ux-component-shipped, cycle=197, outcome=layer-4-shipped-d2-not-met)
+- No backlog rows touched (layer 4 shipped infrastructure, not a specific component contract)
+- Bump: 0.55.3 → 0.55.4 (on Task 12)
+- CHANGELOG Agent Guidance: layer 5 noted for cycle 198
+
+---
+
 ## 2026-04-14T20:34Z — Cycle 196 — **first real production-driver EXPLORE run** — 0 proposals, click-loop confirmed
 
 **First cycle since the post-sweep exhaustion (189) in which `/ux-cycle` actually reached Step 6 EXPLORE via the production driver.** Rule override justification: the 5-cycle-0-findings window was firing off housekeeping cycles (190/191/192/194) and harness-improvement cycles (193/195), not EXPLORE attempts. The cycle 195 DazzleAgent fix strictly post-dates all prior 0-findings evidence, making the rule's memory stale. Honoured the spirit, not the letter.
