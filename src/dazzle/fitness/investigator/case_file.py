@@ -272,7 +272,7 @@ def _pick_siblings(
 
 
 def _levenshtein(a: str, b: str) -> int:
-    """Classic Wagner-Fischer edit distance. O(len(a)*len(b)) time and memory."""
+    """Classic Wagner-Fischer edit distance. O(len(a)*len(b)) time, O(len(b)) space."""
     if a == b:
         return 0
     if not a:

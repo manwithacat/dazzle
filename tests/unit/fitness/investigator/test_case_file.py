@@ -12,7 +12,7 @@ from dazzle.fitness.investigator.case_file import (
     build_case_file,
 )
 from dazzle.fitness.models import EvidenceEmbedded, Finding
-from dazzle.fitness.triage import Cluster
+from dazzle.fitness.triage import Cluster, canonicalize_summary
 
 
 def _finding(
@@ -211,67 +211,84 @@ def test_build_case_file_example_root_detection(tmp_path: Path) -> None:
 
 
 def test_sibling_picker_prefers_diverse_observed_text(tmp_path: Path) -> None:
-    """Given 6+ siblings with a mix of duplicate and distinct observed texts,
-    the picker surfaces the distinct variants."""
-    (tmp_path / "dev_docs").mkdir()
+    """When the pool exceeds SIBLING_LIMIT, the Levenshtein picker prefers
+    observed-text variation over pure sort order.
+
+    Fixture: 6 siblings where f_001/f_002/f_003 have near-identical ``observed``
+    strings and f_004/f_005/f_006 have genuinely distinct ``observed`` strings.
+    The picker should prefer the distinct variants over the near-duplicates.
+    All 6 canonicalise to the same cluster summary thanks to the 120-char
+    truncation in canonicalize_summary.
+    """
+    # LONG_PREFIX is 121 chars. canonicalize_summary truncates to 120 chars, so
+    # every variant (LONG_PREFIX + <any tail>) maps to the same canonical summary.
+    LONG_PREFIX = (
+        "aria-describedby missing on form control with multi-step stage "
+        "validation and HTMX 422 error swap after client-side guard"
+    )
+    assert len(LONG_PREFIX) >= 120, "prefix must exceed truncation threshold"
+
+    # All 7 findings share the same canonical summary (verified by construction).
     findings = [
-        # Sample
-        _finding(
-            "f_000",
-            summary_observed="aria-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:10 — sample",
-        ),
-        # 3 near-duplicates
-        _finding(
-            "f_001",
-            summary_observed="Aria-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:11 — dup1",
-        ),
-        _finding(
-            "f_002",
-            summary_observed="ARIA-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:12 — dup2",
-        ),
-        _finding(
-            "f_003",
-            summary_observed="aria-describedby missing ",
-            evidence_text="src/dazzle_ui/templates/form.html:13 — dup3",
-        ),
-        # 3 distinct variants (all canonicalise the same but have different observed text)
-        _finding(
-            "f_004",
-            summary_observed="aria-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:14 — var1 completely different",
-        ),
-        _finding(
-            "f_005",
-            summary_observed="aria-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:15 — var2 XYZ unique wording",
-        ),
-        _finding(
-            "f_006",
-            summary_observed="aria-describedby missing",
-            evidence_text="src/dazzle_ui/templates/form.html:16 — var3 yet another distinct phrase",
-        ),
+        _finding("f_000", summary_observed=LONG_PREFIX + " SAMPLE"),
+        # Near-duplicates: identical observed tails across f_001..f_003
+        _finding("f_001", summary_observed=LONG_PREFIX + " near"),
+        _finding("f_002", summary_observed=LONG_PREFIX + " near"),
+        _finding("f_003", summary_observed=LONG_PREFIX + " near"),
+        # Distinct: each has a unique tail adding ~20 chars of Levenshtein distance
+        _finding("f_004", summary_observed=LONG_PREFIX + " distinct-variant-alpha"),
+        _finding("f_005", summary_observed=LONG_PREFIX + " distinct-variant-beta"),
+        _finding("f_006", summary_observed=LONG_PREFIX + " distinct-variant-gamma"),
     ]
+
+    # Sanity-check: all observed values canonicalise to the same 120-char string.
+    expected_canonical = canonicalize_summary(LONG_PREFIX)
+    assert len(expected_canonical) == 120
+    for f in findings:
+        assert canonicalize_summary(f.observed) == expected_canonical, (
+            f"{f.id}: observed {f.observed!r} canonicalises to "
+            f"{canonicalize_summary(f.observed)!r}, expected {expected_canonical!r}"
+        )
+
+    (tmp_path / "dev_docs").mkdir()
     upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
 
     locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
     locus_dir.mkdir(parents=True)
     (locus_dir / "form.html").write_text("<div>form</div>\n")
 
-    # Note: the sample is f_000, so siblings are picked from f_001..f_006 (6 candidates)
-    # SIBLING_LIMIT is 5, so exactly 5 siblings should be picked.
-    case_file = build_case_file(_cluster(sample_id="f_000"), tmp_path)
+    # Build an explicit cluster with the computed canonical summary so the pool
+    # filter matches all 6 siblings (not the short "aria-describedby missing" used
+    # elsewhere in this test module).
+    cluster = Cluster(
+        cluster_id="CL-deadbeef",
+        locus="implementation",
+        axis="coverage",
+        canonical_summary=expected_canonical,
+        persona="admin",
+        severity="high",
+        cluster_size=7,
+        first_seen=datetime(2026, 4, 14, 10, 0, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, 12, 0, tzinfo=UTC),
+        sample_id="f_000",
+    )
+
+    case_file = build_case_file(cluster, tmp_path)
 
     sibling_ids = [s.id for s in case_file.siblings]
-    assert len(sibling_ids) == 5
+    assert len(sibling_ids) == 5, f"expected 5 siblings, got {sibling_ids}"
 
-    # All 6 candidates canonicalise to the same summary (they all differ only in
-    # case/whitespace or in the part past the canonical-summary truncation).
-    # Since observed text in this fixture is identical for the dupes, the picker's
-    # minimum-Levenshtein-distance scoring should prefer the distinct-variant texts.
-    # Weaker assertion: at least one of the distinct variants (f_004/f_005/f_006)
-    # should be picked before we exhaust the pool — demonstrating diversity bias.
-    distinct_picked = [sid for sid in sibling_ids if sid in {"f_004", "f_005", "f_006"}]
-    assert distinct_picked, "expected at least one distinct-variant sibling"
+    # The near-duplicates f_001/f_002/f_003 have identical observed text —
+    # they contribute zero additional diversity after the first is picked.
+    # The distinct variants f_004/f_005/f_006 each add real Levenshtein distance.
+    # The picker should therefore select all 3 distinct variants before
+    # exhausting the near-duplicate budget.
+    distinct_picked = {sid for sid in sibling_ids if sid in {"f_004", "f_005", "f_006"}}
+    near_dup_picked = {sid for sid in sibling_ids if sid in {"f_001", "f_002", "f_003"}}
+    assert len(distinct_picked) == 3, (
+        f"expected all 3 distinct variants picked, got {distinct_picked}"
+    )
+    # 5 total - 3 distinct = exactly 2 near-duplicate slots
+    assert len(near_dup_picked) == 2, (
+        f"expected exactly 2 near-duplicates picked, got {near_dup_picked}"
+    )
