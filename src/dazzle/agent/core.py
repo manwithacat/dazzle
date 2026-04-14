@@ -283,6 +283,55 @@ def _tool_use_to_action(block: Any, reasoning: str) -> AgentAction:
     )
 
 
+# Truncation limits for compressed history rendering (keeps LLM prompt bounded).
+_HISTORY_TARGET_MAX_LEN = 40
+_HISTORY_MSG_MAX_LEN = 60
+
+
+def _format_history_line(step: Step) -> str:
+    """Render one history step for the LLM's compressed history (cycle 197).
+
+    Reads the cycle-197 ActionResult fields (from_url, to_url,
+    state_changed, console_errors_during_action) and renders a line
+    that makes state-change status unmissable. Falls back to the legacy
+    message format when state_changed is None (tool/HTTP/anonymous paths).
+    """
+    s = f"{step.step_number}. {step.action.type.value}"
+    if step.action.target:
+        s += f": {step.action.target[:_HISTORY_TARGET_MAX_LEN]}"
+    r = step.result
+    if r.error:
+        s += f" (ERROR: {r.error[:_HISTORY_MSG_MAX_LEN]})"
+    elif r.state_changed is False:
+        loc = f"still at {r.to_url}" if r.to_url else "no state change"
+        s += f" -> NO state change ({loc})"
+    elif r.state_changed is True and r.from_url and r.to_url and r.from_url != r.to_url:
+        s += f" -> navigated {r.from_url} → {r.to_url}"
+    elif r.state_changed is True:
+        s += " -> state changed"
+    elif r.message:
+        s += f" -> {r.message[:_HISTORY_MSG_MAX_LEN]}"
+    if r.console_errors_during_action:
+        n = len(r.console_errors_during_action)
+        first = r.console_errors_during_action[0][:_HISTORY_MSG_MAX_LEN]
+        suffix = "s" if n > 1 else ""
+        s += f" [+{n} console error{suffix}: {first}]"
+    return s
+
+
+def _is_stuck(history: list[Step], window: int = 3) -> bool:
+    """True iff the last `window` steps all have state_changed=False.
+
+    state_changed=None (tool actions, HTTP path) does NOT count as a
+    no-op — tool invocations are legitimate progress even though they
+    don't touch the page.
+    """
+    if len(history) < window:
+        return False
+    recent = history[-window:]
+    return all(s.result.state_changed is False for s in recent)
+
+
 @dataclass
 class Mission:
     """
