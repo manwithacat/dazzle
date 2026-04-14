@@ -1849,6 +1849,25 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 137 — 2026-04-14 — UX-027 widget:file → qa:FAIL (93 findings) — **`created_by` bug reproduced**
+
+**Row:** UX-027 widget:file (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 93 findings (admin=44, agent=49), degraded=False. Run IDs: admin=f1b1cd11-c32b-43c1-93fe-ac51b5b48dad, agent=01fb0e75-977e-4ae8-b097-3a249a3c36dc.
+
+**Real bug reproduced — 2nd hit on `created_by: Field required`:** cycle 126 (UX-010 widget:datepicker) first surfaced the bug; cycle 137 (UX-027 widget:file) reproduced it. The walker's transcript explicitly shows `"form submission failed due to a validation error - the 'created_by' field is required but not set"`. This is a deterministic, reproducible, high-severity bug — server's entity schema declares `created_by` as required, but the template compiler doesn't render a field for it because it's auto-populated from the session user. Two independent walker runs on different contracts (widget:datepicker + widget:file) both hit it.
+
+**Fifth row in the support_tickets ticket-create cluster:** UX-017 (99) + UX-019 (97) + UX-010 (96) + UX-026 (85) + UX-027 (93) = **470 findings total**, all anchored at `/app/ticket/create`. This is now the largest single-anchor cluster in the backlog. The underlying server-client `created_by` schema mismatch is almost certainly present in every row that reaches form-submit depth.
+
+**Candidate investigator run (future):** `get_related_clusters(locus="/app/ticket/create")` → 5 rows. Root cause is in the DSL → template compiler → server pipeline. A single fix in the compiler (render a hidden input for `created_by` pre-populated from session, or omit it from the entity schema's required list when it's auto-populated) would resolve all 5 rows.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 137   | UX-027 widget:file | admin, agent | 93 (44+49) | FAIL |
+
+---
+
 ## Cycle 136 — 2026-04-14 — UX-026 widget:money → qa:FAIL (85 findings)
 
 **Row:** UX-026 widget:money (canonical: support_tickets)
