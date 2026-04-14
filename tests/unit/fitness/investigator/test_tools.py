@@ -129,7 +129,7 @@ def test_read_file_line_range(case_file, fake_root, state) -> None:
     tools = _tools_by_name(case_file, fake_root, state)
     result = tools["read_file"].handler(path="src/ui/form.html", line_range=[5, 7])
     assert "content" in result
-    # Right-aligned 2-char width for 20-line file
+    # Right-aligned 3-char minimum width (20-line file → max(3,2)=3)
     assert "5: " in result["content"]
     assert "7: " in result["content"]
     assert "3: " not in result["content"]

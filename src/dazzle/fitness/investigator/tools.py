@@ -49,15 +49,30 @@ def build_investigator_tools(
 ) -> list[AgentTool]:
     """Assemble all investigator tools with a shared ToolState.
 
-    Tasks 10-14 will append more tools to this list.
+    All builders receive the same (case_file, dazzle_root, state) triple so
+    tools can close over consistent context. `llm_run_id` is forwarded only
+    to `_propose_fix_tool` (Task 14) where it's embedded in the Proposal
+    metadata. Tasks 10-14 will append more tools to this list.
     """
     return [
         _read_file_tool(case_file, dazzle_root, state),
-        # Other tools added in subsequent tasks.
+        # Task 10: _query_dsl_tool(case_file, dazzle_root, state)
+        # Task 11: _get_cluster_findings_tool(case_file, dazzle_root, state)
+        # Task 12: _get_related_clusters_tool(case_file, dazzle_root, state)
+        # Task 13: _search_spec_tool(case_file, dazzle_root, state)
+        # Task 14: _propose_fix_tool(case_file, dazzle_root, llm_run_id, state)
     ]
 
 
 def _read_file_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) -> AgentTool:
+    """Build the read_file tool.
+
+    Takes `case_file` for API consistency with the other tool builders
+    (query_dsl uses it for example_root scoping, get_cluster_findings uses
+    it for the current cluster's siblings). read_file itself doesn't need
+    it — the handler only closes over `dazzle_root` and `state`.
+    """
+
     def handler(path: str, line_range: list[int] | None = None) -> dict[str, Any]:
         suffix = f"[{line_range[0]}:{line_range[1]}]" if line_range else ""
         state.tool_calls_summary.append(f"read_file({path}{suffix})")
@@ -149,14 +164,16 @@ def _find_similar_files(dazzle_root: Path, missing: str) -> list[str]:
         return []
     all_files: list[str] = []
     prefix = stem[:4] if len(stem) >= 4 else stem
+    root_resolved = dazzle_root.resolve()
     for p in dazzle_root.rglob(prefix + "*"):
-        if p.is_file():
-            try:
-                rel = p.resolve().relative_to(dazzle_root.resolve())
-            except ValueError:
-                continue
-            all_files.append(str(rel))
-        if len(all_files) > 200:
+        if not p.is_file():
+            continue
+        try:
+            rel = p.resolve().relative_to(root_resolved)
+        except ValueError:
+            continue
+        all_files.append(str(rel))
+        if len(all_files) >= 200:
             break
     close = difflib.get_close_matches(missing, all_files, n=3, cutoff=0.4)
     return close
