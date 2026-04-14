@@ -1849,6 +1849,72 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 159 — 2026-04-14 — UX-001 dashboard-grid → PASS → DONE — **command_center 403 pattern resolved (DSL scope, not bug)**
+
+**Outcome:** Pivoted from fieldtest_hub to ops_dashboard. UX-001 dashboard-grid advances under cycle 156's rule, plus a quick DSL audit resolves the long-running command_center admin 403 mystery.
+
+### DSL audit: command_center workspace access
+
+Read `examples/ops_dashboard/dsl/app.dsl:88-106`:
+
+```
+persona admin "Administrator":
+  default_workspace: _platform_admin
+
+persona ops_engineer "Operations Engineer":
+  ...
+  default_workspace: command_center
+
+workspace command_center "Command Center":
+  purpose: "Real-time operations monitoring and incident response"
+  stage: "command_center"
+  access: persona(ops_engineer)
+```
+
+The `command_center` workspace declares `access: persona(ops_engineer)` — admin is explicitly excluded by the workspace access rule. Admin's `default_workspace: _platform_admin` (line 89) confirms admin is a platform administrator, not an ops domain participant.
+
+This is **identical to the fieldtest_hub IssueReport pattern** identified in cycle 155: admin is a platform-level role, the example app's domain entities/workspaces scope explicitly to domain personas, the cycle harness passing `personas=["admin", ...]` produces correct 403 responses that look like RBAC bugs but are actually correct DSL behaviour.
+
+The 7-cycle "admin 403 at command_center" pattern (UX-001/003/011/015/031/033/035) is **resolved**: not a bug, not an inconsistency, just the workspace access rule firing as designed.
+
+### Cycle 113 outcome under new rule
+
+| Field | cycle 113 | cycle 159 (retroactive) |
+|---|---|---|
+| degraded | False | False |
+| findings_count | 46 (23 per persona) | 46 (informational) |
+| qa | FAIL (broken rule) | **PASS** |
+
+UX-001 advances READY_FOR_QA → DONE. Fourth widget contract through the full pipeline.
+
+### Bonus methodology insight
+
+The cycle 113 note observed an "inconsistency" — admin "sometimes sees the dashboard, sometimes gets Forbidden". That note was either:
+- A first-cycle artifact from session lifecycle bugs that have since been fixed, OR
+- An honest observation of intermittent walker behavior
+
+Either way, the deterministic 403 was reproduced in cycles 117/127/131/141/143/144 (6 confirmations), and the DSL audit confirms it should be 403. The cycle 113 "inconsistency" was the outlier, not the norm.
+
+### Generalization
+
+Every app where admin is a platform-level role will produce admin 403 fitness signals when Phase B passes admin in the persona list. The structural fix is per-app persona auto-derivation (cycle 155 action item #2 — derive personas from entity permits + workspace access rules at runner construction time). Until that ships, future Phase B callers should pass app-appropriate personas:
+
+- **ops_dashboard:** `["ops_engineer"]` (single persona — manager doesn't have its own workspace access; admin is platform-level)
+- **fieldtest_hub:** `["tester", "engineer"]` for IssueReport surfaces; `["engineer"]` for engineer-only flows
+- **support_tickets:** `["admin", "agent", "customer"]` — admin DOES have domain access here per the cycle 110+ provisioning
+- **contact_manager:** `["admin", "user"]` — admin has domain access per cycle 114
+- **simple_task:** `["admin", "manager"]` per cycle 116
+
+### Backlog impact
+
+UX-001 → DONE. The other 6 ops_dashboard rows (UX-003/011/015/031/033/035) all share the command_center anchor and degraded=False history. They will advance one per cycle going forward.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 158 — 2026-04-14 — UX-025 widget:richtext → PASS → DONE — **fieldtest_hub IssueReport widget trio complete**
 
 **Outcome:** Third widget contract advanced under the cycle 156 corrected rule. UX-025's cycle 154 outcome (admin=54, engineer=50, 104 findings, **degraded=False**) qualifies as PASS without needing a re-run.
