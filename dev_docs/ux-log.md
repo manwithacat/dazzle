@@ -1849,6 +1849,25 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 135 — 2026-04-14 — UX-025 widget:richtext → qa:FAIL (110 findings, anchor 404) — **pattern confirmed 3/3**
+
+**Row:** UX-025 widget:richtext (canonical: fieldtest_hub)
+**Outcome:** `qa: PENDING → FAIL`, 110 findings (admin=53, engineer=57), degraded=False. Run IDs: admin=714c02d4-b330-4cc1-b466-3994866e2c83, engineer=1fe0f2e8-819b-4fff-aeae-0012582714be.
+
+**Broken-anchor pattern now 3/3 on `/app/issue-report/create`:** UX-023 widget:slider (cycle 115), UX-024 widget:colorpicker (cycle 134), and now UX-025 widget:richtext (cycle 135) all target the same non-existent surface in fieldtest_hub and all produce ~100+ findings dominated by 404-page noise. This is the strongest cluster pattern observed so far. **330 findings across these 3 rows are effectively redundant** — they describe the same missing surface from three different angles.
+
+**Ideal investigator target (once v2 ships):** a single `get_related_clusters(locus="src/dazzle_ui/...")` or cross-referenced `get_related_clusters(axis="coverage", persona="admin")` query against the triage queue would surface all three rows; a single fix (add `issue_report` surface to fieldtest_hub's DSL OR revise the three contract anchors) would resolve ~330 findings in one commit. This is exactly the kind of "wide pattern, shared root cause" scenario the investigator's `get_related_clusters` tool + system-prompt root-cause framing were designed for.
+
+**Recommendation for immediate human action (doesn't require investigator):** revise the three contracts in `~/.claude/skills/ux-architect/components/widget-{slider,colorpicker,richtext}.md` to point at an existing fieldtest_hub surface. Candidate surfaces worth checking: `/app/project/create`, `/app/test-session/create`, or whatever form surfaces fieldtest_hub actually has.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 135   | UX-025 widget:richtext | admin, engineer | 110 (53+57) | FAIL |
+
+---
+
 ## Cycle 134 — 2026-04-14 — UX-024 widget:colorpicker → qa:FAIL (110 findings, anchor 404)
 
 **Row:** UX-024 widget:colorpicker (canonical: fieldtest_hub)
