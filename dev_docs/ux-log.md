@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 131 — 2026-04-14 — UX-015 popover → qa:FAIL (46 findings) — **investigator subsystem complete**
+
+**Row:** UX-015 popover (canonical: ops_dashboard)
+**Outcome:** `qa: PENDING → FAIL`, 46 findings (admin=23, ops_engineer=23), degraded=False. Run IDs: admin=d4b9488d-61b8-452e-85ce-3116742b67fb, ops_engineer=d68c9c3f-cbec-44dc-baea-f2b01a43d9d7. Attempts 1 → 2.
+
+**Admin 403 pattern — now 4/4 cycles on `/app/workspaces/command_center`:** UX-001 (cycle 113), UX-003 (cycle 117), UX-011 (cycle 127), and now UX-015 (cycle 131) have all walked this anchor and all reported the admin 403 observation. Pattern is now unambiguous and ready for investigator triage once the stagnation issue (see below) is resolved.
+
+**Investigator subsystem v1 shipped this session.** 20 tasks complete across ~41 commits. Full review loop caught 30+ real bugs including a plan-level design error (`Cluster.locus` vs file path), a latent regex bug in `backlog._ROW_RE`, Pydantic serialization gaps, and a real DazzleAgent integration limitation (text-action protocol can't reliably serialize `propose_fix`'s complex JSON payload — documented as v1 known limitation). Plan file: `docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md`. User ref: `docs/reference/fitness-investigator.md`. 72 unit tests + 1 e2e-gated integration test, all green; mypy clean on all 11 investigator modules.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 131   | UX-015 popover | admin, ops_engineer | 46 (23+23) | FAIL |
+
+---
+
 ## Cycle 130 — 2026-04-13 — UX-014 confirm-dialog → qa:FAIL (20 findings)
 
 **Row:** UX-014 confirm-dialog (canonical: contact_manager)
