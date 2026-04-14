@@ -44,8 +44,20 @@ class PlaywrightExecutor:
     CSS rendering, network interception).
     """
 
-    def __init__(self, page: Any):
+    def __init__(self, page: Any) -> None:
         self._page = page
+        # Cycle 197 — console error buffer for action-window attribution
+        self._console_errors_buffer: list[str] = []
+        page.on("console", self._on_console)
+
+    def _on_console(self, msg: Any) -> None:
+        """Buffer console error messages for action-window diff-slicing."""
+        try:
+            if msg.type == "error":
+                self._console_errors_buffer.append(msg.text)
+        except Exception:
+            # Never let a malformed console message crash the executor
+            pass
 
     def _resolve_locator(self, selector: str) -> Any:
         """Resolve a selector to a Playwright locator.
