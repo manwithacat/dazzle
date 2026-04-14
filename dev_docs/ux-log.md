@@ -1849,6 +1849,16 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 182 — 2026-04-14 — UX-029 detail-view → PASS → DONE (27/33)
+
+**Outcome:** Twenty-seventh widget contract advanced. UX-029 detail-view on contact_manager, cycle 139 outcome (admin=10, user=10, 20 findings, degraded=False) qualifies as PASS. The hardcoded `/app/contact/1` anchor is a known v1 contract limitation but doesn't affect walker completion (degraded=False).
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 181 — 2026-04-14 — UX-028 widget:search_select → PASS → DONE (26/33)
 
 **Outcome:** Twenty-sixth widget contract advanced. UX-028 widget:search_select on contact_manager, cycle 138 outcome (admin=10, user=10, 20 findings, degraded=False) qualifies as PASS.
