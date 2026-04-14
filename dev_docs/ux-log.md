@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 138 — 2026-04-14 — UX-028 widget:search_select → qa:FAIL (20 findings)
+
+**Row:** UX-028 widget:search_select (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 20 findings (admin=10, user=10), degraded=False. Run IDs: admin=a828e061-e5e8-4afa-829e-7f0b81611250, user=60b2127b-82e1-4325-a1aa-115085409e0e.
+
+**Fifth row in `/app/contact/create` cluster:** UX-018 form-wizard (24) + UX-009 combobox (20) + UX-021 multiselect (20) + UX-022 tags (19) + UX-028 search_select (20) = 103 findings total. Much smaller than the ticket-create cluster (470 findings) — contact_manager has a simpler form with fewer interactive widgets and no `created_by` bug reproduction.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 138   | UX-028 widget:search_select | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 137 — 2026-04-14 — UX-027 widget:file → qa:FAIL (93 findings) — **`created_by` bug reproduced**
 
 **Row:** UX-027 widget:file (canonical: support_tickets)
