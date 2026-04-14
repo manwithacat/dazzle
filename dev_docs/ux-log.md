@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 143 — 2026-04-14 — UX-033 base-layout → qa:FAIL (46 findings) — **command_center anchor 6/6**
+
+**Row:** UX-033 base-layout (canonical: ops_dashboard)
+**Outcome:** `qa: PENDING → FAIL`, 46 findings (admin=23, ops_engineer=23), degraded=False. Run IDs: admin=4e13c796-c3f4-4355-9554-8a89ce440e9c, ops_engineer=52805782-e6f6-4f31-8dc9-6403dd433415.
+
+**`/app/workspaces/command_center` admin 403 now 6/6 cycles:** UX-001 (c113), UX-003 (c117), UX-011 (c127), UX-015 (c131), UX-031 (c141), UX-033 (c143). ~276 findings across the 6 rows. This is now one of the two most reliable patterns in the backlog (tied with the fieldtest_hub issue-report 404 for consistency). Every ops_dashboard component contract that lands at this anchor reproduces the same admin 403.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 143   | UX-033 base-layout | admin, ops_engineer | 46 (23+23) | FAIL |
+
+---
+
 ## Cycle 142 — 2026-04-14 — UX-032 related-displays → qa:FAIL (24 findings)
 
 **Row:** UX-032 related-displays (canonical: contact_manager)
