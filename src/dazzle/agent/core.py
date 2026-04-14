@@ -304,6 +304,16 @@ class DazzleAgent:
         """
         Get the next action from the LLM.
 
+        Three-way dispatch:
+        - MCP sampling (mcp_session is not None) → text protocol via _decide_via_sampling
+        - SDK + use_tool_calls=True → native tool use via _decide_via_anthropic_tools
+        - SDK + use_tool_calls=False → text protocol via _decide_via_anthropic (default)
+
+        When use_tool_calls=True is combined with an mcp_session, the agent logs a
+        one-shot warning (via _tool_use_warned latch) and falls back to the MCP
+        sampling text path. MCP sampling is text-only and cannot deliver native
+        tool use.
+
         Returns:
             (action, prompt_text, response_text, tokens_used)
         """
@@ -314,12 +324,43 @@ class DazzleAgent:
         prompt_text = f"## System\n{system_prompt[:500]}...\n\n{state.to_prompt()}"
 
         if self._mcp_session is not None:
+            # Path γ: MCP sampling + text protocol
+            if self._use_tool_calls and not self._tool_use_warned:
+                logger.warning(
+                    "use_tool_calls=True requested but agent is running on MCP "
+                    "sampling path which does not support native tool use. "
+                    "Falling back to text protocol. The robust text parser will "
+                    "still handle simple tool invocations, but complex nested "
+                    "payloads may be unreliable."
+                )
+                self._tool_use_warned = True
             response_text, tokens = await self._decide_via_sampling(system_prompt, messages)
+            action = self._parse_action(response_text, tool_registry)
+        elif self._use_tool_calls:
+            # Path β: SDK + native tool use
+            action, tokens = self._decide_via_anthropic_tools(
+                system_prompt, messages, tool_registry
+            )
+            response_text = action.reasoning  # reasoning IS the response on this path
         else:
+            # Path α: SDK + text protocol (existing default)
             response_text, tokens = self._decide_via_anthropic(system_prompt, messages)
+            action = self._parse_action(response_text, tool_registry)
 
-        action = self._parse_action(response_text, tool_registry)
         return action, prompt_text, response_text, tokens
+
+    def _decide_via_anthropic_tools(
+        self,
+        system_prompt: str,
+        messages: list[dict[str, Any]],
+        tool_registry: dict[str, AgentTool],
+    ) -> tuple[AgentAction, int]:
+        """Request a completion via Anthropic SDK with native tool use.
+
+        STUB — real implementation lands in task 6. Raises NotImplementedError
+        so any accidental production invocation fails loudly before task 6.
+        """
+        raise NotImplementedError("_decide_via_anthropic_tools stub — implement in task 6")
 
     def _decide_via_anthropic(
         self,
