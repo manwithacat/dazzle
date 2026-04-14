@@ -1849,6 +1849,36 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 153 — 2026-04-14 — UX-024 widget:colorpicker re-verify → qa:FAIL (108 findings) — **admin 403 pattern confirmed 2/2**
+
+**Outcome:** Continuation of cycle 152's re-verification sweep. UX-024 last QA'd in cycle 134 against the broken anchor `/app/issue-report/create` (110 noise findings, 404). Cycle 149 fixed the contract URL. This cycle re-runs Phase B.
+
+**Phase B result:** `fitness run [admin:7a1e2e82-ecaa-4b88-916b-a803ce71424a, engineer:6f2a1de4-0c5b-476e-89c3-0d1dd67645ab]: 108 findings total (admin=56, engineer=52), independence=0.000 (max)`, `degraded=False`. attempts 2 → 3.
+
+### Admin 403 pattern confirmed (2/2)
+
+The deterministic per-persona RBAC asymmetry observed in cycle 152 reproduces exactly: admin gets 403 Forbidden at `/app/issuereport/create` while engineer gets 200 OK. The walker's own prose this cycle is an unusually clear capture of the observation:
+
+> "I can see this is an issue report creation page that's showing a 'Forbidden' error. **As an admin, I should have access to this functionality.** Let me first navigate to the main app to see what's available..."
+
+The "as an admin, I should have access" framing came from the LLM walker's expectation, not from any prompt instruction. This strengthens hypothesis (2) from cycle 152 — admin is missing a `permit:` grant on `IssueReport`, not a deliberate scope decision.
+
+**Action item for follow-up cycle:** audit `examples/fieldtest_hub/dsl/` for `permit:` rules on `IssueReport`. If admin is missing from the persona list, file as a fitness fix and re-run UX-023/024/025 to validate.
+
+### Engineer reaches form
+
+Engineer side mirrors cycle 152 — 200 OK on `/app/issuereport/create`, full HTMX/Alpine asset load, walker observes the colorpicker widget rendered (Pickr's `pcr-trigger` swatch). Findings on the engineer side are real contract-walk observations against the rendered widget.
+
+### Walker JSON parse warnings
+
+Bug #5 reproduced again — both warnings captured in stdout, both responses showed Claude 4.6's prose-before-JSON pattern. Non-blocking, but the count is now 26/26 cycles. The cycle 152 finding stands: this bug is universally reproducible.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 152 — 2026-04-14 — UX-023 widget:slider re-verify on corrected anchor → qa:FAIL (109 findings) — **anchor fix validated, new admin RBAC observation**
 
 **Outcome:** First productive Phase B since cycle 145. UX-023 was last QA'd in cycle 115 against the broken anchor `/app/issue-report/create` (404 noise = 114 findings). Cycle 149 fixed the anchor URL in the contract to `/app/issuereport/create` (no separator, matching Dazzle's `replace("_", "")` URL generator). This cycle re-runs Phase B with the corrected contract.
