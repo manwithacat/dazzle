@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.1] - 2026-04-14
+
+### Security
+- **Magic link redirect validator hardened (CodeQL `py/url-redirection`).**
+  `consume_magic_link`'s `?next=` query parameter validation was
+  upgraded from `startswith("/") and not startswith("//")` string-prefix
+  checks to a `urllib.parse.urlparse`-based validator that catches
+  backslash-bypass attacks (`/\@evil.com` — browsers normalize `\` to
+  `/` per the WHATWG URL spec, potentially turning the path into a
+  protocol-relative URL pointing at an attacker-controlled host), as
+  well as scheme injection (`http://`, `javascript:`, `data:`) and
+  authority smuggling. 29 new parametrised tests in
+  `tests/unit/test_magic_link_routes.py` cover the accepted paths,
+  protocol-relative rejection, scheme rejection, backslash-bypass
+  rejection, and non-absolute-path rejection. CodeQL alert #58 resolved.
+
+### Changed
+- **CI: bump `actions/github-script` v8 → v9 and
+  `softprops/action-gh-release` v2 → v3.** Applies Dependabot PRs #772
+  and #773. Both are major-version bumps but neither breaking change
+  affects this project — our workflows use the injected `github` and
+  `context` parameters of `github-script` (no `require('@actions/github')`
+  or `const getOctokit` patterns) and our runners (`ubuntu-latest`,
+  `macos-14`) support Node 24 natively.
+
 ## [0.55.0] - 2026-04-14
 
 ### Fixed
