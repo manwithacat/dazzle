@@ -502,6 +502,9 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
         # Tier 1: fast path — valid JSON already
         try:
             data = json.loads(response)
+            # Guard: JSON must be an object, not an array/string/number
+            if not isinstance(data, dict):
+                raise ValueError(f"JSON root is not an object: {type(data).__name__}")
         except (json.JSONDecodeError, ValueError):
             # Tier 2: extract balanced JSON via bracket counter
             json_substring, surrounding_prose = _extract_first_json_object(response)
@@ -518,6 +521,16 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
                 )
             try:
                 data = json.loads(json_substring)
+                if not isinstance(data, dict):
+                    logger.warning(
+                        "Parser: tier 2 extracted JSON but root is not an object: %s",
+                        type(data).__name__,
+                    )
+                    return AgentAction(
+                        type=ActionType.DONE,
+                        success=False,
+                        reasoning=f"Extracted JSON root is not an object: {json_substring[:2000]}",
+                    )
             except (json.JSONDecodeError, ValueError) as e:
                 logger.warning(
                     "Parser extracted JSON substring but json.loads failed: %s, substring: %s",
@@ -558,7 +571,7 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
                     reasoning=f"Unknown tool: {target}. Available: {list(tool_registry.keys())}",
                 )
             value = data.get("value", {})
-            value_str = json.dumps(value) if isinstance(value, dict) else value
+            value_str = value if isinstance(value, str) else json.dumps(value)
             return AgentAction(
                 type=ActionType.TOOL,
                 target=target,

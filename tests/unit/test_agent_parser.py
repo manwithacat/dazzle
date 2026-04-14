@@ -204,6 +204,41 @@ class TestParseActionTier2:
         assert action.type == ActionType.TYPE
         assert action.value == 'she said "hi"'
 
+    def test_parse_tier2_extracted_substring_is_invalid_json(self) -> None:
+        """Tier 2 succeeds at bracket extraction but the substring is malformed JSON.
+
+        The bracket counter returns any balanced {...}, including JSON-looking but
+        invalid content (unquoted keys, trailing commas, etc.). This test verifies
+        the parser handles that case gracefully and returns a DONE/failure sentinel
+        with a diagnostic reasoning, not a crash.
+        """
+        agent = _make_agent()
+        response = "I think: {key: value}"  # balanced braces, not valid JSON
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is False
+        assert "Extracted JSON was invalid" in action.reasoning
+
+    def test_parse_json_root_is_not_an_object(self) -> None:
+        """json.loads succeeds but returns a list → should fall through to tier 2 or tier 3.
+
+        If the model emits `[{"action": "click"}]` (wrapped in a list), the parser
+        should extract the first balanced object via tier 2. If the model emits
+        `42` or `"hello"`, no extraction is possible and tier 3 returns DONE/failure.
+        """
+        agent = _make_agent()
+
+        # Array wrapping — tier 1 rejects, tier 2 extracts the inner object
+        response = '[{"action": "click", "target": "#foo", "reasoning": "wrapped"}]'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.CLICK
+        assert action.target == "#foo"
+
+        # Scalar at root — all tiers fail
+        action = agent._parse_action("42", tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is False
+
 
 class TestParseActionTier3:
     """Tier 3: no balanced JSON found — return DONE sentinel with diagnostic."""
