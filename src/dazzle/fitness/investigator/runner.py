@@ -14,7 +14,6 @@ pre-recorded script of tool calls; real clients do not.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 from typing import Any, Protocol
@@ -35,19 +34,6 @@ from dazzle.fitness.investigator.proposal import (
     list_proposals,
 )
 from dazzle.fitness.triage import Cluster, read_queue_file
-
-
-@dataclass(frozen=True)
-class InvestigationResult:
-    """Structured outcome of one run_investigation call.
-
-    Used internally; callers normally receive a Proposal (or None) directly
-    from run_investigation.
-    """
-
-    status: str  # "proposed" | "blocked_invalid_proposal" | "blocked_write_error" | "blocked_step_cap" | "blocked_stagnation"
-    proposal_id: str | None
-    cluster_id: str
 
 
 class LlmClient(Protocol):
@@ -154,11 +140,7 @@ async def walk_queue(
     if not queue_path.exists():
         return []
 
-    try:
-        clusters = read_queue_file(queue_path)
-    except Exception:
-        return []
-
+    clusters = read_queue_file(queue_path)
     selected = clusters[:top]
     results: list[Proposal | None] = []
     for cluster in selected:
@@ -206,7 +188,10 @@ async def _drive_stub(mission: Any, tool_state: Any, llm_client: Any) -> None:
         args = entry.get("args") or {}
         tool = tools_by_name.get(tool_name)
         if tool is None:
-            tool_state.terminal_status = "blocked_invalid_proposal"
+            # This path is test-only: the stub driver script referenced a
+            # tool that isn't registered. In production, _drive_real goes
+            # through DazzleAgent which validates tool names before dispatch.
+            tool_state.terminal_status = "blocked_test_script_error"
             return
         result = tool.handler(**args)
         if asyncio.iscoroutine(result):

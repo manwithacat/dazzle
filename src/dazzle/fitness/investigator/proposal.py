@@ -267,12 +267,11 @@ def load_proposal(path: Path) -> Proposal:
 
 
 def list_proposals(dazzle_root: Path, *, cluster_id: str | None = None) -> list[Proposal]:
-    """Return all Proposal objects written to .dazzle/fitness-proposals/.
+    """Return all proposals (optionally filtered by cluster), sorted by
+    creation time ascending.
 
-    If cluster_id is given, filter to proposals whose filename starts with that
-    cluster_id. Proposals are returned sorted by filename (which encodes
-    creation order via the UUID prefix). Files that fail to parse are silently
-    skipped.
+    Parse errors are silently skipped. Used by the runner for the
+    idempotence check and by future actor code.
     """
     directory = _proposals_dir(dazzle_root)
     if not directory.exists():
@@ -285,6 +284,7 @@ def list_proposals(dazzle_root: Path, *, cluster_id: str | None = None) -> list[
             proposals.append(load_proposal(path))
         except ProposalParseError:
             continue
+    proposals.sort(key=lambda p: p.created)
     return proposals
 
 
