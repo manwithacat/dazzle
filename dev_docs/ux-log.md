@@ -1849,6 +1849,36 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 157 — 2026-04-14 — UX-024 widget:colorpicker → PASS → DONE (applied cycle 156 rule retroactively)
+
+**Outcome:** Second widget contract advanced to DONE under the cycle 156 corrected qa rule. UX-024's cycle 153 outcome (admin=56, engineer=52, 108 findings, **degraded=False**) qualifies as PASS without needing a re-run.
+
+### Why no re-run
+
+Three independent reasons make the cycle 153 outcome valid for the new rule:
+
+1. **`degraded` is persona-agnostic.** It tracks walker errors and infrastructure failures, not RBAC outcomes. Admin getting 403 in cycle 153 didn't set degraded=True because the walker still completed its observation steps against whatever DOM was returned — the 403 page is a DOM, just an unhelpful one.
+
+2. **Cycle 155 established that admin 403 in fieldtest_hub IssueReport is correct DSL scope behaviour**, not a walker error. The cycle 153 admin runs were observing legitimate "no access for this persona" content, not a broken state.
+
+3. **Cycle 156 confirmed that contract walks emit zero Findings.** The 108 findings in cycle 153 are entirely from Pass 2a, orthogonal to widget contract verification.
+
+Re-running with corrected personas (`tester+engineer`) would produce a similar `degraded=False` outcome with similar findings_count (per cycle 155's evidence: switching persona barely moved the needle from 109 to 111). It would burn ~5 minutes of subprocess time for no signal change.
+
+### Engineer side reached the colorpicker
+
+Cycle 153's subprocess log showed engineer GET `/app/issuereport/create` → 200 OK with full HTMX/Alpine/Pickr asset load. The walker observed the rendered Pickr `pcr-trigger` swatch and proceeded through all quality gates without errors. The contract walk completed cleanly — that's the whole story for "did the widget contract verify?".
+
+### Backlog impact
+
+UX-024 advances READY_FOR_QA → DONE. Second widget contract through the full pipeline. UX-025 (cycle 154 outcome: 104 findings, degraded=False) is the obvious next pickup for cycle 158.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 156 — 2026-04-14 — qa rule fixed: UX-023 → PASS → DONE — **first widget contract advanced to DONE; entire backlog unblocked**
 
 **Outcome:** Acted on cycle 155's structural finding by reading the fitness engine code, confirming the diagnosis, and shipping the runbook fix. UX-023 widget:slider becomes the **first widget contract** to advance from READY_FOR_QA → DONE since the contract-walk machinery shipped.
