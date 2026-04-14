@@ -107,7 +107,7 @@ def _reset_fake_agent_instances() -> None:
 
 @pytest.mark.asyncio
 async def test_anonymous_run_builds_missing_contracts_mission(tmp_path: Path) -> None:
-    """personas=None runs one anonymous cycle and returns proposals."""
+    """personas=[] runs one anonymous cycle and returns proposals."""
     from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
         run_explore_strategy,
     )
@@ -133,7 +133,7 @@ async def test_anonymous_run_builds_missing_contracts_mission(tmp_path: Path) ->
             connection,
             example_root=tmp_path / "examples" / "contact_manager",
             strategy=Strategy.MISSING_CONTRACTS,
-            personas=None,
+            personas=[],  # explicit anonymous escape hatch (cycle 197: None now means auto-pick)
         )
 
     assert outcome.degraded is False
@@ -144,7 +144,7 @@ async def test_anonymous_run_builds_missing_contracts_mission(tmp_path: Path) ->
     assert len(_FakeAgent.instances) == 1
     assert _FakeAgent.instances[0].use_tool_calls is True
     bundle.close.assert_awaited_once()
-    # No fresh context was created because personas=None reuses the bundle page
+    # No fresh context was created because personas=[] reuses the bundle page
     bundle.browser.new_context.assert_not_called()
 
 
@@ -617,3 +617,150 @@ class TestExploreOutcomeShape:
             raw_proposals_by_persona={"user": 3, "manager": 2},
         )
         assert outcome.raw_proposals_by_persona == {"user": 3, "manager": 2}
+
+
+class TestRunExploreStrategyFanOut:
+    @pytest.mark.asyncio
+    async def test_personas_none_triggers_auto_pick(self, tmp_path: Path) -> None:
+        """personas=None runs once per auto-picked business persona."""
+        from dazzle.agent.missions.ux_explore import Strategy
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            run_explore_strategy,
+        )
+
+        bundle, connection = _fake_bundle_and_connection()
+        # AppSpec with 2 business personas + 1 platform persona
+        fake_spec = MagicMock()
+        fake_spec.personas = [
+            PersonaSpec(id="admin", label="A", default_workspace="_platform_admin"),
+            PersonaSpec(id="manager", label="M", default_workspace="my_work"),
+            PersonaSpec(id="member", label="Mem", default_workspace="my_work"),
+        ]
+        fake_spec.workspaces = []
+
+        with (
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+                new=AsyncMock(return_value=bundle),
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+                return_value=fake_spec,
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+                new=AsyncMock(),
+            ) as mock_login,
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.compute_persona_default_routes",
+                return_value={"manager": "/app/m", "member": "/app/mem"},
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+                new=_FakeAgent,
+            ),
+        ):
+            await run_explore_strategy(
+                connection,
+                example_root=tmp_path / "example",
+                strategy=Strategy.MISSING_CONTRACTS,
+                personas=None,  # auto-pick
+            )
+
+        # Should have run once per business persona (2 total — admin is platform-scoped)
+        assert mock_login.await_count == 2
+        assert len(_FakeAgent.instances) == 2
+
+    @pytest.mark.asyncio
+    async def test_personas_empty_list_runs_anonymously(self, tmp_path: Path) -> None:
+        """personas=[] still means anonymous (backwards compat escape hatch)."""
+        from dazzle.agent.missions.ux_explore import Strategy
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            run_explore_strategy,
+        )
+
+        bundle, connection = _fake_bundle_and_connection()
+        fake_spec = MagicMock()
+        fake_spec.personas = [
+            PersonaSpec(id="member", label="Mem", default_workspace="my_work"),
+        ]
+        fake_spec.workspaces = []
+
+        with (
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+                new=AsyncMock(return_value=bundle),
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+                return_value=fake_spec,
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+                new=AsyncMock(),
+            ) as mock_login,
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+                new=_FakeAgent,
+            ),
+        ):
+            await run_explore_strategy(
+                connection,
+                example_root=tmp_path / "example",
+                strategy=Strategy.MISSING_CONTRACTS,
+                personas=[],  # explicit empty = anonymous
+            )
+
+        # No login call — anonymous path
+        assert mock_login.await_count == 0
+        assert len(_FakeAgent.instances) == 1  # one anonymous run
+
+    @pytest.mark.asyncio
+    async def test_fan_out_populates_raw_proposals_by_persona(self, tmp_path: Path) -> None:
+        """raw_proposals_by_persona tracks pre-dedup counts per persona."""
+        from dazzle.agent.missions.ux_explore import Strategy
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            run_explore_strategy,
+        )
+
+        bundle, connection = _fake_bundle_and_connection()
+        fake_spec = MagicMock()
+        fake_spec.personas = [
+            PersonaSpec(id="manager", label="M", default_workspace="my_work"),
+            PersonaSpec(id="member", label="Mem", default_workspace="my_work"),
+        ]
+        fake_spec.workspaces = []
+
+        with (
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+                new=AsyncMock(return_value=bundle),
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+                return_value=fake_spec,
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+                new=AsyncMock(),
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.compute_persona_default_routes",
+                return_value={"manager": "/app", "member": "/app"},
+            ),
+            patch(
+                "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+                new=_FakeAgent,
+            ),
+        ):
+            outcome = await run_explore_strategy(
+                connection,
+                example_root=tmp_path / "example",
+                strategy=Strategy.MISSING_CONTRACTS,
+                personas=None,
+            )
+
+        # _FakeAgent produces one proposal per persona (with a persona-tagged component name)
+        # With our two personas the deduped list should have 2 entries (different names).
+        # raw_proposals_by_persona tracks the pre-dedup counts.
+        assert outcome.raw_proposals_by_persona == {"manager": 1, "member": 1}

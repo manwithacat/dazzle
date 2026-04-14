@@ -26,6 +26,7 @@ This strategy does NOT own subprocess lifecycle. Caller responsibilities:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,8 @@ from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.qa.server import AppConnection
 from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -168,46 +171,65 @@ async def run_explore_strategy(
     example_root: Path,
     strategy: Strategy,
     personas: list[str] | None = None,
-    start_path: str = "/app",
+    start_path: str | None = None,
 ) -> ExploreOutcome:
     """Run one EXPLORE cycle per persona and return the aggregated outcome.
 
-    Caller owns example-app lifecycle (typically ``ModeRunner``). This
-    function only runs the explore mission against an already-running
-    example app reachable at ``connection.site_url``.
+    ``personas`` semantics (cycle 197 change):
+        None       → auto-pick business personas from the DSL
+        []         → anonymous (no login, single run)
+        ["admin"]  → explicit override, single persona
+        ["a","b"]  → explicit multi-persona fan-out
 
-    Args:
-        connection: Live ``AppConnection`` from a ``ModeRunner`` context.
-        example_root: Path to the example app directory (e.g.
-            ``examples/contact_manager``). Used to load the AppSpec so
-            persona IDs can be resolved to full ``PersonaSpec`` objects
-            for the mission prompt.
-        strategy: ``Strategy.MISSING_CONTRACTS`` or ``Strategy.EDGE_CASES``.
-        personas: List of persona IDs (e.g. ``["admin"]``). When None or
-            empty, runs a single anonymous cycle (no login) using the
-            bundle's original context and page — appropriate for public
-            surfaces. Otherwise loops once per persona, each with a fresh
-            browser context + magic-link login.
-        start_path: Server-relative path to navigate to after login.
-            Defaults to ``/app`` which is the canonical Dazzle app shell
-            entry point. The mission's ``start_url`` is built by combining
-            ``connection.site_url + start_path``.
-
-    Returns:
-        ``ExploreOutcome`` with flat proposals/findings across personas,
-        aggregated summary, and a degraded flag.
-
-    Raises:
-        RuntimeError: if the Playwright bundle itself cannot start, or if
-            all personas are blocked (no useful result to return).
+    ``start_path`` overrides the per-persona computed start path for
+    all runs. Defaults to None (each persona uses its DSL default).
     """
     app_spec = load_project_appspec(example_root)
+
+    # Persona resolution
+    if personas is None:
+        # Auto-pick business personas
+        persona_specs = pick_explore_personas(app_spec)
+        personas_to_run: list[str | None] = (
+            [p.id for p in persona_specs] if persona_specs else [None]
+        )
+        if not persona_specs:
+            logger.warning(
+                "explore: no business personas found in %s; running anonymously",
+                example_root.name,
+            )
+    elif personas == []:
+        # Anonymous escape hatch
+        persona_specs = []
+        personas_to_run = [None]
+    else:
+        # Explicit override — resolve and validate
+        persona_specs = pick_explore_personas(app_spec, override=personas)
+        personas_to_run = [p.id for p in persona_specs]
+
     persona_lookup: dict[str, PersonaSpec] = {p.id: p for p in app_spec.personas}
 
-    personas_to_run: list[str | None] = list(personas) if personas else [None]
+    # Resolve start paths per persona if the caller didn't override
+    persona_start_paths: dict[str | None, str] = {}
+    for pid in personas_to_run:
+        if start_path is not None:
+            persona_start_paths[pid] = start_path
+        elif pid is None:
+            persona_start_paths[pid] = "/app"
+        else:
+            ps = persona_lookup.get(pid)
+            persona_start_paths[pid] = pick_start_path(ps, app_spec) if ps is not None else "/app"
+
+    logger.info(
+        "[explore] %s: running %d persona(s): %s",
+        example_root.name,
+        len(personas_to_run),
+        [p or "anonymous" for p in personas_to_run],
+    )
 
     bundle: PlaywrightBundle | None = None
     results: list[_PersonaRunResult] = []
+    raw_by_persona: dict[str, int] = {}
 
     try:
         bundle = await setup_playwright(base_url=connection.site_url)
@@ -226,8 +248,8 @@ async def run_explore_strategy(
                         persona_id=persona_id,
                         api_url=connection.api_url,
                     )
-                    persona_spec = persona_lookup.get(persona_id)
-                    persona_label = persona_spec.label if persona_spec is not None else persona_id
+                    ps = persona_lookup.get(persona_id)
+                    persona_label = ps.label if ps is not None else persona_id
 
                 result = await _run_one_persona(
                     strategy=strategy,
@@ -235,11 +257,13 @@ async def run_explore_strategy(
                     persona_label=persona_label,
                     page=persona_page,
                     base_url=connection.site_url,
-                    start_path=start_path,
+                    start_path=persona_start_paths[persona_id],
                     example_app=example_root.name,
                     persona_lookup=persona_lookup,
                 )
                 results.append(result)
+                if persona_id is not None:
+                    raw_by_persona[persona_id] = len(result.proposals)
 
             except Exception as e:  # noqa: BLE001 — recording the error is the point
                 results.append(
@@ -269,7 +293,11 @@ async def run_explore_strategy(
             f"explore strategy: all personas blocked ({blocked_summary or 'no results'})"
         )
 
-    return _aggregate(strategy=strategy, results=results)
+    outcome = _aggregate(strategy=strategy, results=results)
+    # Cycle 197 — dedup proposals across fan-out, attach raw counts
+    outcome.proposals = _dedup_proposals(outcome.proposals)
+    outcome.raw_proposals_by_persona = raw_by_persona
+    return outcome
 
 
 async def _run_one_persona(
