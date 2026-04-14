@@ -31,7 +31,7 @@ _EVIDENCE_HEADER = "\n## Evidence envelopes\n\n"
 
 
 _ROW_RE = re.compile(
-    r"^\| (?P<id>FIND-\w+) \| (?P<created>[^|]+) \| (?P<locus>[^|]+) \|"
+    r"^\| (?P<id>[^\s|]{3,}) \| (?P<created>[^|]+) \| (?P<locus>[^|]+) \|"
     r" (?P<axis>[^|]+) \| (?P<severity>[^|]+) \| (?P<persona>[^|]+) \|"
     r" (?P<status>[^|]+) \| (?P<route>[^|]+) \| (?P<summary>[^|]*) \|$"
 )
