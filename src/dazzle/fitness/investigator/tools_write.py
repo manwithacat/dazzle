@@ -24,6 +24,84 @@ from dazzle.fitness.investigator.proposal import (
 )
 from dazzle.fitness.investigator.tools import ToolState
 
+# Tightened JSON Schema for Anthropic tool use (see propose_fix below).
+# The `fixes` array items are fully constrained so Anthropic's API-side
+# validation catches malformed proposals before they reach the handler.
+# When this schema is used with tool use (DazzleAgent(use_tool_calls=True)),
+# the model literally cannot emit a fix missing file_path, diff, rationale,
+# or confidence — the API rejects it at the content-block level.
+PROPOSE_FIX_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "fixes",
+        "rationale",
+        "overall_confidence",
+        "verification_plan",
+        "alternatives_considered",
+        "investigation_log",
+    ],
+    "properties": {
+        "fixes": {
+            "type": "array",
+            "description": "Concrete file-level changes to apply.",
+            "items": {
+                "type": "object",
+                "required": ["file_path", "diff", "rationale", "confidence"],
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file to modify, relative to repo root.",
+                    },
+                    "line_range": {
+                        "type": "array",
+                        "description": "Optional [start_line, end_line] for the target region.",
+                        "items": {"type": "integer"},
+                        "minItems": 2,
+                        "maxItems": 2,
+                    },
+                    "diff": {
+                        "type": "string",
+                        "description": "Unified diff or replacement text for this fix.",
+                    },
+                    "rationale": {
+                        "type": "string",
+                        "description": "Why this specific change is correct.",
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": "Per-fix confidence in [0.0, 1.0].",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                    },
+                },
+            },
+        },
+        "rationale": {
+            "type": "string",
+            "description": "Overall explanation of the proposed fix.",
+        },
+        "overall_confidence": {
+            "type": "number",
+            "description": "Overall confidence in the proposal in [0.0, 1.0].",
+            "minimum": 0.0,
+            "maximum": 1.0,
+        },
+        "verification_plan": {
+            "type": "string",
+            "description": "How to verify the fix works (test command, manual check, etc.).",
+        },
+        "alternatives_considered": {
+            "type": "array",
+            "description": "Other fixes that were considered and rejected.",
+            "items": {"type": "string"},
+        },
+        "investigation_log": {
+            "type": "string",
+            "description": "Raw transcript of the investigation steps.",
+        },
+    },
+}
+
 
 def _propose_fix_tool(
     case_file: CaseFile,
@@ -144,28 +222,7 @@ def _propose_fix_tool(
             "Terminal: write a structured Proposal to disk and end the mission. "
             "Call this only when you have a concrete fix to propose."
         ),
-        schema={
-            "type": "object",
-            "properties": {
-                "fixes": {"type": "array"},
-                "rationale": {"type": "string"},
-                "overall_confidence": {"type": "number"},
-                "verification_plan": {"type": "string"},
-                "alternatives_considered": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "investigation_log": {"type": "string"},
-            },
-            "required": [
-                "fixes",
-                "rationale",
-                "overall_confidence",
-                "verification_plan",
-                "alternatives_considered",
-                "investigation_log",
-            ],
-        },
+        schema=PROPOSE_FIX_SCHEMA,
         handler=handler,
     )
 
