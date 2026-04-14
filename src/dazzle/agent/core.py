@@ -27,6 +27,61 @@ from .transcript import AgentTranscript, Observation
 logger = logging.getLogger("dazzle.agent.core")
 
 
+def _extract_first_json_object(text: str) -> tuple[str | None, str]:
+    """Find the first balanced JSON object in a string.
+
+    Scans ``text`` for the first ``{...}`` whose braces are balanced,
+    respecting string literals and escape sequences. Returns
+    ``(json_substring, surrounding_text)`` where ``surrounding_text`` is
+    ``text`` with the extracted substring removed. If no balanced object
+    is found, returns ``(None, text)`` unchanged.
+
+    Handles:
+        - Nested braces
+        - String literals (braces inside ``"..."`` are treated as characters)
+        - Escape sequences inside strings (``\\"``, ``\\\\``)
+
+    The intent is to pull a JSON action object out of a response that may
+    contain free-form prose before, after, or around it — e.g. the
+    prose-before-JSON pattern from cycle 147 where Claude 4.6 emitted
+    ``"I'll start by exploring. {\\"action\\": \\"navigate\\"}"``.
+    """
+    start = -1
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i, ch in enumerate(text):
+        if escape_next:
+            # Previous char was a backslash; skip this char regardless.
+            escape_next = False
+            continue
+
+        if in_string:
+            if ch == "\\":
+                escape_next = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            if depth > 0:
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    end = i + 1
+                    json_substring = text[start:end]
+                    surrounding = text[:start] + text[end:]
+                    return json_substring, surrounding
+
+    return None, text
+
+
 # =============================================================================
 # Mission Definition
 # =============================================================================
