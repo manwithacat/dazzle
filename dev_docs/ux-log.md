@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 136 — 2026-04-14 — UX-026 widget:money → qa:FAIL (85 findings)
+
+**Row:** UX-026 widget:money (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 85 findings (admin=41, agent=44), degraded=False. Shares `/app/ticket/create` anchor with UX-017 form-field (c122), UX-019 form-validation (c124), and UX-010 widget:datepicker (c126). Walker reached form-submit depth (planned real click on `button:has-text("Create")`). Run IDs: admin=15244245-efb9-4e8c-b5b3-9225ab47dbc5, agent=e484e111-2bc7-4059-8c6f-9f7c4eefd45a.
+
+**Support_tickets/ticket-create cluster is now 4 rows:** UX-017 (99), UX-019 (97), UX-010 (96), UX-026 (85) — 377 findings total, all anchored at the same URL. Similar to the fieldtest_hub 404 pattern, these 4 rows will heavily overlap after triage (same dedupe key space).
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 136   | UX-026 widget:money | admin, agent | 85 (41+44) | FAIL |
+
+---
+
 ## Cycle 135 — 2026-04-14 — UX-025 widget:richtext → qa:FAIL (110 findings, anchor 404) — **pattern confirmed 3/3**
 
 **Row:** UX-025 widget:richtext (canonical: fieldtest_hub)
