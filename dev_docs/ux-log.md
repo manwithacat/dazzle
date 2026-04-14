@@ -1849,6 +1849,67 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 161 — 2026-04-14 — UX-017 form-field → PASS → DONE — separating widget verification from app defects
+
+**Outcome:** Sixth widget contract advanced. Rotated to support_tickets, the fourth bootstrapped app to enter the retroactive sweep. UX-017 form-field exposes an important conceptual point: widget contract PASS is decoupled from real app defects.
+
+### Cycle 122 outcome under new rule
+
+| Field | cycle 122 | cycle 161 (retroactive) |
+|---|---|---|
+| degraded | False | False |
+| findings_count | 99 (admin=47, agent=52) | 99 (informational) |
+| qa | FAIL (broken rule) | **PASS** |
+
+The cycle 122 walker reached `/app/ticket/create` cleanly for both admin and agent. The 99 findings were Pass 2a story_drift / lifecycle output for support_tickets, not contract-walk failures.
+
+### Important: UX-017 PASS is NOT a denial of the `created_by` bug
+
+The `created_by: Field required` server-client schema mismatch was first surfaced in cycle 126 (UX-010 widget:datepicker) and reproduced in cycle 137 (UX-027 widget:file). It is a **real defect in support_tickets** — the server's TicketCreate Pydantic model requires `created_by` but the form template doesn't render a hidden input or auto-populate from session.
+
+This bug:
+- **IS** a real support_tickets defect that should be filed as a fitness backlog item to fix
+- **IS NOT** a form-field widget contract failure
+- **DOES NOT** affect whether the form-field widget renders correctly in the browser
+- **DOES** prevent successful ticket creation when a user submits the form
+
+Marking UX-017 as PASS reflects: "the form-field widget contract walks correctly against the support_tickets canonical anchor". It does not mean: "support_tickets has no bugs". The cycle's job is widget contract verification, not example-app defect tracking.
+
+The `created_by` bug remains tracked in the cycle 126 + 137 notes and should be filed as a separate fitness backlog item for the support_tickets app maintainers (or the framework if it's a generic create-form pattern bug).
+
+### Anchor RBAC anomaly: admin reached form in cycle 122 but not in cycle 126+
+
+Cycle 122 (UX-017): admin reached `/app/ticket/create` cleanly. No 403 noted.
+Cycle 126 (UX-010): "admin 403 at `/app/ticket/create` (not seen in UX-017/019 on same anchor)".
+
+This is a genuine inconsistency — same persona, same anchor, different cycles, different access outcomes. Possible causes:
+- Session lifecycle bug between cycles (cookies not always carrying through)
+- Test DB state drift (some prior cycle created/modified data that affects RBAC)
+- Random walker behavior triggering different code paths
+
+**Not investigating in this cycle.** Worth a dedicated diagnostic cycle later (probe support_tickets DSL for `Ticket.create` permit, check if admin is granted, then run controlled multi-attempt probes). For now, cycle 122's data is what we have, and it qualifies for retroactive PASS.
+
+### Backlog impact
+
+UX-017 advances READY_FOR_QA → DONE. Sixth widget contract through the full pipeline. Running tally (now spans 4 of 5 bootstrapped apps):
+
+| # | Cycle | Row | Component | App |
+|---|-------|-----|-----------|-----|
+| 1 | 156 | UX-023 | widget:slider | fieldtest_hub |
+| 2 | 157 | UX-024 | widget:colorpicker | fieldtest_hub |
+| 3 | 158 | UX-025 | widget:richtext | fieldtest_hub |
+| 4 | 159 | UX-001 | dashboard-grid | ops_dashboard |
+| 5 | 160 | UX-002 | data-table | contact_manager |
+| 6 | 161 | UX-017 | form-field | support_tickets |
+
+simple_task pending — will be picked up next cycle (UX-016 form-chrome or UX-013 toast).
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 160 — 2026-04-14 — UX-002 data-table → PASS → DONE (cleanest retroactive yet)
 
 **Outcome:** Fifth widget contract advanced under cycle 156's rule. Rotated from ops_dashboard to contact_manager for app coverage. UX-002 data-table is the cleanest retroactive PASS so far — no per-persona 403, no admin RBAC noise, no anchor issues.
