@@ -151,12 +151,15 @@ class DazzleAgent:
         model: str | None = None,
         api_key: str | None = None,
         mcp_session: Any = None,
+        use_tool_calls: bool = False,
     ):
         self._observer = observer
         self._executor = executor
         self._model = model or self.DEFAULT_MODEL
         self._api_key = api_key
         self._mcp_session = mcp_session
+        self._use_tool_calls = use_tool_calls
+        self._tool_use_warned = False  # one-shot warning latch for MCP+tool_calls path
         self._client: Any = None
         self._history: list[Step] = []
         self._tokens_used = 0
