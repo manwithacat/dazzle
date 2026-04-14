@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 134 — 2026-04-14 — UX-024 widget:colorpicker → qa:FAIL (110 findings, anchor 404)
+
+**Row:** UX-024 widget:colorpicker (canonical: fieldtest_hub)
+**Outcome:** `qa: PENDING → FAIL`, 110 findings (admin=57, engineer=53), degraded=False. Run IDs: admin=6ccfd1b1-339c-4a0a-8bc2-13f932aa8d19, engineer=0f7e3b91-cf46-43ce-8e3b-22878339bf36.
+
+**Anchor 404 — second hit on the same broken anchor.** `/app/issue-report/create` doesn't exist in fieldtest_hub. Cycle 115 (UX-023 widget:slider) already surfaced this issue; UX-024 shares the same contract anchor. The walker lands on a 404 page and the 110 findings are mostly noise about the 404 itself (action targets non-existent, navigation reasoning, etc.). Both UX-023 and UX-024 need their contract anchors revised to match actual fieldtest_hub surfaces. A third row (UX-025 widget:richtext, fieldtest_hub) likely has the same issue and will fail the same way when cycled.
+
+**Pattern observation for future investigator:** 3 rows (UX-023, UX-024, UX-025) target fieldtest_hub with contracts anchored at `/app/issue-report/create`. The ux-architect contracts were written assuming a surface that doesn't exist in the fieldtest_hub DSL. This is a contract-authoring gap, not a code bug. Fix: either add an `issue_report` surface to the fieldtest_hub DSL, or change the contract anchors to an existing surface (e.g., `/app/project/create`).
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 134   | UX-024 widget:colorpicker | admin, engineer | 110 (57+53) | FAIL |
+
+---
+
 ## Cycle 133 — 2026-04-14 — UX-022 widget:tags → qa:FAIL (19 findings)
 
 **Row:** UX-022 widget:tags (canonical: contact_manager)
