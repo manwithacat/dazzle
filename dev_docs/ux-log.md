@@ -1849,6 +1849,19 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 132 — 2026-04-14 — UX-021 widget:multiselect → qa:FAIL (20 findings)
+
+**Row:** UX-021 widget:multiselect (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 20 findings (admin=10, user=10), degraded=False. Clean Phase B — walker planned real type actions on `#field-last_name` and `#field-email`. Run IDs: admin=7526e885-e7f3-4878-b31c-1201c1cf1fee, user=ac3a5f43-7dd9-4e58-903b-27806374bf96.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 132   | UX-021 widget:multiselect | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 131 — 2026-04-14 — UX-015 popover → qa:FAIL (46 findings) — **investigator subsystem complete**
 
 **Row:** UX-015 popover (canonical: ops_dashboard)
