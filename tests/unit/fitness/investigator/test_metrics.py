@@ -29,6 +29,8 @@ def test_append_metric_creates_file(tmp_path: Path) -> None:
     assert data["model"] == "claude-sonnet-4-6"
     assert data["proposal_id"] == "abc12345"
     assert "created" in data
+    assert data["created"].endswith("Z")
+    assert "." not in data["created"]  # no microseconds
 
 
 def test_append_metric_is_append_only(tmp_path: Path) -> None:

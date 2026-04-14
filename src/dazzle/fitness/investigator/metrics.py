@@ -40,7 +40,7 @@ def append_metric(
         "tokens_out": tokens_out,
         "tool_calls": tool_calls,
         "duration_ms": duration_ms,
-        "created": datetime.now(UTC).isoformat(),
+        "created": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "model": model,
     }
     with target.open("a") as f:
