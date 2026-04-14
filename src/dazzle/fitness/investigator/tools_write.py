@@ -59,7 +59,11 @@ def _propose_fix_tool(
             proposed_fixes = tuple(
                 ProposedFix(
                     file_path=str(f["file_path"]),
-                    line_range=(tuple(f["line_range"]) if f.get("line_range") else None),
+                    line_range=(
+                        (int(f["line_range"][0]), int(f["line_range"][1]))
+                        if f.get("line_range")
+                        else None
+                    ),
                     diff=str(f["diff"]),
                     rationale=str(f["rationale"]),
                     confidence=float(f["confidence"]),
@@ -77,6 +81,9 @@ def _propose_fix_tool(
                         "fixes": fixes,
                         "rationale": rationale,
                         "overall_confidence": overall_confidence,
+                        "verification_plan": verification_plan,
+                        "alternatives_considered": alternatives_considered,
+                        "investigation_log": investigation_log,
                     }
                 ),
             )
@@ -175,12 +182,21 @@ def _block_and_record(
 
     Used when propose_fix is called with args that don't produce a valid
     Proposal — either malformed at parse time or rejected at save time.
+
+    If the blocked-artefact write itself fails (e.g., same disk-full
+    condition that triggered the original failure), swallow the OSError
+    and still set terminal_status so the mission state machine completes
+    cleanly. The caller's returned error dict already carries the
+    original failure reason.
     """
-    write_blocked_artefact(
-        case_file.cluster.cluster_id,
-        dazzle_root,
-        reason=reason,
-        case_file_text=case_file.to_prompt_text(),
-        transcript=raw,
-    )
+    try:
+        write_blocked_artefact(
+            case_file.cluster.cluster_id,
+            dazzle_root,
+            reason=reason,
+            case_file_text=case_file.to_prompt_text(),
+            transcript=raw,
+        )
+    except OSError:
+        pass
     state.terminal_status = "blocked_invalid_proposal"
