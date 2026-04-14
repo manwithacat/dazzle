@@ -4,6 +4,15 @@ Gated behind @pytest.mark.e2e. Runs only when the user explicitly opts in
 (e.g., `pytest -m e2e`). Costs real tokens. Expected to catch pipeline
 regressions (import errors, dataclass incompatibilities, disk I/O failures),
 not assert on specific fix content.
+
+NOTE (v1 known limitation): DazzleAgent's text-action protocol cannot
+reliably produce the complex JSON payload that propose_fix requires.
+In practice the agent often stagnates (4 consecutive steps with no
+tool call) and the runner records status="blocked_stagnation". This
+is a design-level gap tracked for v2 (structured tool-call interface).
+A stagnation outcome is therefore a valid smoke-test completion:
+we verify the pipeline ran end-to-end (_metrics.jsonl entry present)
+without requiring a successful Proposal.
 """
 
 import os
@@ -28,8 +37,8 @@ async def test_investigator_real_llm_pipeline_runs_to_completion(tmp_path: Path)
     blocked record). We do NOT assert on specific fix content because the
     LLM is non-deterministic — a "blocked" outcome is a valid completion.
     """
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        pytest.skip("ANTHROPIC_API_KEY not set")
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")):
+        pytest.skip("no LLM API key set (ANTHROPIC_API_KEY or OPENAI_API_KEY)")
 
     # Copy the fixture into tmp_path so we don't pollute the real fixture dir
     shutil.copytree(FIXTURE_ROOT, tmp_path / "smoke")

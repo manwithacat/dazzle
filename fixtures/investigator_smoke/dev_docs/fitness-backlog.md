@@ -6,7 +6,7 @@ has expired.
 
 | id | created | locus | axis | severity | persona | status | route | summary |
 |----|---------|-------|------|----------|---------|--------|-------|---------|
-| f_smoke_001 | 2026-04-14T00:00:00+00:00 | implementation | coverage | high | admin | PROPOSED | soft | fixtures/investigator_smoke/src/ui/form.html:4 error paragraph present but no aria-describedby wiring |
+| f_smoke_001 | 2026-04-14T00:00:00+00:00 | implementation | coverage | high | admin | PROPOSED | soft | src/ui/form.html:4 error paragraph present but no aria-describedby wiring |
 
 ## Evidence envelopes
 
@@ -24,7 +24,7 @@ has expired.
   "persona": "admin",
   "capability_ref": "Form.submit",
   "expected": "error paragraph linked to control via aria-describedby",
-  "observed": "fixtures/investigator_smoke/src/ui/form.html:4 error paragraph present but no aria-describedby wiring",
+  "observed": "src/ui/form.html:4 error paragraph present but no aria-describedby wiring",
   "evidence_embedded": {
     "expected_ledger_step": {
       "step": 1,
@@ -33,7 +33,7 @@ has expired.
     "diff_summary": [],
     "transcript_excerpt": [
       {
-        "text": "fixtures/investigator_smoke/src/ui/form.html:4 error paragraph missing describedby link"
+        "text": "src/ui/form.html:4 error paragraph missing describedby link"
       }
     ]
   },
