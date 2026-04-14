@@ -1849,6 +1849,19 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 140 — 2026-04-14 — UX-030 review-queue → qa:FAIL (99 findings)
+
+**Row:** UX-030 review-queue (canonical: support_tickets)
+**Outcome:** `qa: PENDING → FAIL`, 99 findings (admin=48, agent=51), degraded=False. Anchor `/app/ticket` (list page). With no tickets in the queue the walker clicks "New Ticket" which navigates into `/app/ticket/create` — meaning most of these findings likely overlap with the existing ticket-create cluster (UX-017/019/010/026/027) via dedupe. Run IDs: admin=36d68a74-54c0-4047-841f-cd3c9286e013, agent=106c56e5-19fa-47a7-bf72-a2a3f2d9581d.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 140   | UX-030 review-queue | admin, agent | 99 (48+51) | FAIL |
+
+---
+
 ## Cycle 139 — 2026-04-14 — UX-029 detail-view → qa:FAIL (20 findings)
 
 **Row:** UX-029 detail-view (canonical: contact_manager)
