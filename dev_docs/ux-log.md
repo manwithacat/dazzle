@@ -1849,6 +1849,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 141 — 2026-04-14 — UX-031 app-shell → qa:FAIL (46 findings) — **command_center anchor now 5/5**
+
+**Row:** UX-031 app-shell (canonical: ops_dashboard)
+**Outcome:** `qa: PENDING → FAIL`, 46 findings (admin=23, ops_engineer=23), degraded=False. Run IDs: admin=6d905df0-fdb8-497b-aca0-096aba95f6c4, ops_engineer=0247c531-03cc-428c-94bb-a5137a136d54.
+
+**`/app/workspaces/command_center` admin 403 now 5/5 cycles:** UX-001 (c113), UX-003 (c117), UX-011 (c127), UX-015 (c131), UX-031 (c141). Consistent, deterministic, reproducible across 5 independent walker runs on 5 different component contracts. ~230 total findings across the 5 rows. The pattern strengthens with every new cycle — eventually every ops_dashboard component will land on this anchor and reproduce the 403. Third investigator-target priority (after the `created_by` bug and the fieldtest_hub anchor 404 pattern).
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 141   | UX-031 app-shell | admin, ops_engineer | 46 (23+23) | FAIL |
+
+---
+
 ## Cycle 140 — 2026-04-14 — UX-030 review-queue → qa:FAIL (99 findings)
 
 **Row:** UX-030 review-queue (canonical: support_tickets)
