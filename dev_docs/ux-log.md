@@ -4,6 +4,63 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T19:55Z — Cycle 193 — **harness improvement** — explore_strategy driver shipped, deeper bug discovered
+
+**Not a normal cycle.** This cycle spent its budget on harness improvements rather than backlog advancement. Deliverables:
+
+1. **`src/dazzle/cli/runtime_impl/ux_cycle_impl/_playwright_helpers.py`** — extracted `PlaywrightBundle`, `setup_playwright`, and `login_as_persona` from `fitness_strategy.py` so a second strategy can reuse them. `fitness_strategy` re-imports them under the old private names (`_PlaywrightBundle` etc.) to preserve the existing patch targets used by `tests/unit/fitness/test_fitness_strategy_integration.py`. 23/23 fitness tests pass unchanged.
+
+2. **`src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py`** — new production driver for Step 6 EXPLORE. Public API: `run_explore_strategy(connection, *, example_root, strategy, personas=None, start_path="/app") -> ExploreOutcome`. Mirrors `run_fitness_strategy` structure: caller owns subprocess lifecycle via ModeRunner, strategy owns Playwright + per-persona login + agent mission + aggregation. Returns `ExploreOutcome` with flat `proposals` / `findings` lists tagged by `persona_id`, plus `blocked_personas` for per-persona failures. All-blocked raises `RuntimeError`.
+
+3. **`tests/unit/test_explore_strategy.py`** — 6 unit tests covering: anonymous single-cycle, multi-persona aggregation, EDGE_CASES strategy, per-persona blocked doesn't abort others, all-blocked raises, bundle teardown on agent crash. Uses a `_FakeAgent` that invokes each mission tool's handler with deterministic args so the real `propose_component` / `record_edge_case` handlers populate their captured lists — end-to-end except for the LLM loop itself.
+
+4. **`.claude/commands/ux-cycle.md` Step 6** — replaced the vague "Dispatch build_ux_explore_mission" prose with a concrete runnable code snippet using `run_explore_strategy` + `ModeRunner`. Added the 5-cycle-0-findings semantic fix as a documentation rule (housekeeping cycles don't count; track via `explored_at` in `.dazzle/ux-cycle-state.json`).
+
+**Verification:** 36/36 tests pass (23 fitness + 7 ux_explore mission + 6 explore_strategy). mypy clean on all 4 ux_cycle_impl source files. ruff clean.
+
+### Smoke run against contact_manager — new bug discovered
+
+Ran the new driver end-to-end against the real `contact_manager` app (real subprocess, real Postgres, real Playwright, real Anthropic API). Boot + login succeeded cleanly:
+
+```
+[smoke] app up at http://localhost:3653 (api http://localhost:3653)
+[smoke] admin logged in, cookie set, page at http://localhost:3653/
+[smoke] step 1: action=done target=None
+[smoke]   response_text: {"action": "navigate", "target": "/app/workspaces/contacts",
+                          "reasoning": "I need to start by exploring..."}
+[smoke] transcript outcome=completed steps=1 tokens=3208
+[smoke] proposals collected: 0
+```
+
+**Agent emitted navigate JSON as text, not as a native tool_use block. The tool-use path returned DONE because no tool_use block was present, and the loop completed in 1 step.**
+
+### Root cause
+
+`DazzleAgent(use_tool_calls=True)` has a **half-finished integration**:
+
+1. Mission tools (`propose_component`) are correctly passed to the SDK `tools=[...]` parameter and the response is inspected for `tool_use` blocks.
+2. But **page actions** (navigate/click/type/scroll/wait/done) are NOT exposed as native tools — they are still documented only via `_build_system_prompt()` text instructions ("Respond with a JSON object for one of these actions").
+3. The LLM, reading the system prompt, obediently emits text-protocol JSON for the navigation action it wants to take: `{"action": "navigate", "target": "/app/workspaces/contacts"}`.
+4. `_decide_via_anthropic_tools` sees a text-only response with no `tool_use` block and returns the DONE sentinel per its documented "text-only → treat as done/stuck" branch (core.py:438).
+5. `make_stagnation_completion` treats `ActionType.DONE` as mission-complete on the very first step.
+
+**Net result:** native tool use on this codepath cannot make forward progress because the agent has no way to navigate before emitting mission tool calls. The `walk_contract` mission dodged this because its flow is anchor-navigate first (done outside the agent loop) then contract walking, but explore missions genuinely need in-loop navigation.
+
+### What this means for the harness evaluation
+
+- **The explore driver itself is sound.** It boots, logs in, wires the agent, aggregates results, handles per-persona failures. Every non-LLM seam was exercised and worked. The driver will start producing value the moment the underlying agent bug is fixed.
+- **Cycle 147's "0 findings" was NOT exclusively the text-parser bug.** Action items 4/6 from cycle 188 resolved the walker's text-parser bug — that's real and confirmed by `test_ux_explore_mission.py`. But for the in-loop explore mission, the navigation/tool-use split is an independent second bug that the 2026-04-14 fix did not address. The sticky-exhausted state has TWO layers of blocker, not one.
+- **Harness-improvement proposal escalated:** in addition to the 4 observations from cycle 190, add a fifth:
+  - **(5) `DazzleAgent(use_tool_calls=True)` exposes mission tools natively but not page actions.** Either (a) declare page actions as SDK tools too (navigate/click/type/scroll/wait/done become synthetic `AgentTool` entries), or (b) change `_build_system_prompt` to prefer tool-use for actions and text only for reasoning, or (c) accept a hybrid mode where the SDK returns both text (describing a builtin action) and tool_use blocks and route them separately. Option (a) is the cleanest — it makes the system prompt purely instructional and the API contract uniform. Needs its own spec.
+
+### Recommendation
+
+Commit the explore driver as-is. It's a correct, tested piece of harness infrastructure that is currently blocked on a deeper DazzleAgent bug. The moment that bug is fixed, `/ux-cycle` Step 6 will start producing `PROP-NNN` / `EX-NNN` rows on every run without further plumbing work.
+
+The deeper bug is not appropriate to fix in this cycle — it touches `DazzleAgent.run()` + `_decide_via_anthropic_tools` + `_build_system_prompt` + possibly `_execute_builtin_action`, and needs a brainstorm on which of options (a)/(b)/(c) is right. Candidate for cycle 194 as a standalone harness-improvement task.
+
+---
+
 ## 2026-04-14T19:37Z — Cycle 192 — EXHAUSTED (sticky) — determinism check #2
 
 **Outcome:** Third consecutive terminal state. Confirmed deterministic: priority queue empty → Step 6 → 5-cycle-0-findings → skip EXPLORE → complete. Cycles 189, 190, 191, 192 are functionally indistinguishable — only the timestamps and trivial log wrapping differ.

@@ -8,7 +8,6 @@ engine and aggregates the result into a /ux-cycle outcome.
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +17,15 @@ from dazzle.agent.core import DazzleAgent
 from dazzle.agent.executor import PlaywrightExecutor
 from dazzle.agent.missions._shared import ComponentContract, parse_component_contract
 from dazzle.agent.observer import PlaywrightObserver
+from dazzle.cli.runtime_impl.ux_cycle_impl._playwright_helpers import (
+    PlaywrightBundle as _PlaywrightBundle,
+)
+from dazzle.cli.runtime_impl.ux_cycle_impl._playwright_helpers import (
+    login_as_persona as _login_as_persona,
+)
+from dazzle.cli.runtime_impl.ux_cycle_impl._playwright_helpers import (
+    setup_playwright as _setup_playwright,
+)
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.fitness.config import load_fitness_config
 from dazzle.fitness.engine import FitnessEngine
@@ -216,95 +224,6 @@ def _aggregate_outcomes(outcomes: list[tuple[str | None, Any]]) -> StrategyOutco
         degraded=any_degraded,
         findings_count=total_findings,
     )
-
-
-async def _login_as_persona(page: Any, persona_id: str, api_url: str) -> None:
-    """Log a Playwright page in as a DSL persona via QA mode's magic-link flow.
-
-    Two-step flow from issue #768:
-        1. ``POST {api_url}/qa/magic-link`` with ``{"persona_id": persona_id}`` —
-           gated by DAZZLE_ENV=development + DAZZLE_QA_MODE=1 on the example
-           subprocess. Returns a single-use token.
-        2. ``GET {api_url}/auth/magic/{token}?next=/`` — validates token,
-           creates session cookie, redirects to ``next``.
-
-    Raises:
-        RuntimeError: if any step fails. Distinguishing messages let the
-            strategy loop record BLOCKED outcomes with useful context:
-            - "magic-link endpoint returned 404" (404 on generator — QA flags
-              missing OR persona not provisioned; see qa_routes.py:59,65)
-            - "magic-link generation failed: HTTP {status}" (other non-2xx)
-            - "persona login rejected: magic-link consumer did not create a session"
-              (final page path is /auth/login or /login — path-exact check)
-    """
-    generator_url = f"{api_url}/qa/magic-link"
-    response = await page.request.post(
-        generator_url,
-        data=json.dumps({"persona_id": persona_id}),
-        headers={"Content-Type": "application/json"},
-    )
-    if not response.ok:
-        if response.status == 404:
-            # 404 covers two distinct cases per qa_routes.py:
-            #  (a) QA mode env flags not set (DAZZLE_ENV + DAZZLE_QA_MODE)
-            #  (b) persona email not provisioned in the auth store
-            raise RuntimeError(
-                f"magic-link endpoint returned 404 for persona {persona_id!r} at "
-                f"{generator_url} — check DAZZLE_ENV=development + DAZZLE_QA_MODE=1, "
-                f"or that the persona is provisioned"
-            )
-        raise RuntimeError(
-            f"magic-link generation failed: HTTP {response.status} at {generator_url}"
-        )
-
-    magic_link_payload = await response.json()
-    # The QA endpoint (dazzle_back/runtime/qa_routes.py:79) returns
-    # MagicLinkResponse(url=f"/auth/magic/{token}") — a server-relative path.
-    magic_link_path = magic_link_payload["url"]
-
-    consumer_url = f"{api_url}{magic_link_path}?next=/"
-    await page.goto(consumer_url)
-
-    # Detect token rejection: consumer redirects to /auth/login (or /login) on failure.
-    # Use path-exact match to avoid false positives on unrelated routes that
-    # happen to contain "login" (e.g. /app/logins, /admin/login-history).
-    from urllib.parse import urlparse
-
-    final_path = urlparse(page.url).path
-    if final_path in ("/auth/login", "/login"):
-        raise RuntimeError(
-            f"persona login rejected: magic-link consumer did not create a session "
-            f"for persona {persona_id!r} (final URL: {page.url})"
-        )
-
-
-@dataclass
-class _PlaywrightBundle:
-    """Playwright resources owned by the strategy for one fitness cycle."""
-
-    playwright: Any
-    browser: Any
-    context: Any
-    page: Any
-
-    async def close(self) -> None:
-        await self.context.close()
-        await self.browser.close()
-        await self.playwright.stop()
-
-
-async def _setup_playwright(base_url: str) -> _PlaywrightBundle:
-    """Spin up a headless Chromium page pointed at ``base_url``.
-
-    Separate from ``_build_engine`` so tests can patch it cleanly.
-    """
-    from playwright.async_api import async_playwright
-
-    pw = await async_playwright().start()
-    browser = await pw.chromium.launch(headless=True)
-    context = await browser.new_context(base_url=base_url)
-    page = await context.new_page()
-    return _PlaywrightBundle(playwright=pw, browser=browser, context=context, page=page)
 
 
 class _EngineProxy:

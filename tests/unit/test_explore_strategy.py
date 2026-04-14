@@ -1,0 +1,367 @@
+"""Unit tests for /ux-cycle Strategy.EXPLORE wiring."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from dazzle.agent.missions.ux_explore import Strategy
+
+# ----- Fake infrastructure ---------------------------------------------------
+
+
+class _FakeTranscript:
+    """Shape-compatible stand-in for ``AgentTranscript``."""
+
+    def __init__(self, outcome: str = "completed", steps: int = 3, tokens: int = 1500):
+        self.outcome = outcome
+        self.steps = [MagicMock() for _ in range(steps)]
+        self.tokens_used = tokens
+
+
+class _FakeAgent:
+    """Fake ``DazzleAgent`` whose ``run`` invokes each mission tool once.
+
+    The real ``DazzleAgent`` owns an LLM loop we cannot exercise in a unit
+    test. This fake takes the mission's tool list and invokes each tool's
+    handler with deterministic arguments, which is enough to let the real
+    ``propose_component`` / ``record_edge_case`` handlers populate their
+    captured ``proposals`` / ``findings`` lists. That is the exact side
+    effect ``explore_strategy`` cares about.
+    """
+
+    instances: list[_FakeAgent] = []
+
+    def __init__(self, observer: Any, executor: Any, use_tool_calls: bool = False) -> None:
+        # Record constructor args so tests can assert tool-use was requested.
+        self.observer = observer
+        self.executor = executor
+        self.use_tool_calls = use_tool_calls
+        _FakeAgent.instances.append(self)
+
+    async def run(self, mission: Any, on_step: Any = None) -> _FakeTranscript:
+        for tool in mission.tools:
+            # Build deterministic args honouring the tool's declared schema.
+            args = _fake_args_for_tool(tool.name, mission.context.get("persona_id", "unknown"))
+            tool.handler(args)
+        return _FakeTranscript(outcome="completed", steps=len(mission.tools) + 1, tokens=2500)
+
+
+def _fake_args_for_tool(tool_name: str, persona_id: str) -> dict[str, Any]:
+    if tool_name == "propose_component":
+        return {
+            "component_name": f"proposed-{persona_id}",
+            "description": "A hypothetical widget observed during the test.",
+            "example_app": "contact_manager",
+        }
+    if tool_name == "record_edge_case":
+        return {
+            "component_name": f"edge-{persona_id}",
+            "description": "Empty state interaction glitch.",
+            "example_app": "contact_manager",
+            "severity": "minor",
+        }
+    raise AssertionError(f"unexpected tool in explore mission: {tool_name}")
+
+
+def _fake_app_spec(persona_ids: list[str]) -> MagicMock:
+    """Minimal AppSpec stand-in with a ``personas`` iterable."""
+    from dazzle.core.ir.personas import PersonaSpec
+
+    spec = MagicMock()
+    spec.personas = [PersonaSpec(id=pid, label=pid.capitalize()) for pid in persona_ids]
+    return spec
+
+
+def _fake_bundle_and_connection() -> tuple[MagicMock, MagicMock]:
+    """Build a mock Playwright bundle and an AppConnection."""
+    from dazzle.qa.server import AppConnection
+
+    bundle = MagicMock()
+    bundle.close = AsyncMock()
+    bundle.page = MagicMock()
+    bundle.browser = MagicMock()
+    # ``new_context`` returns an object with ``new_page`` and ``close``
+    fake_context = MagicMock()
+    fake_context.new_page = AsyncMock(return_value=MagicMock())
+    fake_context.close = AsyncMock()
+    bundle.browser.new_context = AsyncMock(return_value=fake_context)
+
+    connection = MagicMock(spec=AppConnection)
+    connection.site_url = "http://localhost:3000"
+    connection.api_url = "http://localhost:8000"
+    return bundle, connection
+
+
+# ----- Tests -----------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _reset_fake_agent_instances() -> None:
+    _FakeAgent.instances = []
+    yield
+    _FakeAgent.instances = []
+
+
+@pytest.mark.asyncio
+async def test_anonymous_run_builds_missing_contracts_mission(tmp_path: Path) -> None:
+    """personas=None runs one anonymous cycle and returns proposals."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin", "user"])
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_FakeAgent,
+        ),
+    ):
+        outcome = await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.MISSING_CONTRACTS,
+            personas=None,
+        )
+
+    assert outcome.degraded is False
+    assert len(outcome.proposals) == 1
+    assert outcome.proposals[0]["component_name"] == "proposed-anonymous"
+    assert outcome.proposals[0]["persona_id"] is None
+    assert "1 persona(s)" in outcome.summary
+    assert len(_FakeAgent.instances) == 1
+    assert _FakeAgent.instances[0].use_tool_calls is True
+    bundle.close.assert_awaited_once()
+    # No fresh context was created because personas=None reuses the bundle page
+    bundle.browser.new_context.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_multi_persona_run_aggregates_proposals(tmp_path: Path) -> None:
+    """personas=[admin, user] runs once per persona and sums proposals."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin", "user"])
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+            new=AsyncMock(),
+        ) as mock_login,
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_FakeAgent,
+        ),
+    ):
+        outcome = await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.MISSING_CONTRACTS,
+            personas=["admin", "user"],
+        )
+
+    assert outcome.degraded is False
+    assert len(outcome.proposals) == 2
+    personas_seen = {p["persona_id"] for p in outcome.proposals}
+    assert personas_seen == {"admin", "user"}
+    assert mock_login.await_count == 2
+    # One agent per persona
+    assert len(_FakeAgent.instances) == 2
+    assert bundle.browser.new_context.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_edge_cases_strategy_populates_findings(tmp_path: Path) -> None:
+    """Strategy.EDGE_CASES uses record_edge_case and fills findings list."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin"])
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+            new=AsyncMock(),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_FakeAgent,
+        ),
+    ):
+        outcome = await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.EDGE_CASES,
+            personas=["admin"],
+        )
+
+    assert outcome.degraded is False
+    assert outcome.proposals == []
+    assert len(outcome.findings) == 1
+    assert outcome.findings[0]["severity"] == "minor"
+    assert outcome.findings[0]["persona_id"] == "admin"
+    assert outcome.strategy == "EXPLORE/edge_cases"
+
+
+@pytest.mark.asyncio
+async def test_one_persona_blocked_does_not_abort_others(tmp_path: Path) -> None:
+    """A per-persona login failure records BLOCKED but other personas still run."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin", "user"])
+
+    # First call raises (admin), second call succeeds (user)
+    login_mock = AsyncMock(side_effect=[RuntimeError("login rejected"), None])
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+            new=login_mock,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_FakeAgent,
+        ),
+    ):
+        outcome = await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.MISSING_CONTRACTS,
+            personas=["admin", "user"],
+        )
+
+    assert outcome.degraded is True
+    assert len(outcome.blocked_personas) == 1
+    assert outcome.blocked_personas[0][0] == "admin"
+    assert "login rejected" in outcome.blocked_personas[0][1]
+    # user still produced a proposal
+    assert len(outcome.proposals) == 1
+    assert outcome.proposals[0]["persona_id"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_all_personas_blocked_raises(tmp_path: Path) -> None:
+    """If every persona is blocked, the strategy raises rather than returning."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin"])
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+            new=AsyncMock(side_effect=RuntimeError("magic-link 404")),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_FakeAgent,
+        ),
+        pytest.raises(RuntimeError, match="all personas blocked"),
+    ):
+        await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.MISSING_CONTRACTS,
+            personas=["admin"],
+        )
+
+    # Bundle still torn down even though strategy raised
+    bundle.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_bundle_closed_even_when_agent_raises(tmp_path: Path) -> None:
+    """Bundle teardown runs in the outer finally regardless of per-run errors."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+        run_explore_strategy,
+    )
+
+    bundle, connection = _fake_bundle_and_connection()
+    fake_spec = _fake_app_spec(persona_ids=["admin"])
+
+    class _RaisingAgent(_FakeAgent):
+        async def run(self, mission: Any, on_step: Any = None) -> _FakeTranscript:
+            raise RuntimeError("agent crashed")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.setup_playwright",
+            new=AsyncMock(return_value=bundle),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.load_project_appspec",
+            return_value=fake_spec,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.login_as_persona",
+            new=AsyncMock(),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.DazzleAgent",
+            new=_RaisingAgent,
+        ),
+        pytest.raises(RuntimeError, match="all personas blocked"),
+    ):
+        await run_explore_strategy(
+            connection,
+            example_root=tmp_path / "examples" / "contact_manager",
+            strategy=Strategy.MISSING_CONTRACTS,
+            personas=["admin"],
+        )
+
+    bundle.close.assert_awaited_once()

@@ -172,17 +172,49 @@ the FAIL gate, blocking every widget contract from ever reaching PASS.
 
 ### Step 6: EXPLORE (only if no PENDING rows remain)
 
-Check the session counter (stored in `.dazzle/ux-cycle-explore-count`). If count >= 30 OR the last 5 cycles produced 0 findings, skip EXPLORE and mark the cycle complete with "No work remaining, explore budget exhausted".
+Check the session counter (stored in `.dazzle/ux-cycle-explore-count`). If count >= 30, skip EXPLORE and mark the cycle complete with "No work remaining, explore budget exhausted".
 
-Otherwise, alternate between strategies:
+The secondary short-circuit — "last 5 cycles produced 0 findings" — MUST consider only cycles that actually *reached* Step 6 and ran an EXPLORE mission. Housekeeping cycles (retroactive qa-rule sweeps, log-only updates, exhausted-sticky runs) produce 0 EXPLORE findings by construction and must not count toward the streak. Track this via `explored_at` timestamps in `.dazzle/ux-cycle-state.json`.
+
+Alternate strategies by the post-increment counter:
 - Odd-numbered explore cycles: `Strategy.MISSING_CONTRACTS`
 - Even-numbered explore cycles: `Strategy.EDGE_CASES`
 
-Dispatch the `build_ux_explore_mission` from `src/dazzle/agent/missions/ux_explore.py` with a rotating persona. Record the results:
-- `propose_component` findings → new `PROP-NNN` rows in the backlog's "Proposed Components" table
-- `record_edge_case` findings → new `EX-NNN` rows in the "Exploration Findings" table
+Run the explore strategy via the production driver (added 2026-04-14 in v0.55.2):
 
-Commit with message `ux: explore cycle — {N} findings`.
+```python
+from pathlib import Path
+from dazzle.agent.missions.ux_explore import Strategy
+from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import run_explore_strategy
+from dazzle.e2e.modes import get_mode
+from dazzle.e2e.runner import ModeRunner
+
+example_root = Path("/Volumes/SSD/Dazzle/examples/<canonical>")
+
+async with ModeRunner(
+    mode_spec=get_mode("a"),
+    project_root=example_root,
+    personas=["admin"],           # rotating persona from the DSL personas list
+    db_policy="preserve",
+) as conn:
+    outcome = await run_explore_strategy(
+        conn,
+        example_root=example_root,
+        strategy=Strategy.MISSING_CONTRACTS,   # or EDGE_CASES
+        personas=["admin"],
+    )
+```
+
+`run_explore_strategy` builds the explore mission via `build_ux_explore_mission`, wires it into `DazzleAgent(use_tool_calls=True)` with a `PlaywrightObserver` + `PlaywrightExecutor`, and returns an `ExploreOutcome` with flat `proposals` / `findings` lists tagged with `persona_id`. Per-persona failures (login rejected, agent crash) are absorbed into `blocked_personas` without aborting remaining personas; all-blocked triggers a `RuntimeError`.
+
+**Precondition:** same as Phase B — `examples/<canonical>/.env` with `DATABASE_URL` + `REDIS_URL`, plus `ANTHROPIC_API_KEY` in the environment because the agent loop calls the Anthropic SDK directly. `DazzleAgent(use_tool_calls=True)` is a strict requirement — the legacy text-action protocol was empirically confirmed in cycle 147 to stagnate at 8 steps with 0 findings, and the 2026-04-14 tool-use + robust-parser fix is what unblocks explore mode.
+
+Record results:
+- Each entry in `outcome.proposals` → one new `PROP-NNN` row in the backlog's "Proposed Components" table
+- Each entry in `outcome.findings` → one new `EX-NNN` row in the "Exploration Findings" table
+- `outcome.blocked_personas` → notes on the cycle log entry
+
+Commit with message `ux: explore cycle — {N} proposals, {M} findings`.
 
 ### Step 7: Complete
 
