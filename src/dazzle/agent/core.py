@@ -105,6 +105,184 @@ def _default_completion(action: AgentAction, history: list[Step]) -> bool:
     return action.type == ActionType.DONE
 
 
+# ---------------------------------------------------------------------------
+# Builtin page actions as native SDK tools (use_tool_calls=True path)
+#
+# Before cycle 194: DazzleAgent's tool-use path exposed mission tools as
+# native Anthropic tools but left page actions (navigate/click/type/...) as
+# text-protocol JSON instructions in the system prompt. The LLM, obediently
+# emitting a navigate action as text, left the tool-use path with a
+# text-only response which was treated as DONE, stopping the agent after
+# 1 step. See dev_docs/ux-log.md cycle 193 for the full diagnosis.
+#
+# Cycle 194 fix: declare page actions as synthetic SDK tools so the
+# tools=[...] parameter carries the full action contract uniformly. The
+# LLM selects one via a tool_use block, and _tool_use_to_action routes
+# builtin names back to the appropriate ActionType. Mission tools coexist
+# in the same list — name collisions are resolved by giving builtin names
+# priority (enforced in _tool_use_to_action).
+# ---------------------------------------------------------------------------
+
+_BUILTIN_ACTION_NAMES: frozenset[str] = frozenset(
+    {"navigate", "click", "type", "select", "scroll", "wait", "assert", "done"}
+)
+
+
+def _builtin_action_tools() -> list[dict[str, Any]]:
+    """Return the page-action tool schemas in SDK-ready shape."""
+    return [
+        {
+            "name": "navigate",
+            "description": (
+                "Navigate the browser to a URL or server-relative path "
+                "(e.g. '/app/contacts'). Use to explore new pages."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "string",
+                        "description": "Absolute URL or server-relative path",
+                    },
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target"],
+            },
+        },
+        {
+            "name": "click",
+            "description": "Click an element matching the given CSS selector.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "CSS selector"},
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target"],
+            },
+        },
+        {
+            "name": "type",
+            "description": "Type text into an input element matching the given CSS selector.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "CSS selector"},
+                    "value": {"type": "string", "description": "Text to type"},
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target", "value"],
+            },
+        },
+        {
+            "name": "select",
+            "description": "Choose an option from a <select> element.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "CSS selector"},
+                    "value": {"type": "string", "description": "Option value or label"},
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target", "value"],
+            },
+        },
+        {
+            "name": "scroll",
+            "description": "Scroll the page to reveal more content.",
+            "input_schema": {
+                "type": "object",
+                "properties": {"reasoning": {"type": "string"}},
+            },
+        },
+        {
+            "name": "wait",
+            "description": "Wait for an element to appear before continuing.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "CSS selector"},
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target"],
+            },
+        },
+        {
+            "name": "assert",
+            "description": "Assert that a condition or element is present on the page.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "string",
+                        "description": "What to check (selector or description)",
+                    },
+                    "reasoning": {"type": "string"},
+                },
+                "required": ["target"],
+            },
+        },
+        {
+            "name": "done",
+            "description": (
+                "Signal that the mission is complete or cannot proceed further. "
+                "Use only when all goals are met or progress is impossible."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "description": "Whether the mission succeeded",
+                    },
+                    "reasoning": {"type": "string", "description": "Summary"},
+                },
+            },
+        },
+    ]
+
+
+def _tool_use_to_action(block: Any, reasoning: str) -> AgentAction:
+    """Convert an SDK tool_use block to an ``AgentAction``.
+
+    Builtin page-action names (navigate/click/type/...) map to the
+    matching ``ActionType``. All other tool names route to
+    ``ActionType.TOOL`` with the block's input serialised as the action's
+    ``value``, matching the text-protocol path's shape so
+    ``_execute_tool`` can consume it unchanged.
+
+    ``reasoning`` is taken from the tool input when present (LLMs often
+    include it in their input payload), otherwise from the caller's
+    aggregated text blocks.
+    """
+    name = block.name
+    inputs: dict[str, Any] = dict(block.input) if block.input else {}
+    action_reasoning = inputs.pop("reasoning", None) or reasoning
+
+    if name in _BUILTIN_ACTION_NAMES:
+        if name == "done":
+            return AgentAction(
+                type=ActionType.DONE,
+                reasoning=action_reasoning,
+                success=bool(inputs.get("success", True)),
+            )
+        return AgentAction(
+            type=ActionType(name),
+            target=inputs.get("target"),
+            value=inputs.get("value"),
+            reasoning=action_reasoning,
+        )
+
+    # Mission tool — serialise remaining inputs as the value so
+    # _execute_tool's existing handler dispatch works unchanged.
+    return AgentAction(
+        type=ActionType.TOOL,
+        target=name,
+        value=json.dumps(inputs),
+        reasoning=action_reasoning,
+    )
+
+
 @dataclass
 class Mission:
     """
@@ -380,16 +558,27 @@ class DazzleAgent:
         raw textual output on the tool-use path. The structured
         tool_use block is separately captured as the action itself.
         """
-        # Build tools=[...] from every tool in the registry. Every tool already
-        # has a schema (required field on AgentTool), so all tools are eligible.
-        tools = [
-            {
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.schema,
-            }
-            for tool in tool_registry.values()
-        ]
+        # Builtin page actions come first so if a mission tool ever collides
+        # with one (e.g. a mission declares its own `click`), the builtin wins
+        # by SDK-tool-list order. Routing in _tool_use_to_action double-checks
+        # the name against _BUILTIN_ACTION_NAMES so this is belt + braces.
+        tools: list[dict[str, Any]] = _builtin_action_tools()
+        builtin_names = _BUILTIN_ACTION_NAMES
+        for tool in tool_registry.values():
+            if tool.name in builtin_names:
+                logger.warning(
+                    "mission tool name %r collides with a builtin page action; "
+                    "the builtin will take precedence in tool_use routing",
+                    tool.name,
+                )
+                continue
+            tools.append(
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.schema,
+                }
+            )
 
         client = self._get_client()
         create_kwargs: dict[str, Any] = {
@@ -397,12 +586,8 @@ class DazzleAgent:
             "max_tokens": 2000,
             "system": system_prompt,
             "messages": messages,
+            "tools": tools,
         }
-        # Anthropic's API treats omitting `tools` (implicit tool_choice=none) as
-        # distinct from `tools=[]` (undefined behaviour). When the tool_registry
-        # is empty, omit the kwarg entirely so the request is well-formed.
-        if tools:
-            create_kwargs["tools"] = tools
 
         response = client.messages.create(**create_kwargs)
 
@@ -446,15 +631,7 @@ class DazzleAgent:
                 tokens,
             )
 
-        return (
-            AgentAction(
-                type=ActionType.TOOL,
-                target=tool_use_block.name,
-                value=json.dumps(tool_use_block.input),
-                reasoning=reasoning,
-            ),
-            tokens,
-        )
+        return (_tool_use_to_action(tool_use_block, reasoning), tokens)
 
     def _decide_via_anthropic(
         self,
@@ -529,10 +706,35 @@ class DazzleAgent:
         mission: Mission,
         tool_registry: dict[str, AgentTool],
     ) -> str:
-        """Build the full system prompt from mission + tools."""
+        """Build the full system prompt from mission + tools.
+
+        Under ``use_tool_calls=True`` (SDK native tool use), page actions
+        and mission tools are carried by the SDK ``tools=[...]`` parameter,
+        not by text instructions. The system prompt is kept to the
+        mission description plus a terse nudge to use tool calls. This
+        prevents the cycle-193 bug where the text-protocol action
+        reference caused the model to emit navigation as text JSON,
+        leaving the tool-use path with no tool_use block.
+
+        Under ``use_tool_calls=False`` (legacy text-protocol path), the
+        system prompt includes the full text-protocol action reference
+        unchanged.
+        """
         parts = [mission.system_prompt]
 
-        # Add tool descriptions if any
+        if self._use_tool_calls:
+            # Native tool-use path: tools list is the contract. No text
+            # instructions needed — explicit brief reminder only.
+            parts.append(
+                "\n## How to act\n"
+                "Use the provided tools to navigate, interact with, and inspect the "
+                "page, and to record mission-specific findings. Each step must "
+                "invoke exactly one tool. When the mission is complete or no "
+                "further progress is possible, invoke the `done` tool."
+            )
+            return "\n".join(parts)
+
+        # Text-protocol path (legacy): include the full action reference.
         if tool_registry:
             parts.append("\n## Mission-Specific Tools")
             parts.append("In addition to page actions, you can invoke these tools:\n")
@@ -547,7 +749,6 @@ class DazzleAgent:
                 '"value": "{...tool args as JSON...}", "reasoning": "why"}'
             )
 
-        # Add action reference
         parts.append("""
 ## Available Page Actions
 Respond with a JSON object for one of these actions:

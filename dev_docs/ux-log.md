@@ -4,6 +4,89 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T20:18Z — Cycle 195 — **DazzleAgent builtin-action-as-tool fix** — unblocked EXPLORE actions, exposed click-loop bug
+
+**Not a normal cycle.** This cycle shipped the cycle 193 follow-up fix to `DazzleAgent(use_tool_calls=True)` and empirically verified it unblocks in-loop explore agent actions.
+
+### The fix (commit TBD this cycle)
+
+`src/dazzle/agent/core.py`:
+- New module-level `_BUILTIN_ACTION_NAMES` frozenset and `_builtin_action_tools()` factory declaring 8 page actions (navigate/click/type/select/scroll/wait/assert/done) as SDK-ready tool definitions with `input_schema`.
+- New `_tool_use_to_action(block, reasoning)` helper: routes builtin-named tool_use blocks to their matching `ActionType` with target/value/reasoning extracted from `block.input`; routes mission-tool names to `ActionType.TOOL` with `json.dumps(input)` as `value` (matching the text-protocol path's shape so `_execute_tool` consumes it unchanged).
+- `_decide_via_anthropic_tools`: merges `_builtin_action_tools()` + mission tools into the SDK `tools=[...]` parameter. Mission tools whose name collides with a builtin are dropped with a warning (builtin wins). The `tools` kwarg is now always present — the pre-cycle-194 "omit kwarg on empty registry" branch is gone because the list is never empty.
+- `_build_system_prompt`: branches on `self._use_tool_calls`. Under tool-use mode, the "Available Page Actions" text-protocol reference and the "CRITICAL OUTPUT FORMAT" lines are SUPPRESSED — the SDK tools list is the contract. A short "use the provided tools" nudge replaces them. The legacy text-protocol path is untouched.
+
+`tests/unit/test_agent_tool_use.py`:
+- 2 existing tests updated (`test_tool_use_builds_tools_from_schema`, `test_tool_use_empty_tool_registry_omits_tools_kwarg` → `..._still_sends_builtin_tools`) to match new semantics.
+- 8 new tests in `TestBuiltinActionToolUse`: navigate/click/type/done builtin routing, mission tool coexistence, colliding name drop + warning, system prompt under both `use_tool_calls` values.
+
+**23/23 tests in `test_agent_tool_use.py` pass; 839/839 tests pass across agent+explore+fitness+ux+walker+contract selectors; ruff + mypy clean.**
+
+### Empirical verification — smoke run against contact_manager
+
+Ran `/tmp/ux_cycle_191_explore_smoke.py` instrumented script against the real example app — real Postgres, real Redis, real subprocess, real Playwright, real Anthropic API, real admin persona via QA magic-link.
+
+**Before cycle 194 fix** (cycle 193 smoke evidence):
+```
+[smoke] step 1: action=done target=None
+[smoke]   response_text: {"action": "navigate", "target": "/app/workspaces/contacts", ...}
+[smoke] transcript outcome=completed steps=1 tokens=3208
+```
+
+**After cycle 194 fix** (cycle 195 smoke evidence):
+```
+[smoke] step 1: action=click target='a:has-text("Contacts")'
+[smoke]   reasoning: Starting with the main Contacts section...
+[smoke] step 2: action=click target='a:has-text("Contacts")'
+...
+[smoke] step 8: action=click target='a:has-text("Contacts")'
+INFO dazzle.agent.missions: explore stagnation: no tool calls in last 8 steps
+[smoke] transcript outcome=completed steps=8 tokens=29593 proposals=0
+```
+
+**Delta — the fix works exactly as designed.** Step 1 is now a real `click` action arriving as a native `tool_use` block and routed to `ActionType.CLICK`. The agent takes 8 full steps before the legitimate stagnation criterion fires (8 consecutive steps without a `propose_component` mission-tool call). The pre-fix "text-only response → DONE after 1 step" pathology is gone.
+
+### New finding exposed by the smoke run — click-loop on non-navigating click
+
+The smoke revealed a second-order agent pathology: admin lands on `/` which is platform admin. The LLM sees a "Contacts" link, decides to click it, the click fires at Playwright level, but **nothing changes** — either the selector doesn't match, the click isn't landing on the right element, or the observer returns stale DOM. The LLM sees the same state, tries the same click again. Eight times. ~3,700 tokens per step = 29,593 tokens burned for 0 progress.
+
+**Candidate root causes (not diagnosed this cycle):**
+
+1. **Selector miss.** `a:has-text("Contacts")` is a Playwright-specific selector; `PlaywrightExecutor.click` may or may not resolve it. If it doesn't, it may no-op silently rather than erroring.
+2. **Non-navigating click.** The "Contacts" link on platform admin may open a menu, go to a disallowed route, or be decorative. Admin's `default_workspace` is `_platform_admin`, not `contacts`.
+3. **Stale observer DOM.** `PlaywrightObserver.observe()` might capture the pre-click state on fast consecutive steps.
+4. **LLM anchoring.** Once the model commits to "click Contacts", it re-commits on every step because the observation says nothing contradicts its prior plan. This is the hardest one — it's a prompt engineering issue about when to change strategy.
+
+### What this means for the harness
+
+**Layer 1 (text-protocol bug):** Resolved by cycle 194's fix. Shipped.
+
+**Layer 2 (click-loop / non-navigating actions):** Newly exposed. The fix made the agent *actually attempt* actions, which surfaced this pathology that was previously hidden behind the 1-step early-exit. This is progress — we can now see and debug it.
+
+**Layer 2 follow-ups for cycle 196+:**
+
+1. **Diagnose the selector.** Run a one-off Playwright REPL against contact_manager/admin page and check whether `a:has-text("Contacts")` resolves and where clicking it navigates.
+2. **Add action-result feedback to the prompt.** The LLM currently sees the new observation but not an explicit "your last click produced no state change" signal. A low-cost improvement: compare URLs / DOM-hash before and after each action and surface that in the next step's prompt.
+3. **Consider landing admin on a more productive start_url.** Explore mode currently uses `/app` which for admin in contact_manager is `_platform_admin`. A persona with `customer` role would see the actual contact list. The explore strategy could rotate personas to cover both views.
+4. **Set a "repeated-action" stagnation check.** If the same `(action.type, action.target)` pair repeats N times, break the loop earlier (current stagnation only checks for zero mission-tool calls in the window).
+
+### Cycle 195 deliverables summary
+
+- ✓ `DazzleAgent(use_tool_calls=True)` exposes builtin page actions as native SDK tools
+- ✓ `_tool_use_to_action` routes both builtin and mission tool_use blocks correctly
+- ✓ System prompt suppresses text-protocol JSON instructions under tool-use mode
+- ✓ Collision safety: mission tools can't shadow builtin names
+- ✓ 10 new/updated unit tests covering all new branches
+- ✓ Empirical verification via instrumented smoke run against contact_manager
+- ✓ Second-order click-loop bug documented for next cycle
+
+### Still not done
+
+- A real `/ux-cycle` Step 6 explore run that produces PROP-NNN rows. The smoke confirmed the agent can now *act* via native tool use, but admin/contact_manager can't surface proposals because of the click-loop. A real proposal-producing run needs either (a) a different persona/example combination where admin has access to interactive surfaces, or (b) the Layer-2 follow-ups shipped first.
+- Decision: skip a redundant real-driver run this cycle. The smoke output is cheaper empirical proof of the same thing; another $0.05 run would produce identical data. Deferred to cycle 196+ once Layer 2 is addressed.
+
+---
+
 ## 2026-04-14T20:02Z — Cycle 194 — EXHAUSTED (sticky) — post-refactor sanity check
 
 **Outcome:** Fourth consecutive exhausted-sticky. Identical path to 190–192. Confirms that cycle 193's refactor (extracted playwright helpers + new explore_strategy module + updated runbook) did not disturb the priority-queue path. `signals: []`, priority queue empty, 5-cycle-rule fires, jump to exhausted. Log-only, no backlog touch.
