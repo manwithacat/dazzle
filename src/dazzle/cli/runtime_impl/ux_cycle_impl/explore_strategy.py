@@ -42,6 +42,7 @@ from dazzle.cli.runtime_impl.ux_cycle_impl._playwright_helpers import (
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.qa.server import AppConnection
+from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
 
 
 @dataclass
@@ -115,6 +116,22 @@ def pick_explore_personas(
     ]
     business.sort(key=lambda p: p.id)
     return business
+
+
+def pick_start_path(persona_spec: PersonaSpec, app_spec: Any) -> str:
+    """Compute the start URL path for exploring as persona_spec.
+
+    Delegates to compute_persona_default_routes for the full 5-step
+    resolution chain (default_route → default_workspace → persona-access
+    workspace → AUTHENTICATED workspace → first workspace). Falls back
+    to '/app' if the helper returns no route (pathological DSL with no
+    workspaces).
+    """
+    routes = compute_persona_default_routes(
+        personas=[persona_spec],
+        workspaces=app_spec.workspaces,
+    )
+    return routes.get(persona_spec.id) or "/app"
 
 
 async def run_explore_strategy(

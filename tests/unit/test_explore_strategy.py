@@ -458,3 +458,61 @@ async def test_bundle_closed_even_when_agent_raises(tmp_path: Path) -> None:
         )
 
     bundle.close.assert_awaited_once()
+
+
+class TestPickStartPath:
+    def test_uses_explicit_default_route(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_start_path,
+        )
+
+        persona = PersonaSpec(
+            id="user",
+            label="U",
+            default_workspace="contacts",
+            default_route="/app/workspaces/contacts",
+        )
+        spec = MagicMock()
+        spec.workspaces = []
+
+        with patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.compute_persona_default_routes",
+            return_value={"user": "/app/workspaces/contacts"},
+        ):
+            result = pick_start_path(persona, spec)
+        assert result == "/app/workspaces/contacts"
+
+    def test_falls_back_to_app_when_no_route(self) -> None:
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_start_path,
+        )
+
+        persona = PersonaSpec(id="nobody", label="N")
+        spec = MagicMock()
+        spec.workspaces = []
+
+        with patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.compute_persona_default_routes",
+            return_value={},  # helper found nothing
+        ):
+            result = pick_start_path(persona, spec)
+        assert result == "/app"
+
+    def test_delegates_to_compute_persona_default_routes(self) -> None:
+        """Verify we call into the shared helper with the right shape."""
+        from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import (
+            pick_start_path,
+        )
+
+        persona = PersonaSpec(id="user", label="U", default_workspace="contacts")
+        spec = MagicMock()
+        spec.workspaces = ["ws-sentinel"]
+
+        with patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy.compute_persona_default_routes",
+            return_value={"user": "/app/contacts"},
+        ) as mock_compute:
+            result = pick_start_path(persona, spec)
+
+        mock_compute.assert_called_once_with(personas=[persona], workspaces=["ws-sentinel"])
+        assert result == "/app/contacts"
