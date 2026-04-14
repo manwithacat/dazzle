@@ -1849,6 +1849,30 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 165 — 2026-04-14 — UX-010 widget:datepicker → PASS → DONE (10/33) — **double-digit milestone**
+
+**Outcome:** Tenth widget contract advanced — first double-digit count under the cycle 156 corrected rule. UX-010's cycle 126 outcome (admin=49, agent=47, 96 findings, degraded=False) qualifies as PASS even though that cycle surfaced two real defects in support_tickets.
+
+### Two real signals from cycle 126 — tracked separately
+
+The cycle 126 walker run was particularly productive because it surfaced two real defects in support_tickets:
+
+1. **`created_by: Field required` schema mismatch** (also reproduced in cycle 137 with UX-027 widget:file). The server's `TicketCreate` Pydantic model requires `created_by` but the form template doesn't render a hidden input or auto-populate it. Real defect — should be filed as a fitness backlog item for support_tickets.
+
+2. **Admin 403 at `/app/ticket/create` in cycle 126** but admin reached the form cleanly in cycle 122 (UX-017). Same anchor, same persona, different cycles → genuine inconsistency. Possible causes: session lifecycle race, test DB state drift, walker plan variance triggering different code paths. Worth a dedicated diagnostic cycle later.
+
+Both signals are tracked in the row notes but **neither affects UX-010's PASS state**. The cycle 126 walker still completed all contract gate steps (degraded=False), and the tenth row advances cleanly under the corrected rule.
+
+### Backlog progress
+
+10/33 widget contracts now DONE. ~23 rows remaining in the qa:FAIL pile. At 1 row/cycle, that's ~23 more cycles to drain.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 164 — 2026-04-14 — UX-005 modal → PASS → DONE (9/33)
 
 **Outcome:** Ninth widget contract advanced. UX-005 modal on contact_manager, cycle 118 outcome (admin=10, user=10, 20 findings, degraded=False) qualifies as PASS. Walker planned real `click a:has-...` actions, confirming both personas reached the page and identified clickable elements that would trigger modal dialogs.
