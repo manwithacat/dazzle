@@ -1849,6 +1849,16 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 171 — 2026-04-14 — UX-009 widget:combobox → PASS → DONE (16/33)
+
+**Outcome:** Sixteenth widget contract advanced. UX-009 widget:combobox on contact_manager, cycle 125 outcome (admin=10, user=10, 20 findings, degraded=False) qualifies as PASS. Walker planned real `click button:has-text("Create")` on `/app/contact/create`.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 170 — 2026-04-14 — UX-008 pagination → PASS → DONE (15/33) — **halfway milestone**
 
 **Outcome:** Fifteenth widget contract advanced — past the halfway mark on the qa:FAIL retroactive sweep (15 of ~28 originally pending). UX-008 pagination on contact_manager, cycle 121 outcome (admin=10, user=10, 20 findings, degraded=False) qualifies as PASS.
