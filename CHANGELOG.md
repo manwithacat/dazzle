@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **DazzleAgent bug 5a (prose-before-JSON parse failure).** Claude 4.6
+  frequently emits reasoning prose before JSON action blocks. The strict
+  `json.loads` parser returned DONE/failure on any prose prefix, killing
+  missions at step 1 (cycle 147's EXPLORE stagnation was caused by this).
+  `_parse_action` is refactored as a three-tier fallback: (1) try
+  `json.loads` on the whole response, (2) extract the first balanced
+  JSON object via a new `_extract_first_json_object` bracket counter
+  and preserve the surrounding prose in the action's `reasoning` field,
+  (3) return a DONE sentinel with diagnostic if no balanced JSON found.
+  Fixes bug 5a on all text-protocol paths (direct SDK and MCP sampling).
+
+### Added
+- **DazzleAgent `use_tool_calls` kwarg.** Opt-in flag that routes agent
+  decisions through Anthropic's native tool use API when running on the
+  direct SDK path. Fixes bug 5b (nested-JSON-in-tool-values encoding)
+  for tools with nested input shapes. When combined with an
+  `mcp_session`, logs a one-shot warning and falls back to the text
+  protocol (MCP sampling is text-only). Currently enabled only for the
+  investigator's `propose_fix` terminal action; all other missions
+  keep the default `use_tool_calls=False` and use the now-robust text
+  parser.
+- **Investigator `propose_fix` native tool use.** The investigator
+  runner now constructs `DazzleAgent(use_tool_calls=True)`, and the
+  `propose_fix` schema is extracted into a module-level
+  `PROPOSE_FIX_SCHEMA` constant with full item constraints on the
+  `fixes` array (required `file_path`, `diff`, `rationale`,
+  `confidence` on each fix). Anthropic's API enforces the shape at the
+  tool_use boundary, eliminating the stringified-JSON-in-string
+  reliability problem.
+
+### Agent Guidance
+- **Authoring new agent tools:** every `AgentTool` already has a
+  required `schema` field. For tools used on the text protocol, the
+  schema is informational (appears in the system prompt). For tools
+  used with `use_tool_calls=True`, the schema becomes Anthropic's
+  `input_schema` and is enforced at the API boundary. When a tool has
+  a nested input structure (arrays of objects, etc.), tighten the
+  schema's item constraints and flip `use_tool_calls=True` on the
+  agent — the text protocol's nested-JSON encoding is unreliable
+  under Claude 4.6 (bug 5b).
+- **Reasoning preservation principle:** the raw LLM output (prose
+  preambles, scratch notes, the JSON's `reasoning` field, text blocks
+  on the tool-use path) all land in `AgentAction.reasoning` with a
+  `[PROSE]` marker where appropriate. Downstream analysis tasks can
+  extract human-readable justifications from this corpus later. Do
+  not strip prose from the reasoning field — it is signal, not noise.
+
 ## [0.54.5] - 2026-04-14
 
 ### Added
