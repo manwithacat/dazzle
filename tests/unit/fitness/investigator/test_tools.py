@@ -230,6 +230,68 @@ def test_get_cluster_findings_respects_mission_cap(tmp_path, state) -> None:
     assert "note" in r3, "third call should include a redirect note"
 
 
+# ------------ tool: get_related_clusters -----------------------------------
+
+
+def _write_queue_fixture(root: Path, clusters: list[Cluster]) -> None:
+    from dazzle.fitness.triage import write_queue_file
+
+    queue = root / "dev_docs" / "fitness-queue.md"
+    queue.parent.mkdir(parents=True, exist_ok=True)
+    write_queue_file(
+        queue,
+        clusters,
+        project_name="fixture",
+        raw_findings_count=sum(c.cluster_size for c in clusters),
+    )
+
+
+def test_get_related_clusters_returns_same_locus_excluding_self(
+    fake_root, case_file, state
+) -> None:
+    related1 = Cluster(
+        cluster_id="CL-00000001",
+        locus="implementation",  # same as case_file's cluster
+        axis="conformance",
+        canonical_summary="other thing",
+        persona="admin",
+        severity="medium",
+        cluster_size=5,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_other",
+    )
+    unrelated = Cluster(
+        cluster_id="CL-00000002",
+        locus="story_drift",  # different locus
+        axis="coverage",
+        canonical_summary="elsewhere",
+        persona="admin",
+        severity="high",
+        cluster_size=3,
+        first_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        last_seen=datetime(2026, 4, 14, tzinfo=UTC),
+        sample_id="f_elsewhere",
+    )
+    _write_queue_fixture(fake_root, [case_file.cluster, related1, unrelated])
+
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["get_related_clusters"].handler(locus="implementation")
+    assert "hits" in result
+    ids = {c["cluster_id"] for c in result["hits"]}
+    assert "CL-00000001" in ids
+    assert "CL-deadbeef" not in ids  # self excluded
+    assert "CL-00000002" not in ids  # different locus
+
+
+def test_get_related_clusters_empty_returns_note(fake_root, case_file, state) -> None:
+    _write_queue_fixture(fake_root, [case_file.cluster])
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["get_related_clusters"].handler(locus="implementation")
+    assert result.get("hits") == []
+    assert "note" in result
+
+
 def test_get_cluster_findings_unknown_id(tmp_path, state) -> None:
     from dazzle.fitness.triage import write_queue_file
 

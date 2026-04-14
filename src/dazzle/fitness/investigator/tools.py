@@ -59,7 +59,7 @@ def build_investigator_tools(
         _read_file_tool(case_file, dazzle_root, state),
         _query_dsl_tool(case_file, dazzle_root, state),
         _get_cluster_findings_tool(case_file, dazzle_root, state),
-        # Task 12: _get_related_clusters_tool(case_file, dazzle_root, state)
+        _get_related_clusters_tool(case_file, dazzle_root, state),
         # Task 13: _search_spec_tool(case_file, dazzle_root, state)
         # Task 14: _propose_fix_tool(case_file, dazzle_root, llm_run_id, state)
     ]
@@ -439,6 +439,78 @@ def _get_cluster_findings_tool(
                 "limit": {"type": "integer", "minimum": 1, "maximum": 20},
             },
             "required": ["cluster_id"],
+        },
+        handler=handler,
+    )
+
+
+def _get_related_clusters_tool(
+    case_file: CaseFile,
+    dazzle_root: Path,
+    state: ToolState,
+) -> AgentTool:
+    """Build the get_related_clusters tool.
+
+    Finds other clusters at the same locus, excluding the current cluster.
+    Results are sorted by severity descending, cluster_size descending.
+    """
+    from dazzle.fitness.triage import SEVERITY_RANK, read_queue_file
+
+    def handler(locus: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"get_related_clusters({locus})")
+
+        queue_dir = case_file.example_root or dazzle_root
+        queue_path = queue_dir / "dev_docs" / "fitness-queue.md"
+        if not queue_path.exists():
+            queue_path = dazzle_root / "dev_docs" / "fitness-queue.md"
+        if not queue_path.exists():
+            return {"hits": [], "note": "no fitness-queue.md found"}
+
+        try:
+            clusters = read_queue_file(queue_path)
+        except Exception as e:
+            return {"hits": [], "note": f"failed to read queue: {e}"}
+
+        hits = [
+            c for c in clusters if c.locus == locus and c.cluster_id != case_file.cluster.cluster_id
+        ]
+        hits.sort(
+            key=lambda c: (
+                -SEVERITY_RANK.get(c.severity, 0),
+                -c.cluster_size,
+                c.cluster_id,
+            )
+        )
+
+        if not hits:
+            return {
+                "hits": [],
+                "note": (
+                    "no other clusters at this locus; the issue appears unique to this file/region"
+                ),
+            }
+
+        return {
+            "hits": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "axis": c.axis,
+                    "severity": c.severity,
+                    "persona": c.persona,
+                    "cluster_size": c.cluster_size,
+                    "summary": c.canonical_summary,
+                }
+                for c in hits
+            ]
+        }
+
+    return AgentTool(
+        name="get_related_clusters",
+        description="Find other clusters at the same locus. Use to check for wider patterns.",
+        schema={
+            "type": "object",
+            "properties": {"locus": {"type": "string"}},
+            "required": ["locus"],
         },
         handler=handler,
     )

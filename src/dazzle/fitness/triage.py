@@ -190,7 +190,7 @@ _QUEUE_ROW_RE = re.compile(
     r"^\| (?P<rank>\d+) \| (?P<cluster_id>CL-\w+) \| (?P<severity>[^|]+) \|"
     r" (?P<locus>[^|]+) \| (?P<axis>[^|]+) \| (?P<persona>[^|]+) \|"
     r" (?P<size>\d+) \| (?P<summary>[^|]*) \| (?P<first_seen>[^|]+) \|"
-    r" (?P<last_seen>[^|]+) \| (?P<sample_id>FIND-\w+) \|$"
+    r" (?P<last_seen>[^|]+) \| (?P<sample_id>[^|]+) \|$"
 )
 
 
