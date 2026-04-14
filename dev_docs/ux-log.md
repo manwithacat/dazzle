@@ -1849,6 +1849,44 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 160 — 2026-04-14 — UX-002 data-table → PASS → DONE (cleanest retroactive yet)
+
+**Outcome:** Fifth widget contract advanced under cycle 156's rule. Rotated from ops_dashboard to contact_manager for app coverage. UX-002 data-table is the cleanest retroactive PASS so far — no per-persona 403, no admin RBAC noise, no anchor issues.
+
+### Cycle 114 outcome under new rule
+
+| Field | cycle 114 | cycle 160 (retroactive) |
+|---|---|---|
+| degraded | False | False |
+| findings_count | 20 (10 per persona) | 20 (informational) |
+| qa | FAIL (broken rule) | **PASS** |
+
+The cycle 114 note explicitly recorded:
+
+> "No 403 inconsistencies — Contact Manager UI renders correctly for both personas."
+
+Both admin and user successfully reached the data-table, the walker ran cleanly through all gates, and the 20 findings were the standard Pass 2a story_drift output for contact_manager (lower count than fieldtest_hub because contact_manager's spec is more focused).
+
+### Backlog impact
+
+UX-002 advances READY_FOR_QA → DONE. Fifth widget contract through the full pipeline. Running tally:
+
+| # | Cycle | Row | Component | App |
+|---|-------|-----|-----------|-----|
+| 1 | 156 | UX-023 | widget:slider | fieldtest_hub |
+| 2 | 157 | UX-024 | widget:colorpicker | fieldtest_hub |
+| 3 | 158 | UX-025 | widget:richtext | fieldtest_hub |
+| 4 | 159 | UX-001 | dashboard-grid | ops_dashboard |
+| 5 | 160 | UX-002 | data-table | contact_manager |
+
+The retroactive sweep is now exercising all four bootstrapped example apps (fieldtest_hub, ops_dashboard, contact_manager — pending support_tickets and simple_task in upcoming cycles).
+
+### Counter
+
+Explore counter unchanged at 23.
+
+---
+
 ## Cycle 159 — 2026-04-14 — UX-001 dashboard-grid → PASS → DONE — **command_center 403 pattern resolved (DSL scope, not bug)**
 
 **Outcome:** Pivoted from fieldtest_hub to ops_dashboard. UX-001 dashboard-grid advances under cycle 156's rule, plus a quick DSL audit resolves the long-running command_center admin 403 mystery.
