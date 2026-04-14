@@ -392,13 +392,19 @@ class DazzleAgent:
         ]
 
         client = self._get_client()
-        response = client.messages.create(
-            model=self._model,
-            max_tokens=2000,
-            system=system_prompt,
-            messages=messages,
-            tools=tools,
-        )
+        create_kwargs: dict[str, Any] = {
+            "model": self._model,
+            "max_tokens": 2000,
+            "system": system_prompt,
+            "messages": messages,
+        }
+        # Anthropic's API treats omitting `tools` (implicit tool_choice=none) as
+        # distinct from `tools=[]` (undefined behaviour). When the tool_registry
+        # is empty, omit the kwarg entirely so the request is well-formed.
+        if tools:
+            create_kwargs["tools"] = tools
+
+        response = client.messages.create(**create_kwargs)
 
         # Extract token usage
         tokens = 0

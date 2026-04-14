@@ -361,3 +361,34 @@ class TestDecideViaAnthropicTools:
             tool_registry={"read_file": _structured_tool()},
         )
         assert tokens == 300
+
+    def test_tool_use_empty_tool_registry_omits_tools_kwarg(self) -> None:
+        """Empty tool_registry must NOT pass tools=[] to the API.
+
+        Regression for the review finding: Anthropic's API treats omitting
+        the `tools` parameter (implicit tool_choice=none) as distinct from
+        passing `tools=[]` (undefined behaviour). When no tools are
+        registered, the method should omit the kwarg entirely.
+        """
+        response = self._make_response(
+            text_blocks=["I have no tools to call."],
+            tool_use_blocks=[],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={},  # empty registry
+        )
+
+        # Action is a DONE sentinel because no tool_use block was returned
+        assert action.type == ActionType.DONE
+        assert action.success is False
+
+        # Critical assertion: tools=... kwarg must NOT be in the call
+        call_kwargs = agent._client.messages.create.call_args.kwargs
+        assert "tools" not in call_kwargs, (
+            "tools kwarg should be omitted when tool_registry is empty, "
+            f"but got tools={call_kwargs.get('tools')!r}"
+        )
