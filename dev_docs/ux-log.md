@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 144 — 2026-04-14 — UX-035 region-wrapper → qa:FAIL (45 findings) — **command_center anchor 7/7**
+
+**Row:** UX-035 region-wrapper (canonical: ops_dashboard, impl: PARTIAL 14/16)
+**Outcome:** `qa: PENDING → FAIL`, 45 findings (admin=23, ops_engineer=22), degraded=False. Run IDs: admin=4cee7980-7f40-4021-b8f3-ff10933866dd, ops_engineer=f585fad3-d9fb-4e8e-b1e7-344c32fd41e9.
+
+**Attempts counter semantics clarification:** UX-035 has attempts=15 now, which is well past the runbook's "attempts > 3 → BLOCKED" threshold. However, the attempts counter for UX-035 has been tracking refactor-adopter progression (14/16 workspace-region templates refactored), not QA retries. This is a semantic overload that should be cleaned up in a future backlog schema iteration — for now, proceeding on the spirit of the rule (don't loop on failing QA) rather than the letter.
+
+**`/app/workspaces/command_center` admin 403 now 7/7 cycles:** UX-001/003/011/015/031/033/035. ~321 findings across the 7 rows. The cluster is now large enough that any investigator-loop fix would resolve ~300 findings in one commit — the single largest fixable pattern in the backlog alongside the ticket/create `created_by` bug.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 144   | UX-035 region-wrapper | admin, ops_engineer | 45 (23+22) | FAIL |
+
+---
+
 ## Cycle 143 — 2026-04-14 — UX-033 base-layout → qa:FAIL (46 findings) — **command_center anchor 6/6**
 
 **Row:** UX-033 base-layout (canonical: ops_dashboard)
