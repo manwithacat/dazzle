@@ -6,7 +6,11 @@ Covers:
 - Cycle 147 prose-before-JSON regression (1 test, added in task 3)
 """
 
-from dazzle.agent.core import _extract_first_json_object
+import json
+from unittest.mock import AsyncMock
+
+from dazzle.agent.core import AgentTool, DazzleAgent, _extract_first_json_object
+from dazzle.agent.models import ActionType, PageState
 
 
 class TestBracketCounter:
@@ -70,3 +74,169 @@ class TestBracketCounter:
         json_str, surrounding = _extract_first_json_object('{"a": 1')
         assert json_str is None
         assert surrounding == '{"a": 1'
+
+
+def _make_agent() -> DazzleAgent:
+    """Build a DazzleAgent with no-op observer/executor for parser tests."""
+    observer = AsyncMock()
+    observer.observe.return_value = PageState(url="http://test", title="test")
+    executor = AsyncMock()
+    return DazzleAgent(observer, executor, api_key="test-key")
+
+
+def _tool(name: str = "read_file") -> AgentTool:
+    return AgentTool(
+        name=name,
+        description=f"stub tool: {name}",
+        schema={"type": "object", "properties": {"path": {"type": "string"}}},
+        handler=lambda **kwargs: {"ok": True},
+    )
+
+
+class TestParseActionTier1:
+    """Tier 1: plain json.loads succeeds (well-behaved output)."""
+
+    def test_parse_plain_json_click(self) -> None:
+        agent = _make_agent()
+        response = '{"action": "click", "target": "#submit", "reasoning": "needed"}'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.CLICK
+        assert action.target == "#submit"
+        assert action.reasoning == "needed"
+
+    def test_parse_plain_json_tool(self) -> None:
+        agent = _make_agent()
+        response = (
+            '{"action": "tool", "target": "read_file", '
+            '"value": {"path": "/foo"}, "reasoning": "inspect"}'
+        )
+        action = agent._parse_action(response, tool_registry={"read_file": _tool()})
+        assert action.type == ActionType.TOOL
+        assert action.target == "read_file"
+        # value is serialised to a JSON string (existing contract with _execute_tool)
+        assert json.loads(action.value) == {"path": "/foo"}
+        assert action.reasoning == "inspect"
+
+    def test_parse_plain_json_done(self) -> None:
+        agent = _make_agent()
+        response = '{"action": "done", "success": true, "reasoning": "complete"}'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is True
+        assert action.reasoning == "complete"
+
+
+class TestParseActionTier2:
+    """Tier 2: bracket counter extracts JSON from prose-wrapped responses."""
+
+    def test_parse_prose_before_json(self) -> None:
+        agent = _make_agent()
+        response = (
+            "I'll start by exploring the ticket form. "
+            '{"action": "navigate", "target": "/app/ticket/create", '
+            '"reasoning": "entry point"}'
+        )
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.NAVIGATE
+        assert action.target == "/app/ticket/create"
+        # Reasoning preserves both the JSON's reasoning field AND the prose
+        assert "entry point" in action.reasoning
+        assert "I'll start by exploring the ticket form" in action.reasoning
+        assert "[PROSE]" in action.reasoning
+
+    def test_parse_prose_after_json(self) -> None:
+        agent = _make_agent()
+        response = '{"action": "done", "reasoning": "ok"} Okay, that should work.'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert "ok" in action.reasoning
+        assert "that should work" in action.reasoning
+
+    def test_parse_prose_around_json(self) -> None:
+        agent = _make_agent()
+        response = (
+            "Let me think... "
+            '{"action": "click", "target": "#foo", "reasoning": "target found"}'
+            " — yes that's right."
+        )
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.CLICK
+        assert "target found" in action.reasoning
+        assert "Let me think" in action.reasoning
+        assert "yes that's right" in action.reasoning
+
+    def test_parse_markdown_code_fence(self) -> None:
+        """Bracket counter finds the object inside markdown fences."""
+        agent = _make_agent()
+        response = '```json\n{"action": "click", "target": "#foo", "reasoning": "found"}\n```'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.CLICK
+        assert action.target == "#foo"
+
+    def test_parse_nested_object_value(self) -> None:
+        """Tool value can contain nested objects — parser handles the outer extraction."""
+        agent = _make_agent()
+        response = (
+            '{"action": "tool", "target": "read_file", '
+            '"value": {"nested": {"key": "val"}}, "reasoning": "go"}'
+        )
+        action = agent._parse_action(response, tool_registry={"read_file": _tool()})
+        assert action.type == ActionType.TOOL
+        assert json.loads(action.value) == {"nested": {"key": "val"}}
+
+    def test_parse_json_with_string_containing_braces(self) -> None:
+        """Bracket counter respects string literals — braces inside strings don't count."""
+        agent = _make_agent()
+        response = (
+            '{"action": "type", "target": "#input", "value": "hello {world}", "reasoning": "test"}'
+        )
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.TYPE
+        assert action.value == "hello {world}"
+
+    def test_parse_json_with_escaped_quote(self) -> None:
+        agent = _make_agent()
+        response = (
+            '{"action": "type", "target": "#input", '
+            '"value": "she said \\"hi\\"", "reasoning": "test"}'
+        )
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.TYPE
+        assert action.value == 'she said "hi"'
+
+
+class TestParseActionTier3:
+    """Tier 3: no balanced JSON found — return DONE sentinel with diagnostic."""
+
+    def test_parse_garbage(self) -> None:
+        agent = _make_agent()
+        response = "I'm sorry, I can't help with that."
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is False
+        assert "Failed to extract action" in action.reasoning
+
+    def test_parse_unbalanced_json(self) -> None:
+        agent = _make_agent()
+        response = '{"action": "click", "target": "#foo"'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is False
+
+    def test_parse_invalid_action_type(self) -> None:
+        agent = _make_agent()
+        response = '{"action": "teleport", "target": "moon"}'
+        action = agent._parse_action(response, tool_registry={})
+        assert action.type == ActionType.DONE
+        assert action.success is False
+        assert "teleport" in action.reasoning.lower() or "unknown" in action.reasoning.lower()
+
+    def test_parse_unknown_tool_name(self) -> None:
+        agent = _make_agent()
+        response = (
+            '{"action": "tool", "target": "nonexistent_tool", "value": {}, "reasoning": "bad"}'
+        )
+        action = agent._parse_action(response, tool_registry={"read_file": _tool()})
+        # Parser strictly validates tool target against registry (task 2 change)
+        assert action.type == ActionType.DONE
+        assert action.success is False

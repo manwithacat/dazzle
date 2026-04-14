@@ -13,7 +13,6 @@ mission prompt and the model's reasoning capability.
 import asyncio
 import json
 import logging
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -478,43 +477,113 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
         response: str,
         tool_registry: dict[str, AgentTool],
     ) -> AgentAction:
-        """Parse LLM response into an AgentAction."""
+        """Parse an LLM text response into an AgentAction.
+
+        Three-tier fallback for robustness against prose-before-JSON outputs
+        (bug 5a, cycle 147):
+
+        1. ``json.loads(response)`` — fast path for well-behaved output.
+        2. ``_extract_first_json_object(response)`` — bracket-counting extraction
+           for responses with prose surrounding a balanced JSON object. The
+           surrounding prose is preserved in the action's reasoning field
+           (reasoning-preservation principle: the raw LLM output is a
+           reward/feedback corpus, not a presentation layer).
+        3. No balanced JSON found — return ``AgentAction(type=DONE,
+           success=False, reasoning=<diagnostic>)``. The outer loop treats
+           DONE with success=False as a terminal failure.
+
+        On valid parse but invalid action type or unknown tool target, returns
+        a DONE/failure sentinel with a diagnostic reasoning string. The error
+        path never raises — the outer loop expects a valid AgentAction every
+        time.
+        """
+        surrounding_prose = ""
+
+        # Tier 1: fast path — valid JSON already
         try:
-            # Handle markdown code blocks
-            if "```" in response:
-                match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
-                if match:
-                    response = match.group(1)
-
             data = json.loads(response)
-            action_str = data.get("action", "done")
-
-            # Handle tool actions
-            if action_str == "tool":
-                return AgentAction(
-                    type=ActionType.TOOL,
-                    target=data.get("target"),
-                    value=json.dumps(data.get("value", {}))
-                    if isinstance(data.get("value"), dict)
-                    else data.get("value"),
-                    reasoning=data.get("reasoning", ""),
+        except (json.JSONDecodeError, ValueError):
+            # Tier 2: extract balanced JSON via bracket counter
+            json_substring, surrounding_prose = _extract_first_json_object(response)
+            if json_substring is None:
+                # Tier 3: nothing to parse
+                logger.warning(
+                    "Parser failed to extract any JSON object from response: %s",
+                    response[:200],
                 )
-
-            action_type = ActionType(action_str)
-            return AgentAction(
-                type=action_type,
-                target=data.get("target"),
-                value=data.get("value"),
-                reasoning=data.get("reasoning", ""),
-                success=data.get("success", True),
+                return AgentAction(
+                    type=ActionType.DONE,
+                    success=False,
+                    reasoning=f"Failed to extract action. Full response: {response[:2000]}",
+                )
+            try:
+                data = json.loads(json_substring)
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    "Parser extracted JSON substring but json.loads failed: %s, substring: %s",
+                    e,
+                    json_substring[:200],
+                )
+                return AgentAction(
+                    type=ActionType.DONE,
+                    success=False,
+                    reasoning=f"Extracted JSON was invalid: {json_substring[:2000]}",
+                )
+            logger.debug(
+                "Parser tier 2 extraction succeeded with %d chars of surrounding prose",
+                len(surrounding_prose),
             )
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning("Failed to parse action: %s, response: %s", e, response[:200])
+
+        # Build reasoning — preserve both the structured reasoning field and
+        # any surrounding prose from tier 2. The prose goes in raw, with a
+        # [PROSE] marker so downstream analysis can distinguish the two
+        # sources.
+        structured_reasoning = str(data.get("reasoning", ""))
+        prose_trimmed = surrounding_prose.strip()
+        if prose_trimmed:
+            reasoning = f"{structured_reasoning} [PROSE]: {prose_trimmed}".strip()
+        else:
+            reasoning = structured_reasoning
+
+        action_str = data.get("action", "done")
+
+        # Tool invocation — validate target exists in registry
+        if action_str == "tool":
+            target = data.get("target")
+            if target not in tool_registry:
+                logger.info("Parser: unknown tool target %r", target)
+                return AgentAction(
+                    type=ActionType.DONE,
+                    success=False,
+                    reasoning=f"Unknown tool: {target}. Available: {list(tool_registry.keys())}",
+                )
+            value = data.get("value", {})
+            value_str = json.dumps(value) if isinstance(value, dict) else value
+            return AgentAction(
+                type=ActionType.TOOL,
+                target=target,
+                value=value_str,
+                reasoning=reasoning,
+            )
+
+        # Page action — validate action_str is a known ActionType
+        try:
+            action_type = ActionType(action_str)
+        except ValueError:
+            logger.info("Parser: unknown action type %r", action_str)
             return AgentAction(
                 type=ActionType.DONE,
                 success=False,
-                reasoning=f"Failed to parse LLM response: {response[:100]}",
+                reasoning=f"Unknown action: {action_str}",
             )
+
+        return AgentAction(
+            type=action_type,
+            target=data.get("target"),
+            value=data.get("value"),
+            reasoning=reasoning,
+            success=data.get("success", True),
+        )
 
     async def _execute_tool(
         self,
