@@ -4,6 +4,14 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T20:02Z — Cycle 194 — EXHAUSTED (sticky) — post-refactor sanity check
+
+**Outcome:** Fourth consecutive exhausted-sticky. Identical path to 190–192. Confirms that cycle 193's refactor (extracted playwright helpers + new explore_strategy module + updated runbook) did not disturb the priority-queue path. `signals: []`, priority queue empty, 5-cycle-rule fires, jump to exhausted. Log-only, no backlog touch.
+
+Four-cycle determinism sample confirmed. The steady-state is indistinguishable from pre-refactor except for a slightly longer runbook. Next cycle should attempt to *change* that state by fixing the DazzleAgent tool-use bug identified in cycle 193.
+
+---
+
 ## 2026-04-14T19:55Z — Cycle 193 — **harness improvement** — explore_strategy driver shipped, deeper bug discovered
 
 **Not a normal cycle.** This cycle spent its budget on harness improvements rather than backlog advancement. Deliverables:
