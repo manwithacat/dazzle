@@ -153,3 +153,211 @@ class TestDecideBranching:
         agent._decide_via_anthropic_tools.assert_called_once()
         assert action is stub_action
         assert tokens == 42
+
+
+class TestDecideViaAnthropicTools:
+    """Unit tests for _decide_via_anthropic_tools.
+
+    These tests mock the Anthropic SDK client and verify that the method
+    builds tools=[...] correctly, processes content blocks, and returns
+    a well-formed AgentAction for each of the expected response shapes.
+    """
+
+    def _make_response(
+        self,
+        text_blocks: list[str] | None = None,
+        tool_use_blocks: list[dict] | None = None,
+        input_tokens: int = 100,
+        output_tokens: int = 50,
+    ) -> MagicMock:
+        """Build a mock Anthropic Message with the given content blocks."""
+        content = []
+        for text in text_blocks or []:
+            content.append(MagicMock(type="text", text=text))
+        for tub in tool_use_blocks or []:
+            block = MagicMock(type="tool_use")
+            block.name = tub["name"]
+            block.input = tub["input"]
+            content.append(block)
+        response = MagicMock(
+            content=content,
+            usage=MagicMock(input_tokens=input_tokens, output_tokens=output_tokens),
+        )
+        return response
+
+    def _make_agent_with_mock_client(self, mock_response: MagicMock) -> DazzleAgent:
+        """Build a DazzleAgent with its client replaced by a mock."""
+        agent = DazzleAgent(
+            _mock_observer(),
+            _mock_executor(),
+            api_key="test",
+            use_tool_calls=True,
+        )
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+        agent._client = mock_client  # inject
+        return agent
+
+    def test_tool_use_text_and_tool_block(self) -> None:
+        """Happy path: text reasoning + one tool_use block."""
+        import json as _json
+
+        response = self._make_response(
+            text_blocks=["I'll read the file to understand the error."],
+            tool_use_blocks=[{"name": "read_file", "input": {"path": "/foo"}}],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, tokens = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        assert action.type == ActionType.TOOL
+        assert action.target == "read_file"
+        assert _json.loads(action.value) == {"path": "/foo"}
+        assert "I'll read the file" in action.reasoning
+        assert tokens == 150
+
+    def test_tool_use_multiple_text_blocks_concatenated(self) -> None:
+        response = self._make_response(
+            text_blocks=["First thought.", "Second thought."],
+            tool_use_blocks=[{"name": "read_file", "input": {"path": "/a"}}],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        assert "First thought." in action.reasoning
+        assert "Second thought." in action.reasoning
+
+    def test_tool_use_only_text_no_tool_block(self) -> None:
+        """Model emitted reasoning only, no tool_use → DONE sentinel."""
+        response = self._make_response(
+            text_blocks=["I don't know what to do next."],
+            tool_use_blocks=[],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        assert action.type == ActionType.DONE
+        assert action.success is False
+        assert "I don't know what to do next" in action.reasoning
+
+    def test_tool_use_empty_content(self) -> None:
+        """Completely empty response → DONE sentinel with default reasoning."""
+        response = self._make_response(text_blocks=[], tool_use_blocks=[])
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        assert action.type == ActionType.DONE
+        assert action.success is False
+        assert "no tool_use block" in action.reasoning.lower()
+
+    def test_tool_use_multiple_tool_blocks_takes_first(self, caplog) -> None:
+        """Multiple tool_use blocks → take first, log rest at INFO."""
+        import logging
+
+        caplog.set_level(logging.INFO, logger="dazzle.agent.core")
+        response = self._make_response(
+            text_blocks=["Reading both files."],
+            tool_use_blocks=[
+                {"name": "read_file", "input": {"path": "/first"}},
+                {"name": "read_file", "input": {"path": "/second"}},
+            ],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        import json as _json
+
+        assert _json.loads(action.value) == {"path": "/first"}
+        # Verify the ignored block was logged
+        ignored_logs = [r for r in caplog.records if "ignored" in r.message.lower()]
+        assert len(ignored_logs) == 1
+
+    def test_tool_use_builds_tools_from_schema(self) -> None:
+        """Every tool in the registry with a schema should appear in tools=[...]."""
+        response = self._make_response(
+            text_blocks=[],
+            tool_use_blocks=[{"name": "read_file", "input": {"path": "/x"}}],
+        )
+        agent = self._make_agent_with_mock_client(response)
+        tool = _structured_tool()
+
+        agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[{"role": "user", "content": "hello"}],
+            tool_registry={"read_file": tool},
+        )
+
+        # Verify the client was called with tools=[...]
+        call_args = agent._client.messages.create.call_args
+        tools_arg = call_args.kwargs.get("tools")
+        assert tools_arg is not None
+        assert len(tools_arg) == 1
+        assert tools_arg[0]["name"] == "read_file"
+        assert tools_arg[0]["description"] == tool.description
+        assert tools_arg[0]["input_schema"] == tool.schema
+
+    def test_tool_use_input_serialised_to_string(self) -> None:
+        """tool_use.input arrives as a dict; agent serialises to string for _execute_tool compat."""
+        import json as _json
+
+        nested_input = {
+            "fixes": [{"file_path": "a.py", "diff": "foo", "rationale": "r", "confidence": 0.9}],
+            "rationale": "test",
+        }
+        response = self._make_response(
+            text_blocks=[],
+            tool_use_blocks=[{"name": "read_file", "input": nested_input}],
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        action, _ = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+
+        # action.value is a string
+        assert isinstance(action.value, str)
+        # but it deserialises back to the original nested dict
+        assert _json.loads(action.value) == nested_input
+
+    def test_tool_use_tokens_reported(self) -> None:
+        """Token usage extraction from response.usage."""
+        response = self._make_response(
+            text_blocks=[],
+            tool_use_blocks=[{"name": "read_file", "input": {"path": "/x"}}],
+            input_tokens=200,
+            output_tokens=100,
+        )
+        agent = self._make_agent_with_mock_client(response)
+
+        _, tokens = agent._decide_via_anthropic_tools(
+            system_prompt="test",
+            messages=[],
+            tool_registry={"read_file": _structured_tool()},
+        )
+        assert tokens == 300

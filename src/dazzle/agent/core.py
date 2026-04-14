@@ -357,10 +357,98 @@ class DazzleAgent:
     ) -> tuple[AgentAction, int]:
         """Request a completion via Anthropic SDK with native tool use.
 
-        STUB — real implementation lands in task 6. Raises NotImplementedError
-        so any accidental production invocation fails loudly before task 6.
+        Builds the ``tools=[...]`` parameter from tool_registry entries
+        using each tool's ``schema`` field as the ``input_schema``. Sends
+        the request. Collects text content blocks into reasoning. Takes
+        the first ``tool_use`` content block as the action. If no
+        tool_use block is present (model emitted text only), returns a
+        DONE sentinel with the text as reasoning.
+
+        This is the path that fixes bug 5b: nested JSON payloads arrive
+        as structured ``block.input`` dicts and are never routed through
+        a stringified-JSON-in-JSON encoding.
+
+        Single-action-per-step contract: if the response contains
+        multiple tool_use blocks, the first is used and the rest are
+        logged at INFO level and discarded. Parallelism is explicitly
+        out of scope (continuity over speed).
+
+        Note on ``response_text`` for the transcript: the caller in
+        ``_decide`` sets ``response_text = action.reasoning`` on this
+        path because the reasoning field contains the concatenated
+        text content blocks from the response — this IS the model's
+        raw textual output on the tool-use path. The structured
+        tool_use block is separately captured as the action itself.
         """
-        raise NotImplementedError("_decide_via_anthropic_tools stub — implement in task 6")
+        # Build tools=[...] from every tool in the registry. Every tool already
+        # has a schema (required field on AgentTool), so all tools are eligible.
+        tools = [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.schema,
+            }
+            for tool in tool_registry.values()
+        ]
+
+        client = self._get_client()
+        response = client.messages.create(
+            model=self._model,
+            max_tokens=2000,
+            system=system_prompt,
+            messages=messages,
+            tools=tools,
+        )
+
+        # Extract token usage
+        tokens = 0
+        if hasattr(response, "usage"):
+            tokens = (response.usage.input_tokens or 0) + (response.usage.output_tokens or 0)
+
+        # Process content blocks: collect all text blocks as reasoning,
+        # take the first tool_use block as the action.
+        text_blocks: list[str] = []
+        tool_use_block: Any = None
+        ignored_tool_blocks: list[str] = []
+
+        for block in response.content:
+            if block.type == "text":
+                text_blocks.append(block.text)
+            elif block.type == "tool_use":
+                if tool_use_block is None:
+                    tool_use_block = block
+                else:
+                    ignored_tool_blocks.append(block.name)
+
+        if ignored_tool_blocks:
+            logger.info(
+                "_decide_via_anthropic_tools: ignored %d additional tool_use blocks: %s",
+                len(ignored_tool_blocks),
+                ignored_tool_blocks,
+            )
+
+        reasoning = "\n".join(text_blocks).strip()
+
+        if tool_use_block is None:
+            # Model emitted text only → treat as done/stuck
+            return (
+                AgentAction(
+                    type=ActionType.DONE,
+                    success=False,
+                    reasoning=reasoning or "Model emitted no tool_use block",
+                ),
+                tokens,
+            )
+
+        return (
+            AgentAction(
+                type=ActionType.TOOL,
+                target=tool_use_block.name,
+                value=json.dumps(tool_use_block.input),
+                reasoning=reasoning,
+            ),
+            tokens,
+        )
 
     def _decide_via_anthropic(
         self,
