@@ -38,7 +38,7 @@ SIBLING_LIMIT = 5
 LOCUS_HEAD_LINES = 200
 LOCUS_WINDOW_RADIUS = 20
 
-_EVIDENCE_LINE_RE = re.compile(r"(?:line\s+|:)(\d+)")
+_EVIDENCE_LINE_RE = re.compile(r"(?:line\s+|\.\w{1,10}:)(\d+)")
 
 # Matches any path-like token starting with one or more ../ segments.
 # Used by _check_evidence_for_traversal to eagerly detect escape attempts
@@ -366,6 +366,11 @@ def _load_locus(
         )
 
     # Windowed mode: head + ±LOCUS_WINDOW_RADIUS windows around evidence lines.
+    # Note: when no evidence lines fall beyond the head region, the returned
+    # LocusExcerpt has mode="windowed" but chunks contains only the head chunk.
+    # This is intentional — `mode="windowed"` signals the file was truncated
+    # (vs. `mode="full"` which signals full coverage). Consumers should check
+    # `len(chunks) > 1` to determine whether extra windows exist.
     head_end = min(LOCUS_HEAD_LINES, total_lines)
     head_chunk = (1, head_end, "\n".join(lines[:head_end]))
 

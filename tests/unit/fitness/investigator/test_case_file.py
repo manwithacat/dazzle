@@ -355,3 +355,45 @@ def test_locus_windowing_merges_overlapping_windows(tmp_path: Path) -> None:
     assert len(windows) == 1
     assert windows[0][0] <= 750 <= windows[0][1]
     assert windows[0][0] <= 755 <= windows[0][1]
+
+
+def test_locus_windowing_evidence_only_in_head_region(tmp_path: Path) -> None:
+    """Evidence referencing a line inside the head (1-200) on a large file
+    produces a windowed excerpt with only the head chunk — no duplicate window."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="src/ui/large.html:50 — in head")],
+    )
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    case_file = build_case_file(_cluster(sample_id="f_001"), tmp_path)
+    assert case_file.locus is not None
+    assert case_file.locus.mode == "windowed"
+    assert len(case_file.locus.chunks) == 1  # head only
+    assert case_file.locus.chunks[0][0] == 1
+    assert case_file.locus.chunks[0][1] == 200
+
+
+def test_locus_windowing_no_evidence_lines(tmp_path: Path) -> None:
+    """A large file with no evidence line references produces just the head chunk."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [
+            _finding(
+                "f_001",
+                evidence_text="src/ui/large.html — no line number here (just the filename)",
+            )
+        ],
+    )
+    locus_file = tmp_path / "src" / "ui" / "large.html"
+    locus_file.parent.mkdir(parents=True)
+    locus_file.write_text("\n".join(f"line {i}" for i in range(1, 1001)))
+
+    case_file = build_case_file(_cluster(sample_id="f_001"), tmp_path)
+    assert case_file.locus is not None
+    assert case_file.locus.mode == "windowed"
+    assert len(case_file.locus.chunks) == 1  # head only, no evidence windows
