@@ -137,13 +137,25 @@ reachable (set in `examples/<canonical>/.env` or exported in the shell).
 See `docs/reference/e2e-environment.md` for details.
 
 The row's `qa` field becomes:
-- `PASS` if `outcome.degraded is False` and `outcome.findings_count == 0`
-- `FAIL` if `outcome.findings_count > 0`
+- `PASS` if `outcome.degraded is False` (the contract walker completed
+  without walker errors or infrastructure failures across all personas).
+- `FAIL` if `outcome.degraded is True` and at least one persona ran
+  (the walker erred or an infrastructure failure occurred mid-run).
 - `BLOCKED` if the strategy itself raised (subprocess failed to start,
   Playwright bundle couldn't spin up, all personas failed). Note that
   per-persona failures within a multi-persona run are absorbed into
-  `outcome.degraded=True` and `outcome.findings_count=0` for that persona;
-  the strategy only raises when there is nothing useful to return.
+  `outcome.degraded=True` for that persona; the strategy only raises
+  when there is nothing useful to return.
+
+`outcome.findings_count` is **not** used for qa pass/fail. It reports
+Pass 2a story_drift / spec_stale / lifecycle observations from the
+example app's overall spec/story coherence — completely orthogonal to
+whether the widget contract walked correctly. The contract walker
+(`walk_contract`) emits zero findings; it only records ledger steps.
+`findings_count` should be reported as informational app-health context,
+not used to gate per-component qa state. This is the cycle 156 fix —
+prior to that cycle, the rule incorrectly used `findings_count > 0` as
+the FAIL gate, blocking every widget contract from ever reaching PASS.
 
 ### Step 5: REPORT
 
