@@ -16,7 +16,7 @@ Tasks 9-14 fill in the 6 tools incrementally:
 Module layout (post-Task-12 split):
 - tools.py          — this file: ToolState, constants, build_investigator_tools
 - tools_read.py     — 4 read-tool builders and their private helpers
-- tools_write.py    — stub; search_spec (Task 13) and propose_fix (Task 14) land here
+- tools_write.py    — stub; propose_fix (Task 14) lands here
 """
 
 from __future__ import annotations

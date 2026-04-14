@@ -565,16 +565,15 @@ def _rg_search(query: str, roots: list[str], dazzle_root: Path) -> list[dict[str
 
     hits: list[dict[str, Any]] = []
     for line in proc.stdout.splitlines():
-        # rg output format:
-        #   match line:  <path>:<line>:<content>
-        #   context line: <path>-<line>-<content>
-        # Try both separators; the colon form is the actual match.
-        if ":" in line:
-            parts = line.split(":", 2)
-        elif "-" in line:
-            parts = line.split("-", 2)
-        else:
+        # rg match line format with -n: <path>:<line>:<content>
+        # Context lines (from -C 2) use <path>-<line>-<content>, but spec
+        # files in this project use YYYY-MM-DD-<topic>.md naming which
+        # makes dash-splitting ambiguous. We parse only match lines and
+        # let context be silently dropped — the match line alone is
+        # enough signal for the LLM to decide whether to read_file.
+        if ":" not in line:
             continue
+        parts = line.split(":", 2)
         if len(parts) < 3:
             continue
         file_str, line_str, content = parts
