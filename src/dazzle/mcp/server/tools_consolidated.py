@@ -1039,7 +1039,12 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score).",
+            description=(
+                "Capability discovery operations: "
+                "coherence (persona-by-persona authenticated UX coherence score), "
+                "explore (CYCLE 198 SPIKE — runs explore strategy via Path γ / MCP "
+                "sampling against a single example app with Playwright)."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1047,8 +1052,24 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "enum": [
                             "coherence",
+                            "explore",
                         ],
                         "description": "Operation to perform",
+                    },
+                    "example_name": {
+                        "type": "string",
+                        "description": (
+                            "Example app name for explore operation "
+                            "(e.g. 'contact_manager'). Defaults to "
+                            "'contact_manager' if omitted."
+                        ),
+                    },
+                    "persona_id": {
+                        "type": "string",
+                        "description": (
+                            "Optional persona ID for explore operation. "
+                            "When omitted, auto-picks business personas."
+                        ),
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

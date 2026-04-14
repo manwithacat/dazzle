@@ -17,6 +17,7 @@ from .compiler import (
     get_discovery_report_handler,
 )
 from .emitter import discovery_emit_impl, emit_discovery_handler
+from .explore_spike import discovery_explore_spike_handler
 from .missions import (
     discovery_run_headless_impl,
     discovery_run_impl,
@@ -51,6 +52,8 @@ __all__ = [
     "verify_all_stories_handler",
     "app_coherence_handler",
     "_compute_coherence_score",
+    # Cycle 198 spike — Path γ explore
+    "discovery_explore_spike_handler",
     # Helpers
     "save_discovery_report",
 ]

@@ -172,6 +172,8 @@ async def run_explore_strategy(
     strategy: Strategy,
     personas: list[str] | None = None,
     start_path: str | None = None,
+    mcp_session: Any = None,
+    use_tool_calls: bool = True,
 ) -> ExploreOutcome:
     """Run one EXPLORE cycle per persona and return the aggregated outcome.
 
@@ -183,6 +185,24 @@ async def run_explore_strategy(
 
     ``start_path`` overrides the per-persona computed start path for
     all runs. Defaults to None (each persona uses its DSL default).
+
+    Cycle 198 spike — Path γ support:
+
+    ``mcp_session`` — when non-None, ``DazzleAgent`` routes ``_decide``
+    through MCP sampling (Path γ in the Apr 14 spec), subsidised by the
+    Claude Code host subscription instead of the metered Anthropic SDK.
+    Caller must have an MCP session in scope (e.g. an MCP tool handler
+    passing its ``progress_ctx.session``).
+
+    ``use_tool_calls`` — when False (required on Path γ, since MCP
+    sampling is text-only), DazzleAgent uses the text protocol with the
+    robust parser from cycle 195's first fix. Builtin page actions
+    (navigate/click/type/...) come through as text JSON and are handled
+    by ``_parse_action``. Flat-schema mission tools like
+    ``propose_component`` work fine on this path. This trades the
+    cycle 195 second fix (builtin-action-as-tool) for subsidised
+    cognition, which is the right trade when an MCP session is
+    available.
     """
     app_spec = load_project_appspec(example_root)
 
@@ -260,6 +280,8 @@ async def run_explore_strategy(
                     start_path=persona_start_paths[persona_id],
                     example_app=example_root.name,
                     persona_lookup=persona_lookup,
+                    mcp_session=mcp_session,
+                    use_tool_calls=use_tool_calls,
                 )
                 results.append(result)
                 if persona_id is not None:
@@ -310,8 +332,16 @@ async def _run_one_persona(
     start_path: str,
     example_app: str,
     persona_lookup: dict[str, PersonaSpec],
+    mcp_session: Any = None,
+    use_tool_calls: bool = True,
 ) -> _PersonaRunResult:
-    """Run one explore mission for a single persona and collect tool outputs."""
+    """Run one explore mission for a single persona and collect tool outputs.
+
+    ``mcp_session`` and ``use_tool_calls`` are propagated to DazzleAgent to
+    select the execution path (Path β tool-use on direct SDK when
+    mcp_session is None + use_tool_calls is True, Path γ text-protocol
+    sampling when mcp_session is non-None + use_tool_calls is False).
+    """
     proposals: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
 
@@ -335,7 +365,8 @@ async def _run_one_persona(
     agent = DazzleAgent(
         observer=PlaywrightObserver(page=page),
         executor=PlaywrightExecutor(page=page),
-        use_tool_calls=True,
+        mcp_session=mcp_session,
+        use_tool_calls=use_tool_calls,
     )
     transcript = await agent.run(mission)
 

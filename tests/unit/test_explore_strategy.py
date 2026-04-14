@@ -36,11 +36,18 @@ class _FakeAgent:
 
     instances: list[_FakeAgent] = []
 
-    def __init__(self, observer: Any, executor: Any, use_tool_calls: bool = False) -> None:
+    def __init__(
+        self,
+        observer: Any,
+        executor: Any,
+        use_tool_calls: bool = False,
+        mcp_session: Any = None,
+    ) -> None:
         # Record constructor args so tests can assert tool-use was requested.
         self.observer = observer
         self.executor = executor
         self.use_tool_calls = use_tool_calls
+        self.mcp_session = mcp_session
         _FakeAgent.instances.append(self)
 
     async def run(self, mission: Any, on_step: Any = None) -> _FakeTranscript:
