@@ -266,6 +266,28 @@ def load_proposal(path: Path) -> Proposal:
         raise ProposalParseError(f"invalid proposal frontmatter: {e}") from e
 
 
+def list_proposals(dazzle_root: Path, *, cluster_id: str | None = None) -> list[Proposal]:
+    """Return all Proposal objects written to .dazzle/fitness-proposals/.
+
+    If cluster_id is given, filter to proposals whose filename starts with that
+    cluster_id. Proposals are returned sorted by filename (which encodes
+    creation order via the UUID prefix). Files that fail to parse are silently
+    skipped.
+    """
+    directory = _proposals_dir(dazzle_root)
+    if not directory.exists():
+        return []
+
+    pattern = f"{cluster_id}-*.md" if cluster_id else "CL-*.md"
+    proposals: list[Proposal] = []
+    for path in sorted(directory.glob(pattern)):
+        try:
+            proposals.append(load_proposal(path))
+        except ProposalParseError:
+            continue
+    return proposals
+
+
 def write_blocked_artefact(
     cluster_id: str,
     dazzle_root: Path,
