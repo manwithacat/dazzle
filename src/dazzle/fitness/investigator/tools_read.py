@@ -485,3 +485,130 @@ def _finding_to_dict(f: Any) -> dict[str, Any]:
         "observed": f.observed,
         "evidence_excerpt": list(f.evidence_embedded.transcript_excerpt[:3]),
     }
+
+
+def _search_spec_tool(
+    case_file: CaseFile,
+    dazzle_root: Path,
+    state: ToolState,
+) -> AgentTool:
+    """Build the search_spec tool.
+
+    Greps docs/superpowers/specs/ and docs/reference/ for a literal term
+    using ripgrep (primary) or a pure-Python fallback. Returns up to 10
+    hits as {file, line, excerpt} dicts.
+    """
+    import shutil
+
+    def handler(query: str) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"search_spec({query})")
+
+        if len(query) < 3:
+            return {
+                "error": "query too short (min 3 chars)",
+                "hint": "try a more specific term",
+            }
+
+        search_roots = [
+            dazzle_root / "docs" / "superpowers" / "specs",
+            dazzle_root / "docs" / "reference",
+        ]
+        existing_root_strs = [str(r) for r in search_roots if r.exists()]
+        if not existing_root_strs:
+            return {"hits": [], "note": "no spec or reference directories found"}
+
+        if shutil.which("rg"):
+            hits = _rg_search(query, existing_root_strs, dazzle_root)
+        else:
+            hits = _python_search(query, [Path(r) for r in existing_root_strs], dazzle_root)
+
+        for hit in hits:
+            state.evidence_paths.add(hit["file"])
+
+        if not hits:
+            return {
+                "hits": [],
+                "note": ("no matches in spec or reference docs; try rephrasing or a broader term"),
+            }
+        return {"hits": hits[:10]}
+
+    return AgentTool(
+        name="search_spec",
+        description=(
+            "Grep docs/superpowers/specs/ and docs/reference/ for a literal term. "
+            "Returns up to 10 hits."
+        ),
+        schema={
+            "type": "object",
+            "properties": {"query": {"type": "string", "minLength": 3}},
+            "required": ["query"],
+        },
+        handler=handler,
+    )
+
+
+def _rg_search(query: str, roots: list[str], dazzle_root: Path) -> list[dict[str, Any]]:
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            ["rg", "-F", "-n", "-C", "2", "-i", query, *roots],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if proc.returncode not in (0, 1):
+        return []
+
+    hits: list[dict[str, Any]] = []
+    for line in proc.stdout.splitlines():
+        # rg output format:
+        #   match line:  <path>:<line>:<content>
+        #   context line: <path>-<line>-<content>
+        # Try both separators; the colon form is the actual match.
+        if ":" in line:
+            parts = line.split(":", 2)
+        elif "-" in line:
+            parts = line.split("-", 2)
+        else:
+            continue
+        if len(parts) < 3:
+            continue
+        file_str, line_str, content = parts
+        try:
+            line_no = int(line_str)
+        except ValueError:
+            continue
+        rel = _relativise(file_str, dazzle_root)
+        hits.append({"file": rel, "line": line_no, "excerpt": content})
+        if len(hits) >= 10:
+            break
+    return hits
+
+
+def _python_search(query: str, roots: list[Path], dazzle_root: Path) -> list[dict[str, Any]]:
+    needle = query.lower()
+    hits: list[dict[str, Any]] = []
+    for root in roots:
+        for md_file in root.rglob("*.md"):
+            try:
+                lines = md_file.read_text().splitlines()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for i, line in enumerate(lines, start=1):
+                if needle in line.lower():
+                    rel = _relativise(str(md_file), dazzle_root)
+                    hits.append({"file": rel, "line": i, "excerpt": line})
+                    if len(hits) >= 10:
+                        return hits
+    return hits
+
+
+def _relativise(file_str: str, dazzle_root: Path) -> str:
+    try:
+        return str(Path(file_str).resolve().relative_to(dazzle_root.resolve()))
+    except ValueError:
+        return file_str

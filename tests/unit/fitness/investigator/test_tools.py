@@ -313,3 +313,35 @@ def test_get_cluster_findings_unknown_id(tmp_path, state) -> None:
     result = tools["get_cluster_findings"].handler(cluster_id="CL-nosuch", limit=10)
     assert "error" in result
     assert "did_you_mean" in result
+
+
+# ------------ tool: search_spec --------------------------------------------
+
+
+def test_search_spec_finds_literal_term(fake_root, case_file, state) -> None:
+    specs_dir = fake_root / "docs" / "superpowers" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "auth.md").write_text(
+        "# Auth design\n\n"
+        "We use aria-describedby to announce form errors to screen readers.\n"
+        "The field links to its error paragraph via id.\n"
+    )
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="aria-describedby")
+    assert "hits" in result
+    assert any("aria-describedby" in h["excerpt"] for h in result["hits"])
+
+
+def test_search_spec_query_too_short(fake_root, case_file, state) -> None:
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="ab")
+    assert "error" in result
+    assert "too short" in result["error"]
+
+
+def test_search_spec_no_hits(fake_root, case_file, state) -> None:
+    (fake_root / "docs" / "superpowers" / "specs").mkdir(parents=True)
+    tools = _tools_by_name(case_file, fake_root, state)
+    result = tools["search_spec"].handler(query="nonexistent-term-xyz")
+    assert result.get("hits") == []
+    assert "note" in result
