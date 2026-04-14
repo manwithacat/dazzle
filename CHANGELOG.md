@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.6] - 2026-04-14
+
 ### Fixed
 - **DazzleAgent bug 5a (prose-before-JSON parse failure).** Claude 4.6
   frequently emits reasoning prose before JSON action blocks. The strict

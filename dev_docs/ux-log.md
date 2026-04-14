@@ -1934,9 +1934,9 @@ These were surfaced during the sweep but are not part of the cycle's normal flow
 1. **`created_by: Field required`** — real support_tickets defect (cycles 126, 137). Should be filed as a fitness backlog item.
 2. **Cycle-126 admin 403 inconsistency** — admin reached `/app/ticket/create` cleanly in cycle 122 but got 403 in cycle 126. Same anchor, same persona, different cycles. Worth a dedicated diagnostic cycle.
 3. **UX-035 region-wrapper 2/16 stragglers** — finish migrating the last 2 workspace regions to the new wrapper.
-4. **Walker JSON parse bug #5** (Claude 4.6 prose-before-JSON) — universal reproduction (32+ cycles). Needs prompt hardening or parser tolerance in DazzleAgent.
+4. **Walker JSON parse bug #5** (Claude 4.6 prose-before-JSON) — universal reproduction (32+ cycles). Needs prompt hardening or parser tolerance in DazzleAgent. → **RESOLVED** (2026-04-14): three-tier fallback parser with _extract_first_json_object bracket counter. See docs/superpowers/specs/2026-04-14-dazzle-agent-robust-parser-and-tool-use-design.md
 5. **Per-app persona auto-derivation** — derive personas from entity permits + workspace access at runner construction time. Eliminates the need for per-app persona-list lookup tables.
-6. **Investigator v2 on Anthropic SDK** — replace DazzleAgent's text-action protocol with structured tool calls to fix the propose_fix limitation.
+6. **Investigator v2 on Anthropic SDK** — replace DazzleAgent's text-action protocol with structured tool calls to fix the propose_fix limitation. → **RESOLVED** (2026-04-14): DazzleAgent(use_tool_calls=True) + PROPOSE_FIX_SCHEMA + investigator runner flip. See docs/superpowers/specs/2026-04-14-dazzle-agent-robust-parser-and-tool-use-design.md
 7. **UX-036 auth-page applies coverage** — the row's `applies` field lists 8 auth surfaces (login/signup/forgot_password/reset_password/2fa_*) but cycle 145 only verified `/login`. The other 7 should be walked too.
 
 ### Counter
