@@ -1849,6 +1849,57 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 154 — 2026-04-14 — UX-025 widget:richtext re-verify → qa:FAIL (104 findings) — **anchor-fix sweep complete (3/3), admin 403 pattern locked in**
+
+**Outcome:** Final cycle of the cycle-149 anchor-fix re-verification sweep. UX-025 last QA'd in cycle 135 against the broken anchor `/app/issue-report/create` (110 noise findings). This cycle re-runs Phase B with the corrected contract.
+
+**Phase B result:** `fitness run [admin:5ddfdc61-a476-472a-8384-1d156ce04fff, engineer:90c75861-d1fa-4bbb-b75b-241056045c9d]: 104 findings total (admin=54, engineer=50), independence=0.000 (max)`, `degraded=False`. attempts 2 → 3.
+
+### Anchor-fix sweep complete (3/3)
+
+| Cycle | Row | Component | Last broken | Now (corrected) | Δ |
+|-------|-----|-----------|-------------|-----------------|---|
+| 152 | UX-023 | widget:slider | 114 (cycle 115) | 109 | -5 |
+| 153 | UX-024 | widget:colorpicker | 110 (cycle 134) | 108 | -2 |
+| 154 | UX-025 | widget:richtext | 110 (cycle 135) | 104 | -6 |
+
+The reduction is small in raw count but the **finding quality** flipped completely. The cycle 115/134/135 numbers were 404-page noise (the walker observed the same generic Dazzle 404 chrome on every gate). The 152/153/154 numbers are real contract-walk observations against the rendered widgets — for engineer, against the actual Quill/Pickr/range DOM.
+
+### Admin 403 locked in (3/3)
+
+The deterministic per-persona RBAC denial on `/app/issuereport/create` reproduces in every single re-verification cycle:
+
+- **Cycle 152** (slider): admin 403, engineer 200
+- **Cycle 153** (colorpicker): admin 403, engineer 200 — walker prose: *"As an admin, I should have access to this functionality"*
+- **Cycle 154** (richtext): admin 403, engineer 200 — walker prose: *"I expect to click on the Sign In link to authenticate as an admin user"*
+
+Three independent runs, three different walker prompts, three different LLM cycles — all show the same per-persona deterministic denial. This is no longer ambiguous: it is **either** a deliberate fieldtest_hub DSL scope decision (admin ≠ field engineer in the IssueReport domain) **or** a missing `permit:` grant on admin. The walker in cycles 153/154 even framed the denial as unexpected — the LLM treated 403 as an auth-failure signal in cycle 154, attempting to click "Sign In" instead of recognising authorisation absence.
+
+**Action item promoted to top of follow-up queue:**
+
+```bash
+grep -rn "permit:.*IssueReport\|permit:.*issue_report" examples/fieldtest_hub/dsl/
+```
+
+If admin is missing from the persona list on the create permit, file as a fitness fix. If admin is intentionally excluded, document as a fitness-finding category ("scope decision, not bug") so the walker stops flagging it as a quality gate failure.
+
+### Walker JSON parse warnings
+
+Bug #5 reproduced again — both warnings captured (Sign-In click attempt + form fill attempt with prose preamble). 27/27 cycles. The reproducibility makes this a great test fixture for any v2 prompt hardening work.
+
+### Counter
+
+Explore counter unchanged at 23.
+
+### Re-verification queue (post-sweep)
+
+After cycles 152-154, the next-most-stale rows for re-verification are:
+
+- **UX-001/003/011/015/031/033/035** — 7 rows on `/app/workspaces/command_center` with the inconsistent admin 403 pattern. None have been re-verified since the original cycle. Most productive cycle 155+ direction would be to investigate the command_center 403 root cause (DSL audit + actual reproduction with controlled session state).
+- The five rows on `/app/ticket/create` (UX-017/019/010/026/027) — the `created_by` schema mismatch is a real bug but no fix has shipped, so re-verification would just reproduce the same finding.
+
+---
+
 ## Cycle 153 — 2026-04-14 — UX-024 widget:colorpicker re-verify → qa:FAIL (108 findings) — **admin 403 pattern confirmed 2/2**
 
 **Outcome:** Continuation of cycle 152's re-verification sweep. UX-024 last QA'd in cycle 134 against the broken anchor `/app/issue-report/create` (110 noise findings, 404). Cycle 149 fixed the contract URL. This cycle re-runs Phase B.
