@@ -1849,6 +1849,19 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 139 — 2026-04-14 — UX-029 detail-view → qa:FAIL (20 findings)
+
+**Row:** UX-029 detail-view (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 20 findings (admin=10, user=10), degraded=False. Anchor is `/app/contact/1` — hardcoded record ID, assumes contact with id=1 exists. Run IDs: admin=2ca1bcb9-3557-491f-94b8-ed9f7479a127, user=f3ca79bd-84f1-4101-acbf-801732d84930.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 139   | UX-029 detail-view | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 138 — 2026-04-14 — UX-028 widget:search_select → qa:FAIL (20 findings)
 
 **Row:** UX-028 widget:search_select (canonical: contact_manager)
