@@ -1849,6 +1849,24 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 147 — 2026-04-14 — EXPLORE executed (stagnation, 0 findings) — **empirical confirmation of DazzleAgent protocol limitation**
+
+**Mode:** EXPLORE (Step 6). Counter=19 (odd) → `Strategy.MISSING_CONTRACTS`. Dispatched `build_ux_explore_mission` against contact_manager with persona=admin.
+
+**Infrastructure built:** minimal inline runner at `/tmp/ux_cycle_147_explore.py` boots contact_manager via ModeRunner, logs in via `/qa/magic-link` (required `persona_id` not `persona` — first attempt 422'd), launches Playwright/Chromium, navigates to `/app` with the admin session cookie, constructs a DazzleAgent with PlaywrightObserver + PlaywrightExecutor, and calls `agent.run(mission)`. ~4-minute wall-clock safety timeout.
+
+**Outcome:** transcript.outcome=`completed`, 8 steps, 18,011 tokens burned, **0 proposals, 0 findings**. The agent hit the 8-step stagnation window (`make_stagnation_completion(window=8)`) without producing a single clean `propose_component` tool call.
+
+**Why it stagnated:** this is the exact pattern the investigator Task 19 integration test already predicted. DazzleAgent's text-action protocol (see `_parse_action` in `agent/core.py`) can't reliably coax Claude Sonnet 4.6 into emitting strict JSON for tool calls — the LLM prefixes responses with reasoning prose that breaks the parser, and even when the JSON is well-formed the schema mismatch between the text protocol and structured tool-call APIs means most attempts degrade into no-op assertions. The walker JSON parse bug #5 that has reproduced on every cycle 122-145 is the same root cause.
+
+**Empirical data point:** 18K tokens burned for 0 useful output. This is ~1 cent per attempt at sonnet-4-6 rates, and ~4 minutes of wall-clock time. Future explore attempts are expected to behave identically until the DazzleAgent protocol is fixed or the explore mission is rewritten on top of the Anthropic SDK's native `tools` parameter.
+
+**Counter ticks 19 → 20.** Need 10 more cycles at this rate to hit the 30-budget exhaust, OR 5 consecutive 0-finding cycles to trigger the secondary short-circuit. Cycle 147 is the first of the potential 0-finding streak.
+
+**Recommendation for future /ux-cycle invocations:** the backlog has 24 qa:FAIL rows waiting for either investigator v2 (once the protocol is fixed) or manual human review of the three high-volume single-fix-target clusters. Running more explore cycles is not productive — every attempt will stagnate identically. Consider rebuilding explore mode on structured tool calls or switching to a different productive mode (e.g., fixing one of the backlog's high-volume clusters by hand).
+
+---
+
 ## Cycle 146 — 2026-04-14 — exhausted (pool empty, EXPLORE deferred)
 
 **Row:** none — all qa:PENDING rows worked through in cycles 113-145. Priority buckets 1-5 empty:
