@@ -57,7 +57,7 @@ def build_investigator_tools(
     return [
         _read_file_tool(case_file, dazzle_root, state),
         _query_dsl_tool(case_file, dazzle_root, state),
-        # Task 11: _get_cluster_findings_tool(case_file, dazzle_root, state)
+        _get_cluster_findings_tool(case_file, dazzle_root, state),
         # Task 12: _get_related_clusters_tool(case_file, dazzle_root, state)
         # Task 13: _search_spec_tool(case_file, dazzle_root, state)
         # Task 14: _propose_fix_tool(case_file, dazzle_root, llm_run_id, state)
@@ -327,3 +327,122 @@ def _find_similar_files(dazzle_root: Path, missing: str) -> list[str]:
             break
     close = difflib.get_close_matches(missing, all_files, n=3, cutoff=0.4)
     return close
+
+
+def _get_cluster_findings_tool(
+    case_file: CaseFile,
+    dazzle_root: Path,
+    state: ToolState,
+) -> AgentTool:
+    """Build the get_cluster_findings tool.
+
+    Fetches more sibling findings beyond the case file's initial set.
+    Capped at CLUSTER_FINDING_MISSION_CAP (30) per cluster per mission.
+    """
+    from dazzle.fitness.backlog import read_backlog_findings
+    from dazzle.fitness.triage import read_queue_file
+
+    def handler(cluster_id: str, limit: int = 10) -> dict[str, Any]:
+        state.tool_calls_summary.append(f"get_cluster_findings({cluster_id}, limit={limit})")
+        # Clamp limit
+        limit = max(1, min(20, limit))
+
+        # Resolve the backlog source — same precedence as the case file
+        if case_file.example_root is not None:
+            backlog_path = case_file.example_root / "dev_docs" / "fitness-backlog.md"
+            if not backlog_path.exists():
+                backlog_path = dazzle_root / "dev_docs" / "fitness-backlog.md"
+        else:
+            backlog_path = dazzle_root / "dev_docs" / "fitness-backlog.md"
+
+        result: dict[str, Any] = {}
+
+        # Validate cluster_id — allow querying a different cluster, but warn,
+        # and reject if it's not even in the queue file
+        if cluster_id != case_file.cluster.cluster_id:
+            queue_dir = case_file.example_root or dazzle_root
+            queue_path = queue_dir / "dev_docs" / "fitness-queue.md"
+            if not queue_path.exists():
+                queue_path = dazzle_root / "dev_docs" / "fitness-queue.md"
+            known_ids: set[str] = set()
+            if queue_path.exists():
+                try:
+                    known_ids = {c.cluster_id for c in read_queue_file(queue_path)}
+                except Exception:
+                    known_ids = set()
+            if cluster_id not in known_ids:
+                return {
+                    "error": "cluster not found",
+                    "did_you_mean": [case_file.cluster.cluster_id],
+                }
+            result["warning"] = (
+                f"querying cluster {cluster_id} while investigating {case_file.cluster.cluster_id}"
+            )
+
+        # Check mission cap
+        seen = state.findings_seen.get(cluster_id, 0)
+        if seen >= CLUSTER_FINDING_MISSION_CAP:
+            return {
+                "findings": [],
+                "note": (
+                    f"{seen} findings already fetched for this cluster. "
+                    "Remaining findings have equivalent canonical summaries "
+                    "(that's how they got clustered). For variation try "
+                    "get_related_clusters(locus=...) or read_file on the "
+                    "locus; for evidence depth re-read the existing samples."
+                ),
+            }
+
+        # Load all findings from the backlog, filter to this cluster,
+        # exclude those already in the case file
+        all_findings = read_backlog_findings(backlog_path)
+        excluded_ids = {case_file.sample_finding.id}
+        excluded_ids.update(s.id for s in case_file.siblings)
+
+        cluster_filter = case_file.cluster
+        candidates = [
+            f
+            for f in all_findings
+            if f.id not in excluded_ids
+            and f.locus == cluster_filter.locus
+            and f.axis == cluster_filter.axis
+            and f.persona == cluster_filter.persona
+        ]
+
+        remaining_budget = max(0, CLUSTER_FINDING_MISSION_CAP - seen)
+        to_return = candidates[: min(limit, remaining_budget)]
+        state.findings_seen[cluster_id] = seen + len(to_return)
+
+        result["findings"] = [_finding_to_dict(f) for f in to_return]
+        return result
+
+    return AgentTool(
+        name="get_cluster_findings",
+        description=(
+            "Fetch more sibling findings beyond the case file's initial set. "
+            "Capped at 30 per cluster per mission."
+        ),
+        schema={
+            "type": "object",
+            "properties": {
+                "cluster_id": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+            },
+            "required": ["cluster_id"],
+        },
+        handler=handler,
+    )
+
+
+def _finding_to_dict(f: Any) -> dict[str, Any]:
+    """Minimal JSON-safe projection of a Finding for LLM consumption."""
+    return {
+        "id": f.id,
+        "persona": f.persona,
+        "axis": f.axis,
+        "severity": f.severity,
+        "locus": f.locus,
+        "expected": f.expected,
+        "observed": f.observed,
+        "evidence_excerpt": list(f.evidence_embedded.transcript_excerpt[:3]),
+    }

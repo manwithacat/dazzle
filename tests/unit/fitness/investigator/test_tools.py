@@ -175,3 +175,73 @@ def test_query_dsl_unknown_returns_did_you_mean(case_file, fake_root, state) -> 
     assert isinstance(result, dict)
     if "did_you_mean" in result:
         assert isinstance(result["did_you_mean"], list)
+
+
+# ------------ tool: get_cluster_findings -----------------------------------
+
+
+def test_get_cluster_findings_returns_more_siblings(tmp_path, state) -> None:
+    (tmp_path / "dev_docs").mkdir()
+    findings = [_finding(f"f_{i:03d}") for i in range(10)]
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cluster = _cluster()
+    cf = build_case_file(cluster, tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+
+    result = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=10)
+    assert "findings" in result
+    # Excludes the sample + siblings already in the case file
+    excluded = {cf.sample_finding.id} | {s.id for s in cf.siblings}
+    returned_ids = {f["id"] for f in result["findings"]}
+    assert not (returned_ids & excluded)
+
+
+def test_get_cluster_findings_respects_mission_cap(tmp_path, state) -> None:
+    from dazzle.fitness.investigator.tools import CLUSTER_FINDING_MISSION_CAP
+
+    (tmp_path / "dev_docs").mkdir()
+    findings = [_finding(f"f_{i:03d}") for i in range(50)]
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cf = build_case_file(_cluster(), tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+
+    # Burn through the 30-finding mission cap via repeated calls
+    r1 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+    r2 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+    r3 = tools["get_cluster_findings"].handler(cluster_id="CL-deadbeef", limit=20)
+
+    total = len(r1.get("findings", [])) + len(r2.get("findings", [])) + len(r3.get("findings", []))
+    assert total <= CLUSTER_FINDING_MISSION_CAP
+    # The third call should have hit the cap and returned a note
+    assert "note" in r3 or r3.get("findings") == []
+
+
+def test_get_cluster_findings_unknown_id(tmp_path, state) -> None:
+    from dazzle.fitness.triage import write_queue_file
+
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", [_finding("f_001")])
+    # Queue file exists with only CL-deadbeef
+    write_queue_file(
+        tmp_path / "dev_docs" / "fitness-queue.md",
+        [_cluster()],
+        project_name="fixture",
+        raw_findings_count=1,
+    )
+    locus = tmp_path / "src" / "ui" / "form.html"
+    locus.parent.mkdir(parents=True)
+    locus.write_text("x")
+
+    cf = build_case_file(_cluster(), tmp_path)
+    tools = _tools_by_name(cf, tmp_path, state)
+    result = tools["get_cluster_findings"].handler(cluster_id="CL-nosuch", limit=10)
+    assert "error" in result
+    assert "did_you_mean" in result
