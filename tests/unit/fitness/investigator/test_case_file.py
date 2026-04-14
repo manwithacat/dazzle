@@ -132,6 +132,60 @@ def test_build_case_file_traversal_guard(tmp_path: Path) -> None:
         build_case_file(_cluster(), tmp_path)
 
 
+def test_build_case_file_picks_siblings_matching_cluster(tmp_path: Path) -> None:
+    """Siblings in the same cluster (same locus/axis/persona + canonical_summary) are returned."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [
+            # Sample with a file path in evidence so build_case_file can locate the locus
+            _finding(
+                "f_001",
+                summary_observed="aria-describedby missing",
+                evidence_text="src/dazzle_ui/templates/form.html:47 — control has no describedby",
+            ),
+            # Sibling that canonicalises to the same summary
+            _finding(
+                "f_002",
+                summary_observed="Aria-describedby missing",  # case variation
+                evidence_text="src/dazzle_ui/templates/form.html:64 — label missing",
+            ),
+            # Non-sibling: different canonical summary
+            _finding(
+                "f_003",
+                summary_observed="completely different issue",
+                evidence_text="src/dazzle_ui/templates/form.html:100 — other",
+            ),
+        ],
+    )
+    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir.mkdir(parents=True)
+    (locus_dir / "form.html").write_text("\n".join(f"<div>line {i}</div>" for i in range(1, 21)))
+
+    case_file = build_case_file(_cluster(), tmp_path)
+    assert case_file.sample_finding.id == "f_001"
+    sibling_ids = [s.id for s in case_file.siblings]
+    assert "f_002" in sibling_ids
+    assert "f_003" not in sibling_ids  # different summary, not in cluster
+    assert len(case_file.siblings) == 1
+
+
+def test_build_case_file_empty_locus_file(tmp_path: Path) -> None:
+    """Empty locus file produces a LocusExcerpt with empty chunks tuple."""
+    (tmp_path / "dev_docs").mkdir()
+    upsert_findings(
+        tmp_path / "dev_docs" / "fitness-backlog.md",
+        [_finding("f_001", evidence_text="src/empty.py:1 — nothing")],
+    )
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "empty.py").write_text("")
+
+    case_file = build_case_file(_cluster(), tmp_path)
+    assert case_file.locus is not None
+    assert case_file.locus.total_lines == 0
+    assert case_file.locus.chunks == ()
+
+
 def test_build_case_file_example_root_detection(tmp_path: Path) -> None:
     """When extracted file path starts with examples/<name>/, example_root is set."""
     example_dir = tmp_path / "examples" / "support_tickets" / "dev_docs"

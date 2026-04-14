@@ -291,6 +291,15 @@ def _load_locus(
     lines = content.splitlines()
     total_lines = len(lines)
 
+    if total_lines == 0:
+        # Empty file — no content to chunk. Represent as full mode with empty chunks.
+        return LocusExcerpt(
+            file_path=locus_rel,
+            total_lines=0,
+            mode="full",
+            chunks=(),
+        )
+
     if total_lines <= LOCUS_FULL_MAX_LINES:
         return LocusExcerpt(
             file_path=locus_rel,
