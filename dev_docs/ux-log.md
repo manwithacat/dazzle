@@ -1849,6 +1849,45 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 150 — 2026-04-14 — cycle 149 Bug #2 was a false positive (probe-script error)
+
+**Correction:** the "fieldtest_hub admin magic-link broken" finding from cycle 149 was a **false positive caused by an operator error in my httpx probe script**, not a real bug.
+
+**The probe bug:** my cycle 149 script extracted the token via:
+```python
+token = resp.json().get("token")
+```
+But the actual `MagicLinkResponse` shape is `{"url": "/auth/magic/<token>"}` — the key is `"url"`, not `"token"`. So `token` was `None`, and the subsequent `GET /auth/magic/None?next=/app` legitimately failed validation. The 405 → `invalid_magic_link` was real, but the cause was my probe sending a literal "None" token, not a fieldtest_hub bug.
+
+**Comparative probe this cycle (Playwright request API, matching what fitness_strategy actually does):**
+
+```
+=== contact_manager / admin ===
+  /qa/magic-link: 200 ok=True
+  token URL: /auth/magic/lfTGPRYLgnXc19-8kJJUd3i4e_0sL-l07p2ELeAZdtA
+  after magic-link follow: http://localhost:3653/app/workspaces/_platform_admin
+  ✓ authenticated, page title: 'Contact Manager'
+
+=== fieldtest_hub / admin ===
+  /qa/magic-link: 200 ok=True
+  token URL: /auth/magic/31BZwyk_dNTk-t1w6lt2XsHpmo4cdQvRUmfaGlbWguU
+  after magic-link follow: http://localhost:3858/app/workspaces/_platform_admin
+  ✓ authenticated, page title: 'FieldTest Hub'
+```
+
+**Both examples authenticate cleanly via Playwright.** No fieldtest_hub-specific magic-link bug exists.
+
+**Implications for the broader picture:**
+- Cycle 149's Bug #1 (URL format `/app/issue-report/create` → `/app/issuereport/create`) is still real and was correctly fixed across the 3 widget contracts.
+- The `/app/workspaces/command_center` admin 403 pattern across UX-001/003/011/015/031/033/035 is **NOT** because magic-link login is broken (login works fine). It must be a real RBAC/scope rule on the command_center workspace that excludes admin under some condition. That's a different investigation and a real bug worth tracking.
+- The fieldtest_hub /app/issue-report/create 404 cluster (UX-023/024/025) is now likely fully addressable via the contract URL fix alone — the next time those rows are re-verified they should land on `/app/issuereport/create` and produce real findings (or a clean PASS).
+
+**Cycle outcome:** 0 walker findings (no Phase B run), 1 bogus bug retracted, 1 real bug confirmed. Net signal-to-noise is positive — the corrected backlog narrative is more accurate.
+
+**Counter:** 22 → 23. **Recommendation still stands:** further /ux-cycle invocations should focus on fixing real bugs (e.g., the command_center RBAC issue) or re-verifying the 3 fieldtest_hub widget rows against the new anchor.
+
+---
+
 ## Cycle 149 — 2026-04-14 — TWO real bugs found via fieldtest_hub probe + 3 contract fixes shipped
 
 **Mode:** EXPLORE deferred again, but cycle did real diagnostic work and shipped a real fix.
