@@ -1202,7 +1202,7 @@ sorted alphabetically. Supports an explicit override list for
 adversarial / multi-persona runs.
 
 Verified filter mapping across 5 examples/:
-  simple_task: admin, manager, user
+  simple_task: admin, manager, member
   contact_manager: user (admin excluded)
   support_tickets: agent, customer, manager (admin excluded)
   ops_dashboard: ops_engineer (admin excluded)
@@ -2168,7 +2168,7 @@ sweep ran against all 5 examples with these results:
 
 | Example | Personas | Proposals (unique) | State |
 |---|---|---|---|
-| simple_task | admin, manager, user | <N> | <pass/fail> |
+| simple_task | admin, manager, member | <N> | <pass/fail> |
 | contact_manager | user | <N> | <pass/fail> |
 | support_tickets | agent, customer, manager | <N> | <pass/fail> |
 | ops_dashboard | ops_engineer | <N> | <pass/fail> |

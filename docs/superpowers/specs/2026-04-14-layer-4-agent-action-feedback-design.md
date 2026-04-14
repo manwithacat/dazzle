@@ -289,7 +289,7 @@ Verified mapping at spec-write time:
 
 | Example | Business personas (auto-picked) | Framework-scoped (excluded) |
 |---|---|---|
-| simple_task | admin, manager, user | — |
+| simple_task | admin, manager, member | — |
 | contact_manager | user | admin (`_platform_admin`) |
 | support_tickets | agent, customer, manager | admin (`_platform_admin`) |
 | ops_dashboard | ops_engineer | admin (`_platform_admin`) |
