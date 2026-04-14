@@ -9,6 +9,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.2] - 2026-04-14
+
+### Fixed
+- **DazzleAgent `use_tool_calls=True` page actions were text-protocol only.**
+  Before this release, `DazzleAgent(use_tool_calls=True)` exposed mission
+  tools as native SDK tools but left page actions (navigate/click/type/
+  select/scroll/wait/assert/done) as text-protocol JSON instructions in
+  `_build_system_prompt`. The LLM obediently emitted a `navigate` action
+  as text JSON, `_decide_via_anthropic_tools` found no `tool_use` block,
+  returned a DONE sentinel, and the agent loop exited after 1 step with
+  0 actions taken. `walk_contract` dodged this because its anchor
+  navigation happens outside the agent loop, but in-loop explore missions
+  (`ux_explore` MISSING_CONTRACTS / EDGE_CASES) were completely blocked.
+
+  Fixed by declaring page actions as native SDK tools alongside mission
+  tools. New module-level `_BUILTIN_ACTION_NAMES` + `_builtin_action_tools()`
+  factory; new `_tool_use_to_action` router that maps builtin-named
+  `tool_use` blocks to their matching `ActionType` with target/value/
+  reasoning extracted from `block.input`, and mission-tool names to
+  `ActionType.TOOL` with `json.dumps(input)` as `value` (matching the
+  text-protocol shape so `_execute_tool` consumes it unchanged).
+  `_decide_via_anthropic_tools` merges builtin+mission tools into the
+  SDK `tools=[...]` parameter; mission tools colliding with builtin
+  names are dropped with a warning. `_build_system_prompt` branches on
+  `self._use_tool_calls` and suppresses the text-protocol "Available
+  Page Actions" block under tool-use mode; legacy text-protocol path
+  is untouched. Empirically verified against contact_manager:
+  pre-fix = 1 step DONE, post-fix = 8 real click actions via native
+  tool use + legitimate stagnation.
+
+### Added
+- **`src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py` —
+  production driver for `/ux-cycle` Step 6 EXPLORE.** Before this release,
+  `build_ux_explore_mission` existed in `src/dazzle/agent/missions/ux_explore.py`
+  but had no production caller — Step 6 was pointing at a function the
+  harness could not actually invoke, and cycle 147's "empirical 0 findings"
+  data point was produced via a throwaway `/tmp` script. `run_explore_strategy`
+  mirrors `run_fitness_strategy`'s structure: caller owns ModeRunner, strategy
+  owns Playwright + per-persona login + agent mission + aggregation. Returns
+  an `ExploreOutcome` with flat `proposals` / `findings` lists tagged by
+  `persona_id`, plus `blocked_personas` for per-persona failures; all-blocked
+  raises `RuntimeError`.
+- **`src/dazzle/cli/runtime_impl/ux_cycle_impl/_playwright_helpers.py` —
+  shared Playwright bundle + persona-login helpers** extracted from
+  `fitness_strategy.py` so `explore_strategy` can reuse `PlaywrightBundle`,
+  `setup_playwright`, and `login_as_persona` without duplication.
+  `fitness_strategy` re-imports them under the old private names
+  (`_PlaywrightBundle` etc.) to preserve existing test patch targets — 23/23
+  `test_fitness_strategy_integration` tests pass unchanged.
+
+### Changed
+- **`.claude/commands/ux-cycle.md` Step 6 is now actionable.** Replaced the
+  vague "Dispatch the `build_ux_explore_mission`" prose with a concrete
+  runnable code snippet using `run_explore_strategy` + `ModeRunner`.
+  Documented the semantic gate on the 5-cycle-0-findings rule (housekeeping
+  cycles that never reached Step 6 must not count toward the streak;
+  track via `explored_at` in `.dazzle/ux-cycle-state.json`).
+
+### Agent Guidance
+- **`DazzleAgent(use_tool_calls=True)` now exposes 8 builtin page actions
+  as native SDK tools.** If you write new agent missions and use the tool-use
+  path, you no longer need to instruct the LLM to emit navigate/click/type/
+  etc. as text JSON — the SDK tools list carries that contract. The system
+  prompt under tool-use mode omits the legacy "Available Page Actions" text
+  block entirely; the legacy text-protocol path for `use_tool_calls=False`
+  is unchanged.
+- **Mission tool names must not collide with builtin page action names.**
+  A mission that registers a tool named `click`, `navigate`, `type`, `select`,
+  `scroll`, `wait`, `assert`, or `done` will have its mission tool silently
+  dropped with a warning — the builtin wins. Pick a domain-specific name
+  (e.g. `click_record_row` instead of `click`).
+- **Prefer `run_explore_strategy` over inline ModeRunner + DazzleAgent glue
+  for `/ux-cycle` Step 6.** The driver handles per-persona login, blocked-
+  persona absorption, aggregation, and persona-tagged proposals out of the
+  box. See `.claude/commands/ux-cycle.md` Step 6 for the invocation shape.
+
 ## [0.55.1] - 2026-04-14
 
 ### Security
