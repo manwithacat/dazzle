@@ -112,3 +112,14 @@ def test_investigate_top_empty_queue_exits_1(tmp_path: Path) -> None:
         ["investigate", "--top", "1", "--project", str(tmp_path)],
     )
     assert result.exit_code == 1
+
+
+def test_investigate_top_zero_exits_2(tmp_path: Path) -> None:
+    _seed_project(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(
+        fitness_app,
+        ["investigate", "--top", "0", "--project", str(tmp_path)],
+    )
+    assert result.exit_code == 2
+    assert "must be >= 1" in result.output

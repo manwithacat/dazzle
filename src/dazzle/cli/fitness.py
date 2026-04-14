@@ -199,12 +199,21 @@ def investigate_command(
         if not queue_path.exists():
             typer.echo("error: fitness-queue.md not found", err=True)
             raise typer.Exit(code=2)
-        clusters = read_queue_file(queue_path)
+        try:
+            clusters = read_queue_file(queue_path)
+        except Exception as e:
+            typer.echo(f"error: failed to read queue: {e}", err=True)
+            raise typer.Exit(code=2) from e
         matching = [c for c in clusters if c.cluster_id == cluster]
         if not matching:
             typer.echo(f"error: cluster {cluster!r} not in queue", err=True)
             raise typer.Exit(code=2)
         selected_cluster = matching[0]
+
+    # Reject invalid --top values (when no --cluster is set)
+    if cluster is None and top <= 0:
+        typer.echo("error: --top must be >= 1", err=True)
+        raise typer.Exit(code=2)
 
     # Build LLM client
     llm_client = _build_llm_client(model=model, dry_run=dry_run)
@@ -256,8 +265,7 @@ def _build_llm_client(model: str | None, dry_run: bool) -> object:
 
     class _DryRunClient:
         run_id = "dry-run"
-
-    _DryRunClient.model = resolved_model  # type: ignore[attr-defined]
+        model = resolved_model
 
     if dry_run:
         return _DryRunClient()
