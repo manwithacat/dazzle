@@ -4,6 +4,45 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-14T19:29Z — Cycle 190 — EXHAUSTED (sticky) — **harness-evaluation cycle**
+
+**Outcome:** Second post-sweep cycle. Identical terminal state to cycle 189: priority queue buckets 1–5 all empty, EXPLORE short-circuited by the 5-cycle-0-findings rule, no state change.
+
+### Priority queue
+- REGRESSION: 0
+- PENDING contract MISSING/DRAFT: 0
+- DONE qa:PENDING: 0 (UX-004 is READY_FOR_QA aggregate, no standalone contract)
+- VERIFIED re-verification: 0
+
+Jumped to Step 6 EXPLORE. Counter=23 (under 30). 5-cycle window: cycles 184–188 were qa-rule retroactive housekeeping advances, not EXPLORE attempts. The rule as written fires → skip EXPLORE → cycle complete.
+
+### Harness observations recorded this cycle
+
+This cycle was run to evaluate whether the ux-cycle harness is still producing value post-sweep. Four concrete findings:
+
+1. **`build_ux_explore_mission` has no production driver.** Grep confirms the only callers are `tests/unit/test_ux_explore_mission.py` (unit tests) and the module itself. Cycle 147 — the only cycle that actually ran EXPLORE — did so via a throwaway `/tmp/ux_cycle_147_explore.py` that manually assembled ModeRunner + `/qa/magic-link` + Playwright + DazzleAgent inline. That script is gone. Every subsequent EXPLORE invocation is blocked on "write an inline driver from scratch", which is not a realistic cycle-scale task.
+
+2. **The 5-cycle-0-findings rule conflates "explore ran and got 0" with "explore wasn't run."** Cycles 184–188 were the retroactive qa-rule sweep — they never went to Step 6. The rule fires off their 0-finding record anyway, permanently freezing EXPLORE until counter ≥ 30 happens some other way (it won't). Proposed fix: count only cycles that actually reached Step 6 EXPLORE toward the 0-finding streak. Implementation: track an `explored_at` timestamp per cycle in `.dazzle/ux-cycle-state.json` and consult only the last 5 explored cycles.
+
+3. **Action items 4 and 6 from cycle 188's follow-up list are RESOLVED but the rule doesn't know.** DazzleAgent now supports structured tool use (`use_tool_calls=True`) and has a robust JSON parser (three-tier fallback + `_extract_first_json_object`). The 2026-04-14 fix strictly post-dates cycle 147's empirical 0-findings result. Any 0-findings rule based on pre-fix data is evaluating stale evidence. Proposed fix: invalidate the explore budget when DazzleAgent changes materially (reset counter to 0 + require at least one post-fix attempt before exhaustion short-circuits).
+
+4. **Terminal state is sticky.** Cycles 189 and 190 both output identical "No work remaining" with no state change, no commits, no signal payload worth consuming. Running `/loop /ux-cycle` from this state generates pure noise — it will wake up indefinitely, emit ux-component-shipped signals with empty payloads, and commit nothing. Proposed fix: when a cycle is genuinely exhausted, emit a distinct `ux-cycle-exhausted` signal and have `/loop` (or the skill itself) recognise it as a loop-termination condition rather than a per-run normal outcome.
+
+### What would unblock value-adding cycles
+
+In priority order:
+
+1. **Wire an EXPLORE driver into `src/dazzle/cli/runtime_impl/ux_cycle_impl/`** that takes `(strategy, persona, example_app)` → ModeRunner → DazzleAgent(use_tool_calls=True) → proposals/findings → backlog rows. Estimated ~120 lines; mirrors the structure of `fitness_strategy.py`. This is the single highest-leverage harness fix.
+2. **Fix the 5-cycle rule semantics** per observation 2.
+3. **Add a re-verification mode** that deliberately rotates through DONE rows and re-runs Phase B (currently a manual action — priority rule 5 "VERIFIED rows" has no rows to pick from because nothing ever gets marked VERIFIED vs DONE; the skill defines VERIFIED but the sweep never transitioned rows into it).
+4. **Emit a terminal `ux-cycle-exhausted` signal** so `/loop` can stop.
+
+### Counter / state
+
+Explore counter unchanged at 23. No backlog rows touched. No commits to source code. Lock file released. `mark_run(source="ux-cycle")` called.
+
+---
+
 ## 2026-04-13T16:55Z — Cycle 96 — exhausted (sticky)
 
 No state change.
