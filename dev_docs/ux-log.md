@@ -4,6 +4,53 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T04:20Z — Cycle 201 — **edge_cases strategy live against support_tickets** — 2 concerning defects + 3 notable + 1 minor
+
+**Outcome:** First production run of the `edge_cases` explore strategy (shipped in v0.55.8) against a live example app, using the `ingest_findings` helper (shipped in v0.55.9) to auto-write the backlog. Subagent probed `support_tickets` as the `agent` persona and surfaced **6 observations — 2 concerning, 4 notable** — including a suspected data-loss bug on the form the support agent uses for their core job. Zero proposals, which is the expected shape for `edge_cases` (observations >> proposals by design).
+
+### Run stats
+
+- Strategy: `edge_cases`
+- Example: `support_tickets`
+- Persona: `agent`
+- Run ID: `20260415-041329`
+- Bash helper calls: 25 (over 20 soft target, under 30 hard ceiling)
+- Subsidised tokens: ~72k
+- Wall-clock: 321s
+- Findings automation: `ingest_findings()` wrote 6 `EX-NNN` rows (EX-002..007) in one call with no hand-editing
+
+### Findings
+
+| EX | severity | page | gist |
+|---|---|---|---|
+| EX-002 | concerning | `/app/workspaces/agent_dashboard` | Sidebar exposes Agent Dashboard + My Tickets to the agent persona, both return 403. Same RBAC/nav mismatch the cycle-199 manager run flagged — **now cross-persona confirmed**. |
+| EX-003 | concerning | `/app/workspaces/my_tickets` | 403 and 404 pages render with the **public marketing chrome** (Home / Sign In / Get Started) while the user is still authenticated. Tells a logged-in user to Sign In. |
+| EX-004 | notable | `/app/ticket/99999` | 404 on non-existent ticket only offers "Go Home" (to `/`), no "Back to Ticket List" — long recovery path, drops out of the app shell. |
+| EX-005 | notable | `/app/workspaces/ticket_queue` | Workspace drawer's "Open full page" action has `href="#"` — dead affordance. Same finding cycle 198's contact_manager/user run flagged for `workspace-detail-drawer`. **Cross-app confirmed.** |
+| EX-006 | notable | `/app/ticket/create` | `Assigned To` field is a plain text input, not a user/agent search-select. Typo-prone orphan assignments. Matches cycle-199 manager observation. |
+| EX-007 | **concerning** | `/app/ticket/create` | **Create Ticket form silently fails to submit.** Title + Description filled, Create clicked: no error, no toast, no URL change, no state_changed. Form stuck. Priority/Category default to placeholder options with no visible required marker — if backend rejects them, UI doesn't say so. Potential data-loss dead-end for the Support Agent's core task. |
+
+### Cross-cycle convergence is the key signal
+
+Cycle 199's missing_contracts sweep found **components**. Cycle 201's edge_cases sweep found **defects** — and three of the six (EX-002 RBAC/nav, EX-005 dead-drawer-affordance, EX-006 free-text Assigned To) were independently flagged by earlier persona-runs using a different strategy. When two subagents with different personas and different missions converge on the same issue, the signal is much stronger than any single finding.
+
+The new observations (EX-003, EX-004, EX-007) are all net-new — the missing_contracts subagents were looking at different surfaces (component patterns, not error pages). EX-007 in particular (silent create-form failure) is the kind of bug that only surfaces when someone actually tries to use the form with realistic inputs. A component-hunting subagent navigates, observes, clicks; an edge-case subagent types, submits, verifies.
+
+### Infrastructure notes
+
+- **`ingest_findings` worked first-try.** The writer parsed the existing backlog, allocated EX-002..007 from EX-001, inserted rows after the last data row in the Exploration Findings table, escaped pipes in descriptions, flattened multi-line notes, and left the rest of the file byte-identical. Manual inspection of the inserted rows shows they match the cycle 199 hand-written EX schema. Automation dogfooded successfully.
+- **Helper missing a `select` action.** The subagent called out that it couldn't drive `<select>` elements from the helper, which limited its ability to isolate whether Priority/Category being unset was the cause of the EX-007 silent failure. Adding a `select '#id' 'value'` action would make form exploration much more thorough. Worth doing as follow-up cycle.
+- **Landing URL ambiguity.** The subagent's first `observe` landed on `/` (public marketing), not `/app` (authenticated workspace). The prompt says "your session is already logged in", which is true, but doesn't set the initial URL. Adding `navigate /app` to the prompt's starting-point section would save a call.
+
+### Next cycle options
+
+1. **File EX-007 as a GitHub issue against `support_tickets`.** It's a concerning-severity data-loss bug that an actual agent using the app would hit on day one.
+2. **Draft contracts for some of UX-037..046** — now that 10 PENDING rows exist and we've dogfooded the full explore path, the next step is SPECIFY/REFACTOR for real.
+3. **Add the `select` action to `playwright_helper`** so the next edge_cases run can drive forms all the way through.
+4. **Investigate the RBAC/nav mismatch in `support_tickets`** — 2 cross-persona confirmations that the sidebar shows links the persona can't use. Either the scope rules are inverted or the sidebar needs a permission filter.
+
+---
+
 ## 2026-04-15T03:30Z — Cycle 200 — **triage: 10 PROP rows promoted to UX-037..046**
 
 **Outcome:** Triaged the 10 proposals produced by cycles 198+199 and promoted every one of them into a `PENDING` / `contract:MISSING` UX row. Net effect: the `/ux-cycle` pipeline's Step 1 prioritisation now has 10 new rows to chew through before it would next fall back to Step 6 EXPLORE. The "explore faster than you can triage" failure mode is cleared.

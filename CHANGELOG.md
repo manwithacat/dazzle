@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.11] - 2026-04-15
+
+### Changed
+- **Cycle 201 — first production `edge_cases` explore run.** Ran
+  the strategy shipped in v0.55.8 against `support_tickets/agent`
+  using the `ingest_findings` writer shipped in v0.55.9. End-to-end
+  dogfooding of the full explore-ingest pipeline. The subagent
+  surfaced 6 observations (2 concerning, 3 notable, 1 minor) and
+  `ingest_findings` wrote them as `EX-002..007` in one call without
+  hand-editing.
+- The concerning-severity findings include a **suspected silent
+  create-form failure** on `/app/ticket/create` (EX-007) — filling
+  Title + Description and clicking Create produces no toast, no URL
+  change, no state-change signal, and the ticket list still reads
+  "No items found" afterwards. Potential data-loss dead-end on the
+  support agent's core workflow.
+- Three findings cross-confirmed earlier persona-runs (sidebar RBAC
+  mismatch, dead `Open full page` affordance, free-text Assigned-To
+  field), strengthening the signal on those issues independently of
+  any single LLM's interpretation.
+
+### Agent Guidance
+- **The `ingest_findings` writer is proven in production.** Future
+  `/ux-cycle` Step 6 runs should call it directly instead of
+  hand-writing PROP/EX rows. First-try success: schema matched the
+  hand-written cycle 199 rows byte-for-byte in the relevant columns.
+- **`edge_cases` strategy produces observations, not proposals.**
+  Cycle 201 wrote 0 proposals and 6 observations — exactly the shape
+  the strategy section promises. Don't run `edge_cases` if you're
+  trying to grow the contract backlog; run it if you're trying to
+  surface friction on existing surfaces.
+- **Follow-up: `playwright_helper` lacks a `select` action.** The
+  subagent explicitly called this out as a mission-limiting gap —
+  it couldn't drive `<select>` elements, which blocked isolation of
+  the EX-007 silent-submit root cause. Worth adding in a later
+  cycle.
+
 ## [0.55.10] - 2026-04-15
 
 ### Changed
