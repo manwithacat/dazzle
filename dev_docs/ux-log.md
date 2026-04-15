@@ -4,6 +4,81 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T23:01Z — Cycle 234 — **finding_investigation: EX-011/030/037 are all VERIFIED_FALSE_POSITIVE — framework already correct, DSL copy at fault**
+
+**Strategy:** `finding_investigation`. Targets: EX-011 (ops_dashboard/ops_engineer empty-state CTAs invite unauthorised actions), EX-030 (support_tickets/customer my_tickets empty missing CTA), EX-037 (fieldtest_hub/tester "Add your first device" copy for a persona that can't create). Planned as "gap doc #2 axis 3 closure" with a single template-compiler edit adding `persona_can_create` to empty-state context.
+
+**Outcome:** Applied Heuristic 1 first. Fetched rendered region HTML at the HTTP layer for all three observations. **All three are VERIFIED_FALSE_POSITIVE** against the framework-bug framing — the framework is already correctly withholding the Create-first CTA button for unauthorised personas. The residual defect is at the DSL COPY layer, not the framework rendering layer. Filed as EX-046 for a separate DSL evolution discussion.
+
+### Investigation trace (Heuristic 1 applied)
+
+1. **EX-037 fieldtest_hub tester_dashboard/my_devices region** — fetched `/api/workspaces/tester_dashboard/regions/my_devices` as tester with HX-Request header. Rendered response contains the empty copy "No devices registered yet. Add your first device to begin field testing!" but **zero "Create first device" buttons and zero `btn-primary` links.** The `empty_state.html:7-9` template guard `{% if create_url %}` correctly suppresses the CTA button when the persona can't create.
+
+2. **Traced the copy source**. The "Add your first device to begin field testing!" string is NOT in any framework template. Grepping the codebase: it lives in fieldtest_hub's DSL at `examples/fieldtest_hub/dsl/app.dsl:298` on the Device LIST surface's `ux:` block: `empty: "No devices registered yet. Add your first device to begin field testing!"`. DSL-authored copy.
+
+3. **EX-011 ops_dashboard command_center/active_alerts + system_status** — fetched both regions as ops_engineer. `active_alerts` renders "No alerts. All systems operational." with zero CTA buttons (it's a factual statement, not an action prompt — cycle-223 subagent observation was inaccurate in its characterisation). `system_status` renders "No systems registered. Add a system to begin monitoring." with zero CTA buttons — same pattern as EX-037: action-oriented DSL copy, but the framework correctly withholds the button.
+
+4. **EX-030 support_tickets my_tickets/customer_tickets** — fetched the region as customer. Renders "No support tickets. All clear!" with zero CTA buttons. This one doesn't even have action-oriented copy; the original observation ("no call-to-action to create a ticket") assumes the customer SHOULD see a CTA, but the framework is correctly withholding one — customer's access to ticket creation is persona-gated via the DSL.
+
+### Framework is doing the right thing
+
+All three cases prove the same point: the `empty_state.html` template at `src/dazzle_ui/templates/fragments/empty_state.html` is correctly persona-aware. The `{% if create_url %}` guard on the Create-first CTA means that when `create_url` is None (which happens when the current persona cannot create the entity), the button is withheld. **The framework already implements the persona-aware affordance behaviour that gap doc #2's axis 3 proposed to build.**
+
+The observations were misread. The original subagent reports at cycles 216/221/223 said things like "empty state copy invites action the persona cannot perform" — but the invitation was only in the COPY TEXT, not in a button or other affordance. The subagent conflated "action-oriented words in a sentence" with "a clickable affordance". The framework isn't exposing any clickable affordance; it's rendering DSL-authored text verbatim.
+
+### The residual DSL-level gap (filed as EX-046)
+
+What's actually true:
+1. DSL authors sometimes write action-oriented `empty:` text like "Add your first device" that reads strangely to non-creating personas
+2. The DSL has no per-persona override for the `empty:` field on ux blocks
+3. The framework can't distinguish "this sentence contains an action verb" from "this sentence is factual" without fragile NLP
+
+The cleanest fix is a DSL schema evolution: allow `empty:` inside the existing `for <persona>:` block to specify persona-scoped copy. This matches the existing pattern where `scope:`, `purpose:`, and `action_primary:` can all be persona-scoped. EX-046 has the full proposal with three fix directions and a recommendation (Option A — syntax extension).
+
+### Status moves
+
+- **EX-011**: OPEN → **VERIFIED_FALSE_POSITIVE** (framework already correct; copy quality issue)
+- **EX-030**: OPEN → **VERIFIED_FALSE_POSITIVE** (same)
+- **EX-037**: OPEN → **VERIFIED_FALSE_POSITIVE** (same)
+- **EX-046**: new row, framework-gap, OPEN (the DSL evolution proposal)
+
+### Heuristic 1 tally
+
+Cycle 234 is the **third consecutive cycle** where Heuristic 1 caught the observations-vs-reality mismatch. Across cycles 229, 232, 233, 234:
+
+| Cycle | What looked like a framework gap | What was actually happening |
+|---|---|---|
+| 229 | Silent 422 form submit | Substrate lost form state before submit |
+| 232 ref-half | Widget compiler missing ref default | Structural template work, different scope |
+| 233 | Cascade `inject_current_user_refs` to User-subtypes | Tester isn't a User-subtype, no cascade path exists |
+| 234 | Empty-state CTA persona-awareness | Framework already withholds CTA; DSL copy is the issue |
+
+**4 out of the last 6 investigation cycles have had the hypothesised framework fix turn out to be unnecessary or wrong.** The `finding_investigation` strategy paired with Heuristic 1 is the single highest-leverage defensive mechanism in the loop. Without it, at least 4 unnecessary implementation cycles would have shipped, each building framework code that didn't solve the actual problem.
+
+**This is strong enough evidence to promote Heuristic 1 from "recommended" to "mandatory"** in the skill. I'll encode this in cycle 235's synthesis pass.
+
+### Cycle metrics
+
+- Duration: ~20 minutes (mostly HTTP-layer reproduction across 3 apps + region endpoint inspection)
+- Output: 3 rows moved to VERIFIED_FALSE_POSITIVE, 1 new framework-gap row (EX-046) with DSL proposal
+- Framework code: **untouched** (investigation confirmed the framework is correct)
+- Test suite: not run (no source changes)
+
+**Explore budget:** 10 → 11 / 100. **~1 cycle remaining** in the user's ~12-cycle arc.
+
+### Next cycle plan (final)
+
+**Cycle 235 — `framework_gap_analysis` v3 (synthesis + arc retrospective)**. The resumed arc is closing. Cycle 235 should:
+
+1. Write a closing synthesis doc — full accounting of what was closed, what remains, what was learned
+2. Strengthen Heuristic 1 in the skill from "recommended" to "mandatory" based on the 4/6 hit rate
+3. Add a new heuristic #4 ("defaults propagation audit", surfaced in cycle 232)
+4. Present the user with a clean status-of-the-entropy-reduction report for review
+
+This closes the loop on the ~12-cycle arc with a durable learning artifact.
+
+---
+
 ## 2026-04-15T22:54Z — Cycle 233 — **finding_investigation: EX-041 is blocked on a deeper framework-level question (EX-045)**
 
 **Strategy:** `finding_investigation`. Target: EX-041 (fieldtest_hub/tester Log Test Session form exposes required 'Tester' ref field as a raw UUID text input, should auto-populate from current user). Originally scoped as a small ~20-min cascade extension of #774 (`inject_current_user_refs`) to handle User-subtype entities.
