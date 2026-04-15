@@ -9,7 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.32] - 2026-04-15
+## [0.55.33] - 2026-04-15
+
+### Fixed
+- **manwithacat/dazzle#774: silent create-form failure.** Create handlers now auto-inject
+  `current_user` into any required `ref User` field that the DSL create
+  surface omits. Before this fix, an entity declaring `created_by:
+  ref User required` whose `surface ... mode: create` section didn't
+  include `created_by` would produce a pydantic "Field required"
+  validation error on a field the user was never shown. The fix adds
+  `inject_current_user_refs` helper in
+  `src/dazzle_back/runtime/route_generator.py` and a new
+  `user_ref_fields` parameter on `create_create_handler`. The call site
+  in `RouteGenerator.generate_route` computes `user_ref_fields` from
+  the existing `entity_ref_targets` map (filtering to targets named
+  `User`) so no new wiring is required at the config level.
+
+  Injection rules (all must hold):
+  1. `current_user` is non-empty (we know who to inject)
+  2. The field is listed in `user_ref_fields` (entity has a `ref User`)
+  3. The field exists on the pydantic input schema
+  4. The field is declared required on the schema
+  5. The body does NOT already supply an explicit value
+
+  The helper never overrides an explicit body value and never injects
+  for optional fields.
+
+### Added
+- 9 new unit tests in `tests/unit/test_create_user_ref_injection.py`
+  covering all five injection rules, multi-field injection, unknown
+  field-name tolerance, and explicit-null-triggers-injection semantics.
+- End-to-end verification against `support_tickets` with a fresh
+  `ModeRunner` subprocess: submitting the Ticket create form with only
+  Title + Description now returns 200 OK + HX-Redirect to the new
+  ticket's detail page. The core #774 defect is closed.
+
+### Filed
+- **manwithacat/dazzle#778 — auth-user ↔ User entity bridge gap.** Surfaced while
+  verifying the #774 fix end-to-end. The QA magic-link flow provisions
+  dev personas into the `users` auth store but not into the `User`
+  domain entity, so any `ref User` FK fails validation even after
+  `current_user` is injected correctly. Distinct from #774 — the
+  injection is correct, but the injected UUID has no matching User
+  entity row. Manual workaround: `INSERT INTO "User" ...` with the
+  auth user's UUID. Framework fix direction sketched in the issue.
+
+
 
 ### Added
 - **Cycle 219 — framework maturity assessment.** Synthesised the

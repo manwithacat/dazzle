@@ -1828,6 +1828,52 @@ def _extract_result_id(result: Any) -> str | None:
     return None
 
 
+def inject_current_user_refs(
+    body: dict[str, Any],
+    input_schema: type[BaseModel],
+    user_ref_fields: list[str] | None,
+    current_user: str | None,
+) -> None:
+    """Auto-inject ``current_user`` into missing required ``ref User`` fields.
+
+    Mutates ``body`` in place. Rules (all must hold for a field to be injected):
+
+    1. ``current_user`` is non-empty (we know who to inject)
+    2. ``user_ref_fields`` is non-empty (caller has identified ref-User fields)
+    3. The field exists on ``input_schema.model_fields``
+    4. The field is declared required on the schema (no default, not Optional)
+    5. The body either does NOT contain the field OR contains ``None`` for it
+
+    Closes manwithacat/dazzle#774. Before this helper existed, create surfaces that
+    omitted ``created_by`` (or similar ``ref User required`` fields) from
+    their DSL section would produce a pydantic ``Field required`` error on
+    a field the user was never shown. The helper closes the gap by letting
+    the framework supply ``current_user`` for any ref-User field the DSL
+    author left out, without silently overriding explicit values.
+
+    Args:
+        body: Parsed request body dict (mutated in place)
+        input_schema: The pydantic schema the handler will ``model_validate``
+            against. Used to detect required fields.
+        user_ref_fields: Names of fields on this entity whose ``ref_entity``
+            is "User". Typically computed from the entity's
+            ``entity_ref_targets`` at route-registration time.
+        current_user: String representation of the current user's id.
+    """
+    if not current_user or not user_ref_fields:
+        return
+    for fname in user_ref_fields:
+        existing = body.get(fname)
+        if existing is not None:
+            continue
+        field_info = input_schema.model_fields.get(fname)
+        if field_info is None:
+            continue
+        if not field_info.is_required():
+            continue
+        body[fname] = current_user
+
+
 def create_create_handler(
     service: "BaseService[Any]",
     input_schema: type[BaseModel],
@@ -1839,8 +1885,19 @@ def create_create_handler(
     audit_logger: "AuditLogger | None" = None,
     cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
+    user_ref_fields: list[str] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for create operations with optional Cedar-style access control."""
+    """Create a handler for create operations with optional Cedar-style access control.
+
+    Args:
+        user_ref_fields: Names of fields on this entity that are ``ref User``
+            foreign keys. When the request body omits any of these (because
+            the DSL create surface didn't expose them — e.g. ``created_by``),
+            the handler auto-injects ``current_user`` before schema
+            validation, provided the field is declared required in the
+            Pydantic input schema. See ``inject_current_user_refs``.
+            Closes manwithacat/dazzle#774.
+    """
 
     def _build_redirect_url(result: Any) -> str | None:
         if not entity_slug:
@@ -1864,6 +1921,10 @@ def create_create_handler(
         idem_key = request.headers.get("x-idempotency-key")
         if idem_key and "idempotency_key" not in body:
             body["idempotency_key"] = idem_key
+
+        # Auto-inject current_user for missing required `ref User` fields
+        # (manwithacat/dazzle#774). See inject_current_user_refs for the full rule set.
+        inject_current_user_refs(body, input_schema, user_ref_fields, current_user)
 
         data = input_schema.model_validate(body)
 
@@ -2611,6 +2672,14 @@ class RouteGenerator:
         if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
             create_schema = entity_schemas.get("create", model)
             if create_schema:
+                # Identify ref-User fields on this entity for current_user
+                # auto-injection (manwithacat/dazzle#774). `entity_ref_targets` already maps
+                # fk_field -> target_entity_name; we filter to targets whose
+                # name is exactly "User".
+                _refs = self.entity_ref_targets.get(entity_name or "", {})
+                _user_ref_fields = [
+                    fk_field for fk_field, target in _refs.items() if target == "User"
+                ]
                 handler = create_create_handler(
                     service,
                     create_schema,
@@ -2622,6 +2691,7 @@ class RouteGenerator:
                     audit_logger=_audit_for("create"),
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
+                    user_ref_fields=_user_ref_fields or None,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
