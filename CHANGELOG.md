@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.20] - 2026-04-15
+## [0.55.21] - 2026-04-15
+
+### Added
+- **Cycle 209 — UX-042 activity-feed contract drafted + Phase B PASS.**
+  Vertical left-border timeline `<ul>` with primary-coloured bullet
+  markers and a relative-time column. Server-rendered, no Alpine,
+  optional HTMX click-to-drawer when `action_url` is configured.
+  Three-step display-field fallback chain (`description` → `action`
+  → `title`). Phase B against support_tickets:
+  `fitness run [admin:35d368e4, agent:cdc0c4ae]: 97 findings (48/49),
+  degraded=False`. 5 quality gates, 8 v2 open questions including
+  severity-tinted bullets, keyboard accessibility (entries are
+  `<div>` not `<button>`), drawer auto-open, time-format
+  pluggability. Seventh cycle-198+ subagent-discovered row to DONE.
+
+
 
 ### Added
 - **Cycle 208 — UX-041 column-visibility-picker contract drafted + Phase B PASS.**
