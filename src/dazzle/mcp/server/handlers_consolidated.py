@@ -1071,10 +1071,6 @@ handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
     "discovery",
     {
         "coherence": f"{_MOD_DISC}:app_coherence_handler",
-        # Cycle 198 spike — Path γ explore run (see explore_spike.py).
-        # Temporary operation under the discovery namespace; moves to a
-        # dedicated tool if the spike succeeds.
-        "explore": f"{_MOD_DISC}:discovery_explore_spike_handler",
     },
 )
 

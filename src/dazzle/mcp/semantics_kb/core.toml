@@ -3,7 +3,7 @@
 
 [meta]
 category = "Core Constructs"
-version = "0.55.6"
+version = "0.55.7"
 
 [concepts.entity]
 category = "Core Construct"

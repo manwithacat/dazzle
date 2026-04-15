@@ -1,14 +1,14 @@
 """Shared Playwright bundle + persona-login helpers for ux_cycle strategies.
 
-Extracted from ``fitness_strategy`` in 2026-04-14 so a second strategy
-(``explore_strategy``) can reuse the same bundle construction and QA-mode
-magic-link login flow. Consumers:
+Current consumer:
 
 - ``fitness_strategy.run_fitness_strategy``
-- ``explore_strategy.run_explore_strategy``
 
-No behaviour change from the previous in-module implementation — the
-functions are byte-identical aside from being re-homed.
+Originally extracted to be shared with an explore strategy as well; the
+explore path has since been re-homed onto the subagent-driven playbook
+(``subagent_explore``) that drives a stateless helper via the Task tool,
+so this module is currently fitness-only. Kept as a module (rather than
+inlined) because a future strategy may need the same QA magic-link flow.
 """
 
 from __future__ import annotations

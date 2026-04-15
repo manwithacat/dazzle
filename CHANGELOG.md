@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.7] - 2026-04-15
+
+### Removed
+- **Cycle 197 explore path retired.** Deleted ~2100 lines of dead code
+  that supported the pre-cycle-198 DazzleAgent-on-SDK explore path.
+  Specifically:
+  - `src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py`
+    (480 lines) — the `run_explore_strategy` entry point and the
+    `ExploreOutcome` dataclass.
+  - `src/dazzle/agent/missions/ux_explore.py` (222 lines) — the
+    `build_ux_explore_mission`, `make_propose_component_tool`, and
+    `make_record_edge_case_tool` helpers. Not to be confused with
+    `ux_explore_subagent.py`, which is the live subagent path added
+    in 0.55.5.
+  - `src/dazzle/mcp/server/handlers/discovery/explore_spike.py` (192
+    lines) — the cycle-198 Path-γ MCP-sampling spike handler. The
+    spike proved Claude Code doesn't implement `sampling/createMessage`,
+    so the handler is no longer useful.
+  - The `discovery.explore` MCP operation, its enum entry, and its
+    parameter schema in `tools_consolidated.py` / `handlers_consolidated.py`.
+  - Four test files: `tests/unit/test_explore_strategy.py`,
+    `tests/unit/test_ux_explore_mission.py`,
+    `tests/unit/mcp/test_discovery_explore_spike.py`, and
+    `tests/e2e/test_explore_strategy_e2e.py`.
+- The live explore path is now the subagent-driven playbook documented
+  in `.claude/commands/ux-cycle.md` Step 6, which uses
+  `src/dazzle/agent/missions/ux_explore_subagent.py` and
+  `src/dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py`.
+  The fitness strategy (`fitness_strategy.run_fitness_strategy`) is
+  unaffected and still uses `_playwright_helpers.py`.
+
+### Agent Guidance
+- **The `discovery` MCP tool now exposes only the `coherence`
+  operation.** If you need explore, use the subagent-driven playbook
+  via `/ux-cycle` Step 6 — not an MCP operation.
+
 ## [0.55.6] - 2026-04-15
 
 ### Added
