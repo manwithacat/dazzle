@@ -4,6 +4,49 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T03:30Z — Cycle 200 — **triage: 10 PROP rows promoted to UX-037..046**
+
+**Outcome:** Triaged the 10 proposals produced by cycles 198+199 and promoted every one of them into a `PENDING` / `contract:MISSING` UX row. Net effect: the `/ux-cycle` pipeline's Step 1 prioritisation now has 10 new rows to chew through before it would next fall back to Step 6 EXPLORE. The "explore faster than you can triage" failure mode is cleared.
+
+### Triage verdict — why all 10 promoted
+
+All 10 proposals were tested against three overlap questions:
+
+1. **Does an existing contract already cover this?** No for all 10.
+2. **Does another proposal in the batch subsume it?** Closest near-miss was `UX-038 workspace-card-picker` vs `UX-045 dashboard-edit-chrome` — they're always used together but have structurally different state models (picker owns catalog + empty-state + click-outside; edit-chrome owns save/dirty/reset). Kept separate, with cross-links in each row's notes.
+3. **Is it just a specialisation of `popover` / `region-wrapper` / `data-table` (the generic primitives)?** For `column-visibility-picker`, yes — it's a popover consumer with a specific `aria-haspopup=menu` + `menuitemcheckbox` content shape. Still promoted on the grounds that the ARIA pattern deserves a contract so it doesn't drift; the note flags it as a popover consumer explicitly.
+
+### Promotion map
+
+| New | From | Canonical | Rationale |
+|---|---|---|---|
+| UX-037 workspace-detail-drawer | PROP-037 | contact_manager | distinct from slide-over: plain-JS dzDrawer API, permanent in DOM, "open full page" affordance, HTMX internal-nav |
+| UX-038 workspace-card-picker | PROP-038 | support_tickets | popover consumer; complementary to UX-045 |
+| UX-039 workspace-tabbed-region | PROP-039 | support_tickets | orthogonal to region-wrapper (wrapper = chrome) |
+| UX-040 kanban-board | PROP-040 | support_tickets | novel read-only column-board pattern |
+| UX-041 column-visibility-picker | PROP-041 | support_tickets | popover consumer; sibling of data-table |
+| UX-042 activity-feed | PROP-042 | support_tickets | distinct from related-displays (FK-joined) — this is audit/history |
+| UX-043 inline-edit | PROP-043 | support_tickets | distinct interaction pattern with its own state model |
+| UX-044 dashboard-region-toolbar | PROP-044 | support_tickets | distinct from filter-bar (page) and data-table (list) — per-region |
+| UX-045 dashboard-edit-chrome | PROP-045 | support_tickets | save/dirty/reset shell distinct from dashboard-grid (layout) |
+| UX-046 bulk-action-bar | PROP-046 | support_tickets | distinct from data-table (table owns checkboxes, bar is separate) |
+
+### Canonical concentration and what it means
+
+9/10 new UX rows are canonical to `support_tickets` (only UX-037 is from `contact_manager`). That's partly an artefact of cycle 199's 3-persona fan-out against one app, not a signal about the apps themselves — `ops_dashboard`, `fieldtest_hub`, and `simple_task` haven't been subagent-explored yet. A follow-up fan-out against those apps is a reasonable cycle-201+ move, but only after these 10 rows have at least had contracts drafted (otherwise we re-accumulate the triage backlog).
+
+### Remaining unpromoted proposal
+
+`PROP-032 workspace-regions` from cycle 17 is still `PROPOSED`. Its original note says it "likely decomposes into 4 sub-rows". Cycle 199 effectively decomposed part of it — `UX-039 workspace-tabbed-region` and `UX-040 kanban-board` are two of the 4 region types referenced in that old PROP. The other two (grid, list) are arguably covered by `dashboard-grid` + `region-wrapper` + `data-table`. A dedicated cycle can formally close PROP-032 by either marking it PROMOTED→UX-039+040 (partial) or SUPERSEDED. Leaving it as-is for this cycle.
+
+### Next cycle options
+
+1. **Draft contracts** for UX-037..046 via the ux-architect skill (SPECIFY step 2 in the runbook). 10 contracts is a lot for one cycle; spreading 2-3 per cycle over 4-5 cycles is more realistic.
+2. **Exercise edge_cases strategy end-to-end** against a fresh example app. Shipped in v0.55.8 but still untested on live content.
+3. **Close PROP-032** formally.
+
+---
+
 ## 2026-04-15T03:10Z — Cycle 199 — **multi-persona fan-out validated** — 3 personas × support_tickets → 9 proposals, 7 observations
 
 **Outcome:** First multi-persona explore cycle. Walked the cycle 198 playbook against `examples/support_tickets` three times (once per business persona: agent, customer, manager), each with its own state-dir, runner, and subagent invocation. Result: **9 non-overlapping proposal candidates (PROP-038..046)** and **7 observations** — a >9× uplift over cycle 198's single-persona run, at roughly proportional subsidised cost. Zero duplicates: the `existing_components` filter fed each persona the set of contracts already covered by earlier personas in the same cycle, and the subagents respected it.

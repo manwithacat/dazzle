@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.10] - 2026-04-15
+
+### Changed
+- **Cycle 200 triage: 10 PROP rows promoted to UX-037..046.** All ten
+  proposals produced by cycles 198+199 (`workspace-detail-drawer`,
+  `workspace-card-picker`, `workspace-tabbed-region`, `kanban-board`,
+  `column-visibility-picker`, `activity-feed`, `inline-edit`,
+  `dashboard-region-toolbar`, `dashboard-edit-chrome`,
+  `bulk-action-bar`) passed the three overlap tests — no existing
+  contract subsumes them, no two proposals collapse into one, and the
+  two that are popover consumers (`column-visibility-picker`,
+  `workspace-card-picker`) warrant their own contracts for drift
+  prevention. Each `PROP-NNN` row in
+  `dev_docs/ux-backlog.md` is now marked `PROMOTED→UX-NNN`, and the
+  ten new `PENDING / contract:MISSING` rows sit at the top of the
+  `/ux-cycle` Step 1 priority queue for the next cycle.
+
+### Agent Guidance
+- **The explore/triage ratio matters.** Cycles 198+199 produced 10
+  proposals in 4 persona-runs; cycle 200 triaged them in one pass.
+  Don't run another fan-out until the triage queue has been worked
+  down at least to first-draft contracts — otherwise the backlog
+  just accumulates untriaged noise.
+
 ## [0.55.9] - 2026-04-15
 
 ### Added
