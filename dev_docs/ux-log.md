@@ -4,6 +4,103 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T22:41Z — Cycle 232 — **finding_investigation: EX-009 widget selection — date half FIXED, ref half scoped out as EX-044**
+
+**Strategy:** `finding_investigation`. Target: EX-009 (simple_task/member cycle 213 — Due Date renders as plain input, Assign To renders as plain text). This row was a key piece of the new widget-selection gap doc written in cycle 230, and was slated as the cycle 232 target because it hits both the date and ref sub-gaps in one surface.
+
+**Outcome:** Applied Heuristic 1 ("try the real thing") throughout. Reproduced both defects at the HTTP layer first, traced the compiler dispatch, fixed the date-half with a one-line default, and documented the ref-half as a structurally-larger fix (filed as EX-044 for a future cycle).
+
+### Investigation trace
+
+1. **HTTP-layer reproduction** (Heuristic 1). Booted simple_task, logged in as member, fetched `/app/task/create` with `Accept: text/html`, extracted the `due_date` and `assigned_to` field HTML blocks.
+   - `due_date` renders as `<input type="date" id="field-due_date" data-dazzle-field="due_date">` — plain HTML5 date input, NO Flatpickr wrapper, NO `data-dz-widget` attribute
+   - `assigned_to` renders as `<input type="text" id="field-assigned_to" data-dazzle-field="assigned_to" placeholder="Assign To">` — completely unadorned, not a search-select at all
+
+2. **Confirmed IR shape.** Task entity DSL: `due_date: date`, `assigned_to: ref User`. IR parses correctly — widget selection should fire.
+
+3. **Traced compiler dispatch.**
+   - `src/dazzle/core/ir/triples.py:58-59` declares `FIELD_TYPE_TO_WIDGET` mapping: `DATE → DATE_PICKER`, `REF → SEARCH_SELECT`. **The IR intent is clear.**
+   - `src/dazzle_ui/converters/template_compiler.py` has `_field_type_to_form_type` → calls `resolve_widget(field_spec)` → maps to a `form_type` string like `"date"` or `"ref"`. **The form_type is derived from the widget correctly.**
+   - But `_build_form_fields` at line 587-588 populates `field.widget` ONLY from explicit DSL override: `widget_hint = element_options.get("widget")`. For entity-field fallback paths (where DSL doesn't have explicit sections), `widget_hint` is always None.
+   - `src/dazzle_ui/templates/macros/form_field.html` branches on `field.widget == "picker"` (activates Flatpickr), `field.widget == "combobox"` (activates Tom Select with static options), `field.source` (activates external-API search-select). If none match, falls through to the final `field.type` branch which emits plain inputs.
+
+4. **Root cause (date)**: Form-field context is missing the `widget` hint, so the template falls through to `{% elif field.type == "date" %}` at line 319 and emits `<input type="date">` instead of `data-dz-widget="datepicker"`.
+
+5. **Root cause (ref)**: Neither the `combobox` branch nor the `source` branch supports generic entity-ref. `combobox` iterates `field.options` which is empty for refs (dropdown shows only placeholder, nothing selectable). `source` expects an external-API shape tied to a `companieshouse`-style fragment endpoint, not a generic `/users?search={q}` lookup. There is no existing template branch OR compiler path that handles the common "look up records from entity E" case. A proper fix requires structural framework work.
+
+### The date-half fix (shipped this cycle)
+
+Single-function edit in `template_compiler.py:_build_form_fields`. After computing `widget_hint = element_options.get("widget")`, added:
+
+```python
+# Default widget fallback for date/datetime fields (cycle 232).
+if widget_hint is None and field_spec and field_spec.type:
+    _k = field_spec.type.kind
+    if _k in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
+        widget_hint = "picker"
+```
+
+Extensive comment cites the IR's `FIELD_TYPE_TO_WIDGET` mapping and explains why the intent never reached the template. This mirrors the date case; follow-up cycles can extend it to other WidgetKinds where a safe default exists.
+
+### Cross-app verification (Heuristic 3)
+
+Checked all 5 example apps for date fields on their create surfaces:
+
+| App | Create surface | plain type="date" | datepicker widget | daterange |
+|---|---|---|---|---|
+| simple_task | /app/task/create | 0 | **1** ✓ | 0 |
+| fieldtest_hub | /app/device/create | 0 | 0 | 0 (no date fields on this surface) |
+| support_tickets | /app/ticket/create | 0 | 0 | 0 (no date fields) |
+| ops_dashboard | /app/system/create | 0 | 0 | 0 (no date fields) |
+| contact_manager | /app/contact/create | 0 | 0 | 0 (no date fields) |
+
+simple_task is the only app with a date field on a visible create surface. The fix correctly converts it to the datepicker widget. The other 4 apps have no date fields to regress. Zero collateral impact.
+
+### The ref-half structural gap (deferred to EX-044)
+
+Filed as a new framework-gap row. Key points of the full trace:
+
+- **Two existing template branches** handle ref-like widgets, neither suitable for DSL-plain refs:
+  1. `{% elif field.widget == "combobox" %}` — Tom Select wrapper with static options. For a `ref User` field, `field.options` is empty, so the dropdown has only a placeholder — unusable.
+  2. `{% elif field.source %}` — dynamic search-select via `fragments/search_select.html`. Expects a `FieldSourceContext` with `endpoint`, `display_key`, `value_key` (companies-house-style external-API shape). Not automatic for entity-ref lookups.
+- **A proper fix** requires either:
+  - (A) Extending `FieldSourceContext` to model entity-ref lookups and auto-generating a source_ctx for every ref field in `_build_form_fields` (e.g. `endpoint=/users?search={q}`, `display_key=name`, `value_key=id`, populating from the entity's `display_field` attribute + primary key)
+  - (B) Adding a new dedicated template branch (`{% elif field.ref_entity %}`) with HTMX-backed async fetching from the referenced entity's list endpoint
+
+Option (A) reuses existing infrastructure (FieldSourceContext + search_select.html fragment); option (B) is cleaner but duplicates the lookup pattern.
+
+Estimated scope: 45-60 minutes in a dedicated cycle, plus regression testing across the 4 contributing rows (EX-006, EX-009 ref-half, EX-029, EX-041).
+
+### Status moves
+
+- **EX-009**: OPEN → **PARTIALLY_FIXED** (date half resolved this cycle; ref half tracked via EX-044)
+- **EX-044**: NEW row, framework-gap, OPEN — filed with full investigation trace
+
+### Test suite + quality gates
+
+- Full unit sweep: **10453/10453 pass** — no regressions
+- Lint: clean
+- Types (on /ship paths): clean
+- Cross-app HTTP-layer verification: clean
+
+### Framework-level implications
+
+**The form-field dispatch architecture is sound, but the compiler is under-using it.** The `FIELD_TYPE_TO_WIDGET` mapping in `triples.py` is the canonical intent declaration — it says "date fields use the datepicker widget". But the compiler was translating that intent into a form-type string only, never propagating it into the actual widget-context field the template branches on. This is the inverse of cycle 225/226/228's pattern: instead of two code paths diverging, here one code path was missing a step (the widget hint propagation) that the template had been expecting all along.
+
+**This is a third class of defect** worth adding to the heuristics section in a future skill update:
+
+> **Heuristic 4 candidate — Defaults propagation audit**: When a framework introduces a canonical intent declaration (like `FIELD_TYPE_TO_WIDGET` or `workspace_allowed_personas`), grep for every call site that reads the intent and verify it propagates into the context objects templates actually consume. Missing propagation is a subtle gap — the intent exists and the consumer exists, but the bridge between them is incomplete.
+
+I'll evaluate whether this generalises across more cycles before formally adding it to the skill.
+
+**Explore budget:** 8 → 9 / 100. **~3 cycles remaining** in the user's ~12-cycle arc.
+
+### Mission assessment
+
+Textbook partial-success cycle. Closed half of a concerning row with a small, well-scoped fix. Documented the other half with enough precision that a follow-up cycle can execute the structural work without re-doing the investigation. The "shipped one thing, filed one thing" outcome is the shape the loop should produce when investigations reveal two gaps with asymmetric scope.
+
+---
+
 ## 2026-04-15T22:35Z — Cycle 231 — **verification sweep: 5 error-chrome rows promoted SUSPECTED_FIXED → FIXED across all 5 apps**
 
 **Strategy:** custom verification-sweep variant of `finding_investigation`. Target: EX-003/004/008/014/020, all marked SUSPECTED_FIXED in cycle 230 with a shared hypothesis — v0.55.31 #776 (the in-app error shell templates + URL-prefix dispatch in `exception_handlers.py`) should have resolved the authenticated-404/403-renders-marketing-chrome defect. Cycle 231 was the short verification cycle promised in cycle 230's plan.
