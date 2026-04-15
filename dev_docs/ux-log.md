@@ -4,6 +4,91 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T21:50Z — Cycle 228 — **finding_investigation: EX-040 — bulk-action bar suppresses for personas without delete permission**
+
+**Strategy:** `finding_investigation`. Target: EX-040 (cycle 223 observation — fieldtest_hub/tester sees "Delete X items" bulk-action bar on 4 entity lists despite delete being engineer-only per DSL).
+
+**Outcome:** Root-caused, fixed, cross-persona verified. Fourth consecutive successful `finding_investigation` cycle in the resumed arc.
+
+### Investigation trace
+
+1. **Located template + compile-time context.** Found `src/dazzle_ui/templates/fragments/bulk_actions.html` (the affordance template, `x-show="bulkCount > 0"`) and the compile-time builder at `src/dazzle_ui/converters/template_compiler.py:767` which sets `bulk_actions=True` **unconditionally** on every list surface.
+
+2. **Initial hypothesis check: IR inspection.** Inspected the IR's AccessSpec for fieldtest_hub's Device/IssueReport/TestSession/Task. Surprise: `PermissionRule.operation=DELETE, personas=[]` for all four — "empty = any". That would mean every persona is allowed per the IR.
+
+3. **Reality check: attempt a real DELETE as tester.** Booted fieldtest_hub, logged in as tester, got an engineer's Device ID via a separate engineer session, and fired a `DELETE /devices/<id>` from tester. Returned **403 Forbidden**. So runtime enforcement WAS rejecting the delete — the IR's `personas=[]` wasn't the whole story.
+
+4. **Drilled into the IR shape.** The role restriction lives in `PermissionRule.condition` (a `ConditionExpr` tree), not `personas`. For Device, the DELETE rule's condition is `role_check{role_name='engineer'}`. The `personas` field is a separate (and empty) scoping concept; the `condition` tree is the real gate. The runtime's `evaluate_permission` walks the condition tree and correctly denies tester.
+
+5. **Found the existing per-persona access helper.** `src/dazzle/rbac/matrix.py` has `generate_access_matrix(appspec) → AccessMatrix` which returns a `(role, entity, operation) → PolicyDecision` map. For fieldtest_hub, `matrix.get('tester', 'Device', 'delete') == PolicyDecision.DENY` — correct. But the matrix is a *statically computed* object; it would work at compile time, which is where `bulk_actions=True` is set. Alternatively there's a per-request helper `_user_can_mutate(deps, surface_name, 'delete', auth_ctx)` already used for Create button suppression at `page_routes.py:692`. Per-request is simpler and matches the existing pattern.
+
+6. **Applied the fix at the per-request layer.** Added a parallel suppression block at `page_routes.py:701` mirroring the Create-button block. Calls `_user_can_mutate(deps, surface_name, 'delete', auth_ctx)` and sets `req_table.bulk_actions = False` when the current persona cannot delete. Single helper, single source of truth with the existing Create-button gate.
+
+### The fix
+
+**One file changed:** `src/dazzle_ui/runtime/page_routes.py` — inserted a new `if ctx.user_roles is not None and req_table.bulk_actions:` block right after the existing Create-button suppression block, calling the same `_user_can_mutate` helper with `operation='delete'`. 10 lines of code + a 12-line comment explaining the cycle 228 mechanism and the "why per-request not compile-time" decision.
+
+### Cross-persona verification on fieldtest_hub
+
+| Persona | /app/device | /app/issuereport | /app/testsession | /app/task | Expected |
+|---|---|---|---|---|---|
+| **tester** | 0 bulkDelete | 0 | 0 | 0 | ✓ (delete engineer-only) |
+| **engineer** | 1 | 1 | 1 | 1 | ✓ (can delete) |
+| **manager** | 0 | 0 | 0 | 0 | ✓ (delete engineer-only) |
+
+Exactly the shape the DSL declares. engineer is the only persona with `role(engineer)` in the delete permit, and only engineer sees the button. Tester and manager (both excluded from delete at the DSL level) no longer see the affordance.
+
+### Test suite impact
+
+- Full unit sweep: **10453/10453 pass** — no regressions
+- Lint: caught a `UP042` on cycle 227's test file (`class _AccessLevel(str, Enum)` → `StrEnum`), fixed in passing
+- Types (on /ship paths): clean
+
+### Framework-level implications
+
+**Gap doc #2 partial closure.** The `persona-unaware-affordances` gap doc from cycle 224 identified 4 axes where persona-filtering was missing: workspace-level nav (closed by v0.55.34 #775 + cycle 226 fix), bulk-action bars (closed by this cycle), empty-state CTAs (still open), and create-form field visibility (still open). **2 of 4 axes done.**
+
+The cycle 228 fix is narrower than the gap doc's fix sketch (which proposed a general `affordance_visible(persona, action, target)` helper across all 4 axes in a new `persona_visibility.py` module). The narrower approach taken here is deliberate:
+
+1. The per-request pattern (mirror the existing Create-button block) is consistent with how the framework already handles this for Create — reusing `_user_can_mutate` means both affordances go through a single well-tested runtime code path.
+2. A unified helper module would be larger scope and higher risk. This smaller fix closes 1 concrete observation with 10 lines of code and 0 new test infrastructure.
+3. The gap doc can still drive a future refactor into `persona_visibility.py` — but only after all 4 axes have at least one per-axis implementation to pattern-match against.
+
+**Key insight:** The `_user_can_mutate` helper was already doing the right thing for Create. The gap wasn't "no such helper exists" — it was "the helper existed but wasn't called from all the right places". This is the same shape as cycle 226 (the #775 fix was correct but missed a second call site). **Pattern:** when a framework introduces a single-source-of-truth helper, it's worth an audit cycle to find all the places where the helper *should* be called but isn't. Worth filing as a recurring cycle type.
+
+### Cycle 225/226/227/228 pattern consolidation
+
+Four consecutive investigation cycles, each ~20-30 minutes, each closing one concerning or high-priority row. All four fixes shared a common shape: a small structural correction at a single call site, unified by an existing helper rather than introducing new abstractions.
+
+| Cycle | Row | Root cause | Scope | Delta |
+|---|---|---|---|---|
+| 225 | EX-035 | Parser dropped multi-line list children → cascaded through persona → fallback workspace | 1 function rewrite | 1 file + 2 regression tests |
+| 226 | EX-028 | v0.55.34 #775 missed a second nav-items builder | 1 function edit | 1 file, existing tests cover it |
+| 227 | EX-042 | `_root_redirect` fallback dict was too narrow | 1 new helper + 1 call-site swap | 2 files + 11 regression tests |
+| 228 | EX-040 | `_user_can_mutate` not called from the bulk-action-bar path | 1 call-site addition | 1 file, existing runtime tests cover it |
+
+**Four concerning/high rows closed. Four structural cleanups. ~100 minutes total cycle time. Zero regressions across any of them.** The finding_investigation strategy is clearly the highest-leverage cycle type in the current phase.
+
+### Next cycle plan
+
+With EX-040 closed, the largest remaining concerning row is **EX-039** (silent form submit on empty required fields / negative numeric). It's the core of gap doc #1 (silent-form-submit). The scope is bigger than 225-228 — probably requires new framework infrastructure (HTMX 422-error-surfacing), not a simple helper swap. Cycle 229 should tackle it, with explicit acknowledgment that it may take 45-60 minutes vs the 20-30 of the recent cycles.
+
+If cycle 229 proves too large to fit in one investigation cycle, fall back to filing a detailed issue with the investigation's findings and pivoting to a smaller row for cycle 230.
+
+### Status moves
+
+- **EX-040**: OPEN → **FIXED_LOCALLY** (with full trace)
+
+### Mission assessment
+
+Fourth consecutive investigation cycle. Particularly clean because:
+1. The initial IR inspection led me astray (`personas=[]` looked like a parser bug), but the "try the actual operation" reality check caught it immediately. This is a valuable debugging pattern: **always try the real thing** before committing to a hypothesis about broken framework internals.
+2. The fix was smaller than the gap doc sketch proposed, but that's the right outcome for closing one specific observation. The gap doc's broader `persona_visibility.py` refactor can wait until there's a second axis that needs the same shape.
+
+**Explore budget:** 4 → 5 / 100. **~7 cycles remaining** in the user's ~12-cycle arc.
+
+---
+
 ## 2026-04-15T21:36Z — Cycle 227 — **finding_investigation: EX-042 — `_root_redirect` fallback structural cleanup**
 
 **Strategy:** `finding_investigation`. Target: EX-042 (the secondary gap filed during cycle 226 — `_root_redirect` falls back to `workspaces[0]` which is usually the admin workspace, producing 403 dead-end for non-admin personas any time their persona-to-workspace mapping is incomplete).

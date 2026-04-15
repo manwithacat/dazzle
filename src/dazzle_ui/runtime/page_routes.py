@@ -695,6 +695,22 @@ async def _page_handler(
             ) or not _user_can_mutate(deps, surface_name, "create", auth_ctx):
                 req_table.create_url = None
 
+        # Suppress the bulk-action-bar "Delete X items" affordance when the
+        # current persona cannot delete this entity. Closes EX-040 (cycle
+        # 223 observation: bulk-action bar shown to fieldtest_hub/tester
+        # on 4 entity lists despite delete being engineer-only per DSL).
+        # The template_compiler sets ``bulk_actions=True`` unconditionally
+        # at compile time because there is no request context then; we
+        # resolve per-persona here in the per-request copy, mirroring the
+        # create_url suppression above. ``_user_can_mutate`` correctly
+        # distinguishes "no rules / field-conditioned rules" (allow —
+        # record-level) from "role-gate denies mutation" (suppress).
+        if ctx.user_roles is not None and req_table.bulk_actions:
+            if _should_suppress_mutations(
+                deps, surface_name, auth_ctx, ctx.user_roles
+            ) or not _user_can_mutate(deps, surface_name, "delete", auth_ctx):
+                req_table.bulk_actions = False
+
         # Evaluate role-based visible_condition on list columns (#585)
         if ctx.user_roles is not None:
             from dazzle_ui.utils.condition_eval import evaluate_condition

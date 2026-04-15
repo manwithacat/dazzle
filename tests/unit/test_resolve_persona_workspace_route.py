@@ -18,14 +18,14 @@ routes, so naïvely honouring `default_route` would redirect users to
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from dazzle_ui.converters.workspace_converter import (
     resolve_persona_workspace_route,
 )
 
 
-class _AccessLevel(str, Enum):
+class _AccessLevel(StrEnum):
     PUBLIC = "public"
     AUTHENTICATED = "authenticated"
     PERSONA = "persona"
