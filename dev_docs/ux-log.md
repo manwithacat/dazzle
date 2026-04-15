@@ -4,6 +4,29 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T19:10Z — Cycle 220 — **UX-004 form aggregate closed; 6 unrelated Phase A fails filed as EX-025/EX-026**
+
+**Outcome:** Picked UX-004 (`form`) — the aggregate row left over from cycles 6–9 in `READY_FOR_QA` state with no standalone contract. Phase A ran against `simple_task` with a booted `dazzle serve --local` process, and produced `23 passed / 6 failed / 22 pending` across 51 generated contracts. **None of the 6 failures is a `form:*` contract.** The sub-rows UX-016/017/018/019 are all DONE/PASS in their own cycles, so UX-004 moved to DONE on the basis that the form sub-contracts are individually verified and nothing form-related regressed.
+
+The 6 Phase A failures split into two independent framework gaps and were filed as separate EX rows:
+
+- **EX-025 — contract-gap (4 rows).** Four `workspace:*` contracts expect rendered HTML to carry a `data-region-name="<name>"` attribute on each declared region wrapper, but the template compiler doesn't stamp that attribute anywhere. Affected: `task_board`, `admin_dashboard`, `team_overview`, `_platform_admin` — 15 distinct region names across the four workspaces. Either the workspace template compiler should emit the attribute (preferable — contract is load-bearing for assertion) or the contract generator should key on whatever attribute the templates actually emit. Framework-wide asymmetry between the contract generator and the template compiler; worth re-running Phase A against `ops_dashboard` and `fieldtest_hub` in a follow-up cycle to gauge blast radius.
+
+- **EX-026 — rbac-asymmetry (2 rows).** Two RBAC contract failures with opposite-persona semantics. (1) `rbac:User:member:list` returns 403 because the contract expects members to have User list access but the DSL's access rules deny it — the contract generator looks over-eager here; members plausibly shouldn't need to list Users. (2) `workspace:my_work` returns 403 for admin, but `my_work` is a legitimately member-scoped workspace and admin exclusion is correct — the contract generator is probing every persona against every workspace without consulting persona access rules. Framework gap: the workspace contract generator needs to respect persona-scoped access when deciding which personas to verify.
+
+Both EX rows are filed OPEN; neither has a GitHub issue yet (they need cross-app triage first to confirm they're not simple_task-specific).
+
+**Status moves:**
+- UX-004 `form`: `READY_FOR_QA` → `DONE` (qa:PASS) with extensive notes
+- EX-025: new row, OPEN
+- EX-026: new row, OPEN
+
+**Cycle duration:** ~5 minutes (no subagent, no fitness engine — Phase A only on a booted server).
+
+**Backlog state after cycle:** 0 rows in REGRESSION / PENDING / IN_PROGRESS / READY_FOR_QA. The next `/ux-cycle` iteration will fall through to Step 6 EXPLORE.
+
+---
+
 ## 2026-04-15T04:20Z — Cycle 201 — **edge_cases strategy live against support_tickets** — 2 concerning defects + 3 notable + 1 minor
 
 **Outcome:** First production run of the `edge_cases` explore strategy (shipped in v0.55.8) against a live example app, using the `ingest_findings` helper (shipped in v0.55.9) to auto-write the backlog. Subagent probed `support_tickets` as the `agent` persona and surfaced **6 observations — 2 concerning, 4 notable** — including a suspected data-loss bug on the form the support agent uses for their core job. Zero proposals, which is the expected shape for `edge_cases` (observations >> proposals by design).
