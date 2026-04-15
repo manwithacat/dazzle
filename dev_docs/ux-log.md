@@ -4,6 +4,69 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T23:00Z — Cycle 237 — **framework_gap_analysis: component menagerie roadmap (strategic inventory)**
+
+**Strategy:** `framework_gap_analysis` — pure synthesis, no browser, no code. Triggered by user strategic direction after cycle 236: *"at a strategic level, we should be aiming to increase the menagerie of available, high-quality components for ux. not necessarily looking for full shadcn/react capabilities, but leveraging htmx and alpine.js to provide canonical solutions to ux requirements"*.
+
+### Core finding
+
+**The biggest gap is not missing components — it's uncontracted components.** Inventory pass across `src/dazzle_ui/templates/` revealed ~18 shipped template files with no matching `ux-architect` contract. The code works, the DSL drives some of it, but there's no regression gate, no consistent token governance, no discoverability for future DSL authors or for LLM agents trying to propose UX.
+
+Bringing these under governance is higher-leverage than inventing new primitives.
+
+### What I did
+
+1. **Enumerated the contract directory** at `~/.claude/skills/ux-architect/components/` — 46 contracts covering UX-001..040 + activity-feed + inline-edit + a handful of chrome components.
+2. **Enumerated shipped templates** across `fragments/`, `workspace/regions/`, `components/`. Found ~18 templates with no matching contract.
+3. **Checked DSL usage in all 5 example apps** via grep for `display:`, `metrics:`, `region_type:`. Result: `list` = 23 uses, everything else (`timeline`, `summary`, `kanban`, `grid`, `detail`) = 1 use each. Most rich region templates exist **speculatively** with no real DSL consumers.
+4. **Cross-referenced** the contract gaps against DSL usage to build a prioritisation.
+5. **Wrote the roadmap doc** at `dev_docs/framework-gaps/2026-04-15-component-menagerie-roadmap.md` (~460 lines).
+
+### Findings by category
+
+| Category | Count | Notes |
+|---|---|---|
+| 1a. Templated + contracted + verified (UX-001..040 PASS rows) | 46 | Base layer is solid |
+| 1b. Contracted but unverified | 2 | `activity-feed`, `inline-edit` — need PASS rows |
+| 1c. Templated + DSL-anchored, **no contract** | ~10 | Highest leverage: `metrics`, `timeline`, `kanban`, `grid`, plus ~6 speculative regions |
+| 1d. Templated + implicit everywhere, **no contract** | ~12 | `status_badge`, `empty_state`, `tooltip_rich`, `toggle_group`, `breadcrumbs`, `accordion`, `context_menu`, `skeleton_patterns`, `form_stepper`, `steps_indicator`, `alert_banner`, `date_range_picker` |
+| 1f. Genuine gaps (not templated, not contracted) | ~10 | `stat-card` (inline), `avatar`, `badge`, AI-era primitives, progress bar (inline), etc. |
+
+### Top 5 for mini-arc 238-242
+
+| Cycle | Component | Rationale |
+|---|---|---|
+| **238** | `status-badge` | 5/5 blast radius; auto-derivable from enum/state fields (zero DSL change); substrate exists; single biggest visual-consistency win |
+| **239** | `metrics` region / stat-card | 3/5 apps already use it via `metrics:` DSL block; compiler already populates `metrics.html`; contracting formalises tile/attention-colour semantics |
+| **240** | `empty-state` | 5/5 blast radius; bundles the EX-046 per-persona copy grammar extension; closes the last residue of gap doc #2 |
+| **241** | `tooltip` | 5/5 want it; ARIA compliance; small scope |
+| **242** | `toggle-group` / segmented control | 2/5 current use; pairs with optional `display: [list, kanban]` DSL grammar extension |
+
+### Parking lot
+
+14 additional items ranked in the roadmap doc. Top of the lot: `breadcrumbs`, `activity-feed` verification, `inline-edit` verification, `form-stepper`, `alert-banner`. Speculative region types (`bar_chart`, `funnel_chart`, `heatmap`, `tree`, `progress`) are audit-and-park — no DSL consumers in any example app, so contracting them prematurely is low-value.
+
+### Meta-observations captured in the doc
+
+1. **New cycle type proposal: `contract_audit`**. Distinct from `missing_contracts`. Picks a specific known-templated-but-ungoverned component and formalises it. Cycles 238-242 will all be this shape. Promote to the skill after one or two have landed.
+2. **DSL anchors are the multiplier.** The three top components all have existing DSL anchors (enum fields, `metrics:` block, `empty:` copy). Contracting these gives every future app the component for free. UI-only primitives (tooltip, accordion) are lower ROI per cycle.
+3. **Avoid inventing while audit is incomplete.** Natural instinct after cycle 236's fix is to invent avatars/chat bubbles. Trap. Finish the audit first.
+4. **Cycle 236 is the template for this mini-arc**: raw-layer reproduction, existing machinery already wants this, small compiler+template change unlocks cross-app consistency, DSL author writes nothing and gets the new behaviour for free.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 13 → **14**. Headroom ample (up to 100).
+
+### Rows touched
+
+None directly — this is a pure synthesis cycle. No backlog transitions. Outputs are the roadmap doc and this log entry.
+
+### ScheduleWakeup
+
+Not armed. This cycle delivers an artefact for the user to react to; proceeding straight into cycle 238 `contract_audit` on status-badge is the default path but should wait for an explicit "go" since the user may want to swap priorities in the roadmap or defer the mini-arc entirely.
+
+---
+
 ## 2026-04-15T23:25Z — Cycle 236 — **finding_investigation: EX-044 widget-selection ref-half SHIPPED (closes the last widget-selection gap)**
 
 **Strategy:** `finding_investigation` against EX-044 (widget-selection gap for ref fields). Target: the highest-ROI remaining framework gap from the retrospective's recommended-next-work list. The user re-invoked `/loop /ux-cycle` after cycle 235's explicit stop, signalling continuation; with no new direction given, I took the retrospective's top recommendation.
