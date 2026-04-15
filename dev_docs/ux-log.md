@@ -4,6 +4,116 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T22:54Z — Cycle 233 — **finding_investigation: EX-041 is blocked on a deeper framework-level question (EX-045)**
+
+**Strategy:** `finding_investigation`. Target: EX-041 (fieldtest_hub/tester Log Test Session form exposes required 'Tester' ref field as a raw UUID text input, should auto-populate from current user). Originally scoped as a small ~20-min cascade extension of #774 (`inject_current_user_refs`) to handle User-subtype entities.
+
+**Outcome:** Cycle 229-shape outcome — investigation revealed the observation is structurally deeper than the hypothesised fix. Cycle 233 is a documentation-only cycle that traces the real mechanism and files a new framework-gap row (EX-045) for the root-cause question. No framework code changed. EX-041 marked `BLOCKED_ON_EX-045`.
+
+### Investigation trace (Heuristic 1 applied)
+
+1. **Read `inject_current_user_refs`** at `route_generator.py:1835`. The filter at line 2685 is strict: `target == "User"` — literal string match on the ref target entity name. For `ref Tester`, target is `"Tester"`, not `"User"`, so the field is excluded from auto-injection.
+
+2. **Hypothesised fix**: walk the ref graph one hop — if a required field is `ref <Entity>` and `<Entity>` has a `ref User` back-reference, resolve current_user to the matching `<Entity>` row and inject that. Checked fieldtest_hub's Tester entity DSL to confirm the cascade path exists.
+
+3. **Hypothesis invalidated at DSL inspection**. Tester DSL at `examples/fieldtest_hub/dsl/app.dsl`:
+   ```
+   entity Tester "Tester":
+     id: uuid pk
+     name: str(200) required
+     email: str(255) required unique
+     location: str(200) required
+     skill_level: enum[casual, enthusiast, engineer]=casual
+     ...
+   ```
+   **Tester has no `ref User` field**. It's a fully-independent domain entity — not a User-subtype, no foreign key back to an auth user, nothing to cascade through. The cascade extension has nothing to walk.
+
+4. **Checked the access-evaluator's `current_user` resolution** at `access_evaluator.py:98`:
+   ```python
+   if value == "current_user":
+       resolved_value = context.user_id
+   ```
+   `current_user` resolves to `context.user_id` — the authenticated user's auth-system ID. NOT a Tester row ID.
+
+5. **Examined fieldtest_hub's existing scope rules** that use `current_user`:
+   - `scope: list: assigned_tester_id = current_user for: tester` on Device
+   - `scope: list: reported_by_id = current_user for: tester` on IssueReport
+   - `scope: list: tester_id = current_user for: tester` on TestSession
+
+   All three filter Tester-typed FKs against `current_user` (auth user id). **This only works if Tester row IDs are equal to auth user IDs**. fieldtest_hub's demo seed must be populating Testers with IDs matching the persona auth users — a convention, not a framework guarantee. A real deployment where Tester rows are created independently would break every one of these scope rules silently.
+
+6. **Searched for any existing persona-entity binding DSL construct** (`backed_by`, `linked_entity`, `identity_entity`) in `src/dazzle/core`. **No such concept exists.** This is a structural gap in the DSL schema.
+
+### Root cause
+
+**EX-041's observation is correct but its hypothesised fix doesn't apply.** The real mechanism is:
+
+1. Dazzle's DSL has two separate constructs for "the tester user":
+   - `persona tester "Field Tester"` — an auth-layer role/identity declared in the DSL
+   - `entity Tester "Tester"` — a domain-layer entity with its own id/name/email
+2. **These are not linked at the framework level.** There is no construct in the DSL that says "this persona corresponds to rows in this entity via this field".
+3. The auth layer knows `auth_ctx.user.id` (a User/auth-system id). The framework has no way to resolve that to a specific Tester row without the DSL author telling it how.
+4. fieldtest_hub's existing scope rules work by convention — the demo seed populates Tester rows with IDs that happen to match auth user IDs. This is invisible to the framework and fragile to real deployment.
+5. The Log Test Session create form exposes `tester_id` as a raw FK input because the framework can't pre-fill it — even with the current_user value, the field is typed as `ref Tester`, and the framework doesn't know that tester_id should take the current user's auth id (or its Tester-record id, which per the convention happens to be the same).
+
+### Why this blocks EX-041's fix
+
+To auto-populate `tester_id` on the Log Test Session form for the tester persona:
+
+- **The framework needs to know "the tester persona is backed by the Tester entity, linked via the `id` field matching auth user id".** This declaration does not exist in any current DSL.
+- **The framework needs a helper like `resolve_persona_entity_id(persona, entity, auth_ctx)`** that returns the entity row id for the current auth user. This helper can't be written without the declaration.
+- **The `inject_current_user_refs` helper needs a `persona_entity_fields` extension** that uses the new helper instead of just injecting `current_user` directly.
+
+All three pieces depend on the upstream DSL construct, which is an unresolved framework design question.
+
+### Fix directions (deferred to EX-045 for design discussion)
+
+**Option A — Explicit DSL construct (cleanest):**
+```dsl
+persona tester "Field Tester":
+  backed_by: Tester
+  link_via: email  # Tester.email == auth_user.email
+```
+
+The linker validates the declaration at load time: checks that `backed_by` references a real entity and `link_via` references a field that exists on that entity and is unique. Runtime resolution: `auth_ctx.user.email` → `SELECT id FROM Tester WHERE email = ?` → injected as `tester_id` wherever the DSL needs it.
+
+**Option B — Convention-over-configuration:**
+If a persona id matches an entity name case-insensitively (`tester` persona + `Tester` entity), assume the binding exists and look up by email convention. Fast to implement but implicit and fragile — breaks for personas whose id doesn't match an entity name.
+
+**Option C — Don't auto-resolve; require explicit scope rules:**
+Introduce a `current_user_entity(<entity_name>)` scope-rule function that the DSL author invokes explicitly: `scope: list: reported_by_id = current_user_entity(Tester) for: tester`. The framework implements the function as a subquery; the DSL author decides when to invoke it. More verbose but doesn't require new schema.
+
+**My recommendation**: Option A. It's explicit (matches Dazzle's DSL philosophy), linker-validatable, and centralises the binding in one place. But this is a DSL schema evolution question, not a bug fix — worth a short brainstorming discussion with the user before committing to a direction.
+
+### Status moves
+
+- **EX-041**: OPEN → **BLOCKED_ON_EX-045** (with full investigation trace)
+- **EX-045**: NEW row, framework-gap, OPEN — filed with 3 fix-direction options and a recommendation
+
+### Third instance of "try the real thing" saves the cycle
+
+Cycle 229 caught gap doc #1 (substrate artifact, not framework bug).
+Cycle 232 caught EX-009 (two gaps with asymmetric scope).
+Cycle 233 catches EX-041 (wrong fix target — no cascade path exists).
+
+**Heuristic 1 has now prevented three unnecessary implementation cycles across five investigations.** That's a very high hit rate for a cycle discipline. I'll add a note to the skill's heuristics section in a future synthesis cycle.
+
+### Cycle metrics
+
+- Duration: ~15 minutes (no code change, pure investigation + documentation)
+- Output: EX-041 status updated with full trace, EX-045 new framework-gap row with 3 fix options
+- Framework code: untouched
+- Test suite: not run (no source changes)
+
+**Explore budget:** 9 → 10 / 100. **~2 cycles remaining** in the user's ~12-cycle arc.
+
+### Next cycle plan
+
+- **Cycle 234**: `finding_investigation` on **EX-011 / EX-030 / EX-037** (empty-state CTA persona-awareness, gap doc #2's axis 3). Known-good scope — the compiler already has `persona_can_create` derivation patterns from cycle 228, the template already has empty-state hooks, the fix is ~10 lines. ~20 min.
+- **Cycle 235 (final)**: framework_gap_analysis v3 — closing synthesis pass that consolidates cycles 225-234's learnings into a status-of-the-entropy-reduction report for the user. Alternatively: a small EX-044 finding_investigation if the user wants structural widget work. Decide based on cycle 234 outcome.
+
+---
+
 ## 2026-04-15T22:41Z — Cycle 232 — **finding_investigation: EX-009 widget selection — date half FIXED, ref half scoped out as EX-044**
 
 **Strategy:** `finding_investigation`. Target: EX-009 (simple_task/member cycle 213 — Due Date renders as plain input, Assign To renders as plain text). This row was a key piece of the new widget-selection gap doc written in cycle 230, and was slated as the cycle 232 target because it hits both the date and ref sub-gaps in one surface.
