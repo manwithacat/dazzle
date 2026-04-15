@@ -1,7 +1,13 @@
-{# Status badge fragment - expects 'value' variable in scope #}
-{% if value %}
-<span class="badge badge-sm {{ value | badge_class }}"
-      role="status">{{ value | replace("_", " ") | title }}</span>
-{% else %}
-<span class="text-base-content/30" aria-label="No status">—</span>
-{% endif %}
+{#
+  Legacy include shim (cycle 238).
+
+  This fragment is kept as a thin compatibility wrapper around the canonical
+  `render_status_badge` macro at `macros/status_badge.html`. New templates
+  SHOULD import and call the macro directly — this shim exists only for
+  back-compat with two older {% include %}-based call sites in
+  `components/detail_view.html` and `components/review_queue.html`.
+
+  Contract: ~/.claude/skills/ux-architect/components/status-badge.md (UX-041)
+#}
+{% from 'macros/status_badge.html' import render_status_badge %}
+{{ render_status_badge(value=value) }}

@@ -1,5 +1,6 @@
 {# Kanban region — UX-035 adopter #3 (after grid, list). #}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
   {% if items and kanban_columns %}
   <div class="flex gap-3 overflow-x-auto pb-2" style="min-height: 200px;">
@@ -7,7 +8,7 @@
     {% set col_items = items | selectattr(group_by, "equalto", col_value) | list %}
     <div class="flex-shrink-0 bg-[hsl(var(--muted)/0.4)] rounded-[6px] p-2" style="width: 260px; min-width: 260px;">
       <div class="flex items-center justify-between mb-2 px-1">
-        <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ col_value | badge_class }}">{{ col_value }}</span>
+        {{ render_status_badge(value=col_value) }}
         <span class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ col_items | length }}</span>
       </div>
       <div class="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -30,7 +31,7 @@
             <p class="text-[11px] text-[hsl(var(--muted-foreground))]">
               <span>{{ meta_col.label }}:</span>
               {% if meta_col.type == "badge" %}
-                <span class="inline-flex items-center px-1.5 h-4 rounded-[3px] text-[10px] font-medium {{ item[meta_col.key] | badge_class }}">{{ item[meta_col.key] | default("") }}</span>
+                {{ render_status_badge(value=item[meta_col.key], size='sm') }}
               {% elif meta_col.type == "bool" %}
                 {{ item[meta_col.key] | bool_icon }}
               {% elif meta_col.type == "date" %}

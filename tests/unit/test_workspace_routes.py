@@ -749,10 +749,16 @@ class TestKanbanTemplate:
             active_filters={},
             metrics=[],
         )
-        # Verify column headers are rendered
-        assert "todo" in html
-        assert "in_progress" in html
-        assert "done" in html
+        # Verify column headers are rendered.
+        # Cycle 238 — status_badge macro humanises enum values, so
+        # `todo` → `Todo`, `in_progress` → `In Progress`, `done` → `Done`.
+        assert "Todo" in html
+        assert "In Progress" in html
+        assert "Done" in html
+        # Canonical status-badge marker + tones landed
+        assert "dz-status-badge" in html
+        assert 'data-dz-status-tone="neutral"' in html  # todo → neutral
+        assert 'data-dz-status-tone="info"' in html  # in_progress → info
         # Verify items are present
         assert "Fix bug" in html
         assert "Write docs" in html
@@ -1084,9 +1090,10 @@ class TestBarChartTemplate:
             active_filters={},
             metrics=[],
         )
-        assert "todo" in html
-        assert "in_progress" in html
-        assert "done" in html
+        # Cycle 238 — status_badge humanises enum values.
+        assert "Todo" in html
+        assert "In Progress" in html
+        assert "Done" in html
         assert "4 total" in html
 
     def test_bar_chart_metrics_fallback(self) -> None:

@@ -1,4 +1,4 @@
-/* dazzle v0.55.35 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.55.36 | MIT License | https://github.com/manwithacat/dazzle */
 @layer base, framework, app, overrides;
 @layer framework {
 #app,
@@ -584,8 +584,8 @@ background: hsl(var(--warning) / 0.1);
 color: hsl(var(--warning));
 }
 .badge-error {
-background: hsl(var(--er) / 0.1);
-color: hsl(var(--er));
+background: hsl(var(--destructive) / 0.1);
+color: hsl(var(--destructive));
 }
 .badge-info {
 background: hsl(var(--info) / 0.1);

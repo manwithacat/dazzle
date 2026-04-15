@@ -1,5 +1,6 @@
 {# Table group — Alpine tab switching within a related group #}
 {# Contract: ~/.claude/skills/ux-architect/components/related-displays.md (UX-032) #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% set first_tab_id = group.tabs[0].tab_id if group.tabs else '' %}
 <div x-data="{ activeTab: '{{ first_tab_id }}' }">
   {% if group.tabs | length > 1 %}
@@ -56,7 +57,7 @@
               {% for col in tab.columns %}
               <td class="text-[13px] text-[hsl(var(--foreground))] px-4 py-2.5">
                 {% if col.type == "badge" %}
-                  <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+                  {{ render_status_badge(value=item[col.key]) }}
                 {% elif col.type == "bool" %}
                   {{ item[col.key] | bool_icon }}
                 {% elif col.type == "date" %}

@@ -1,4 +1,5 @@
 {# Grid region — first adopter of the shared region_card macro (UX-035). #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
   {% if items %}
@@ -24,7 +25,7 @@
       <p class="text-[12px] text-[hsl(var(--muted-foreground))]">
         <span class="text-[11px]">{{ col.label }}:</span>
         {% if col.type == "badge" %}
-          <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+          {{ render_status_badge(value=item[col.key]) }}
         {% elif col.type == "bool" %}
           {{ item[col.key] | bool_icon }}
         {% elif col.type == "date" %}

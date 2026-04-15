@@ -1,5 +1,6 @@
 {# Bar chart region — UX-035 adopter #9. #}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
   {% if items and group_by %}
   {% set grouped = {} %}
@@ -16,7 +17,7 @@
     {% for label, count in grouped.items() %}
     <div class="flex items-center gap-2">
       <span class="text-[11px] w-24 truncate text-right">
-        <span class="inline-flex items-center px-1.5 h-4 rounded-[3px] text-[10px] font-medium {{ label | badge_class }}">{{ label }}</span>
+        {{ render_status_badge(value=label, size='sm') }}
       </span>
       <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
         <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"

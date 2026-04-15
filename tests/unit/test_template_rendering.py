@@ -676,6 +676,125 @@ class TestJinjaFilters:
         tmpl = env.from_string("{{ val|badge_class }}")
         assert tmpl.render(val=None) == ""
 
+    # --- badge_tone filter (cycle 238, closes part of EX-041 status-badge
+    # drift). Exercises the canonical semantic tone resolver used by the
+    # `render_status_badge` macro. ---
+
+    def test_badge_tone_success_states(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        for val in ("active", "done", "completed", "approved", "resolved", "passed"):
+            assert tmpl.render(val=val) == "success", f"{val} should map to success"
+
+    def test_badge_tone_info_states(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        for val in ("in_progress", "open", "running", "processing"):
+            assert tmpl.render(val=val) == "info", f"{val} should map to info"
+
+    def test_badge_tone_warning_states(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        for val in ("review", "pending", "on_hold", "waiting", "blocked", "high", "major"):
+            assert tmpl.render(val=val) == "warning", f"{val} should map to warning"
+
+    def test_badge_tone_destructive_states(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        for val in ("inactive", "overdue", "cancelled", "rejected", "failed", "critical", "urgent"):
+            assert tmpl.render(val=val) == "destructive", f"{val} should map to destructive"
+
+    def test_badge_tone_neutral_fallback(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        for val in ("todo", "draft", "new", "backlog", "low", "minor", "unknown_value"):
+            assert tmpl.render(val=val) == "neutral", f"{val} should map to neutral"
+
+    def test_badge_tone_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        assert tmpl.render(val=None) == "neutral"
+
+    def test_badge_tone_case_insensitive(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_tone }}")
+        assert tmpl.render(val="ACTIVE") == "success"
+        assert tmpl.render(val="In Progress") == "info"  # space-to-underscore
+
+    # --- status_badge macro (cycle 238) ---
+    # The macro is the canonical renderer for every enum/state field across
+    # the template set. Replaces ~16 inline class-combination call sites that
+    # had drifted into 7 distinct wrapper styles.
+
+    def test_status_badge_macro_happy_path(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='in_progress') }}"
+        )
+        out = tmpl.render()
+        assert "dz-status-badge" in out
+        assert 'data-dz-status-tone="info"' in out
+        assert "In Progress" in out  # humanised
+        assert 'role="status"' in out
+        assert "aria-label=" in out
+
+    def test_status_badge_macro_none_renders_placeholder(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value=None) }}"
+        )
+        out = tmpl.render()
+        assert "—" in out
+        assert "dz-status-badge" not in out  # no badge when value is None
+
+    def test_status_badge_macro_tone_override(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='anything', tone='destructive') }}"
+        )
+        out = tmpl.render()
+        assert 'data-dz-status-tone="destructive"' in out
+
+    def test_status_badge_macro_size_sm(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='done', size='sm') }}"
+        )
+        out = tmpl.render()
+        assert "text-[10px]" in out  # sm sizing
+        assert "h-4" in out
+
+    def test_status_badge_macro_md_default(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='done') }}"
+        )
+        out = tmpl.render()
+        assert "text-[11px]" in out  # md default
+        assert "h-5" in out
+
+    def test_status_badge_macro_bordered(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='done', bordered=true) }}"
+        )
+        out = tmpl.render()
+        assert "border " in out
+        assert "border-[hsl(var(--success)/0.35)]" in out
+
+    def test_status_badge_macro_display_override(self, env) -> None:
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='open', display='New!') }}"
+        )
+        out = tmpl.render()
+        assert ">New!<" in out
+
+    def test_status_badge_macro_uses_design_tokens(self, env) -> None:
+        """Every tone uses hsl(var(--token)) — never legacy DaisyUI classes."""
+        tmpl = env.from_string(
+            "{% from 'macros/status_badge.html' import render_status_badge %}"
+            "{{ render_status_badge(value='failed') }}"
+        )
+        out = tmpl.render()
+        assert "hsl(var(--destructive))" in out
+        # Legacy DaisyUI class names MUST NOT appear
+        assert "badge-error" not in out
+        assert "badge-ghost" not in out
+
     # --- timeago filter ---
 
     def test_timeago_none(self, env) -> None:

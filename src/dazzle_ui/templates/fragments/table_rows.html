@@ -1,6 +1,7 @@
 {# table_rows.html — inline-editable row cells, row states, Tab navigation
    Requires: dzTable Alpine controller (editing, selected, isEditing, startEdit, toggleRow)
    Row height: h-9 (36px dense). No DaisyUI classes. #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% if table and table.rows %}
 {% set _row_label_col = namespace(key="id") %}
 {% for col in table.columns %}{% if col.type not in ["ref", "badge", "bool", "currency"] and _row_label_col.key == "id" %}{% set _row_label_col.key = col.key %}{% endif %}{% endfor %}
@@ -69,10 +70,7 @@
             @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', '{{ item[col.key] | default('') | e }}')"
             title="{{ item[col.key] | default('') }}">
         {% if col.type == "badge" %}
-          <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px] font-medium
-                       uppercase tracking-[0.04em] {{ item[col.key] | badge_class }}">
-            {{ item[col.key] | default("") | humanize }}
-          </span>
+          {{ render_status_badge(value=item[col.key]) }}
         {% elif col.type == "bool" %}
           {{ item[col.key] | bool_icon }}
         {% elif col.type == "date" %}
@@ -86,10 +84,7 @@
     {# ── Non-editable cell — type-specific rendering ───────────────────── #}
     {% else %}
     {% if col.type == "badge" %}
-      <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px] font-medium
-                   uppercase tracking-[0.04em] {{ item[col.key] | badge_class }}">
-        {{ item[col.key] | default("") | humanize }}
-      </span>
+      {{ render_status_badge(value=item[col.key]) }}
     {% elif col.type == "bool" %}
       {{ item[col.key] | bool_icon }}
     {% elif col.type == "date" %}

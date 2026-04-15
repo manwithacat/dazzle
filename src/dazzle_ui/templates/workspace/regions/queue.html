@@ -1,5 +1,6 @@
 {# Queue display mode — review queue with inline transition actions #}
 {# UX-035 adopter #5 (after grid, list, kanban, tabbed_list).         #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(None) %}
   {# Header: title + total count badge #}
@@ -62,7 +63,7 @@
           <span class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate">{{ item[display_key ~ "_display"] | default(item[display_key]) | default(item.id) }}</span>
           {% for col in columns %}
             {% if col.type == "badge" and col.key != display_key %}
-              <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+              {{ render_status_badge(value=item[col.key]) }}
             {% endif %}
           {% endfor %}
         </div>

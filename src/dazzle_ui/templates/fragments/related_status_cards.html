@@ -1,5 +1,6 @@
 {# Status cards — grid of cards with status badge for each related entity #}
 {# Contract: ~/.claude/skills/ux-architect/components/related-displays.md (UX-032) #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% for tab in group.tabs %}
 {% if tab.visible | default(true) %}
 <div class="mb-4">
@@ -39,7 +40,7 @@
         </div>
         {% for col in tab.columns if col.type == "badge" %}
         {% if loop.first %}
-        <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium shrink-0 {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+        <span class="shrink-0">{{ render_status_badge(value=item[col.key]) }}</span>
         {% endif %}
         {% endfor %}
       </div>

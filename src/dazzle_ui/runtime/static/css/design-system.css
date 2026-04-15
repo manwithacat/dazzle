@@ -700,8 +700,8 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 .badge-error {
-  background: hsl(var(--er) / 0.1);
-  color: hsl(var(--er));
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
 }
 
 .badge-info {

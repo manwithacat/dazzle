@@ -89,32 +89,89 @@ def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
     return str(value)
 
 
+# Canonical semantic tones for status badges. The macro at
+# `templates/macros/status_badge.html` maps these to design-system tokens.
+# Cycle 238 — single source of truth shared by `badge_tone` and `badge_class`.
+_STATUS_TONE_MAP: dict[str, str] = {
+    # Success — things that reached a positive terminal state
+    "active": "success",
+    "done": "success",
+    "completed": "success",
+    "approved": "success",
+    "resolved": "success",
+    "closed": "success",
+    "published": "success",
+    "passed": "success",
+    # Info — things actively in motion / neutral-positive
+    "in_progress": "info",
+    "open": "info",
+    "running": "info",
+    "started": "info",
+    "processing": "info",
+    # Warning — attention needed / awaiting action
+    "review": "warning",
+    "pending": "warning",
+    "on_hold": "warning",
+    "waiting": "warning",
+    "blocked": "warning",
+    "escalated": "warning",
+    # Destructive — failure / negative terminal state, or top-urgency
+    "inactive": "destructive",
+    "overdue": "destructive",
+    "cancelled": "destructive",
+    "rejected": "destructive",
+    "failed": "destructive",
+    "critical": "destructive",
+    "error": "destructive",
+    "urgent": "destructive",
+    # Priority / severity "high" — warning (below destructive)
+    "high": "warning",
+    "major": "warning",
+    # Priority / severity "medium" — info
+    "medium": "info",
+    # Neutral fallbacks for unstarted / draft / low-priority states
+    "todo": "neutral",
+    "draft": "neutral",
+    "new": "neutral",
+    "backlog": "neutral",
+    "low": "neutral",
+    "minor": "neutral",
+}
+
+
+def _badge_tone_filter(value: Any) -> str:
+    """Map a status value to a semantic tone name.
+
+    Returns one of: ``neutral`` | ``success`` | ``warning`` | ``info`` |
+    ``destructive``. Used by the ``status_badge`` macro (see
+    ``templates/macros/status_badge.html``) to pick the correct design-system
+    token variant.
+    """
+    if value is None:
+        return "neutral"
+    status = str(value).lower().replace(" ", "_")
+    return _STATUS_TONE_MAP.get(status, "neutral")
+
+
 def _badge_filter(value: Any) -> str:
-    """Map a status value to a DaisyUI badge class."""
+    """Map a status value to a legacy CSS badge class.
+
+    **Deprecated** (cycle 238): new templates should use the
+    ``render_status_badge`` macro from ``templates/macros/status_badge.html``
+    which maps the canonical tone to hsl(var(--token))-based Tailwind classes.
+    Retained only for any stragglers that still emit the legacy class names.
+    """
     if value is None:
         return ""
-    status = str(value).lower().replace(" ", "_")
-    badge_map = {
-        "active": "badge-success",
-        "done": "badge-success",
-        "completed": "badge-success",
-        "approved": "badge-success",
-        "in_progress": "badge-info",
-        "open": "badge-info",
-        "review": "badge-warning",
-        "pending": "badge-warning",
-        "on_hold": "badge-warning",
-        "todo": "badge-ghost",
-        "draft": "badge-ghost",
-        "new": "badge-ghost",
-        "inactive": "badge-error",
-        "overdue": "badge-error",
-        "cancelled": "badge-error",
-        "rejected": "badge-error",
-        "failed": "badge-error",
+    tone = _badge_tone_filter(value)
+    tone_to_legacy = {
+        "neutral": "badge-ghost",
+        "success": "badge-success",
+        "info": "badge-info",
+        "warning": "badge-warning",
+        "destructive": "badge-error",
     }
-    css_class = badge_map.get(status, "badge-ghost")
-    return css_class
+    return tone_to_legacy.get(tone, "badge-ghost")
 
 
 def _bool_icon_filter(value: Any) -> Markup:
@@ -322,6 +379,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["currency"] = _currency_filter
     env.filters["dateformat"] = _date_filter
     env.filters["badge_class"] = _badge_filter
+    env.filters["badge_tone"] = _badge_tone_filter
     env.filters["bool_icon"] = _bool_icon_filter
     env.filters["truncate_text"] = _truncate_filter
     env.filters["timeago"] = _timeago_filter

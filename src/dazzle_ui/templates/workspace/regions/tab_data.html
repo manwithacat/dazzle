@@ -1,4 +1,5 @@
 {# Tab data fragment — data table for multi-source tab panels, no card wrapper #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% if filter_columns %}
 <div class="flex flex-wrap gap-2 mb-2 filter-bar">
   {% for fc in filter_columns %}
@@ -44,7 +45,7 @@
         {% for col in columns %}
         <td>
           {% if col.type == "badge" %}
-            <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+            {{ render_status_badge(value=item[col.key]) }}
           {% elif col.type == "bool" %}
             {{ item[col.key] | bool_icon }}
           {% elif col.type == "date" %}

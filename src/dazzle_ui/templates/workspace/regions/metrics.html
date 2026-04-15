@@ -1,4 +1,5 @@
 {# Metrics region — UX-035 adopter #6. #}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
   {# Metrics tiles grid #}
@@ -44,7 +45,7 @@
           {% for col in columns %}
           <td class="text-[13px] text-[hsl(var(--foreground))] px-3 py-2">
             {% if col.type == "badge" %}
-              <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+              {{ render_status_badge(value=item[col.key]) }}
             {% elif col.type == "bool" %}
               {{ item[col.key] | bool_icon }}
             {% elif col.type == "date" %}

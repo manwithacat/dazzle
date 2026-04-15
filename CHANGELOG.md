@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.37] - 2026-04-16
+
+### Added
+- **`status-badge` component contract (UX-041).** First cycle of the component
+  menagerie mini-arc (cycles 238-242 per the roadmap at
+  `dev_docs/framework-gaps/2026-04-15-component-menagerie-roadmap.md`). New
+  canonical `render_status_badge` Jinja macro at
+  `src/dazzle_ui/templates/macros/status_badge.html` is now the single source
+  of truth for every enum/state/status rendering across the framework: 5
+  semantic tones (`neutral | success | warning | info | destructive`), 2
+  sizes (`md` default, `sm` for dense regions), optional bordered variant
+  for detail regions. Contract at
+  `~/.claude/skills/ux-architect/components/status-badge.md` with 5 quality
+  gates and 7 v2 open questions.
+
+- **`badge_tone` Jinja filter.** Maps any status/priority/severity enum value
+  to one of 5 semantic tones via a canonical `_STATUS_TONE_MAP` covering
+  ~30 values (active/done/open/pending/review/critical/urgent/high/medium/
+  low/etc.). Case-insensitive, space-to-underscore normalised.
+
+### Fixed
+- **Status-badge drift across 16+ template call sites.** Before cycle 238,
+  status rendering used 7 distinct inline class combinations plus a legacy
+  DaisyUI-shaped `fragments/status_badge.html` plus a broken `.badge-error`
+  CSS rule referencing an undefined `--er` variable. All call sites migrated
+  to the canonical macro: `table_rows.html`, `related_status_cards.html`,
+  `related_table_group.html`, `detail_fields.html`, and workspace regions
+  `list`, `grid`, `timeline`, `queue`, `bar_chart`, `kanban` (2×), `detail`,
+  `tab_data`, `metrics`. `grep -rn badge_class src/dazzle_ui/templates/`
+  returns zero call sites. Cross-app verified on all 5 example apps: zero
+  legacy `badge-{ghost,success,warning,info,error}` classes remain in
+  rendered output. Closes part of EX-001.
+
+- **Broken `.badge-error` CSS rule** at `design-system.css:702` — referenced
+  undefined `--er` variable instead of the canonical `--destructive`. Every
+  previously-rendered `destructive` badge was silently mis-coloured.
+
+### Agent Guidance
+- **Never inline status badge rendering.** Always use
+  `{% from 'macros/status_badge.html' import render_status_badge %}` and
+  call the macro. The `badge_class` filter is deprecated and exists only as
+  a back-compat shim for legacy call sites — new code MUST use `badge_tone`
+  + the macro, which renders to `hsl(var(--token))`-based Tailwind classes
+  from the design system instead of the legacy DaisyUI class names.
+- **`contract_audit` is the cycle shape for the component menagerie mini-arc**
+  (cycles 238-242). Pattern: pick a known-templated-but-ungoverned component,
+  HTTP-layer reproduce the drift, grep every call site, build macro + filter
+  + contract in one commit, migrate every call site, cross-app verify,
+  regression tests matching the quality gates. See cycle 238 for the
+  template to follow for cycles 239-242.
+
 ## [0.55.36] - 2026-04-15
 
 ### Fixed

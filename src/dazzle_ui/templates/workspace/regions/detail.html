@@ -1,5 +1,6 @@
 {# Detail region — UX-035 adopter #14. #}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
   {% if item %}
   <dl class="grid grid-cols-2 gap-2">
@@ -7,7 +8,7 @@
     <dt class="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">{{ col.label }}</dt>
     <dd class="text-[13px] text-[hsl(var(--foreground))]">
       {% if col.type == "badge" %}
-        <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border {{ item[col.key] | badge_class }}">{{ item[col.key] | default("—") }}</span>
+        {{ render_status_badge(value=item[col.key], bordered=true) }}
       {% elif col.type == "bool" %}
         {{ item[col.key] | bool_icon }}
       {% elif col.type == "date" %}

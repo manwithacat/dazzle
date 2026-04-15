@@ -1,0 +1,75 @@
+{#
+  Status Badge macro — canonical renderer (cycle 238).
+
+  Contract: ~/.claude/skills/ux-architect/components/status-badge.md (UX-041)
+
+  Single source of truth for every status/enum/state rendering across the
+  template set. Before cycle 238 this component had drifted into 7 distinct
+  inline class combinations across 16+ template call sites, plus a legacy
+  DaisyUI-shaped fragment (`fragments/status_badge.html`). The macro
+  replaces all of them.
+
+  Usage:
+      {% from 'macros/status_badge.html' import render_status_badge %}
+      {{ render_status_badge(value="todo") }}
+      {{ render_status_badge(value="done", size="sm") }}
+      {{ render_status_badge(value=item.priority, bordered=true, display="URGENT") }}
+
+  Arguments:
+    value     — the raw enum / state / boolean-status value (e.g. "in_progress").
+                Used to resolve the tone via the `badge_tone` filter and also
+                used as the aria-label fallback. If empty/None, an em-dash
+                placeholder is rendered instead.
+    tone      — optional tone override. One of:
+                  "neutral" | "success" | "warning" | "info" | "destructive"
+                If omitted, the tone is derived from `value` via badge_tone.
+    size      — "sm" | "md" (default "md"). sm is used in dense regions
+                (timeline, bar_chart, kanban meta rows); md is the default
+                for table cells and regular list rows.
+    bordered  — optional boolean. When true, the badge carries a 1px border
+                in the same tone. Used by the detail region for emphasis.
+    display   — optional override for the visible text. Defaults to
+                value|humanize (underscores → spaces, title-cased).
+
+  Tone → design-system token mapping:
+    neutral     → hsl(var(--muted)) / hsl(var(--muted-foreground))
+    success     → hsl(var(--success) / 0.12) / hsl(var(--success))
+    warning     → hsl(var(--warning) / 0.12) / hsl(var(--warning))
+    info        → hsl(var(--info) / 0.12) / hsl(var(--info))
+    destructive → hsl(var(--destructive) / 0.12) / hsl(var(--destructive))
+#}
+
+{% macro render_status_badge(value, tone=None, size="md", bordered=False, display=None) -%}
+{%- if value in (None, "", "—") -%}
+  <span class="text-[hsl(var(--muted-foreground))] text-[13px]" aria-label="No status">—</span>
+{%- else -%}
+  {%- set _tone = tone or (value | badge_tone) -%}
+  {%- set _label = display if display is not none else (value | humanize) -%}
+  {%- if size == "sm" -%}
+    {%- set _sizing = "px-1.5 h-4 text-[10px]" -%}
+  {%- else -%}
+    {%- set _sizing = "px-2 h-5 text-[11px]" -%}
+  {%- endif -%}
+  {%- if _tone == "success" -%}
+    {%- set _tones = "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]" -%}
+    {%- set _border_color = "border-[hsl(var(--success)/0.35)]" -%}
+  {%- elif _tone == "warning" -%}
+    {%- set _tones = "bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))]" -%}
+    {%- set _border_color = "border-[hsl(var(--warning)/0.35)]" -%}
+  {%- elif _tone == "info" -%}
+    {%- set _tones = "bg-[hsl(var(--info)/0.12)] text-[hsl(var(--info))]" -%}
+    {%- set _border_color = "border-[hsl(var(--info)/0.35)]" -%}
+  {%- elif _tone == "destructive" -%}
+    {%- set _tones = "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))]" -%}
+    {%- set _border_color = "border-[hsl(var(--destructive)/0.35)]" -%}
+  {%- else -%}
+    {%- set _tones = "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]" -%}
+    {%- set _border_color = "border-[hsl(var(--border))]" -%}
+  {%- endif -%}
+  {%- set _border = ("border " ~ _border_color) if bordered else "" -%}
+  <span class="dz-status-badge inline-flex items-center rounded-[3px] font-medium {{ _sizing }} {{ _tones }} {{ _border }}"
+        data-dz-status-tone="{{ _tone }}"
+        role="status"
+        aria-label="Status: {{ _label }}">{{ _label }}</span>
+{%- endif -%}
+{%- endmacro -%}
