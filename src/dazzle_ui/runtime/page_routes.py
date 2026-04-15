@@ -1108,18 +1108,36 @@ def create_page_routes(
     # surface page template, so they get separate handlers.
     workspaces = getattr(appspec, "workspaces", []) or []
     if workspaces:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
         # Build nav items for workspace pages: workspace links + entity surface links.
         # Entity surfaces are derived from workspace regions' source entities.
+        # Delegate workspace-access resolution to the shared helper so sidebar
+        # nav visibility matches the enforcement path AND template_compiler's
+        # nav_by_persona. EX-028 (cycle 221) + cycle 226 root-cause: the v0.55.34
+        # #775 fix unified template_compiler.py and _workspace_handler access
+        # enforcement via workspace_allowed_personas, but this second
+        # ws_nav_items builder was never migrated. It pulled allow_personas
+        # directly from raw ws_access, which returned [] for workspaces with no
+        # explicit DSL access declaration — and the downstream filter at
+        # line 860 treats an empty list as "no restriction", so implicitly-gated
+        # workspaces leaked into every persona's sidebar. Calling the helper
+        # here restores single-source-of-truth.
+        from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        _personas_list = list(getattr(appspec, "personas", []) or [])
         ws_nav_items: list[dict[str, Any]] = []
         for ws in workspaces:
             ws_access = getattr(ws, "access", None)
+            _allowed = workspace_allowed_personas(ws, _personas_list)
+            # None means "no filter" (visible to every authenticated user);
+            # preserve the existing convention that empty list in the item
+            # dict means "no restriction" by flattening None → [].
+            _allow_for_item = [] if _allowed is None else list(_allowed)
             ws_nav_items.append(
                 {
                     "label": ws.title or ws.name.replace("_", " ").title(),
                     "route": f"{app_prefix}/workspaces/{ws.name}",
-                    "allow_personas": list(ws_access.allow_personas) if ws_access else [],
+                    "allow_personas": _allow_for_item,
                     "access_level": ws_access.level if ws_access else "authenticated",
                 }
             )
@@ -1196,10 +1214,9 @@ def create_page_routes(
                 )
             ws_nav_group_map[ws.name] = groups
 
-        # Import the shared access-resolution helper — the same function the
-        # template_compiler uses to build nav_by_persona, so enforcement and
-        # sidebar stay in sync (manwithacat/dazzle#775).
-        from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+        # workspace_allowed_personas is already imported above (ws_nav_items
+        # build). Both call sites now consult the same helper, so sidebar,
+        # enforcement, and template_compiler nav_by_persona all agree.
 
         for workspace in workspaces:
             ws_ctx = build_workspace_context(workspace, appspec)

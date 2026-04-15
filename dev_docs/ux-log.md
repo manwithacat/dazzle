@@ -4,6 +4,96 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T21:24Z — Cycle 226 — **finding_investigation: EX-028 — #775 fix missed a second nav builder**
+
+**Strategy:** `finding_investigation`. Target: EX-028 (cycle 221's observation that support_tickets/customer sidebar shows ticket_queue + agent_dashboard which 403 on click — flagged as contradicting the v0.55.34 #775 fix).
+
+**Outcome:** Root-caused, fixed, cross-persona verified on 2 apps. **Cycle 225's parser fix was necessary but not sufficient** — a second nav-items builder still bypassed `workspace_allowed_personas`.
+
+### Investigation trace
+
+1. **Post-parser-fix baseline check.** Cycle 225 fixed the multi-line-list parser bug; support_tickets personas now load `default_workspace` correctly (`customer→my_tickets, agent→ticket_queue, manager→agent_dashboard, admin→_platform_admin`). I first checked whether EX-028 was already resolved as a side effect of cycle 225.
+
+2. **Reproduced EX-028 post-fix.** Booted support_tickets, logged in as customer, hit `/app/workspaces/my_tickets`, extracted sidebar hrefs. Customer still saw `ticket_queue`, `agent_dashboard`, AND `my_tickets` in the sidebar. **Parser fix alone didn't resolve it.**
+
+3. **Traced `workspace_allowed_personas` directly.** For each support_tickets workspace, the helper returns the CORRECT set: `ticket_queue→['agent'], agent_dashboard→['manager'], my_tickets→['customer'], _platform_admin→['admin','super_admin']`. So the helper works perfectly. The defect is upstream: the sidebar nav generator isn't consulting the helper properly.
+
+4. **Grep-traced nav-item build sites.** Found two separate builders:
+   - `src/dazzle_ui/converters/template_compiler.py:1197` — calls `workspace_allowed_personas` correctly (this is what #775 fixed).
+   - `src/dazzle_ui/runtime/page_routes.py:1115` — **does NOT call the helper.** It pulls `allow_personas` directly from raw `ws_access.allow_personas`, which for workspaces with no explicit DSL access returns `[]`.
+
+5. **Traced the downstream filter.** At `page_routes.py:860`: `not item.get("allow_personas") or any(r in item["allow_personas"] for r in normalized_roles)`. An empty `allow_personas` evaluates falsy → the item is unconditionally shown. So workspaces with implicit access (relying on `persona.default_workspace` claims) leaked into every persona's sidebar.
+
+### Root cause
+
+**The v0.55.34 #775 fix unified one of the two nav-items builders with enforcement, but missed the second.** `template_compiler.py` was migrated to call `workspace_allowed_personas`, and `_workspace_handler` access enforcement at `page_routes.py:1207` was also migrated. But the `ws_nav_items` list passed to `_workspace_handler` was built at line 1115 by a **separate code path** that never got the single-source-of-truth treatment. Two different nav builders diverged — same class of defect #775 was supposed to eliminate.
+
+This is a textbook example of **"one fix, two affected paths, only one migrated"** — easy to miss in a refactor because the two builders superficially produce similar-shaped data structures but with different semantics.
+
+### The fix
+
+Modified `src/dazzle_ui/runtime/page_routes.py:1115` to call `workspace_allowed_personas` during `ws_nav_items` construction, flattening `None → []` to preserve the existing "empty list = no restriction" convention in the downstream filter. Also removed the duplicate import of `workspace_allowed_personas` further down (line 1221) since the helper is now imported earlier in the same function.
+
+Change: 1 function edit, ~10 lines of semantic changes + extensive comment explaining the cycle 226 mechanism and its relationship to cycle 221 observation + v0.55.34 #775 fix.
+
+### Cross-persona verification
+
+**support_tickets (post-fix):**
+
+| Persona | Sidebar workspace links visible |
+|---|---|
+| customer | `my_tickets` only ✓ |
+| agent | `ticket_queue` only ✓ |
+| manager | `agent_dashboard` only ✓ |
+| admin | `_platform_admin` only ✓ |
+
+**fieldtest_hub (post-fix, to verify no regression):**
+
+| Persona | Sidebar workspace links visible |
+|---|---|
+| tester | `tester_dashboard` only ✓ |
+| engineer | `engineering_dashboard` only ✓ |
+| manager | `engineering_dashboard` only ✓ (shares with engineer per DSL) |
+| admin | `_platform_admin` only ✓ |
+
+### Test suite impact
+
+- Targeted sweep (`workspace or page_routes or nav or persona`): 690/690 pass
+- Full unit sweep: **10442/10442 pass** — no regressions
+- Lint: clean (1 auto-fix applied)
+- Types (on paths /ship checks): clean
+- `dazzle_ui/` mypy errors: 27 pre-existing in 5 files, 2 in `page_routes.py` at lines 242/895, **not near my edit** (line 1115 region)
+
+### Framework-level implications
+
+This defect and cycle 225's parser bug share a deep pattern: **two-stage cascades where a small upstream gap creates a large downstream symptom**. Cycle 225's cascade was parser→persona→nav. Cycle 226's cascade is "one fix migrated builder A but not builder B → empty list default → permissive filter → nav leak". In both cases the symptom surfaced at the UX layer in a way that looked like a UX bug, but the real fix was a structural correction further up the dependency graph.
+
+**This is the category of gap the relaxed policy was designed to find.** Neither cycle 225's parser bug nor cycle 226's duplicate-nav-builder would have been caught by surface-level `edge_cases` exploration alone — they required reproduction, grep-tracing, and comparison of multiple call sites. Both cycles took ~20 minutes and closed 2 concerning observations (EX-035, EX-028) while also invalidating gap doc #4 from cycle 224.
+
+**Implications for other gap docs:**
+
+- **Gap #2 (persona-unaware-affordances):** still valid. The `workspace_allowed_personas` unification is now complete for workspace-level nav, but the other axes (bulk-action bars, empty-state CTAs, create-form field visibility, workspace-access fallback case) remain. The EX-028 closure doesn't change the gap doc's scope — those other 6 contributing observations (EX-010/011/019/029/037/040) still point at real framework gaps.
+- **Gap #1 (silent-form-submit):** unaffected; still open. Good candidate for cycle 227's investigation.
+- **Gap #3 (workspace-region-naming-drift):** unaffected; still open. Good candidate once form-submit is addressed.
+- **Gap #4 (error-page-navigation-dead-end):** already superseded by cycle 225.
+
+### Secondary filing — EX-042
+
+Per the promise in cycle 225's log entry, filed EX-042 as a `framework-gap` observation: `_root_redirect`'s final fallback to `workspaces[0].name` is fragile for apps that legitimately don't declare `default_workspace` on every persona. The existing `_resolve_persona_route` helper at `workspace_converter.py:561` has a smarter 5-step resolution and should be used instead. This is a low-risk refactor that eliminates the dead-end class of error cycle 225 exposed.
+
+### Status moves
+
+- **EX-028**: OPEN → **FIXED_LOCALLY** (with full trace)
+- **EX-042**: new row, OPEN, class=`framework-gap`
+
+### Mission assessment
+
+**Textbook success for `finding_investigation` (cycle 225 was the first).** Second consecutive cycle where a single concerning observation led to a small, targeted framework fix with a direct test of the cross-persona symptom. Pattern emerging: the investigation cycles are the highest-leverage cycle type because they convert ambiguous observations into structural improvements that disprove or generalise the gap-doc hypotheses from synthesis cycles.
+
+**Explore budget:** 2 → 3 / 100. **~9 cycles remaining** in the user's ~12-cycle arc.
+
+---
+
 ## 2026-04-15T21:15Z — Cycle 225 — **finding_investigation: EX-035 → real root cause is a DSL parser bug, not an HTMX intercept**
 
 **Strategy:** `finding_investigation`. Target: EX-035 (the `/app/workspaces/engineering_dashboard` dead-end identified in cycle 223, flagged in cycle 224's gap doc as a regression of v0.55.31 #776 with three hypotheses ranked by likelihood).
