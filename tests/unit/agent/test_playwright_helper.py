@@ -23,7 +23,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.agent import playwright_helper as helper
+# Playwright is an optional runtime dependency; these tests patch
+# ``playwright.async_api.async_playwright`` which requires the import to
+# resolve, so skip the whole module when playwright isn't installed
+# (e.g. the CI "Python Tests" job that doesn't install the extra).
+pytest.importorskip("playwright")
+
+from dazzle.agent import playwright_helper as helper  # noqa: E402
 
 
 def _mk_page(

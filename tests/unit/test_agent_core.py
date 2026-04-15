@@ -382,6 +382,14 @@ class TestExecutorRoleSelectors:
     async def test_click_with_role_selector(self) -> None:
         """Full execute path with a role selector."""
         page = AsyncMock()
+        # PlaywrightExecutor.__init__ calls page.on("console", ...); it must
+        # be a plain sync registration, not an awaitable.
+        page.on = MagicMock()
+        # execute() captures before/after state via page.url (sync attr) and
+        # page.content() (async) — feed realistic values so _dom_hash can
+        # hash a real string and state diff comparisons work.
+        page.url = "http://test/"
+        page.content.return_value = "<html></html>"
         page.get_by_role = MagicMock()
         locator = AsyncMock()
         page.get_by_role.return_value = locator
