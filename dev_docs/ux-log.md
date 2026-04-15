@@ -4,6 +4,70 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T03:10Z — Cycle 199 — **multi-persona fan-out validated** — 3 personas × support_tickets → 9 proposals, 7 observations
+
+**Outcome:** First multi-persona explore cycle. Walked the cycle 198 playbook against `examples/support_tickets` three times (once per business persona: agent, customer, manager), each with its own state-dir, runner, and subagent invocation. Result: **9 non-overlapping proposal candidates (PROP-038..046)** and **7 observations** — a >9× uplift over cycle 198's single-persona run, at roughly proportional subsidised cost. Zero duplicates: the `existing_components` filter fed each persona the set of contracts already covered by earlier personas in the same cycle, and the subagents respected it.
+
+### Runs
+
+| Persona | Run ID | Helper calls | Subsidised tokens | Wall-clock | Proposals | Observations |
+|---|---|---|---|---|---|---|
+| agent | `20260415-024652` | 17 | ~87k | 319s | 3 | 2 |
+| customer | `20260415-025334` | 14 | ~74k | 318s | 3 | 2 |
+| manager | `20260415-030259` | 9 | ~62k | 164s | 3 | 3 |
+| **total** | — | **40** | **~223k** | **801s** | **9** | **7** |
+
+Every run followed the same 10-step playbook: `init_explore_run` → spawn runner.py in background → poll conn.json → `playwright_helper login` → `build_subagent_prompt` with updated `existing_components` list → Task-tool subagent → `read_findings` → `pkill` teardown → consolidate. No step required hand-coding per persona.
+
+### Proposals (all added to backlog as PROP-038..046)
+
+**agent** (workspace-centric surfaces):
+- `workspace-card-picker` — Add-Card popover on customizable dashboards (distinct from dashboard-grid layout contract)
+- `workspace-tabbed-region` — HTMX lazy-load tablist inside region-wrapper
+- `kanban-board` — horizontally-scrolling enum-grouped column board with per-column pagination + empty-state
+
+**customer** (data-table interaction surfaces):
+- `column-visibility-picker` — popover checkbox list for toggling columns (only when >3 columns; threshold hardcoded)
+- `activity-feed` — vertical timeline workspace region
+- `inline-edit` — in-place cell editor with loading/error/confirm-cancel state
+
+**manager** (dashboard chrome + bulk-ops):
+- `dashboard-region-toolbar` — collapse/CSV-export/filter triad that recurs above every region
+- `dashboard-edit-chrome` — Reset/Saved-indicator/Add-Card edit-mode shell (save-dirty-reset state model distinct from card-picker drawer)
+- `bulk-action-bar` — pinned horizontal bar with destructive action + clear-selection, appears when table rows are selected
+
+### Cross-persona signal: workspace save-state ambiguity
+
+Both the agent and the manager flagged the "Saved" button label as confusing on clean load. Two independent subagents on different surfaces converged on the same observation — strong evidence it's real friction, not one LLM's idiosyncratic reading.
+
+### Cross-persona signal: RBAC inconsistency
+
+The manager observation flagged a **concerning** defect: `/app/workspaces/ticket_queue` and `/app/workspaces/my_tickets` return 403 Access Denied for the `manager` persona, even though the sidebar shows the links. The agent persona, in parallel, flagged the same broken-link pattern at a different workspace (different links also 403'd). This is a real DSL scope/nav inconsistency in support_tickets — either scope rules are inverted, or the app-shell should hide links the current persona can't reach. Worth filing as a support_tickets bug once the cycle is shipped.
+
+### Cross-persona cost model
+
+Subsidised tokens per persona-run held steady at ~75k ± 15k, and wall-clock held steady at ~270s ± 80s. The manager run was notably faster because the reachable surface area was smaller (2 of 3 sidebar workspaces returned 403, so the subagent stopped at 9 calls instead of ~15). **Budget implication:** a 3-persona fan-out costs roughly 3× a single run — no hidden multipliers, no orchestration overhead.
+
+### Note on subagent disagreement — not a defect
+
+Cycle 198's contact_manager/user run recorded an observation saying "workspace-card-picker is already covered by dashboard-grid." Cycle 199's support_tickets/agent run proposed `workspace-card-picker` as distinct from dashboard-grid. These are honest disagreements between independent subagents about where the contract boundary sits. The resolution (as always) is at contract-authoring time, not at explore time — the agent's proposal is specific enough (anchored-above popover, upward enter animation, empty-state branch, click-outside) that a reviewer can decide whether it collapses into dashboard-grid or becomes its own contract. Recording both sides is the point.
+
+### What this run validates
+
+1. **Multi-persona fan-out is a playbook concern, not a code concern.** `init_explore_run` with a different `persona_id` + `playwright_helper login <persona>` is the entire per-persona setup. No shared-state races, no state-dir clobbering.
+2. **The `existing_components` filter works at scale.** Each persona received progressively more components in its do-not-propose list and the subagents respected it. Zero duplicates across 9 proposals.
+3. **Subsidised cognition is sustainable.** 3 subagent runs against one example app cost ~223k tokens — ~$0 marginal on Max Pro. The cycle 197 metered sweep (~$0.50 for 0 proposals) is strictly dominated.
+4. **Smaller reachable-surface personas are not dead weight.** Manager had 9 Bash calls vs agent's 17, but produced the most cross-surface signal (2 cross-persona convergences + the RBAC concern).
+
+### Deferred (explicit follow-ups)
+
+- **Action 3: retire cycle 197 dead code** (`explore_strategy.py`, `explore_spike.py`, `discovery.explore` op, unused kwargs). Cycle 199 is a good fence: everything above the fence runs on the new substrate, everything below is now cold code.
+- **Action 4: `edge_cases` strategy** — scaffolded but NotImplementedError. Cycle 200 can build it now that missing_contracts is seen across 2 apps × 4 personas.
+- **Action 5: backlog ingestion writer** — automate playbook step 9 (findings.json → PROP rows + log entry). The cycle 199 consolidation was done by hand; a helper would shave 5-10 minutes per cycle and enforce the PROP-NNN schema.
+- **support_tickets nav/scope bug** — file separately; it's an app-level defect, not a framework gap.
+
+---
+
 ## 2026-04-15T02:50Z — Cycle 198 — **substrate pivot shipped** — Claude Code subagent + stateless Playwright helper
 
 **Outcome:** First real PROP-NNN row added to the backlog via autonomous agent exploration (PROP-037 `workspace-detail-drawer`). Cycle 198 replaces cycle 197's DazzleAgent-on-SDK explore path with a Claude Code subagent driving a stateless Playwright helper. Cognition runs on the Max Pro subscription; the metered Anthropic SDK is eliminated from the explore path.

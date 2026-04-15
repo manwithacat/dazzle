@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.6] - 2026-04-15
+
+### Added
+- **Cycle 199 — multi-persona fan-out validated.** Walked the cycle 198
+  subagent-driven explore playbook three times against
+  `examples/support_tickets`, once per business persona (agent, customer,
+  manager). Result: **9 non-overlapping proposal candidates**
+  (`PROP-038..046`) plus 7 observations, including two cross-persona
+  convergences (workspace save-state label ambiguity; RBAC nav/scope
+  inconsistency). Total subsidised cost: ~223k tokens across 40 helper
+  calls in 801s wall-clock — roughly 3× a single-persona run with zero
+  hidden multipliers. The `existing_components` filter was fed each
+  persona the running set of contracts already proposed in the cycle so
+  later personas didn't duplicate earlier ones; zero duplicates across
+  9 proposals.
+- **9 new `PROP-NNN` rows** in `dev_docs/ux-backlog.md`:
+  `workspace-card-picker`, `workspace-tabbed-region`, `kanban-board`,
+  `column-visibility-picker`, `activity-feed`, `inline-edit`,
+  `dashboard-region-toolbar`, `dashboard-edit-chrome`, `bulk-action-bar`.
+  Each includes a specific selector hint, the persona that found it,
+  and a rationale for why existing contracts don't cover it.
+
+### Agent Guidance
+- **Multi-persona fan-out is a playbook concern, not a code concern.**
+  `init_explore_run(persona_id=...)` + `playwright_helper login <persona>`
+  is the entire per-persona setup. No shared-state races, no state-dir
+  clobbering. Each run gets its own `dev_docs/ux_cycle_runs/<example>_<persona>_<run_id>/`.
+- **Pass the running set of proposed components into
+  `build_subagent_prompt(existing_components=...)`** on each subsequent
+  persona-run in a cycle, so later personas don't re-propose what
+  earlier personas already found.
+
 ## [0.55.5] - 2026-04-15
 
 ### Added
