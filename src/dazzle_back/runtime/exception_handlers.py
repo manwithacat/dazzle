@@ -115,6 +115,87 @@ def register_exception_handlers(app: FastAPI) -> None:
         return json_or_htmx_error(request, errors, error_type="validation_error")
 
 
+def _is_app_path(path: str) -> bool:
+    """Return True if the given request path is inside the authenticated app shell.
+
+    The authenticated app runs under ``/app/*``; the marketing site is
+    everything else. Error pages under ``/app/*`` need to render inside
+    the app shell so logged-in users keep their sidebar and persona
+    context — see manwithacat/dazzle#776.
+    """
+    return path == "/app" or path.startswith("/app/")
+
+
+def _compute_back_affordance(path: str) -> tuple[str, str] | None:
+    """Compute a 'Back to {parent}' affordance for an in-app error page.
+
+    Given ``/app/contact/{bad_id}``, returns ``('/app/contact', 'Back to List')``.
+    Given ``/app/workspaces/{bad_ws}``, returns ``('/app', 'Back to Dashboard')``.
+    Returns None for paths where no sensible parent exists.
+    """
+    segments = [s for s in path.split("/") if s]
+    # segments: ['app', <surface>, <...>]
+    if len(segments) < 2 or segments[0] != "app":
+        return None
+    if len(segments) == 2:
+        # /app/<surface> — parent is /app
+        return ("/app", "Back to Dashboard")
+    # /app/<surface>/<id-or-more> — parent is /app/<surface>
+    surface = segments[1]
+    if surface == "workspaces":
+        return ("/app", "Back to Dashboard")
+    return (f"/app/{surface}", "Back to List")
+
+
+def _render_app_shell_error(
+    *,
+    template_name: str,
+    status_code: int,
+    message: str,
+    request: Any,
+    app_name: str,
+) -> Any:
+    """Render an in-app error page inside the authenticated app shell.
+
+    Builds a minimal context that the ``layouts/app_shell.html`` layout
+    can render without crashing — the sidebar uses ``nav_items|default([])``
+    so an empty nav is harmless; the navbar uses ``user_email|default('')``
+    so a missing email is also fine. The page looks like an authenticated
+    surface (sidebar present, persona chrome visible) even though the
+    error handler doesn't have access to the full ``PageRouteContext``.
+    """
+    from fastapi.responses import HTMLResponse
+
+    # Delegate to the existing render_fragment wrapper. It uses the same
+    # autoescape-configured Jinja env as render_page / render_site_page,
+    # and the templates we render here (app/404.html, app/403.html)
+    # extend layouts/app_shell.html so inheritance resolves normally.
+    from dazzle_ui.runtime.template_renderer import render_fragment
+
+    back = _compute_back_affordance(str(request.url.path))
+
+    # Minimal context — the app_shell layout's blocks all use `| default`
+    # for optional keys, so we only need to fill in what this error page
+    # template references directly. The sidebar renders empty but the
+    # chrome stays intact.
+    ctx: dict[str, Any] = {
+        "app_name": app_name,
+        "message": message,
+        "is_authenticated": True,
+        "nav_items": [],
+        "nav_groups": [],
+        "user_email": "",
+        "user_name": "",
+        "user_roles": [],
+        "current_route": str(request.url.path),
+    }
+    if back:
+        ctx["back_url"], ctx["back_label"] = back
+
+    html = render_fragment(template_name, **ctx)
+    return HTMLResponse(content=html, status_code=status_code)
+
+
 def register_site_error_handlers(
     app: FastAPI,
     sitespec_data: dict[str, Any],
@@ -127,6 +208,11 @@ def register_site_error_handlers(
     - 403: Access denied page
     - 404: Page not found page
     API requests still receive JSON responses.
+
+    **In-app vs marketing dispatch (manwithacat/dazzle#776):** when the request path
+    starts with ``/app/``, renders the error inside the authenticated
+    app shell so logged-in users keep their sidebar and persona
+    context. Otherwise renders the public marketing-site variant.
 
     Args:
         app: FastAPI application instance
@@ -141,6 +227,7 @@ def register_site_error_handlers(
     has_custom_css = bool(
         project_root and (project_root / "static" / "css" / "custom.css").is_file()
     )
+    app_name = sitespec_data.get("product_name") or sitespec_data.get("name") or "Dazzle"
 
     @app.exception_handler(StarletteHTTPException)
     async def custom_http_error_handler(request: Any, exc: StarletteHTTPException) -> Any:
@@ -152,6 +239,14 @@ def register_site_error_handlers(
 
         if exc.status_code == 403 and is_browser:
             message = exc.detail if isinstance(exc.detail, str) else "Access denied"
+            if _is_app_path(str(request.url.path)):
+                return _render_app_shell_error(
+                    template_name="app/403.html",
+                    status_code=403,
+                    message=message,
+                    request=request,
+                    app_name=app_name,
+                )
             ctx = build_site_error_context(
                 sitespec_data, message=message, custom_css=has_custom_css
             )
@@ -161,6 +256,14 @@ def register_site_error_handlers(
             )
 
         if exc.status_code == 404 and is_browser:
+            if _is_app_path(str(request.url.path)):
+                return _render_app_shell_error(
+                    template_name="app/404.html",
+                    status_code=404,
+                    message="The page you're looking for doesn't exist.",
+                    request=request,
+                    app_name=app_name,
+                )
             ctx_404 = build_site_404_context(sitespec_data, custom_css=has_custom_css)
             return HTMLResponse(
                 content=render_site_page("site/404.html", ctx_404),

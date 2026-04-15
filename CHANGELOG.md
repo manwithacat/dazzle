@@ -9,7 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.30] - 2026-04-15
+## [0.55.31] - 2026-04-15
+
+### Fixed
+- **manwithacat/dazzle#776: 404/403 pages under `/app/*` now render inside the
+  authenticated app shell.** Previously `site/404.html` and
+  `site/403.html` (which extend the marketing site layout) were
+  rendered unconditionally for every error, so a logged-in user
+  hitting a bad record URL (`/app/contact/bad-id`) or a forbidden
+  workspace (`/app/workspaces/forbidden`) was dropped into the public
+  marketing chrome with `Sign In` / `Get Started` nav links. Every
+  Dazzle example app exhibited this (5-app cross-cycle evidence from
+  cycles 201/213/216/217/218 of the /ux-cycle autonomous loop).
+
+  The fix adds two new templates — `templates/app/404.html` and
+  `templates/app/403.html` — which extend `layouts/app_shell.html`
+  and render the error markup inside the authenticated sidebar +
+  navbar chrome. The exception handler in
+  `src/dazzle_back/runtime/exception_handlers.py` now inspects
+  `request.url.path`: if it starts with `/app/` (or is exactly
+  `/app`), the in-app variant is rendered; otherwise the existing
+  marketing-site variant is rendered. API requests still return JSON
+  regardless of path.
+
+  The in-app error page also includes a **"Back to List" /
+  "Back to Dashboard" affordance** computed from the request path.
+  `/app/contact/bad-id` → `Back to List` (to `/app/contact`);
+  `/app/workspaces/forbidden` → `Back to Dashboard` (to `/app`).
+  This was a secondary complaint in the cycle-201 EX-004 and
+  cycle-217 EX-014 observations: the only recovery affordance was
+  "Go Home" which dropped the user on the public landing page.
+
+### Added
+- 14 new unit tests in `tests/unit/test_exception_handlers.py` covering
+  `_is_app_path` (5 cases), `_compute_back_affordance` (5 cases), and
+  the end-to-end dispatch via the registered handler (4 cases: 404
+  in-app, 404 marketing, 403 in-app, API request JSON fallback).
+
+### Agent Guidance
+- **Error pages under `/app/*` must render inside the authenticated
+  shell.** When adding a new error type or status code that browsers
+  might hit inside the app, route through
+  `_render_app_shell_error(...)` in `exception_handlers.py` rather
+  than calling `render_site_page(...)` directly. The in-app variant
+  preserves sidebar, persona badge, and logout context; the marketing
+  variant does not.
+
+
 
 ### Added
 - **Cycle 218 — explore: contact_manager / user / edge_cases.** Final
