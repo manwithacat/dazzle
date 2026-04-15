@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.19] - 2026-04-15
+## [0.55.20] - 2026-04-15
+
+### Added
+- **Cycle 208 — UX-041 column-visibility-picker contract drafted + Phase B PASS.**
+  ARIA `role="menu"` + `role="menuitemcheckbox"` popover dropdown
+  triggered by a "Columns" button in the data-table header. Conditional
+  render guarded by `>3 columns`, parent-controller-owned state, no
+  server endpoints. Phase B against support_tickets:
+  `fitness run [admin:c79c3a35, agent:cea9824b]: 93 findings (45/48),
+  degraded=False`. 5 quality gates, 8 v2 open questions including the
+  cycle-199-flagged hardcoded threshold (EX-006), missing persistence,
+  Escape close, and arrow-key navigation. Sixth cycle-198+
+  subagent-discovered row to DONE.
+
+
 
 ### Added
 - **Cycle 207 — UX-039 workspace-tabbed-region contract drafted + Phase B PASS.**
