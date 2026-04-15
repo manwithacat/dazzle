@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.16] - 2026-04-15
+## [0.55.17] - 2026-04-15
+
+### Added
+- **Cycle 205 — UX-037 workspace-detail-drawer contract drafted + Phase B PASS.**
+  Contract at `~/.claude/skills/ux-architect/components/workspace-detail-drawer.md`:
+  permanently-mounted right-anchored drawer with a plain-JS `window.dzDrawer`
+  imperative API (no Alpine), three-way interaction model (close /
+  expand-to-full / internal-navigate), HTMX content slot at
+  `#dz-detail-drawer-content`. 5 quality gates (open via API, Esc close,
+  backdrop close, internal-link interception, expand-href update),
+  7 v2 open questions including the `href="#"` accessibility gap that
+  cycle 198 originally flagged. Phase B against contact_manager:
+  `fitness run [admin:562dddac, user:1dc5de59]: 20 findings (10/10),
+  degraded=False`. Both personas reached the workspace anchor.
+
+
 
 ### Added
 - **Cycle 204 — UX-040 kanban-board contract drafted + Phase B PASS.**
