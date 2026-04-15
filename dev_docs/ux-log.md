@@ -4,6 +4,45 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T20:38Z — Cycle 222 — **missing_contracts: ops_dashboard/admin — 3 proposals (workspace region types) + 2 observations**
+
+**Outcome:** Second explore cycle of the resumed loop. Strategy: `missing_contracts` (post-increment counter=29 → odd → missing_contracts per rotation). Target: `ops_dashboard` as the `admin` persona — cycle 216 hit ops_engineer with edge_cases, so admin was an unexplored axis and `missing_contracts` is a different lens on the same app.
+
+Subagent made 22 Playwright helper calls across ~7 minutes and filed **3 proposals, 2 observations** — proposal-heavy as expected for `missing_contracts`. Rolled into the backlog as PROP-047..PROP-049 and EX-033..EX-034.
+
+**Proposals — three new workspace region types with no current contract:**
+
+1. **PROP-047 `workspace-metrics-region`** — Responsive KPI tile grid (1/2/4 cols breakpoint-driven) optionally followed by a breakout table with attention-level row colouring. Lives in `src/dazzle_ui/templates/workspace/regions/metrics.html`. Not covered by `dashboard-grid` (layout), `region-wrapper` (frame), `filter-bar`, `data-table`, or `region-toolbar`. This is the actual *content* renderer for `region: kind=metrics` region types, and its attention-level row colouring in particular is a visual primitive worth pinning. Selector hint: `div[class*='grid-cols-4']:has(.text-[18px])`.
+
+2. **PROP-048 `workspace-tree-region`** — Recursive collapsible hierarchy rendered with native `<details>`/`<summary>` + chevron rotation on open, child-count badges, and HTMX drawer-load on node click. Lives in `src/dazzle_ui/templates/workspace/regions/tree.html`. Uses no Alpine — pure CSS + native disclosure + HTMX. Contract-worthy because the interaction grammar (keyboard disclosure, depth indicator, HTMX attach point) is load-bearing and currently only documented in the template itself. Selector: `details.group`.
+
+3. **PROP-049 `workspace-diagram-region`** — Mermaid.js diagram region with CDN lazy-load, `theme=neutral`, overflow-x scroll wrapper. The only workspace region that brings in a third-party renderer. Lives in `workspace/regions/diagram.html`. Worth a contract both for the CDN load pattern (security, CSP implications) and for the overflow/scroll behaviour which is the only responsive hook on an otherwise-fixed SVG. Selector: `pre.mermaid`.
+
+**Observations:**
+
+1. **EX-033 [concerning] `/app/workspaces/_platform_admin`** — The Platform Admin workspace sidebar lists three inline region links — `Health` (`/app/health`), `Deploys` (`/app/deploys`), and `App Map` (`/app/app-map`) — all of which return **404**. The real surfaces live at `/app/systemhealth` and `/app/deployhistory`. This is the same defect-class as cycle 216's EX-010 (ops_dashboard/ops_engineer dead nav links) but with a different mechanism: cycle 216 saw **403**s on routes that existed but the persona couldn't access; this cycle sees **404**s on routes that *don't exist at all*. The workspace nav generator is producing hrefs that don't map to real routes — possibly from a name-mangling mismatch (`systemhealth` vs `system_health` vs `system-health`) in the slug-ification path, or from regions declared without a corresponding surface. Worth tracing whether the same nav generator path underpins the contract-generator `data-region-name` expectation surfaced in cycle 220 (EX-025), since both are "workspace region definitions diverging from what's actually emitted". Framework-level.
+
+2. **EX-034 [notable] `/app/system/create`** — The `Register System` create form silently failed on submit: clicked Create with a name typed, got no redirect and no visible error. Same observable pattern as cycle 217's EX-018 (fieldtest_hub silent submit) and cycle 201's EX-007 (→ closed as #774 via auto-inject current_user). Could be another occurrence of the test-seed / auth-bridge gap (#778 re-confirm) if `System` has a `created_by: ref User required` and the admin persona's QA session user isn't in the User table; OR a different silent-failure mode entirely. The `/app/system/create` code path wasn't exercised by cycle 220's Phase A run so we don't yet have direct confirmation. Worth checking in a follow-up.
+
+**Cross-cycle signal pattern:** PROP-047..049 all live in the same template directory (`workspace/regions/`) — this suggests the workspace-region template family was never systematically audited for contracts, likely because cycle 17's initial scan focused on `components/` and `fragments/`. A targeted sweep of the entire `workspace/regions/` directory in a dedicated follow-up cycle would probably turn up 3-5 more uncontracted region types (heatmap, kanban-region, funnel_chart, bar_chart, timeline, activity_feed — the last one already has a contract from cycle 212ish). Worth noting for future prioritisation.
+
+**Explore budget:** 28 → 29. **One cycle remaining** before the 30-cap short-circuit.
+
+**Mission assessment:** successful. Subagent found three genuine uncontracted patterns + two substantive observations within 22 calls. Slightly over the 20-call suggested budget but under the 30 ceiling.
+
+**Friction notes from subagent:**
+- Parallel helper calls share the same `state.json`; concurrent navigates corrupt session state. The helper should lock or serialize.
+- Empty database made it impossible to see metrics/tree/diagram regions rendering with real content — the proposals are based on template-level inspection, not observed-in-browser. A seeded demo dataset before exploring would let the subagent verify behaviour, not just structure.
+- DSL surfaces declared but unimplemented (`/app/health`, `/app/deploys`, `/app/app-map`) make exploration noisy — the observer can't distinguish "intentionally stubbed" from "broken link".
+
+**Status moves:**
+- PROP-047..049: new rows, all OPEN
+- EX-033, EX-034: new rows, OPEN
+
+**Run artifacts:** `dev_docs/ux_cycle_runs/ops_dashboard_admin_20260415-203025/findings.json` (local-only, gitignored).
+
+---
+
 ## 2026-04-15T20:20Z — Cycle 221 — **edge_cases: support_tickets/customer — 1 concerning, 2 notable, 3 minor**
 
 **Outcome:** First explore cycle of the resumed loop. Strategy: `edge_cases` (post-increment counter=28 → even → edge_cases per rotation rule). Target: `support_tickets` as the `customer` persona — unexplored axis (cycle 201 probed the same app as `agent`; `customer` is the end-user perspective we hadn't stressed yet).
