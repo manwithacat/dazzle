@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.8] - 2026-04-15
+
+### Added
+- **`edge_cases` strategy for `build_subagent_prompt`.** Second
+  strategy for the cycle-198 subagent-driven explore path. Where
+  `missing_contracts` hunts for uncontracted component patterns, the
+  `edge_cases` strategy directs the subagent to probe friction and
+  defects: empty/error/boundary states, dead-end navigation,
+  affordance mismatches (clickable-looking elements that do nothing,
+  spinners that never resolve), copy/persona mismatches, and stale
+  post-navigation state. Output skews toward observations rather than
+  proposals, with explicit severity guidance (concerning / notable /
+  minor).
+- Strategy dispatch is now validated: unknown strategy literals raise
+  `ValueError` with a clear message. Previously the module raised
+  `NotImplementedError` unconditionally for anything other than
+  `missing_contracts`.
+- Test coverage expanded: 6 new tests in
+  `tests/unit/agent/test_ux_explore_subagent.py` covering edge-case
+  section content, observation-skewing guidance, strategy
+  non-bleed-through, and the ValueError path (16 tests total, all
+  passing).
+
+### Changed
+- `.claude/commands/ux-cycle.md` Strategy Rotation section — removed
+  the "not yet implemented, falls back to missing_contracts"
+  disclaimer for even-numbered explore cycles. Even cycles now
+  actually run the edge_cases strategy.
+
+### Agent Guidance
+- **Even-numbered explore cycles now run the `edge_cases` strategy**
+  for real. If you're orchestrating `/ux-cycle` from the runbook,
+  pass `strategy="edge_cases"` to `build_subagent_prompt` on even
+  counts and expect the subagent's findings to be mostly
+  observations, not proposals.
+
 ## [0.55.7] - 2026-04-15
 
 ### Removed

@@ -17,9 +17,16 @@ user produced 4 proposals + 4 observations in 188s at ~60k subsidised
 tokens — compared to 0 proposals across 11 DazzleAgent runs in cycle 197's
 verification sweep.
 
-Only ``MISSING_CONTRACTS`` is implemented in cycle 198. ``EDGE_CASES`` is
-scaffolded with a stub that raises NotImplementedError; it'll be filled in
-a later cycle once the MISSING_CONTRACTS path is proven at scale.
+Two strategies are supported:
+
+- ``missing_contracts`` — the primary mode. The subagent scans for
+  recurring interaction patterns that should have a ux-architect contract
+  but don't yet. Proven at scale across cycles 198–199 (10 proposals
+  across 4 persona-runs on 2 example apps).
+- ``edge_cases`` — added in cycle 200. The subagent probes friction,
+  broken-state recovery, empty-/error-/boundary-state handling, nav
+  dead-ends, and mismatches between UI affordance and actual behaviour.
+  Output skews toward observations rather than proposals.
 """
 
 from __future__ import annotations
@@ -47,8 +54,8 @@ def build_subagent_prompt(
     """Build the mission prompt for a subagent-driven explore run.
 
     Args:
-        strategy: "missing_contracts" (the primary cycle 198 mode) or
-            "edge_cases" (scaffolded but not yet implemented).
+        strategy: "missing_contracts" (scan for uncontracted patterns) or
+            "edge_cases" (probe for friction, broken states, dead-ends).
         example_name: The Dazzle example app name (e.g. "contact_manager").
         persona_id: DSL persona id the subagent walks as.
         persona_label: Human-readable label from ``PersonaSpec.label``.
@@ -74,19 +81,19 @@ def build_subagent_prompt(
         ``prompt`` field.
 
     Raises:
-        NotImplementedError: if ``strategy == "edge_cases"`` — that
-            strategy is scaffolded but deliberately left unimplemented
-            for cycle 198.
+        ValueError: if ``strategy`` is not a recognised literal.
     """
-    if strategy == "edge_cases":
-        raise NotImplementedError(
-            "edge_cases strategy is not implemented in cycle 198; use missing_contracts"
+    if strategy == "missing_contracts":
+        strategy_section = _MISSING_CONTRACTS_STRATEGY_SECTION
+    elif strategy == "edge_cases":
+        strategy_section = _EDGE_CASES_STRATEGY_SECTION
+    else:
+        raise ValueError(
+            f"unknown strategy {strategy!r}; expected 'missing_contracts' or 'edge_cases'"
         )
 
     hard_ceiling = int(budget_calls * 1.5)
     existing_list = "\n".join(f"- {name}" for name in existing_components)
-
-    strategy_section = _MISSING_CONTRACTS_STRATEGY_SECTION
 
     return _PROMPT_TEMPLATE.format(
         example_name=example_name,
@@ -125,6 +132,53 @@ reproduce what you saw.
 
 If you don't find anything without a contract, that's a legitimate finding
 — record it as an observation with severity=minor."""
+
+
+_EDGE_CASES_STRATEGY_SECTION = """\
+You are probing for UX friction and edge-case defects — places where the
+app does the wrong thing, misleads the user, or silently drops into a
+broken state. The previous cycles have already catalogued the recurring
+component patterns; your job is to stress-test what's there.
+
+Concrete things to try:
+
+- **Empty states** — visit list/table/dashboard pages that have zero rows
+  for this persona. Is the empty state helpful? Does it suggest a next
+  action? Is there a call-to-action that actually works?
+- **Error states** — submit a form with invalid/missing input. Does the
+  validation surface inline, in a toast, or silently? Does the form
+  recover its state, or do you lose what you typed?
+- **Boundary conditions** — very long text, zero/negative numbers, the
+  past/future dates, huge file uploads. Look for layout overflow, silent
+  truncation, and unhandled errors.
+- **Dead-end navigation** — click every sidebar link, every breadcrumb,
+  every "open full page" affordance. Find links that 403/404, lead to
+  blank pages, or loop back on themselves. Find links the persona can
+  see but can't use.
+- **Affordance mismatches** — a button that looks clickable but does
+  nothing; a hover state on an element that's read-only; a loading
+  spinner that never resolves; a toast that claims success after a
+  silent failure.
+- **Copy/persona mismatches** — text that reads as if a different persona
+  is viewing ("welcome, administrator" when you're a customer).
+- **State leaks** — navigate away mid-action, come back, and see stale
+  state (draft drafts, in-flight HTMX requests, open drawers).
+
+Record each finding as an **observation**, not a proposal. The shape is
+the same; just use the observation schema below. Set ``severity`` to:
+
+- ``concerning`` if data loss, broken auth/permissions, or a hard-stuck
+  state is possible
+- ``notable`` for missing affordances or copy/behaviour mismatches
+- ``minor`` for polish issues (wording, alignment, single-character
+  typos, ambiguous labels)
+
+Proposals are still accepted but should be rare — only if you stumble
+across a genuinely uncontracted component pattern along the way.
+
+If the app holds up against everything you try, that's itself a finding:
+record a single ``minor`` observation saying the persona's reachable
+surface had no edge-case defects in this cycle."""
 
 
 _PROMPT_TEMPLATE = """\

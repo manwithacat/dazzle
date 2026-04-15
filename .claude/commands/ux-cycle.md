@@ -179,8 +179,8 @@ The secondary short-circuit — "last 5 cycles produced 0 findings" — MUST con
 ### Strategy rotation
 
 Alternate strategies by the post-increment counter:
-- Odd-numbered explore cycles: `missing_contracts`
-- Even-numbered explore cycles: `edge_cases` (not implemented in cycle 198 — falls back to `missing_contracts` until that strategy ships)
+- Odd-numbered explore cycles: `missing_contracts` — scan for recurring UX patterns that should have a ux-architect contract but don't yet. Proposals preferred, observations when nothing notable turns up.
+- Even-numbered explore cycles: `edge_cases` — probe for friction, broken-state recovery, empty/error/boundary handling, dead-end navigation, affordance mismatches. Observations preferred; proposals only for stumble-across discoveries. Shipped in v0.55.8.
 
 ### Substrate (cycle 198+, v0.55.5)
 

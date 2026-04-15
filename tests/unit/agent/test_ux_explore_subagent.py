@@ -1,8 +1,9 @@
-"""Tests for cycle 198's build_subagent_prompt.
+"""Tests for build_subagent_prompt.
 
 These tests verify that the prompt template:
   - interpolates all required parameters correctly
-  - raises NotImplementedError for edge_cases (scaffolded-only in 198)
+  - dispatches between missing_contracts and edge_cases strategies
+  - rejects unknown strategies with ValueError
   - includes the existing_components list verbatim
   - produces different budget/ceiling lines when budget_calls changes
   - uses the helper_command + state_dir + findings_path pair consistently
@@ -87,10 +88,45 @@ class TestStrategyDispatch:
         # Missing-contracts-specific guidance language
         assert "recurring interaction pattern" in prompt
 
-    def test_edge_cases_raises_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="edge_cases"):
+    def test_edge_cases_is_supported(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="edge_cases")  # type: ignore[arg-type]
+        )
+        # Edge-cases-specific guidance language
+        assert "probing for UX friction" in prompt
+        assert "Empty states" in prompt
+        assert "Error states" in prompt
+        assert "Boundary conditions" in prompt
+        assert "Dead-end navigation" in prompt
+        assert "Affordance mismatches" in prompt
+
+    def test_edge_cases_directs_findings_as_observations(self) -> None:
+        """edge_cases output skews toward observations, not proposals."""
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="edge_cases")  # type: ignore[arg-type]
+        )
+        assert "as an **observation**" in prompt
+        # But proposals are still accepted for stumble-across discoveries
+        assert "Proposals are still accepted" in prompt
+
+    def test_missing_contracts_does_not_leak_edge_cases_guidance(self) -> None:
+        """The two strategy sections are mutually exclusive."""
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="missing_contracts")  # type: ignore[arg-type]
+        )
+        assert "probing for UX friction" not in prompt
+        assert "Dead-end navigation" not in prompt
+
+    def test_edge_cases_does_not_leak_missing_contracts_guidance(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="edge_cases")  # type: ignore[arg-type]
+        )
+        assert "recurring interaction pattern" not in prompt
+
+    def test_unknown_strategy_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="unknown strategy"):
             build_subagent_prompt(
-                **_sample_params(strategy="edge_cases")  # type: ignore[arg-type]
+                **_sample_params(strategy="lol_random")  # type: ignore[arg-type]
             )
 
 
