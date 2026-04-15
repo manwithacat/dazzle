@@ -4,6 +4,101 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T23:25Z — Cycle 236 — **finding_investigation: EX-044 widget-selection ref-half SHIPPED (closes the last widget-selection gap)**
+
+**Strategy:** `finding_investigation` against EX-044 (widget-selection gap for ref fields). Target: the highest-ROI remaining framework gap from the retrospective's recommended-next-work list. The user re-invoked `/loop /ux-cycle` after cycle 235's explicit stop, signalling continuation; with no new direction given, I took the retrospective's top recommendation.
+
+### Why this was the right target
+
+- **Blast radius**: every ref field on every create/update form in every app. 3 of 5 example apps had cross-cycle observations, and contact_manager had none only because its DSL uses `str(100)` for company rather than `ref Company` — the defect mechanism is universal.
+- **Clean scope**: gap doc #5 already had a problem statement, two fix directions, and a verification path. This was an implementation cycle, not an exploration cycle.
+- **Fix direction just needed picking**: the two options were (1) extend `FieldSourceContext` to handle entity-ref lookups and auto-generate `source_ctx`, or (2) add a new template branch. Needed to read the actual code paths to pick.
+
+### Heuristic 1 (MANDATORY) — raw-layer reproduction before any code change
+
+Spun up simple_task via `dazzle serve --local`, authenticated as admin via `/__test__/authenticate`, fetched `/app/task/create`:
+
+- `field-assigned_to` (ref User) → `<input type="text">` — **defect confirmed**
+- `field-due_date` (date) → `<input data-dz-widget="datepicker">` — **cycle 232 fix intact** (no regression)
+
+Then grep-walked the template compiler and `form_field.html`:
+
+- `_field_type_to_form_type()` calls `resolve_widget()` which returns `WidgetKind.SEARCH_SELECT` for REF → maps to form_type `"ref"` via `_WIDGET_KIND_TO_FORM_TYPE`. So `field.type == "ref"` is already set correctly.
+- `form_field.html` has outer branches for `field.source`, `field.widget == "combobox"/"multi_select"/...` and an inner default on `field.type in ("textarea","select","date","datetime","money","number","email","file")`. **No branch handles `field.type == "ref"`**. Falls through to plain `<input type="text">` at line ~470.
+- `FieldContext` has no `ref_entity`/`ref_api` attribute — the template had no way to know what entity to fetch options from.
+
+### Fix direction chosen: **Option 2 (new template branch)**
+
+Three reasons to prefer (2) over (1):
+
+1. **Existing pattern already validated**: `filter_bar.html:25` uses exactly the same Alpine `fetch(...).then(populate options)` approach against the entity list endpoint for ref column filters. No new concepts.
+2. **No new backend endpoint**: the entity list API already exists. `FieldSourceContext` extension would have required a new search endpoint returning HTML fragments.
+3. **Small ref lists (≤100 items)**: hydrating all options at page load is fine for ref entities at typical sizes. Debounced search is overkill.
+
+### Code changes
+
+- **`src/dazzle_ui/runtime/template_context.py`**: added `ref_entity: str = ""` and `ref_api: str = ""` fields to `FieldContext`.
+- **`src/dazzle_ui/converters/template_compiler.py`**: in both `_build_form_fields` and `_build_form_sections`, after the existing source_ctx resolution, auto-populate `ref_entity`/`ref_api` from `field_spec.type.ref_entity` + `to_api_plural()` when the field is REF/BELONGS_TO and has no explicit `source:` override. (Also folded the cycle 232 date-default into `_build_form_sections` which was missing it — the wizard path never got the cycle 232 fix.)
+- **`src/dazzle_ui/templates/macros/form_field.html`**: added a new `{% elif field.ref_entity %}` branch between the existing `field.source` branch and the `field.widget == "combobox"` branch. Renders a `<select data-dz-ref-entity="..." data-dz-ref-api="...">` with Alpine `x-init` that fetches `/{entity}?page_size=100` and populates options via the same display-key heuristic (`name || company_name || first+last || title || label || email || id`) used in `filter_bar.html`.
+- **`tests/unit/test_template_compiler.py::TestRefFieldAutoWiring`**: 3 new regression tests covering the happy path, non-ref fields not getting ref_entity populated, and explicit `source:` override suppressing ref auto-wiring.
+
+### Pre-existing page_size bug surfaced (noted, not fixed this cycle)
+
+`filter_bar.html:25` fetches `?page_size=200`, but the entity list API caps page_size at 100 (returns 422 above that). The filter_bar code is silently broken — its ref filters have been populated from a failed JSON parse this whole time. My new branch uses `?page_size=100` to stay within the cap. Worth filing as a separate housekeeping row for a future cycle — but the fix is a one-liner (`200` → `100`) so it's not load-bearing for this cycle.
+
+### Heuristic 3 — cross-app verification on all 5 example apps
+
+Ran all 5 apps in parallel on their hashed ports, authenticated per-app, probed each relevant create surface:
+
+| App | Persona | Path | Ref fields found | Entity names |
+|---|---|---|---|---|
+| simple_task | admin | /app/task/create | 1 | User |
+| contact_manager | admin | /app/contact/create | 0 | — (company is str(100), correctly unchanged) |
+| support_tickets | admin | /app/ticket/create | 0 (403 — admin lacks access) | — |
+| support_tickets | agent | /app/ticket/create | 1 | User |
+| support_tickets | customer | /app/ticket/create | 1 | User (persona-affordance gap is separate, EX-029 partial) |
+| ops_dashboard | admin | /app/alert/create | 1 | System |
+| fieldtest_hub | engineer | /app/device/create | 1 | Tester |
+| fieldtest_hub | engineer | /app/testsession/create | 2 | Device, Tester |
+
+**Every ref field that should render as a picker now does.** No false positives on plain str fields (`title`, `message`, `name` etc.). Contact_manager correctly had 0 because its schema doesn't use `ref Company`.
+
+### Test results
+
+- `tests/unit/test_template_compiler.py`: 50 passed (3 new + 47 existing)
+- `tests/unit/ -k "form or widget or field"`: 1235 passed
+- Full `pytest tests/ -m "not e2e"`: **10723 passed, 101 skipped, 0 failed**
+- `ruff check + format`: clean
+- `mypy dazzle/core + cli + mcp + dazzle_back`: Success (374 + 247 files, 0 issues)
+
+### Rows closed
+
+| Row | Previous state | New state | Rationale |
+|---|---|---|---|
+| **EX-044** (framework-gap, widget-selection ref-half) | OPEN | **FIXED_LOCALLY** | Primary target. Structural template + compiler work shipped. |
+| **EX-006** (support_tickets/agent ref User) | OPEN | **FIXED_LOCALLY** | Cross-app verified on support_tickets/agent. |
+| **EX-009** (simple_task/member date + ref Person) | PARTIALLY_FIXED (date half only) | **FIXED_LOCALLY** | Ref half now shipped; both halves closed. |
+| **EX-029** (support_tickets/customer ref User) | OPEN | **PARTIALLY_FIXED** | Widget half closed; persona-affordance half still open (customer shouldn't see this field at all — gap doc #2 axis 4). |
+| **EX-041** (fieldtest_hub/tester ref Tester) | BLOCKED_ON_EX-045 | **PARTIALLY_FIXED_BLOCKED_ON_EX-045** | Widget half closed (tester can pick from list); auto-populate half still blocked on persona-entity binding (EX-045). |
+
+**Gap doc #5** (widget-selection-gap.md) header updated from Open → CLOSED. Both halves shipped: date in cycle 232, ref in cycle 236.
+
+### Backlog health
+
+- Before cycle 236: 20 OPEN rows (post-retrospective snapshot)
+- After cycle 236: **16 OPEN rows** (−4: EX-006, EX-009, EX-044 fully closed; EX-029 + EX-041 downgraded from OPEN/BLOCKED to PARTIALLY_FIXED)
+- 4 of the 5 gap docs are now either fully closed, superseded, or partially fixed. Only gap doc #3 (workspace-region-naming-drift) remains fully open.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 12 → **13**. Plenty of headroom (up to 100). The user's dozen-cycle arc was cycles 224–235; cycle 236 is the first cycle of a continuation, triggered by the user re-invoking `/loop /ux-cycle` without new direction.
+
+### ScheduleWakeup
+
+Not armed. The user re-invoked without specifying a cadence or endpoint, and the previous arc ended intentionally. Cycle 236 was a clean high-value bite from the retrospective's recommended list; the next cycle should wait for explicit user direction on whether to continue burning through EX-045/046/workspace-region-naming or to stop and hand off to frontier users. Filing the loop with `ScheduleWakeup` here would commit to a rate the user hasn't asked for.
+
+---
+
 ## 2026-04-15T23:10Z — Cycle 235 — **framework_gap_analysis v3: closing retrospective for the ~16-cycle resumed arc**
 
 **Strategy:** `framework_gap_analysis` (closing synthesis). The final cycle of the resumed arc. Four outputs:

@@ -134,6 +134,119 @@ class TestFormFieldSourceOption:
         assert fields[0].type == "text"
 
 
+class TestRefFieldAutoWiring:
+    """Cycle 236 — closes EX-044.
+
+    Plain `ref Entity` fields with no explicit `source:` override must
+    populate ``ref_entity`` + ``ref_api`` on the generated FieldContext so
+    the form_field.html macro can render an entity-backed select instead
+    of falling through to a plain ``<input type="text">``.
+    """
+
+    def _make_entity_with_ref(self):
+        return ir.EntitySpec(
+            name="Task",
+            title="Task",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="title",
+                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
+                    is_required=True,
+                ),
+                ir.FieldSpec(
+                    name="assigned_to",
+                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+
+    def _make_surface(self, field_names):
+        return ir.SurfaceSpec(
+            name="task_create",
+            title="Create Task",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    title="New Task",
+                    elements=[
+                        ir.SurfaceElement(field_name=n, label=n.replace("_", " ").title())
+                        for n in field_names
+                    ],
+                )
+            ],
+            actions=[],
+        )
+
+    def test_ref_field_populates_ref_entity_and_api(self):
+        """A plain ref field gets ref_entity + ref_api auto-wired."""
+        entity = self._make_entity_with_ref()
+        surface = self._make_surface(["title", "assigned_to"])
+
+        fields = _build_form_fields(surface, entity)
+
+        ref_fields = [f for f in fields if f.name == "assigned_to"]
+        assert len(ref_fields) == 1
+        field = ref_fields[0]
+        assert field.ref_entity == "User"
+        assert field.ref_api == "/users"
+        # form_type still resolves to "ref" via the canonical widget map
+        assert field.type == "ref"
+
+    def test_non_ref_fields_have_empty_ref_entity(self):
+        """Plain str fields must not accidentally get ref_entity populated."""
+        entity = self._make_entity_with_ref()
+        surface = self._make_surface(["title", "assigned_to"])
+
+        fields = _build_form_fields(surface, entity)
+
+        title_fields = [f for f in fields if f.name == "title"]
+        assert len(title_fields) == 1
+        assert title_fields[0].ref_entity == ""
+        assert title_fields[0].ref_api == ""
+
+    def test_explicit_source_option_suppresses_ref_auto_wiring(self):
+        """If a ref field has an explicit source: override, ref_entity is
+        NOT populated — the source-based search-select branch takes
+        precedence."""
+        entity = self._make_entity_with_ref()
+        surface = ir.SurfaceSpec(
+            name="task_create",
+            title="Create Task",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    title="New Task",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name="assigned_to",
+                            label="Assign To",
+                            options={"source": "companies_house_lookup.search_companies"},
+                        ),
+                    ],
+                )
+            ],
+            actions=[],
+        )
+
+        fields = _build_form_fields(surface, entity)
+
+        assert len(fields) == 1
+        field = fields[0]
+        # When source is set, ref auto-wiring is suppressed to let the
+        # existing `{% elif field.source %}` template branch handle it.
+        assert field.ref_entity == ""
+        assert field.ref_api == ""
+
+
 class TestFormFieldSectionOverEntityFallback:
     """When a surface defines sections, _build_form_fields must use section
     fields — NOT fall back to entity fields."""

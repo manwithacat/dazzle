@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.36] - 2026-04-15
+
+### Fixed
+- **Widget-selection gap for `ref` fields in form generation (closes EX-044).** Plain
+  `ref Entity` fields in create/update surfaces have been silently rendering as
+  `<input type="text">` on every app, because the form-field template had no branch
+  for `field.type == "ref"`. Fix: added `ref_entity` + `ref_api` to `FieldContext`,
+  auto-populated them in `_build_form_fields` and `_build_form_sections` at
+  `src/dazzle_ui/converters/template_compiler.py` for REF/BELONGS_TO fields with no
+  explicit `source:` override, and added a new `{% elif field.ref_entity %}` branch
+  in `src/dazzle_ui/templates/macros/form_field.html` that renders an Alpine-hydrated
+  `<select>` fetching options from the entity's list endpoint (mirrors the existing
+  `filter_bar.html` pattern, no new backend route needed). Cross-app verified on all
+  5 example apps: simple_task/User, support_tickets/User (agent + customer),
+  ops_dashboard/System, fieldtest_hub/Tester + Device+Tester. Closes EX-006,
+  EX-009 (ref-half), the widget half of EX-029 + EX-041. Gap doc #5
+  (widget-selection-gap.md) is now fully closed — date half in v0.55.34 cycle 232,
+  ref half here in cycle 236. Also folds the v0.55.34 cycle 232 date-picker default
+  into the wizard path (`_build_form_sections`) which was missing it. 3 new
+  regression tests in `test_template_compiler.py::TestRefFieldAutoWiring`; full unit
+  sweep 10723 pass / 101 skip / 0 fail.
+
+### Agent Guidance
+- When adding a new form-field type rendering, check BOTH `_build_form_fields` and
+  `_build_form_sections` in `template_compiler.py` — the wizard path is a separate
+  code path that easily gets left behind. The cycle 236 fix caught the missing
+  cycle 232 date-default in the wizard path as a side effect.
+
 ## [0.55.35] - 2026-04-15
 
 ### Fixed

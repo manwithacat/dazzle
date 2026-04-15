@@ -47,6 +47,58 @@
     <p id="{{ error_id }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ error }}</p>
     {% endif %}
 
+  {% elif field.ref_entity %}
+    {# Entity-ref auto-wiring (cycle 236 — closes EX-044).
+       When a DSL field is a plain `ref Entity` with no explicit `source:`
+       override, the template compiler populates ref_entity + ref_api from
+       the IR and the form renders a select that hydrates options from the
+       entity's list endpoint. Mirrors the Alpine fetch pattern already
+       used by filter_bar.html for ref/belongs_to column filters. #}
+    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
+    </label>
+    {% if field.hint is defined and field.hint %}
+    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    {% endif %}
+    <select id="field-{{ field.name }}" name="{{ field.name }}"
+            data-dazzle-field="{{ field.name }}"
+            data-dz-ref-entity="{{ field.ref_entity }}"
+            data-dz-ref-api="{{ field.ref_api }}"
+            {% if field.required %}required aria-required="true"{% endif %}
+            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
+            class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+            x-data="{ options: [], loading: true, current: '{{ values.get(field.name) if values else '' }}' }"
+            x-init="
+              fetch('{{ field.ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(data => {
+                  const items = data.items || [];
+                  const display = (item) => {
+                    return item.__display__ || item.name || item.company_name
+                      || ((item.first_name || '') + ' ' + (item.last_name || '')).trim()
+                      || item.title || item.label || item.email || item.id || '';
+                  };
+                  options = items.map(i => ({ value: i.id, label: display(i) }));
+                  loading = false;
+                })
+                .catch(() => { loading = false; })
+            ">
+      <option value="">{{ field.placeholder or ('Select ' + field.label + '…') }}</option>
+      <template x-for="opt in options" :key="opt.value">
+        <option :value="opt.value"
+                x-text="opt.label"
+                :selected="current === opt.value">
+        </option>
+      </template>
+    </select>
+    {% if errors.get(field.name) %}
+    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
+    {% endif %}
+
   {# ── Vendored widget overrides (Phase 4) ─────────────────────────── #}
   {% elif field.widget == "combobox" %}
   {# UX-009: combobox widget — TomSelect wrapper, pure Tailwind chrome #}

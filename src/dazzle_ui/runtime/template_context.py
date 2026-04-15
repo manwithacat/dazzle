@@ -78,6 +78,8 @@ class FieldContext(BaseModel):
     widget: str | None = (
         None  # Widget override (e.g. rich_text, combobox, tags, picker, color, slider)
     )
+    ref_entity: str = ""  # Target entity name for ref/belongs_to fields (e.g. "User")
+    ref_api: str = ""  # List endpoint for ref lookup (e.g. "/user") — Alpine fetches options
     when_expr: str = ""  # Serialized when: condition from surface element
     visible: bool = True  # Evaluated at render time against record data
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)

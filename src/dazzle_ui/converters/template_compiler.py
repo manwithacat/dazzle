@@ -604,6 +604,26 @@ def _build_form_fields(
             if _k in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
                 widget_hint = "picker"
 
+        # Ref / belongs_to auto-wiring (cycle 236 — closes EX-044).
+        # When a field is a plain `ref Entity` with no explicit `source:`
+        # override, the form_type resolves to "ref" via the canonical widget
+        # map (triples.FIELD_TYPE_TO_WIDGET) but nothing in the template
+        # knew the target entity name, so ref fields silently fell through
+        # to `<input type="text">`. Populate ref_entity/ref_api here so the
+        # form_field.html macro can render an entity-backed select that
+        # fetches options from the entity's list API.
+        ref_entity_name = ""
+        ref_api = ""
+        if (
+            source_ctx is None
+            and field_spec
+            and field_spec.type
+            and field_spec.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
+            and field_spec.type.ref_entity
+        ):
+            ref_entity_name = field_spec.type.ref_entity
+            ref_api = f"/{to_api_plural(ref_entity_name)}"
+
         extra: dict[str, Any] = {}
         if form_type == "file" and field_spec and field_spec.type:
             accept_override = element_options.get("accept")
@@ -625,6 +645,8 @@ def _build_form_fields(
                 source=source_ctx,
                 extra=extra,
                 widget=widget_hint,
+                ref_entity=ref_entity_name,
+                ref_api=ref_api,
                 when_expr=when_expr_str,
                 visible_condition=vis_cond,
             )
@@ -682,6 +704,25 @@ def _build_form_sections(
             # Widget override from DSL: field name "Label" widget=rich_text
             widget_hint = element.options.get("widget")
 
+            # Default widget fallback for date/datetime fields (cycle 232).
+            if widget_hint is None and field_spec and field_spec.type:
+                _k = field_spec.type.kind
+                if _k in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
+                    widget_hint = "picker"
+
+            # Ref / belongs_to auto-wiring (cycle 236 — closes EX-044).
+            ref_entity_name = ""
+            ref_api = ""
+            if (
+                source_ctx is None
+                and field_spec
+                and field_spec.type
+                and field_spec.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
+                and field_spec.type.ref_entity
+            ):
+                ref_entity_name = field_spec.type.ref_entity
+                ref_api = f"/{to_api_plural(ref_entity_name)}"
+
             extra: dict[str, Any] = {}
             if form_type == "file" and field_spec and field_spec.type:
                 accept_override = element.options.get("accept")
@@ -708,6 +749,8 @@ def _build_form_sections(
                     source=source_ctx,
                     extra=extra,
                     widget=widget_hint,
+                    ref_entity=ref_entity_name,
+                    ref_api=ref_api,
                     when_expr=when_str,
                     visible_condition=vis,
                 )
