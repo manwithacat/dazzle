@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.15] - 2026-04-15
+
+### Changed
+- **Cycle 203 — UX-043 inline-edit Phase B PASS, advanced to DONE.**
+  Multi-persona fitness-engine contract walk against `support_tickets`
+  with `personas=["admin", "agent"]`:
+  `fitness run [admin:f9c7e3c1, agent:0e8a0f37]: 88 findings total
+  (admin=41, agent=47), degraded=False`. PASS under the cycle-156
+  `degraded`-based rule — the 88 findings are Pass 2a story_drift /
+  spec_stale observations from `support_tickets`'s overall app
+  health, orthogonal to the contract walk. The walker (`walk_contract`)
+  itself emits zero findings; it only records ledger steps. Both
+  personas reached the inline-edit anchor (`/app/ticket`) and the
+  walker completed cleanly.
+- **First cycle-198+ subagent-discovered UX row to reach `DONE`.**
+  Full chain executed in this session: cycle 199 explore (proposal)
+  → cycle 200 triage (PROP-043 → UX-043) → cycle 202 contract draft
+  → cycle 203 Phase B PASS. The `/ux-cycle` substrate is now end-to-end
+  proven for at least one component.
+
+### Agent Guidance
+- **Phase B is `degraded`-based, not `findings_count`-based.** The
+  cycle 156 fix established this rule; cycle 203 is the first time
+  it's been applied to a brand-new contract walked for the first
+  time. 88 fitness findings sound alarming but the walker emitting
+  zero of them is what matters. Don't fail a row on `findings_count`.
+
 ## [0.55.14] - 2026-04-15
 
 ### Added
