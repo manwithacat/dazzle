@@ -9,7 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.29] - 2026-04-15
+## [0.55.30] - 2026-04-15
+
+### Added
+- **Cycle 218 — explore: contact_manager / user / edge_cases.** Final
+  app to receive an edge_cases run; completes the 5-app coverage matrix
+  on the new substrate. 15 helper calls, ~64k subsidised tokens, 238s
+  wall-clock. **0 proposals + 5 observations** (2 concerning, 1 notable,
+  2 minor) ingested as EX-020..024.
+- **5th-app cross-confirmation of the 404/403 marketing-chrome eject.**
+  `/app/contact/{nonexistent-id}` drops the authenticated user into the
+  public marketing chrome with 'Sign In' nav. Now confirmed in
+  support_tickets, simple_task, ops_dashboard, fieldtest_hub, AND
+  contact_manager — every example app exhibits the bug.
+- **2nd-app confirmation of the data-table formatter bug, worse here.**
+  `/app/contact` renders 20 row-action link groups with **zero cell
+  content**. Embedded version in `/app/workspaces/contacts` renders
+  the same entity correctly. Cycle 217 found "-" / blank cells in
+  fieldtest_hub; here the entire row body is blank. Same root cause,
+  more severe symptom.
+- **Important non-finding: UX-046 bulk-action-bar is NOT regressed.**
+  The cycle 217 EX-019 finding was specifically about an unfilled
+  count slot in the label, not the visibility binding. The bar IS
+  properly CSS-hidden without selection. Cycle 217's contract walker
+  PASS stands.
+
+### Filed upstream issues
+- **manwithacat/dazzle#776 — framework: 404/403 error pages drop authenticated
+  users into public marketing chrome.** Filed with 5-app cross-cycle
+  evidence: cycles 201/213/216/217/218. Conclusively a framework-level
+  layout dispatch bug. Suggested fix sketch included: dispatch error
+  templates by URL prefix (`/app/*` → authenticated shell). Sits
+  alongside #774 (silent create-form failure) and #775 (sidebar nav
+  shows inaccessible links) as the three confirmed framework-level
+  defects this session has surfaced.
+
+### Agent Guidance
+- **Cross-cycle convergence at N≥5 is conclusive.** When the same
+  defect appears in 5 different apps with 5 different personas across
+  5 different cycles, it's not a coincidence. File it. Cycle 218 made
+  the 404-eject pattern N=5 and triggered the issue filing.
+- **The substrate is in a steady state.** Six cycles of explore
+  produce real signal but at decreasing per-cycle marginal yield. The
+  high-value action now is converting accumulated cross-app signal
+  into upstream issues, not running more explore cycles. The session
+  has produced enough evidence to act on.
+
+
 
 ### Added
 - **Cycle 217 — explore: fieldtest_hub / engineer / edge_cases.**
