@@ -9,7 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.25] - 2026-04-15
+## [0.55.26] - 2026-04-15
+
+### Added
+- **Cycle 214 — triage + UX-047 feedback-widget contract + Phase B PASS.**
+  Combined housekeeping + work cycle. Triaged PROP-047 and PROP-048 (the
+  cycle 213 explore findings) into UX-047 and UX-048 PENDING rows, then
+  immediately drafted the contract for UX-047 feedback-widget and ran
+  Phase B against simple_task. The contract documents the **vanilla-JS
+  module** at `runtime/static/js/feedback-widget.js` — no Alpine, no
+  HTMX, all DOM construction via `document.createElement` for security,
+  dedicated CSS file at `runtime/static/css/feedback-widget.css`.
+  Auto-captures page snapshot + nav history + JS errors at submit time.
+  Rate-limited 10/hour via localStorage with a 24h retry queue for
+  failed submits. Phase B against simple_task:
+  `fitness run [admin:6fdba764, member:4f8f6262]: 71 findings (36/35),
+  degraded=False`. 5 quality gates, 10 v2 open questions including
+  ARIA modal semantics, radiogroup chip ARIA, focus trap, live region
+  on toast, toast unification with UX-013, DSL-configurable categories,
+  screenshot upload, role-based visibility, page-snapshot privacy
+  redaction.
+- **First explore→triage→specify→QA chain on the new substrate.**
+  Cycle 213 found PROP-047, cycle 214 promoted + drafted + verified it
+  in a single iteration. UX-048 theme-toggle is now PENDING for the
+  next cycle.
+
+### Agent Guidance
+- **The /ux-cycle skill's Step 1 doesn't pick up PROP-NNN rows.** When
+  cycle N runs Step 6 EXPLORE and produces PROPs, cycle N+1 needs an
+  explicit triage step before Step 1 has anything to work on.
+  Otherwise the loop runs Step 6 indefinitely and the backlog
+  accumulates untriaged PROPs (the failure mode cycle 200 was created
+  to prevent). Until /ux-cycle gains a built-in triage step, the
+  pattern is: explore N → manual triage (PROP→UX) → /ux-cycle picks
+  the new UX-NNN.
+
+
 
 ### Added
 - **Cycle 213 — first explore cycle past the UX-037..046 milestone.**
