@@ -4,6 +4,44 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T21:04Z — Cycle 224 — **framework_gap_analysis: 4 gap docs synthesised from 14 contributing observations**
+
+**Outcome:** First cycle under the **relaxed policy**. The `/ux-cycle` skill at `.claude/commands/ux-cycle.md` was updated to:
+
+1. Raise the explore budget cap from 30 to **100** (soft safety rail, not a productivity ceiling)
+2. Add two new strategies alongside `missing_contracts` and `edge_cases`:
+   - **`framework_gap_analysis`** — no browser/subagent; reads accumulated observations, groups by defect class, writes gap docs to `dev_docs/framework-gaps/<YYYY-MM-DD>-<theme>.md`
+   - **`finding_investigation`** — reproduces a specific OPEN EX row locally, traces to framework code, files an issue or lands a fix
+3. Replace the strict odd/even rotation with **strategy selection by judgment** — the assistant picks per-cycle based on recent signal (subject to diversity heuristics)
+
+Counter was reset from 30 → 0 after the policy update. This cycle is #1 under the new budget.
+
+**Strategy selected:** `framework_gap_analysis`. Rationale: three fresh explore cycles (221, 222, 223) plus cycle 220's Phase A findings sat unsynthesised in the backlog, and four cross-cycle themes had already reached 2+ contributing observations — strong convergence signal, high synthesis ROI.
+
+**Output:** 4 framework gap docs written to `dev_docs/framework-gaps/`, each following the new skill's gap-doc structure (problem statement, evidence table, root-cause hypothesis with code paths, fix sketch, blast radius, open questions, recommended follow-up):
+
+1. **`2026-04-15-silent-form-submit.md`** — 5 contributing observations (EX-007/018/034/039/041) across 4 apps. The v0.55.33 #774 fix closed *one* specific cause (missing `created_by` ref User) but the broader silent-submit class has at least 3 root causes: (a) 422 responses never re-render the HTMX form, (b) `inject_current_user_refs` doesn't cascade through User-subtype entities like `Tester`, (c) client-side validation mirroring from Pydantic schema is missing. Unified fix sketch: framework-default 422 exception handler that re-renders forms with per-field error markers. High blast radius — every create/update form in every app.
+
+2. **`2026-04-15-persona-unaware-affordances.md`** — 8 contributing observations (EX-002/010/011/019/028/029/037/040) across 4 apps. The v0.55.34 #775 fix established `workspace_allowed_personas` as single-source-of-truth for workspace-level nav filtering, but the same pattern needs to generalise to 4 more axes: bulk-action bars, empty-state CTAs, create-form field visibility, and the workspace-access fallback case itself (EX-028 shows #775's `rule 4` returning None — "visible to everyone" — is too permissive). Unified fix sketch: extract a general `affordance_visible(persona, action, target)` helper in a new `persona_visibility.py` module, with specialisations for each axis, plus a DSL-level `default_access: permissive|strict` flag to migrate the fallback behaviour without breaking existing apps. **Highest blast radius of the 4 gaps** — EX-040 alone represents 4 cross-entity destructive-action defects in a single walk.
+
+3. **`2026-04-15-workspace-region-naming-drift.md`** — 6 contributing items (EX-013/025/033 + PROP-047/048/049) across 3 apps, all converging on the same subsystem. Three code paths independently derive names/routes/DOM markers for workspace regions and don't agree: route generator collapses underscores (`system_health` → `systemhealth`), nav generator uses a different slug rule (`health`, not `systemhealth`), contract generator expects `data-region-name="X"` DOM attribute the template compiler never emits. Unified fix sketch: single `workspace_region_identity(workspace, region, appspec) -> RegionIdentity` helper in `workspace_converter.py` (same "single source of truth" pattern as `workspace_allowed_personas`) consumed by all three call sites, plus a regression test iterating every region in every example app to enforce round-trip consistency.
+
+4. **`2026-04-15-error-page-navigation-dead-end.md`** — single observation (EX-035) but high-priority because it's a **regression of the shipped v0.55.31 #776 fix**. The in-app error shell templates (`app/404.html`, `app/403.html`) render correctly but the back-affordance anchors are inert (`state_changed: false` on click). Three hypotheses ranked by likelihood: (1) HTMX boost intercept on the app shell, (2) server-side redirect loop in `/app` resolver, (3) Alpine click handler. Most likely (1): the app shell probably sets `hx-boost="true"` at the body level, and the error-page anchors are intercepted but the follow-up HX response pipeline fails. Two-line fix under hypothesis (1): add `hx-boost="false"` to the error template back-links. **Priority: HIGH**. Next `finding_investigation` cycle will confirm/deny each hypothesis in under 30 minutes.
+
+**Cross-gap intersection noted:** the error-page gap (#4) and the persona-unaware-affordances gap (#2) compound into the tester experience EX-035 captured — tester lands on `engineering_dashboard` (wrong default workspace for this persona, a persona-default bug) and then can't escape the resulting 403 (the anchor-intercept bug). Fixing just one leaves the composite defect half-fixed. The two docs cross-reference.
+
+**Backlog state:** all 14 contributing rows remain OPEN. The gap docs are the synthesis layer; individual EX rows will move to `FIXED→v0.55.XX` as each gap's fix lands. No rows moved this cycle — synthesis is not triage.
+
+**Explore budget:** 0 → **1 / 100** under the new cap.
+
+**Cycle duration:** ~10 minutes (pure reasoning, no browser, no subagent).
+
+**Mission assessment:** successful. 4 gap docs totalling ~36KB of synthesised analysis, each with actionable fix sketches and clear priority. The framework now has explicit targets for four generalisable framework-level problems, each backed by cross-cycle evidence.
+
+**Status moves:** none (synthesis-only). All 14 contributing EX rows remain OPEN pending investigation/fix cycles.
+
+---
+
 ## 2026-04-15T20:50Z — Cycle 223 — **edge_cases: fieldtest_hub/tester — 7 observations (2 concerning, 3 notable, 2 minor) — EXPLORE BUDGET EXHAUSTED**
 
 **Outcome:** Third and **final** explore cycle before the 30-cap short-circuit. Strategy: `edge_cases` (post-increment counter=30 → even → edge_cases per rotation). Target: `fieldtest_hub` as the `tester` persona — complementary axis to cycle 217's engineer probe of the same app. Tester files issues (input side); engineer resolves them (output side). Different workflow, different surface.

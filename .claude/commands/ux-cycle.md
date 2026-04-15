@@ -170,17 +170,81 @@ the FAIL gate, blocking every widget contract from ever reaching PASS.
    ```
    If the row was `DONE` and regressed to `FAIL`, emit `ux-regression` instead.
 
-### Step 6: EXPLORE (only if no PENDING rows remain)
+### Step 6: EXPLORE / ANALYSE / INVESTIGATE (only if no actionable rows remain in Step 1)
 
-Check the session counter (stored in `.dazzle/ux-cycle-explore-count`). If count >= 30, skip EXPLORE and mark the cycle complete with "No work remaining, explore budget exhausted".
+The explore phase is the loop's entropy-reducer. Its primary job is identifying **generalisable framework-level problems** — defect classes that span multiple apps/personas and can be fixed once at the framework layer rather than N times at the app layer. Surface-level observations are the raw material; cross-cycle synthesis into framework gaps is the high-value outcome.
 
-The secondary short-circuit — "last 5 cycles produced 0 findings" — MUST consider only cycles that actually *reached* Step 6 and ran an EXPLORE mission. Housekeeping cycles (retroactive qa-rule sweeps, log-only updates, exhausted-sticky runs) produce 0 EXPLORE findings by construction and must not count toward the streak. Track this via `explored_at` timestamps in `.dazzle/ux-cycle-state.json`.
+#### Budget
 
-### Strategy rotation
+Check `.dazzle/ux-cycle-explore-count`. If count >= **100**, skip Step 6 and mark the cycle complete with "explore budget exhausted — pause for triage". 100 is a soft safety rail against runaway loops caused by bugs, not a productivity ceiling. When the cap is hit, the expected response is a **deliberate batch reset** by the operator after reviewing accumulated findings — not "more of the same".
 
-Alternate strategies by the post-increment counter:
-- Odd-numbered explore cycles: `missing_contracts` — scan for recurring UX patterns that should have a ux-architect contract but don't yet. Proposals preferred, observations when nothing notable turns up.
-- Even-numbered explore cycles: `edge_cases` — probe for friction, broken-state recovery, empty/error/boundary handling, dead-end navigation, affordance mismatches. Observations preferred; proposals only for stumble-across discoveries. Shipped in v0.55.8.
+Secondary short-circuit: if the last 5 cycles that actually reached Step 6 produced **zero** findings AND no framework gaps, skip EXPLORE and pause. Track cycles that reached Step 6 via `explored_at` timestamps in `.dazzle/ux-cycle-state.json`; housekeeping cycles (retroactive qa-rule sweeps, log-only updates, exhausted-sticky runs) are NOT counted toward the streak.
+
+#### Strategy selection
+
+The assistant running /ux-cycle chooses one of three strategies per cycle, using **judgment** rather than a strict rotation. The default behaviour is to rotate through `missing_contracts` and `edge_cases` for breadth, but the assistant SHOULD deviate when there's a high-leverage reason to:
+
+1. **`missing_contracts`** — scan for recurring UX patterns that should have a ux-architect contract but don't yet. Proposal-heavy. Use when: (a) a recently-touched template family (e.g. `workspace/regions/`) may contain uncontracted components, or (b) it's been >3 cycles since the last missing_contracts run.
+
+2. **`edge_cases`** — probe for friction, broken-state recovery, empty/error/boundary handling, dead-end navigation, affordance mismatches. Observation-heavy. Use when: (a) a persona/app axis hasn't been probed yet, or (b) a recent framework fix (closed GitHub issue) needs cross-app regression-check evidence, or (c) the current cycle's rotation dictates it.
+
+3. **`framework_gap_analysis`** — **no browser, no subagent**. Instead: read accumulated observations (EX-XXX rows) since the last analysis cycle, group by defect-class, identify cross-cycle themes where 2+ observations point at the same underlying framework gap, and write a **gap analysis document** to `dev_docs/framework-gaps/<YYYY-MM-DD>-<theme-slug>.md`. Each gap doc must include:
+   - **Problem statement** — the generalisable defect class, phrased framework-first not app-first
+   - **Evidence** — list of EX-XXX rows (and any GitHub issues) contributing to the theme, each with a one-line summary
+   - **Root cause hypothesis** — where in the framework code the gap likely lives, with specific file paths if identifiable
+   - **Fix sketch** — a concrete proposal, ideally a single change that addresses all contributing observations
+   - **Blast radius** — which apps/personas are likely affected and which are already confirmed
+   - **Open questions** — what needs verification before a fix is safe
+
+   Use when: (a) 3+ cross-cycle observations point at the same theme, (b) you want to consolidate evidence before escalating to a GitHub issue, or (c) it's been >7 cycles since the last analysis — synthesis debt accumulates. This strategy produces NO browser activity and NO subagent dispatch; it is a pure reasoning cycle. It DOES count against the explore budget.
+
+4. **`finding_investigation`** — **no browser subagent, but you may use your own tools to reproduce and root-cause a specific finding**. Pick one OPEN EX-XXX row (prefer severity=concerning, prefer cross-cycle reinforcement) and:
+   - Reproduce the defect locally (boot the relevant example app, verify the finding is real, isolate conditions)
+   - Trace it to the framework code that causes it
+   - Either file a GitHub issue with direct code-level evidence OR propose a fix directly if small enough
+   - Update the EX row's status from `OPEN` to `FILED→#NNN` (issue filed), `FIXED_LOCALLY` (patch pending), or `VERIFIED_FALSE_POSITIVE` (cannot reproduce)
+
+   Use when: (a) a concerning observation has accumulated enough cross-cycle evidence to investigate, (b) a gap_analysis cycle surfaced a promising root-cause hypothesis that needs verification, or (c) the backlog has >5 OPEN concerning rows — conversion pressure.
+
+#### Choosing for this cycle
+
+When Step 6 is entered, the assistant:
+
+1. **Scans recent cycle outcomes** in `dev_docs/ux-log.md` (last 5 cycles) and the OPEN EX row counts by severity.
+2. **Lists candidate strategies** it considered, with a one-line reason each.
+3. **Picks one** and records the choice in the log entry for this cycle.
+4. **Proceeds** with that strategy's playbook (see below for `missing_contracts` / `edge_cases`; `framework_gap_analysis` and `finding_investigation` have their own structures documented in Appendix A at the bottom of this skill).
+
+The assistant should **prefer diverse cycles over mechanical rotation**. Three edge_cases runs in a row is fine if the cross-cycle signal keeps converging on interesting framework themes; conversely, two back-to-back framework_gap_analysis cycles is fine if the first one surfaced a promising theme that the second can dig deeper into.
+
+### Appendix A — `framework_gap_analysis` and `finding_investigation` playbooks
+
+**`framework_gap_analysis` workflow:**
+
+1. Read `dev_docs/ux-log.md` for the last ~10 cycles and the current `dev_docs/ux-backlog.md` EX table.
+2. Group OPEN (and recently-filed) observations by suspected common cause. Look for:
+   - Identical or near-identical defect patterns across 2+ apps
+   - Observations that point at the same template family or framework subsystem
+   - Observations that recur *after* a framework fix was shipped for a related issue
+   - Observations that reinforce a hypothesis from a prior finding
+3. For each theme with 2+ observations, write a gap doc at `dev_docs/framework-gaps/<YYYY-MM-DD>-<theme-slug>.md` using the structure in Step 6 above.
+4. Commit with message `ux: gap analysis cycle {N} — {K} themes synthesised`.
+5. The cycle counts against the explore budget (increment the counter).
+6. Emit signal `ux-gap-analysis` with payload `{cycle, themes_count, theme_slugs}`.
+
+**`finding_investigation` workflow:**
+
+1. Pick an OPEN EX row (see selection heuristics in Step 6).
+2. Reproduce locally (typically `dazzle serve --local` against the row's canonical example, drive via curl/httpx/direct SQL, extract the minimum repro).
+3. Trace to framework code using Grep/Read, starting from the symptom's most-likely call site.
+4. Write findings to the EX row's `notes` column (include line-number refs to the responsible code).
+5. One of:
+   - File a GitHub issue (via `gh issue create`) if the fix scope is material and unclear. Update the row's status to `FILED→#NNN`.
+   - Land a fix directly (edit code, run `/ship`) if the fix is small and the mechanism is certain. Update the row's status to a closure note and cite the commit SHA.
+   - Mark as `VERIFIED_FALSE_POSITIVE` if the observation cannot be reproduced, with notes explaining the reproduction attempt and the likely false-positive cause.
+6. Commit with message `ux: investigation cycle {N} — {EX-id} {outcome}`.
+7. The cycle counts against the explore budget.
+8. Emit signal `ux-investigation-complete` with payload `{cycle, ex_id, outcome}`.
 
 ### Substrate (cycle 198+, v0.55.5)
 
