@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.13] - 2026-04-15
+
+### Changed
+- **Cycle 201 defects filed as GitHub issues.** The two concerning-severity
+  observations from cycle 201's edge_cases run against `support_tickets`
+  have been filed outside the UX backlog:
+  - [#774](https://github.com/manwithacat/dazzle/issues/774) — silent create-form failure on `/app/ticket/create`. Root cause identified: the `ticket_create` surface omits `created_by: ref User required` (from the `Ticket` entity on line 64 of `examples/support_tickets/dsl/app.dsl`), so the backend rejects submissions, and the UI doesn't surface the error. Matches historical cycle 110/126/137 observations about the same underlying bug.
+  - [#775](https://github.com/manwithacat/dazzle/issues/775) — sidebar nav shows workspace links that the current persona cannot actually access (403). Cross-persona confirmed: cycle 199 manager run and cycle 201 agent run independently flagged this.
+- Updated `EX-002` and `EX-007` rows in `dev_docs/ux-backlog.md` with
+  `FILED→#NNN` status and issue cross-links so future diagnosticians can
+  trace the backlog row to the upstream issue.
+
+### Agent Guidance
+- **Edge-case findings that are real defects belong in GitHub issues,
+  not the UX backlog.** The UX backlog is for components to bring under
+  ux-architect governance; edge-case findings that turn out to be
+  genuine app-level bugs should be promoted to issues with a
+  `FILED→#NNN` breadcrumb in the backlog row.
+
 ## [0.55.12] - 2026-04-15
 
 ### Added
