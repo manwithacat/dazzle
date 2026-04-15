@@ -325,6 +325,174 @@ async def action_select(
         await _teardown(pw, browser, ctx, page, state_dir)
 
 
+async def action_form_submit(
+    url: str,
+    fields_json: str,
+    submit_selector: str,
+    state_dir: Path,
+    timeout_ms: int,
+) -> dict[str, Any]:
+    """Navigate to a form, fill multiple fields, submit, and observe the result — all in one subprocess.
+
+    Added in cycle 229 after EX-039 investigation revealed that the
+    per-call ``action_type`` + ``action_click`` pattern does not work for
+    form submission: each subprocess starts a fresh browser, reloads
+    from ``storage_state`` (cookies only, no in-page form state), so
+    values typed via a prior ``action_type`` call have already
+    evaporated by the time a subsequent ``action_click`` fires. Empty
+    forms get blocked by HTML5 ``required`` validation before any
+    HTMX request is emitted, producing the "silent submit" symptom the
+    subagent observed in cycles 201/217/222/223.
+
+    This combined action accepts the whole form state (URL + dict of
+    field selectors → values + submit-button selector) and runs all
+    steps in a single browser lifetime, so form state persists
+    through the submit event.
+
+    Args:
+        url: The form page URL (absolute or path — path is resolved
+            against ``base_url``).
+        fields_json: JSON-encoded dict mapping CSS selector → value.
+            For ``<select>`` elements use an option value or visible
+            label. For ``<input>``/``<textarea>`` use the raw text.
+        submit_selector: CSS selector for the submit button.
+        state_dir: Standard state-dir path.
+        timeout_ms: Per-action timeout.
+
+    Returns:
+        Dict with ``status``, ``from_url``, ``to_url``, ``state_changed``,
+        and ``visible_error_text`` — the innerText of any
+        ``[data-dazzle-error]`` element on the post-submit page (empty
+        string if none, which is the happy path).
+    """
+    try:
+        fields = json.loads(fields_json)
+    except json.JSONDecodeError as exc:
+        return {
+            "error": f"invalid fields JSON: {exc}",
+            "error_type": "ValueError",
+        }
+    if not isinstance(fields, dict):
+        return {
+            "error": "fields must be a JSON object of selector → value",
+            "error_type": "ValueError",
+        }
+
+    pw, browser, ctx, page = await _launch(state_dir, timeout_ms)
+    try:
+        # Resolve URL — accept absolute or path-relative.
+        base_url_path = state_dir / "base_url.txt"
+        if url.startswith("http"):
+            target = url
+        elif base_url_path.exists():
+            base = base_url_path.read_text().strip()
+            target = base.rstrip("/") + url if url.startswith("/") else base + "/" + url
+        else:
+            return {
+                "error": "cannot resolve relative URL without base_url.txt",
+                "error_type": "RuntimeError",
+            }
+
+        try:
+            await page.goto(target, wait_until="networkidle", timeout=timeout_ms)
+        except Exception as exc:
+            return {
+                "error": f"navigation failed: {exc}",
+                "error_type": type(exc).__name__,
+                "target": target,
+            }
+
+        before_url = page.url
+
+        # Fill every field in one session. For <select>, use select_option;
+        # otherwise fall back to fill().
+        for selector, value in fields.items():
+            try:
+                locator = page.locator(selector).first
+                tag = await locator.evaluate("el => el.tagName.toLowerCase()")
+                if tag == "select":
+                    try:
+                        await locator.select_option(value=str(value), timeout=timeout_ms)
+                    except Exception:
+                        await locator.select_option(label=str(value), timeout=timeout_ms)
+                else:
+                    await locator.fill(str(value), timeout=timeout_ms)
+            except Exception as exc:
+                return {
+                    "error": f"failed to fill {selector!r}: {exc}",
+                    "error_type": type(exc).__name__,
+                    "selector": selector,
+                }
+
+        # Click submit.
+        try:
+            await page.locator(submit_selector).first.click(timeout=timeout_ms)
+        except Exception as exc:
+            return {
+                "error": f"submit click failed: {exc}",
+                "error_type": type(exc).__name__,
+                "submit_selector": submit_selector,
+            }
+
+        # Wait for the submit to settle. Two phases:
+        # 1. Network idle — for non-HTMX full-page submits, redirects, etc.
+        # 2. Short explicit wait for HTMX ajax to complete AND the swap
+        #    to run. HTMX emits ``htmx:afterSwap`` once the response is
+        #    rendered into the target; we wait for either that or a URL
+        #    change, whichever comes first. ``networkidle`` alone isn't
+        #    reliable for HTMX because the ajax round-trip may complete
+        #    before networkidle kicks in AND the swap runs on the JS
+        #    thread after the response settles.
+        try:
+            await page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        except Exception:
+            pass
+        # Give HTMX a beat to run its swap handler. 250ms is generous
+        # for any local-network response.
+        try:
+            await page.wait_for_timeout(250)
+        except Exception:
+            pass
+
+        # Harvest any post-submit error banner so the caller doesn't need
+        # a second observe call to see it (a second call would trigger
+        # a fresh page.goto which would discard the swapped-in error
+        # content — see cycle 229 investigation).
+        visible_error_text = ""
+        try:
+            error_el = page.locator("[data-dazzle-error]").first
+            if await error_el.count() > 0:
+                visible_error_text = (await error_el.inner_text()).strip()
+        except Exception:
+            pass
+
+        # Also snapshot the inner HTML of #form-errors if present — this
+        # is the target container for HTMX 422 swaps and gives us a
+        # second diagnostic window even if the [data-dazzle-error]
+        # selector didn't match (e.g. if the error fragment wrapped
+        # differently than expected).
+        form_errors_inner = ""
+        try:
+            target_el = page.locator("#form-errors").first
+            if await target_el.count() > 0:
+                form_errors_inner = (await target_el.inner_text()).strip()
+        except Exception:
+            pass
+
+        after_url = page.url
+        return {
+            "status": "form_submitted",
+            "from_url": before_url,
+            "to_url": after_url,
+            "state_changed": before_url != after_url,
+            "visible_error_text": visible_error_text,
+            "form_errors_inner": form_errors_inner,
+            "fields_filled": list(fields.keys()),
+        }
+    finally:
+        await _teardown(pw, browser, ctx, page, state_dir)
+
+
 async def action_wait(selector: str, state_dir: Path, timeout_ms: int) -> dict[str, Any]:
     """Wait for an element to appear — useful for async content loads."""
     pw, browser, ctx, page = await _launch(state_dir, timeout_ms)
@@ -385,6 +553,26 @@ def _build_parser() -> argparse.ArgumentParser:
     wait_cmd = sub.add_parser("wait", help="Wait for an element to appear.")
     wait_cmd.add_argument("selector")
 
+    # form_submit — navigate, fill many fields, click submit, observe errors,
+    # all in ONE subprocess. Added in cycle 229 after EX-039 investigation
+    # revealed that action_type values evaporate between subprocess calls
+    # (storage_state only persists cookies, not in-page form state). For
+    # form-submit flows, subagents should use this command instead of
+    # chaining type/click across multiple invocations.
+    form_submit = sub.add_parser(
+        "form_submit",
+        help="Navigate, fill fields, submit, observe — all in one subprocess.",
+    )
+    form_submit.add_argument("url", help="Form page URL or path.")
+    form_submit.add_argument(
+        "fields",
+        help="JSON object of {selector: value} pairs.",
+    )
+    form_submit.add_argument(
+        "submit_selector",
+        help="CSS selector for the submit button.",
+    )
+
     return p
 
 
@@ -409,6 +597,14 @@ async def _run(args: argparse.Namespace) -> int:
             result = await action_select(args.selector, args.value, state_dir, timeout_ms)
         elif args.action == "wait":
             result = await action_wait(args.selector, state_dir, timeout_ms)
+        elif args.action == "form_submit":
+            result = await action_form_submit(
+                args.url,
+                args.fields,
+                args.submit_selector,
+                state_dir,
+                timeout_ms,
+            )
         else:
             result = {"error": f"unknown action: {args.action}"}
     except Exception as e:

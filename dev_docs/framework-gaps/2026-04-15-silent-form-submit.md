@@ -1,13 +1,53 @@
 # Framework Gap — Silent Form Submit
 
-**Status:** Open
+**Status:** SUPERSEDED (cycle 229 investigation)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
+**Superseded:** Cycle 229 (finding_investigation on EX-039)
 **Contributing cycles:** 201, 217, 222, 223
-**Evidence weight:** 5 observations across 4 apps, 1 partially-fixed (#774)
+**Evidence weight:** originally 5 observations; post-investigation, 3 of 5 are substrate artifacts, 1 was a real framework bug already fixed by #774, 1 is a distinct class (#774 cascade, tracked as EX-041)
 
 ---
 
-## Problem statement
+## ⚠️ SUPERSEDED — cycle 229 investigation invalidated most of this gap doc
+
+Cycle 229's end-to-end investigation of EX-039 revealed that **the framework's 422 HTML error-surfacing system already exists and works correctly**. At the HTTP layer, POSTing an invalid payload to any entity create endpoint returns a proper `422 Unprocessable Entity` response with a `[data-dazzle-error]` HTML fragment containing "Validation Error" + per-field messages ("device_id: Field required", etc.). The form template's `hx-target-422="#form-errors"` wiring is correct; HTMX's `response-targets` extension is loaded at `base.html:105`; the exception handler at the backend renders the right fragment.
+
+**What actually caused the "silent submit" observations was a substrate bug**, not a framework gap:
+
+1. The subagent's `action_type` / `action_click` multi-call pattern launches a fresh Playwright subprocess for each action. `storage_state` persists cookies but NOT in-page form state, so values filled in a prior `action_type` subprocess evaporate by the time the next `action_click` subprocess fires.
+2. Consequently, every `action_click` submitted an **empty form**. HTML5 `required` attributes on the form's device_id/description inputs blocked empty submits entirely — **no POST ever reached the server**, `state_changed=false` was correctly reported, and no error appeared because no error was requested.
+3. Even in non-required-field cases (EX-018's 1000-char device name, EX-039's -999 negative number), the test values evaporated the same way, so the server saw them as empty and the outcome was the same.
+4. `action_observe` made it worse: it also launches a fresh subprocess and does `page.goto(last_url)`, which means any HTMX-swapped error content from an in-place swap is **discarded** on the next observe. Even if the framework had rendered an error in-place, observing it would have destroyed it.
+
+**Framework-side, nothing was broken**. The gap this doc proposed to build (framework-default 422 handler re-rendering forms with field errors) already exists. The `inject_current_user_refs` fix for #774 remains real and correct — it addresses a specific FK auto-population gap that's orthogonal to the error-surfacing question.
+
+### Post-investigation evidence classification
+
+| Row | Original status | Cycle 229 verdict |
+|---|---|---|
+| EX-007 (→#774) | Real framework bug | **Still real** — #774 closed it. Specific cause (missing created_by ref User), fixed in v0.55.33. |
+| EX-018 | Concerning | **SUSPECTED_FALSE_POSITIVE** — substrate artifact; needs re-verification with new `form_submit` action |
+| EX-034 | Notable | **SUSPECTED_FALSE_POSITIVE** — same substrate class |
+| EX-039 | Notable | **VERIFIED_FALSE_POSITIVE** — cycle 229 reproduced the real mechanism end-to-end |
+| EX-041 | Notable | **Still real** — distinct class. The form exposes `ref Tester` (User-subtype) without auto-injecting; this is a cascade extension of #774 and should be closed by extending `inject_current_user_refs` to walk the ref graph. |
+
+So the true residual "silent-form-submit"-like gaps are:
+1. **EX-041** — `inject_current_user_refs` cascade to User-subtype entities (Tester → User back-ref). Small, well-scoped framework fix worth 15 min in a future cycle.
+2. **Client-side validation mirroring** (proposed as Fix #3 in the original doc below) — still a latent UX improvement, but no longer motivated by a real defect. Hold until a fresh observation surfaces the need.
+
+### Substrate fix shipped in cycle 229
+
+Added new `form_submit` action to `src/dazzle/agent/playwright_helper.py`: navigates, fills all fields, clicks submit, and harvests error banner text — all in **one subprocess lifetime**, with a 250ms post-networkidle wait for HTMX to run its swap handler. This unblocks all future subagent form exploration, which was previously unable to observe form validation errors at all. Filed as **EX-043** with full trace.
+
+### Takeaway for the /ux-cycle loop
+
+This gap doc is a useful illustration of why the **synthesis cycle must be followed by at least one investigation cycle before a fix is attempted**. Cycle 224's gap analysis saw 5 observations pointing at the same symptom class and synthesized them into a framework-wide theme. That was a reasonable inference from the data — but the data itself was poisoned by a substrate bug that faked the symptom. A naïve implementation cycle following cycle 224 would have built the "framework-default 422 handler" that already existed, and then wondered why the observations kept recurring.
+
+**Updated /ux-cycle skill heuristic for gap-analysis follow-through**: when a gap doc would require new framework infrastructure (vs. a helper swap or single-file edit), spend at least one investigation cycle **reproducing the defect end-to-end at the HTTP layer** (bypassing any subagent tooling) before committing to the infrastructure build. The "try the real thing" pattern from cycle 228 is the right general discipline.
+
+---
+
+## Original problem statement (retained for historical reference)
 
 When a create form submits and the backend rejects the payload for **any reason other than a missing `created_by` ref User**, the rejection is completely invisible to the user. The form stays on the same URL, shows no inline validation, no toast, no field highlighting, and no state-changed signal. The user's typed content survives or disappears non-deterministically (at least one subagent run saw a `-999` numeric value vanish without a trace).
 

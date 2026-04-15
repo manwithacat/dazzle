@@ -4,6 +4,109 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T22:06Z — Cycle 229 — **finding_investigation: EX-039 invalidates gap doc #1 + substrate fix for form submission**
+
+**Strategy:** `finding_investigation`. Target: EX-039 (cycle 223 observation — silent form submit on empty required fields / negative numeric, core of gap doc #1).
+
+**Outcome:** The biggest cycle of the resumed arc. **Gap doc #1 (silent-form-submit) is substantially invalidated** — 3 of 5 contributing observations were substrate artifacts, not framework bugs. The framework's 422 HTML error-surfacing system already exists and works correctly. Instead of building new framework infrastructure, I shipped a substrate fix (new `form_submit` helper action) that unblocks all future subagent form exploration. This is a classic "the investigation found a completely different problem than the gap doc hypothesised".
+
+### Investigation trace (applying cycle 228's "try the real thing" heuristic)
+
+1. **HTTP-layer reproduction** (before touching any UI code). Booted fieldtest_hub, logged in as tester, POSTed an empty body to `/issuereports` with `HX-Request: true` header. Got **HTTP 422** with **`content-type: text/html`** and a body containing a fully-rendered error fragment: `<div class="...destructive..." data-dazzle-error><h3>Validation Error</h3><ul><li>device_id: Field required</li>...</ul></div>`. **Framework 422 handling works.**
+
+2. **Inspected the form template + HTMX wiring.** `components/form.html:25` declares `hx-target-422="#form-errors"`; `components/form.html:32` has `<div id="form-errors">` as the swap target; `base.html:105` loads `response-targets` as an `hx-ext`. Wiring is correct end-to-end.
+
+3. **Drove the form via Playwright the way the subagent would** — `action_type` on device_id, `action_type` on description, `action_click` on Create button. Got `state_changed=false`, no visible error. **Server log shows no POST was made during the Playwright click.** Only my earlier curl POSTs appeared in the log.
+
+4. **Hypothesis: HTML5 `required` blocks empty submit**. Checked the form HTML — device_id and description inputs BOTH have `required aria-required="true"`. So the native browser validation intercepts the submit before HTMX ajax fires. That explains no POST.
+
+5. **But typed values SHOULD have filled the required fields.** `observe` after the type calls showed `value=''` on ALL fields. **The typed values never persisted.** Re-reading `action_type` in `playwright_helper.py:265`: each call launches a fresh Playwright subprocess, loads storage_state (cookies only), re-navigates to last_url, fills the field, then tears down (`ctx.storage_state(path=...)` saves cookies only — NOT in-page form state).
+
+6. **Root cause — the subagent substrate silently loses form field values across subprocess calls.** EX-039's observation was real (the subagent correctly reported `state_changed=false`) but the mechanism wasn't a framework bug — it was a substrate artifact. And it affected EX-018 and EX-034 too, because the same multi-call type/click pattern was used.
+
+7. **Additional substrate issue:** `action_observe` also re-launches the page via `_launch`'s `page.goto(last_url)`. Even in the hypothetical case where HTMX DID successfully swap in an error fragment from a single-subprocess submit, any subsequent `action_observe` would discard it by reloading.
+
+### The fix — new substrate helper action
+
+Added `action_form_submit(url, fields_json, submit_selector, state_dir, timeout_ms)` to `src/dazzle/agent/playwright_helper.py`. One subprocess lifetime, one browser, one Playwright context:
+
+1. Launch + restore cookies
+2. Navigate to the form URL
+3. For each `{selector: value}` in the fields dict, fill (or select-option for `<select>`)
+4. Click the submit button
+5. Wait for `networkidle` **plus 250ms** — HTMX runs its swap handler on the JS thread *after* the ajax response settles, and `networkidle` alone isn't enough
+6. Harvest `[data-dazzle-error]` inner text AND `#form-errors` inner text (two diagnostic windows)
+7. Return `{status, from_url, to_url, state_changed, visible_error_text, form_errors_inner, fields_filled}`
+
+Wired through the argparse dispatcher:
+
+```bash
+python -m dazzle.agent.playwright_helper --state-dir DIR form_submit \
+  /app/issuereport/create \
+  '{"#field-device_id": "...", "#field-description": "..."}' \
+  'button:has-text("Create")'
+```
+
+### End-to-end verification
+
+**Empty submit (HTML5 `required` blocks):**
+- `state_changed: False`, `visible_error_text: ""` — **correct behaviour**, browser handles this natively before HTMX fires.
+
+**Fields filled but server-required `reported_by_id` missing:**
+- `state_changed: False`, `visible_error_text: "Validation Error\nreported_by_id: Field required"`, `form_errors_inner: "Validation Error\nreported_by_id: Field required"` — **HTMX 422 swap rendered correctly in place**.
+
+Server log confirms: one POST per `form_submit` call, all returning 422 with the HTML fragment.
+
+### Gap doc #1 invalidation
+
+| Row | Original | Cycle 229 verdict |
+|---|---|---|
+| EX-007 (→#774) | Real framework bug | Still real — #774 closed it |
+| EX-018 | Concerning | **SUSPECTED_FALSE_POSITIVE** — needs re-verification with `form_submit` |
+| EX-034 | Notable | **SUSPECTED_FALSE_POSITIVE** — same substrate class |
+| EX-039 | Notable | **VERIFIED_FALSE_POSITIVE** — reproduced end-to-end |
+| EX-041 | Notable | **Still real** — distinct class (ref Tester → User cascade) |
+
+`dev_docs/framework-gaps/2026-04-15-silent-form-submit.md` updated with a prominent SUPERSEDED header + full explanation.
+
+### Framework-level implications
+
+**This is the single most important cycle in the resumed arc** in terms of "what did we learn about the framework":
+
+1. **The framework's 422 error-surfacing system is complete and correct.** No need for the massive new infrastructure the gap doc proposed.
+2. **The subagent substrate has a fundamental limitation** for form-submission flows that was silently fooling every cycle that observed form behaviour. The fix unblocks all future exploration of this area.
+3. **Gap-analysis cycles are only as trustworthy as their input data.** Cycle 224 synthesised 5 observations into a "big framework gap" theme — a reasonable inference, but the data was poisoned by a substrate bug nobody had noticed. **The "try the real thing" heuristic from cycle 228 was what saved cycle 229 from building unnecessary infrastructure.** It's worth encoding this as a hard rule in the skill: before committing to build new framework infrastructure based on a gap doc, always reproduce the defect at the HTTP layer to confirm the data.
+
+### Status moves
+
+- **EX-039**: OPEN → **VERIFIED_FALSE_POSITIVE** (cycle 229 reproduced the substrate mechanism end-to-end)
+- **EX-018, EX-034**: OPEN → **SUSPECTED_FALSE_POSITIVE** (same substrate class; re-verification deferred to a future cycle)
+- **EX-043**: new row — substrate-bug, `FIXED_LOCALLY`. Documents the substrate limitation + the `form_submit` fix for future diagnosticians.
+- **Gap doc #1 (silent-form-submit)**: OPEN → **SUPERSEDED**. Document retained with a SUPERSEDED header + full cycle 229 explanation. The residual real gaps (EX-041 and client-side validation mirroring) are called out explicitly.
+
+### Test suite impact
+
+- Targeted test sweep (playwright_helper + persona): 44/44 pass
+- Full unit sweep: **10453/10453 pass** — no regressions
+- Lint + types: clean
+
+### Mission assessment
+
+Highest-leverage investigation cycle of the resumed arc. Closed 1 concerning row with high confidence, marked 2 more as suspected false positives, invalidated 1 gap doc, shipped a substrate fix that unblocks a whole category of future exploration, and surfaced a new /ux-cycle skill heuristic worth encoding. Duration: ~45 min. Zero framework code changes — the fix was entirely in the subagent tooling.
+
+**Explore budget:** 5 → 6 / 100. **~6 cycles remaining** in the user's ~12-cycle arc.
+
+### Next cycle plan revision
+
+With gap doc #1 invalidated and EX-040 closed in cycle 228, the remaining concerning/high-value rows are:
+
+- **EX-041** (ref Tester not auto-injected from current user) — small, scoped cascade fix of #774. Natural next target.
+- **EX-010, EX-011, EX-013, EX-014** (cycle 216/217 observations on ops_dashboard and fieldtest_hub): all in the "still OPEN" pile but may have been mitigated by cycles 225-228's fixes. Worth a re-verification pass.
+
+Plan for cycle 230: pivot to `framework_gap_analysis` v2 — re-synthesise the backlog now that cycles 225-229 have closed 5 rows and invalidated 1 gap doc. The signal-to-noise ratio of the remaining observations has changed enough that a fresh synthesis pass will either confirm gap doc #2/#3 still hold or surface a new theme.
+
+---
+
 ## 2026-04-15T21:50Z — Cycle 228 — **finding_investigation: EX-040 — bulk-action bar suppresses for personas without delete permission**
 
 **Strategy:** `finding_investigation`. Target: EX-040 (cycle 223 observation — fieldtest_hub/tester sees "Delete X items" bulk-action bar on 4 entity lists despite delete being engineer-only per DSL).
