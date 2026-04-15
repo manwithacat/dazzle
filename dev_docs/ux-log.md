@@ -4,6 +4,52 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T20:50Z — Cycle 223 — **edge_cases: fieldtest_hub/tester — 7 observations (2 concerning, 3 notable, 2 minor) — EXPLORE BUDGET EXHAUSTED**
+
+**Outcome:** Third and **final** explore cycle before the 30-cap short-circuit. Strategy: `edge_cases` (post-increment counter=30 → even → edge_cases per rotation). Target: `fieldtest_hub` as the `tester` persona — complementary axis to cycle 217's engineer probe of the same app. Tester files issues (input side); engineer resolves them (output side). Different workflow, different surface.
+
+Subagent made 18 Playwright helper calls across ~6 minutes and filed **7 observations, 0 proposals** — the densest defect-per-call rate of any cycle so far. Rolled into the backlog as EX-035..EX-041.
+
+**Findings, ranked by severity:**
+
+1. **EX-035 [concerning] `/app/workspaces/engineering_dashboard`** — Error-page navigation is a **dead-end**. When tester hits a workspace they don't have access to, the 403 page shows "Back to Dashboard" / "Go to Dashboard" links pointing at `/app` — but clicking them produces `state_changed: false` on every attempt. An HTMX router or event listener is intercepting clicks on error-state pages. This is a **regression of the v0.55.31 #776 fix** (which added the in-app error shell with back-affordances). The affordance renders but doesn't navigate — which is worse than the old "marketing chrome" failure mode because it looks like it should work and doesn't. **Highest-priority cross-cycle signal this cycle.**
+
+2. **EX-040 [concerning] `/app/device`, `/app/issuereport`, `/app/testsession`, `/app/task`** — The "Delete X items" bulk-action bar with a destructive red button is rendered on **all four** list pages for the tester persona. Delete is engineer-only on all four entities per the DSL access rules. **The tester sees a destructive affordance they are not permitted to use** — four cross-entity hits in one app. This is the same defect class as cycle 221's EX-028 ("workspace nav links the persona can't access") but for destructive actions, not navigation. The v0.55.34 #775 fix added `workspace_allowed_personas` for workspace-level access filtering, but the bulk-action bar clearly isn't consulting entity-level access rules. **New framework gap worth filing as a GitHub issue once cross-app confirmed** (likely affects all 5 example apps).
+
+3. **EX-036 [notable] `/app/device`** — Device Dashboard table for a tester with zero devices renders column headers but **no empty-state message at all**. The tester is presented with a silent empty table, no context, no CTA. Same defect class as cycle 221's EX-030 (missing CTA in empty state) but worse — here there's no empty-state text whatsoever. Likely a template gap where the `region.empty_state` hook fires for region-rendered lists but not for entity-list surfaces.
+
+4. **EX-039 [notable] `/app/issuereport/create` and `/app/testsession/create`** — Silent form validation: submitting with empty required fields or a negative numeric value produces **no visible feedback** — no inline errors, no field highlights, no toast, form stays on the page with no indication of what failed. Same observable pattern as cycle 201's EX-007 (→ closed as #774 via `inject_current_user_refs`) and cycle 217's EX-018, and cycle 222's EX-034. **This is now 4 cross-cycle observations of silent submit failures.** Candidate for a framework-level form-error-surfacing guarantee — the v0.55.33 #774 fix addressed one *specific* cause (missing `created_by` ref), but the broader "silent submit" failure mode persists when the server rejects the payload for *other* reasons (missing required fields, invalid numeric values, length violations).
+
+5. **EX-041 [notable] `/app/testsession/create`** — Required "Tester" FK field on the Log Test Session form is rendered as a plain text input; the logged-in tester has to know and manually type their own system UUID. **This is exactly the class #774 was supposed to solve** — required `ref User` (or `ref Tester`, which is a User-subtype entity) on a create form should auto-inject `current_user`. The v0.55.33 fix targets `ref User` specifically; it doesn't cascade to entities that derive from User (like Tester). Worth extending `inject_current_user_refs` to walk the ref chain back to the User entity so domain-specific "actor" entities get the same auto-injection.
+
+6. **EX-037 [minor] `/app/workspaces/tester_dashboard`** — "My Devices" empty-state copy reads "Add your first device to begin field testing!" but the tester persona **cannot create devices** (engineer-only per DSL). The copy advertises a permitted action the persona cannot perform — same defect class as cycle 216's EX-011 on ops_dashboard. Cross-cycle recurrence: empty-state copy is generated without consulting persona access rules.
+
+7. **EX-038 [minor] `/app/issuereport`, `/app/testsession`** — Raw entity name leaks in create-CTA labels ("New IssueReport", "New TestSession") and in at least one search placeholder ("Search issuereport…"). The surface titles are correct, so the data is there — the table-level affordances are falling back to `entity.name` instead of `entity.label`/`entity.title`. Template-compiler-level defect in `filter-bar` or `data-table` helper templates.
+
+**Cross-cycle signal convergence:** This cycle produced an unusually high density of cross-cycle reinforcement:
+- EX-035 points at a regression of the v0.55.31 #776 fix (error-page navigation)
+- EX-037 recurs cycle 216's EX-011 (copy vs. persona access)
+- EX-039 is the 4th cross-cycle silent-submit observation (EX-007/EX-018/EX-034/EX-039)
+- EX-040 is a new framework gap class (persona filtering on destructive affordances) with 4 cross-entity hits in this single app
+- EX-041 is a natural extension of the #774 fix (cascade to User-subtype entities)
+
+**Four out of seven findings converge on already-known framework themes** — that's exactly the signal you want from the last cycle before budget exhaustion: the substrate is catching real things, and the same defect classes are accumulating cross-app evidence.
+
+**Explore budget:** 29 → **30 (CAP REACHED)**. Per the skill rule, subsequent `/ux-cycle` invocations will short-circuit with "No work remaining, explore budget exhausted" until the counter is reset. Three strong explore cycles in this resumed run (221, 222, 223) produced a combined 3 proposals + 15 observations, none of them duplicates of prior backlog rows.
+
+**Mission assessment:** successful. 7 findings in 18 calls, 2 concerning, 3 notable, 2 minor. Densest defect-per-call rate across the resumed explore arc (1 finding per 2.6 calls vs cycle 221's 3.0 and cycle 222's 4.4).
+
+**Friction notes from subagent:**
+- Initial session redirect sent tester to `engineering_dashboard` (403 for this persona) before reaching `tester_dashboard`. Three calls wasted. A per-persona session fixture that starts on the correct `default_workspace` would cut cold-start overhead ~15%.
+- The `observe` helper doesn't distinguish DOM presence from viewport visibility, producing false-positive click targets on elements that exist but can't be clicked.
+- Form field values typed via `type` appear not to persist across some click+re-render cycles — the `-999` value "disappeared without a trace". Network-capture mode would clarify whether values reach the server. (Same friction flagged in cycle 221.)
+
+**Status moves:** EX-035..EX-041 — 7 new rows, all OPEN.
+
+**Run artifacts:** `dev_docs/ux_cycle_runs/fieldtest_hub_tester_20260415-204250/findings.json` (local-only, gitignored).
+
+---
+
 ## 2026-04-15T20:38Z — Cycle 222 — **missing_contracts: ops_dashboard/admin — 3 proposals (workspace region types) + 2 observations**
 
 **Outcome:** Second explore cycle of the resumed loop. Strategy: `missing_contracts` (post-increment counter=29 → odd → missing_contracts per rotation). Target: `ops_dashboard` as the `admin` persona — cycle 216 hit ops_engineer with edge_cases, so admin was an unexplored axis and `missing_contracts` is a different lens on the same app.
