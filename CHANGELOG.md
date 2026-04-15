@@ -9,7 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.22] - 2026-04-15
+## [0.55.23] - 2026-04-15
+
+### Added
+- **Cycle 211 — UX-045 dashboard-edit-chrome contract drafted + Phase B PASS.**
+  Five-state save lifecycle (clean / dirty / saving / saved / error) with
+  state-driven `:class` binding on the Save button, Reset button, and
+  Add Card affordance opening the UX-038 picker. Treats the top-of-grid
+  Reset+Save toolbar and the bottom-of-grid Add Card button as one
+  composite component because they share the same `saveState` flag.
+  Phase B against support_tickets:
+  `fitness run [admin:af51414a, agent:e95819ab]: 88 findings (44/44),
+  degraded=False`. 5 quality gates, 9 v2 open questions including the
+  cycle-199 cross-persona "Saved" label ambiguity (flagged by both the
+  agent and manager personas), missing live region for save-state
+  announcements, missing `aria-expanded` on Add Card trigger, Reset
+  confirmation dialog, auto-save, save shortcut key, multi-step undo,
+  and a confirm-on-leave navigation guard. Ninth cycle-198+
+  subagent-discovered row to DONE. **One row remaining (UX-046
+  bulk-action-bar).**
+
+
 
 ### Added
 - **Cycle 210 — UX-044 dashboard-region-toolbar contract drafted + Phase B PASS.**
