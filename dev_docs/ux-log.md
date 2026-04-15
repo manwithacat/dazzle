@@ -4,6 +4,44 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T20:20Z — Cycle 221 — **edge_cases: support_tickets/customer — 1 concerning, 2 notable, 3 minor**
+
+**Outcome:** First explore cycle of the resumed loop. Strategy: `edge_cases` (post-increment counter=28 → even → edge_cases per rotation rule). Target: `support_tickets` as the `customer` persona — unexplored axis (cycle 201 probed the same app as `agent`; `customer` is the end-user perspective we hadn't stressed yet).
+
+Subagent made 18 Playwright helper calls across ~7 minutes and filed **6 observations, 0 proposals** — the expected shape for `edge_cases`. Findings rolled into the backlog as EX-027..EX-032.
+
+**Findings, ranked by severity:**
+
+1. **EX-027 [concerning] `/app/ticket/create`** — Ticket creation is **completely broken for the customer persona**. The session user ID (`a4cb8ef3-...`) does not exist in the User entity table, so every form submit returns HTTP 422 `Referenced User with ID ... not found (field: created_by)`. The customer's single primary workflow is fully blocked. **Same class as manwithacat/dazzle#778** (the test-infrastructure gap where QA magic-link personas provision auth rows but not domain User rows) — this is the same bridge failure surfacing in a different app. The v0.55.33 framework fix for #774 (auto-inject `current_user` for required ref User fields) works correctly; the failure happens downstream because the injected FK points at a User row that doesn't exist. **Not a new framework bug — it's the pre-existing #778 test-infra gap reconfirmed on a different app/persona combo.** Worth upgrading #778's severity given this is now cross-app (support_tickets + fieldtest_hub both affected).
+
+2. **EX-028 [notable] `/app/workspaces/my_tickets`** — Sidebar nav exposes 'Ticket Queue' and 'Agent Dashboard' links that 403 for the customer. This is the same defect class as cycle 199/201's findings which landed as manwithacat/dazzle#775 (now closed in v0.55.34 via `workspace_allowed_personas`). **Expected behaviour of the fix:** workspaces that declare no explicit `access:` and no matching `persona.default_workspace = <ws>` should fall through rule 4 and show to everyone. These workspaces probably fit that fallback. Either the fallback is wrong (should be more conservative — hide unless at least one persona claims) or the support_tickets DSL needs explicit `access:` declarations on `ticket_queue` and `agent_dashboard`. **Cross-cycle signal that the #775 fix is incomplete for the no-explicit-access fallback case.** Worth re-opening #775 or filing a follow-up.
+
+3. **EX-029 [notable] `/app/ticket/create`** — The Create Ticket form exposes an 'Assigned To' field (a `ref User` picker rendered as a plain text input) to the customer persona. Ticket assignment is an agent/manager concern; customers should never choose an assignee. The DSL's `ticket_create` surface includes `assigned_to` without persona-scoping. This is a surface-level DSL gap in support_tickets (not a framework gap) but the underlying framework question is: should the form compiler automatically hide ref-User fields that the current persona cannot meaningfully populate? That's a broader UX question worth chewing on.
+
+4. **EX-030 [minor] `/app/workspaces/my_tickets`** — Empty state ("No support tickets. All clear!") has no CTA to create a ticket. The standalone `/app/ticket` list empty state has a "New Ticket" button correctly. This is the region empty-state template missing a per-region CTA hook.
+
+5. **EX-031 [minor] `/app/workspaces/my_tickets`** — Region filter dropdowns show raw enum values (`open`, `in_progress`) instead of human-readable labels (`Open`, `In Progress`). Inconsistent with the standalone ticket list which labels them correctly. Framework gap: `region-toolbar` (cycle 216's proposed contract) uses a different filter-value formatter than `filter-bar`. Same enum, same entity, two different renders.
+
+6. **EX-032 [minor] `/app/workspaces/my_tickets`** — The 'Open full page' link inside the workspace card picker drawer has `href="#"` — recurrence of the EX-005 dead affordance finding from cycle 201. Still unfixed. Same defect class, different persona.
+
+**Cross-cycle signal pattern:** 3 of the 6 observations reinforce already-tracked defects (EX-028 → #775 follow-up, EX-027 → #778 re-confirm, EX-032 → EX-005 recurrence). That's a **positive signal** — the exploration substrate is consistently catching the same defect classes across persona rotations, which is exactly what you want for triage convergence. The 2 `notable` surface-level findings (EX-029, EX-030) are DSL/template-level not framework-level.
+
+**Explore budget:** 27 → 28. Two cycles remaining before the 30-cap short-circuit.
+
+**Mission assessment:** successful. Subagent followed the helper protocol cleanly, recorded findings incrementally, and surfaced one concerning issue + two notable + three minor in 18 helper calls — well under the 20-call budget.
+
+**Friction notes from subagent:**
+- `observe.visible_text` doesn't include form field values, making it hard to confirm whether typed text survives a failed HTMX submit (the subagent had to shell out to a direct Playwright script).
+- `observe.interactive_elements` returns hidden elements (bulk action bar, drawer contents), creating false-positive affordance reports.
+- `state_changed: false` on click doesn't distinguish "navigation blocked" from "element out of viewport" — two different failure modes collapsed into one signal.
+
+**Status moves:**
+- EX-027..EX-032: new rows, all OPEN
+
+**Run artifacts:** `dev_docs/ux_cycle_runs/support_tickets_customer_20260415-201812/findings.json` (local-only, gitignored).
+
+---
+
 ## 2026-04-15T19:10Z — Cycle 220 — **UX-004 form aggregate closed; 6 unrelated Phase A fails filed as EX-025/EX-026**
 
 **Outcome:** Picked UX-004 (`form`) — the aggregate row left over from cycles 6–9 in `READY_FOR_QA` state with no standalone contract. Phase A ran against `simple_task` with a booted `dazzle serve --local` process, and produced `23 passed / 6 failed / 22 pending` across 51 generated contracts. **None of the 6 failures is a `form:*` contract.** The sub-rows UX-016/017/018/019 are all DONE/PASS in their own cycles, so UX-004 moved to DONE on the basis that the form sub-contracts are individually verified and nothing form-related regressed.
