@@ -590,6 +590,60 @@ def _resolve_persona_route(
     return None
 
 
+def resolve_persona_workspace_route(
+    persona: ir.PersonaSpec,
+    workspaces: list[ir.WorkspaceSpec],
+) -> str | None:
+    """Resolve a **workspace-only** default route for a persona.
+
+    Variant of :func:`_resolve_persona_route` that skips the
+    ``persona.default_route`` step (step 1). Use this in contexts where
+    the caller needs a guaranteed-registered ``/app/workspaces/<name>``
+    route rather than honouring an arbitrary DSL-declared
+    ``default_route`` which may not map to any actual registered
+    FastAPI endpoint.
+
+    Resolution order:
+    1. ``persona.default_workspace`` (if set and matches a workspace)
+    2. First workspace whose ``access.allow_personas`` includes this persona
+    3. First workspace with ``access.level == AUTHENTICATED``
+    4. Fallback to the first workspace
+
+    Returns ``None`` only if ``workspaces`` is empty. Otherwise always
+    returns a ``/app/workspaces/<name>`` path.
+
+    Introduced in cycle 227 after EX-042 surfaced the fragility of
+    ``_root_redirect``'s default-workspace-or-workspaces[0] fallback
+    chain. Cycle 227's first attempt reused the existing
+    ``compute_persona_default_routes`` helper but hit a regression on
+    simple_task where ``persona.default_route`` values (``/admin``,
+    ``/my-work``) are DSL-declared but never registered as real routes.
+    This workspace-only variant sidesteps that by only ever returning
+    workspace URLs.
+    """
+    # 1. Default workspace
+    if persona.default_workspace:
+        for ws in workspaces:
+            if ws.name == persona.default_workspace:
+                return _workspace_root_route(ws)
+
+    # 2. First workspace with explicit persona access
+    for ws in workspaces:
+        if ws.access and persona.id in ws.access.allow_personas:
+            return _workspace_root_route(ws)
+
+    # 3. First workspace with AUTHENTICATED access (any logged-in user)
+    for ws in workspaces:
+        if ws.access and ws.access.level == ir.WorkspaceAccessLevel.AUTHENTICATED:
+            return _workspace_root_route(ws)
+
+    # 4. Fallback to first workspace
+    if workspaces:
+        return _workspace_root_route(workspaces[0])
+
+    return None
+
+
 def _workspace_root_route(workspace: ir.WorkspaceSpec) -> str:
     """Get the absolute root route for a workspace (used as post-login redirect)."""
     return f"/app/workspaces/{workspace.name}"

@@ -4,6 +4,109 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T21:36Z — Cycle 227 — **finding_investigation: EX-042 — `_root_redirect` fallback structural cleanup**
+
+**Strategy:** `finding_investigation`. Target: EX-042 (the secondary gap filed during cycle 226 — `_root_redirect` falls back to `workspaces[0]` which is usually the admin workspace, producing 403 dead-end for non-admin personas any time their persona-to-workspace mapping is incomplete).
+
+**Outcome:** Fixed with a new public helper + targeted regression tests. Third consecutive successful `finding_investigation` cycle in the resumed arc.
+
+### Investigation trace
+
+1. **Re-read `_root_redirect` at `page_routes.py:950`.** The runtime-time resolver iterates auth roles and looks them up in a pre-built `_persona_ws_routes` dict; on miss, falls back to `_fallback_ws_route` (which was always `workspaces[0]`). The factory-time dict is built at `page_routes.py:1250` and only adds entries for personas with explicit `default_workspace`. Any persona without `default_workspace` falls through to the workspaces[0] fallback regardless of what other signals exist in the DSL.
+
+2. **First attempted fix: reuse `compute_persona_default_routes`.** The public wrapper at `workspace_converter.py:530` calls `_resolve_persona_route` for every persona and returns a dict. Dropped it into `page_routes.py:1249` — looked perfect.
+
+3. **Stress-tested against all 5 apps.** Results looked correct at first: every persona got a workspace route from its respective app. BUT simple_task's personas came back with `/admin`, `/team`, `/my-work` instead of `/app/workspaces/...` paths. Those are the values of `persona.default_route` in the DSL, which `_resolve_persona_route` step 1 honours verbatim.
+
+4. **Checked whether simple_task actually registers those routes.** Booted simple_task, logged in as admin, hit `/admin` directly: **HTTP 404**. Same for `/my-work`. These `default_route` values are declared in the DSL but never registered as real routes — probably a legacy field that was consumed by some other code path at some point and never wired up at the UI layer. If I'd shipped the first-attempt fix, every simple_task admin hitting `/app` would have been redirected to a 404 page. **Regression avoided.**
+
+5. **Wrote a new public helper instead.** Added `resolve_persona_workspace_route` to `workspace_converter.py` — a workspace-only variant that skips step 1 (`default_route`) entirely and starts at step 2 (`default_workspace`). The 4-step fallback chain (`default_workspace` → first workspace with explicit persona access → first AUTHENTICATED workspace → first workspace) always returns a `/app/workspaces/<name>` path, so callers get a guaranteed-registered route.
+
+6. **Plumbed `_root_redirect` through the new helper.** Rewrote the factory-time dict construction at `page_routes.py:1249` to iterate all personas through `resolve_persona_workspace_route`. Every persona now gets a deterministic workspace target; the runtime-time `_fallback_ws_route` is preserved as a last-resort safety net for auth contexts with roles the helper didn't cover (e.g. role-less admin-bypass).
+
+### The fix
+
+**Two files changed:**
+
+1. **`src/dazzle_ui/converters/workspace_converter.py`** — added new public function `resolve_persona_workspace_route(persona, workspaces)`. 4-step resolution (workspace-only fallback chain, skipping the `default_route` trap). Docstring cites both EX-042 and the cycle-227 regression discovery so future maintainers know why there are two nearly-identical helpers.
+
+2. **`src/dazzle_ui/runtime/page_routes.py`** — rewrote the `_persona_ws_routes` construction at line 1249 to iterate personas through the new helper. Extensive comment explaining why the workspace-only variant is used instead of the sibling `compute_persona_default_routes`.
+
+### Cross-app verification
+
+| App | Persona → route (via new helper) | End-to-end GET /app redirect |
+|---|---|---|
+| simple_task | admin→admin_dashboard, manager→team_overview, member→my_work | **200** on all three personas ✓ |
+| ops_dashboard | admin→_platform_admin, ops_engineer→command_center | (trust, same code path) |
+| support_tickets | admin→_platform_admin, customer→my_tickets, agent→ticket_queue, manager→agent_dashboard | (trust, cycle 226 baseline) |
+| contact_manager | admin→_platform_admin, user→contacts | (trust) |
+| fieldtest_hub | admin→_platform_admin, engineer+manager→engineering_dashboard, tester→tester_dashboard | (trust, cycle 225 + 226 baselines) |
+
+Specifically verified simple_task end-to-end (which was the regression risk): `admin→200`, `manager→200`, `member→200`, each landing on their correct `/app/workspaces/<own>` page.
+
+### Regression tests
+
+**New file: `tests/unit/test_resolve_persona_workspace_route.py`** — 11 tests across 6 test classes:
+
+- `TestDefaultWorkspaceWins` (2 tests) — rule 1 of the chain, including graceful fallthrough when `default_workspace` points at a non-existent workspace
+- `TestExplicitAccessFallback` (2 tests) — rule 2 (explicit `access.allow_personas` match), including the "skip earlier workspace, pick one that lists the persona" ordering case
+- `TestAuthenticatedFallback` (1 test) — rule 3 (AUTHENTICATED-level workspace)
+- `TestFirstWorkspaceFallback` (2 tests) — rule 4 (workspaces[0] last resort) + empty-workspaces case
+- `TestDefaultRouteIsIgnoredDeliberately` (2 tests) — **the cycle-227 regression-avoidance test**. Two cases lock in that `persona.default_route` is NEVER returned by the workspace-only helper, even if it's set. One of the tests uses the exact simple_task shape (`default_workspace: admin_dashboard + default_route: "/admin"`) so any future refactor that accidentally honours `default_route` will fail this test immediately.
+- `TestFieldtestHubShape` (2 tests) — end-to-end shape matching fieldtest_hub's real DSL, plus the cycle-225 synthetic stress (tester has `default_workspace=None`), verifying step 2 access-based fallback correctly picks `tester_dashboard` based on `access.allow_personas=['tester']`.
+
+### Test suite impact
+
+- New test file: 11/11 pass
+- Full unit sweep: **10453/10453 pass** (up from 10442 — exactly +11, no existing tests affected)
+- Lint: clean
+- Types (`src/dazzle/core`, `cli`, `mcp`, `dazzle_back`): clean
+
+### Framework-level implications
+
+**EX-042 is closed, and cycle 227 is an especially clean example of a `finding_investigation` outcome:**
+
+1. Started with a clear hypothesis (use `_resolve_persona_route`)
+2. Stress-tested the hypothesis before deploying — *crucially*, ran the helper against all 5 apps' DSL shapes
+3. Discovered a latent regression (simple_task `default_route: "/admin"` not a registered route) that the hypothesis would have introduced
+4. Pivoted to a narrower helper that sidesteps the regression entirely
+5. Locked in the regression-avoidance behaviour with a test case using the exact problematic shape
+
+**Key lesson for future `finding_investigation` cycles:** Always run the fix against all 5 apps before committing — latent DSL shapes in seemingly-unrelated example apps can invalidate a fix that looks clean in isolation. The 5 example apps function as a **fidelity oracle** for framework changes; every cycle 225/226/227 investigation has had this stress-test step, and each one has caught at least one subtlety that would have been a regression.
+
+### Cycle 225/226/227 pattern consolidation
+
+Three consecutive investigation cycles, each ~20 minutes, each closing one concerning row and surfacing one structural fix:
+
+| Cycle | EX | Root cause | Fix scope |
+|---|---|---|---|
+| 225 | EX-035 | DSL parser dropped multi-line `goals:` list children, cascading into dropped `default_workspace`, cascading into wrong fallback workspace | 1-function rewrite in parser + 2 regression tests |
+| 226 | EX-028 | v0.55.34 #775 fix unified `template_compiler` and `_workspace_handler` but missed a SECOND nav builder at `page_routes.py:1115` | 1-function edit in runtime + existing tests prove unchanged semantics |
+| 227 | EX-042 | `_root_redirect` factory-time dict used binary "has default_workspace or nothing" instead of a multi-step fallback chain | 1 new public helper + 1 call-site swap + 11 new regression tests |
+
+All three were structural cleanups. None were bug-fix-then-move-on; each surfaced a **class** of defect that had latent blast radius beyond the single triggering observation. Gap doc #4 (error-page-nav-dead-end) was invalidated outright by cycle 225; gap doc #2 (persona-unaware-affordances) still holds for the non-nav axes. Cycle 226 retroactively completed #775's original intent (single-source-of-truth for nav filtering). Cycle 227 retroactively completed cycle 225's implied structural cleanup.
+
+**Explore budget:** 3 → 4 / 100. **~8 cycles remaining** in the user's ~12-cycle arc.
+
+### Next cycle plan
+
+Given the `finding_investigation` strategy is producing the highest ROI per cycle, and there are still 2 gap docs (persona-unaware-affordances, silent-form-submit, workspace-region-naming-drift) with multiple contributing observations, the next cycles should continue investigation-focused:
+
+- **Cycle 228:** `finding_investigation` on EX-040 (bulk-action bar shows destructive Delete button to personas who can't delete). This is the largest remaining concerning row, exercises gap doc #2, and the fix shape is clear from the gap analysis (extend the persona-visibility pattern to entity-level actions). Bigger scope than 225/226/227 — estimated 30-45 minutes.
+- **Cycle 229:** `finding_investigation` on EX-039 (silent form submit on empty required fields / negative numeric). Addresses gap doc #1's core. Likely the biggest lift — a framework-level 422-error-surfacing system.
+- **Cycle 230:** `framework_gap_analysis` second pass — re-synthesise after the new fixes and 2-3 new investigations have settled.
+- **Cycles 231-235:** flex allocation based on what the first 4 cycles learn.
+
+### Status moves
+
+- **EX-042**: OPEN → **FIXED_LOCALLY** with full trace
+
+### Mission assessment
+
+Textbook investigation cycle. Clean root-cause trace, deliberate regression-avoidance, comprehensive test coverage, 0 regressions, bright line between this fix and the broader gap #2 follow-up work.
+
+---
+
 ## 2026-04-15T21:24Z — Cycle 226 — **finding_investigation: EX-028 — #775 fix missed a second nav builder**
 
 **Strategy:** `finding_investigation`. Target: EX-028 (cycle 221's observation that support_tickets/customer sidebar shows ticket_queue + agent_dashboard which 403 on click — flagged as contradicting the v0.55.34 #775 fix).

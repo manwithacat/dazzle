@@ -1245,15 +1245,46 @@ def create_page_routes(
 
         # When workspaces exist and "/" is not already registered as a page,
         # add a redirect so users landing at the app root reach a real page.
-        # Uses persona default_workspace to pick the right workspace per user.
+        #
+        # Delegate per-persona resolution to _resolve_persona_route — the
+        # same helper the ux-cycle uses for post-login redirect computation
+        # — so personas without an explicit default_workspace still get a
+        # sensible target (first workspace with access.allow_personas match,
+        # then first AUTHENTICATED workspace, then first workspace as a
+        # last resort). Before cycle 227 this block only populated entries
+        # for personas that declared `default_workspace` in the DSL;
+        # everyone else fell through to a raw `workspaces[0]` fallback,
+        # which for most apps is the privileged/admin workspace — causing
+        # non-admin personas to hit 403 on login and the recovery path
+        # (EX-035 dead-end loop). Cycle 225 fixed the upstream parser bug;
+        # this cycle fixes the downstream structural fragility.
         if "/" not in page_contexts:
-            # Build persona -> workspace route mapping
+            from dazzle_ui.converters.workspace_converter import (
+                resolve_persona_workspace_route,
+            )
+
+            # Build persona -> workspace route mapping for EVERY persona
+            # using the workspace-only resolver. It always returns a
+            # /app/workspaces/<name> route when the app has at least one
+            # workspace, so every declared persona gets a deterministic
+            # target. We deliberately use the workspace-only variant
+            # rather than compute_persona_default_routes: the latter
+            # honours persona.default_route (e.g. "/admin") which may be
+            # DSL-declared but not actually registered as a FastAPI
+            # route — hitting /app as admin would then redirect to a
+            # 404. The workspace-only resolver stays inside the
+            # guaranteed-registered /app/workspaces/<name> namespace.
             _persona_ws_routes: dict[str, str] = {}
-            for persona in appspec.personas:
-                if persona.default_workspace:
-                    _persona_ws_routes[persona.id] = (
-                        f"{app_prefix}/workspaces/{persona.default_workspace}"
-                    )
+            for _persona in appspec.personas:
+                _route = resolve_persona_workspace_route(_persona, list(workspaces))
+                if _route:
+                    _persona_ws_routes[_persona.id] = _route
+
+            # Fallback for users with no persona match at all (e.g. a
+            # role-less admin-bypass route). Preserves the existing
+            # post-resolution safety net — unchanged from the prior
+            # implementation so there is still a redirect target even if
+            # the auth context has no known role.
             _fallback_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
 
             router.get("/", response_class=HTMLResponse)(
