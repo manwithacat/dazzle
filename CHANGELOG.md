@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.18] - 2026-04-15
+## [0.55.19] - 2026-04-15
+
+### Added
+- **Cycle 207 — UX-039 workspace-tabbed-region contract drafted + Phase B PASS.**
+  ARIA `role="tablist"` strip with eager-load on the first tab and
+  `intersect once` lazy load on the rest, DOM-classList state (no
+  Alpine), inline onclick handler. Phase B against support_tickets:
+  `fitness run [admin:2d196ba9, agent:f718e131]: 95 findings (47/48),
+  degraded=False`. 5 quality gates, 7 v2 open questions including a
+  significant accessibility cluster (anchors not keyboard-focusable,
+  missing `aria-selected`, missing `role="tabpanel"`, missing live
+  region). Fifth cycle-198+ subagent-discovered row to DONE.
+
+
 
 ### Added
 - **Cycle 206 — UX-038 workspace-card-picker contract drafted + Phase B PASS.**
