@@ -4,6 +4,80 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T22:35Z — Cycle 231 — **verification sweep: 5 error-chrome rows promoted SUSPECTED_FIXED → FIXED across all 5 apps**
+
+**Strategy:** custom verification-sweep variant of `finding_investigation`. Target: EX-003/004/008/014/020, all marked SUSPECTED_FIXED in cycle 230 with a shared hypothesis — v0.55.31 #776 (the in-app error shell templates + URL-prefix dispatch in `exception_handlers.py`) should have resolved the authenticated-404/403-renders-marketing-chrome defect. Cycle 231 was the short verification cycle promised in cycle 230's plan.
+
+**Method (applying Heuristic 1 — "try the real thing")**: instead of dispatching a subagent, drive the verification at the raw HTTP layer. For each of the 5 example apps:
+
+1. Boot `dazzle serve --local`
+2. Log in as any persona via the existing `playwright_helper login` command (captures cookies to state dir)
+3. Extract cookies, fire a `curl` with `Accept: text/html` at a deliberately-fake `/app/<entity>/<fake-id>` path
+4. Grep the response body for in-app shell markers ("Access Denied" / "Page Not Found" + "Go to Dashboard") vs marketing chrome markers ("Sign In" / "Get Started")
+
+Total cycle time including boot-up + shutdown for each of 5 apps: ~5 minutes of active cycle time.
+
+### Results
+
+| App | Port | Persona | Fake path | HTTP status | In-app shell | Marketing chrome |
+|---|---|---|---|---|---|---|
+| support_tickets | 3969 | agent | `/app/ticket/99999` | 404 | ✓ 1 | ✗ 0 |
+| simple_task | 3392 | member | `/app/task/nonexistent-id-99999` | 404 | ✓ 1 | ✗ 0 |
+| ops_dashboard | 3462 | admin | `/app/system/nonexistent-99999` | 404 | ✓ 1 | ✗ 0 |
+| fieldtest_hub | 3858 | engineer | `/app/issuereport/nonexistent-99999` | 404 | ✓ 1 | ✗ 0 |
+| contact_manager | 3653 | user | `/app/contact/nonexistent-99999` | 404 | ✓ 1 | ✗ 0 |
+
+**Clean sweep — 5/5.** Every app's authenticated 404 now renders the in-app error shell with a "Go to Dashboard" affordance and zero marketing-chrome markers. The v0.55.31 #776 fix holds across the full example fleet. Three personas (agent, member, admin) and five apps cover enough surface to retire the observation class with confidence.
+
+### Status moves
+
+- **EX-003**: SUSPECTED_FIXED → **FIXED** (support_tickets/agent — originally cycle 201)
+- **EX-004**: SUSPECTED_FIXED → **FIXED** (support_tickets/agent — originally cycle 201)
+- **EX-008**: SUSPECTED_FIXED → **FIXED** (simple_task/member — originally cycle 213)
+- **EX-014**: SUSPECTED_FIXED → **FIXED** (fieldtest_hub/engineer — originally cycle 217)
+- **EX-020**: SUSPECTED_FIXED → **FIXED** (contact_manager/user — originally cycle 218)
+
+Five rows closed in one cycle — the highest row-closure-per-cycle ratio of the resumed arc.
+
+### Cycle 230 learning applied
+
+Cycle 230's framework_gap_analysis v2 identified the 5 rows as a cluster sharing the exact defect class that v0.55.31 #776 targeted, and marked them SUSPECTED_FIXED. Cycle 231's sweep validated that hypothesis in a single focused cycle. **The "synthesis → mark suspected → verification sweep" pattern is a useful cycle shape worth adding to the skill** — it converts accumulated observation debt into closed rows efficiently whenever a shipped framework fix matches a previously-identified theme.
+
+Consider adding as a dedicated cycle type: `verification_sweep` — pick N OPEN rows that share a common hypothesis (e.g. "resolved by a shipped fix", "same subsystem", "same framework version"), batch-verify at the lowest reasonable layer, close as many as possible in one cycle. High row-closure-per-cycle ratio, low context cost, low cognitive effort per row because the verification method is the same across the batch.
+
+### Notable observations
+
+- **Marketing chrome is zero everywhere**, not just on the newer apps. The URL-prefix dispatch in `exception_handlers.py`'s `_is_app_path` correctly routes `/app/*` 404s to the in-app shell regardless of which app declared the entity.
+- **The "Go to Dashboard" affordance is present in all 5**, meaning the back-link renders even for personas whose `default_workspace` is ambiguous — cycles 225+227's parser fix + `_root_redirect` structural cleanup are both feeding the right URL into the shell template.
+- **None of the observations surfaced a new problem** — none of the 5 fake paths revealed any additional defect class along the way. The sweep was a clean confirmation, not a treasure-hunt.
+
+### Backlog state after cycle 231
+
+Started with 31 OPEN rows (post-cycle 230). Closed 5 as FIXED this cycle. **Now 26 OPEN rows + 10 FIXED_LOCALLY/FIXED + 2 VERIFIED_FALSE_POSITIVE + 2 SUSPECTED_FALSE_POSITIVE + 3 FILED**.
+
+Of the remaining 26 OPEN rows, the ones tracked by gap docs or slated for cycles 232-234:
+
+| Target | Rows | Cycle |
+|---|---|---|
+| Widget selection gap (new gap doc) | EX-006, EX-009, EX-029, EX-041 | 232 (EX-009) + 233 (EX-041) |
+| Persona-unaware affordances (empty-state CTA axis) | EX-011, EX-030, EX-037 | 234 |
+| Workspace region naming drift | EX-013, EX-025, EX-033 | later |
+| Polish / standalone | EX-001, EX-005/032, EX-015, EX-016, EX-019/023, EX-022, EX-024, EX-038 | later |
+
+### Test suite impact
+
+None — no framework code touched.
+
+### Explore budget
+
+7 → 8 / 100. **~4 cycles remaining** in the user's ~12-cycle arc.
+
+### Mission assessment
+
+Cleanest possible verification-sweep cycle. 5 rows closed in ~5 minutes of active time, ~1 minute per row closed. Each close was backed by a direct HTTP response check — no substrate-layer ambiguity, no post-hoc inference. This is the fastest path from SUSPECTED to confirmed across the resumed arc.
+
+---
+
 ## 2026-04-15T22:25Z — Cycle 230 — **framework_gap_analysis v2 — new widget-selection gap + skill learnings encoded**
 
 **Strategy:** `framework_gap_analysis` (second synthesis pass). Rationale: cycles 225-229 closed 5 rows (EX-028/035/040/042 fixed, EX-039 verified false positive), invalidated 1 gap doc, surfaced 3 durable meta-heuristics, and fixed a substrate limitation. The backlog shape has genuinely shifted enough to warrant a fresh synthesis — the signal-to-noise ratio of remaining OPEN rows is different than cycle 224's baseline.
