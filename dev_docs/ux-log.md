@@ -4,6 +4,122 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-16T00:35Z — Cycle 239 — **contract_audit: metrics-region SHIPPED (second mini-arc cycle, UX-042 → DONE)**
+
+**Strategy:** `contract_audit` — second cycle of the component menagerie mini-arc. Same shape as cycle 238: pick a known-templated-but-ungoverned component, HTTP-reproduce the drift, grep every call site, build contract + fix + tests in one commit.
+
+**Target:** `metrics` workspace region — from cycle 237's roadmap (#2 priority after status-badge). The `metrics:` DSL block with `aggregate:` already parses and the compiler at `_compute_aggregate_metrics` already populates the template context with `list[{"label": str, "value": int}]`. What was missing: a contract governing tile anatomy, token compliance, number formatting, and the canonical rendering path.
+
+### Heuristic 1 — raw-layer reproduction
+
+Booted support_tickets, fetched `/api/workspaces/ticket_queue/regions/queue_metrics` as agent (the one known-working metrics region). Extracted:
+
+- 3 KPI tiles rendering correctly (Total Open / In Progress / Critical)
+- **Hardcoded HSL warning literal** `bg-[hsl(38_92%_50%/0.08)]` on the attention-level row background path (line 38 of metrics.html) — the same class of drift as cycle 238's `badge_class` issue
+- **Dead context field** `{% if metric.description %}` at lines 11-13 — backend's `_compute_aggregate_metrics` returns only `{"label": str, "value": int}` dicts, never emits `description`
+- **No number formatting** — bare `{{ metric.value }}` means `1234` renders as `"1234"`, not `"1,234"`
+- **No test hooks** — no class marker, no `data-*` attributes, no machine-readable metric keys
+
+### Broader drift surfaced during the grep walk
+
+Searched for `hsl(38_92%` and `hsl(142_76%` (the hardcoded brand colour literals) across the template set. Found **9 region templates** with 14 call sites of the same pattern — developers had copy-pasted the literal colour instead of routing through the `--warning` design token:
+
+| File | Hits |
+|---|---|
+| `grid.html` | 1 (`border-l-[hsl(38_92%_50%)]` for warning left border) |
+| `heatmap.html` | 2 (cell bg + darker text) |
+| `kanban.html` | 1 (text colour for warning attention) |
+| `list.html` | 1 (row bg for warning attention) |
+| `metrics.html` | 1 (row bg for drill-down warning attention) |
+| `progress.html` | 3 (stage bg + darker text + border) |
+| `queue.html` | 2 (border-l + bg for warning attention) |
+| `tab_data.html` | 3 (broken Tailwind arbitraries `bg-error/10`, `bg-warning/10`, `bg-info/10` — NOT design tokens) |
+| `timeline.html` | 1 (text colour for warning attention) |
+
+Fixed all of them in one mechanical sweep via a small Python regex script: `hsl(38_92%_50%/0.N)` → `hsl(var(--warning)/0.N)`, `hsl(38_92%_35%)` → `hsl(var(--warning))`, `hsl(38_92%_50%)` → `hsl(var(--warning))`. `tab_data.html`'s broken arbitraries replaced with proper design-token arbitraries. All 9 files pass through one commit.
+
+### What shipped
+
+**1. Rewrote `workspace/regions/metrics.html`:**
+
+- Wrapped the tile grid in `{% if metrics %}...{% else %}...{% endif %}` so zero-metric state renders the empty paragraph cleanly (avoids an empty grid div).
+- Added `dz-metrics-grid` class marker + `data-dz-tile-count` automation attribute on the outer grid.
+- Added `dz-metric-tile` class + `data-dz-metric-key="{slug}"` per tile. Slug is `label|lower|replace(' ','_')`.
+- Added `tabular-nums` to the value row so `1,234` and `5,678` column-align across a 4-tile row.
+- Added `tracking-tight` to the label row for dense-region consistency.
+- Removed dead `metric.description` branch.
+- Pipes `metric.value` through `| metric_number`.
+
+**2. New `metric_number` Jinja filter** at `src/dazzle_ui/runtime/template_renderer.py`:
+
+- `None` → `"0"`
+- `int` → `f"{value:,}"` (`1234` → `"1,234"`, `1500000` → `"1,500,000"`)
+- `float ≥ 1` → `f"{value:,.1f}"` (`3.1415` → `"3.1"`)
+- `float < 1` → `f"{value}"` (`0.25` → `"0.25"`)
+- `bool` → `"Yes"` / `"No"` (handled before int because `bool` is a subclass of `int`)
+- `str` → passthrough (for DSL-authored pre-formatted strings)
+
+**3. Cross-cutting drift fix** — 9 region templates × 14 call sites migrated from hardcoded HSL literals to `hsl(var(--warning))`-based tokens. Same mechanical shape as cycle 238's badge migration.
+
+**4. Contract doc** at `~/.claude/skills/ux-architect/components/metrics-region.md` — 6 quality gates, 7 v2 open questions (auto-infer display mode, per-tile tone, sparklines, click-to-filter, currency/unit suffixes, responsive tile count, dark-mode verification).
+
+**5. 16 new regression tests:**
+
+- 8 × `test_metric_number_*` — None / small int / thousands / negative / float ≥ 1 / float < 1 / bool / string passthrough
+- 8 × `TestMetricsRegionTemplate` — canonical markers / thousands separator / tile order / empty state / no hardcoded HSL / drill-down table / dead-description gate / DISPLAY_TEMPLATE_MAP routing
+
+### Heuristic 3 — cross-app verification
+
+| App / Region | HTTP | dz-metric-tile | tile-count | Hardcoded 38_92% | Dead description | tabular-nums |
+|---|---|---|---|---|---|---|
+| support_tickets / queue_metrics | 200 | 3 | 3 | 0 | 0 | 3 |
+
+All 6 contract gates pass on the verified region.
+
+### Latent gap surfaced (EX-047 filed, NOT fixed this cycle)
+
+During the audit I discovered that **simple_task admin_dashboard.metrics / team_metrics / team_overview.metrics and fieldtest_hub engineering_dashboard.metrics all declare `aggregate:` WITHOUT `display: summary`**, so they silently route to the list template and render as empty lists. The aggregate values are computed but never displayed.
+
+This is a latent framework defect: the display-mode resolver at `workspace_renderer.py` line ~250 defaults to `LIST` when `display:` is omitted, without considering whether the region has an `aggregate:` block. Fix direction: promote `display_mode` to `SUMMARY` when `region.aggregates` is non-empty AND `display` is the parser default.
+
+Filed as **EX-047**. Not fixing in cycle 239 because:
+1. Cycle 239's scope is the contract, not the router
+2. It's a latent behaviour change that would flip 4 broken-but-stable regions into new rendering paths — needs its own finding_investigation cycle
+3. The fix is ~15 minutes of work but deserves its own cycle so the behaviour change has a clean commit boundary
+
+### Test results
+
+- `test_template_rendering.py::TestJinjaFilters`: 72 passed (+8 new `metric_number` tests)
+- `test_workspace_routes.py::TestMetricsRegionTemplate`: 8 passed (all new)
+- `test_workspace_routes.py` existing tests: unaffected
+- **Full unit sweep: 10754 pass / 101 skip / 0 fail** (+16 from cycle 238's 10,738)
+- Lint: 1 error (ruff UP042 — `dict()` literal); fixed inline to `{...}`
+- mypy `dazzle/core + cli + mcp + dazzle_back`: clean
+
+### Rows touched
+
+| Row | Previous state | New state | Rationale |
+|---|---|---|---|
+| **UX-042** | (new row) | **DONE / PASS** | Contract written, template rewritten, 9 other regions fixed, 16 tests pass, cross-app verified |
+| **EX-001** (DaisyUI drift) | OPEN | OPEN (further partial closure) | Added 9 more files and 14 more call sites to the "migrated" side of the ledger |
+| **EX-047** | (new row) | **OPEN** | Latent display-mode inference gap filed for a future cycle |
+
+### Notable observations
+
+1. **contract_audit is proving its shape.** Cycle 239 ran the same pattern as cycle 238 in roughly the same wall-clock time, closed a different slice of drift, and surfaced a latent gap in the process. The pattern is durable enough to promote to the skill — next commit should update `.claude/commands/ux-cycle.md` to formalise `contract_audit` as a named strategy.
+2. **Cross-cutting drift tends to cluster.** Cycle 238 found `badge_class` drift across 16+ templates. Cycle 239 found `hsl(38_92%_50%)` drift across 9 templates. Both are the same root cause: developers copy-pasting a visual primitive rather than routing through a token/helper. There may be more of these — worth a dedicated drift-scan cycle that greps for raw HSL literals, absolute colour names, DaisyUI classes, etc., and files each as an EX row.
+3. **EX-047 was found BECAUSE of the contract.** When I cross-verified the contract on all apps that declare metrics blocks, the ones without `display: summary` silently failed the cross-app probe. Without the contract's explicit expectation, I wouldn't have noticed.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 15 → **16**. Ample headroom (up to 100).
+
+### ScheduleWakeup
+
+Not armed. Mini-arc is progressing well; the user's strategic directive is still the frame but I should pause for review after each cycle. Cycle 240 target per the roadmap is `empty-state` (bundles the EX-046 per-persona grammar extension) — good follow-on.
+
+---
+
 ## 2026-04-16T00:05Z — Cycle 238 — **contract_audit: status-badge SHIPPED (first mini-arc cycle, UX-041 → DONE)**
 
 **Strategy:** `contract_audit` — a new cycle shape proposed in cycle 237's roadmap doc. Distinct from `missing_contracts`: picks a *known-templated-but-ungoverned* component and formalises it. First cycle of the component menagerie mini-arc (cycles 238-242).

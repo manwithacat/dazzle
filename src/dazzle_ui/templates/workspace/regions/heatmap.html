@@ -20,7 +20,7 @@
           <td class="py-1 px-2 text-center cursor-pointer transition-opacity duration-[80ms] hover:opacity-80
             {%- if heatmap_thresholds|length >= 2 -%}
               {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(0_72%_51%/0.15)] text-[hsl(0_72%_35%)]
-              {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(38_92%_50%/0.15)] text-[hsl(38_92%_35%)]
+              {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))]
               {%- else %} bg-[hsl(142_71%_45%/0.15)] text-[hsl(142_71%_30%)]
               {%- endif -%}
             {%- elif heatmap_thresholds|length == 1 -%}

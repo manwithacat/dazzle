@@ -10,7 +10,7 @@
       {% if attn %}
         border-l-4
         {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))]{% endif %}
-        {% if attn.level == 'warning' %}border-l-[hsl(38_92%_50%)]{% endif %}
+        {% if attn.level == 'warning' %}border-l-[hsl(var(--warning))]{% endif %}
         {% if attn.level == 'notice' %}border-l-[hsl(var(--primary))]{% endif %}
       {% endif %}
       {% if action_url %} cursor-pointer hover:border-[hsl(var(--primary)/0.5)]{% endif %}"

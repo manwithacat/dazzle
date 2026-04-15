@@ -48,7 +48,7 @@
       {% if attn %}
         border-l-4
         {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.04)]
-        {% elif attn.level == 'warning' %}border-l-[hsl(38_92%_50%)] bg-[hsl(38_92%_50%/0.04)]
+        {% elif attn.level == 'warning' %}border-l-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.04)]
         {% elif attn.level == 'notice' %}border-l-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.04)]
         {% endif %}
       {% else %}

@@ -38,7 +38,7 @@
     <tbody>
       {% for item in items %}
       {% set attn = item.get("_attention") if item.get is defined else none %}
-      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-error/10{% elif attn.level == 'warning' %}bg-warning/10{% elif attn.level == 'notice' %}bg-info/10{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
+      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% elif attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% elif attn.level == 'notice' %}bg-[hsl(var(--info)/0.08)]{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
           {% if attn %}title="{{ attn.message }}"{% endif %}
           {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
           hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>

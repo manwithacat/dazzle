@@ -59,7 +59,7 @@
             {% if attn %}
             <p class="text-[11px] mt-1
               {% if attn.level == 'critical' %}text-[hsl(var(--destructive))]
-              {% elif attn.level == 'warning' %}text-[hsl(38_92%_50%)]
+              {% elif attn.level == 'warning' %}text-[hsl(var(--warning))]
               {% else %}text-[hsl(var(--primary))]{% endif %}">
               {{ attn.message }}
             </p>

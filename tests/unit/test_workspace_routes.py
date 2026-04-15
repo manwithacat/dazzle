@@ -714,6 +714,170 @@ class TestWorkspaceSSEConditional:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 239 — Metrics region contract (UX-042)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestMetricsRegionTemplate:
+    """Metrics region renders aggregate tiles + optional drill-down table.
+
+    Cycle 239 — contracts the metrics.html region template and its canonical
+    tile anatomy. Quality gates encoded here mirror the ones in
+    ~/.claude/skills/ux-architect/components/metrics-region.md.
+    """
+
+    def _metrics_kwargs(self, **overrides):
+        """Default context required by workspace/regions/metrics.html."""
+        defaults = {
+            "title": "Queue Metrics",
+            "metrics": [],
+            "items": [],
+            "columns": [],
+            "empty_message": "No metrics available.",
+            "action_url": "",
+            "action_id_field": "id",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_tile_markers(self) -> None:
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[
+                    {"label": "Total Open", "value": 7},
+                    {"label": "In Progress", "value": 3},
+                    {"label": "Critical", "value": 0},
+                ],
+            ),
+        )
+        # Gate 1: canonical class markers and counts
+        assert "dz-metrics-grid" in html
+        assert 'data-dz-tile-count="3"' in html
+        assert html.count("dz-metric-tile") == 3
+        # Per-tile machine-readable keys, slugified from label
+        assert 'data-dz-metric-key="total_open"' in html
+        assert 'data-dz-metric-key="in_progress"' in html
+        assert 'data-dz-metric-key="critical"' in html
+
+    def test_thousands_separator_applied_to_values(self) -> None:
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[
+                    {"label": "Total Events", "value": 1234567},
+                    {"label": "Pending", "value": 42},
+                ],
+            ),
+        )
+        # Gate 3: integer values format with thousands separator
+        assert "1,234,567" in html
+        assert "42" in html
+        # Raw unformatted value MUST NOT appear
+        assert ">1234567<" not in html
+
+    def test_tile_order_preserves_metric_list_order(self) -> None:
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[
+                    {"label": "Third", "value": 3},
+                    {"label": "First", "value": 1},
+                    {"label": "Second", "value": 2},
+                ],
+            ),
+        )
+        # Gate 4: order matches DSL declaration order
+        i_third = html.find("Third")
+        i_first = html.find("First")
+        i_second = html.find("Second")
+        assert -1 < i_third < i_first < i_second
+
+    def test_empty_metrics_renders_empty_state(self) -> None:
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(metrics=[], empty_message="Nothing to show."),
+        )
+        # Gate 5: no grid wrapper when metrics is empty
+        assert "dz-metrics-grid" not in html
+        assert "Nothing to show." in html
+
+    def test_no_hardcoded_hsl_literals(self) -> None:
+        """Gate 2: no hardcoded HSL warning literals.
+
+        The pre-cycle-239 template had `hsl(38_92%_50%/0.08)` inline for
+        the warning attention-level. This test locks the migration in place.
+        """
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[{"label": "Total", "value": 10}],
+                items=[
+                    {
+                        "id": "1",
+                        "title": "Row",
+                        "_attention": {"level": "warning", "message": "Watch out"},
+                    }
+                ],
+                columns=[{"key": "title", "label": "Title", "type": "text"}],
+            ),
+        )
+        # The old hardcoded literal must not appear anywhere
+        assert "38_92%" not in html
+        # The canonical token must appear for the warning row tint
+        assert "hsl(var(--warning)" in html
+
+    def test_drill_down_table_renders_when_items_and_columns(self) -> None:
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[{"label": "Total", "value": 10}],
+                items=[
+                    {"id": "1", "title": "Row 1", "status": "open"},
+                    {"id": "2", "title": "Row 2", "status": "done"},
+                ],
+                columns=[
+                    {"key": "title", "label": "Title", "type": "text"},
+                    {"key": "status", "label": "Status", "type": "badge"},
+                ],
+            ),
+        )
+        # Tiles still present
+        assert "dz-metric-tile" in html
+        # Drill-down table headers present
+        assert ">Title<" in html
+        assert ">Status<" in html
+        # Status badge (cycle 238 macro) rendered for each row
+        assert html.count("dz-status-badge") == 2
+        # Row data visible
+        assert "Row 1" in html
+        assert "Row 2" in html
+
+    def test_no_dead_description_field(self) -> None:
+        """Gate 6: cycle 239 removed the unused metric.description branch.
+
+        If someone reinstates the branch without wiring the compiler, it
+        will silently render blank. Lock the removal in place.
+        """
+        html = render_fragment(
+            "workspace/regions/metrics.html",
+            **self._metrics_kwargs(
+                metrics=[
+                    {"label": "Open", "value": 5, "description": "should not render"},
+                ],
+            ),
+        )
+        # The compiler never populates description — template must ignore it
+        assert "should not render" not in html
+
+    def test_metrics_routes_to_summary_template(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("SUMMARY") == "workspace/regions/metrics.html"
+        assert DISPLAY_TEMPLATE_MAP.get("METRICS") == "workspace/regions/metrics.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 

@@ -1,20 +1,21 @@
-{# Metrics region — UX-035 adopter #6. #}
+{# Metrics region — UX-035 adopter #6.
+   Contract: ~/.claude/skills/ux-architect/components/metrics-region.md (UX-042) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
-  {# Metrics tiles grid #}
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  {# Metrics tiles grid — responsive 1/2/4 column layout #}
+  {% if metrics %}
+  <div class="dz-metrics-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+       data-dz-tile-count="{{ metrics | length }}">
     {% for metric in metrics %}
-    <div class="p-3 rounded-[4px] bg-[hsl(var(--muted)/0.4)] border border-[hsl(var(--border))]">
-      <div class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ metric.label }}</div>
-      <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5">{{ metric.value }}</div>
-      {% if metric.description %}
-      <div class="text-[11px] text-[hsl(var(--muted-foreground))] mt-0.5">{{ metric.description }}</div>
-      {% endif %}
+    <div class="dz-metric-tile p-3 rounded-[4px] bg-[hsl(var(--muted)/0.4)] border border-[hsl(var(--border))]"
+         data-dz-metric-key="{{ metric.label | lower | replace(' ', '_') }}">
+      <div class="text-[11px] text-[hsl(var(--muted-foreground))] tracking-tight">{{ metric.label }}</div>
+      <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5 tabular-nums">{{ metric.value | metric_number }}</div>
     </div>
     {% endfor %}
   </div>
-  {% if not metrics %}
+  {% else %}
   <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No metrics available.") }}</p>
   {% endif %}
 
@@ -35,7 +36,7 @@
         <tr class="border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
           {% if attn %}
             {% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% endif %}
-            {% if attn.level == 'warning' %}bg-[hsl(38_92%_50%/0.08)]{% endif %}
+            {% if attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% endif %}
             {% if attn.level == 'notice' %}bg-[hsl(var(--primary)/0.06)]{% endif %}
           {% endif %}
           {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"

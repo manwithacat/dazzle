@@ -139,6 +139,38 @@ _STATUS_TONE_MAP: dict[str, str] = {
 }
 
 
+def _metric_number_filter(value: Any) -> str:
+    """Format an aggregate metric value for display in a metric tile.
+
+    Cycle 239 (UX-042 metrics-region contract).
+
+    - Integers: rendered with locale-independent thousands separator
+      (e.g. ``1234`` → ``"1,234"``, ``1500000`` → ``"1,500,000"``).
+    - Floats: rendered to 1 decimal place with thousands separator
+      when >= 1 (e.g. ``3.1415`` → ``"3.1"``), or the full value for
+      sub-unit values (e.g. ``0.25`` → ``"0.25"``).
+    - Strings: returned verbatim — the DSL author may have pre-formatted.
+    - None / missing: rendered as ``"0"``.
+
+    The macro at ``workspace/regions/metrics.html`` always calls this
+    filter, so every metric tile across every Dazzle app renders with
+    consistent number formatting, regardless of what shape the backend
+    aggregate evaluator returned.
+    """
+    if value is None:
+        return "0"
+    if isinstance(value, bool):
+        # bools are subclass of int — handle before int to avoid surprises
+        return "Yes" if value else "No"
+    if isinstance(value, int):
+        return f"{value:,}"
+    if isinstance(value, float):
+        if abs(value) >= 1:
+            return f"{value:,.1f}"
+        return f"{value}"
+    return str(value)
+
+
 def _badge_tone_filter(value: Any) -> str:
     """Map a status value to a semantic tone name.
 
@@ -380,6 +412,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["dateformat"] = _date_filter
     env.filters["badge_class"] = _badge_filter
     env.filters["badge_tone"] = _badge_tone_filter
+    env.filters["metric_number"] = _metric_number_filter
     env.filters["bool_icon"] = _bool_icon_filter
     env.filters["truncate_text"] = _truncate_filter
     env.filters["timeago"] = _timeago_filter

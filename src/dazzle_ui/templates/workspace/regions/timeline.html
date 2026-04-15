@@ -11,7 +11,7 @@
       <span class="absolute -left-[21px] top-1.5 flex h-3 w-3 items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3
           {% if attn and attn.level == 'critical' %}text-[hsl(var(--destructive))]
-          {% elif attn and attn.level == 'warning' %}text-[hsl(38_92%_50%)]
+          {% elif attn and attn.level == 'warning' %}text-[hsl(var(--warning))]
           {% else %}text-[hsl(var(--primary))]{% endif %}"
           aria-hidden="true">
           <circle cx="10" cy="10" r="6"/>

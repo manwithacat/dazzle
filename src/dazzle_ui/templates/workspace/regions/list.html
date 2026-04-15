@@ -74,7 +74,7 @@
         <tr class="border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
             {% if attn %}
               {% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% endif %}
-              {% if attn.level == 'warning' %}bg-[hsl(38_92%_50%/0.08)]{% endif %}
+              {% if attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% endif %}
               {% if attn.level == 'notice' %}bg-[hsl(var(--primary)/0.06)]{% endif %}
             {% endif %}
             {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"

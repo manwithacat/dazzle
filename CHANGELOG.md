@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.38] - 2026-04-16
+
+### Added
+- **`metrics-region` component contract (UX-042).** Second cycle of the
+  component menagerie mini-arc. Contract at
+  `~/.claude/skills/ux-architect/components/metrics-region.md` with 6
+  quality gates governing the KPI tile grid + optional drill-down table
+  rendered by `workspace/regions/metrics.html`. Rewrote the template to
+  add canonical `dz-metrics-grid` + `dz-metric-tile` class markers,
+  `data-dz-tile-count` + `data-dz-metric-key` automation attributes, and
+  `tabular-nums` digit alignment.
+
+- **`metric_number` Jinja filter.** Canonical formatter for every
+  aggregate tile value across the framework. Integers render with
+  thousands separator (`1234` → `1,234`), floats ≥ 1 with one decimal
+  place, sub-unit floats verbatim, `True`/`False` → `Yes`/`No`,
+  `None` → `0`, strings pass through. DSL authors no longer need to
+  pre-format aggregate values.
+
+### Fixed
+- **Hardcoded HSL warning literals across 9 region templates (cross-cutting
+  drift fix).** `grid.html`, `heatmap.html`, `kanban.html`, `list.html`,
+  `metrics.html`, `progress.html`, `queue.html`, `tab_data.html`,
+  `timeline.html` all had `hsl(38_92%_50%)` / `hsl(38_92%_35%)` inlined for
+  attention-level warning tints instead of routing through the `--warning`
+  design token. 14 call sites migrated to `hsl(var(--warning))`-based
+  arbitraries. Makes these templates dark-mode-adaptive for free.
+  `tab_data.html` additionally had broken Tailwind-arbitrary classes
+  (`bg-error/10`, `bg-warning/10`, `bg-info/10`) that don't resolve to
+  design tokens; migrated to canonical design-token arbitraries.
+
+- **Dead `metric.description` branch removed from `metrics.html`.** The
+  backend's `_compute_aggregate_metrics` only emits `{"label", "value"}`
+  dicts — it never populates `description`. The `{% if metric.description %}`
+  branch had been silently dead code. Removed, with a regression test
+  locking the removal in place.
+
+### Agent Guidance
+- **Never inline attention-level background colours.** Use design-system
+  tokens (`hsl(var(--destructive)/0.08)`, `hsl(var(--warning)/0.08)`,
+  `hsl(var(--primary)/0.06)`). The pre-cycle-239 pattern of hardcoding
+  `hsl(38_92%_50%/0.08)` for warning is now regressed out of every region
+  template and the metrics-region contract gates against its reintroduction.
+- **`contract_audit` as a cycle strategy is proving itself.** Cycles 238
+  and 239 both ran the same pattern (pick ungoverned template → reproduce
+  drift → grep call sites → build macro/filter + contract in one commit →
+  migrate every call site → cross-app verify → regression tests). Expect
+  the next several cycles (240-242) to follow the same shape. Promote to
+  the skill after cycle 240.
+- **When auditing a component, grep for its neighbours.** Cycle 238 found
+  status-badge drift; cycle 239 found warning-HSL drift in the same class
+  of templates. Cross-cutting drift tends to cluster — one audit often
+  surfaces siblings worth fixing in the same commit for consistency.
+
 ## [0.55.37] - 2026-04-16
 
 ### Added

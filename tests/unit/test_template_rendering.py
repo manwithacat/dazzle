@@ -795,6 +795,47 @@ class TestJinjaFilters:
         assert "badge-error" not in out
         assert "badge-ghost" not in out
 
+    # --- metric_number filter (cycle 239, UX-042 metrics-region contract) ---
+    # Canonical number formatter for every metric tile across the framework.
+
+    def test_metric_number_none(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=None) == "0"
+
+    def test_metric_number_small_int(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=5) == "5"
+        assert tmpl.render(val=0) == "0"
+
+    def test_metric_number_thousands(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=1234) == "1,234"
+        assert tmpl.render(val=1500000) == "1,500,000"
+
+    def test_metric_number_negative(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=-42) == "-42"
+        assert tmpl.render(val=-12345) == "-12,345"
+
+    def test_metric_number_float_ge_one(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=3.14159) == "3.1"
+        assert tmpl.render(val=1234.56) == "1,234.6"
+
+    def test_metric_number_float_sub_unit(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=0.25) == "0.25"
+
+    def test_metric_number_bool(self, env) -> None:
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val=True) == "Yes"
+        assert tmpl.render(val=False) == "No"
+
+    def test_metric_number_string_passthrough(self, env) -> None:
+        """Pre-formatted strings (e.g. '£12,345') pass through verbatim."""
+        tmpl = env.from_string("{{ val | metric_number }}")
+        assert tmpl.render(val="£1,234") == "£1,234"
+
     # --- timeago filter ---
 
     def test_timeago_none(self, env) -> None:

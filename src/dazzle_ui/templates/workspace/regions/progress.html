@@ -10,7 +10,7 @@
     {% for stage in stage_counts %}
     <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border
       {%- if stage.complete %} bg-[hsl(142_71%_45%/0.12)] text-[hsl(142_71%_30%)] border-[hsl(142_71%_45%/0.3)]
-      {%- elif stage.count > 0 %} bg-[hsl(38_92%_50%/0.12)] text-[hsl(38_92%_35%)] border-[hsl(38_92%_50%/0.3)]
+      {%- elif stage.count > 0 %} bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]
       {%- else %} bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]
       {%- endif %}">
       {{ stage.name }} ({{ stage.count }})
