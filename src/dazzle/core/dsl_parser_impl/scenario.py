@@ -405,14 +405,65 @@ class ScenarioParserMixin:
             return value
 
     def _parse_string_list(self) -> list[str]:
-        """Parse a comma-separated list of strings."""
+        """Parse a string list — supports both inline and multi-line forms.
+
+        Inline form (single line, comma-separated)::
+
+            goals: "Grade papers", "Track attendance"
+
+        Multi-line form (YAML-style indented dash)::
+
+            goals:
+              - "Grade papers"
+              - "Track attendance"
+              - "Plan lessons"
+
+        The multi-line form is detected by the presence of a NEWLINE
+        immediately after the `:` (i.e. before any STRING token). Both
+        forms coexist; DSL authors may use whichever is ergonomic.
+
+        Fixed in cycle 225 — the prior implementation silently returned
+        an empty list for multi-line input and left the ``-`` tokens
+        unconsumed, which cascaded into the containing block dropping
+        all subsequent fields. This was the root cause of EX-035's
+        dead-end navigation finding: fieldtest_hub personas declared
+        their ``goals:`` as multi-line lists and consequently lost their
+        ``default_workspace`` declarations, which in turn made
+        ``_root_redirect`` fall back to ``workspaces[0]`` — the wrong
+        workspace for every non-admin persona.
+        """
         strings: list[str] = []
 
+        # Multi-line form: after the `:` we see one or more NEWLINEs
+        # followed by an INDENT, then a sequence of `- "value"` entries.
+        if self.match(TokenType.NEWLINE):
+            self.skip_newlines()
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    if self.match(TokenType.MINUS):
+                        self.advance()
+                        if self.match(TokenType.STRING):
+                            strings.append(self.current_token().value)
+                            self.advance()
+                        self.skip_newlines()
+                    else:
+                        # Unexpected token inside a list — skip it so
+                        # one malformed entry doesn't abort the whole
+                        # block. The containing parser will still see
+                        # the DEDENT that terminates the list.
+                        self.advance()
+                self.expect(TokenType.DEDENT)
+            return strings
+
+        # Inline form: comma-separated strings on the current line.
         while True:
             if self.match(TokenType.STRING):
                 strings.append(self.current_token().value)
                 self.advance()
-
                 if self.match(TokenType.COMMA):
                     self.advance()
                 else:

@@ -181,6 +181,96 @@ persona teacher "Teacher":
         assert persona.goals == ["Grade papers", "Track attendance"]
         assert persona.proficiency_level == "expert"
 
+    def test_parse_persona_with_multiline_goals_list(self) -> None:
+        """Regression test for cycle 225 / EX-035.
+
+        The parser originally only supported inline comma-separated
+        string lists (``goals: "a", "b"``). When a DSL used the
+        YAML-style multi-line indented form instead, ``_parse_string_list``
+        silently returned an empty list AND left the ``-`` tokens
+        unconsumed, which cascaded into ``parse_persona`` dropping every
+        field after ``goals:``. fieldtest_hub, ops_dashboard, and
+        support_tickets all hit this: their personas lost
+        ``default_workspace`` declarations, and the UI root-redirect
+        handler fell back to ``workspaces[0]`` — the wrong workspace
+        for every non-admin persona — producing a dead-end 403 with
+        no recovery path.
+
+        Both forms must be supported and must load ALL subsequent
+        fields correctly.
+        """
+        dsl = """
+module test
+
+app test_app "Test"
+
+entity User "User":
+  id: uuid pk
+  name: str(200) required
+
+persona teacher "Teacher":
+  description: "A classroom teacher"
+  goals:
+    - "Grade papers"
+    - "Track attendance"
+    - "Plan lessons"
+  proficiency: expert
+  default_workspace: classroom_view
+  default_route: "/classes"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.personas) == 1
+        persona = fragment.personas[0]
+        # Every field after the multi-line goals: must load correctly.
+        assert persona.id == "teacher"
+        assert persona.description == "A classroom teacher"
+        assert persona.goals == ["Grade papers", "Track attendance", "Plan lessons"]
+        assert persona.proficiency_level == "expert"
+        assert persona.default_workspace == "classroom_view"
+        assert persona.default_route == "/classes"
+
+    def test_parse_persona_multiline_goals_with_unknown_field(self) -> None:
+        """Regression test for cycle 225 / EX-035 — second shape.
+
+        fieldtest_hub's original DSL had both the multi-line ``goals:``
+        list AND an unknown ``session_style:`` field between
+        ``proficiency_level`` and ``default_workspace``. Both the
+        multi-line list AND the unknown-field skip must coexist
+        without dropping subsequent fields.
+        """
+        dsl = """
+module test
+
+app test_app "Test"
+
+entity User "User":
+  id: uuid pk
+  name: str(200) required
+
+persona engineer "Engineer":
+  goals:
+    - "Monitor all devices"
+    - "Manage firmware"
+    - "Coordinate testers"
+  proficiency: expert
+  session_style: deep_work
+  default_workspace: engineering_dashboard
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.personas) == 1
+        persona = fragment.personas[0]
+        assert persona.goals == [
+            "Monitor all devices",
+            "Manage firmware",
+            "Coordinate testers",
+        ]
+        assert persona.proficiency_level == "expert"
+        # default_workspace must survive BOTH the multi-line list
+        # AND the unknown-field skip.
+        assert persona.default_workspace == "engineering_dashboard"
+
     def test_parse_scenario_block(self) -> None:
         """Test parsing a scenario declaration."""
         dsl = """

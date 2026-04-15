@@ -4,6 +4,84 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T21:15Z — Cycle 225 — **finding_investigation: EX-035 → real root cause is a DSL parser bug, not an HTMX intercept**
+
+**Strategy:** `finding_investigation`. Target: EX-035 (the `/app/workspaces/engineering_dashboard` dead-end identified in cycle 223, flagged in cycle 224's gap doc as a regression of v0.55.31 #776 with three hypotheses ranked by likelihood).
+
+**Outcome:** Root-caused, fixed, regression-tested, verified end-to-end. **All three hypotheses from cycle 224's gap doc were wrong.** The real mechanism is a **DSL parser bug** two layers removed from the symptom.
+
+### Investigation trace
+
+1. **Hypothesis 1 (HTMX boost intercept).** Grepped templates: `base.html:105` does set `hx-boost="true"` on `<body>`, so error-page anchors are indeed intercepted. Seemed confirmed. But reproducing with curl directly against the backend (bypassing HTMX entirely) still landed on `/app/workspaces/engineering_dashboard` as a 403 — **without HTMX involvement.** So HTMX boost wasn't the cause; the server itself was routing tester to the wrong workspace.
+
+2. **Hypothesis 2 (server-side resolution bug).** Traced `/app` GET → 307 `/app/` → 307 `/app/workspaces/engineering_dashboard` → 403. Found the resolver at `src/dazzle_ui/runtime/page_routes.py:950` `_root_redirect`. It builds a `persona → workspace_url` map from `appspec.personas`, falling back to `workspaces[0].name` when a persona has no entry. So the question became: **why does tester have no entry?**
+
+3. **Drilled into `appspec.personas` for fieldtest_hub.** `tester.default_workspace = None`. But the DSL at `examples/fieldtest_hub/dsl/app.dsl:37` clearly declares `default_workspace: tester_dashboard`. **The parser is losing the declaration.**
+
+4. **Cross-app parse check** revealed the pattern: `fieldtest_hub`, `ops_dashboard` (and partially `support_tickets`) had multi-line indented `goals:` lists. `simple_task` and `contact_manager` use inline `goals: "a", "b"` form. The broken apps were exactly the multi-line-list apps, and in each case `default_workspace` was lost alongside empty `goals`.
+
+5. **Confirmed the parser bug** at `src/dazzle/core/dsl_parser_impl/scenario.py:407`. `_parse_string_list` only handled the inline comma-separated form. When fed a multi-line `goals:\n  - "..."` block, it saw a NEWLINE instead of a STRING, immediately returned an empty list, and left the `-` (MINUS) tokens sitting in the stream. `parse_persona`'s unknown-field fallback (line 108) then ate the list items one token at a time, eventually consuming every subsequent field in the persona block before hitting DEDENT. That's how `proficiency_level`, `session_style`, AND `default_workspace` were all dropped together.
+
+### The fix
+
+Rewrote `_parse_string_list` to detect the multi-line form (NEWLINE immediately after the `:`) and parse the indented `- "value"` entries using the same pattern as `_parse_condition_list` in `story.py:277`. Both forms now coexist; DSL authors can pick whichever is ergonomic.
+
+**Change:** `src/dazzle/core/dsl_parser_impl/scenario.py` — 41 lines added, 13 modified. Single function rewrite. Extensive comment explaining the cycle 225 investigation trail because this bug has been silently present for cycles.
+
+**Regression tests:** 2 new cases in `tests/unit/test_persona_scenario_ir.py`:
+- `test_parse_persona_with_multiline_goals_list` — the simple multi-line form
+- `test_parse_persona_multiline_goals_with_unknown_field` — the fieldtest_hub shape (multi-line list + unknown `session_style` field + `default_workspace` after)
+
+### Cross-app verification after the fix
+
+| App | Before (buggy parse) | After (fixed parse) |
+|---|---|---|
+| simple_task | goals=3/3, ws correct | unchanged (already worked, uses inline form) |
+| support_tickets | goals=3/3, ws correct | unchanged (already worked) |
+| contact_manager | goals=0 (none declared), ws correct | unchanged |
+| ops_dashboard | goals=0, ws=None for ops_engineer | **goals=2, ws=command_center ✓** |
+| fieldtest_hub | goals=0, ws=None for engineer/tester/manager | **goals=3 (and 2 for manager), ws=correct for all ✓** |
+
+### End-to-end verification of EX-035
+
+Before: `/app` as tester → 307 → `/app/workspaces/engineering_dashboard` → **403 dead-end loop**
+After: `/app` as tester → 307 → `/app/workspaces/tester_dashboard` → **200 OK** ✓
+
+### Test suite impact
+
+- `test_persona_scenario_ir.py`: **16/16 pass** (was 14, added 2)
+- Full unit sweep (`tests/unit/ -m "not e2e"`): **10440 / 10440 pass** — no regressions
+- Lint: clean
+- `mypy src/dazzle/core`: clean
+
+### Framework-level implications
+
+This bug has been hiding across **3 example apps** (fieldtest_hub, ops_dashboard, support_tickets partially) and likely any DSL authored in the YAML-native style. The symptoms were silent: apps parse without errors, just with corrupted persona data. Multiple downstream features probably depend on `persona.default_workspace` being set — the fact that only one cycle's investigation surfaced this reveals how hard silent parser bugs are to catch.
+
+**Framework-gap implications for the other 3 gap docs from cycle 224:**
+
+- **persona-unaware-affordances (gap #2):** cycle 221's EX-028 ("sidebar still shows ticket_queue/agent_dashboard for customer") may have partially been this same bug — support_tickets' `customer` persona dump showed goals=3, ws=my_tickets, so it parsed OK. But the fallback logic in `workspace_allowed_personas` (rule 4) still returns `None` for `ticket_queue`/`agent_dashboard` because neither has explicit access AND no persona claims them via `default_workspace`. EX-028's mechanism is still valid — gap #2 still stands.
+
+- **error-page-navigation-dead-end (gap #4):** entire gap doc is now superseded by this investigation. The "HTMX boost intercept" hypothesis was wrong; the real mechanism was a parser bug → wrong workspace resolution → loop. **Gap #4 should be marked as resolved by cycle 225's fix** once the patch ships.
+
+- **silent-form-submit (gap #1)** and **workspace-region-naming-drift (gap #3):** unaffected by this investigation, still valid themes.
+
+### Secondary gap surfaced
+
+Even with `default_workspace` now loading correctly, `_root_redirect`'s final fallback (`workspaces[0].name`) is still fragile — if a DSL genuinely declares no `default_workspace` for a persona (the `admin_only_dashboard` pattern), the same dead-end could re-emerge. The existing `_resolve_persona_route` helper at `workspace_converter.py:561` has a smarter 5-step resolution and should be used by `_root_redirect` instead. **Filing this as a follow-up observation — EX-042** (to be added in the next cycle's backlog update, since this cycle's scope is the parser fix).
+
+### Status moves
+
+- **EX-035**: OPEN → **FIXED_LOCALLY**. Row notes updated with full root cause + fix trace.
+
+### Mission assessment
+
+**Textbook success for the `finding_investigation` strategy.** Investigation cycle took ~20 minutes. Output: 1 concerning row resolved, 2 apps silently corrupted parser data fixed, 1 gap doc invalidated (wrong hypothesis), 1 new follow-up gap identified, 2 regression tests locked in, no existing tests broken. This is the kind of cycle the relaxed policy was designed to enable — a reasoning-and-code cycle that closes a loop rather than opening a new one.
+
+**Explore budget:** 1 → 2 / 100.
+
+---
+
 ## 2026-04-15T21:04Z — Cycle 224 — **framework_gap_analysis: 4 gap docs synthesised from 14 contributing observations**
 
 **Outcome:** First cycle under the **relaxed policy**. The `/ux-cycle` skill at `.claude/commands/ux-cycle.md` was updated to:
