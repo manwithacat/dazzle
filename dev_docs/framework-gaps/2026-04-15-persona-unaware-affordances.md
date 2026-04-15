@@ -1,9 +1,44 @@
 # Framework Gap — Persona-Unaware Affordances
 
-**Status:** Open
+**Status:** Partially Fixed (2 of 4 axes closed in cycles 226 + 228)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
+**Refreshed:** Cycle 230 (framework_gap_analysis v2)
 **Contributing cycles:** 201, 216, 221, 223
-**Evidence weight:** 8 observations across 4 apps, 1 partially-fixed (#775), 1 contradicts the fix
+**Evidence weight:** 8 observations across 4 apps
+
+---
+
+## ⚠️ Cycle 230 status refresh
+
+Cycles 226 and 228 closed 2 of the 4 axes this gap doc originally identified. The remaining 3 axes are still valid framework work:
+
+### Closed axes
+
+1. **Workspace-level nav filtering (closed in cycle 226 + v0.55.34 #775)**
+   - v0.55.34 #775 introduced `workspace_allowed_personas` as single-source-of-truth for workspace access resolution
+   - Cycle 226 found that the fix unified `template_compiler.py` and `_workspace_handler` but missed a second `ws_nav_items` builder at `page_routes.py:1115`. Plumbed the missing call site.
+   - **EX-002, EX-028 closed.** All 5 example apps cross-persona verified: each persona sees exactly their allowed workspaces in the sidebar.
+
+2. **Bulk-action-bar destructive affordances (closed in cycle 228)**
+   - Added a per-request suppression block at `page_routes.py:701` that calls the existing `_user_can_mutate(deps, surface_name, 'delete', auth_ctx)` helper and sets `req_table.bulk_actions = False` when the current persona cannot delete.
+   - **EX-040 closed.** fieldtest_hub cross-persona verified: tester/manager = 0 bulkDelete, engineer = 1, on all 4 entity list pages.
+
+### Still-open axes
+
+3. **Empty-state CTAs** — still open. Rows: EX-011 (ops_dashboard/ops_engineer — region empty states invite actions the persona can't perform), EX-030 (support_tickets/customer — my_tickets region missing CTA), EX-037 (fieldtest_hub/tester — "Add your first device" CTA for a persona that can't create devices). Template-compiler level fix: compute `persona_can_create = entity_access(persona, entity, 'create')` and pass it to the empty-state template; template branches on it.
+
+4. **Create-form field visibility** — still open. Rows: EX-029 (support_tickets/customer — Create Ticket form exposes 'Assigned To' ref User to customer). Related but distinct: the widget-selection gap doc from cycle 230 covers WHY ref fields render as plain inputs; this axis covers whether they should be shown to the current persona at all. Fix direction: field-level access rules OR inferred defaults (omit `ref <Entity>` fields if the current persona cannot list `<Entity>`).
+
+5. **Workspace-access fallback case** — cycle 226 partially addressed this via the `page_routes.py:1115` fix, but the fallback `rule 4` in `workspace_allowed_personas` (return `None` = "no filter") is still permissive by default. The gap doc's proposed `default_access: permissive | strict` DSL flag migration is still the right long-term fix. Low priority — cross-app evidence shows the existing resolution works correctly when workspaces declare explicit access OR when `default_workspace` is set on a persona, which covers all 5 example apps.
+
+### Remaining fix scope
+
+The 2 still-open axes (empty-state CTAs + create-form field visibility) are both smaller than the original gap doc proposed because cycle 226/228 established the single-source-of-truth pattern they should follow. The unified `affordance_visible(persona, action, target)` helper is no longer necessary — instead:
+
+- **Empty-state CTAs**: template compiler precomputes `persona_can_create` per-entity, template branches.
+- **Create-form field visibility**: template compiler filters form fields where `entity_access(persona, target_entity, 'list') is False`.
+
+Both are ~15-minute fixes once the template-compiler dispatch is confirmed. Good candidates for future `finding_investigation` cycles.
 
 ---
 

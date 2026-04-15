@@ -4,6 +4,111 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T22:25Z — Cycle 230 — **framework_gap_analysis v2 — new widget-selection gap + skill learnings encoded**
+
+**Strategy:** `framework_gap_analysis` (second synthesis pass). Rationale: cycles 225-229 closed 5 rows (EX-028/035/040/042 fixed, EX-039 verified false positive), invalidated 1 gap doc, surfaced 3 durable meta-heuristics, and fixed a substrate limitation. The backlog shape has genuinely shifted enough to warrant a fresh synthesis — the signal-to-noise ratio of remaining OPEN rows is different than cycle 224's baseline.
+
+**Candidate strategies considered:**
+- `finding_investigation` on EX-041 (ref Tester cascade) — small, clean, but low strategic value
+- `finding_investigation` on EX-022 (None-timestamp formatter) — minor polish
+- `edge_cases` on a fresh axis (contact_manager/admin) — breadth but doesn't use the 5-cycle learning
+- **`framework_gap_analysis`** (chosen) — highest leverage. Closes the loop on cycles 225-229's learnings and sets up the next investigation arc with cleaner targeting.
+
+### Backlog inventory (post-cycle 229)
+
+43 EX rows total. **31 OPEN**, 5 FIXED_LOCALLY (cycles 225-228), 2 VERIFIED_FALSE_POSITIVE (EX-021, EX-039), 2 SUSPECTED_FALSE_POSITIVE (EX-018, EX-034), 3 FILED to GitHub issues.
+
+The 31 OPEN rows cluster into 12 themes:
+
+| Theme | Rows | Cycle 230 action |
+|---|---|---|
+| A. Error-page marketing chrome | EX-003, EX-004, EX-008, EX-014, EX-020 | **Marked SUSPECTED_FIXED** — strongly suspected resolved by v0.55.31 #776. Needs a 5-minute re-verification sweep. |
+| B. Dead `#` anchors in drawer | EX-005, EX-032 | Cross-cycle recurrence; small fix candidate |
+| **C. Widget-selection gap** | **EX-006, EX-009, EX-029, EX-041** | **NEW GAP DOC written** — 4 cross-cycle observations, no gap doc prior to this cycle |
+| D. Region content quality | EX-011, EX-015, EX-016, EX-030, EX-036 | Loosely coupled — partially covered by gap doc #2 (empty-state CTAs) |
+| E. Workspace region naming drift | EX-013, EX-025, EX-033 | Gap doc #3 still fully valid |
+| F. RBAC contract-generator asymmetry | EX-026 | Subsumed by gap doc #2 |
+| G. Raw entity name leaks | EX-038 | Standalone polish |
+| H. Detail-view None formatter | EX-022 | Standalone, small fix |
+| I. A11y missing labels | EX-024 | Standalone |
+| J. DaisyUI coverage gap | EX-001 | Meta-coverage issue |
+| K. Bulk-action bar count | EX-019, EX-023 | Template polish |
+| L. Duplicate region content | EX-016 | DSL-level, not framework |
+
+### Output 1: new gap doc — `widget-selection-gap`
+
+Wrote `dev_docs/framework-gaps/2026-04-15-widget-selection-gap.md` synthesising theme C:
+
+- **Evidence**: 4 observations across 3 apps and 3 personas (EX-006/009/029/041)
+- **Problem**: ref fields and typed fields (date, datetime, money, ref) render as plain `<input type="text">` instead of reaching their intended widget components (widget-search-select, widget-datepicker, etc.). The widget contracts exist, the vendored JS/CSS exists, but the form-field template compiler's dispatch path is short-circuiting.
+- **Root cause hypothesis ranking**: (1) dispatch table incomplete [most likely], (2) widget context not populated, (3) DSL requires explicit `widget:` override [check with grep first]
+- **Fix sketch**: one-line additions per field type in a `FIELD_TYPE_TO_WIDGET` mapping + context propagation + regression tests per widget class
+- **Blast radius**: high — 3 of 5 apps confirmed, every DSL with ref/date/money fields likely affected
+- **Recommended next cycle**: `finding_investigation` on EX-009 (simple_task — one app hits both the date and ref gaps simultaneously, so one investigation closes two observations). Apply the cycle 229 "try the real thing" heuristic: inspect rendered HTML at the HTTP layer first, then trace the compiler dispatch.
+
+### Output 2: refresh gap doc #2 (persona-unaware-affordances)
+
+Added a "Cycle 230 status refresh" section to `dev_docs/framework-gaps/2026-04-15-persona-unaware-affordances.md`:
+
+- **Closed axes** (2 of 4):
+  - Workspace nav filtering — closed by v0.55.34 #775 + cycle 226 second-builder fix. EX-002, EX-028 closed.
+  - Bulk-action-bar destructive affordances — closed by cycle 228's per-request suppression. EX-040 closed.
+- **Still-open axes** (3 of 4):
+  - Empty-state CTAs — rows EX-011, EX-030, EX-037. Template-compiler fix: precompute `persona_can_create` per-entity.
+  - Create-form field visibility — row EX-029. Partially overlaps with new widget-selection gap doc but distinct concern (whether to show the field at all vs how to render it).
+  - Workspace-access fallback case — low priority; cycle 226 partially addressed it. Works in practice for all 5 example apps.
+
+The remaining axes are narrower than the original gap doc proposed — the unified `affordance_visible` helper is no longer needed because cycle 226/228 established the single-source-of-truth pattern. Each remaining axis is a ~15-minute fix.
+
+### Output 3: durable skill learnings encoded in `.claude/commands/ux-cycle.md`
+
+Added a new "Durable heuristics" section to the skill under the finding_investigation workflow appendix. Three rules:
+
+**Heuristic 1 — "Try the real thing" before committing to a framework hypothesis.** Cycles 228 and 229 both found cases where the observation was misleading and only a raw-layer reproduction (curl, direct HTTP, direct helper invocation) revealed the actual mechanism. In cycle 229 this saved the loop from building massive unnecessary 422-handler infrastructure that already existed. **Rule**: FIRST step of any finding_investigation or gap-doc-triggered fix is raw-layer reproduction. If raw layer shows framework working correctly, pivot to substrate analysis.
+
+**Heuristic 2 — Helper-audit cycles for single-source-of-truth propagation.** Cycles 226 and 228 both found cases where a framework helper was introduced but a refactor missed a second call site. **Rule**: when a `finding_investigation` identifies a helper-audit class defect, grep for other call sites before writing the fix. Worth considering a dedicated `helper_audit` cycle type that pre-emptively walks every call site of a helper.
+
+**Heuristic 3 — Cross-app verification before committing a framework fix.** Cycle 227's first attempted fix (reusing `compute_persona_default_routes`) would have introduced a simple_task regression because of a latent DSL shape (`default_route: "/admin"` values that aren't registered routes). Cross-app verification caught it. **Rule**: any framework-code fix must include an explicit "verified on all 5 example apps" step before commit.
+
+### Output 4: EX-003/004/008/014/020 marked SUSPECTED_FIXED
+
+All 5 rows have the same defect class (authenticated 404/403 renders public marketing chrome). v0.55.31 #776 shipped in-app error shell templates (`app/403.html`, `app/404.html`) + URL-prefix dispatch at `exception_handlers.py` that specifically fixes this. Cycle 225 proved the in-app shell renders correctly for `/app/*` paths with `Accept: text/html`. All 5 rows updated with status `SUSPECTED_FIXED` and a cycle 230 note pointing at v0.55.31.
+
+Cycle 231 candidate: 5-minute re-verification sweep — boot each of the 5 apps, log in as an arbitrary persona, hit a non-existent `/app/<entity>/<fake-id>` route, confirm the in-app shell renders with "Back to List" affordance. Should close all 5 as FIXED.
+
+### Framework-gap status (all 4 gap docs)
+
+| Doc | Status |
+|---|---|
+| #1 silent-form-submit | **SUPERSEDED** (cycle 229 — substrate artifact, not framework bug) |
+| #2 persona-unaware-affordances | **Partially Fixed** (2 of 4 axes closed in 226/228; 3 remaining) |
+| #3 workspace-region-naming-drift | **Open** — still fully valid, 6 contributing items, strong synthesis signal |
+| #4 error-page-navigation-dead-end | **SUPERSEDED** (cycle 225 — root cause was parser bug, not HTMX intercept) |
+| **NEW** widget-selection-gap | **Open** — written this cycle, 4 contributing items |
+
+**2 of 5 gap docs superseded by finding_investigation cycles** — which is the intended shape of the loop: synthesis produces hypotheses, investigation either confirms them or falsifies them, false hypotheses don't block progress. The loop's entropy-reduction is working as designed.
+
+### Cycle metrics
+
+- Duration: ~25 minutes (pure reasoning + 1 small Python script for backlog mutations, no browser, no subagent)
+- Output: 1 new gap doc (~9KB), 1 gap doc refresh (~5KB added), 1 skill update with 3 heuristics, 5 backlog rows marked suspected-fixed
+- Framework code: untouched this cycle
+- Test suite: not run this cycle (no source changes)
+
+### Explore budget
+
+6 → 7 / 100. **~5 cycles remaining** in the user's ~12-cycle arc.
+
+### Next cycle plan
+
+1. **Cycle 231 — re-verification sweep (mini-cycle)**: boot each of 5 apps, hit a 404 path, confirm in-app shell renders. Move EX-003/004/008/014/020 from SUSPECTED_FIXED to FIXED. ~10 minutes. Could be done in parallel with cycle 232's investigation.
+2. **Cycle 232 — finding_investigation on EX-009 (simple_task widget-selection)**: closes 2 sub-observations (date + ref) from the new widget-selection gap doc. Apply Heuristic 1: inspect the rendered HTML at HTTP layer first. ~30 min.
+3. **Cycle 233 — finding_investigation on EX-041 (fieldtest_hub ref Tester cascade)**: small scope, cascade extension of #774 to walk through User-subtype entities. ~20 min.
+4. **Cycle 234 — finding_investigation on EX-011 or EX-030 (empty-state CTA persona-awareness)**: closes axis 3 of gap doc #2. ~20 min.
+5. **Cycle 235 — framework_gap_analysis v3 OR targeted missing_contracts on `workspace/regions/`**: depends on what 231-234 yields.
+
+---
+
 ## 2026-04-15T22:06Z — Cycle 229 — **finding_investigation: EX-039 invalidates gap doc #1 + substrate fix for form submission**
 
 **Strategy:** `finding_investigation`. Target: EX-039 (cycle 223 observation — silent form submit on empty required fields / negative numeric, core of gap doc #1).

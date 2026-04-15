@@ -246,6 +246,38 @@ The assistant should **prefer diverse cycles over mechanical rotation**. Three e
 7. The cycle counts against the explore budget.
 8. Emit signal `ux-investigation-complete` with payload `{cycle, ex_id, outcome}`.
 
+### Durable heuristics (from cycles 225-229)
+
+These rules are load-bearing for every future investigation and synthesis cycle. Internalise them.
+
+**Heuristic 1 — "Try the real thing" before committing to a framework hypothesis.**
+
+*Surfaced in cycle 228, proved critical in cycle 229.*
+
+Before you write a line of fix code OR commit to a gap doc's proposed framework infrastructure, **reproduce the defect end-to-end at the lowest layer that can exhibit it**. For a "silent form submit" observation: fire a raw curl with `HX-Request: true` at the backend endpoint and check the response. For a "bulk-action bar shown to wrong persona" observation: attempt the actual DELETE and see whether the runtime accepts or denies it. For a "workspace nav leak" observation: compare the sidebar hrefs for each persona against what `workspace_allowed_personas` returns directly.
+
+Why: subagent observations are indirection-heavy. Multiple layers separate the subagent's `visible_text` from the actual framework behaviour — the substrate, the browser, HTMX swap timing, observe-time re-navigation, etc. Cycle 229 revealed that **3 of the 5 observations underpinning gap doc #1 were substrate artifacts**, not framework bugs. The framework's 422 error-surfacing system that the gap doc proposed to build from scratch already existed and worked correctly. A naïve implementation cycle following cycle 224's gap synthesis would have built the unnecessary infrastructure and then wondered why the observations kept recurring.
+
+**Rule**: in any `finding_investigation` cycle OR any implementation cycle triggered by a gap doc, the FIRST step is a raw-layer reproduction. If the raw layer shows the framework behaving correctly, the defect is in the observer, not the framework — pivot the cycle to substrate analysis instead.
+
+**Heuristic 2 — Helper-audit cycles for single-source-of-truth propagation.**
+
+*Surfaced in cycles 226 + 228.*
+
+When the framework introduces a helper function intended to be a single source of truth for some decision (e.g. `workspace_allowed_personas` for workspace visibility, `_user_can_mutate` for entity-level permissions), the refactor that introduces the helper often migrates ONE call site but misses others with superficially similar but subtly divergent logic. Cycle 226 found the v0.55.34 #775 fix had migrated `template_compiler.py`'s nav builder but missed `page_routes.py:1115`'s separate nav builder. Cycle 228 found that `_user_can_mutate` was correctly called for the Create button but not for the bulk-action bar, even though both are role-gated UI affordances.
+
+**Rule**: when a `finding_investigation` cycle identifies a helper-audit class defect (two code paths that should consult the same helper but one of them doesn't), **before writing the fix, grep-scan for other call sites** where the helper should also be consulted. Two is evidence of a pattern; there's often a third call site that would have surfaced as a future observation. Fix all of them in one commit when feasible.
+
+Worth considering as a dedicated cycle type: `helper_audit` — pick a single-source-of-truth helper and walk every spot in the codebase where a role/persona/access decision is made, checking whether the helper is called. The audit surfaces pre-observation drift before it becomes cross-cycle evidence.
+
+**Heuristic 3 — Cross-app verification before committing a framework fix.**
+
+*Surfaced in cycle 227.*
+
+Before running `/ship` on a framework-layer fix, run the change against **all 5 example apps** and verify the target behaviour. Cycle 227's first attempted fix reused `compute_persona_default_routes` which honours `persona.default_route` values — a shape simple_task's DSL declares but does not register as real routes. The naïve fix would have redirected simple_task admins to a 404. Cross-app verification caught it immediately.
+
+**Rule**: any `finding_investigation` fix that touches framework code (not test scaffolding or docs) must include an explicit "verified on all 5 example apps" step before commit, even if the fix was motivated by a single app. The 5 apps function as a fidelity oracle for latent DSL shapes you might not have anticipated.
+
 ### Substrate (cycle 198+, v0.55.5)
 
 EXPLORE runs as a Claude Code Task-tool subagent, NOT as a `DazzleAgent` on the direct Anthropic SDK. Cognitive work is billed to the Claude Code host subscription; browser work happens via a stateless Playwright helper subprocess. **The assistant running `/ux-cycle` composes this sequence directly — there is no async orchestrator function.**
