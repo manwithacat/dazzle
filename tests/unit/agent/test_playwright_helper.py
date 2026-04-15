@@ -92,6 +92,11 @@ class TestParser:
         assert parsed.selector == "#field"
         assert parsed.text == "hello"
 
+        parsed = parser.parse_args(["--state-dir", "/tmp/x", "select", "#priority", "high"])
+        assert parsed.action == "select"
+        assert parsed.selector == "#priority"
+        assert parsed.value == "high"
+
         parsed = parser.parse_args(["--state-dir", "/tmp/x", "wait", ".loaded"])
         assert parsed.action == "wait"
 
@@ -280,6 +285,61 @@ class TestActionWait:
 
         assert result["status"] == "found"
         assert result["selector"] == ".loaded"
+
+
+@pytest.mark.asyncio
+class TestActionSelect:
+    async def test_select_matches_by_value_on_first_try(self, tmp_path: Path) -> None:
+        page = _mk_page()
+        locator = MagicMock()
+        locator.first = MagicMock()
+        locator.first.select_option = AsyncMock(return_value=["high"])
+        page.locator = MagicMock(return_value=locator)
+
+        bundle = _FakePlaywrightBundle(page)
+        with bundle.patch_async_playwright():
+            result = await helper.action_select("#priority", "high", tmp_path, 5000)
+
+        assert result["status"] == "selected"
+        assert result["matched_by"] == "value"
+        assert result["chosen_values"] == ["high"]
+        locator.first.select_option.assert_awaited_once_with(value="high", timeout=5000)
+
+    async def test_select_falls_back_to_label(self, tmp_path: Path) -> None:
+        page = _mk_page()
+        locator = MagicMock()
+        locator.first = MagicMock()
+
+        # First call (value=...) raises, second call (label=...) succeeds
+        locator.first.select_option = AsyncMock(side_effect=[Exception("no value match"), ["low"]])
+        page.locator = MagicMock(return_value=locator)
+
+        bundle = _FakePlaywrightBundle(page)
+        with bundle.patch_async_playwright():
+            result = await helper.action_select("#priority", "Low Priority", tmp_path, 5000)
+
+        assert result["status"] == "selected"
+        assert result["matched_by"] == "label"
+        assert result["chosen_values"] == ["low"]
+        assert locator.first.select_option.await_count == 2
+
+    async def test_select_returns_error_when_both_attempts_fail(self, tmp_path: Path) -> None:
+        page = _mk_page()
+        locator = MagicMock()
+        locator.first = MagicMock()
+        locator.first.select_option = AsyncMock(
+            side_effect=[Exception("no value"), Exception("no label either")]
+        )
+        page.locator = MagicMock(return_value=locator)
+
+        bundle = _FakePlaywrightBundle(page)
+        with bundle.patch_async_playwright():
+            result = await helper.action_select("#priority", "nonexistent", tmp_path, 5000)
+
+        assert "error" in result
+        assert result["selector"] == "#priority"
+        assert result["value"] == "nonexistent"
+        assert result["error_type"] == "Exception"
 
 
 @pytest.mark.asyncio

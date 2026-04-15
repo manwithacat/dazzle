@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.12] - 2026-04-15
+
+### Added
+- **`select` action for `playwright_helper`.** The stateless Playwright
+  driver used by subagent-driven explore runs can now drive `<select>`
+  elements. Signature:
+  `python -m dazzle.agent.playwright_helper --state-dir DIR select '<selector>' '<value>'`.
+  Attempts to match `value` as an option `value` attribute first; on
+  failure, falls back to matching as a visible label. Returns
+  `matched_by: "value" | "label"` so callers know how the option was
+  resolved.
+- Driven by the cycle 201 edge_cases run against `support_tickets` —
+  the subagent explicitly flagged that it couldn't drive `<select>`
+  elements, which blocked root-causing the silent create-form failure
+  (finding EX-007). With this action in place, the next edge_cases
+  run can fully exercise forms that use `<select>` for Priority,
+  Category, or any DSL enum field.
+- 3 new unit tests in `tests/unit/agent/test_playwright_helper.py`
+  covering the value-first happy path, the label fallback, and the
+  double-failure error shape (17 tests total).
+
+### Agent Guidance
+- **Use `select` instead of `click` for `<select>` elements.** Clicking
+  a `<select>` opens the native picker but doesn't let the caller
+  choose an option. `select '<selector>' '<value>'` resolves the
+  option deterministically.
+
 ## [0.55.11] - 2026-04-15
 
 ### Changed

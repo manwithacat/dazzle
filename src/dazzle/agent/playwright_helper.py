@@ -12,6 +12,7 @@ Usage::
     python -m dazzle.agent.playwright_helper --state-dir DIR navigate <path_or_url>
     python -m dazzle.agent.playwright_helper --state-dir DIR click '<css_selector>'
     python -m dazzle.agent.playwright_helper --state-dir DIR type '<selector>' '<text>'
+    python -m dazzle.agent.playwright_helper --state-dir DIR select '<selector>' '<value>'
     python -m dazzle.agent.playwright_helper --state-dir DIR wait '<selector>'
 
 All output is a single JSON object on stdout. Errors include an ``error``
@@ -35,6 +36,12 @@ Design notes (cycle 198):
 
 - The ``wait`` action was added in cycle 198 — the spike didn't need it,
   but exploration missions that observe loading states will.
+
+- The ``select`` action was added in cycle 202 after cycle 201's edge_cases
+  run surfaced the gap: the subagent couldn't drive ``<select>`` elements,
+  which blocked root-causing the support_tickets silent-submit bug
+  (findings EX-007). ``select`` uses Playwright's ``select_option`` which
+  accepts either a value string or a visible label.
 """
 
 from __future__ import annotations
@@ -277,6 +284,47 @@ async def action_type(selector: str, text: str, state_dir: Path, timeout_ms: int
         await _teardown(pw, browser, ctx, page, state_dir)
 
 
+async def action_select(
+    selector: str, value: str, state_dir: Path, timeout_ms: int
+) -> dict[str, Any]:
+    """Pick an option in a ``<select>`` element.
+
+    ``value`` is tried first as an option ``value`` attribute, then as a
+    visible label. This lets callers drive selects whether they know the
+    exact ``<option value="...">`` or only the user-visible text.
+    """
+    pw, browser, ctx, page = await _launch(state_dir, timeout_ms)
+    try:
+        try:
+            locator = page.locator(selector)
+            # Playwright's select_option accepts a string (interpreted as
+            # option value) or a dict with {"label": ...}. Try value first;
+            # on failure, retry with label semantics.
+            try:
+                chosen = await locator.first.select_option(value=value, timeout=timeout_ms)
+                matched_by = "value"
+            except Exception:
+                chosen = await locator.first.select_option(label=value, timeout=timeout_ms)
+                matched_by = "label"
+            return {
+                "status": "selected",
+                "selector": selector,
+                "value": value,
+                "matched_by": matched_by,
+                "chosen_values": chosen,
+                "url": page.url,
+            }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "selector": selector,
+                "value": value,
+            }
+    finally:
+        await _teardown(pw, browser, ctx, page, state_dir)
+
+
 async def action_wait(selector: str, state_dir: Path, timeout_ms: int) -> dict[str, Any]:
     """Wait for an element to appear — useful for async content loads."""
     pw, browser, ctx, page = await _launch(state_dir, timeout_ms)
@@ -330,6 +378,10 @@ def _build_parser() -> argparse.ArgumentParser:
     type_cmd.add_argument("selector")
     type_cmd.add_argument("text")
 
+    select_cmd = sub.add_parser("select", help="Pick a <select> option by value or visible label.")
+    select_cmd.add_argument("selector")
+    select_cmd.add_argument("value")
+
     wait_cmd = sub.add_parser("wait", help="Wait for an element to appear.")
     wait_cmd.add_argument("selector")
 
@@ -353,6 +405,8 @@ async def _run(args: argparse.Namespace) -> int:
             result = await action_click(args.selector, state_dir, timeout_ms)
         elif args.action == "type":
             result = await action_type(args.selector, args.text, state_dir, timeout_ms)
+        elif args.action == "select":
+            result = await action_select(args.selector, args.value, state_dir, timeout_ms)
         elif args.action == "wait":
             result = await action_wait(args.selector, state_dir, timeout_ms)
         else:
