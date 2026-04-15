@@ -246,19 +246,30 @@ The assistant should **prefer diverse cycles over mechanical rotation**. Three e
 7. The cycle counts against the explore budget.
 8. Emit signal `ux-investigation-complete` with payload `{cycle, ex_id, outcome}`.
 
-### Durable heuristics (from cycles 225-229)
+### Durable heuristics (from cycles 225-234)
 
 These rules are load-bearing for every future investigation and synthesis cycle. Internalise them.
 
-**Heuristic 1 — "Try the real thing" before committing to a framework hypothesis.**
+**Heuristic 1 — "Try the real thing" before committing to a framework hypothesis. (MANDATORY)**
 
-*Surfaced in cycle 228, proved critical in cycle 229.*
+*Surfaced in cycle 228, proved critical in cycle 229, repeatedly validated in cycles 232/233/234.*
 
-Before you write a line of fix code OR commit to a gap doc's proposed framework infrastructure, **reproduce the defect end-to-end at the lowest layer that can exhibit it**. For a "silent form submit" observation: fire a raw curl with `HX-Request: true` at the backend endpoint and check the response. For a "bulk-action bar shown to wrong persona" observation: attempt the actual DELETE and see whether the runtime accepts or denies it. For a "workspace nav leak" observation: compare the sidebar hrefs for each persona against what `workspace_allowed_personas` returns directly.
+**This rule is non-negotiable.** Before you write a line of fix code OR commit to a gap doc's proposed framework infrastructure, **reproduce the defect end-to-end at the lowest layer that can exhibit it**. For a "silent form submit" observation: fire a raw curl with `HX-Request: true` at the backend endpoint and check the response. For a "bulk-action bar shown to wrong persona" observation: attempt the actual DELETE and see whether the runtime accepts or denies it. For a "workspace nav leak" observation: compare the sidebar hrefs for each persona against what `workspace_allowed_personas` returns directly. For a "widget missing on form" observation: curl the form HTML and grep for the widget marker.
 
-Why: subagent observations are indirection-heavy. Multiple layers separate the subagent's `visible_text` from the actual framework behaviour — the substrate, the browser, HTMX swap timing, observe-time re-navigation, etc. Cycle 229 revealed that **3 of the 5 observations underpinning gap doc #1 were substrate artifacts**, not framework bugs. The framework's 422 error-surfacing system that the gap doc proposed to build from scratch already existed and worked correctly. A naïve implementation cycle following cycle 224's gap synthesis would have built the unnecessary infrastructure and then wondered why the observations kept recurring.
+**Track record — 4 of the last 6 investigations had the hypothesised framework fix turn out to be unnecessary or wrong:**
 
-**Rule**: in any `finding_investigation` cycle OR any implementation cycle triggered by a gap doc, the FIRST step is a raw-layer reproduction. If the raw layer shows the framework behaving correctly, the defect is in the observer, not the framework — pivot the cycle to substrate analysis instead.
+- **Cycle 229** — Gap doc #1's "silent form submit" framework gap was a substrate artifact (`action_type` values evaporated across subprocess boundaries). Framework 422 handling already existed and worked. Heuristic 1 saved a major unnecessary build.
+- **Cycle 232 ref-half** — EX-009's widget-selection observation turned out to be two separate gaps with asymmetric scope. Date half was a 1-line default; ref half was structural template work. The initial hypothesis (single dispatch-table fix) would have been wrong for the ref case.
+- **Cycle 233** — EX-041's "cascade `inject_current_user_refs` to User-subtypes" fix had no code to apply because Tester isn't a User-subtype at all. The real gap is a deeper DSL question (persona-to-entity binding, filed as EX-045).
+- **Cycle 234** — EX-011/030/037's "empty-state CTAs invite unauthorised actions" turned out to be DSL copy quality, not a framework affordance bug. The framework already correctly withholds the Create-first CTA button via `empty_state.html:7-9`. Fix is at the DSL copy layer (EX-046), not the framework rendering layer.
+
+Without Heuristic 1, each of these cycles would have shipped framework code that didn't solve the observed problem. The discipline prevents wrong work, and its hit rate is durable enough to promote from "strongly recommended" to **mandatory**.
+
+**Why subagent observations are unreliable:** Multiple layers separate the subagent's `visible_text` from actual framework behaviour — the substrate's statelessness (form state evaporates between calls), the browser's JS event loop timing, HTMX swap scheduling, observe-time re-navigation that destroys in-place DOM changes, DSL copy that looks like an affordance but isn't. Any of these can fake a framework defect.
+
+**The rule (mandatory — not optional):**
+
+In any `finding_investigation` cycle OR any implementation cycle triggered by a gap doc, the FIRST step is a raw-layer reproduction. If the raw layer shows the framework behaving correctly, the defect is in the observer, the DSL, or the substrate — pivot the cycle to that layer instead. Do not write framework code until the raw layer confirms framework behaviour is incorrect.
 
 **Heuristic 2 — Helper-audit cycles for single-source-of-truth propagation.**
 
@@ -277,6 +288,20 @@ Worth considering as a dedicated cycle type: `helper_audit` — pick a single-so
 Before running `/ship` on a framework-layer fix, run the change against **all 5 example apps** and verify the target behaviour. Cycle 227's first attempted fix reused `compute_persona_default_routes` which honours `persona.default_route` values — a shape simple_task's DSL declares but does not register as real routes. The naïve fix would have redirected simple_task admins to a 404. Cross-app verification caught it immediately.
 
 **Rule**: any `finding_investigation` fix that touches framework code (not test scaffolding or docs) must include an explicit "verified on all 5 example apps" step before commit, even if the fix was motivated by a single app. The 5 apps function as a fidelity oracle for latent DSL shapes you might not have anticipated.
+
+**Heuristic 4 — Defaults propagation audit.**
+
+*Surfaced in cycle 232.*
+
+When the framework introduces a canonical intent declaration (a central lookup table or resolver function that says "this type of thing should use that default"), grep for every call site that *reads* the intent and verify it actually propagates into the context objects templates/consumers actually look at. The intent and the consumer can both exist while the bridge between them is silently incomplete.
+
+**The cycle 232 case**: `src/dazzle/core/ir/triples.py` has a `FIELD_TYPE_TO_WIDGET` map that says `DATE → DATE_PICKER`, `REF → SEARCH_SELECT`. Its resolver `resolve_widget(field_spec)` is called by `template_compiler._field_type_to_form_type()` which derives a `form_type` string. But the form_type string alone isn't enough — the form-field Jinja macro branches on a separate `field.widget` field that was only ever populated from explicit DSL overrides. The intent was declared (triples.py), the resolver was correct, the template consumer existed — but the **bridge** from resolver to context object was missing a default. Date fields correctly rendered as `type="date"` (via the form_type fallback) but never reached the Flatpickr widget branch.
+
+**The pattern**: intent declaration + correct resolver + working consumer ≠ end-to-end correctness. The compiler needs to propagate the intent *into the context object the template actually reads*. This is neither a helper-audit nor a try-the-real-thing issue — it's a subtle data-flow gap that only shows up when you trace from the declaration down to the rendered DOM.
+
+**Rule**: when a framework introduces a canonical intent declaration (like `FIELD_TYPE_TO_WIDGET` or `workspace_allowed_personas` or `PermissionKind`), grep for every call site that reads the intent and verify it propagates all the way to the consumer. Missing propagation is a defect class in its own right — distinct from "helper not called" (Heuristic 2) because the helper IS called, it just produces a value that isn't plumbed through to where it's needed.
+
+Worth considering as a dedicated cycle type: `defaults_propagation_audit` — pick a canonical intent declaration and trace every downstream data-flow path to its rendering consumer. This is a stricter audit than `helper_audit` and catches a different class of drift.
 
 ### Substrate (cycle 198+, v0.55.5)
 

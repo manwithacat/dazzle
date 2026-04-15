@@ -1,10 +1,10 @@
 # Framework Gap — Persona-Unaware Affordances
 
-**Status:** Partially Fixed (2 of 4 axes closed in cycles 226 + 228)
+**Status:** Nearly Fixed (3 of 4 axes closed — workspace nav in 226, bulk-action bars in 228, empty-state CTAs verified-false-positive in 234)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
-**Refreshed:** Cycle 230 (framework_gap_analysis v2)
-**Contributing cycles:** 201, 216, 221, 223
-**Evidence weight:** 8 observations across 4 apps
+**Refreshed:** Cycle 230 (framework_gap_analysis v2), Cycle 235 (framework_gap_analysis v3)
+**Contributing cycles:** 201, 216, 221, 223, 234
+**Evidence weight:** 8 observations across 4 apps (3 of 8 now false-positive after cycle 234)
 
 ---
 
@@ -23,9 +23,11 @@ Cycles 226 and 228 closed 2 of the 4 axes this gap doc originally identified. Th
    - Added a per-request suppression block at `page_routes.py:701` that calls the existing `_user_can_mutate(deps, surface_name, 'delete', auth_ctx)` helper and sets `req_table.bulk_actions = False` when the current persona cannot delete.
    - **EX-040 closed.** fieldtest_hub cross-persona verified: tester/manager = 0 bulkDelete, engineer = 1, on all 4 entity list pages.
 
-### Still-open axes
+### Closed axes (continued)
 
-3. **Empty-state CTAs** — still open. Rows: EX-011 (ops_dashboard/ops_engineer — region empty states invite actions the persona can't perform), EX-030 (support_tickets/customer — my_tickets region missing CTA), EX-037 (fieldtest_hub/tester — "Add your first device" CTA for a persona that can't create devices). Template-compiler level fix: compute `persona_can_create = entity_access(persona, entity, 'create')` and pass it to the empty-state template; template branches on it.
+3. **Empty-state CTAs — closed in cycle 234 as VERIFIED_FALSE_POSITIVE.** Applied Heuristic 1 at the HTTP layer. Fetched rendered region HTML for all three observations (EX-011 ops_dashboard/ops_engineer, EX-030 support_tickets/customer, EX-037 fieldtest_hub/tester). **Framework is already correct.** `src/dazzle_ui/templates/fragments/empty_state.html:7-9` gates the Create-first CTA button on `create_url` being set, and for unauthorised personas `create_url` is None — so the button is correctly withheld in every case. Zero `btn-primary` links observed in any of the three rendered regions. The original subagent reports conflated "action-oriented words in the DSL-authored empty copy" with "a clickable affordance". The copy is DSL-authored (e.g. fieldtest_hub's Device surface declares `empty: "Add your first device..."` at `app.dsl:298`) and the framework renders it verbatim. **The residual defect is at the DSL layer** — per-persona override for `empty:` copy doesn't exist. Filed as **EX-046** with a DSL schema evolution proposal (add `empty:` inside the existing `for <persona>:` block). EX-011, EX-030, EX-037 are all marked VERIFIED_FALSE_POSITIVE against the framework-bug framing.
+
+### Still-open axes
 
 4. **Create-form field visibility** — still open. Rows: EX-029 (support_tickets/customer — Create Ticket form exposes 'Assigned To' ref User to customer). Related but distinct: the widget-selection gap doc from cycle 230 covers WHY ref fields render as plain inputs; this axis covers whether they should be shown to the current persona at all. Fix direction: field-level access rules OR inferred defaults (omit `ref <Entity>` fields if the current persona cannot list `<Entity>`).
 

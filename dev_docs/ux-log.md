@@ -4,6 +4,60 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T23:10Z — Cycle 235 — **framework_gap_analysis v3: closing retrospective for the ~16-cycle resumed arc**
+
+**Strategy:** `framework_gap_analysis` (closing synthesis). The final cycle of the resumed arc. Four outputs:
+
+1. **Closing retrospective doc** — `dev_docs/framework-gaps/2026-04-15-resumed-arc-retrospective.md`. Full accounting of the arc's scoreboard, lessons, open work, and recommendation for the next phase. ~11KB of synthesis covering what was closed, what was learned, what remains, and why.
+
+2. **Heuristic 1 promoted to MANDATORY** in `.claude/commands/ux-cycle.md`. Rationale: the rule caught observations-vs-reality mismatches in **4 of the last 6 investigation cycles** (229, 232 ref-half, 233, 234). Track record is documented inline in the skill with specific cycle citations. Without the heuristic, each of those cycles would have shipped framework code that didn't solve the actual problem.
+
+3. **Heuristic 4 added** — "Defaults propagation audit". Surfaced in cycle 232's EX-009 investigation. Distinct from Heuristic 2 (helper-audit) because the helper IS called, it just doesn't propagate into the context object the consumer reads. The pattern: canonical intent declaration + correct resolver + working consumer ≠ end-to-end correctness if the bridge between resolver and context object has a default-not-set gap. Cited example: `FIELD_TYPE_TO_WIDGET[DATE] = DATE_PICKER` was declared and resolved, but `field.widget` wasn't populated from the resolution, so the template's `field.widget == "picker"` branch never fired.
+
+4. **Gap doc #2 refreshed** — persona-unaware-affordances status changed from "Partially Fixed (2 of 4 axes)" to "Nearly Fixed (3 of 4 axes)". The empty-state CTAs axis was verified-false-positive in cycle 234: framework already withholds the CTA button correctly; the residual defect is DSL copy quality (filed as EX-046). Only axis 4 (create-form field visibility, overlapping with EX-044) remains.
+
+### Arc scoreboard (extracted from the retrospective)
+
+- **21 backlog row state transitions** (closed, reclassified, or partially fixed)
+- **7 framework-code fixes shipped** across cycles 220, 225, 226, 227, 228, 229, 232
+- **~25 new regression tests** added across the arc
+- **5 gap docs** in `dev_docs/framework-gaps/` (4 synthesis + 1 retrospective)
+- **4 durable heuristics** encoded in the skill (Heuristic 1 mandatory, 2/3/4 recommended)
+- **2 new strategies** in the skill (`framework_gap_analysis`, `finding_investigation`) beyond the original `missing_contracts` + `edge_cases`
+- **1 substrate improvement** (`form_submit` helper action)
+- **~51% reduction in the OPEN backlog** (41 → 20 rows)
+- **16 cycle log entries** with full reasoning traces
+- **0 shipped regressions** across 10,453+ unit tests
+
+### The biggest meta-finding
+
+**Dazzle's framework is more correct than the loop's observations suggested.** Across 6 recent investigations, 4 turned out to reveal that the framework was doing the right thing and the defect was elsewhere (substrate, DSL copy, DSL schema, or structural scope boundary). The remaining 2 (cycles 225 and 226) did find real framework bugs — a DSL parser gap and a missed helper-migration site.
+
+This is actually good news for frontier user readiness: the framework's correctness at the runtime layer is high. The gaps that remain are structural DSL questions (persona-entity binding, widget dispatch for refs) and copy-quality DSL issues (per-persona empty text). These are the kind of problems real users on real domains can productively surface — the loop can't fully anticipate them.
+
+### Recommendation for the user (from the retrospective)
+
+1. **Triage discussion on EX-045** (persona-entity binding) — biggest unresolved DSL question, affects every app with a persona-backed domain entity
+2. **Dedicate a cycle to EX-044** (widget-selection ref structural fix) — highest-ROI pure-framework fix remaining
+3. **Release to frontier users only after EX-044 + EX-045 direction is chosen** — real users will surface narrower polish faster than the loop can; structural gaps are the last foundation work that benefits from local probing
+4. **Retain the relaxed skill policy and the 4 durable heuristics** — they're working
+
+### Loop state at arc close
+
+- **Lock file**: will be released after commit
+- **Explore counter**: 11 → 12 / 100 (plenty of budget remaining for next arc)
+- **Worktree**: will be clean after push
+- **CI badge**: green as of cycle 225 (10 cycles ago)
+- **ScheduleWakeup**: **not armed** — this is the last cycle of the dozen-cycle arc the user requested. The loop stops here pending user input.
+
+### Mission assessment
+
+**Textbook arc closure.** 16 cycles, 21 rows transitioned, 7 framework fixes, 4 durable heuristics, 5 gap docs, 1 substrate improvement. The relaxed skill policy (from cycle 224) enabled the judgment-driven strategy selection that produced most of the arc's value. The closing retrospective is comprehensive enough that a future operator (or a future-me) can pick up the state without re-reading every cycle entry.
+
+The loop's endpoint was ambiguous-by-design; this is a natural pause point where the user can review the synthesis, choose a direction (release / fix EX-044 / design EX-045 / keep exploring / pivot), and restart the loop from a cleaner baseline.
+
+---
+
 ## 2026-04-15T23:01Z — Cycle 234 — **finding_investigation: EX-011/030/037 are all VERIFIED_FALSE_POSITIVE — framework already correct, DSL copy at fault**
 
 **Strategy:** `finding_investigation`. Targets: EX-011 (ops_dashboard/ops_engineer empty-state CTAs invite unauthorised actions), EX-030 (support_tickets/customer my_tickets empty missing CTA), EX-037 (fieldtest_hub/tester "Add your first device" copy for a persona that can't create). Planned as "gap doc #2 axis 3 closure" with a single template-compiler edit adding `persona_can_create` to empty-state context.
