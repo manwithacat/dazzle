@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.21] - 2026-04-15
+## [0.55.22] - 2026-04-15
+
+### Added
+- **Cycle 210 — UX-044 dashboard-region-toolbar contract drafted + Phase B PASS.**
+  Per-region toolbar (title + region-actions + CSV export + multi-filter
+  `<select>` bar) that recurs above each workspace region body. HTMX
+  `hx-include="closest .filter-bar"` ties multi-filter coordination
+  together. No Alpine. Phase B against support_tickets:
+  `fitness run [admin:42c1d3cf, agent:1c6f1a9d]: 99 findings (50/49),
+  degraded=False`. 5 quality gates, 8 v2 open questions. **Notable
+  discrepancy with cycle 199 proposal:** the manager-persona observation
+  mentioned a collapse/expand eye button but the current code has no
+  such affordance — flagged for v2 to decide. Eighth cycle-198+
+  subagent-discovered row to DONE.
+
+
 
 ### Added
 - **Cycle 209 — UX-042 activity-feed contract drafted + Phase B PASS.**
