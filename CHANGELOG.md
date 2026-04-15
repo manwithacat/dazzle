@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.35] - 2026-04-15
+
+### Fixed
+- **manwithacat/dazzle#777: list routes leaked bare ``*_id`` columns instead of
+  eagerly loading ref relations.** Two bugs combined to break eager
+  loading whenever a DSL ref field was named with an ``_id`` suffix
+  (the common case — ``device_id: ref Device``, ``reported_by_id: ref
+  Tester``, etc.):
+
+  1. ``entity_converter.convert_entity`` synthesised a ``RelationSpec``
+     whose ``name`` was the **raw field name** (``"device_id"``). That
+     short-circuited the implicit-relation path in
+     ``RelationRegistry.from_entities`` which would otherwise have
+     registered the natural short name ``"device"``. App factory's
+     ``entity_auto_includes`` strips the ``_id`` suffix and asks for
+     ``"device"``, so ``get_relation("IssueReport", "device")`` missed
+     and ``load_relations`` silently ``continue``d past every ref
+     relation. Result: the registry held ``device_id`` but the runtime
+     asked for ``device``, so no nested data was ever attached.
+  2. Even after the first bug was fixed, the list-route handler applied
+     ``json_projection`` to strip fields not listed by the surface —
+     and the allow-list omitted any auto-include relation names. Keys
+     that ``load_relations`` had successfully populated on the row dict
+     were then filtered out before serialization, so the client saw
+     only the scalar columns the surface declared.
+
+  The fix deletes the redundant converter synthesis so
+  ``RelationRegistry.from_entities`` becomes the sole authoritative
+  builder of implicit relations (one code path, consistent naming), and
+  teaches ``create_list_handler`` to union ``auto_include`` into the
+  projection allow-list so eager-loaded nested data survives to the
+  wire. Evidence: fieldtest_hub ``/issuereports`` list response went
+  from ``{device_id: "..."}`` (no nested data) to ``{device_id: "...",
+  device: {id, name, model, ...}}`` with a freshly inserted row whose
+  FK actually resolved. Note: pre-existing seed rows in fieldtest_hub
+  have orphan FKs (deterministic uuid5 IDs that don't match the uuid4
+  Device rows) — that's a demo-data gap, not a framework bug.
+
+### Added
+- 11 new regression tests in ``tests/unit/test_ref_eager_loading_777.py``
+  covering: converter no longer synthesises ``RelationSpec`` from ref
+  fields, ``RelationRegistry.from_entities`` strips ``_id`` and keeps
+  the raw field name as the FK column, raw-column lookups miss by
+  design, json_projection unions ``auto_include``, and four
+  parametrised cases covering the common naming patterns
+  (``device_id``, ``reported_by_id``, ``assigned_to_id``, ``owner``).
+
+### Agent Guidance
+- When adding a DSL ref field, there is now a **single** source of
+  truth for the relation name surfaced at runtime:
+  ``RelationRegistry.from_entities`` in
+  ``src/dazzle_back/runtime/relation_loader.py``. It strips a single
+  trailing ``_id`` from the field name to produce the relation key and
+  keeps the raw field name as ``foreign_key_field``. The entity
+  converter no longer emits ``RelationSpec`` entries from ref fields —
+  do not re-add that shortcut, it reintroduces the naming collision
+  with ``entity_auto_includes``.
+
 ## [0.55.34] - 2026-04-15
 
 ### Fixed

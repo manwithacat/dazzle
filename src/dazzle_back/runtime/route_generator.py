@@ -1660,7 +1660,11 @@ async def _list_handler_body(
 
     # Apply field projection to JSON responses (#360)
     if json_projection and result and isinstance(result, dict) and "items" in result:
+        # Auto-include relation names must survive projection so eager-loaded
+        # nested data reaches the client (#777).
         allowed = set(json_projection)
+        if auto_include:
+            allowed.update(auto_include)
         projected_items = []
         for item in result["items"]:
             if hasattr(item, "model_dump"):

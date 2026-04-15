@@ -30,7 +30,6 @@ from dazzle_back.specs import (
     InvariantLogicalKind,
     InvariantSpec,
     PermissionRuleSpec,
-    RelationKind,
     RelationSpec,
     ScalarType,
     ScopeRuleSpec,
@@ -742,22 +741,13 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         else:
             fields.append(convert_field(f))
 
-    # Note: Relations are inferred from ref fields
-    # In a real implementation, we'd need more sophisticated relation detection
+    # Relations from ref fields are materialised later by
+    # RelationRegistry.from_entities() in the runtime. Synthesising them here
+    # with the raw FK column name (e.g. "device_id") collided with the
+    # stripped short names ("device") that the runtime and app_factory use to
+    # express includes, silently disabling eager relation loading for any
+    # entity whose ref field name ended in "_id" (issue #777).
     relations: list[RelationSpec] = []
-
-    # Extract relations from ref fields
-    for field in dazzle_entity.fields:
-        if field.type.kind == ir.FieldTypeKind.REF and field.type.ref_entity:
-            relations.append(
-                RelationSpec(
-                    name=field.name,
-                    from_entity=dazzle_entity.name,
-                    to_entity=field.type.ref_entity,
-                    kind=RelationKind.MANY_TO_ONE,  # Assume many-to-one for ref fields
-                    required=field.is_required,
-                )
-            )
 
     # Build metadata
     metadata: dict[str, object] = {}
