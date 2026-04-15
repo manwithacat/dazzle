@@ -9,7 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.31] - 2026-04-15
+## [0.55.32] - 2026-04-15
+
+### Added
+- **Cycle 219 — framework maturity assessment.** Synthesised the
+  autonomous /ux-cycle loop's 20 cycles (198-218) + targeted
+  investigations into a qualitative assessment of where the Dazzle
+  framework stands. Written at a natural pause point where the loop
+  has surfaced enough signal to evaluate from. Lives at
+  `dev_docs/framework-maturity-2026-04-15.md`.
+- **Cycle 219 — direct investigation of cycle-217 EX-017 (data-table
+  formatter bug).** Code-level + API-level reproduction confirmed:
+  - Real bug: list routes don't eagerly load ref relations. Template
+    compiler strips `_id` from col_key expecting joined dict
+    (`item['device']`) that never arrives; server dict has
+    `device_id` (UUID).
+  - Second real bug: `datetime auto_add` not honored in seed data —
+    `reported_at: None` on every IssueReport row via `/issuereports`
+    JSON API.
+  - Cycle-218 EX-021 (contact_manager blank cells) is a
+    **false positive** — `/app/contact` renders 11 rows with correct
+    content; subagent's `visible_text` extraction likely caught
+    `<template x-if>` inert content or filter-bar selects.
+- **Filed manwithacat/dazzle#777** with the ref-eager-load investigation + fix
+  direction sketch. Fourth framework-level issue surfaced by the loop
+  this session (manwithacat/dazzle#774 silent-submit, #775 sidebar-nav, #776
+  404-chrome-eject CLOSED, #777 ref-eager-load).
+
+### Changed
+- `dev_docs/ux-backlog.md` EX-017 flagged as FILED→#777 with
+  root-cause summary.
+- `dev_docs/ux-backlog.md` EX-021 flagged as VERIFIED_FALSE_POSITIVE
+  with substrate-level explanation for future subagent cycles to
+  reference.
+
+### Framework maturity verdict (from the assessment doc)
+
+**Composite rating: 3 / 5** — usable for prototyping and internal apps
+today, but 3 open framework-level defects (#774, #775, #777) would
+each block a real customer-facing deployment until fixed. Component
+design system and discovery substrate are rated 4/5; write-path
+correctness is rated 2/5 because of the silent-submit gap. See the
+full assessment doc for the per-axis breakdown and the recommended
+focus order for the next framework work.
+
+
 
 ### Fixed
 - **manwithacat/dazzle#776: 404/403 pages under `/app/*` now render inside the
