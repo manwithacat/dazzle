@@ -4,6 +4,103 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-15T02:50Z — Cycle 198 — **substrate pivot shipped** — Claude Code subagent + stateless Playwright helper
+
+**Outcome:** First real PROP-NNN row added to the backlog via autonomous agent exploration (PROP-037 `workspace-detail-drawer`). Cycle 198 replaces cycle 197's DazzleAgent-on-SDK explore path with a Claude Code subagent driving a stateless Playwright helper. Cognition runs on the Max Pro subscription; the metered Anthropic SDK is eliminated from the explore path.
+
+### The pivot
+
+Cycle 197 shipped v0.55.4 with Layer 4 (click-loop) fixed, but exposed Layer 5: the LLM on DazzleAgent's SDK path under-invoked `propose_component` (11 persona-runs × 5 apps → 0 proposals). Cycle 198 began as "add EXPECT/OBSERVE interlock to DazzleAgent" but the Path γ spike (MCP sampling) returned `Method not found` — Claude Code doesn't implement server→client sampling. The follow-up Option B spike proved that Claude Code Task-tool subagents driving Playwright via Bash produce qualitatively better findings at zero marginal cost.
+
+**Empirical data from the Option B spike** (2026-04-15 ~02:15Z): 1 subagent run against contact_manager/user → 4 proposals + 4 observations in 188s at ~60k subsidised tokens. Cycle 197's v0.55.4 sweep produced 0 proposals across 11 persona-runs at ~330k metered tokens. The substrate was the blocker, not the prompt.
+
+### What shipped
+
+Four commits + runbook rewrite (on top of v0.55.4):
+
+| SHA | Content |
+|---|---|
+| `740a4903` | `src/dazzle/agent/playwright_helper.py` — stateless one-shot Playwright driver with argparse CLI (login/observe/navigate/click/type/wait), `--state-dir` for per-run isolation, 14 unit tests |
+| `37c3e0d9` | `src/dazzle/agent/missions/ux_explore_subagent.py` — `build_subagent_prompt(...)` parameterised template, missing_contracts strategy only (edge_cases raises NotImplementedError), 12 unit tests |
+| `2eadefca` | `src/dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py` — `init_explore_run`, `ExploreRunContext`, `read_findings`, `write_runner_script`, 18 unit tests |
+| `e03f3cf2` | `.claude/commands/ux-cycle.md` Step 6 rewritten as a 10-step subagent-driven playbook |
+
+**Total new code:** ~1200 lines (~500 production, ~700 test). 44 new unit tests, all green.
+
+### Acceptance test — walked the playbook end-to-end
+
+Ran the full production runbook against `contact_manager` with persona `user` at 02:30Z:
+
+1. `init_explore_run` → `dev_docs/ux_cycle_runs/contact_manager_user_20260415-023030/`
+2. Generated runner script booted ModeRunner in background → `conn.json` at `http://localhost:3653` in ~3s
+3. `playwright_helper login` → `"status": "logged_in"`
+4. `build_subagent_prompt` → 6162-char prompt with 35 existing components filtered out
+5. Task tool subagent (general-purpose, sonnet) ran 18 Bash helper calls, 70 total tool_uses, 92,587 subsidised tokens, 416 seconds wall-clock
+6. Subagent wrote 1 proposal + 4 observations to findings.json
+7. `read_findings` validated + returned the structured outcome
+8. `pkill` teardown clean
+9. `PROP-037 workspace-detail-drawer` added to backlog
+
+### The finding itself (PROP-037)
+
+**`workspace-detail-drawer`** — a permanently-mounted right-anchored drawer on workspace pages, distinct from the existing `slide-over` contract. Uses `window.dzDrawer` plain-JS API (not Alpine), always present in DOM, carries a unique "Open full page" affordance that escapes the workspace context and HTMX-loads internal link clicks rather than full-navigating. Three-way interaction model (close / expand-to-full / internal-navigate). Selector: `#dz-detail-drawer`.
+
+Plus 4 observations: one notable accessibility gap (drawer's "Open full page" link has `href="#"` until a row is clicked), three minor follow-up notes on the column-visibility sub-pattern, the workspace card-picker (covered by dashboard-grid), and four template-library region types (tree/timeline/activity_feed/tabbed_list) not rendered in contact_manager but worth exploring on consuming apps.
+
+### Comparison: cycle 197 vs cycle 198
+
+| Metric | Cycle 197 v0.55.4 (DazzleAgent + SDK) | Cycle 198 v0.55.5 (subagent + stateless helper) |
+|---|---|---|
+| **Proposals produced** | 0 across 11 persona-runs | **1 validated proposal on first production run** |
+| **Observations captured** | 0 | 4 (including one notable a11y defect) |
+| **Token cost** | ~330k metered (~$0.50) per sweep | ~92k **subsidised** (~$0 marginal) per persona-run |
+| **Wall-clock** | 513s for 5-app sweep | 416s for 1 persona-run |
+| **Substrate** | Direct Anthropic SDK + native tool use | Claude Code subagent via Task tool + Bash + Playwright helper |
+| **Lines of agent infrastructure owned** | ~1500 lines (`src/dazzle/agent/` core + observer + executor + missions + strategy) | ~500 lines (helper + prompt + init/read/runner-gen) |
+
+### Harness layer scorecard post cycle 198
+
+| # | Layer | Before cycle 198 | After cycle 198 |
+|---|---|---|---|
+| 1 | EXPLORE driver wired | ✓ | ✓ (substrate replaced) |
+| 2 | DazzleAgent tool-use integration | ✓ (kept for walk_contract + investigator) | ✓ (unchanged, not on explore path) |
+| 3 | 5-cycle rule semantic gate | ✗ broken | ✗ unchanged (deferred) |
+| 4 | Agent click-loop on non-navigating actions | ✓ fixed | ✓ (irrelevant — subagent drives the loop) |
+| 5 | LLM under-invokes `propose_component` | ✗ blocked explore | **✓ resolved by substrate pivot — subagents natively propose** |
+| 6 | Terminal `ux-cycle-exhausted` signal | ✗ wrong kind | ✗ unchanged (deferred) |
+| **NEW** | **Subagent cognition inside Max Pro subscription** | — | **✓ shipped** |
+
+**4 of 6 original layers resolved. Layer 3 and Layer 6 are the only remaining harness gaps, and neither blocks autonomous value-adding activity now that proposals are flowing.**
+
+### Deferred to cycle 199+
+
+- **Multi-persona fan-out** — cycle 198 ships single-persona runs. Fan-out is a playbook-level loop, not a code change.
+- **`edge_cases` strategy implementation** — scaffolded but raises NotImplementedError. Cycle 199 can build it once missing_contracts is seen at scale.
+- **Retiring `src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py` + `explore_spike.py`** — dead code for the explore path. Kept during cycle 198 to avoid breaking adjacent paths (fitness still uses the old strategy pattern).
+- **Cycle 197's `tests/e2e/test_explore_strategy_e2e.py`** — left untouched. It still runs the old DazzleAgent path if invoked, but nothing invokes it. Cycle 199 decides whether to delete or port to the subagent path.
+- **Backlog ingestion automation** — the playbook's step 9 ("write PROP-NNN row") is a manual edit. A small writer helper is a natural cycle 199 addition once the finding cadence justifies it.
+- **Path γ spike code cleanup** (`explore_spike.py` handler + `discovery.explore` operation in tools_consolidated.py) — still present in the repo. Harmless but dead; remove in cycle 199's cleanup sweep.
+
+### What this unblocks
+
+This is the first cycle since the session began where **`/ux-cycle` Step 6 EXPLORE actually produces backlog replenishment as a normal consequence of running the harness**. The goal the user articulated at the start of the session — "improve the dazzle framework via examples via ux-cycle" — now has a functional feedback loop: run the playbook, get a proposal, write it to the backlog, repeat.
+
+Further, the token economics confirmed:
+- **Per persona-run:** ~$0 marginal (subsidised)
+- **Per proposal:** ~$0.05 equivalent at metered rates, but free on the subscription
+- **Daily 5-app sweep:** ~$0 vs ~$2.50 metered — a ~$75/month subscription pays for itself if a single human-hour of QA labour per month is avoided
+
+### Cycle complete
+
+- No lock (the cycle 197 5-cycle-exhausted path wasn't entered because this was a brainstorm+implement cycle)
+- Signal emitted: `ux-component-shipped` kind with `component=workspace-detail-drawer, outcome=proposed, cycle=198`
+- Backlog: PROP-037 added
+- `mark_run(source="ux-cycle")` called
+- Bump: 0.55.4 → 0.55.5 (this commit)
+- CHANGELOG: agent guidance about the substrate pivot
+
+---
+
 ## 2026-04-15T00:04Z — Cycle 197 — **Layer 4 shipped + Layer 5 newly exposed**
 
 **Outcome:** D2 acceptance bar NOT met, but Layer 4 (click-loop) is structurally fixed and a new Layer 5 finding is clearly documented. Twelve commits over ~6 hours delivered all planned Layer 4 infrastructure. E2E verification sweep across 5 `examples/` apps ran cleanly but produced 0 proposals, exposing a deeper LLM-behaviour blocker.

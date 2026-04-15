@@ -9,6 +9,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.5] - 2026-04-15
+
+### Added
+- **Cycle 198 — substrate pivot for `/ux-cycle` Step 6 EXPLORE.** Replaces the
+  DazzleAgent-on-direct-SDK explore path with a Claude Code Task-tool subagent
+  driving a stateless Playwright helper via Bash. Cognitive work runs inside
+  the Claude Code host subscription (Max Pro 20) — the metered Anthropic SDK
+  is eliminated from the explore path.
+- **`src/dazzle/agent/playwright_helper.py`** — stateless one-shot Playwright
+  driver. Actions: `login`, `observe`, `navigate`, `click`, `type`, `wait`.
+  Each call is a subprocess that loads state (storage_state + base_url +
+  last_url) from `--state-dir`, performs one action, and saves state back.
+  Session cookies persist across calls. Subagent consumers drive it via Bash.
+- **`src/dazzle/agent/missions/ux_explore_subagent.py`** —
+  `build_subagent_prompt(...)` parameterised mission template. Cycle 198
+  ships `missing_contracts` only; `edge_cases` raises `NotImplementedError`
+  pending a later cycle.
+- **`src/dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py`** —
+  `init_explore_run`, `ExploreRunContext`, `read_findings`,
+  `write_runner_script`. Small composable helpers the outer assistant uses
+  to stage state, boot ModeRunner, and read findings. No async orchestrator
+  function — Claude Code's Task tool is only reachable from the assistant's
+  cognitive loop, so the playbook is assistant-driven.
+- **First real `PROP-037` backlog row** — `workspace-detail-drawer`, found by
+  the production subagent run against `contact_manager` with persona `user`.
+  92k subsidised tokens, 18 helper calls, 416s wall-clock.
+
+### Changed
+- **`.claude/commands/ux-cycle.md` Step 6 rewritten** as a 10-step
+  subagent-driven playbook. Removed all references to `run_explore_strategy`,
+  `DazzleAgent`, and `ANTHROPIC_API_KEY` from the explore path. Claude Code
+  host is now a hard dependency for Step 6 (not for walk_contract or fitness,
+  which still use DazzleAgent).
+
+### Agent Guidance
+- **`/ux-cycle` Step 6 EXPLORE requires a Claude Code host session.** The
+  substrate pivot replaces DazzleAgent's `observe → decide → execute` loop
+  with Claude Code's built-in Task-tool agent framework. Running Step 6 from
+  a non-Claude-Code environment (raw pytest, CI runner without an MCP host)
+  is not supported in cycle 198 and won't be until a later cycle decides
+  whether to generalise.
+- **Stateless Playwright helper pattern for browser-driving subagents.** When
+  a mission prompt needs a subagent to interact with a running app, reach
+  for `python -m dazzle.agent.playwright_helper --state-dir DIR <action>`
+  rather than building a new observer/executor stack. The one-shot
+  subprocess pattern (storage_state file + last_url file) is the
+  load-bearing trick that lets a stateless Bash-driven subagent maintain
+  session continuity.
+- **`run_explore_strategy` (the cycle 197 DazzleAgent-based explore driver)
+  still exists but is deprecated for explore.** It's kept to avoid breaking
+  `tests/e2e/test_explore_strategy_e2e.py` during the migration. Cycle 199
+  decides whether to delete it entirely.
+- **44 new unit tests cover the substrate.** None use Playwright or launch
+  real browsers — the walk-the-playbook production test is the acceptance
+  check.
+
 ## [0.55.4] - 2026-04-15
 
 ### Fixed
