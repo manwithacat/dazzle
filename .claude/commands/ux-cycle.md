@@ -176,45 +176,160 @@ Check the session counter (stored in `.dazzle/ux-cycle-explore-count`). If count
 
 The secondary short-circuit — "last 5 cycles produced 0 findings" — MUST consider only cycles that actually *reached* Step 6 and ran an EXPLORE mission. Housekeeping cycles (retroactive qa-rule sweeps, log-only updates, exhausted-sticky runs) produce 0 EXPLORE findings by construction and must not count toward the streak. Track this via `explored_at` timestamps in `.dazzle/ux-cycle-state.json`.
 
+### Strategy rotation
+
 Alternate strategies by the post-increment counter:
-- Odd-numbered explore cycles: `Strategy.MISSING_CONTRACTS`
-- Even-numbered explore cycles: `Strategy.EDGE_CASES`
+- Odd-numbered explore cycles: `missing_contracts`
+- Even-numbered explore cycles: `edge_cases` (not implemented in cycle 198 — falls back to `missing_contracts` until that strategy ships)
 
-Run the explore strategy via the production driver (added 2026-04-14 in v0.55.2):
+### Substrate (cycle 198+, v0.55.5)
 
-```python
+EXPLORE runs as a Claude Code Task-tool subagent, NOT as a `DazzleAgent` on the direct Anthropic SDK. Cognitive work is billed to the Claude Code host subscription; browser work happens via a stateless Playwright helper subprocess. **The assistant running `/ux-cycle` composes this sequence directly — there is no async orchestrator function.**
+
+**Prerequisites:**
+- Claude Code host running this very session (the `Task` tool must be reachable).
+- `examples/<canonical>/.env` with `DATABASE_URL` + `REDIS_URL`.
+- Postgres + Redis reachable on the local dev box.
+- No `ANTHROPIC_API_KEY` needed — cognition runs through the subscription.
+
+### Playbook (numbered steps the assistant walks through)
+
+**1. Initialise the per-run state directory.** Run via Bash:
+
+```bash
+python -c "
 from pathlib import Path
-from dazzle.agent.missions.ux_explore import Strategy
-from dazzle.cli.runtime_impl.ux_cycle_impl.explore_strategy import run_explore_strategy
-from dazzle.e2e.modes import get_mode
-from dazzle.e2e.runner import ModeRunner
-
-example_root = Path("/Volumes/SSD/Dazzle/examples/<canonical>")
-
-async with ModeRunner(
-    mode_spec=get_mode("a"),
-    project_root=example_root,
-    personas=["admin"],           # rotating persona from the DSL personas list
-    db_policy="preserve",
-) as conn:
-    outcome = await run_explore_strategy(
-        conn,
-        example_root=example_root,
-        strategy=Strategy.MISSING_CONTRACTS,   # or EDGE_CASES
-        personas=["admin"],
-    )
+from dazzle.cli.runtime_impl.ux_cycle_impl.subagent_explore import init_explore_run
+import json
+ctx = init_explore_run(
+    example_root=Path('/Volumes/SSD/Dazzle/examples/<canonical>'),
+    persona_id='<persona_id>',
+)
+print(json.dumps(ctx.to_dict(), indent=2))
+"
 ```
 
-`run_explore_strategy` builds the explore mission via `build_ux_explore_mission`, wires it into `DazzleAgent(use_tool_calls=True)` with a `PlaywrightObserver` + `PlaywrightExecutor`, and returns an `ExploreOutcome` with flat `proposals` / `findings` lists tagged with `persona_id`. Per-persona failures (login rejected, agent crash) are absorbed into `blocked_personas` without aborting remaining personas; all-blocked triggers a `RuntimeError`.
+This creates `dev_docs/ux_cycle_runs/<example>_<persona>_<run_id>/` with an empty `findings.json` + a generated `runner.py`. Capture the printed context dict — every subsequent step uses paths from it.
 
-**Precondition:** same as Phase B — `examples/<canonical>/.env` with `DATABASE_URL` + `REDIS_URL`, plus `ANTHROPIC_API_KEY` in the environment because the agent loop calls the Anthropic SDK directly. `DazzleAgent(use_tool_calls=True)` is a strict requirement — the legacy text-action protocol was empirically confirmed in cycle 147 to stagnate at 8 steps with 0 findings, and the 2026-04-14 tool-use + robust-parser fix is what unblocks explore mode.
+**2. Boot the example app via the generated runner script.** Run via Bash `run_in_background=true`:
 
-Record results:
-- Each entry in `outcome.proposals` → one new `PROP-NNN` row in the backlog's "Proposed Components" table
-- Each entry in `outcome.findings` → one new `EX-NNN` row in the "Exploration Findings" table
-- `outcome.blocked_personas` → notes on the cycle log entry
+```bash
+python <runner_script_path>
+```
 
-Commit with message `ux: explore cycle — {N} proposals, {M} findings`.
+The runner loads the example's `.env`, boots `ModeRunner`, writes `conn.json` inside the state dir, then blocks on SIGTERM. **Do not wait on this call** — it runs for the lifetime of the cycle.
+
+**3. Poll for readiness.** Run via Bash (foreground, ~5s timeout):
+
+```bash
+for i in $(seq 1 20); do
+  test -f <conn_path> && break
+  sleep 0.5
+done
+cat <conn_path>
+```
+
+Grab `site_url` + `api_url` from the JSON.
+
+**4. Log in as the persona.** Run via Bash:
+
+```bash
+python -m dazzle.agent.playwright_helper \
+  --state-dir <state_dir> \
+  login <api_url> <persona_id>
+```
+
+Verify the output JSON has `"status": "logged_in"`. If it has `"error"`, abort the cycle and jump to Step 7 (kill the runner, log the failure).
+
+**5. Build the subagent mission prompt.** Run via Bash:
+
+```bash
+python -c "
+from dazzle.agent.missions.ux_explore_subagent import build_subagent_prompt
+from dazzle.core.appspec_loader import load_project_appspec
+from pathlib import Path
+import os
+
+example_root = Path('<example_root>')
+app_spec = load_project_appspec(example_root)
+persona = next(p for p in app_spec.personas if p.id == '<persona_id>')
+
+# List existing-contracted components so the subagent doesn't re-propose them
+components_dir = Path(os.path.expanduser('~/.claude/skills/ux-architect/components'))
+existing = sorted(p.stem for p in components_dir.glob('*.md')) if components_dir.exists() else []
+
+prompt = build_subagent_prompt(
+    strategy='missing_contracts',
+    example_name='<example_name>',
+    persona_id='<persona_id>',
+    persona_label=persona.label,
+    site_url='<site_url>',
+    helper_command='python -m dazzle.agent.playwright_helper',
+    state_dir='<state_dir>',
+    findings_path='<findings_path>',
+    existing_components=existing,
+    start_route=persona.default_route or '/app',
+    budget_calls=20,
+    min_findings=3,
+)
+print(prompt)
+"
+```
+
+Capture the printed prompt.
+
+**6. Invoke the Task tool with the prompt.** Call the `Agent` / `Task` tool with:
+- `subagent_type`: `general-purpose`
+- `model`: `sonnet`
+- `description`: `Cycle N /ux-cycle explore: <example> <persona>`
+- `prompt`: the string from step 5
+
+Wait for the subagent to complete. Its final message is the report; the findings file is the durable artifact.
+
+**7. Read the findings.** Run via Bash:
+
+```bash
+python -c "
+from pathlib import Path
+from dazzle.cli.runtime_impl.ux_cycle_impl.subagent_explore import (
+    ExploreRunContext, read_findings,
+)
+# Reconstruct context from the state_dir paths captured in step 1
+ctx = ExploreRunContext(
+    example_root=Path('<example_root>'),
+    example_name='<example_name>',
+    persona_id='<persona_id>',
+    run_id='<run_id>',
+    state_dir=Path('<state_dir>'),
+    findings_path=Path('<findings_path>'),
+    conn_path=Path('<conn_path>'),
+    runner_script_path=Path('<runner_script_path>'),
+)
+findings = read_findings(ctx)
+print(f'proposals: {len(findings.proposals)}, observations: {len(findings.observations)}')
+import json
+print(json.dumps(findings.to_dict(), indent=2))
+"
+```
+
+**8. Tear down the runner.** Run via Bash:
+
+```bash
+pkill -TERM -f <runner_script_path> || true
+```
+
+The runner has a 20-minute safety cap anyway, but explicit teardown is cleaner. Verify `.dazzle/mode_a.lock` is released against the example.
+
+**9. Record results.** For each entry in `findings.proposals`:
+- Append a `PROP-NNN` row to the backlog's "Proposed Components" table (incrementing the highest existing ID).
+- Skip if a proposal with the same `component_name` already exists (dedup by name).
+
+For each entry in `findings.observations`:
+- Append an `EX-NNN` row to the "Exploration Findings" table (again, incrementing from the highest existing ID).
+
+Findings in `dev_docs/ux_cycle_runs/<run>/findings.json` are local-only (gitignored); only the backlog row updates get committed.
+
+**10. Commit.** Message: `ux: explore cycle {N} — {proposals} proposals, {observations} observations`. Include the run_id in the body so future diagnosticians can find the raw findings file locally if it still exists.
 
 ### Step 7: Complete
 
