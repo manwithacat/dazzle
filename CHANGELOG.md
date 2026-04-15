@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.9] - 2026-04-15
+
+### Added
+- **`subagent_ingest` helper — automates `/ux-cycle` Step 9 backlog
+  writes.** New module
+  `src/dazzle/cli/runtime_impl/ux_cycle_impl/subagent_ingest.py`
+  exposes `PersonaRun`, `IngestionResult`, and `ingest_findings(...)`.
+  Takes a list of per-persona `SubagentExploreFindings`, parses the
+  existing `dev_docs/ux-backlog.md` to find the highest existing
+  `PROP-NNN` and `EX-NNN` IDs, dedupes proposals by `component_name`
+  against the existing table, formats new rows (escaping pipes,
+  flattening multi-line descriptions), and appends them after the
+  last existing data row in each table. Callers get back an
+  `IngestionResult` with added row counts, dedup skips, and
+  warnings.
+- **13 unit tests** in `tests/unit/test_subagent_ingest.py` covering
+  ID allocation, in-call dedup, cross-cycle dedup, row formatting,
+  pipe escaping, multi-line flattening, empty-input no-ops,
+  single-persona proposals-only runs, and insertion-order
+  preservation against unrelated sections.
+
+### Changed
+- **`.claude/commands/ux-cycle.md` Step 9 rewritten** to call
+  `ingest_findings(...)` from a one-shot `python -c` block instead of
+  narrating the manual "find the next ID, write a row, dedup by name"
+  dance. The log entry (`ux-log.md`) is still written by hand —
+  interpretive prose doesn't benefit from automation.
+
+### Agent Guidance
+- **When walking the `/ux-cycle` Step 6 playbook, use
+  `ingest_findings` instead of hand-writing backlog rows.** It's
+  faster, dedups correctly, and produces consistently-formatted rows
+  that the next cycle's ingestion will parse without surprises.
+
 ## [0.55.8] - 2026-04-15
 
 ### Added

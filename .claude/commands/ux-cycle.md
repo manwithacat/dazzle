@@ -320,14 +320,62 @@ pkill -TERM -f <runner_script_path> || true
 
 The runner has a 20-minute safety cap anyway, but explicit teardown is cleaner. Verify `.dazzle/mode_a.lock` is released against the example.
 
-**9. Record results.** For each entry in `findings.proposals`:
-- Append a `PROP-NNN` row to the backlog's "Proposed Components" table (incrementing the highest existing ID).
-- Skip if a proposal with the same `component_name` already exists (dedup by name).
+**9. Record results.** Run via Bash — the `ingest_findings` helper handles
+ID allocation, dedup, table insertion, and row formatting:
 
-For each entry in `findings.observations`:
-- Append an `EX-NNN` row to the "Exploration Findings" table (again, incrementing from the highest existing ID).
+```bash
+python -c "
+from pathlib import Path
+from dazzle.cli.runtime_impl.ux_cycle_impl.subagent_explore import (
+    ExploreRunContext, read_findings,
+)
+from dazzle.cli.runtime_impl.ux_cycle_impl.subagent_ingest import (
+    PersonaRun, ingest_findings,
+)
 
-Findings in `dev_docs/ux_cycle_runs/<run>/findings.json` are local-only (gitignored); only the backlog row updates get committed.
+ctxs = [  # one per persona-run in this cycle
+    ExploreRunContext(
+        example_root=Path('<example_root>'),
+        example_name='<example_name>',
+        persona_id='<persona_id>',
+        run_id='<run_id>',
+        state_dir=Path('<state_dir>'),
+        findings_path=Path('<findings_path>'),
+        conn_path=Path('<conn_path>'),
+        runner_script_path=Path('<runner_script_path>'),
+    ),
+]
+runs = [
+    PersonaRun(
+        persona_id=ctx.persona_id,
+        run_id=ctx.run_id,
+        example_name=ctx.example_name,
+        findings=read_findings(ctx),
+    )
+    for ctx in ctxs
+]
+result = ingest_findings(
+    backlog_path=Path('/Volumes/SSD/Dazzle/dev_docs/ux-backlog.md'),
+    cycle_number=<N>,
+    runs=runs,
+)
+print('added:', result.prop_rows_added, 'proposals,', result.ex_rows_added, 'observations')
+if result.proposals_skipped_as_duplicates:
+    print('dedup-skipped:', result.proposals_skipped_as_duplicates)
+if result.warnings:
+    print('warnings:', result.warnings)
+"
+```
+
+The helper dedups proposals against existing `PROP-NNN` rows by
+`component_name`, allocates fresh IDs starting from the next free
+number in each table, and appends the new rows after the last existing
+data row in "Proposed Components" and "Exploration Findings".
+
+The findings in `dev_docs/ux_cycle_runs/<run>/findings.json` are
+local-only (gitignored); only the backlog row updates get committed.
+The log entry (`dev_docs/ux-log.md`) is still written by hand — it's
+interpretive prose and doesn't benefit from automation.
 
 **10. Commit.** Message: `ux: explore cycle {N} — {proposals} proposals, {observations} observations`. Include the run_id in the body so future diagnosticians can find the raw findings file locally if it still exists.
 
