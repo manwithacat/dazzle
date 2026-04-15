@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.14] - 2026-04-15
+
+### Added
+- **Cycle 202 — first contract drafted for a cycle-199/200 promoted row.**
+  `UX-043 inline-edit` has a contract at
+  `~/.claude/skills/ux-architect/components/inline-edit.md` (in the
+  ux-architect skill, not the Dazzle repo). Scope: 4 field types
+  (text / bool / badge / date), mutually-exclusive `editing` state on
+  the `dzTable` Alpine controller, phase-based lifecycle
+  (display → editing → saving → success/error). Includes 5 testable
+  quality gates (activation, mutual exclusion, commit round-trip,
+  error retry, keyboard-only completion) and a documented server
+  contract (`PATCH /api/{entity}/{id}/field/{col}`).
+- `UX-043` status in `dev_docs/ux-backlog.md` advanced:
+  `PENDING / contract:MISSING / impl:PENDING / qa:PENDING` →
+  `READY_FOR_QA / contract:DONE / impl:DONE / qa:PENDING`. `impl:DONE`
+  because existing code in `fragments/inline_edit.html`,
+  `fragments/table_rows.html`, and `dz-alpine.js` already matches
+  the drafted contract — the contract was written to reflect current
+  behaviour, not to drive a refactor. First UX-037..046 row to advance
+  past PENDING.
+
+### Agent Guidance
+- **Draft contracts against the existing implementation when possible.**
+  When a component already exists in code (as `inline-edit` did), the
+  contract should describe current behaviour rather than propose a
+  rewrite — that way `impl:DONE` can be set in the same cycle and the
+  row advances straight to READY_FOR_QA. Only mark `impl:PENDING` if
+  the current code genuinely needs a refactor to match the contract.
+- **Open questions belong in the contract.** Things that are
+  deliberately deferred (refocus-after-reload, confirm-mode for
+  selects/checkboxes, optimistic updates, bulk-edit, hint tooltips
+  for inline-edit) live in the contract's "Open Questions for vNext"
+  section. They are not implementation TODOs — they are design
+  decisions the v1 contract explicitly declines to make.
+
 ## [0.55.13] - 2026-04-15
 
 ### Changed
