@@ -71,6 +71,12 @@ class ExploreOutcome:
     tokens_used: int = 0
     # Cycle 197 — pre-dedup counts per persona, for logging and cross-persona analysis
     raw_proposals_by_persona: dict[str, int] = field(default_factory=dict)
+    # Cycle 198 spike — per-persona diagnostic detail for runs that completed
+    # (didn't raise) but produced a non-"completed" transcript. Distinct from
+    # blocked_personas, which holds only personas whose setup/run raised.
+    # Each entry: {"persona_id": str|None, "outcome": str, "error": str|None,
+    # "steps": int, "tokens": int}.
+    per_persona_results: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -319,6 +325,20 @@ async def run_explore_strategy(
     # Cycle 197 — dedup proposals across fan-out, attach raw counts
     outcome.proposals = _dedup_proposals(outcome.proposals)
     outcome.raw_proposals_by_persona = raw_by_persona
+    # Cycle 198 spike — per-persona diagnostic detail (exposes transcript-level
+    # errors that aren't captured by blocked_personas). Callers can grep
+    # per_persona_results[*].error to surface why a persona-run degraded even
+    # when it didn't raise.
+    outcome.per_persona_results = [
+        {
+            "persona_id": r.persona_id,
+            "outcome": r.outcome,
+            "error": r.error,
+            "steps": r.steps,
+            "tokens": r.tokens,
+        }
+        for r in results
+    ]
     return outcome
 
 
@@ -377,6 +397,16 @@ async def _run_one_persona(
     for f in findings:
         f["persona_id"] = persona_id
 
+    # Propagate transcript-level error into _PersonaRunResult.error so
+    # aggregators + callers can surface diagnostic info even when the
+    # persona completed (didn't raise) but the agent loop recorded an
+    # error (cycle 198 spike finding — Path γ was silently returning
+    # degraded=True with zero steps and no error context).
+    persona_error: str | None = None
+    if transcript.outcome != "completed":
+        err = getattr(transcript, "error", None)
+        persona_error = f"{transcript.outcome}: {err}" if err else transcript.outcome
+
     return _PersonaRunResult(
         persona_id=persona_id,
         proposals=proposals,
@@ -384,6 +414,7 @@ async def _run_one_persona(
         outcome=transcript.outcome,
         steps=len(transcript.steps),
         tokens=transcript.tokens_used,
+        error=persona_error,
     )
 
 

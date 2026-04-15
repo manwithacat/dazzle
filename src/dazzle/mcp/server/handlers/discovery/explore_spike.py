@@ -185,6 +185,8 @@ async def discovery_explore_spike_handler(project_path: Path, args: dict[str, An
             "steps_run": outcome.steps_run,
             "tokens_used": outcome.tokens_used,
             "raw_proposals_by_persona": outcome.raw_proposals_by_persona,
+            # Cycle 198 spike diagnostic — per-persona outcome + transcript error
+            "per_persona_results": outcome.per_persona_results,
         },
         indent=2,
     )
