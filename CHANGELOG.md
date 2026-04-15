@@ -9,7 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.24] - 2026-04-15
+## [0.55.25] - 2026-04-15
+
+### Added
+- **Cycle 213 — first explore cycle past the UX-037..046 milestone.**
+  Subagent walked `simple_task` as the `member` persona using the
+  `missing_contracts` strategy. 11 helper calls, ~74k subsidised tokens,
+  207s wall-clock. Surfaced **2 proposals + 2 observations** ingested
+  via `ingest_findings`:
+  - `PROP-047 feedback-widget` — `dz-feedback-*` floating FAB + popover
+    with chip-group category/severity inputs and submit lifecycle.
+    Rendered on every authed layout.
+  - `PROP-048 theme-toggle` — `#dz-theme-toggle` tri-state persistent
+    theme switcher shared across marketing and authed shells.
+  - `EX-008 (notable)` — `/app/task/1` 404 renders the public marketing
+    chrome ("Sign In", "Go Home") even when the session is still valid.
+    Cross-app convergence with cycle-201 EX-003 (same defect in
+    support_tickets) — now confirmed at the **framework level**, not a
+    per-app issue.
+  - `EX-009 (notable)` — Task create form renders `due_date` and
+    `assigned_to` as plain `<input>` elements rather than the
+    `widget-datepicker` / `widget-search-select` widgets. DSL author
+    expectation vs framework form-generation gap. Same shape as the
+    cycle-199 manager observation against support_tickets.
+
+### Agent Guidance
+- **Cross-app cross-cycle convergence is the highest-quality signal.**
+  Two separate subagents, two different apps, same defect: the 404/403
+  marketing-chrome behaviour is now confirmed as a framework-level bug,
+  not a support_tickets quirk. Same for the form-widget-selection gap.
+  Both are stronger candidates for filing as upstream issues than any
+  single-cycle finding.
+
+
 
 ### Added
 - **Cycle 212 — UX-046 bulk-action-bar contract drafted + Phase B PASS.**
