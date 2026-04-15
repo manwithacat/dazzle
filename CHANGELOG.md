@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.17] - 2026-04-15
+## [0.55.18] - 2026-04-15
+
+### Added
+- **Cycle 206 — UX-038 workspace-card-picker contract drafted + Phase B PASS.**
+  Pure-presentation Alpine popover catalog over a server-supplied
+  `catalog` array, parent-owned state model (`showPicker`, `catalog`,
+  `addCard` on the dashboard editor controller). 5 quality gates,
+  7 v2 open questions (ARIA `role="menu"`, focus management, Escape,
+  auto-close after add, search filter, keyboard nav, position
+  fallback). Phase B against support_tickets:
+  `fitness run [admin:569bad2e, agent:e3af653e]: 93 findings (44/49),
+  degraded=False`. Fourth cycle-198+ subagent-discovered row to DONE.
+
+
 
 ### Added
 - **Cycle 205 — UX-037 workspace-detail-drawer contract drafted + Phase B PASS.**
