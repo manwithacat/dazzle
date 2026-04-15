@@ -9,7 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.28] - 2026-04-15
+## [0.55.29] - 2026-04-15
+
+### Added
+- **Cycle 217 — explore: fieldtest_hub / engineer / edge_cases.**
+  Highest-yield edge_cases run yet. ~18 helper calls, ~61k subsidised
+  tokens, 369s wall-clock. **0 proposals + 7 observations** (4
+  concerning, 2 notable, 1 minor) — all ingested as EX-013..019:
+  - **Two more cross-app convergences** strengthen existing
+    framework-level signals:
+    - **404/403 → marketing chrome dropout** now confirmed in **four**
+      apps (support_tickets EX-003, simple_task EX-008, ops_dashboard
+      adjacent EX-010, fieldtest_hub EX-014). This is conclusively a
+      framework-level layout dispatch bug, not a per-app issue.
+    - **Silent form submit failure** now confirmed in two apps
+      (support_tickets manwithacat/dazzle#774, fieldtest_hub EX-018). Same shape as
+      the cycle-201 finding.
+  - **Genuinely new framework-level findings**:
+    - EX-016: data-table FK lookup + datetime formatter both silently
+      failing (rendering "-" and blank). The walker observed
+      IssueReport rows where Device should be a ref display name and
+      Reported At should be a timestamp — both empty. Two formatters,
+      not one.
+    - EX-019: bulk-action-bar visible without selection AND showing
+      "Delete  items" with missing count. **Possible regression of
+      UX-046 quality gate 1** (the visibility binding should be
+      `bulkCount > 0`). Worth investigating before the next cycle
+      adopts the contract for fieldtest_hub.
+    - EX-013: sidebar "Issue Board" link unresolvable; fourth
+      independent confirmation of the sidebar-403 / nav-mismatch
+      pattern.
+    - EX-017: empty-state copy "No issues reported yet - great work!"
+      contradicts an adjacent region showing 5 issues. Cross-region
+      inconsistency in the same workspace.
+
+### Agent Guidance
+- **Edge_cases against rich-content apps is qualitatively different
+  from edge_cases against empty apps.** Cycle 217 produced 7 findings
+  in fieldtest_hub vs cycle 216's 3 in ops_dashboard. The presence of
+  seed data + rich region templates makes the difference. Future
+  edge_cases cycles should prefer apps where the persona has reachable
+  content.
+- **EX-019 may be a UX-046 regression.** The bulk-action-bar contract's
+  Quality Gate 1 says "When `bulkCount === 0`, the bar is hidden". The
+  fieldtest_hub finding says the bar is visible at zero count. Either
+  fieldtest_hub uses a stale fragment, or the contract walker on the
+  cycle 212 PASS happened to hit a path where the bar was hidden but
+  the gate didn't actually verify the negative. Worth a re-verification
+  cycle against fieldtest_hub specifically.
+
+
 
 ### Added
 - **Cycle 216 — explore: ops_dashboard / ops_engineer / missing_contracts.**
