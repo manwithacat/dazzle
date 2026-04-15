@@ -1196,19 +1196,20 @@ def create_page_routes(
                 )
             ws_nav_group_map[ws.name] = groups
 
+        # Import the shared access-resolution helper — the same function the
+        # template_compiler uses to build nav_by_persona, so enforcement and
+        # sidebar stay in sync (manwithacat/dazzle#775).
+        from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+
         for workspace in workspaces:
             ws_ctx = build_workspace_context(workspace, appspec)
             _ws_route = f"{app_prefix}/workspaces/{workspace.name}"
-            _explicit_access = getattr(workspace, "access", None)
-            if _explicit_access:
-                _ws_allowed = list(workspace.access.allow_personas)
-            else:
-                # No explicit access: declaration — infer from persona default_workspace.
-                # Only restrict if at least one persona claims this workspace; otherwise
-                # leave open to all authenticated users (backward-compat).
-                _ws_allowed = [
-                    p.id for p in appspec.personas if p.default_workspace == workspace.name
-                ]
+            _allowed = workspace_allowed_personas(workspace, list(appspec.personas))
+            # The _workspace_handler interprets an empty _ws_allowed list as
+            # "no restriction" (backward compat), so we flatten None and
+            # non-empty lists into either "empty list = no restriction" or
+            # "non-empty list = restrict to these personas".
+            _ws_allowed = [] if _allowed is None else list(_allowed)
             _ws_entity_items = ws_entity_nav.get(workspace.name, [])
             _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
 

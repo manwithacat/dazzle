@@ -464,6 +464,69 @@ def convert_workspaces(
 # =============================================================================
 
 
+def workspace_allowed_personas(
+    workspace: ir.WorkspaceSpec,
+    personas: list[ir.PersonaSpec],
+) -> list[str] | None:
+    """Return the set of persona IDs allowed to access a workspace.
+
+    This is the **single source of truth** for "who can see this workspace".
+    Both the server-side access enforcement (``_workspace_handler``) and the
+    sidebar nav generator (``template_compiler``) must call this function so
+    they agree on what each persona sees. Before this helper existed
+    (manwithacat/dazzle#775), the two paths had diverging rules and the sidebar would
+    show workspace links for personas that the enforcement path would 403 on
+    — a pattern observed in 4 example apps across cycles 199, 201, 216, 217
+    of the autonomous ``/ux-cycle`` loop.
+
+    Resolution order:
+
+    1. **Explicit `access.allow_personas`** — if the DSL declares
+       ``access: persona(admin, agent)`` with a non-empty ``allow_personas``
+       list, exactly those personas are allowed. Returns the list verbatim.
+    2. **Explicit `access.deny_personas`** — if the DSL declares a non-empty
+       deny list (and no allow list), all personas except the denied ones
+       are allowed. Returns the inverted set.
+    3. **Implicit `persona.default_workspace`** — if no explicit access
+       declaration exists on the workspace, personas are filtered by their
+       ``default_workspace`` attribute: only personas whose
+       ``default_workspace`` equals this workspace's name are allowed.
+    4. **Fallback: all personas** — if the workspace has no explicit access
+       AND no persona claims it as their default, return ``None`` meaning
+       "visible to every authenticated user". This preserves backward
+       compatibility with workspaces that predate ``default_workspace``.
+
+    A return value of ``None`` means **no filter** (visible to everyone
+    authenticated). A return value of an empty list means **no one** — which
+    is a legitimate configuration but almost always a DSL bug; callers
+    should probably log a warning. A non-empty list means **only these
+    personas**.
+
+    Args:
+        workspace: The workspace IR node.
+        personas: The list of all persona specs from the AppSpec. Used only
+            for resolution steps 2 and 3 (deny-list inversion and
+            default_workspace inference).
+
+    Returns:
+        A list of persona IDs, or ``None`` for the "no filter" case.
+    """
+    ws_access = getattr(workspace, "access", None)
+    if ws_access is not None:
+        allow = list(getattr(ws_access, "allow_personas", None) or [])
+        deny = list(getattr(ws_access, "deny_personas", None) or [])
+        if allow:
+            return allow
+        if deny:
+            return [p.id for p in personas if p.id not in deny]
+    # No explicit access declaration — infer from persona default_workspace
+    claimants = [p.id for p in personas if p.default_workspace == workspace.name]
+    if claimants:
+        return claimants
+    # Truly open workspace (backward compat for pre-default_workspace apps)
+    return None
+
+
 def compute_persona_default_routes(
     personas: list[ir.PersonaSpec],
     workspaces: list[ir.WorkspaceSpec],

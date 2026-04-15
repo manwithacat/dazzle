@@ -9,7 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.33] - 2026-04-15
+## [0.55.34] - 2026-04-15
+
+### Fixed
+- **manwithacat/dazzle#775: sidebar nav showed inaccessible workspace links.** The
+  enforcement path (``_workspace_handler``) and the sidebar nav
+  generator (``template_compiler``) were using **two different rules**
+  to decide who could see each workspace:
+
+  | Path | Rule when no explicit ``access:`` declaration |
+  |---|---|
+  | Enforcement | only personas whose ``default_workspace == ws.name`` |
+  | Sidebar nav | all personas |
+
+  So in apps like ``support_tickets`` that declare no explicit
+  ``access:`` on their workspaces (it relies on ``persona
+  default_workspace`` instead), the sidebar showed every persona every
+  workspace link, but clicking any non-default workspace returned 403.
+  4-app cross-cycle evidence from cycles 199/201/216/217 of the
+  ``/ux-cycle`` autonomous loop.
+
+  The fix introduces ``workspace_allowed_personas`` in
+  ``src/dazzle_ui/converters/workspace_converter.py`` as the **single
+  source of truth** for "who can see this workspace". Both the
+  enforcement path in ``page_routes.py`` and the sidebar nav generator
+  in ``template_compiler.py`` now call it, so they agree byte-for-byte.
+
+  Resolution order inside the helper:
+  1. Explicit ``access.allow_personas`` — returned verbatim
+  2. Explicit ``access.deny_personas`` — inverted against the full persona list
+  3. Implicit ``persona.default_workspace`` — personas claiming this workspace
+  4. Fallback: return ``None`` meaning "no filter, visible to everyone"
+
+  The fallback preserves backward compatibility for workspaces that
+  predate the ``default_workspace`` attribute.
+
+### Added
+- 12 new unit tests in ``tests/unit/test_workspace_allowed_personas.py``
+  covering all four rules, edge cases (empty access object, access=None,
+  deny-all, no personas), and an end-to-end fixture matching the actual
+  ``support_tickets`` shape that originally surfaced #775.
+- End-to-end verification against live ``support_tickets`` with a fresh
+  ``ModeRunner`` subprocess:
+  - agent sees only ``ticket_queue``
+  - customer sees only ``my_tickets``
+  - manager sees only ``agent_dashboard``
+  - zero ghost links
+
+### Agent Guidance
+- **Use ``workspace_allowed_personas`` whenever you need to decide who
+  can see a workspace.** This is now the single source of truth. Don't
+  reintroduce inline rules in new code paths. If a new scenario needs
+  a different rule, extend the helper.
+
+
 
 ### Fixed
 - **manwithacat/dazzle#774: silent create-form failure.** Create handlers now auto-inject

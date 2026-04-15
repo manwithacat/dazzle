@@ -1177,6 +1177,15 @@ def compile_appspec_to_templates(
     nav_by_persona: dict[str, list[NavItemContext]] = {}
     # Track which personas each workspace allows (for entity nav below)
     _ws_personas: dict[str, list[str]] = {}
+    # Delegate workspace-access resolution to the shared helper so the sidebar
+    # nav and the server-side access enforcement agree on who sees what.
+    # Before manwithacat/dazzle#775 was fixed, this block had its own divergent rule and
+    # ghost nav links appeared in 4 example apps.
+    from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+
+    _personas_list = list(getattr(appspec, "personas", []) or [])
+    _all_pids = [p.id for p in _personas_list if p.id]
+
     for ws in appspec.workspaces:
         route = f"{app_prefix}/workspaces/{ws.name}"
         item = NavItemContext(
@@ -1185,37 +1194,14 @@ def compile_appspec_to_templates(
         )
         nav_items.append(item)
 
-        # Build per-persona nav: workspace access declarations determine
-        # which personas can see each workspace in the nav sidebar.
-        ws_access = getattr(ws, "access", None)
-        if ws_access:
-            allow = getattr(ws_access, "allow_personas", None) or []
-            deny = getattr(ws_access, "deny_personas", None) or []
-            level = str(getattr(ws_access, "level", ""))
-            if allow and "persona" in level.lower():
-                # Only add to allowed personas
-                _ws_personas[ws.name] = list(allow)
-                for persona_id in allow:
-                    nav_by_persona.setdefault(persona_id, []).append(item)
-                continue
-            if deny:
-                # Add to all personas except denied ones
-                matched: list[str] = []
-                for p in getattr(appspec, "personas", []) or []:
-                    pid = getattr(p, "name", None) or getattr(p, "id", "")
-                    if pid and pid not in deny:
-                        nav_by_persona.setdefault(pid, []).append(item)
-                        matched.append(pid)
-                _ws_personas[ws.name] = matched
-                continue
-        # No access restriction — add to all personas
-        all_pids: list[str] = []
-        for p in getattr(appspec, "personas", []) or []:
-            pid = getattr(p, "name", None) or getattr(p, "id", "")
-            if pid:
-                nav_by_persona.setdefault(pid, []).append(item)
-                all_pids.append(pid)
-        _ws_personas[ws.name] = all_pids
+        allowed = workspace_allowed_personas(ws, _personas_list)
+        # None means "open to all authenticated" → add to every persona.
+        # Empty list means "no one" — leave out of every persona's nav.
+        # Non-empty list means "only these personas".
+        pids_for_this_ws = _all_pids if allowed is None else list(allowed)
+        _ws_personas[ws.name] = pids_for_this_ws
+        for pid in pids_for_this_ws:
+            nav_by_persona.setdefault(pid, []).append(item)
 
     # Add entity surface links derived from workspace regions so that
     # entity pages show the same nav items as workspace pages.
