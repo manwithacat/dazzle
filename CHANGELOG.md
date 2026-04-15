@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.16] - 2026-04-15
+
+### Added
+- **Cycle 204 — UX-040 kanban-board contract drafted + Phase B PASS.**
+  Contract at `~/.claude/skills/ux-architect/components/kanban-board.md`:
+  read-only horizontally-scrolling column board grouped by enum field,
+  HTMX-into-`workspace-detail-drawer` on card click (no drag-and-drop
+  in v1), Load-all overflow handling, server-owned state. Inherits
+  card chrome from `region-wrapper` (UX-035). 5 quality gates
+  (multi-column rendering, card→drawer routing, ref-link
+  stopPropagation, Load-all reload, empty-state passthrough), 6 v2
+  open questions deferred (card semantics for accessibility,
+  horizontal keyboard scroll, drag-and-drop, non-enum grouping, WIP
+  limits, scroll-position memory).
+- **UX-040 advanced to `DONE / qa:PASS`** via the same Phase B
+  fitness contract walk pattern cycle 203 used for UX-043:
+  `fitness run [admin:06eae945, agent:ff320c65]: 102 findings total
+  (admin=51, agent=51), degraded=False`. Both personas reached
+  `/app/workspaces/ticket_queue` and the walker completed cleanly.
+  Second cycle-198+ subagent-discovered row to reach DONE.
+
+### Agent Guidance
+- **Drafting a contract from existing code is a tight loop.** Cycle
+  204 took ~10 minutes wall-clock from "find the template" to "Phase
+  B PASS shipped" because the implementation already matched the
+  contract semantics — only the documentation was missing. When
+  drafting future contracts for cycle 200's promoted rows, look for
+  this pattern: read the template, describe what it does, run Phase
+  B, ship.
+
 ## [0.55.15] - 2026-04-15
 
 ### Changed
