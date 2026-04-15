@@ -9,7 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.26] - 2026-04-15
+## [0.55.27] - 2026-04-15
+
+### Added
+- **Cycle 215 — UX-048 theme-toggle contract drafted + Phase B PASS.**
+  Contract documents reality vs the cycle-213 proposal: it's a
+  **two-state user-explicit toggle** (light ↔ dark), NOT a tri-state
+  switcher as PROP-048 originally claimed. The system preference
+  (`prefers-color-scheme`) is consulted only as a default seed when
+  localStorage has no stored value. Phase B against simple_task:
+  `fitness run [admin:40698edc, member:138ebeb6]: 73 findings (36/37),
+  degraded=False`.
+- **Headline finding: cross-shell sync is broken.** The marketing shell
+  uses `localStorage.dz-theme-variant` (vanilla JS in
+  `runtime/static/js/site.js`), the in-app shell uses
+  `localStorage.dz-dark-mode` (Alpine `$persist` in `app_shell.html`).
+  Both write `<html data-theme>` but neither reads the other's key. A
+  user toggles dark on the marketing site, logs in, and the app shell
+  silently defaults to light. The cycle-213 proposal claimed "single
+  source of truth" — that was aspirational, not reality. v2 must
+  consolidate to a single key + controller.
+- 5 quality gates (toggle attribute swap, persistence within a shell,
+  system seed for marketing only, stored pref overrides system, two
+  distinct localStorage keys documented as current-broken-state),
+  9 v2 open questions led by the cross-shell sync gap and missing
+  `aria-pressed`.
+
+### Agent Guidance
+- **Contracts must document reality, not the proposal.** Cycle 213's
+  PROP-048 claimed tri-state with a single source of truth. The actual
+  code is two-state with two stores. The contract describes what
+  exists today and flags the divergence as the v2 priority. Future
+  cycles should follow this pattern: read the implementation first,
+  write the contract against it, list the gaps in Open Questions.
+
+
 
 ### Added
 - **Cycle 214 — triage + UX-047 feedback-widget contract + Phase B PASS.**
