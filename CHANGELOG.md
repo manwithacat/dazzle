@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.24] - 2026-04-15
+
+### Added
+- **Cycle 212 — UX-046 bulk-action-bar contract drafted + Phase B PASS.**
+  Final cycle-198+ subagent-discovered row to reach DONE. `bulkCount`-driven
+  visibility with enter/leave transitions, count-pluralised
+  "Delete N item(s)" + "Clear selection" escape, parent-controller-owned
+  state, muted destructive treatment (8% bg-tint hover, not filled).
+  Phase B against support_tickets:
+  `fitness run [admin:424f981a, agent:acb76a1d]: 91 findings (43/48),
+  degraded=False`. 5 quality gates, 9 v2 open questions including
+  Escape-to-clear, live region, in-flight loading state, built-in
+  confirmation, multi-action support, selection persistence across
+  pagination, select-all-matching, position variant (inline vs
+  fixed-bottom), and undo affordance.
+
+### **MILESTONE — UX-037..046 set complete**
+
+All ten cycle-198+ subagent-discovered UX rows are now `DONE / qa:PASS`.
+The full `/ux-cycle` substrate has been proven end-to-end on real
+content: explore → ingest → triage → SPECIFY → QA, repeated for ten
+distinct components across `support_tickets` and `contact_manager`.
+
+| Row | Component | Cycle DONE | Canonical |
+|---|---|---|---|
+| UX-037 | workspace-detail-drawer | 205 | contact_manager |
+| UX-038 | workspace-card-picker | 206 | support_tickets |
+| UX-039 | workspace-tabbed-region | 207 | support_tickets |
+| UX-040 | kanban-board | 204 | support_tickets |
+| UX-041 | column-visibility-picker | 208 | support_tickets |
+| UX-042 | activity-feed | 209 | support_tickets |
+| UX-043 | inline-edit | 203 | support_tickets |
+| UX-044 | dashboard-region-toolbar | 210 | support_tickets |
+| UX-045 | dashboard-edit-chrome | 211 | support_tickets |
+| UX-046 | bulk-action-bar | 212 | support_tickets |
+
+The next `/ux-cycle` invocation will fall through Step 1's PENDING
+priority and enter Step 6 EXPLORE (or hit the explore budget short-circuit
+if the session counter is exhausted).
+
 ## [0.55.23] - 2026-04-15
 
 ### Added
