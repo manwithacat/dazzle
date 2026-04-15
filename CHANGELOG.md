@@ -9,7 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.55.27] - 2026-04-15
+## [0.55.28] - 2026-04-15
+
+### Added
+- **Cycle 216 — explore: ops_dashboard / ops_engineer / missing_contracts.**
+  11 helper calls, ~70k subsidised tokens, 264s wall-clock. Useful
+  **negative result**: 0 proposals + 3 observations. The substrate is
+  operating correctly; ops_dashboard simply doesn't expose new
+  uncontracted patterns to this persona because (a) the seed is empty,
+  (b) ops_dashboard's DSL only uses `list` mode regions and not the
+  richer region templates (heatmap, funnel, timeline, tree, metrics,
+  progress, diagram, bar_chart) that `src/dazzle_ui/templates/workspace/regions/`
+  ships with.
+- **Cross-app convergence #3 on the sidebar-403 pattern.** EX-010 in
+  ops_dashboard joins EX-002 (support_tickets) and a similar finding
+  in cycle 199's manager run. Same shape: nav links visible, persona
+  can't actually access. **Three independent confirmations across
+  three distinct example apps now make this a framework-level pattern
+  worth filing as an issue separately from the cycle-201 issue #775.**
+  Possibly the same root cause manifesting at the framework level
+  (sidebar generator doesn't filter by `access:` rules).
+- 3 new EX rows (EX-010..012): sidebar-403, ops-engineer empty-state
+  CTAs invite admin-gated actions, and a minor "no uncontracted
+  components visible on the reachable surface" observation.
+
+### Agent Guidance
+- **Empty-state runs have low component yield.** Cycle 216 confirms
+  what intuition suggested: subagent explore against an app with no
+  seed data reaches very few interactive surfaces. Future explore
+  cycles should prefer (a) apps with rich seed data, (b) the
+  `component_showcase` fixture which exercises every region template
+  type, or (c) personas with admin reach. Picking ops_engineer was
+  technically correct (it's the persona that owns the workspace) but
+  empirically unproductive.
+- **Negative results are first-class findings.** Cycle 216 produced
+  zero proposals but a strong cross-app convergence signal on the
+  sidebar-403 framework-level pattern. Don't treat 0-proposal cycles
+  as wasted — the substrate evidence and the cross-cycle confirmation
+  are real value.
+
+
 
 ### Added
 - **Cycle 215 — UX-048 theme-toggle contract drafted + Phase B PASS.**
