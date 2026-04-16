@@ -45,7 +45,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from pydantic import ValidationError
+
 from .. import ir
+from ..errors import make_parse_error
 from ..lexer import TokenType
 
 
@@ -172,19 +175,31 @@ class LedgerParserMixin:
 
         self.expect(TokenType.DEDENT)
 
-        return ir.LedgerSpec(
-            name=str(name),
-            label=label,
-            intent=intent,
-            account_code=account_code,
-            ledger_id=ledger_id,
-            account_type=account_type,
-            currency=currency,
-            flags=flags,
-            sync=sync,
-            tenant_scoped=tenant_scoped,
-            metadata_mapping=metadata_mapping,
-        )
+        try:
+            return ir.LedgerSpec(
+                name=str(name),
+                label=label,
+                intent=intent,
+                account_code=account_code,
+                ledger_id=ledger_id,
+                account_type=account_type,
+                currency=currency,
+                flags=flags,
+                sync=sync,
+                tenant_scoped=tenant_scoped,
+                metadata_mapping=metadata_mapping,
+            )
+        except ValidationError as e:
+            # Surface Pydantic constraint failures (e.g. account_code < 1)
+            # as structured parse errors so malformed / fuzz-mutated DSL
+            # doesn't crash the caller with a raw pydantic traceback.
+            token = self.current_token()
+            raise make_parse_error(
+                f"Invalid ledger '{name}': {e.errors()[0]['msg']}",
+                self.file,
+                token.line,
+                token.column,
+            ) from e
 
     def parse_transaction(self) -> ir.TransactionSpec:
         """

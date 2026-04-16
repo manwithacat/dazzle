@@ -202,6 +202,10 @@ class SurfaceSpec(BaseModel):
         actions: List of actions available on this surface
         ux: Optional UX semantic layer specification
         access: Optional access control specification for auth/RBAC
+        headless: Surface is intentionally API-only (no rendered form — e.g.
+            a client-side widget owns the UI and POSTs directly). When True,
+            the "no sections defined" lint warning is suppressed because
+            sections are deliberately empty.
     """
 
     name: str
@@ -219,6 +223,7 @@ class SurfaceSpec(BaseModel):
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
     related_groups: list[RelatedGroup] = Field(default_factory=list)
+    headless: bool = False
 
     model_config = ConfigDict(frozen=True)
 

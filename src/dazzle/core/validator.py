@@ -371,8 +371,10 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                             f"does not exist on entity '{entity.name}'"
                         )
 
-        # Warn if no sections
-        if not surface.sections:
+        # Warn if no sections — unless the surface is intentionally headless
+        # (e.g. a framework-generated API-only surface whose UI lives in a
+        # client-side widget).
+        if not surface.sections and not getattr(surface, "headless", False):
             warnings.append(f"Surface '{surface.name}' has no sections defined")
 
         # Check mode consistency

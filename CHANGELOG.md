@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.17] - 2026-04-17
+
+### Added
+- `SurfaceSpec.headless: bool = False` — marks a surface as intentionally API-only (no rendered form, e.g. a client-side widget owns the UI). Suppresses the "no sections defined" lint warning for these surfaces.
+
+### Fixed
+- `feedback_create` (framework-generated headless CREATE surface) now carries `headless=True` so the lint no-longer warns on every feedback-enabled app.
+- Ledger parser wraps `LedgerSpec(...)` construction in `try/except ValidationError` and re-raises as a structured `ParseError` with token line/column. Previously a fuzz-mutated ledger with `account_code=0` / `ledger_id=0` would crash the caller with a raw pydantic traceback (caught by `test_insert_keyword_mutation`).
+
 ## [0.57.16] - 2026-04-17
 
 ### Fixed

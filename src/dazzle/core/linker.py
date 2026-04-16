@@ -412,6 +412,7 @@ def _build_feedback_create_surface() -> ir.SurfaceSpec:
         mode=ir.SurfaceMode.CREATE,
         sections=[],
         access=ir.SurfaceAccessSpec(require_auth=True),
+        headless=True,
     )
 
 
