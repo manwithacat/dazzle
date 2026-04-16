@@ -250,11 +250,11 @@ async def exchange_github_code(
             code="missing_dependency",
         )
 
-    from dazzle_back.runtime.http_utils import http_call_with_retry
+    from dazzle.core.http_client import async_retrying_request
 
     async with httpx.AsyncClient() as client:
         # Exchange code for access token
-        token_response = await http_call_with_retry(
+        token_response = await async_retrying_request(
             client,
             "POST",
             "https://github.com/login/oauth/access_token",
@@ -285,7 +285,7 @@ async def exchange_github_code(
         access_token = token_data["access_token"]
 
         # Fetch user profile
-        user_response = await http_call_with_retry(
+        user_response = await async_retrying_request(
             client,
             "GET",
             "https://api.github.com/user",
@@ -307,7 +307,7 @@ async def exchange_github_code(
         # Fetch primary email
         email = user_data.get("email")
         if not email:
-            emails_response = await http_call_with_retry(
+            emails_response = await async_retrying_request(
                 client,
                 "GET",
                 "https://api.github.com/user/emails",
@@ -362,11 +362,11 @@ async def verify_github_token(access_token: str) -> SocialProfile:
             code="missing_dependency",
         )
 
-    from dazzle_back.runtime.http_utils import http_call_with_retry
+    from dazzle.core.http_client import async_retrying_request
 
     async with httpx.AsyncClient() as client:
         # Fetch user profile
-        user_response = await http_call_with_retry(
+        user_response = await async_retrying_request(
             client,
             "GET",
             "https://api.github.com/user",
@@ -388,7 +388,7 @@ async def verify_github_token(access_token: str) -> SocialProfile:
         # Fetch primary email
         email = user_data.get("email")
         if not email:
-            emails_response = await http_call_with_retry(
+            emails_response = await async_retrying_request(
                 client,
                 "GET",
                 "https://api.github.com/user/emails",

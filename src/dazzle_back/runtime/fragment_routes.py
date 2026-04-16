@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from starlette.responses import Response
 
-from dazzle_back.runtime.http_utils import http_call_with_retry
+from dazzle.core.http_client import async_retrying_request
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def create_fragment_router(
 
             if data is None:
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await http_call_with_retry(
+                    resp = await async_retrying_request(
                         client,
                         "GET",
                         search_url,
@@ -171,7 +171,7 @@ def create_fragment_router(
 
             if record is None:
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await http_call_with_retry(client, "GET", full_url, headers=headers)
+                    resp = await async_retrying_request(client, "GET", full_url, headers=headers)
                     resp.raise_for_status()
                     record = resp.json()
                 # Cache detail records for 1 hour

@@ -33,13 +33,13 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from dazzle.core.http_client import async_retrying_request
 from dazzle.core.ir.integrations import (
     AuthType,
     ErrorAction,
     MappingTriggerType,
 )
 from dazzle_back.runtime.event_bus import EntityEvent, EntityEventType
-from dazzle_back.runtime.http_utils import http_call_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -335,12 +335,14 @@ class MappingExecutor:
                     request_kwargs["json"] = body
 
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await http_call_with_retry(
+                    resp = await async_retrying_request(
                         client,
                         method,
                         url,
-                        max_attempts=max_attempts,
-                        backoff_base=_RETRY_BACKOFF_BASE,
+                        max_retries=max_attempts - 1,
+                        backoff=tuple(
+                            _RETRY_BACKOFF_BASE * (2**i) for i in range(max_attempts - 1)
+                        ),
                         **request_kwargs,
                     )
 
