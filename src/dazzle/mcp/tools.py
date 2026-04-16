@@ -10,7 +10,7 @@ try:
     from mcp.types import Tool
 except ImportError:
     # MCP SDK not available, use dict fallback
-    Tool = None  # type: ignore
+    Tool = None  # type: ignore[assignment, misc]
 
 
 def create_tools() -> list[dict[str, Any]]:

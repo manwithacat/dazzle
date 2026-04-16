@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 try:
     from fastapi import Request
 except ImportError:
-    Request = None  # type: ignore
+    Request = None  # type: ignore[assignment, misc]
 
 
 class WorkspaceRouteBuilder:

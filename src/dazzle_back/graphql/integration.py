@@ -31,7 +31,7 @@ try:
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
-    FastAPI = None  # type: ignore
+    FastAPI = None  # type: ignore[assignment, misc]
 
 if TYPE_CHECKING:
     from dazzle_back.specs import BackendSpec

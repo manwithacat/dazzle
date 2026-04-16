@@ -379,7 +379,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                     grant_store=_grant_store,
                 )
                 if result is not None and not result.is_valid:
-                    raise result.error  # type: ignore
+                    raise result.error
             finally:
                 if _grant_store is not None:
                     try:

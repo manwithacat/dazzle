@@ -7,7 +7,7 @@ Contains Tool objects for backend, UI, and GraphQL BFF tools.
 try:
     from mcp.types import Tool
 except ImportError:
-    Tool = None  # type: ignore
+    Tool = None  # type: ignore[assignment, misc]
 
 
 def get_runtime_tools() -> list[Tool]:

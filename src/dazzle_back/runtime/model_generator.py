@@ -194,7 +194,7 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
     elif not field.required:
         field_kwargs["default"] = None
         # Make type Optional
-        python_type = python_type | None  # type: ignore
+        python_type = python_type | None  # type: ignore[assignment]
 
     # Handle string max_length
     if field.type.max_length:
@@ -396,7 +396,7 @@ def generate_list_response_schema(
         Pydantic model for list responses
     """
     field_definitions: dict[str, Any] = {
-        "items": (list[entity_model], Field(description=f"List of {entity.name} items")),  # type: ignore
+        "items": (list[entity_model], Field(description=f"List of {entity.name} items")),  # type: ignore[valid-type]
         "total": (int, Field(description="Total number of items")),
         "page": (int, Field(default=1, description="Current page")),
         "page_size": (int, Field(default=20, description="Items per page")),

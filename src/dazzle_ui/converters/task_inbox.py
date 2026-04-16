@@ -174,7 +174,7 @@ class TaskInboxConverter:
             filter_assignee=region_config.get("filter_assignee", "current_user"),
             sort_field=region_config.get("sort_field", "due_at"),
             sort_direction=region_config.get("sort_direction", "asc"),
-            columns=columns if columns else None,  # type: ignore
+            columns=columns if columns else None,  # type: ignore[arg-type]
             page_size=region_config.get("page_size", 20),
             show_overdue_first=region_config.get("show_overdue_first", True),
             show_process_name=region_config.get("show_process_name", True),
