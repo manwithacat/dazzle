@@ -114,6 +114,14 @@ class TableContext(BaseModel):
     # the current user's persona has an override, ``empty_message`` is
     # replaced on the per-request table copy before rendering.
     persona_empty_messages: dict[str, str] = Field(default_factory=dict)
+    # Per-persona column hide lists, keyed by persona id.
+    # Compiled from `for <persona>: hide: col1, col2` DSL blocks
+    # (cycle 243, generalises the cycle 240 PersonaVariant resolver
+    # pilot to the ``hide`` field). Resolved at request time in
+    # page_routes.py — when the current user's persona has a hide
+    # list, the matching columns on the per-request table copy have
+    # ``hidden=True`` set before rendering.
+    persona_hide: dict[str, list[str]] = Field(default_factory=dict)
     search_first: bool = False
     filter_values: dict[str, str] = Field(default_factory=dict)
     table_id: str = ""

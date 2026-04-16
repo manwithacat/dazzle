@@ -242,6 +242,75 @@ def _user_can_mutate(
     return _decision.allowed
 
 
+def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
+    """Apply per-persona PersonaVariant overrides to a per-request table copy.
+
+    Walks ``user_roles`` (with the ``role_`` prefix stripped) in order
+    and applies the first matching persona's overrides from the compile-
+    time dicts on ``req_table``. Each overridable field has its own dict
+    on the TableContext:
+
+    - ``persona_empty_messages: dict[str, str]`` — cycle 240 pilot
+    - ``persona_hide: dict[str, list[str]]`` — cycle 243 extension
+
+    The compile-dict-then-resolve-per-request pattern generalises to
+    every PersonaVariant field (``purpose``, ``show``, ``action_primary``,
+    ``read_only``, ``defaults``, ``focus``). Adding a new field is a
+    3-step extension:
+
+    1. Add the dict to ``TableContext`` in ``template_context.py``.
+    2. Populate it in ``_compile_list_surface`` from ``ux.persona_variants``.
+    3. Apply its resolution semantics inside this helper.
+
+    The first two steps are mechanical; only the resolution semantics
+    are field-specific (hide → set ``column.hidden=True``,
+    ``empty_message`` → swap the base string, ``read_only`` → suppress
+    mutation affordances, etc.).
+
+    Mutates ``req_table`` in place. Safe to call with empty dicts or
+    empty user_roles — it's a no-op in both cases. Designed to be
+    idempotent and testable in isolation.
+    """
+    if not user_roles:
+        return
+
+    persona_empty = getattr(req_table, "persona_empty_messages", None) or {}
+    persona_hide = getattr(req_table, "persona_hide", None) or {}
+
+    if not persona_empty and not persona_hide:
+        return
+
+    for role in user_roles:
+        normalised = role.removeprefix("role_")
+
+        matched = False
+
+        # Empty-message override (cycle 240)
+        if normalised in persona_empty:
+            req_table.empty_message = persona_empty[normalised]
+            matched = True
+
+        # Column hide override (cycle 243). Hide every column whose key
+        # is in the persona's hide list. Stacks on top of cycle 240's
+        # condition-eval column hiding — both set ``hidden=True`` on
+        # the per-request copy, and the DataTable template already
+        # honours it.
+        if normalised in persona_hide:
+            hide_set = set(persona_hide[normalised])
+            if hide_set:
+                for col in req_table.columns:
+                    if col.key in hide_set:
+                        col.hidden = True
+            matched = True
+
+        # First matching persona wins for all override fields. Stops
+        # the loop early so later roles can't silently clobber earlier
+        # ones — the user's primary persona (typically first in the
+        # user_roles list) takes precedence.
+        if matched:
+            return
+
+
 def _filter_nav_by_entity_access(
     nav_items: list[Any],
     deps: "_PageDeps",
@@ -711,21 +780,12 @@ async def _page_handler(
             ) or not _user_can_mutate(deps, surface_name, "delete", auth_ctx):
                 req_table.bulk_actions = False
 
-        # Resolve per-persona empty_message override (cycle 240, closes
-        # EX-046). The compiler ships a ``persona_empty_messages`` dict
-        # keyed by persona id; at request time we look up the first role
-        # that matches and swap ``empty_message`` for the override.
-        # DSL syntax:
-        #     ux:
-        #       empty: "Add your first task"
-        #       for member:
-        #         empty: "No tasks assigned yet"
-        if req_table.persona_empty_messages and ctx.user_roles:
-            for _role in ctx.user_roles:
-                _normalised = _role.removeprefix("role_")
-                if _normalised in req_table.persona_empty_messages:
-                    req_table.empty_message = req_table.persona_empty_messages[_normalised]
-                    break
+        # Apply per-persona PersonaVariant overrides to the per-request
+        # table copy. Extracted to a helper in cycle 243 so the resolver
+        # logic is testable without a full request context, and so new
+        # PersonaVariant fields can be added in one place.
+        if ctx.user_roles:
+            _apply_persona_overrides(req_table, ctx.user_roles)
 
         # Evaluate role-based visible_condition on list columns (#585)
         if ctx.user_roles is not None:

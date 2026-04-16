@@ -4,6 +4,117 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-16T02:45Z — Cycle 243 — **finding_investigation: PersonaVariant runtime wiring generalised (cycle 240 pilot extended with `hide`)**
+
+**Strategy:** `finding_investigation` — the cycle 242 closing retrospective's top recommended next cycle. Extend the compile-dict-then-resolve-per-request pattern that cycle 240 shipped for `empty_message` so it covers additional `PersonaVariant` fields. Scope trimmed to the highest-leverage single field: `hide` (persona-specific list column visibility).
+
+### Why this was the right target
+
+- **Highest blast radius** of the remaining PersonaVariant fields. `hide` affects every data-table on every list surface for every persona. Unlike `purpose` (surface headers) or `action_primary` (big button), `hide` touches rows the user reads in aggregate — mis-configurations are immediately obvious.
+- **No new DSL grammar**: the `hide:` field inside `for <persona>:` blocks has always been parseable. Cycle 243 just wires it through to the runtime.
+- **Addresses gap doc #2 axis 4 residual** (persona-unaware-affordances: create-form field visibility) — though this cycle's hide scope is list columns, the resolver pattern it establishes generalises to form fields in a future cycle.
+- **Small scope, high leverage**: one dict, one compiler block, one resolver line, plus an extracted helper.
+
+### Heuristic 1 — reproduction at the grep layer
+
+Grep for `variant.hide` and `ux.hide` across the runtime to confirm the cycle 242 retrospective's claim:
+
+```
+grep -rn "variant\.hide\|ux\.hide" src/dazzle_ui/ src/dazzle_back/
+```
+
+Returned **zero matches**. Confirmed: before cycle 243, the `hide` field on `PersonaVariant` existed in the IR, parsed from the DSL, but was literally unreferenced by any runtime code path. Silent drop.
+
+Also grepped `UXSpec` to confirm `hide` is exclusively a PersonaVariant concept (it's not on the base `UXSpec` class). Simplifies the design — no need to worry about base+override semantics.
+
+### What shipped
+
+**1. `TableContext.persona_hide: dict[str, list[str]]`** — added to `src/dazzle_ui/runtime/template_context.py` alongside the cycle 240 `persona_empty_messages` field. Compile-time dict keyed by persona id, list of column keys to hide.
+
+**2. `_compile_list_surface` collects the dict** — refactored the cycle 240 block in `template_compiler.py` so both `persona_empty_messages` and `persona_hide` are populated in one loop over `ux.persona_variants`. Empty hide lists are not added (keeps the dict tidy).
+
+**3. `_apply_persona_overrides` helper in `page_routes.py`** — extracted the cycle 240 inline resolver block into a standalone helper that takes a per-request table copy and a `user_roles` list. Walks the roles (stripping the `role_` prefix), finds the first matching persona, applies ALL of that persona's overrides at once, and returns. Matched semantics: first-wins. The helper is fully testable in isolation without a request context.
+
+**4. Resolver extension for `hide`**: the helper now applies a second override — if the matching persona has a `persona_hide` entry, it iterates `req_table.columns` and sets `hidden=True` for every column whose key is in the persona's hide set. Stacks on top of the existing cycle-240 condition-eval column hiding (both set the same `hidden=True` flag on the per-request copy).
+
+**5. Generalisation path documented in the helper's docstring.** Explicitly lays out the 3-step extension pattern for future cycles: (a) add a dict to the context type, (b) populate in the compiler, (c) apply resolution semantics in the helper. Each remaining PersonaVariant field (`purpose`, `show`, `action_primary`, `read_only`, `defaults`, `focus`) can be added with this recipe.
+
+### 18 new regression tests
+
+`tests/unit/test_persona_hide_columns.py` covers three layers:
+
+**Parser (3 tests)** — lock the existing grammar behaviour in place:
+- `test_persona_hide_single_field` — `for <persona>: hide: col1`
+- `test_persona_hide_multiple_fields` — comma-separated list
+- `test_persona_hide_coexists_with_empty` — `hide:` alongside `empty:` in the same variant
+
+**Compiler (5 tests)** — verify `TableContext.persona_hide` is populated correctly:
+- `test_no_variants_produces_empty_dict`
+- `test_single_persona_hide_populates_dict`
+- `test_multiple_personas_populate_dict` (with an empty-list variant correctly omitted)
+- `test_empty_hide_list_not_added`
+- `test_hide_and_empty_coexist_on_same_variant` (proves both pilot and extension coexist)
+
+**Resolver helper (10 tests)** — verify `_apply_persona_overrides` logic directly:
+- `test_no_roles_is_noop` + `test_no_overrides_is_noop`
+- `test_hide_applies_for_matching_role`
+- `test_hide_does_not_touch_non_matching_columns`
+- `test_role_prefix_stripped` — handles `role_` prefix from auth layer
+- `test_non_matching_role_is_noop`
+- `test_first_matching_role_wins` — primary persona wins when multiple match
+- `test_empty_message_override_applies` — cycle 240 regression
+- `test_hide_and_empty_apply_together` — atomic application of both overrides
+- `test_empty_hide_list_not_processed` — defensive against dict pollution
+
+### Heuristic 3 — no-regression cross-app check
+
+Spun up simple_task and hit `/app/task` as admin. HTTP=200, table headers render, 20 rows in the body. Since no example app currently declares `for <persona>: hide: ...`, the verification is that nothing regressed: the resolver is a no-op when the compile-time dict is empty, and the early-return branches in `_apply_persona_overrides` make sure.
+
+### Test results
+
+- `tests/unit/test_persona_hide_columns.py`: 18 new tests (3 parser + 5 compiler + 10 resolver)
+- `tests/unit/test_persona_empty_message.py`: 14 existing cycle 240 tests — all still pass (regression locked)
+- **Full unit sweep: 10,808 pass / 101 skip / 0 fail** (+18 from cycle 242's 10,790)
+- Lint + mypy clean
+
+### Meta — the generalisation pattern is now clean
+
+`_apply_persona_overrides` is the right abstraction. Each PersonaVariant field maps to exactly one `if normalised in req_table.persona_<field>:` block in the helper, plus one field-specific mutation (swap a string, set `hidden=True`, update `read_only`, etc.). The pattern is **not** recursive or generic — it's deliberately hand-written per-field so each field's semantics are explicit. That said, the remaining 6 fields are mechanical enough that a follow-up cycle could plausibly ship all of them in one commit.
+
+**Why first-wins on user_roles matters**: a user may have multiple roles, and the primary persona is conventionally listed first in `ctx.user_roles`. The resolver stops after the first match so later roles can't silently clobber earlier ones. This is the same convention the cycle 240 pilot established.
+
+### Rows touched
+
+| Row | State | Notes |
+|---|---|---|
+| **EX-048** | (new row) | **PARTIALLY_FIXED** | Filed as a framework-gap row with status `PARTIALLY_FIXED`. Cycle 243 shipped the `hide` extension + extracted the reusable helper. Remaining PersonaVariant fields listed (`purpose`, `show`, `show_aggregate`, `action_primary`, `read_only`, `defaults`, `focus`) with estimates for follow-up cycles. |
+| **UX-044 (empty-state)** | updated notes | Added a cycle 243 note referencing the extension and the new `_apply_persona_overrides` helper |
+| **UX-049 (toggle-group)** | renumbered | Cycle 242's toggle-group was originally filed as UX-046, but that ID was already claimed by bulk-action-bar in cycle 212. Renumbered to UX-049 in cycle 243 (another numbering collision). |
+
+### Numbering-collision discipline
+
+This is the second numbering collision in recent cycles (UX-043 collision in cycle 240 → renumbered in 241; UX-046 collision in cycle 242 → renumbered in 243). Both collisions were pre-existing rows buried deep in the backlog that I missed when picking the next free ID. Going forward, before claiming a UX-NNN ID, run `grep -oE "^\| UX-[0-9]+" dev_docs/ux-backlog.md | sort -u | tail -5` to find the highest existing ID. Worth encoding as a check in the skill at some point.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 19 → **20**.
+
+### ScheduleWakeup
+
+Not armed. Cycle 243 shipped the `hide` extension cleanly. The remaining PersonaVariant fields (EX-048) are a natural follow-up, but each is small enough that batching them into one cycle vs. spreading them across multiple is a judgment call the user should make.
+
+### Recommendation for next cycle
+
+Continue executing the retrospective's recommendation list:
+
+1. **Batch-generalise the remaining PersonaVariant fields** in cycle 244. All 6 remaining (`purpose`, `show`, `show_aggregate`, `action_primary`, `read_only`, `defaults`, `focus`) follow the same shape as cycle 243. Estimate: 45-90 min total. Closes EX-048 entirely.
+2. **Alternative**: EX-047 aggregate display-mode inference (simpler, 15 min, closes 4 broken regions across 2 apps).
+3. **Alternative**: parking-lot items from the roadmap (breadcrumbs, activity-feed verification, etc.).
+
+Top recommendation: **cycle 244 = batch the remaining PersonaVariant fields**. One commit fully closes EX-048 and unblocks gap doc #2 axis 4 (persona-unaware create-form field visibility — the `hide` extension covers list columns; form fields need the same resolver pattern applied to FormContext).
+
+---
+
 ## 2026-04-16T02:10Z — Cycle 242 — **contract_audit: toggle-group SHIPPED — component menagerie mini-arc COMPLETE (UX-046 → DONE)**
 
 **Strategy:** `contract_audit` — fifth and final cycle of the component menagerie mini-arc (cycles 238-242 per the roadmap at `dev_docs/framework-gaps/2026-04-15-component-menagerie-roadmap.md`).

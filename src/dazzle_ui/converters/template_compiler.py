@@ -790,16 +790,22 @@ def _compile_list_surface(
         else ("Use search or filters to find results." if search_first else "No items found.")
     )
 
-    # Per-persona empty-message overrides (cycle 240, closes EX-046).
-    # Collect `for <persona>: empty: "..."` strings into a dict so the
-    # per-request path in page_routes.py can swap ``empty_message`` for
-    # the current user's persona. Compile-time has no persona context,
-    # so we ship the whole dict and resolve at request time.
+    # Per-persona PersonaVariant overrides (cycle 240 pilot + cycle 243
+    # extension). Collect both `empty_message` and `hide` from every
+    # variant and ship them as dicts to the TableContext; the per-request
+    # resolver in page_routes.py looks up the current user's persona and
+    # applies the overrides before rendering. This is the canonical
+    # compile-dict-then-resolve-per-request pattern and is the
+    # generalisable shape for wiring any PersonaVariant field through
+    # to the runtime.
     persona_empty_messages: dict[str, str] = {}
+    persona_hide: dict[str, list[str]] = {}
     if ux and ux.persona_variants:
         for _variant in ux.persona_variants:
             if _variant.empty_message:
                 persona_empty_messages[_variant.persona] = _variant.empty_message
+            if _variant.hide:
+                persona_hide[_variant.persona] = list(_variant.hide)
 
     table_id = f"dt-{surface.name}"
 
@@ -834,6 +840,7 @@ def _compile_list_surface(
             search_fields=search_fields,
             empty_message=empty_message,
             persona_empty_messages=persona_empty_messages,
+            persona_hide=persona_hide,
             search_first=search_first,
             table_id=table_id,
             inline_editable=inline_editable,

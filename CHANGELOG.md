@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.42] - 2026-04-16
+
+### Added
+- **Per-persona list-column hide support (EX-048 partial fix).** The
+  DSL parser has always accepted `for <persona>: hide: col1, col2`
+  inside UX blocks, but before cycle 243 the values were silently
+  dropped at render time. Cycle 243 extends the cycle 240
+  compile-dict-then-resolve-per-request pilot to cover `hide`:
+  - `TableContext.persona_hide: dict[str, list[str]]` compiled from
+    `ux.persona_variants` in `_compile_list_surface`
+  - Per-request resolution sets `column.hidden=True` for every matching
+    column on the user's primary persona
+  - Stacks cleanly on top of the existing cycle-240 condition-eval
+    column hiding (both set the same `hidden=True` flag)
+
+- **`_apply_persona_overrides` helper in `page_routes.py`.** Extracted
+  the cycle 240 inline resolver block into a standalone function that
+  takes a per-request table copy and a user_roles list. First-wins
+  matching (primary persona takes precedence), role-prefix stripping,
+  and idempotent with empty dicts / empty user_roles. Fully testable
+  in isolation without a full request context. The helper's docstring
+  documents the 3-step extension pattern so future cycles can add the
+  remaining PersonaVariant fields (`purpose`, `show`, `show_aggregate`,
+  `action_primary`, `read_only`, `defaults`, `focus`) mechanically.
+
+### Agent Guidance
+- **When extending PersonaVariant runtime wiring**, follow the cycle
+  240 + 243 pattern: (1) add a `persona_<field>s` dict to the relevant
+  template context, (2) populate from `ux.persona_variants` in the
+  compiler, (3) apply the resolution semantics inside
+  `_apply_persona_overrides`. The helper's docstring is the canonical
+  recipe. Each field is ~10-15 min of work. Batching the remaining
+  6 fields in one cycle is a reasonable next step (tracked as EX-048).
+- **Watch for UX backlog ID collisions.** Cycles 240 and 242 both
+  claimed IDs that were already in use (UX-043, UX-046). Before
+  picking the next UX-NNN ID, run
+  `grep -oE "^\| UX-[0-9]+" dev_docs/ux-backlog.md | sort -u | tail -5`
+  to find the highest existing ID and pick the next one.
+
 ## [0.55.41] - 2026-04-16
 
 ### Added
