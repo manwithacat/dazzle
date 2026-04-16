@@ -177,13 +177,15 @@ class EntityParserMixin:
         """Parse ``intent: "..."`` declaration."""
         self.advance()
         self.expect(TokenType.COLON)
-        return self.expect(TokenType.STRING).value
+        result: str = self.expect(TokenType.STRING).value
+        return result
 
     def _parse_entity_domain(self) -> str:
         """Parse ``domain: name`` declaration."""
         self.advance()
         self.expect(TokenType.COLON)
-        return self.expect_identifier_or_keyword().value
+        result: str = self.expect_identifier_or_keyword().value
+        return result
 
     def _parse_entity_patterns(self) -> list[str]:
         """Parse ``patterns: a, b, c`` declaration."""
@@ -673,7 +675,8 @@ class EntityParserMixin:
         """Parse ``display_field: name`` declaration (v0.44.0)."""
         self.advance()
         self.expect(TokenType.COLON)
-        return self.expect_identifier_or_keyword().value
+        result: str = self.expect_identifier_or_keyword().value
+        return result
 
     def _parse_entity_field_declaration(self, ctx: _EntityParseContext) -> None:
         """Parse a regular or computed field declaration (the default branch)."""

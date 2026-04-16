@@ -172,7 +172,7 @@ Return ONLY the updated page content.
 
 def generate_patches(
     issues: list[ClosedIssue],
-    targets: list[str],
+    targets: list[str] | tuple[str, ...],
     project_root: Path,
     llm_complete: Callable[[str, str], str],
 ) -> list[DocPatch]:

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.2] - 2026-04-16
+
+### Changed
+- Extracted 52 AppSpec query methods to `appspec_queries.py` (delegates remain for backward compat)
+- Decomposed `parse_entity` from 728 → 76 lines (25 named helpers + context dataclass)
+- Decomposed `ProcessParserMixin` longest methods from 132 → 32 lines (context dataclasses)
+- Decomposed `serve_command` from 594 → 45 lines (10 focused helpers)
+- Decomposed `_page_handler` from 514 → 59 lines (9 route helpers + context dataclass)
+- Converted 48 mutable ALL_CAPS constants to `frozenset`/`tuple` (28 sets, 20 lists)
+
 ## [0.57.1] - 2026-04-16
 
 ### Fixed

@@ -168,15 +168,30 @@ class _ServeContext:
     )
 
     def __init__(self) -> None:
+        self.manifest_path: Path = Path(".")
+        self.project_root: Path = Path(".")
         self.mf: Any = None
         self.auth_enabled: bool = False
         self.project_name: str = ""
         self.dev_config_override_test: bool | None = None
+        self.production: bool = False
+        self.host: str = "0.0.0.0"
+        self.port: int = 3000
+        self.api_port: int = 8000
         self.database_url: str = ""
         self.redis_url: str = ""
+        self.local: bool = False
+        self.watch: bool = False
+        self.watch_source: bool = False
         self.enable_dev_mode: bool = False
         self.enable_test_mode: bool = False
+        self.auto_mock: bool | None = False
         self.env: Any = None
+        self.ui_only: bool = False
+        self.backend_only: bool = False
+        self.graphql: bool = False
+        self.workers: int | None = 1
+        self.local_assets: bool | None = False
         self.sitespec_data: dict[str, Any] | None = None
         self.appspec: Any = None
 
