@@ -253,6 +253,7 @@
           'description': 'System administrator with full access',
           'id': 'admin',
           'label': 'Administrator',
+          'link_via': 'email',
           'proficiency_level': 'intermediate',
         }),
         dict({
@@ -260,6 +261,7 @@
           'description': 'Standard user with limited access',
           'id': 'user',
           'label': 'Regular User',
+          'link_via': 'email',
           'proficiency_level': 'intermediate',
         }),
       ]),

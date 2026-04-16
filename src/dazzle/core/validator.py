@@ -1314,6 +1314,63 @@ def _lint_missing_titles(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _validate_persona_backed_by(appspec: ir.AppSpec) -> list[str]:
+    """Validate ``backed_by`` / ``link_via`` on persona declarations.
+
+    Cycle 248 (closes EX-045). When a persona declares ``backed_by: Entity``,
+    the linker verifies:
+
+    1. The named entity exists in ``appspec.domain.entities``.
+    2. The entity has a field matching ``link_via`` (default ``"email"``).
+    3. No two personas claim the same ``backed_by`` entity (ambiguous).
+
+    Returns a list of error strings (not warnings — a misconfigured
+    ``backed_by`` is a hard error that will break scope-rule evaluation
+    at runtime if left undetected).
+    """
+    errors: list[str] = []
+    entity_names = {e.name for e in appspec.domain.entities}
+    entity_fields: dict[str, set[str]] = {}
+    for e in appspec.domain.entities:
+        entity_fields[e.name] = {f.name for f in e.fields}
+
+    seen_backed: dict[str, str] = {}  # entity_name → persona_id
+    for persona in appspec.personas:
+        if not persona.backed_by:
+            continue
+
+        ent_name = persona.backed_by
+        link_field = persona.link_via
+
+        # Check 1: entity exists
+        if ent_name not in entity_names:
+            errors.append(
+                f"Persona '{persona.id}' declares backed_by: {ent_name} "
+                f"but entity '{ent_name}' does not exist."
+            )
+            continue
+
+        # Check 2: link_via field exists on the entity
+        if link_field not in entity_fields.get(ent_name, set()):
+            errors.append(
+                f"Persona '{persona.id}' declares backed_by: {ent_name} "
+                f"with link_via: {link_field}, but entity '{ent_name}' "
+                f"has no field named '{link_field}'."
+            )
+
+        # Check 3: no duplicate backed_by
+        if ent_name in seen_backed:
+            errors.append(
+                f"Persona '{persona.id}' declares backed_by: {ent_name} "
+                f"but persona '{seen_backed[ent_name]}' already claims it. "
+                f"Each entity can back at most one persona."
+            )
+        else:
+            seen_backed[ent_name] = persona.id
+
+    return errors
+
+
 def _lint_workspace_personas(appspec: ir.AppSpec) -> list[str]:
     """Check for workspaces without associated personas."""
     if not appspec.workspaces:
@@ -1826,6 +1883,7 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_naming_conventions(appspec))
     warnings.extend(_detect_dead_constructs(appspec))
     warnings.extend(_lint_missing_titles(appspec))
+    warnings.extend(_validate_persona_backed_by(appspec))
     warnings.extend(_lint_workspace_personas(appspec))
     warnings.extend(_lint_workspace_routing(appspec))
     warnings.extend(_lint_workspace_access_declarations(appspec))

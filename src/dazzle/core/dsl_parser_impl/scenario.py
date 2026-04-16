@@ -39,6 +39,8 @@ class ScenarioParserMixin:
               proficiency: expert
               default_workspace: classroom_view
               default_route: "/classes"
+              backed_by: Teacher
+              link_via: email
         """
         persona_id, label, _ = self._parse_construct_header(
             TokenType.PERSONA, allow_keyword_name=True
@@ -51,6 +53,8 @@ class ScenarioParserMixin:
         proficiency: str = "intermediate"
         default_workspace: str | None = None
         default_route: str | None = None
+        backed_by: str | None = None
+        link_via: str = "email"
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -104,6 +108,20 @@ class ScenarioParserMixin:
                 default_route = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # backed_by: EntityName (cycle 248, closes EX-045)
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "backed_by":
+                self.advance()
+                self.expect(TokenType.COLON)
+                backed_by = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # link_via: field_name (cycle 248, closes EX-045)
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "link_via":
+                self.advance()
+                self.expect(TokenType.COLON)
+                link_via = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             else:
                 # Skip unknown fields
                 self.advance()
@@ -119,6 +137,8 @@ class ScenarioParserMixin:
             proficiency_level=proficiency,  # type: ignore[arg-type]
             default_workspace=default_workspace,
             default_route=default_route,
+            backed_by=backed_by,
+            link_via=link_via,
         )
 
     def parse_scenario(self) -> ir.ScenarioSpec:

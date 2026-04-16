@@ -26,6 +26,19 @@ class PersonaSpec(BaseModel):
         proficiency_level: Technical skill level of this persona
         default_workspace: Default workspace to show for this persona
         default_route: Default route to navigate to on persona switch
+        backed_by: Optional entity name that this persona is backed by.
+            When set, the framework can resolve ``current_user`` to a
+            specific domain entity row at runtime — enabling scope-rule
+            cascading, auto-injection for ``ref <Entity>`` fields on
+            create forms, and form pre-selection for the persona's own
+            entity record. Added in cycle 248 (closes EX-045).
+            Example: ``persona tester: backed_by: Tester``.
+        link_via: The field name used to join the auth user to the
+            backing entity. Defaults to ``"email"`` — meaning the
+            framework looks up the backing entity row where
+            ``<entity>.<link_via> == current_user.email``. Can be
+            overridden to ``"id"`` or any other unique field that
+            appears on both the backing entity and the auth user.
     """
 
     id: str
@@ -35,6 +48,8 @@ class PersonaSpec(BaseModel):
     proficiency_level: Literal["novice", "intermediate", "expert"] = "intermediate"
     default_workspace: str | None = None
     default_route: str | None = None
+    backed_by: str | None = None  # Entity name (e.g. "Tester")
+    link_via: str = "email"  # Join field (default: email)
 
     model_config = ConfigDict(frozen=True)
 

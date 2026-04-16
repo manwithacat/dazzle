@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.45] - 2026-04-16
+
+### Added
+- **Persona-entity binding: `backed_by` / `link_via` DSL construct
+  (cycle 248, closes EX-045).** DSL authors can now explicitly declare
+  which domain entity backs a persona:
+  ```dsl
+  persona tester "Field Tester":
+    backed_by: Tester
+    link_via: email
+  ```
+  New `PersonaSpec.backed_by: str | None` and `PersonaSpec.link_via: str`
+  fields on the IR. Parser extension accepts `backed_by:` and `link_via:`
+  inside persona blocks. Linker validation at `dazzle validate` time
+  checks: (1) the named entity exists, (2) the `link_via` field exists
+  on the entity, (3) no two personas claim the same backing entity.
+  This is the **DSL surface + validation layer** — runtime auto-injection
+  (resolving the backing entity row from the current auth user at
+  request time) is tracked as EX-049 for a follow-up cycle that threads
+  through the async repository lookup in the create handler.
+
+### Agent Guidance
+- **When a DSL has both a persona and a same-named entity** (e.g.
+  `persona tester` + `entity Tester`), declare the binding explicitly
+  with `backed_by: Tester`. This enables future runtime features
+  (auto-injection of `ref Tester` fields, scope-rule cascading, form
+  pre-selection) and catches misconfigurations at validate time rather
+  than silently failing at runtime. Default `link_via` is `email`;
+  override to `id` if entity IDs match auth user IDs by convention.
+
 ## [0.55.44] - 2026-04-16
 
 ### Fixed
