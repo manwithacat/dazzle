@@ -556,7 +556,15 @@ class TestForeachStep:
             "foreach_steps": [sub_step],
         }
 
-        with patch("dazzle.core.process.celery_tasks._get_db_connection") as mock_conn_fn:
+        # _execute_builtin_entity_op reads entity metadata via `_get_store()`
+        # (a fresh Redis-backed store), not the `store` argument threaded
+        # through `_execute_foreach_step`. Patch both so the test runs
+        # without redis or postgres installed.
+        with (
+            patch("dazzle.core.process.celery_tasks._get_store") as mock_get_store,
+            patch("dazzle.core.process.celery_tasks._get_db_connection") as mock_conn_fn,
+        ):
+            mock_get_store.return_value = store
             cur = _mock_cursor(rows=[("new-id",)])
             conn = _mock_conn(cur)
             mock_conn_fn.return_value = conn
