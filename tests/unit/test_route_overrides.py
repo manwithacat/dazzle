@@ -151,3 +151,108 @@ class TestBuildOverrideRouter:
 
         result = build_override_router(Path("/nonexistent"))
         assert result is None
+
+
+class TestLoadExtensionRouters:
+    """load_extension_routers() imports APIRouters declared in dazzle.toml (#786)."""
+
+    def test_empty_spec_list_returns_empty(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        assert load_extension_routers(tmp_path, []) == []
+
+    def test_loads_valid_router(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        pkg = tmp_path / "ext_pkg_valid"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        (pkg / "routes.py").write_text(
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/ext/ping')\n"
+            "async def ping(): return {'ok': True}\n"
+        )
+
+        routers = load_extension_routers(tmp_path, ["ext_pkg_valid.routes:router"])
+        assert len(routers) == 1
+        assert any(r.path == "/ext/ping" for r in routers[0].routes)
+
+    def test_skips_invalid_spec_format(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        # No colon separator
+        assert load_extension_routers(tmp_path, ["app.routes.router"]) == []
+        # Empty attr
+        assert load_extension_routers(tmp_path, ["app.routes:"]) == []
+        # Empty module
+        assert load_extension_routers(tmp_path, [":router"]) == []
+
+    def test_rejects_path_traversal_in_module(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        # Slashes, dashes, semicolons — all rejected by the whitelist regex.
+        specs = [
+            "../escape:router",
+            "app/routes:router",
+            "app.routes;print('x'):router",
+            "app-routes:router",
+        ]
+        assert load_extension_routers(tmp_path, specs) == []
+
+    def test_skips_missing_module(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        assert load_extension_routers(tmp_path, ["nonexistent_pkg_xyz.mod:router"]) == []
+
+    def test_skips_missing_attribute(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        pkg = tmp_path / "ext_pkg_missing_attr"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        (pkg / "routes.py").write_text("from fastapi import APIRouter\nother = APIRouter()\n")
+
+        routers = load_extension_routers(tmp_path, ["ext_pkg_missing_attr.routes:router"])
+        assert routers == []
+
+    def test_skips_non_router_attribute(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        pkg = tmp_path / "ext_pkg_wrong_type"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        (pkg / "routes.py").write_text("router = 'not an APIRouter'\n")
+
+        routers = load_extension_routers(tmp_path, ["ext_pkg_wrong_type.routes:router"])
+        assert routers == []
+
+    def test_loads_multiple_routers(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        pkg = tmp_path / "ext_multi"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        (pkg / "a.py").write_text(
+            "from fastapi import APIRouter\nrouter = APIRouter()\n"
+            "@router.get('/a')\nasync def a(): return {}\n"
+        )
+        (pkg / "b.py").write_text(
+            "from fastapi import APIRouter\nrouter = APIRouter()\n"
+            "@router.get('/b')\nasync def b(): return {}\n"
+        )
+
+        routers = load_extension_routers(tmp_path, ["ext_multi.a:router", "ext_multi.b:router"])
+        assert len(routers) == 2
+
+    def test_one_broken_spec_doesnt_block_others(self, tmp_path: Path) -> None:
+        from dazzle_back.runtime.route_overrides import load_extension_routers
+
+        pkg = tmp_path / "ext_mixed"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        (pkg / "good.py").write_text("from fastapi import APIRouter\nrouter = APIRouter()\n")
+
+        specs = ["does_not_exist_xyz:router", "ext_mixed.good:router"]
+        routers = load_extension_routers(tmp_path, specs)
+        assert len(routers) == 1

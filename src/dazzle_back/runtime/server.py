@@ -766,6 +766,22 @@ class DazzleBackendApp:
             except Exception:
                 logger.debug("Route override discovery skipped", exc_info=True)
 
+            # Extension routers registered in dazzle.toml (#786).
+            # Registered after single-file overrides but before generated routes
+            # so they still win first-match against auto-generated endpoints.
+            try:
+                from dazzle.core.manifest import load_manifest
+                from dazzle_back.runtime.route_overrides import load_extension_routers
+
+                manifest_path = self._project_root / "dazzle.toml"
+                if manifest_path.is_file():
+                    manifest = load_manifest(manifest_path)
+                    router_specs = manifest.extensions.routers
+                    for ext_router in load_extension_routers(self._project_root, router_specs):
+                        self._app.include_router(ext_router)
+            except Exception:
+                logger.debug("Extension router loading skipped", exc_info=True)
+
         # Entity CRUD routes
         service_specs = {svc.name: svc for svc in self._service_specs}
 

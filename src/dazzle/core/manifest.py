@@ -336,6 +336,19 @@ class TenantConfig:
 
 
 @dataclass
+class ExtensionsConfig:
+    """Registration of project-supplied extensions (closes #786).
+
+    Allows a project's ``dazzle.toml`` to declare FastAPI ``APIRouter``
+    objects that the runtime should mount alongside generated routes.
+    Each entry is a dotted ``module:attr`` spec imported relative to
+    the project root — e.g. ``app.routes.graph:router``.
+    """
+
+    routers: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ProjectManifest:
     """
     Project manifest loaded from dazzle.toml.
@@ -368,6 +381,7 @@ class ProjectManifest:
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
+    extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
 
 
 def check_framework_version(manifest: ProjectManifest) -> None:
@@ -575,6 +589,15 @@ def load_manifest(path: Path) -> ProjectManifest:
     cdn_enabled = ui_data.get("cdn", False)
     favicon_path = ui_data.get("favicon")
 
+    # Parse [extensions] section (#786)
+    extensions_data = data.get("extensions", {})
+    raw_routers = extensions_data.get("routers", [])
+    if not isinstance(raw_routers, list):
+        raw_routers = []
+    extensions_config = ExtensionsConfig(
+        routers=[str(r) for r in raw_routers if isinstance(r, str)],
+    )
+
     # Parse environment profiles
     env_data = data.get("environments", {})
     environments: dict[str, EnvironmentProfile] = {}
@@ -605,6 +628,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         cdn=cdn_enabled,
         favicon=favicon_path,
         environments=environments,
+        extensions=extensions_config,
     )
 
 

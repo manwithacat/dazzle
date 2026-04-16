@@ -378,7 +378,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                     is_superuser=is_superuser,
                     grant_store=_grant_store,
                 )
-                if result is not None and not result.is_valid:
+                if result is not None and not result.is_valid and result.error is not None:
                     raise result.error
             finally:
                 if _grant_store is not None:

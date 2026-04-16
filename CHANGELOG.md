@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.6] - 2026-04-16
+
+### Added
+- Project `dazzle.toml` files accept an `[extensions]` section listing FastAPI `APIRouter` objects to mount alongside generated routes. Each entry is a `module:attr` spec imported relative to the project root, whitelisted to plain dotted identifiers. Enables apps with large custom API surfaces (e.g. Penny Dreadful's 143 custom endpoints) to use `dazzle serve` directly instead of bypassing it with their own server module — restoring `/polish`, fitness engine, and `dazzle test agent` compatibility (#786).
+
+### Fixed
+- Mypy error in `service_generator.py` where `raise result.error` didn't narrow `Optional[TransitionError]` to a non-None `BaseException` — added the explicit `is not None` guard.
+
+### Agent Guidance
+- Declare custom routers in `dazzle.toml`:
+  ```toml
+  [extensions]
+  routers = ["app.routes.graph:router", "app.routes.search:router"]
+  ```
+  Each module must expose the named attribute as a `fastapi.APIRouter`. Extension routers mount after `routes/*.py` single-file overrides and before generated CRUD routes, so they win first-match against auto-generated endpoints. Invalid specs (path traversal, non-identifier characters) are silently skipped with a warning.
+
 ## [0.57.5] - 2026-04-16
 
 ### Added
