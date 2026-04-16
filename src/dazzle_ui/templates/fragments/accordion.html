@@ -1,28 +1,55 @@
-{# Accordion / collapsible sections — DaisyUI collapse with optional lazy-load #}
-{# Parameters: sections (list of {id: str, title: str, content: str|None, endpoint: str|None}) #}
-{# If endpoint is provided, content lazy-loads on first open via HTMX #}
-{% for section in sections %}
-<div class="collapse collapse-arrow bg-base-100 border border-base-300 {% if not loop.first %}mt-1{% endif %}"
-     {% if section.endpoint %}x-collapse{% endif %}>
-  {% if section.endpoint %}
-  {# Lazy-loaded: fetch content on first open #}
-  <details hx-get="{{ section.endpoint }}"
+{# Accordion / collapsible sections — canonical renderer (cycle 247).
+
+   Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md
+
+   Parameters:
+     sections : list of {id: str, title: str, content: str|None, endpoint: str|None}
+
+   Uses the native HTML <details>/<summary> elements — no Alpine, no
+   HTMX for static content. Static sections rendered with all-closed
+   default; the first section is open. Lazy-loaded sections use HTMX
+   to fetch on first open.
+
+   The caller supplies `content` as plain text — it is HTML-escaped by
+   Jinja autoescape. If structured content is needed, lazy-load it from
+   a template endpoint via `section.endpoint`.
+
+   Note: pre-cycle-247 version passed content through `| safe` which was
+   a latent XSS vector (same class as the cycle 241 tooltip fix). Removed
+   because the primitive has no consumer; safe-by-default is preferred.
+#}
+<div class="dz-accordion">
+  {% for section in sections %}
+  <details class="dz-accordion-item border border-[hsl(var(--border))] rounded-[4px] bg-[hsl(var(--card))] {% if not loop.first %}mt-1{% endif %}"
+           {% if loop.first and not section.endpoint %}open{% endif %}
+           {% if section.endpoint %}
+           hx-get="{{ section.endpoint }}"
            hx-trigger="toggle once"
            hx-target="#accordion-content-{{ section.id }}"
-           hx-swap="innerHTML">
-    <summary class="collapse-title font-medium">{{ section.title }}</summary>
-    <div class="collapse-content" id="accordion-content-{{ section.id }}">
-      <span class="loading loading-dots loading-sm"></span>
+           hx-swap="innerHTML"
+           {% endif %}
+           data-dz-accordion-item
+           data-dz-section-id="{{ section.id }}">
+    <summary class="flex items-center justify-between cursor-pointer list-none px-3 py-2 text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] rounded-[4px]">
+      <span>{{ section.title }}</span>
+      <svg class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-[120ms] group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </summary>
+    <div class="dz-accordion-content px-3 py-2 text-[13px] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))]"
+         id="accordion-content-{{ section.id }}">
+      {% if section.endpoint %}
+      <span class="inline-flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
+        <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        Loading…
+      </span>
+      {% else %}
+      {{ section.content }}
+      {% endif %}
     </div>
   </details>
-  {% else %}
-  {# Static content #}
-  <details {% if loop.first %}open{% endif %}>
-    <summary class="collapse-title font-medium">{{ section.title }}</summary>
-    <div class="collapse-content">
-      {{ section.content | safe }}
-    </div>
-  </details>
-  {% endif %}
+  {% endfor %}
 </div>
-{% endfor %}

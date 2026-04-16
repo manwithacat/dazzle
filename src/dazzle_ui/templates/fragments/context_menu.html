@@ -1,31 +1,47 @@
-{# Context menu — right-click triggered menu #}
-{# Parameters: items (list of {label: str, url: str|None, icon: str|None, divider: bool|None}) #}
-<div x-data="dzContextMenu" class="relative">
+{# Context menu — right-click triggered menu (cycle 247 canonical).
+
+   Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md
+
+   Parameters:
+     items            : list of {label: str, url: str|None, icon: str|None, divider: bool|None}
+     trigger_content  : HTML | str — the element that receives the right-click
+                        (passed through `| safe`; caller supplies markup)
+
+   Uses the ``dzContextMenu`` Alpine controller at ``dz-alpine.js:833``
+   for state. Fires on right-click (`@contextmenu`); the menu is
+   positioned absolutely at cursor coordinates via Alpine `:style`.
+   `@click.outside` closes the menu.
+#}
+<div x-data="dzContextMenu" class="dz-context-menu relative" @contextmenu="onContextMenu($event)">
   {# The trigger area — wraps caller content #}
   {% block context_trigger %}
   {{ trigger_content | safe if trigger_content else '' }}
   {% endblock %}
 
-  {# Menu #}
+  {# Menu panel #}
   <ul x-show="open"
-      x-transition:enter="transition ease-out duration-100"
+      x-cloak
+      x-transition:enter="transition ease-out duration-[100ms]"
       x-transition:enter-start="opacity-0 scale-95"
       x-transition:enter-end="opacity-100 scale-100"
       :style="'position:fixed; left:' + x + 'px; top:' + y + 'px'"
       @click.outside="close()"
+      @keydown.escape.window="close()"
       role="menu"
-      class="menu bg-base-100 border border-base-300 rounded-box shadow-lg z-50 min-w-44 p-1">
+      data-dz-context-menu-panel
+      class="z-50 min-w-44 py-1 rounded-[4px] bg-[hsl(var(--popover))] border border-[hsl(var(--border))] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)] text-[13px]">
     {% for item in items %}
     {% if item.divider %}
-    <li class="divider my-1"></li>
+    <li class="my-1 border-t border-[hsl(var(--border))]" role="separator"></li>
     {% else %}
     <li>
-      <a {% if item.url %}href="{{ item.url }}"{% endif %}
-         @click="close()"
+      <a {% if item.url %}href="{{ item.url }}"{% else %}href="#" @click.prevent="close()"{% endif %}
+         {% if item.url %}@click="close()"{% endif %}
          role="menuitem"
-         class="flex items-center gap-2">
-        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="w-4 h-4"></i>{% endif %}
-        {{ item.label }}
+         data-dz-context-menu-item
+         class="flex items-center gap-2 px-3 py-1.5 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms]">
+        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" aria-hidden="true"></i>{% endif %}
+        <span>{{ item.label }}</span>
       </a>
     </li>
     {% endif %}

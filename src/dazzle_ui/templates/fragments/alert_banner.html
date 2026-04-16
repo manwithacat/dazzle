@@ -1,14 +1,48 @@
-{# Full-width alert banner — for page-level messages #}
-{# Parameters: message (str), level (str: success|error|warning|info), dismissible (bool, default: true), icon (str, optional) #}
+{# Full-width alert banner — canonical renderer (cycle 247).
+
+   Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md
+
+   Parameters:
+     message     : str                                   — the alert text
+     level       : "info" | "success" | "warning" | "error" (default: info)
+     dismissible : bool (default true)                    — show an × button
+     icon        : str | None                             — lucide icon name
+
+   Four semantic tones mirror the status-badge contract (cycle 238):
+
+     - info    → --info
+     - success → --success
+     - warning → --warning
+     - error   → --destructive
+
+   Design-token colours, no DaisyUI `alert alert-{level}` classes. Pure
+   Tailwind arbitraries resolve through the framework design-system.css.
+#}
 {% set level = level | default('info') %}
 {% set dismissible = dismissible | default(true) %}
-<div class="alert alert-{{ level }} rounded-none" role="alert"
-     {% if dismissible %}x-data="{ show: true }" x-show="show" x-transition{% endif %}>
+{% if level == "success" %}
+  {% set _token = "success" %}
+{% elif level == "warning" %}
+  {% set _token = "warning" %}
+{% elif level == "error" %}
+  {% set _token = "destructive" %}
+{% else %}
+  {% set _token = "info" %}
+{% endif %}
+<div class="dz-alert-banner flex items-start gap-3 px-4 py-3 border-b bg-[hsl(var(--{{ _token }})/0.08)] border-[hsl(var(--{{ _token }})/0.2)] text-[13px] text-[hsl(var(--foreground))]"
+     role="alert"
+     data-dz-alert-level="{{ level }}"
+     {% if dismissible %}x-data="{ show: true }" x-show="show" x-cloak x-transition{% endif %}>
   {% if icon %}
-  <i data-lucide="{{ icon }}" class="w-5 h-5"></i>
+  <i data-lucide="{{ icon }}" class="w-4 h-4 mt-0.5 shrink-0 text-[hsl(var(--{{ _token }}))]" aria-hidden="true"></i>
   {% endif %}
-  <span>{{ message }}</span>
+  <span class="flex-1 leading-snug">{{ message }}</span>
   {% if dismissible %}
-  <button @click="show = false" class="btn btn-ghost btn-sm btn-circle" aria-label="Dismiss">&times;</button>
+  <button type="button"
+          @click="show = false"
+          class="shrink-0 h-6 w-6 inline-flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms]"
+          aria-label="Dismiss">
+    <span aria-hidden="true">&times;</span>
+  </button>
   {% endif %}
 </div>

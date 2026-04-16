@@ -94,7 +94,9 @@ class TestContextMenu:
         ]
         tmpl = jinja_env.from_string('{% include "fragments/context_menu.html" %}')
         html = tmpl.render(items=items)
-        assert "divider" in html
+        # Cycle 247 — modernised; DaisyUI "divider" class replaced with
+        # semantic role="separator" and a canonical border-t hairline
+        assert 'role="separator"' in html
 
 
 class TestCommandPalette:

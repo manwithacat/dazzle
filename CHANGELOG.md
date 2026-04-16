@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.44] - 2026-04-16
+
+### Fixed
+- **Parking-lot primitives modernised (cycle 247, 6 fragments).** Batch
+  modernisation of six small fragments that shipped with DaisyUI classes
+  and had zero consumers: `breadcrumbs.html`, `alert_banner.html`,
+  `accordion.html`, `context_menu.html`, `skeleton_patterns.html`,
+  `date_range_picker.html`. All six now use design-token colours, canonical
+  `dz-*` class markers, ARIA semantics, and Tailwind transitions. Family
+  contract at `~/.claude/skills/ux-architect/components/parking-lot-primitives.md`.
+  Also fixed: accordion `{{ content | safe }}` XSS vector removed (same
+  class as cycle 241 tooltip fix), context-menu adds `@keydown.escape.window`
+  for keyboard dismiss, date-range-picker adds explicit `id`+`for` on
+  labels for accessibility, skeleton-patterns uses explicit `animate-pulse`
+  instead of DaisyUI `skeleton` class. Updated 5 existing tests in
+  `test_phase2_fragments.py` and `test_phase3_fragments.py` that asserted
+  DaisyUI class names. 16 new tests in `test_parking_lot_primitives.py`.
+
 ## [0.55.43] - 2026-04-16
 
 ### Added

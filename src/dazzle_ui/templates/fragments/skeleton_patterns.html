@@ -1,12 +1,24 @@
-{# Skeleton loading patterns — DaisyUI skeleton component presets #}
-{# Usage: {% from "fragments/skeleton_patterns.html" import skeleton_table_rows, skeleton_card, skeleton_detail %} #}
+{# Skeleton loading patterns — canonical renderers (cycle 247).
+
+   Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md
+
+   Usage:
+     {% from "fragments/skeleton_patterns.html"
+        import skeleton_table_rows, skeleton_card, skeleton_cards, skeleton_detail %}
+
+   Each macro renders a shimmer placeholder shape. Uses a single
+   ``dz-skeleton`` class with the canonical pulse animation defined in
+   ``design-system.css`` (cycle 247 — if not already present, the
+   framework CSS should define the keyframes + base class). Pre-cycle-247
+   used DaisyUI `skeleton` + `card` + `card-body` classes.
+#}
 
 {% macro skeleton_table_rows(rows=5, cols=4) %}
 {# Skeleton table body — shimmer rows for table loading state #}
 {% for _ in range(rows) %}
 <tr>
   {% for _ in range(cols) %}
-  <td><div class="skeleton h-4 w-full"></div></td>
+  <td class="px-3 py-2"><div class="dz-skeleton h-4 w-full rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div></td>
   {% endfor %}
 </tr>
 {% endfor %}
@@ -14,32 +26,33 @@
 
 {% macro skeleton_card() %}
 {# Skeleton card — shimmer card for grid loading state #}
-<div class="card bg-base-100 border border-base-300">
-  <div class="card-body gap-3">
-    <div class="skeleton h-4 w-3/4"></div>
-    <div class="skeleton h-3 w-1/2"></div>
-    <div class="skeleton h-3 w-full"></div>
-    <div class="skeleton h-3 w-5/6"></div>
+<div class="dz-skeleton-card bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] p-3 shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+  <div class="space-y-2">
+    <div class="dz-skeleton h-4 w-3/4 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
+    <div class="dz-skeleton h-3 w-1/2 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
+    <div class="dz-skeleton h-3 w-full rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
+    <div class="dz-skeleton h-3 w-5/6 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
   </div>
 </div>
 {% endmacro %}
 
 {% macro skeleton_detail() %}
 {# Skeleton detail view — shimmer fields for detail loading state #}
-<div class="space-y-4">
-  <div class="skeleton h-6 w-1/3"></div>
+<div class="dz-skeleton-detail space-y-4">
+  <div class="dz-skeleton h-6 w-1/3 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
   {% for _ in range(4) %}
   <div class="flex gap-4">
-    <div class="skeleton h-4 w-24"></div>
-    <div class="skeleton h-4 w-48"></div>
+    <div class="dz-skeleton h-4 w-24 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
+    <div class="dz-skeleton h-4 w-48 rounded-[3px] bg-[hsl(var(--muted))] animate-pulse"></div>
   </div>
   {% endfor %}
 </div>
 {% endmacro %}
 
 {% macro skeleton_cards(count=6) %}
-{# Grid of skeleton cards #}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+{# Grid of skeleton cards — matches the responsive breakpoints used
+   by the metrics region and other grid regions. #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for _ in range(count) %}
   {{ skeleton_card() }}
   {% endfor %}

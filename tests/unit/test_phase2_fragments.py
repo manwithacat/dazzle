@@ -34,7 +34,9 @@ class TestAlertBanner:
     def test_renders_dismissible_banner(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "fragments/alert_banner.html" %}')
         html = tmpl.render(message="Warning!", level="warning")
-        assert "alert-warning" in html
+        # Cycle 247 — modernised to design tokens; DaisyUI alert-* removed
+        assert "dz-alert-banner" in html
+        assert 'data-dz-alert-level="warning"' in html
         assert "Warning!" in html
         assert "x-data" in html
         assert "Dismiss" in html
@@ -42,7 +44,8 @@ class TestAlertBanner:
     def test_non_dismissible_banner(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "fragments/alert_banner.html" %}')
         html = tmpl.render(message="Info", level="info", dismissible=False)
-        assert "alert-info" in html
+        # Cycle 247 — modernised; DaisyUI alert-info removed
+        assert 'data-dz-alert-level="info"' in html
         assert "x-data" not in html
 
 
@@ -83,14 +86,15 @@ class TestStepsIndicator:
 class TestAccordion:
     def test_renders_static_sections(self, jinja_env):
         sections = [
-            {"id": "a", "title": "Section A", "content": "<p>Content A</p>", "endpoint": None},
-            {"id": "b", "title": "Section B", "content": "<p>Content B</p>", "endpoint": None},
+            {"id": "a", "title": "Section A", "content": "Content A", "endpoint": None},
+            {"id": "b", "title": "Section B", "content": "Content B", "endpoint": None},
         ]
         tmpl = jinja_env.from_string('{% include "fragments/accordion.html" %}')
         html = tmpl.render(sections=sections)
         assert "Section A" in html
         assert "Content A" in html
-        assert "collapse-arrow" in html
+        # Cycle 247 — modernised; DaisyUI collapse-arrow removed
+        assert "dz-accordion-item" in html
 
     def test_lazy_load_section_has_htmx(self, jinja_env):
         sections = [
@@ -100,7 +104,8 @@ class TestAccordion:
         html = tmpl.render(sections=sections)
         assert 'hx-get="/api/lazy"' in html
         assert 'hx-trigger="toggle once"' in html
-        assert "loading loading-dots" in html
+        # Cycle 247 — modernised; DaisyUI loading loading-dots → SVG spinner
+        assert "Loading" in html
 
 
 class TestSkeletonPatterns:

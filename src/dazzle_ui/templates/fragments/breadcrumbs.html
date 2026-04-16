@@ -1,17 +1,35 @@
-{# Breadcrumb navigation trail — DaisyUI breadcrumbs component #}
-{# Parameters: crumbs (list of Crumb objects with .label and .url) #}
+{# Breadcrumb navigation trail — canonical renderer (cycle 247).
+
+   Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md
+
+   Parameters:
+     crumbs : list of objects with `.label` (str) and optional `.url`.
+              The last crumb typically has `.url=None` (current page).
+
+   Renders only when 2+ crumbs exist — a lone breadcrumb is not navigation.
+
+   Uses the native chevron (›) as a separator rather than a custom SVG or
+   DaisyUI-injected content. Matches the Linear/macOS convention.
+#}
 {% if crumbs and crumbs | length > 1 %}
-<div class="breadcrumbs text-sm" aria-label="Breadcrumb">
-  <ul>
+<nav class="dz-breadcrumbs text-[12px] text-[hsl(var(--muted-foreground))]" aria-label="Breadcrumb">
+  <ol class="flex items-center gap-1.5 flex-wrap">
     {% for crumb in crumbs %}
-    <li>
+    <li class="flex items-center gap-1.5">
+      {% if not loop.first %}
+      <span class="text-[hsl(var(--muted-foreground))] opacity-60" aria-hidden="true">›</span>
+      {% endif %}
       {% if crumb.url %}
-      <a href="{{ crumb.url }}" hx-get="{{ crumb.url }}" hx-push-url="true" hx-target="body">{{ crumb.label }}</a>
+      <a href="{{ crumb.url }}"
+         hx-get="{{ crumb.url }}"
+         hx-push-url="true"
+         hx-target="body"
+         class="hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms]">{{ crumb.label }}</a>
       {% else %}
-      <span aria-current="page">{{ crumb.label }}</span>
+      <span class="text-[hsl(var(--foreground))] font-medium" aria-current="page">{{ crumb.label }}</span>
       {% endif %}
     </li>
     {% endfor %}
-  </ul>
-</div>
+  </ol>
+</nav>
 {% endif %}
