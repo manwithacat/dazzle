@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.13] - 2026-04-16
+
+### Fixed
+- `dazzle serve` in test mode now generates a random `DAZZLE_TEST_SECRET` (if none is set) and publishes it to `.dazzle/runtime.json` so `dazzle test create-sessions` and `dazzle test dsl-run` can authenticate against `/__test__/*` without the caller pre-setting the env var. Closes the CyFuture / Penny Dreadful blocker where generated AUTH/SM/WS tests all failed with 403 / 404 because the test runner had no way to obtain a valid session cookie (#790).
+- `SessionManager._resolve_test_secret` now falls back from env to `runtime.json` when authenticating personas. Same fallback added to the inline `SimpleAdapter` inside `E2ERunner.run_tests`.
+
+### Added
+- `ports.read_runtime_test_secret(project_root)` helper for consumers that need the shared secret without importing the whole serve context.
+
+### Agent Guidance
+- `dazzle serve --test-mode` (or any serve invocation that enables test endpoints) now writes a random `test_secret` to `.dazzle/runtime.json` alongside the port allocation. Tools that talk to `/__test__/*` endpoints should prefer reading that file (via `dazzle.cli.runtime_impl.ports.read_runtime_test_secret`) and only fall back to the `DAZZLE_TEST_SECRET` env var for CI environments that inject their own secret.
+
 ## [0.57.12] - 2026-04-16
 
 ### Added

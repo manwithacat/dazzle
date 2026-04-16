@@ -342,7 +342,20 @@ def _allocate_ports_and_runtime(ctx: _ServeContext) -> None:
             api_port=allocation.ui_port,
             project_name=allocation.project_name,
         )
-    write_runtime_file(ctx.project_root, allocation)
+
+    # In test mode, generate/read a shared secret and publish it so
+    # `dazzle test create-sessions` can authenticate without the caller
+    # setting DAZZLE_TEST_SECRET in their own env (#790).
+    test_secret: str | None = None
+    if ctx.enable_test_mode:
+        test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+        if not test_secret:
+            import secrets
+
+            test_secret = secrets.token_urlsafe(24)
+            os.environ["DAZZLE_TEST_SECRET"] = test_secret
+
+    write_runtime_file(ctx.project_root, allocation, test_secret=test_secret)
 
     def cleanup_runtime() -> None:
         clear_runtime_file(ctx.project_root)

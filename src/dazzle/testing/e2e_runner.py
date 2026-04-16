@@ -350,6 +350,11 @@ class E2ERunner:
         # Import the step execution helpers
         from dazzle.cli.testing import _execute_step_sync, _resolve_fixture_deps
 
+        # Capture project path into the adapter closure so it can fall
+        # back to the runtime.json test_secret when the env var is unset
+        # (#790 — dazzle serve publishes the secret there in test mode).
+        project_path = self.project_path
+
         # Create a simple adapter for URL resolution
         class SimpleAdapter:
             def __init__(self, base_url: str, api_url: str):
@@ -357,11 +362,23 @@ class E2ERunner:
                 self.api_url = api_url
                 self._fixture_ids: dict[str, str] = {}
 
+            def _resolve_secret(self) -> str:
+                secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+                if secret:
+                    return secret
+                try:
+                    from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+
+                    runtime_secret = read_runtime_test_secret(project_path)
+                except Exception:
+                    runtime_secret = None
+                return runtime_secret or ""
+
             def _http_client(self) -> httpx.Client:
                 """Lazy httpx client with test secret header if set."""
                 if not hasattr(self, "_client"):
                     headers: dict[str, str] = {}
-                    secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+                    secret = self._resolve_secret()
                     if secret:
                         headers["X-Test-Secret"] = secret
                     self._client = httpx.Client(timeout=10.0, headers=headers)

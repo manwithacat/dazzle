@@ -102,6 +102,24 @@ class SessionManager:
     # Public API
     # =========================================================================
 
+    def _resolve_test_secret(self) -> str:
+        """Find the shared test secret.
+
+        Priority: ``DAZZLE_TEST_SECRET`` env var → ``.dazzle/runtime.json``
+        ``test_secret`` field (written by ``dazzle serve --test-mode``
+        since v0.57.13, #790).
+        """
+        secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+        if secret:
+            return secret
+        try:
+            from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+
+            runtime_secret = read_runtime_test_secret(self.project_path)
+        except Exception:
+            runtime_secret = None
+        return runtime_secret or ""
+
     async def create_session(
         self,
         persona_id: str,
@@ -127,7 +145,7 @@ class SessionManager:
         close_client = client is None
         if client is None:
             headers: dict[str, str] = {}
-            test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+            test_secret = self._resolve_test_secret()
             if test_secret:
                 headers["X-Test-Secret"] = test_secret
             client = httpx.AsyncClient(timeout=30.0, headers=headers)

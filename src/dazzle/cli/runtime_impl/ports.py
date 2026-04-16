@@ -158,7 +158,12 @@ def find_available_ports(
     )
 
 
-def write_runtime_file(project_root: Path, allocation: PortAllocation) -> Path:
+def write_runtime_file(
+    project_root: Path,
+    allocation: PortAllocation,
+    *,
+    test_secret: str | None = None,
+) -> Path:
     """
     Write runtime state file with current port allocation.
 
@@ -168,6 +173,11 @@ def write_runtime_file(project_root: Path, allocation: PortAllocation) -> Path:
     Args:
         project_root: Project root directory
         allocation: Current port allocation
+        test_secret: When ``dazzle serve`` is running in test mode,
+            include the shared secret that ``/__test__/*`` endpoints
+            expect. Consumers (``dazzle test create-sessions``, etc.)
+            read this to attach the ``X-Test-Secret`` header without
+            needing the env var set on their side (#790).
 
     Returns:
         Path to the runtime file
@@ -176,16 +186,35 @@ def write_runtime_file(project_root: Path, allocation: PortAllocation) -> Path:
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
     runtime_file = runtime_dir / "runtime.json"
-    runtime_data = {
+    runtime_data: dict[str, object] = {
         "project_name": allocation.project_name,
         "ui_port": allocation.ui_port,
         "api_port": allocation.api_port,
         "ui_url": f"http://localhost:{allocation.ui_port}",
         "api_url": f"http://localhost:{allocation.api_port}",
     }
+    if test_secret:
+        runtime_data["test_secret"] = test_secret
 
     runtime_file.write_text(json.dumps(runtime_data, indent=2))
     return runtime_file
+
+
+def read_runtime_test_secret(project_root: Path) -> str | None:
+    """Return the ``test_secret`` from ``.dazzle/runtime.json``, if any (#790).
+
+    Used by ``dazzle test ...`` commands so they don't need
+    ``DAZZLE_TEST_SECRET`` in their own env.
+    """
+    runtime_file = project_root / ".dazzle" / "runtime.json"
+    if not runtime_file.exists():
+        return None
+    try:
+        data = json.loads(runtime_file.read_text())
+        secret = data.get("test_secret")
+        return secret if isinstance(secret, str) and secret else None
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def read_runtime_file(project_root: Path) -> PortAllocation | None:
