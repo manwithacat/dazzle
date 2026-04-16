@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.15] - 2026-04-16
+
+### Fixed
+- Auto-generated `FeedbackReport` entity (created by the linker when `feedback_widget: enabled`) now ships with `scope: all for: *` rules matching its five `permit:` rules. Previously the LIST endpoint default-denied on every feedback-enabled app because permit-without-scope is a lint warning AND a runtime default-deny. Improve-loop cycle.
+
 ## [0.57.14] - 2026-04-16
 
 ### Fixed

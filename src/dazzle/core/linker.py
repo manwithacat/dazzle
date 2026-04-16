@@ -350,24 +350,22 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
         fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
 
     # Any authenticated user can create/read; only admins can update/delete.
+    # ``scope: all for: *`` matches every permit so the runtime doesn't
+    # default-deny the LIST endpoint (silencing the per-app improve-loop
+    # warning: "permit: rules but no scope: blocks — default-deny").
+    _ops = (
+        ir.PermissionKind.CREATE,
+        ir.PermissionKind.READ,
+        ir.PermissionKind.LIST,
+        ir.PermissionKind.UPDATE,
+        ir.PermissionKind.DELETE,
+    )
     access = ir.AccessSpec(
         permissions=[
-            ir.PermissionRule(
-                operation=ir.PermissionKind.CREATE, require_auth=True, effect=ir.PolicyEffect.PERMIT
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.READ, require_auth=True, effect=ir.PolicyEffect.PERMIT
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.LIST, require_auth=True, effect=ir.PolicyEffect.PERMIT
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.UPDATE, require_auth=True, effect=ir.PolicyEffect.PERMIT
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.DELETE, require_auth=True, effect=ir.PolicyEffect.PERMIT
-            ),
-        ]
+            ir.PermissionRule(operation=op, require_auth=True, effect=ir.PolicyEffect.PERMIT)
+            for op in _ops
+        ],
+        scopes=[ir.ScopeRule(operation=op, condition=None, personas=["*"]) for op in _ops],
     )
 
     # State machine: new → triaged → in_progress → resolved → verified
