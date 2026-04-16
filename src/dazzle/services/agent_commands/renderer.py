@@ -111,11 +111,12 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
 
 def render_skill(cmd: CommandDefinition, ctx: dict[str, Any]) -> str:
     """Render a command's Jinja2 template."""
-    env = Environment(
+    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
         keep_trailing_newline=True,
         trim_blocks=True,
         lstrip_blocks=True,
+        autoescape=False,
     )
     template = env.get_template(cmd.template_file)
     return template.render(cmd=cmd, ctx=ctx)
@@ -125,11 +126,12 @@ def render_agents_md(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
     """Render AGENTS.md from all commands."""
-    env = Environment(
+    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
         keep_trailing_newline=True,
         trim_blocks=True,
         lstrip_blocks=True,
+        autoescape=False,
     )
     template = env.get_template("agents_md.j2")
     return template.render(commands=commands, ctx=ctx)
@@ -139,11 +141,12 @@ def render_claude_md_section(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
     """Render the section to append to .claude/CLAUDE.md."""
-    env = Environment(
+    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
         keep_trailing_newline=True,
         trim_blocks=True,
         lstrip_blocks=True,
+        autoescape=False,
     )
     template = env.get_template("claude_md_section.j2")
     return template.render(commands=commands, ctx=ctx)
