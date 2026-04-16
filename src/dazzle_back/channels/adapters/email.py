@@ -493,7 +493,7 @@ class FileEmailAdapter(EmailAdapter):
                     if filepath.exists():
                         content: str = filepath.read_text()
                         return content
-        except (json.JSONDecodeError, KeyError):
-            pass
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.warning("Failed to read message %s: %s", message_id, exc)
 
         return None
