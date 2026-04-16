@@ -10,7 +10,7 @@
 <a href="{{ target }}"
    class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2
           focus:z-[9999] focus:p-3 focus:bg-primary focus:text-primary-content
-          focus:rounded focus:shadow-lg focus:text-sm focus:font-semibold">
+          focus:rounded focus:shadow-lg focus:text-[13px] focus:font-semibold">
   {{ text }}
 </a>
 {% endmacro %}
@@ -29,7 +29,7 @@
 <div {% if id %}id="{{ id }}"{% endif %}
      class="htmx-indicator flex justify-center py-4"
      role="status" aria-label="{{ label }}">
-  <span class="loading loading-spinner loading-md" aria-hidden="true"></span>
+  <span class="w-5 h-5 animate-spin loading-md" aria-hidden="true"></span>
   <span class="sr-only">{{ label }}</span>
 </div>
 {% endmacro %}

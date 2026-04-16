@@ -5,7 +5,7 @@
     {% if section.subhead %}<p class="dz-subhead">{{ section.subhead }}</p>{% endif %}
     {% if section.body %}<p class="dz-value-body">{{ section.body }}</p>{% endif %}
     {% if section.primary_cta %}
-    <div class="dz-cta-group"><a href="{{ section.primary_cta.href | default('#') }}" class="btn btn-primary">{{ section.primary_cta.label | default("Get Started") }}</a></div>
+    <div class="dz-cta-group"><a href="{{ section.primary_cta.href | default('#') }}" class="inline-flex items-center h-9 px-4 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[14px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">{{ section.primary_cta.label | default("Get Started") }}</a></div>
     {% endif %}
   </div>
 </section>

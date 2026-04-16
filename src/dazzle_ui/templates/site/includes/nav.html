@@ -6,9 +6,9 @@
       <a href="{{ item.href }}" class="dz-nav-link">{{ item.label }}</a>
       {% endfor %}
       {% if is_authenticated %}
-      <a href="{{ dashboard_url }}" class="btn btn-primary btn-sm">Dashboard</a>
+      <a href="{{ dashboard_url }}" class="inline-flex items-center h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">Dashboard</a>
       {% elif nav_cta %}
-      <a href="{{ nav_cta.href }}" class="btn btn-primary btn-sm">{{ nav_cta.label }}</a>
+      <a href="{{ nav_cta.href }}" class="inline-flex items-center h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">{{ nav_cta.label }}</a>
       {% endif %}
       {% include "site/includes/theme_toggle.html" %}
     </div>

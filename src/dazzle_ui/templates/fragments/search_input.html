@@ -1,6 +1,6 @@
 {# Reusable search input — pure Tailwind, same HTMX wiring #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional), table #}
-{% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") |lower) + '...' if table else 'Search...') %}
+{% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") | replace("_", " ") |lower) + '...' if table else 'Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
 {% set search_id = 'dz-search-' + (table.table_id or 'search') if table else 'dz-search' %}
 <div x-data="{ query: '' }" class="relative flex items-center">

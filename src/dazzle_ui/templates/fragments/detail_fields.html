@@ -1,14 +1,14 @@
 {# Detail fields fragment — renders entity item as a definition list.
    Used by the API read handler for HTMX/browser content negotiation. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body">
-    <h2 class="card-title">{{ entity_name }}</h2>
+<div class="card bg-[hsl(var(--card))] shadow-sm">
+  <div class="p-4">
+    <h2 class="text-lg font-semibold">{{ entity_name }}</h2>
     <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 mt-4">
       {% for key, value in item.items() %}
       {% if value is not none and key != 'id' %}
-      <dt class="font-medium text-base-content/70 text-sm text-right py-1">{{ key | replace('_', ' ') | title }}</dt>
-      <dd class="py-1 text-sm break-all">
+      <dt class="font-medium text-[hsl(var(--muted-foreground))] text-[13px] text-right py-1">{{ key | replace('_', ' ') | title }}</dt>
+      <dd class="py-1 text-[13px] break-all">
         {% if value is sameas true %}
         {{ render_status_badge(value="yes", tone="success", display="Yes") }}
         {% elif value is sameas false %}

@@ -2,7 +2,7 @@
 {# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
 {# Expects: dropdown_label (str), dropdown_items (list of {label, href?, action?}) #}
 <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
-  <button @click="open = !open" class="btn btn-ghost btn-sm gap-1">
+  <button @click="open = !open" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] h-8 px-3 text-[13px] gap-1">
     {{ dropdown_label | default("Actions") }}
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
          class="w-4 h-4 stroke-current transition-transform" :class="open && 'rotate-180'">
@@ -10,7 +10,7 @@
     </svg>
   </button>
   <ul x-show="open" x-transition
-      class="absolute right-0 mt-1 menu p-1 shadow-md bg-base-100 rounded-lg border border-base-300 w-40 z-50">
+      class="absolute right-0 mt-1 menu p-1 shadow-md bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] w-40 z-50">
     {% for item in dropdown_items | default([]) %}
     <li>
       {% if item.href %}

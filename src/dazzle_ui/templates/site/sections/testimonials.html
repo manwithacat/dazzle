@@ -4,11 +4,11 @@
     {{ section_header(section) }}
     <div class="dz-testimonials-grid">
       {% for item in section["items"] | default([]) %}
-      <div class="card bg-base-200">
-        <div class="card-body">
+      <div class="card bg-[hsl(var(--muted))]">
+        <div class="p-4">
           <p class="italic">"{{ item.quote | default("") }}"</p>
           <p class="font-medium mt-2">{{ item.name | default("") }}</p>
-          {% if item.role %}<p class="text-sm opacity-70">{{ item.role }}</p>{% endif %}
+          {% if item.role %}<p class="text-[13px] opacity-70">{{ item.role }}</p>{% endif %}
         </div>
       </div>
       {% endfor %}

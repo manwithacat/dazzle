@@ -92,7 +92,7 @@
              xmlns="http://www.w3.org/2000/svg">
           <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        New {{ table.entity_name }}
+        New {{ table.entity_name | replace("_", " ") }}
       </a>
       {% endif %}
     </div>
@@ -276,7 +276,7 @@
           <path d="M12 16h16M12 20h10M12 24h8" stroke="currentColor" stroke-width="1.5"
                 stroke-linecap="round"/>
         </svg>
-        <p class="text-[15px] font-medium text-[hsl(var(--foreground))]">No {{ table.entity_name | lower }}s found</p>
+        <p class="text-[15px] font-medium text-[hsl(var(--foreground))]">No {{ table.entity_name | replace("_", " ") | lower }}s found</p>
         <p class="text-[13px]">Try adjusting your search or filter criteria.</p>
         {% if table.create_url %}
         <a href="{{ table.create_url }}"
@@ -288,7 +288,7 @@
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
-          New {{ table.entity_name }}
+          New {{ table.entity_name | replace("_", " ") }}
         </a>
         {% endif %}
       </div>

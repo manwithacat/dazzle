@@ -5,10 +5,10 @@
     {{ section_media(section) }}
     <div class="dz-features-grid">
       {% for item in section["items"] | default([]) %}
-      <div class="dz-feature-item card bg-base-100 shadow-sm">
-        <div class="card-body">
+      <div class="dz-feature-item card bg-[hsl(var(--card))] shadow-sm">
+        <div class="p-4">
           {% if item.icon %}<i data-lucide="{{ item.icon }}"></i>{% endif %}
-          <h3 class="card-title">{{ item.title | default("") }}</h3>
+          <h3 class="text-lg font-semibold">{{ item.title | default("") }}</h3>
           <p>{{ item.body | default("") }}</p>
         </div>
       </div>

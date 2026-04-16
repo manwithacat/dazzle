@@ -3,12 +3,12 @@
 {% if filter_columns %}
 <div class="flex flex-wrap gap-2 mb-2 filter-bar">
   {% for fc in filter_columns %}
-  <select class="select select-xs select-bordered"
+  <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] border border-[hsl(var(--border))]"
           hx-get="{{ endpoint }}" hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
           hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
     <option value="">All {{ fc.label }}</option>
     {% for opt in fc.options %}
-    <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt }}</option>
+    <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt | humanize }}</option>
     {% endfor %}
   </select>
   {% endfor %}
@@ -72,7 +72,7 @@
   </table>
 </div>
 {% if total > items | length %}
-<p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+<p class="text-[12px] opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
 {% endif %}
 {% else %}
 <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>

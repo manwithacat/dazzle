@@ -60,14 +60,14 @@
 
             {# Form submit + navigation buttons #}
             <div class="flex gap-3 pt-4">
-              <button type="submit" class="btn btn-primary"
+              <button type="submit" class="inline-flex items-center h-9 px-4 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[14px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]"
                       data-loading-class="loading"
                       data-loading-disable>
                 {% if ctx.form.mode == "edit" %}Save & Continue{% else %}Submit{% endif %}
               </button>
               {% for tr in experience.transitions %}
                 {% if tr.event != 'success' %}
-                <button type="button" class="btn btn-{{ tr.style }}"
+                <button type="button" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}"
                         hx-post="{{ tr.url }}"
                         hx-target="body"
                         hx-swap="innerHTML">
@@ -87,7 +87,7 @@
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
@@ -100,7 +100,7 @@
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
@@ -114,7 +114,7 @@
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
@@ -123,15 +123,15 @@
 
     {% else %}
       {# Non-surface step (process/integration) — placeholder #}
-      <div class="card bg-base-200 p-8 text-center">
+      <div class="card bg-[hsl(var(--muted))] p-8 text-center">
         <div class="text-lg font-medium mb-2">Step in progress</div>
-        <p class="text-base-content/60">This step is being processed. Please wait or continue.</p>
+        <p class="text-[hsl(var(--muted-foreground))]">This step is being processed. Please wait or continue.</p>
       </div>
       {% if experience.transitions %}
       <div class="flex gap-3 pt-4 justify-center">
         {% for tr in experience.transitions %}
         <form method="post" action="{{ tr.url }}">
-          <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+          <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
         </form>
         {% endfor %}
       </div>

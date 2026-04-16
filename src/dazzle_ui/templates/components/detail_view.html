@@ -94,7 +94,9 @@
         <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-[13px] font-medium text-[hsl(var(--muted-foreground))]">{{ field.label }}</dt>
           <dd class="mt-1 text-[13px] text-[hsl(var(--foreground))] sm:col-span-2 sm:mt-0">
-            {% if field.type == "badge" %}
+            {% if value is none %}
+              —
+            {% elif field.type == "badge" %}
               {% include 'fragments/status_badge.html' %}
             {% elif field.type == "bool" or field.type == "checkbox" %}
               {{ value | bool_icon }}
@@ -121,9 +123,9 @@
               {% if value is mapping %}
                 {{ value | ref_display }}
               {% elif field.type == "enum" %}
-                {{ value | default("—") | humanize }}
+                {{ value | default("—", true) | humanize }}
               {% else %}
-                {{ value | default("—") }}
+                {{ value | default("—", true) }}
               {% endif %}
             {% endif %}
           </dd>

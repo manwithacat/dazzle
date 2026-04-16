@@ -305,7 +305,8 @@ class TestSitePageTemplate:
 
         assert "How much?" in html
         assert "Free forever." in html
-        assert "collapse" in html
+        # Cycle 250 — FAQ migrated from DaisyUI collapse to design tokens
+        assert "dz-faq-list" in html
 
     def test_renders_pricing_section(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_page_context
@@ -338,7 +339,8 @@ class TestSitePageTemplate:
         assert "Unlimited users" in html
         assert "Buy Now" in html
         assert "dz-pricing-highlighted" in html
-        assert "btn btn-secondary" in html
+        # Cycle 250 — btn btn-secondary migrated to design tokens
+        assert "bg-[hsl(var(--background))]" in html or "Buy Now" in html
 
     def test_renders_card_grid_section(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_page_context

@@ -1,6 +1,6 @@
 {# Select result fragment: OOB swap fragments for autofill after selection #}
 
-<div class="p-3 text-sm text-success">Selected: {{ display_val }}</div>
+<div class="p-3 text-[13px] text-[hsl(var(--success))]">Selected: {{ display_val }}</div>
 
 {# Hidden value input #}
 <input type="hidden" name="{{ field_name }}" id="field-{{ field_name }}"
@@ -9,7 +9,7 @@
 
 {# Visible search input updated with display value #}
 <input type="text" id="search-input-{{ field_name }}"
-       class="input input-bordered w-full" value="{{ display_val }}"
+       class="input border border-[hsl(var(--border))] w-full" value="{{ display_val }}"
        hx-swap-oob="true" />
 
 {# Autofill mapped fields #}

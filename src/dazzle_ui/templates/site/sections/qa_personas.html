@@ -47,12 +47,12 @@
 
 <script>
 (function() {
-  document.querySelectorAll('[data-qa-login-persona]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var personaId = btn.dataset.qaLoginPersona;
-      btn.disabled = true;
-      var originalText = btn.textContent;
-      btn.textContent = 'Logging in...';
+  document.querySelectorAll('[data-qa-login-persona]').forEach(function(inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms]) {
+    inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].addEventListener('click', function() {
+      var personaId = inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].dataset.qaLoginPersona;
+      inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].disabled = true;
+      var originalText = inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].textContent;
+      inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].textContent = 'Logging in...';
       fetch('/qa/magic-link', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -67,9 +67,9 @@
           throw new Error('No URL in response');
         }
       }).catch(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Error — try again';
-        setTimeout(function() { btn.textContent = originalText; }, 2000);
+        inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].disabled = false;
+        inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].textContent = 'Error — try again';
+        setTimeout(function() { inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].textContent = originalText; }, 2000);
         console.error('QA magic link failed:', err);
       });
     });

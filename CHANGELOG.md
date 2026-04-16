@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.47] - 2026-04-16
+
+### Fixed
+- **Comprehensive DaisyUI→design-token sweep (cycle 250).** Migrated
+  ~99 remaining DaisyUI class instances across 30 template files to
+  canonical design-token equivalents. Covers: site/marketing pages
+  (hero, CTA, pricing, FAQ, features, testimonials, card_grid, etc.),
+  experience wizard, layout chrome, fragment stragglers, workspace
+  region stragglers. Only 3 DaisyUI instances remain across the entire
+  template set, all in the stepper/wizard component (`step-primary`)
+  which requires a dedicated stepper rewrite to replace.
+
+- **Dead drawer `href="#"` on "Open full page" (EX-005/EX-032).**
+  Workspace drawer's expand link was a dead affordance. Now hidden by
+  default with `hidden` attribute; JS reveals it only when a real
+  URL is available.
+
+- **Detail view renders 'None' for null timestamps (EX-022).** Added
+  a `{% if value is none %}` guard at the top of the detail-view
+  field rendering chain. Also fixed `default()` to pass `true` as
+  the second argument so Jinja2 treats Python `None` as missing.
+
+- **Bulk action bar double-space in "Delete  items" (EX-023).** The
+  text nodes were separate flex children with gap between them.
+  Wrapped in a single `<span>` so the text is one flex child.
+
+- **Workspace filter dropdowns raw enum values (EX-031).** Applied
+  `| humanize` to filter option display text in workspace region
+  templates (list.html, tab_data.html, queue.html). Values remain
+  raw for correct filtering.
+
+- **Raw entity name in Create CTA and search placeholder (EX-038).**
+  Applied `| replace("_", " ")` to handle snake_case entity names in
+  filterable_table.html and search_input.html.
+
+- **Missing `data-dz-region-name` on workspace regions (EX-025).**
+  Extended the `region_card` macro to stamp `data-dz-region-name`
+  and a matching `id="region-<name>"` from the region's context.
+
+- **Backlog cleanup.** Removed duplicate EX-046 row. Reclassified
+  EX-012 (CLOSED_NO_ACTION), EX-019 (CLOSED_SUPERSEDED by cycle 228),
+  EX-026 (DEFERRED — contract-gen issue). Reclassified 7 DSL/app
+  quality rows (EX-010/013/015/016/027/033/036) as DEFERRED_APP_QUALITY.
+
 ## [0.55.46] - 2026-04-16
 
 ### Added

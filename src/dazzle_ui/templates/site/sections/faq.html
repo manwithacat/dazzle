@@ -4,10 +4,10 @@
     {{ section_header(section) }}
     <div class="dz-faq-list">
       {% for item in section["items"] | default([]) %}
-      <div class="collapse collapse-arrow bg-base-200">
+      <div class="border border-[hsl(var(--border))] rounded-[4px] bg-[hsl(var(--muted))]">
         <input type="radio" name="faq">
-        <div class="collapse-title font-medium">{{ item.question | default("") }}</div>
-        <div class="collapse-content"><p>{{ item.answer | default("") }}</p></div>
+        <div class="text-[13px] font-medium cursor-pointer font-medium">{{ item.question | default("") }}</div>
+        <div class="px-3 py-2"><p>{{ item.answer | default("") }}</p></div>
       </div>
       {% endfor %}
     </div>

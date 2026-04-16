@@ -32,7 +32,7 @@
             hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
       <option value="">All {{ fc.label }}</option>
       {% for opt in fc.options %}
-      <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt }}</option>
+      <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt | humanize }}</option>
       {% endfor %}
     </select>
     {% endfor %}

@@ -8,7 +8,7 @@
     hx-headers='{"Accept": "text/html"}'
     hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
   <td colspan="{{ table.columns | length + 1 }}" class="text-center py-4">
-    <span class="loading loading-spinner loading-sm"></span>
+    <span class="w-4 h-4 animate-spin"></span>
     <span class="sr-only">Loading more...</span>
   </td>
 </tr>

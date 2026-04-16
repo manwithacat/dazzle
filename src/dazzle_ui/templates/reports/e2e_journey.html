@@ -68,8 +68,8 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
-  .badge-pass { background: var(--pass); color: #000; }
-  .badge-fail { background: var(--fail); color: #fff; }
+  .bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] { background: var(--pass); color: #000; }
+  .bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] { background: var(--fail); color: #fff; }
   .badge-partial { background: var(--partial); color: #000; }
   .badge-blocked { background: var(--blocked); color: #fff; }
   .badge-dead_end, .badge-dead-end { background: var(--dead-end); color: #fff; }
@@ -211,8 +211,8 @@
 <details>
   <summary>
     {{ session.persona }}
-    <span class="badge badge-pass">{{ session.verdict_counts.get('pass', 0) }} pass</span>
-    <span class="badge badge-fail">{{ session.verdict_counts.get('fail', 0) }} fail</span>
+    <span class="badge bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]">{{ session.verdict_counts.get('pass', 0) }} pass</span>
+    <span class="badge bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))]">{{ session.verdict_counts.get('fail', 0) }} fail</span>
     &mdash; {{ session.steps | length }} steps, {{ session.stories_covered }}/{{ session.stories_attempted }} stories
   </summary>
   <div class="content">

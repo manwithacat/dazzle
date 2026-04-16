@@ -186,7 +186,7 @@
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       Close
     </button>
-    <a id="dz-drawer-expand" href="#" class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1">
+    <a id="dz-drawer-expand" hidden class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1">
       Open full page
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
     </a>
@@ -203,7 +203,7 @@
   window.dzDrawer = {
     isOpen: false,
     open: function(url) {
-      if (url && expand) expand.href = url;
+      if (url && expand) { expand.href = url; expand.hidden = false; } else if (expand) { expand.hidden = true; }
       drawer.classList.remove('translate-x-full');
       backdrop.classList.remove('opacity-0', 'pointer-events-none');
       document.body.classList.add('overflow-hidden');
