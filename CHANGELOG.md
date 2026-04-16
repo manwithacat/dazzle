@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.10] - 2026-04-16
+
+### Added
+- `dazzle ux explore` CLI command: prepares per-persona explore run contexts (state dir, findings file, background ModeRunner script) that the outer Claude Code assistant dispatches subagents against. Supports `--persona X` / `--all-personas`, `--cycles N`, `--strategy S`, `--app-dir PATH`, and `--json` output (#789).
+- Three new explore strategies: `persona_journey` (walk DSL goals end-to-end), `cross_persona_consistency` (check scope rules from a single persona's POV), `regression_hunt` (post-upgrade sweep), and `create_flow_audit` (stress every create surface). Alongside existing `edge_cases` and `missing_contracts` there are now six strategies (#789).
+- `/explore` agent command definition (`explore.toml` + `explore.md.j2`) so `dazzle agent sync` deploys the slash command into downstream projects.
+- `GraphNodeSpec.parent_field` + DSL `parent:` inside `graph_node:` blocks (shipped in 0.57.8 — moved here for context on the exploration API rename).
+
+### Changed
+- **Breaking**: renamed explore substrate API from `example_*` to `app_*`:
+  - `ExploreRunContext.example_root` → `app_root`, `example_name` → `app_name`
+  - `init_explore_run(example_root=...)` → `init_explore_run(app_root=...)` (and `app_root` now defaults to `Path.cwd()`)
+  - `build_subagent_prompt(example_name=...)` → `app_name=...` with a new `app_descriptor` variable replacing the hardcoded "Dazzle example app" wording
+  - `PersonaRun.example_name` → `app_name`
+  - `run_fitness_strategy(example_root=...)` → `app_root=...`
+  No shims — callers are updated in the same commit. Rename blast radius: `subagent_explore.py`, `subagent_ingest.py`, `fitness_strategy.py`, `ux_explore_subagent.py`, and all related tests.
+- `init_explore_run` now discovers `project_root` by walking upward for `dazzle.toml` (via new `discover_project_root`) instead of assuming `<repo>/examples/<name>`. Downstream projects get the same `dev_docs/ux_cycle_runs/` layout without passing paths explicitly (#789).
+- Explore prompt template swapped "Dazzle example app" for a variable-driven opening so downstream projects can brand the prompt (#789).
+
+### Agent Guidance
+- Downstream projects can now run the exploration substrate without a Dazzle `examples/` tree. Add an `/explore` slash command with `dazzle agent sync`, then run `/explore` (or call `dazzle ux explore --strategy edge_cases`) from your project root. Boot the app with `dazzle serve`, dispatch subagents per the `explore.md.j2` playbook, and ingest findings into your project's `agent/explore-backlog.md`.
+- When picking a strategy: start with `edge_cases`, follow up with `persona_journey` on the same persona set, then `cross_persona_consistency` to catch scope-rule drift. Use `regression_hunt` after framework upgrades and `create_flow_audit` when auditing onboarding.
+- `init_explore_run(app_root=None)` uses the CWD — apps calling this from a script should always pass an explicit path when they're not running from the project root.
+
 ## [0.57.9] - 2026-04-16
 
 ### Changed

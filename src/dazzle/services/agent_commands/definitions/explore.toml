@@ -1,0 +1,26 @@
+[command]
+name = "explore"
+version = "1.0.0"
+title = "Explore"
+description = "Subagent-driven UX exploration — boot the app, walk it as each persona, record findings."
+pattern = "loop"
+
+[maturity]
+min_entities = 3
+requires = ["serve"]
+
+[loop]
+backlog_file = "agent/explore-backlog.md"
+log_file = "agent/explore-log.md"
+lock_file = "agent/explore.lock"
+max_cycles = 20
+stale_lock_minutes = 60
+
+[tools]
+cli = [
+    "dazzle ux explore",
+    "dazzle serve",
+]
+
+[skill_template]
+file = "explore.md.j2"

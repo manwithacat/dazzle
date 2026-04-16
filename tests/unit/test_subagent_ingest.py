@@ -64,7 +64,7 @@ class TestIdAllocation:
         run = PersonaRun(
             persona_id="agent",
             run_id="20260415-030000",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[
                     {
@@ -86,7 +86,7 @@ class TestIdAllocation:
         run = PersonaRun(
             persona_id="agent",
             run_id="20260415-030000",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 observations=[
                     {
@@ -111,7 +111,7 @@ class TestDeduplication:
         run = PersonaRun(
             persona_id="user",
             run_id="20260415-030000",
-            example_name="contact_manager",
+            app_name="contact_manager",
             findings=_make_findings(
                 proposals=[
                     {
@@ -133,13 +133,13 @@ class TestDeduplication:
             PersonaRun(
                 persona_id="agent",
                 run_id="run-a",
-                example_name="support_tickets",
+                app_name="support_tickets",
                 findings=_make_findings(proposals=[finding]),
             ),
             PersonaRun(
                 persona_id="customer",
                 run_id="run-b",
-                example_name="support_tickets",
+                app_name="support_tickets",
                 findings=_make_findings(proposals=[finding]),
             ),
         ]
@@ -153,7 +153,7 @@ class TestRowFormatting:
         run = PersonaRun(
             persona_id="manager",
             run_id="20260415-030259",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[
                     {
@@ -179,7 +179,7 @@ class TestRowFormatting:
         run = PersonaRun(
             persona_id="customer",
             run_id="run-b",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 observations=[
                     {
@@ -200,7 +200,7 @@ class TestRowFormatting:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[
                     {
@@ -222,7 +222,7 @@ class TestRowFormatting:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[
                     {
@@ -252,7 +252,7 @@ class TestIdempotencyAndEmptyInputs:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(observations=[{"note": "something", "severity": "minor"}]),
         )
         original_prop_section = backlog_file.read_text().split("## Proposed Components")[1]
@@ -268,7 +268,7 @@ class TestIdempotencyAndEmptyInputs:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(proposals=[{"description": "no name"}]),
         )
         result = ingest_findings(backlog_file, cycle_number=199, runs=[run])
@@ -281,7 +281,7 @@ class TestInsertionLocation:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[{"component_name": "new-widget", "description": "d"}]
             ),
@@ -297,7 +297,7 @@ class TestInsertionLocation:
         run = PersonaRun(
             persona_id="agent",
             run_id="run-a",
-            example_name="support_tickets",
+            app_name="support_tickets",
             findings=_make_findings(
                 proposals=[{"component_name": "new-widget", "description": "d"}],
                 observations=[{"note": "o", "severity": "minor"}],

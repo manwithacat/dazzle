@@ -365,6 +365,123 @@ def _run_contracts(
     return 0
 
 
+@ux_app.command("explore")
+def explore_command(
+    persona: str = typer.Option("", "--persona", help="DSL persona id the subagent walks as"),
+    cycles: int = typer.Option(
+        1,
+        "--cycles",
+        help="Number of run contexts to prepare (one per persona when --all-personas)",
+    ),
+    strategy: str = typer.Option(
+        "edge_cases",
+        "--strategy",
+        help="Explore strategy: edge_cases | missing_contracts | persona_journey | cross_persona_consistency | regression_hunt | create_flow_audit",
+    ),
+    app_dir: Path = typer.Option(
+        None,
+        "--app-dir",
+        help="Path to the Dazzle app root. Defaults to current working directory.",
+    ),
+    all_personas: bool = typer.Option(
+        False,
+        "--all-personas",
+        help="Prepare one run per DSL-declared persona instead of the single --persona",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit run context as JSON (for outer-assistant consumption)"
+    ),
+) -> None:
+    """Prepare an explore run: state dir, findings file, runner script.
+
+    This command does NOT launch the browser — that requires the outer
+    Claude Code assistant's ``Task`` tool, which can only be invoked from
+    its cognitive loop (see #789 and the substrate docs).
+
+    What it does:
+
+    1. Derives the persona list (from ``--persona`` or ``--all-personas``).
+    2. Calls ``init_explore_run`` for each persona × cycle to create the
+       run directory, empty findings file, and ModeRunner background
+       script.
+    3. Prints the resulting contexts so the outer assistant can pick up
+       the paths and dispatch subagents.
+
+    Example:
+        dazzle ux explore --persona teacher --strategy edge_cases
+        dazzle ux explore --all-personas --strategy persona_journey
+        dazzle ux explore --strategy regression_hunt --cycles 3
+    """
+    import json as _json_mod
+
+    from dazzle.cli.runtime_impl.ux_cycle_impl.subagent_explore import (
+        EXPLORE_STRATEGIES,
+        init_explore_run,
+    )
+
+    if strategy not in EXPLORE_STRATEGIES:
+        console.print(
+            f"[red]Unknown strategy {strategy!r}. Expected one of: "
+            f"{', '.join(EXPLORE_STRATEGIES)}[/red]"
+        )
+        raise typer.Exit(2)
+
+    resolved_app_dir = (app_dir or Path.cwd()).resolve()
+    if not resolved_app_dir.is_dir():
+        console.print(f"[red]App dir does not exist: {resolved_app_dir}[/red]")
+        raise typer.Exit(2)
+
+    personas: list[str]
+    if all_personas:
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        try:
+            appspec = load_project_appspec(resolved_app_dir)
+        except Exception as e:
+            console.print(f"[red]Failed to load AppSpec from {resolved_app_dir}: {e}[/red]")
+            raise typer.Exit(2) from e
+        personas = [p.id for p in (appspec.personas or []) if getattr(p, "interactive", True)]
+        if not personas:
+            console.print(
+                "[yellow]No interactive personas declared in DSL — nothing to do[/yellow]"
+            )
+            raise typer.Exit(0)
+    else:
+        if not persona:
+            console.print("[red]Either --persona or --all-personas must be specified[/red]")
+            raise typer.Exit(2)
+        personas = [persona]
+
+    contexts: list[dict[str, Any]] = []
+    for persona_id in personas:
+        for cycle_i in range(1, cycles + 1):
+            ctx = init_explore_run(
+                app_root=resolved_app_dir,
+                persona_id=persona_id,
+                strategy=strategy,
+            )
+            ctx_dict = ctx.to_dict()
+            ctx_dict["cycle_index"] = cycle_i
+            contexts.append(ctx_dict)
+
+    if json_output:
+        console.print_json(_json_mod.dumps({"runs": contexts}, indent=2))
+        return
+
+    console.print(f"[green]Prepared {len(contexts)} explore run(s)[/green]")
+    console.print(f"  strategy: {strategy}")
+    console.print(f"  app: {resolved_app_dir.name} at {resolved_app_dir}")
+    for c in contexts:
+        console.print(
+            f"  • persona={c['persona_id']} run={c['run_id']} findings={c['findings_path']}"
+        )
+    console.print(
+        "\n[dim]Next: the outer assistant should run each runner script "
+        "via Bash(run_in_background=true), poll conn.json, and dispatch a "
+        "subagent with the prompt from build_subagent_prompt.[/dim]"
+    )
+
+
 @ux_app.command("verify")
 def verify_command(
     structural: bool = typer.Option(

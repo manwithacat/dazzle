@@ -60,7 +60,7 @@ class PersonaRun:
     persona_id: str
     run_id: str
     findings: SubagentExploreFindings
-    example_name: str
+    app_name: str
 
 
 @dataclass
@@ -114,7 +114,7 @@ def _format_prop_row(
     cycle_number: int,
     persona_id: str,
     run_id: str,
-    example_name: str,
+    app_name: str,
 ) -> str:
     component = _escape_cell(str(proposal.get("component_name", "<unknown>")))
     description = _escape_cell(str(proposal.get("description", "")))
@@ -125,7 +125,7 @@ def _format_prop_row(
     # to the raw finding: cycle number, persona+run, observed page,
     # selector hint.
     note_parts = [
-        f"Cycle {cycle_number} — {example_name}/{persona_id} run {run_id}.",
+        f"Cycle {cycle_number} — {app_name}/{persona_id} run {run_id}.",
     ]
     if observed_on:
         note_parts.append(f"Observed on `{observed_on}`.")
@@ -146,7 +146,7 @@ def _format_ex_row(
     cycle_number: int,
     persona_id: str,
     run_id: str,
-    example_name: str,
+    app_name: str,
 ) -> str:
     severity = str(observation.get("severity", "minor"))
     page = str(observation.get("page", ""))
@@ -159,7 +159,7 @@ def _format_ex_row(
     description = _escape_cell(" ".join(description_parts))
 
     notes = _escape_cell(
-        f"Cycle {cycle_number} — {example_name}/{persona_id} run {run_id}, severity={severity}."
+        f"Cycle {cycle_number} — {app_name}/{persona_id} run {run_id}, severity={severity}."
     )
 
     return (
@@ -266,7 +266,7 @@ def ingest_findings(
                     cycle_number=cycle_number,
                     persona_id=run.persona_id,
                     run_id=run.run_id,
-                    example_name=run.example_name,
+                    app_name=run.app_name,
                 )
                 + "\n"
             )
@@ -282,7 +282,7 @@ def ingest_findings(
                     cycle_number=cycle_number,
                     persona_id=run.persona_id,
                     run_id=run.run_id,
-                    example_name=run.example_name,
+                    app_name=run.app_name,
                 )
                 + "\n"
             )

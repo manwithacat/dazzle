@@ -48,7 +48,7 @@ class StrategyOutcome:
 async def run_fitness_strategy(
     connection: AppConnection,
     *,
-    example_root: Path,
+    app_root: Path,
     component_contract_path: Path | None = None,
     personas: list[str] | None = None,
 ) -> StrategyOutcome:
@@ -112,7 +112,7 @@ async def run_fitness_strategy(
                 )
 
                 engine = await _build_engine(
-                    example_root=example_root,
+                    app_root=app_root,
                     handle=handle,
                     bundle=persona_bundle,
                     component_contract_path=component_contract_path,
@@ -256,7 +256,7 @@ class _ContractObserver:
 
 
 async def _build_engine(
-    example_root: Path,
+    app_root: Path,
     handle: Any,
     bundle: Any,
     component_contract_path: Path | None = None,
@@ -278,8 +278,8 @@ async def _build_engine(
             "so PgSnapshotSource can read the example app's database"
         )
 
-    app_spec = load_project_appspec(example_root)
-    config = load_fitness_config(example_root)
+    app_spec = load_project_appspec(app_root)
+    config = load_fitness_config(app_root)
 
     backend = PostgresBackend(database_url=database_url)
     snapshot_source = PgSnapshotSource(backend)
@@ -307,10 +307,10 @@ async def _build_engine(
     contract_observer = _ContractObserver(page=bundle.page) if component_contract_path else None
 
     engine = FitnessEngine(
-        project_root=example_root,
+        project_root=app_root,
         config=config,
         app_spec=app_spec,
-        spec_md_path=example_root / "SPEC.md",
+        spec_md_path=app_root / "SPEC.md",
         agent=agent,
         executor=PlaywrightExecutor(page=bundle.page),
         snapshot_source=snapshot_source,

@@ -1,4 +1,4 @@
-"""Cycle 198 subagent-driven explore: helpers for the outer assistant.
+"""Subagent-driven explore: helpers for the outer assistant.
 
 This module intentionally does NOT export an async orchestrator function
 that "invokes" the Task tool. Claude Code's Task tool is only reachable
@@ -6,15 +6,16 @@ from the outer assistant's cognitive loop — it's a tool instruction, not
 a library callable. Trying to abstract it into a single function creates
 impedance mismatch.
 
-Instead, cycle 198 ships four small helpers that the outer assistant
-composes during a /ux-cycle Step 6 run:
+Instead, the explore substrate ships small helpers that the outer
+assistant composes during a /ux-cycle Step 6 (or `dazzle ux explore`)
+run:
 
     1. ``init_explore_run(...)`` — create the per-run state directory,
        write the initial findings file, write the ModeRunner background
        script, return a context object holding every path the assistant
        needs.
 
-    2. ``ExploreRunContext`` — dataclass with example/persona/run_id and
+    2. ``ExploreRunContext`` — dataclass with app/persona/run_id and
        every absolute path (state_dir, findings_path, runner_script_path,
        helper_command). JSON-serializable if the assistant wants to stash
        it across tool calls.
@@ -27,9 +28,10 @@ composes during a /ux-cycle Step 6 run:
        assistant runs this via Bash(run_in_background=true), polls for
        conn.json, and eventually kills it with pkill.
 
-The outer assistant's playbook (documented in .claude/commands/ux-cycle.md
-Step 6) walks through these helpers in order, interleaving them with Bash
-commands and the Task tool invocation.
+In 0.57.10 (closes #789) the substrate was generalised from Dazzle's
+own ``examples/`` apps to **any** Dazzle project: ``app_root`` defaults
+to ``Path.cwd()``, ``project_root`` is discovered by walking upward for
+``dazzle.toml``, and terminology has switched from "example" to "app".
 
 Storage policy: state_dir lives under dev_docs/ux_cycle_runs/ which is
 gitignored. Artefacts are local-only and ephemeral (per-run directory
@@ -48,6 +50,19 @@ DEFAULT_RUNS_DIR_RELATIVE = Path("dev_docs") / "ux_cycle_runs"
 
 HELPER_COMMAND = "python -m dazzle.agent.playwright_helper"
 
+# Valid explore strategies (closes #789). Each strategy changes the
+# guidance injected into the explore prompt — see
+# ``dazzle.agent.missions.ux_explore_subagent`` for the per-strategy
+# behaviour blocks.
+EXPLORE_STRATEGIES: tuple[str, ...] = (
+    "edge_cases",
+    "persona_journey",
+    "cross_persona_consistency",
+    "regression_hunt",
+    "create_flow_audit",
+)
+DEFAULT_EXPLORE_STRATEGY = "edge_cases"
+
 
 @dataclass
 class ExploreRunContext:
@@ -55,32 +70,34 @@ class ExploreRunContext:
 
     All paths are absolute so the outer assistant can pass them into
     Bash commands without relative-path ambiguity. ``run_id`` is unique
-    per invocation; two concurrent runs against the same example+persona
+    per invocation; two concurrent runs against the same app+persona
     get distinct contexts.
     """
 
-    example_root: Path
-    example_name: str
+    app_root: Path
+    app_name: str
     persona_id: str
     run_id: str
     state_dir: Path
     findings_path: Path
     conn_path: Path
     runner_script_path: Path
+    strategy: str = DEFAULT_EXPLORE_STRATEGY
     helper_command: str = HELPER_COMMAND
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-serializable representation for debugging / log capture."""
         return {
-            "example_name": self.example_name,
+            "app_name": self.app_name,
             "persona_id": self.persona_id,
             "run_id": self.run_id,
+            "strategy": self.strategy,
             "state_dir": str(self.state_dir),
             "findings_path": str(self.findings_path),
             "conn_path": str(self.conn_path),
             "runner_script_path": str(self.runner_script_path),
             "helper_command": self.helper_command,
-            "example_root": str(self.example_root),
+            "app_root": str(self.app_root),
         }
 
 
@@ -113,48 +130,82 @@ class SubagentExploreFindings:
         return asdict(self)
 
 
+def discover_project_root(start: Path) -> Path:
+    """Walk upward from ``start`` looking for the nearest ``dazzle.toml``.
+
+    Returns the directory containing ``dazzle.toml``, or ``start`` itself
+    if none is found (callers then fall back to cwd semantics).
+    """
+    current = start.resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / "dazzle.toml").is_file():
+            return candidate
+    return current
+
+
 def init_explore_run(
-    example_root: Path,
-    persona_id: str,
+    app_root: Path | None = None,
+    persona_id: str = "",
     *,
     run_id: str | None = None,
     base_runs_dir: Path | None = None,
     project_root: Path | None = None,
+    strategy: str = DEFAULT_EXPLORE_STRATEGY,
 ) -> ExploreRunContext:
     """Create the state directory, findings file, and runner script.
 
     Synchronous — no ModeRunner launch yet. The assistant calls this
     first, then runs the generated runner script via Bash to actually
-    boot the example app.
+    boot the app.
 
     Args:
-        example_root: Path to the example app directory (e.g.
-            ``examples/contact_manager``).
+        app_root: Path to the Dazzle app directory. Defaults to
+            ``Path.cwd()`` so downstream projects can invoke the
+            substrate from their own repo root without passing a path.
         persona_id: DSL persona id the subagent will walk as.
         run_id: Unique identifier for this run. Defaults to an
             ISO-style timestamp.
         base_runs_dir: Directory under which per-run state lives.
             Defaults to ``<project_root>/dev_docs/ux_cycle_runs``.
-        project_root: Dazzle repo root used to resolve
-            ``base_runs_dir`` default. If None, inferred as
-            ``example_root.parents[1]`` (i.e. the parent of ``examples/``).
+        project_root: Directory to anchor ``base_runs_dir`` under. When
+            None, the substrate walks upward from ``app_root`` looking
+            for the nearest ``dazzle.toml`` and falls back to
+            ``app_root`` itself. This replaces the previous
+            framework-specific ``examples/<name>`` inference (#789).
+        strategy: Which explore strategy the subagent prompt should
+            emphasise — see ``EXPLORE_STRATEGIES`` for the valid set.
 
     Returns:
         A fully-populated ``ExploreRunContext`` with the findings file
         and runner script already written to disk.
+
+    Raises:
+        ValueError: if ``persona_id`` is empty or ``strategy`` is unknown.
     """
+    if not persona_id:
+        raise ValueError("persona_id is required")
+    if strategy not in EXPLORE_STRATEGIES:
+        raise ValueError(
+            f"Unknown explore strategy {strategy!r}. "
+            f"Expected one of: {', '.join(EXPLORE_STRATEGIES)}"
+        )
+
+    if app_root is None:
+        app_root = Path.cwd()
+
     if run_id is None:
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
+    resolved_app_root = app_root.resolve()
+
     if project_root is None:
-        # examples/<name>/ → repo root is parents[1]
-        project_root = example_root.resolve().parents[1]
+        project_root = discover_project_root(resolved_app_root)
 
     if base_runs_dir is None:
         base_runs_dir = project_root / DEFAULT_RUNS_DIR_RELATIVE
 
-    example_name = example_root.name
-    run_dir_name = f"{example_name}_{persona_id}_{run_id}"
+    app_name = resolved_app_root.name
+    run_dir_name = f"{app_name}_{persona_id}_{run_id}"
     state_dir = base_runs_dir / run_dir_name
     state_dir.mkdir(parents=True, exist_ok=True)
 
@@ -166,14 +217,15 @@ def init_explore_run(
     runner_script_path = state_dir / "runner.py"
 
     ctx = ExploreRunContext(
-        example_root=example_root.resolve(),
-        example_name=example_name,
+        app_root=resolved_app_root,
+        app_name=app_name,
         persona_id=persona_id,
         run_id=run_id,
         state_dir=state_dir.resolve(),
         findings_path=findings_path.resolve(),
         conn_path=conn_path.resolve(),
         runner_script_path=runner_script_path.resolve(),
+        strategy=strategy,
     )
 
     write_runner_script(ctx)
@@ -183,18 +235,18 @@ def init_explore_run(
 def write_runner_script(ctx: ExploreRunContext) -> Path:
     """Write a self-contained runner script to ``ctx.runner_script_path``.
 
-    The script, when executed, loads the example's .env, boots
-    ``ModeRunner``, writes connection info to ``ctx.conn_path``, then
-    blocks on a shutdown signal (SIGTERM/SIGINT). The outer assistant
-    runs it via ``Bash(run_in_background=true)``, polls for ``conn.json``,
-    then proceeds with the login + subagent + teardown sequence.
+    The script, when executed, loads the app's .env, boots ``ModeRunner``,
+    writes connection info to ``ctx.conn_path``, then blocks on a shutdown
+    signal (SIGTERM/SIGINT). The outer assistant runs it via
+    ``Bash(run_in_background=true)``, polls for ``conn.json``, then
+    proceeds with the login + subagent + teardown sequence.
 
     Generated as a script rather than imported as a module because
     ``Bash(run_in_background=true)`` launches a shell subprocess — it
     can't share Python state with the assistant's context.
     """
     script = _RUNNER_SCRIPT_TEMPLATE.format(
-        example_root=repr(str(ctx.example_root)),
+        app_root=repr(str(ctx.app_root)),
         persona_id=repr(ctx.persona_id),
         conn_path=repr(str(ctx.conn_path)),
     )
@@ -220,12 +272,12 @@ def read_findings(ctx: ExploreRunContext) -> SubagentExploreFindings:
 
 
 _RUNNER_SCRIPT_TEMPLATE = '''\
-"""Cycle 198 subagent-driven explore: ModeRunner background runner.
+"""Subagent-driven explore: ModeRunner background runner.
 
 Generated by dazzle.cli.runtime_impl.ux_cycle_impl.subagent_explore
 .write_runner_script. Do not edit by hand — regenerated per run.
 
-Loads the example app's .env, boots ModeRunner, writes connection info,
+Loads the app's .env, boots ModeRunner, writes connection info,
 blocks until SIGTERM. The outer assistant runs this via Bash with
 run_in_background=true, polls for the conn file, and eventually kills
 this process with pkill.
@@ -239,7 +291,7 @@ import signal
 import sys
 from pathlib import Path
 
-EXAMPLE_ROOT = Path({example_root})
+APP_ROOT = Path({app_root})
 PERSONA_ID = {persona_id}
 CONN_PATH = Path({conn_path})
 
@@ -247,7 +299,7 @@ SAFETY_TIMEOUT_SEC = 1200  # 20 minutes
 
 
 async def main() -> None:
-    env_path = EXAMPLE_ROOT / ".env"
+    env_path = APP_ROOT / ".env"
     if env_path.exists():
         for raw in env_path.read_text().splitlines():
             line = raw.strip()
@@ -269,7 +321,7 @@ async def main() -> None:
 
     async with ModeRunner(
         mode_spec=get_mode("a"),
-        project_root=EXAMPLE_ROOT,
+        project_root=APP_ROOT,
         personas=[PERSONA_ID],
         db_policy="preserve",
     ) as conn:

@@ -179,11 +179,19 @@ def test_load_all_commands_finds_definitions() -> None:
     assert len(commands) >= 1
 
 
-def test_load_all_commands_finds_six() -> None:
+def test_load_all_commands_finds_all_definitions() -> None:
     commands = load_all_commands()
-    assert len(commands) == 6
+    assert len(commands) == 7
     names = sorted(c.name for c in commands)
-    assert names == ["improve", "issues", "polish", "qa", "ship", "spec-sync"]
+    assert names == [
+        "explore",
+        "improve",
+        "issues",
+        "polish",
+        "qa",
+        "ship",
+        "spec-sync",
+    ]
 
 
 def test_all_definitions_have_valid_versions() -> None:

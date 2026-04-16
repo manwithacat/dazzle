@@ -1,6 +1,6 @@
-"""Mission prompt templates for cycle 198's subagent-driven explore.
+"""Mission prompt templates for the subagent-driven explore substrate.
 
-Cycle 198 replaces DazzleAgent-driven explore (v0.55.4) with Claude Code
+Cycle 198 replaced DazzleAgent-driven explore (v0.55.4) with Claude Code
 Task-tool subagents driving a stateless Playwright helper via Bash. The
 cognitive work happens inside the subagent's conversation turn and is
 billed to the Claude Code host subscription (Max Pro 20) instead of the
@@ -17,29 +17,47 @@ user produced 4 proposals + 4 observations in 188s at ~60k subsidised
 tokens — compared to 0 proposals across 11 DazzleAgent runs in cycle 197's
 verification sweep.
 
-Two strategies are supported:
+Five strategies are supported (closes #789):
 
-- ``missing_contracts`` — the primary mode. The subagent scans for
-  recurring interaction patterns that should have a ux-architect contract
-  but don't yet. Proven at scale across cycles 198–199 (10 proposals
-  across 4 persona-runs on 2 example apps).
-- ``edge_cases`` — added in cycle 200. The subagent probes friction,
-  broken-state recovery, empty-/error-/boundary-state handling, nav
-  dead-ends, and mismatches between UI affordance and actual behaviour.
-  Output skews toward observations rather than proposals.
+- ``missing_contracts`` — scan for recurring interaction patterns that
+  should have a ux-architect contract but don't yet.
+- ``edge_cases`` — probe friction, broken-state recovery, empty/error/
+  boundary-state handling, nav dead-ends. Skews toward observations.
+- ``persona_journey`` — walk the DSL persona's declared ``goals`` end
+  to end and record friction points.
+- ``cross_persona_consistency`` — check whether the same entity renders
+  consistently across personas and whether visibility rules match the
+  DSL's access declarations.
+- ``regression_hunt`` — walk every workspace region and flag anything
+  that differs from the assistant's expected behaviour (useful after a
+  framework upgrade).
+- ``create_flow_audit`` — for every creatable entity, attempt a create
+  with valid + invalid data and record which flows silently fail.
+
+In 0.57.10 the template was generalised from Dazzle's own ``examples/``
+apps to any Dazzle project — the "Dazzle example app" wording was
+replaced with a variable ``{app_descriptor}`` so downstream consumers
+can brand the prompt for their own project (#789).
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
-Strategy = Literal["missing_contracts", "edge_cases"]
+Strategy = Literal[
+    "missing_contracts",
+    "edge_cases",
+    "persona_journey",
+    "cross_persona_consistency",
+    "regression_hunt",
+    "create_flow_audit",
+]
 
 
 def build_subagent_prompt(
     *,
     strategy: Strategy,
-    example_name: str,
+    app_name: str,
     persona_id: str,
     persona_label: str,
     site_url: str,
@@ -50,13 +68,16 @@ def build_subagent_prompt(
     start_route: str,
     budget_calls: int = 20,
     min_findings: int = 3,
+    app_descriptor: str | None = None,
+    persona_goals: list[str] | None = None,
 ) -> str:
     """Build the mission prompt for a subagent-driven explore run.
 
     Args:
-        strategy: "missing_contracts" (scan for uncontracted patterns) or
-            "edge_cases" (probe for friction, broken states, dead-ends).
-        example_name: The Dazzle example app name (e.g. "contact_manager").
+        strategy: One of the six supported strategies (see module
+            docstring).
+        app_name: The Dazzle app name (e.g. "contact_manager" or
+            "aegismark" for a downstream project).
         persona_id: DSL persona id the subagent walks as.
         persona_label: Human-readable label from ``PersonaSpec.label``.
         site_url: ``AppConnection.site_url`` from ModeRunner.
@@ -75,6 +96,12 @@ def build_subagent_prompt(
             this is a target, with a hard ceiling at 1.5x.
         min_findings: Minimum proposals+observations before the subagent
             is allowed to stop early.
+        app_descriptor: Sentence describing the app (e.g. "Dazzle example
+            app"). Defaults to ``f"Dazzle app `{app_name}`"`` for
+            backward-compatible wording.
+        persona_goals: DSL-declared persona goals, used by the
+            ``persona_journey`` strategy to seed the walk. Optional for
+            other strategies.
 
     Returns:
         The full prompt string ready to pass to the Task tool as its
@@ -83,20 +110,26 @@ def build_subagent_prompt(
     Raises:
         ValueError: if ``strategy`` is not a recognised literal.
     """
-    if strategy == "missing_contracts":
-        strategy_section = _MISSING_CONTRACTS_STRATEGY_SECTION
-    elif strategy == "edge_cases":
-        strategy_section = _EDGE_CASES_STRATEGY_SECTION
-    else:
+    strategy_section = _STRATEGY_SECTIONS.get(strategy)
+    if strategy_section is None:
         raise ValueError(
-            f"unknown strategy {strategy!r}; expected 'missing_contracts' or 'edge_cases'"
+            f"unknown strategy {strategy!r}; expected one of: "
+            f"{', '.join(_STRATEGY_SECTIONS.keys())}"
         )
 
     hard_ceiling = int(budget_calls * 1.5)
     existing_list = "\n".join(f"- {name}" for name in existing_components)
 
+    if app_descriptor is None:
+        app_descriptor = f"Dazzle app `{app_name}`"
+
+    # Strategies that consume persona goals template them into their
+    # prompt section themselves; pass a pre-formatted string in.
+    goals_formatted = _format_persona_goals(persona_goals or [])
+
     return _PROMPT_TEMPLATE.format(
-        example_name=example_name,
+        app_name=app_name,
+        app_descriptor=app_descriptor,
         persona_id=persona_id,
         persona_label=persona_label,
         site_url=site_url,
@@ -108,8 +141,17 @@ def build_subagent_prompt(
         budget_calls=budget_calls,
         hard_ceiling=hard_ceiling,
         min_findings=min_findings,
-        strategy_section=strategy_section,
+        strategy_section=strategy_section.format(
+            persona_id=persona_id,
+            persona_goals=goals_formatted,
+        ),
     )
+
+
+def _format_persona_goals(goals: list[str]) -> str:
+    if not goals:
+        return "(no goals declared in the DSL for this persona)"
+    return "\n".join(f"- {goal}" for goal in goals)
 
 
 _MISSING_CONTRACTS_STRATEGY_SECTION = """\
@@ -181,23 +223,191 @@ record a single ``minor`` observation saying the persona's reachable
 surface had no edge-case defects in this cycle."""
 
 
+_PERSONA_JOURNEY_STRATEGY_SECTION = """\
+You are walking {persona_id}'s declared goals end-to-end. Your job is to
+check whether the app actually lets the persona accomplish each goal —
+without surprise, without dead-ends, and without fighting the UI.
+
+The DSL declares these goals for this persona:
+
+{persona_goals}
+
+For each goal, attempt the following sequence:
+
+1. **Locate** — find the entry point the persona would plausibly use.
+   Look for obvious affordances (sidebar, dashboard cards, call-to-action
+   buttons). Don't fall back to typing URLs unless an affordance is
+   clearly expected but missing.
+2. **Walk** — click through the flow end-to-end. Fill forms with
+   reasonable data, submit, follow any redirects, observe the confirmation.
+3. **Verify** — confirm the result is visible somewhere the persona
+   would naturally check (their workspace, an activity feed, a
+   detail page).
+
+Record an observation for each goal you walk, even if it succeeds. Include:
+
+- The path you actually took (sidebar → workspace → form → submit)
+- Whether the UI made the next step obvious at each checkpoint
+- Whether the confirmation pattern matches the persona's expectations
+- Friction points (forced field order, unclear wording, missing defaults,
+  extra clicks that don't match the goal intent)
+
+Severity:
+- ``concerning`` — goal is impossible or requires a workaround the persona
+  shouldn't have to know
+- ``notable`` — goal works but with friction that reduces trust or
+  adoption
+- ``minor`` — goal works cleanly, with nits
+
+Proposals are rare for this strategy — only record one if the journey
+exposes a missing UX component contract (e.g. a custom flow that should
+reuse an existing pattern)."""
+
+
+_CROSS_PERSONA_CONSISTENCY_STRATEGY_SECTION = """\
+You are checking that the same underlying entity renders consistently
+across personas, and that visibility/permission rules actually match the
+DSL's declared access rules.
+
+You are only logged in as one persona ({persona_id}) for this run, so the
+check is: record what *this* persona sees on shared entities, and flag
+anything that contradicts what the DSL declares (access rules, scope
+filters, workspace membership).
+
+For each workspace region or list surface you encounter:
+
+1. **Note the row count** — does it match what the persona's scope rule
+   should permit? (You don't have the other persona's view — you're
+   checking for obvious over- or under-visibility, not comparing
+   directly.)
+2. **Note visible columns** — does the persona see columns marked
+   "hidden" for their role? Does a column that should be visible appear
+   blank or missing?
+3. **Note action affordances** — create/edit/delete buttons that are
+   visible but shouldn't be (based on DSL permit: rules), or missing
+   when they should be present.
+4. **Note linked navigation** — sidebar entries and workspace links that
+   this persona can see. Follow each one: does it lead to a 403/404 or
+   to content this persona shouldn't have?
+
+Each finding is an observation with severity:
+
+- ``concerning`` — persona sees data they shouldn't, or can take an
+  action the access rules forbid
+- ``notable`` — UI reveals something the persona can't act on (sidebar
+  link that 403s, workspace link with no entries), wastes their time
+- ``minor`` — labels or affordances that don't match the persona's role
+  (copy, iconography, empty-state messaging)
+
+Proposals are rare for this strategy. Only propose if you notice a
+component pattern that exists specifically to handle cross-persona
+differences (persona-conditional renderer, persona-specific sidebar
+widget) that should have a contract."""
+
+
+_REGRESSION_HUNT_STRATEGY_SECTION = """\
+You are walking every major workspace region and flagging anything that
+looks surprising, broken, or inconsistent with how the framework should
+behave. This strategy is useful after a framework upgrade, a theme
+change, or a big refactor: you're hunting for things that *used to
+work* and no longer do.
+
+You don't have a baseline to compare against directly. You're doing a
+fast, broad sweep and relying on your own judgement about what Dazzle
+apps are supposed to look like. Bias toward "this looks off" rather
+than "this is definitely broken."
+
+For each workspace region:
+
+1. **Visit the region** via its sidebar entry or dashboard card.
+2. **Check the basics** — does the region render without console errors
+   or blank placeholders? Do expected affordances (create button, filter
+   bar, search) appear? Does the column set look right for the entity?
+3. **Open one row** — follow the first row's detail link. Does the
+   detail page load? Do the tabs/actions look complete? Do related
+   entities render?
+4. **Return** — use the back/breadcrumb. Does scroll position or
+   filter state persist?
+
+Record observations for anything that looks off. Severity:
+
+- ``concerning`` — a region fails to render, throws a 500, or loses
+  state unexpectedly
+- ``notable`` — visible regressions from usual Dazzle behaviour
+  (missing filters, broken breadcrumbs, unstyled elements, obvious
+  layout problems)
+- ``minor`` — polish that's likely a regression (spacing, iconography,
+  alignment) but could also be an intentional recent change
+
+Proposals are rare for this strategy. The priority is coverage — walk
+as many regions as your budget allows."""
+
+
+_CREATE_FLOW_AUDIT_STRATEGY_SECTION = """\
+You are auditing the app's create flows. For each entity that this
+persona can create, attempt a create with both valid and invalid data,
+and record how the flow behaves.
+
+For each creatable entity you can reach:
+
+1. **Find the create affordance** — workspace "New" button, sidebar
+   "+ Add", dashboard call-to-action. Note where you had to look.
+2. **Valid create** — fill the form with reasonable data and submit.
+   Observe:
+   - Does the form surface sensible defaults?
+   - Does validation fire inline before submit?
+   - On success, where does the UI take you? (Detail page, list with
+     the new row highlighted, toast + stay?)
+   - Does the new record actually appear in the list afterwards?
+3. **Invalid create** — submit with a required field empty, an invalid
+   email, a negative number, an absurdly long string. Observe:
+   - Does validation surface inline, in a toast, or silently on submit?
+   - Does the form preserve the user's input, or reset it?
+   - Is the error message actionable?
+4. **Cancel** — abandon a half-filled form mid-way (close drawer,
+   navigate away). Is there a confirm prompt? Does it persist a draft?
+
+Record an observation for each entity's create flow, covering both the
+valid and invalid paths. Severity:
+
+- ``concerning`` — create silently fails, validation is missing for
+  required fields, the form loses user input on validation errors,
+  the new record doesn't appear in the list
+- ``notable`` — missing affordance, unclear validation messages, no
+  success feedback, confusing post-create navigation
+- ``minor`` — defaults, copy, iconography, form field order
+
+Proposals are rare for this strategy — only if you see a pattern that
+should be a shared create-flow component (multi-step wizard, upload
+drop-zone)."""
+
+
+_STRATEGY_SECTIONS: dict[Strategy, str] = {
+    "missing_contracts": _MISSING_CONTRACTS_STRATEGY_SECTION,
+    "edge_cases": _EDGE_CASES_STRATEGY_SECTION,
+    "persona_journey": _PERSONA_JOURNEY_STRATEGY_SECTION,
+    "cross_persona_consistency": _CROSS_PERSONA_CONSISTENCY_STRATEGY_SECTION,
+    "regression_hunt": _REGRESSION_HUNT_STRATEGY_SECTION,
+    "create_flow_audit": _CREATE_FLOW_AUDIT_STRATEGY_SECTION,
+}
+
+
 _PROMPT_TEMPLATE = """\
-# Mission: explore {example_name} as {persona_label}
+# Mission: explore {app_name} as {persona_label}
 
-You are exploring the Dazzle `{example_name}` example app as the
-`{persona_id}` persona ({persona_label}). Your mission is described
-under "Mission-specific guidance" below.
+You are exploring the {app_descriptor} as the `{persona_id}` persona
+({persona_label}). Your mission is described under "Mission-specific
+guidance" below.
 
-This run is part of a /ux-cycle explore cycle. The cognitive work happens
-inside this Claude Code session and is billed to the Max Pro subscription,
-so don't over-optimise for token count — quality of findings beats
-quantity of calls.
+This run is part of an explore cycle. The cognitive work happens inside
+this Claude Code session and is billed to the Max Pro subscription, so
+don't over-optimise for token count — quality of findings beats quantity
+of calls.
 
 ## How to drive the browser
 
-The `{example_name}` app is already running at `{site_url}` and your
-session is already logged in as `{persona_id}`. DO NOT try to start
-servers or log in.
+The app is already running at `{site_url}` and your session is already
+logged in as `{persona_id}`. DO NOT try to start servers or log in.
 
 A stateless Playwright helper is your driver. Invoke it via the Bash tool:
 

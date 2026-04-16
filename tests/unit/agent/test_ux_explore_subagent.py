@@ -25,7 +25,7 @@ from dazzle.agent.missions.ux_explore_subagent import build_subagent_prompt
 def _sample_params(**overrides: object) -> dict[str, object]:
     base: dict[str, object] = {
         "strategy": "missing_contracts",
-        "example_name": "contact_manager",
+        "app_name": "contact_manager",
         "persona_id": "user",
         "persona_label": "Business User",
         "site_url": "http://localhost:3653",
@@ -128,6 +128,62 @@ class TestStrategyDispatch:
             build_subagent_prompt(
                 **_sample_params(strategy="lol_random")  # type: ignore[arg-type]
             )
+
+    def test_persona_journey_supported(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(  # type: ignore[arg-type]
+                strategy="persona_journey",
+                persona_goals=["Onboard new clients", "Close deals fast"],
+            )
+        )
+        assert "walking user's declared goals" in prompt
+        assert "Onboard new clients" in prompt
+        assert "Close deals fast" in prompt
+
+    def test_persona_journey_without_goals_marks_missing(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="persona_journey")  # type: ignore[arg-type]
+        )
+        assert "no goals declared in the DSL" in prompt
+
+    def test_cross_persona_consistency_supported(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="cross_persona_consistency")  # type: ignore[arg-type]
+        )
+        assert "renders consistently" in prompt
+        assert "visibility/permission rules" in prompt
+        assert "scope rule" in prompt
+
+    def test_regression_hunt_supported(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="regression_hunt")  # type: ignore[arg-type]
+        )
+        assert "major workspace region" in prompt
+        assert "framework upgrade" in prompt
+
+    def test_create_flow_audit_supported(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(strategy="create_flow_audit")  # type: ignore[arg-type]
+        )
+        assert "auditing the app's create flows" in prompt
+        assert "Valid create" in prompt
+        assert "Invalid create" in prompt
+
+
+class TestAppDescriptor:
+    def test_default_descriptor_uses_app_name(self) -> None:
+        prompt = build_subagent_prompt(**_sample_params())  # type: ignore[arg-type]
+        assert "Dazzle app `contact_manager`" in prompt
+
+    def test_custom_app_descriptor_used_in_opening(self) -> None:
+        prompt = build_subagent_prompt(
+            **_sample_params(  # type: ignore[arg-type]
+                app_descriptor="AegisMark production app",
+            )
+        )
+        assert "AegisMark production app" in prompt
+        # Old framework-specific wording is gone
+        assert "Dazzle example app" not in prompt
 
 
 class TestPromptStructure:

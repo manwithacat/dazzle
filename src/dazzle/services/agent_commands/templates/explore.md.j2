@@ -1,0 +1,92 @@
+# {{ cmd.title }} — Subagent-Driven UX Exploration Loop
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Goal
+
+Autonomously explore the running app as each persona, discover UX issues
+that no one has filed, and record findings to the exploration backlog.
+
+This command is the downstream port of the framework's `/ux-cycle` step 6
+(exploration substrate). It drives a stateless Playwright helper through
+a Claude Code subagent — the cognitive work is billed to the outer
+assistant's host subscription, not the metered SDK path.
+
+## Cycle: Boot → Prepare → Dispatch → Ingest → Loop
+
+### 1. Boot the app
+
+Start the app so the subagent has a target:
+
+```
+dazzle serve --local &
+# or
+dazzle serve &
+```
+
+Wait until `http://localhost:3000` responds. The subagent will authenticate
+via the framework's QA magic-link flow, so no pre-login is needed.
+
+### 2. Prepare run contexts
+
+Use the CLI to create the per-persona run directory, findings file, and
+ModeRunner background script:
+
+```
+dazzle ux explore --all-personas --strategy edge_cases --json
+```
+
+Parse the JSON output to get, for each persona, the absolute path to
+`findings.json` and the runner script. The strategies are:
+
+- `edge_cases` — probe friction, broken states, dead-ends (default)
+- `missing_contracts` — scan for uncontracted UX component patterns
+- `persona_journey` — walk the persona's DSL goals end-to-end
+- `cross_persona_consistency` — check visibility/scope rules match the DSL
+- `regression_hunt` — sweep all workspace regions after an upgrade
+- `create_flow_audit` — stress every entity's create surface
+
+Pick the strategy most appropriate to the current pass. When in doubt
+default to `edge_cases` first, then `persona_journey` for the same
+persona set on the next cycle.
+
+### 3. Dispatch subagents
+
+For each prepared run:
+
+1. Run the generated `runner.py` via `Bash(run_in_background=true)` so the
+   ModeRunner boots and writes `conn.json`.
+2. Poll for `conn.json` to exist + `ready: true`.
+3. Dispatch a `Task` subagent using
+   `dazzle.agent.missions.ux_explore_subagent.build_subagent_prompt` with
+   the run's persona, findings path, and strategy.
+4. When the subagent completes, SIGTERM the background runner.
+
+### 4. Ingest findings
+
+For each completed run:
+
+1. Read `findings.json` via `read_findings(ctx)`.
+2. Append new proposals and observations to `{{ cmd.loop.backlog_file }}`
+   using the standard `PROP-NNN` / `EX-NNN` row format.
+3. Mark any pattern observed 3+ times as a candidate for a
+   framework-level fix and note it in `{{ cmd.loop.log_file }}`.
+
+### 5. Loop
+
+Return to step 2 with a different strategy (or the next persona subset).
+Stop after {{ cmd.loop.max_cycles }} cycles or when two consecutive
+cycles produce fewer than 2 new findings each.
+
+## Available Tools
+
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- One strategy per cycle — don't mix modes in the same subagent run.
+- Subagents must write findings to the file as they go, not at the end.
+- Never edit a finding after ingestion; file a new one if the situation
+  has changed.
+- If two cycles in a row hit the call budget without producing findings,
+  stop — the reachable surface is exhausted for that strategy.

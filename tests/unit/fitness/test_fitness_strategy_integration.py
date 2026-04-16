@@ -42,7 +42,7 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
         ) as mock_build,
     ):
         outcome = await run_fitness_strategy(
-            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+            mock_connection, app_root=tmp_path / "examples" / "support_tickets"
         )
 
     assert fake_engine.run.await_count == 1
@@ -83,7 +83,7 @@ async def test_fitness_strategy_records_blocked_outcome_on_engine_failure(tmp_pa
         ),
     ):
         outcome = await run_fitness_strategy(
-            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+            mock_connection, app_root=tmp_path / "examples" / "support_tickets"
         )
 
     fake_bundle.close.assert_awaited_once()
@@ -121,7 +121,7 @@ async def test_fitness_strategy_raises_when_playwright_setup_fails(
         pytest.raises(RuntimeError, match="playwright missing"),
     ):
         await run_fitness_strategy(
-            mock_connection, example_root=tmp_path / "examples" / "support_tickets"
+            mock_connection, app_root=tmp_path / "examples" / "support_tickets"
         )
 
 
@@ -132,9 +132,9 @@ async def test_build_engine_wires_dependencies(
     """`_build_engine` assembles AppSpec + FitnessConfig + agent + snapshot source + LLM."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
 
@@ -174,7 +174,7 @@ async def test_build_engine_wires_dependencies(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=None,
@@ -191,9 +191,9 @@ async def test_build_engine_raises_when_database_url_unset(
 ) -> None:
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
@@ -201,7 +201,7 @@ async def test_build_engine_raises_when_database_url_unset(
 
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=MagicMock(site_url="http://x", api_url="http://y"),
             bundle=fake_bundle,
             component_contract_path=None,
@@ -215,9 +215,9 @@ async def test_build_engine_passes_contract_path_to_engine(
     """`_build_engine` with a contract_path constructs FitnessEngine with contract_paths set."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     contract_path = tmp_path / "auth-page.md"
     contract_path.write_text("# auth-page\n\n## Quality Gates\n\n1. Card centered\n")
@@ -245,7 +245,7 @@ async def test_build_engine_passes_contract_path_to_engine(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=contract_path,
@@ -295,7 +295,7 @@ async def test_run_fitness_strategy_threads_contract_path(
     ):
         await run_fitness_strategy(
             mock_connection,
-            example_root=tmp_path / "examples" / "support_tickets",
+            app_root=tmp_path / "examples" / "support_tickets",
             component_contract_path=contract_path,
         )
 
@@ -311,9 +311,9 @@ async def test_build_engine_takes_prebuilt_bundle(
     """_build_engine now accepts a bundle parameter instead of creating its own."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
 
@@ -338,7 +338,7 @@ async def test_build_engine_takes_prebuilt_bundle(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         result = await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=None,
@@ -357,9 +357,9 @@ async def test_build_engine_navigates_to_contract_anchor(
     """When the contract has an anchor, _build_engine navigates the page before building."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     contract_path = tmp_path / "auth-page.md"
     contract_path.write_text(
@@ -389,7 +389,7 @@ async def test_build_engine_navigates_to_contract_anchor(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=contract_path,
@@ -406,9 +406,9 @@ async def test_build_engine_does_not_navigate_when_no_anchor(
     """When the contract has no anchor, _build_engine skips navigation (v1.0.2 behavior)."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     contract_path = tmp_path / "no-anchor.md"
     contract_path.write_text("# no-anchor\n\n## Quality Gates\n\n1. gate\n")
@@ -436,7 +436,7 @@ async def test_build_engine_does_not_navigate_when_no_anchor(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=contract_path,
@@ -453,9 +453,9 @@ async def test_build_engine_normalizes_anchor_without_leading_slash(
     """Anchors written without a leading / still produce well-formed URLs."""
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
-    example_root = tmp_path / "examples" / "support_tickets"
-    example_root.mkdir(parents=True)
-    (example_root / "SPEC.md").write_text("# spec\n")
+    app_root = tmp_path / "examples" / "support_tickets"
+    app_root.mkdir(parents=True)
+    (app_root / "SPEC.md").write_text("# spec\n")
 
     # Anchor body has NO leading slash
     contract_path = tmp_path / "slashless.md"
@@ -484,7 +484,7 @@ async def test_build_engine_normalizes_anchor_without_leading_slash(
     ):
         handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
         await fitness_strategy._build_engine(
-            example_root=example_root,
+            app_root=app_root,
             handle=handle,
             bundle=fake_bundle,
             component_contract_path=contract_path,
@@ -699,7 +699,7 @@ async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_pers
     ):
         outcome = await run_fitness_strategy(
             mock_connection,
-            example_root=tmp_path / "examples" / "support_tickets",
+            app_root=tmp_path / "examples" / "support_tickets",
             personas=["admin", "editor", "viewer"],
         )
 
@@ -764,7 +764,7 @@ async def test_run_fitness_strategy_single_anonymous_run_backwards_compat(
     ):
         outcome = await run_fitness_strategy(
             mock_connection,
-            example_root=tmp_path / "examples" / "support_tickets",
+            app_root=tmp_path / "examples" / "support_tickets",
             personas=None,
         )
 
@@ -830,7 +830,7 @@ async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path)
     ):
         outcome = await run_fitness_strategy(
             mock_connection,
-            example_root=tmp_path / "examples" / "support_tickets",
+            app_root=tmp_path / "examples" / "support_tickets",
             personas=["failing", "happy"],
         )
 
@@ -877,7 +877,7 @@ async def test_run_fitness_strategy_closes_bundle_on_engine_construction_failure
     ):
         outcome = await run_fitness_strategy(
             mock_connection,
-            example_root=tmp_path / "examples" / "support_tickets",
+            app_root=tmp_path / "examples" / "support_tickets",
             personas=None,
         )
 
