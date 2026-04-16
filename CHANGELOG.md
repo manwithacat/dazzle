@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-04-16
+
+**Minor release — UX modernisation arc complete.** Consolidates 12 patch
+releases (v0.55.36 → v0.55.47) into a named minor. Headline changes:
+
+- DaisyUI migration 99%+ complete (~210 class instances → design tokens)
+- 8 new component contracts (status-badge, metrics-region, empty-state,
+  tooltip, toggle-group, breadcrumbs, alert-banner, accordion + 3 more)
+- Per-persona DSL overrides (`empty:`, `hide:`, `read_only:`) wired
+  end-to-end on both list and form surfaces
+- Persona-entity binding (`backed_by` / `link_via`) with runtime
+  auto-injection on create handlers
+- Aggregate regions auto-infer `display: summary`
+- Ref fields auto-render as entity-backed `<select>` dropdowns
+- 3 latent XSS vectors closed
+- 137 new regression tests (10,723 → 10,860), zero regressions
+- Backlog cleared: 0 OPEN EX rows remaining
+- Frontier agent briefing at `dev_docs/frontier-agent-briefing-v0.55.47.md`
+
+See individual patch changelogs below for per-commit detail.
+
 ## [0.55.47] - 2026-04-16
 
 ### Fixed
