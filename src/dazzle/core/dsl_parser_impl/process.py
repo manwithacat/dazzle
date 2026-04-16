@@ -40,11 +40,44 @@ DSL Syntax (v0.23.0):
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..ir.process import EffectAction, StepEffect
 from ..lexer import TokenType
+
+
+@dataclass
+class _ProcessParseContext:
+    """Accumulator for fields parsed inside a process block."""
+
+    description: str | None = None
+    implements: list[str] = field(default_factory=list)
+    trigger: ir.ProcessTriggerSpec | None = None
+    inputs: list[ir.ProcessInputField] = field(default_factory=list)
+    outputs: list[ir.ProcessOutputField] = field(default_factory=list)
+    steps: list[ir.ProcessStepSpec] = field(default_factory=list)
+    compensations: list[ir.CompensationSpec] = field(default_factory=list)
+    timeout_seconds: int = 86400  # Default 24h
+    overlap_policy: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
+    events: ir.ProcessEventEmission = field(default_factory=ir.ProcessEventEmission)
+
+
+@dataclass
+class _ScheduleParseContext:
+    """Accumulator for fields parsed inside a schedule block."""
+
+    description: str | None = None
+    implements: list[str] = field(default_factory=list)
+    cron: str | ir.ParamRef | None = None
+    interval_seconds: int | None = None
+    timezone: str | ir.ParamRef = "UTC"
+    catch_up: bool = False
+    overlap: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
+    steps: list[ir.ProcessStepSpec] = field(default_factory=list)
+    timeout_seconds: int | ir.ParamRef = 3600  # Default 1h
+    events: ir.ProcessEventEmission = field(default_factory=ir.ProcessEventEmission)
 
 
 def parse_duration(s: str) -> int:
@@ -157,263 +190,192 @@ class ProcessParserMixin:
         _parse_string_or_param: Any
 
     def parse_process(self) -> ir.ProcessSpec:
-        """
-        Parse a process block.
-
-        Grammar:
-            process IDENTIFIER STRING? COLON NEWLINE INDENT
-              [implements COLON LBRACKET identifier_list RBRACKET NEWLINE]
-              [trigger COLON NEWLINE trigger_block]
-              [input COLON NEWLINE input_block]
-              [output COLON NEWLINE output_block]
-              [steps COLON NEWLINE steps_block]
-              [compensations COLON NEWLINE compensations_block]
-              [timeout COLON DURATION NEWLINE]
-              [overlap COLON IDENTIFIER NEWLINE]
-              [emits COLON NEWLINE emits_block]
-            DEDENT
-
-        Returns:
-            ProcessSpec with parsed values
-        """
+        """Parse a process block."""
         name, title, loc = self._parse_construct_header(TokenType.PROCESS, allow_keyword_name=True)
 
-        # Parse description if present (docstring-style)
-        description = None
+        ctx = _ProcessParseContext()
         if self.match(TokenType.STRING):
-            description = str(self.advance().value)
+            ctx.description = str(self.advance().value)
             self.skip_newlines()
 
-        # Initialize fields
-        implements: list[str] = []
-        trigger: ir.ProcessTriggerSpec | None = None
-        inputs: list[ir.ProcessInputField] = []
-        outputs: list[ir.ProcessOutputField] = []
-        steps: list[ir.ProcessStepSpec] = []
-        compensations: list[ir.CompensationSpec] = []
-        timeout_seconds: int = 86400  # Default 24h
-        overlap_policy: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
-        events: ir.ProcessEventEmission = ir.ProcessEventEmission()
-
-        # Parse process fields
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            if self.match(TokenType.IMPLEMENTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                implements = self._parse_process_identifier_list()
-                self.skip_newlines()
-
-            elif self.match(TokenType.TRIGGER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                trigger = self._parse_process_trigger()
-
-            elif self.match(TokenType.INPUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                inputs = self._parse_process_inputs()
-
-            elif self.match(TokenType.OUTPUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                outputs = self._parse_process_outputs()
-
-            elif self.match(TokenType.STEPS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                steps = self._parse_process_steps()
-
-            elif self.match(TokenType.COMPENSATIONS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                compensations = self._parse_compensations()
-
-            elif self.match(TokenType.TIMEOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                timeout_str = self._parse_duration_value()
-                timeout_seconds = parse_duration(timeout_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.OVERLAP):
-                self.advance()
-                self.expect(TokenType.COLON)
-                overlap_str = self.expect_identifier_or_keyword().value
-                overlap_policy = self._parse_overlap_policy(str(overlap_str))
-                self.skip_newlines()
-
-            elif self.match(TokenType.EMITS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                events = self._parse_process_emits()
-
-            else:
-                # Skip unknown field
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    self._skip_to_next_process_field()
+            self._parse_process_field(ctx)
 
         self.expect(TokenType.DEDENT)
 
         return ir.ProcessSpec(
             name=str(name),
             title=title,
-            description=description,
-            implements=implements,
-            trigger=trigger,
-            inputs=inputs,
-            outputs=outputs,
-            steps=steps,
-            compensations=compensations,
-            timeout_seconds=timeout_seconds,
-            overlap_policy=overlap_policy,
-            events=events,
+            description=ctx.description,
+            implements=ctx.implements,
+            trigger=ctx.trigger,
+            inputs=ctx.inputs,
+            outputs=ctx.outputs,
+            steps=ctx.steps,
+            compensations=ctx.compensations,
+            timeout_seconds=ctx.timeout_seconds,
+            overlap_policy=ctx.overlap_policy,
+            events=ctx.events,
             source=loc,
         )
 
+    def _parse_process_field(self, ctx: _ProcessParseContext) -> None:
+        """Dispatch a single top-level field inside a process block."""
+        if self.match(TokenType.IMPLEMENTS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            ctx.implements = self._parse_process_identifier_list()
+            self.skip_newlines()
+        elif self.match(TokenType.TRIGGER):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.trigger = self._parse_process_trigger()
+        elif self.match(TokenType.INPUT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.inputs = self._parse_process_inputs()
+        elif self.match(TokenType.OUTPUT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.outputs = self._parse_process_outputs()
+        elif self.match(TokenType.STEPS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.steps = self._parse_process_steps()
+        elif self.match(TokenType.COMPENSATIONS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.compensations = self._parse_compensations()
+        elif self.match(TokenType.TIMEOUT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            timeout_str = self._parse_duration_value()
+            ctx.timeout_seconds = parse_duration(timeout_str)
+            self.skip_newlines()
+        elif self.match(TokenType.OVERLAP):
+            self.advance()
+            self.expect(TokenType.COLON)
+            overlap_str = self.expect_identifier_or_keyword().value
+            ctx.overlap_policy = self._parse_overlap_policy(str(overlap_str))
+            self.skip_newlines()
+        elif self.match(TokenType.EMITS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.events = self._parse_process_emits()
+        else:
+            self.advance()
+            if self.match(TokenType.COLON):
+                self.advance()
+                self._skip_to_next_process_field()
+
     def parse_schedule(self) -> ir.ScheduleSpec:
-        """
-        Parse a schedule block.
-
-        Grammar:
-            schedule IDENTIFIER STRING? COLON NEWLINE INDENT
-              [implements COLON LBRACKET identifier_list RBRACKET NEWLINE]
-              cron COLON STRING NEWLINE | interval COLON DURATION NEWLINE
-              [timezone COLON STRING NEWLINE]
-              [catch_up COLON BOOL NEWLINE]
-              [overlap COLON IDENTIFIER NEWLINE]
-              [steps COLON NEWLINE steps_block]
-              [timeout COLON DURATION NEWLINE]
-              [emits COLON NEWLINE emits_block]
-            DEDENT
-
-        Returns:
-            ScheduleSpec with parsed values
-        """
+        """Parse a schedule block."""
         name, title, _ = self._parse_construct_header(TokenType.SCHEDULE, allow_keyword_name=True)
 
-        # Parse description if present
-        description = None
+        ctx = _ScheduleParseContext()
         if self.match(TokenType.STRING):
-            description = str(self.advance().value)
+            ctx.description = str(self.advance().value)
             self.skip_newlines()
 
-        # Initialize fields
-        implements: list[str] = []
-        cron: str | ir.ParamRef | None = None
-        interval_seconds: int | None = None
-        timezone: str | ir.ParamRef = "UTC"
-        catch_up: bool = False
-        overlap: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
-        steps: list[ir.ProcessStepSpec] = []
-        timeout_seconds: int | ir.ParamRef = 3600  # Default 1h
-        events: ir.ProcessEventEmission = ir.ProcessEventEmission()
-
-        # Parse schedule fields
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            if self.match(TokenType.IMPLEMENTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                implements = self._parse_process_identifier_list()
-                self.skip_newlines()
-
-            elif self.match(TokenType.CRON):
-                self.advance()
-                self.expect(TokenType.COLON)
-                cron = self._parse_string_or_param(param_type="str", default="")
-                self.skip_newlines()
-
-            elif self.match(TokenType.INTERVAL):
-                self.advance()
-                self.expect(TokenType.COLON)
-                interval_str = self._parse_duration_value()
-                interval_seconds = parse_duration(interval_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.TIMEZONE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                timezone = self._parse_string_or_param(param_type="str", default="UTC")
-                self.skip_newlines()
-
-            elif self.match(TokenType.CATCH_UP):
-                self.advance()
-                self.expect(TokenType.COLON)
-                catch_up_token = self.expect_identifier_or_keyword()
-                catch_up = str(catch_up_token.value).lower() == "true"
-                self.skip_newlines()
-
-            elif self.match(TokenType.OVERLAP):
-                self.advance()
-                self.expect(TokenType.COLON)
-                overlap_str = self.expect_identifier_or_keyword().value
-                overlap = self._parse_overlap_policy(str(overlap_str))
-                self.skip_newlines()
-
-            elif self.match(TokenType.STEPS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                steps = self._parse_process_steps()
-
-            elif self.match(TokenType.TIMEOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.PARAM):
-                    self.advance()
-                    self.expect(TokenType.LPAREN)
-                    ref_key = self.expect(TokenType.STRING).value
-                    self.expect(TokenType.RPAREN)
-                    timeout_seconds = ir.ParamRef(key=ref_key, param_type="int", default=3600)
-                else:
-                    timeout_str = self._parse_duration_value()
-                    timeout_seconds = parse_duration(timeout_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.EMITS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                events = self._parse_process_emits()
-
-            else:
-                # Skip unknown field
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    self._skip_to_next_process_field()
+            self._parse_schedule_field(ctx)
 
         self.expect(TokenType.DEDENT)
 
         return ir.ScheduleSpec(
             name=str(name),
             title=title,
-            description=description,
-            implements=implements,
-            cron=cron,
-            interval_seconds=interval_seconds,
-            timezone=timezone,
-            catch_up=catch_up,
-            overlap=overlap,
-            steps=steps,
-            timeout_seconds=timeout_seconds,
-            events=events,
+            description=ctx.description,
+            implements=ctx.implements,
+            cron=ctx.cron,
+            interval_seconds=ctx.interval_seconds,
+            timezone=ctx.timezone,
+            catch_up=ctx.catch_up,
+            overlap=ctx.overlap,
+            steps=ctx.steps,
+            timeout_seconds=ctx.timeout_seconds,
+            events=ctx.events,
         )
+
+    def _parse_schedule_field(self, ctx: _ScheduleParseContext) -> None:
+        """Dispatch a single top-level field inside a schedule block."""
+        if self.match(TokenType.IMPLEMENTS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            ctx.implements = self._parse_process_identifier_list()
+            self.skip_newlines()
+        elif self.match(TokenType.CRON):
+            self.advance()
+            self.expect(TokenType.COLON)
+            ctx.cron = self._parse_string_or_param(param_type="str", default="")
+            self.skip_newlines()
+        elif self.match(TokenType.INTERVAL):
+            self.advance()
+            self.expect(TokenType.COLON)
+            interval_str = self._parse_duration_value()
+            ctx.interval_seconds = parse_duration(interval_str)
+            self.skip_newlines()
+        elif self.match(TokenType.TIMEZONE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            ctx.timezone = self._parse_string_or_param(param_type="str", default="UTC")
+            self.skip_newlines()
+        elif self.match(TokenType.CATCH_UP):
+            self.advance()
+            self.expect(TokenType.COLON)
+            catch_up_token = self.expect_identifier_or_keyword()
+            ctx.catch_up = str(catch_up_token.value).lower() == "true"
+            self.skip_newlines()
+        elif self.match(TokenType.OVERLAP):
+            self.advance()
+            self.expect(TokenType.COLON)
+            overlap_str = self.expect_identifier_or_keyword().value
+            ctx.overlap = self._parse_overlap_policy(str(overlap_str))
+            self.skip_newlines()
+        elif self.match(TokenType.STEPS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.steps = self._parse_process_steps()
+        elif self.match(TokenType.TIMEOUT):
+            self._parse_schedule_timeout_field(ctx)
+        elif self.match(TokenType.EMITS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            ctx.events = self._parse_process_emits()
+        else:
+            self.advance()
+            if self.match(TokenType.COLON):
+                self.advance()
+                self._skip_to_next_process_field()
+
+    def _parse_schedule_timeout_field(self, ctx: _ScheduleParseContext) -> None:
+        """Parse the timeout field in a schedule block (supports param refs)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        if self.match(TokenType.PARAM):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            ref_key = self.expect(TokenType.STRING).value
+            self.expect(TokenType.RPAREN)
+            ctx.timeout_seconds = ir.ParamRef(key=ref_key, param_type="int", default=3600)
+        else:
+            timeout_str = self._parse_duration_value()
+            ctx.timeout_seconds = parse_duration(timeout_str)
+        self.skip_newlines()
 
     def _parse_process_identifier_list(self) -> list[str]:
         """Parse a bracketed list of identifiers: [A, B, C] or inline identifier."""
@@ -520,76 +482,25 @@ class ProcessParserMixin:
         trigger_word = str(token.value).lower()
 
         if trigger_word == "entity":
-            self.advance()
-            entity_name = str(self.expect_identifier_or_keyword().value)
-
-            # Check for status transition or simple event
-            next_token = self.current_token()
-            next_val = str(next_token.value).lower()
-
-            if next_val == "status":
-                self.advance()
-                # Expect arrow syntax: -> status_name
-                if self.match(TokenType.ARROW):
-                    self.advance()
-                    to_status = str(self.expect_identifier_or_keyword().value)
-                    return ir.ProcessTriggerSpec(
-                        kind=ir.ProcessTriggerKind.ENTITY_STATUS_TRANSITION,
-                        entity_name=entity_name,
-                        to_status=to_status,
-                    )
-                else:
-                    from_status = str(self.expect_identifier_or_keyword().value)
-                    self.expect(TokenType.ARROW)
-                    to_status = str(self.expect_identifier_or_keyword().value)
-                    return ir.ProcessTriggerSpec(
-                        kind=ir.ProcessTriggerKind.ENTITY_STATUS_TRANSITION,
-                        entity_name=entity_name,
-                        from_status=from_status,
-                        to_status=to_status,
-                    )
-            elif next_val in ("created", "updated", "deleted"):
-                self.advance()
-                return ir.ProcessTriggerSpec(
-                    kind=ir.ProcessTriggerKind.ENTITY_EVENT,
-                    entity_name=entity_name,
-                    event_type=next_val,
-                )
-            else:
-                from ..errors import make_parse_error
-
-                raise make_parse_error(
-                    "Invalid entity trigger: expected 'status', 'created',"
-                    f" 'updated', or 'deleted', got '{next_val}'",
-                    self.file,
-                    next_token.line,
-                    next_token.column,
-                )
-
+            return self._parse_entity_trigger()
         elif trigger_word == "manual":
             self.advance()
             return ir.ProcessTriggerSpec(kind=ir.ProcessTriggerKind.MANUAL)
-
         elif trigger_word == "signal":
             self.advance()
             signal_name = str(self.expect_identifier_or_keyword().value)
-            # Signal triggers don't have signal_name field in our model,
-            # we use process_name field for signal name
             return ir.ProcessTriggerSpec(
                 kind=ir.ProcessTriggerKind.SIGNAL,
                 process_name=signal_name,
             )
-
         elif trigger_word == "process":
             self.advance()
             process_name = str(self.expect_identifier_or_keyword().value)
-            # Expect "completed"
             self.expect_identifier_or_keyword()  # consume "completed"
             return ir.ProcessTriggerSpec(
                 kind=ir.ProcessTriggerKind.PROCESS_COMPLETED,
                 process_name=process_name,
             )
-
         else:
             from ..errors import make_parse_error
 
@@ -598,6 +509,52 @@ class ProcessParserMixin:
                 self.file,
                 token.line,
                 token.column,
+            )
+
+    def _parse_entity_trigger(self) -> ir.ProcessTriggerSpec:
+        """Parse an entity-based trigger (status transition or CRUD event)."""
+        self.advance()
+        entity_name = str(self.expect_identifier_or_keyword().value)
+
+        next_token = self.current_token()
+        next_val = str(next_token.value).lower()
+
+        if next_val == "status":
+            self.advance()
+            if self.match(TokenType.ARROW):
+                self.advance()
+                to_status = str(self.expect_identifier_or_keyword().value)
+                return ir.ProcessTriggerSpec(
+                    kind=ir.ProcessTriggerKind.ENTITY_STATUS_TRANSITION,
+                    entity_name=entity_name,
+                    to_status=to_status,
+                )
+            else:
+                from_status = str(self.expect_identifier_or_keyword().value)
+                self.expect(TokenType.ARROW)
+                to_status = str(self.expect_identifier_or_keyword().value)
+                return ir.ProcessTriggerSpec(
+                    kind=ir.ProcessTriggerKind.ENTITY_STATUS_TRANSITION,
+                    entity_name=entity_name,
+                    from_status=from_status,
+                    to_status=to_status,
+                )
+        elif next_val in ("created", "updated", "deleted"):
+            self.advance()
+            return ir.ProcessTriggerSpec(
+                kind=ir.ProcessTriggerKind.ENTITY_EVENT,
+                entity_name=entity_name,
+                event_type=next_val,
+            )
+        else:
+            from ..errors import make_parse_error
+
+            raise make_parse_error(
+                "Invalid entity trigger: expected 'status', 'created',"
+                f" 'updated', or 'deleted', got '{next_val}'",
+                self.file,
+                next_token.line,
+                next_token.column,
             )
 
     def _parse_process_inputs(self) -> list[ir.ProcessInputField]:
@@ -1118,46 +1075,21 @@ class ProcessParserMixin:
                 if self.match(TokenType.DEDENT):
                     break
 
-                if self.match(TokenType.SURFACE):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    surface = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                elif self.match(TokenType.ENTITY):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    entity_path = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                elif self.match(TokenType.ASSIGNEE_ROLE):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    assignee_role = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                elif self.match(TokenType.ASSIGNEE):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    assignee_expression = self._parse_condition_string()
-                    self.skip_newlines()
-
-                elif self.match(TokenType.TIMEOUT):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    timeout_str = self._parse_duration_value()
-                    timeout_seconds = parse_duration(timeout_str)
-                    self.skip_newlines()
-
-                elif self.match(TokenType.OUTCOMES):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    self.skip_newlines()
-                    outcomes = self._parse_task_outcomes()
-
-                else:
-                    # Skip unknown
-                    self.advance()
+                (
+                    surface,
+                    entity_path,
+                    assignee_role,
+                    assignee_expression,
+                    timeout_seconds,
+                    outcomes,
+                ) = self._parse_human_task_field(
+                    surface,
+                    entity_path,
+                    assignee_role,
+                    assignee_expression,
+                    timeout_seconds,
+                    outcomes,
+                )
 
             self.expect(TokenType.DEDENT)
 
@@ -1170,6 +1102,51 @@ class ProcessParserMixin:
             escalation_timeout_seconds=escalation_timeout_seconds,
             outcomes=outcomes,
         )
+
+    def _parse_human_task_field(
+        self,
+        surface: str,
+        entity_path: str | None,
+        assignee_role: str | None,
+        assignee_expression: str | None,
+        timeout_seconds: int,
+        outcomes: list[ir.HumanTaskOutcome],
+    ) -> tuple[str, str | None, str | None, str | None, int, list[ir.HumanTaskOutcome]]:
+        """Parse a single field inside a human_task block."""
+        if self.match(TokenType.SURFACE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            surface = str(self.expect_identifier_or_keyword().value)
+            self.skip_newlines()
+        elif self.match(TokenType.ENTITY):
+            self.advance()
+            self.expect(TokenType.COLON)
+            entity_path = str(self.expect_identifier_or_keyword().value)
+            self.skip_newlines()
+        elif self.match(TokenType.ASSIGNEE_ROLE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            assignee_role = str(self.expect_identifier_or_keyword().value)
+            self.skip_newlines()
+        elif self.match(TokenType.ASSIGNEE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            assignee_expression = self._parse_condition_string()
+            self.skip_newlines()
+        elif self.match(TokenType.TIMEOUT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            timeout_str = self._parse_duration_value()
+            timeout_seconds = parse_duration(timeout_str)
+            self.skip_newlines()
+        elif self.match(TokenType.OUTCOMES):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            outcomes = self._parse_task_outcomes()
+        else:
+            self.advance()
+        return surface, entity_path, assignee_role, assignee_expression, timeout_seconds, outcomes
 
     def _parse_task_outcomes(self) -> list[ir.HumanTaskOutcome]:
         """Parse human task outcomes."""
@@ -1302,16 +1279,7 @@ class ProcessParserMixin:
         return assignments
 
     def _parse_step_effects(self) -> list[StepEffect]:
-        """Parse step effects block.
-
-        Grammar:
-            INDENT
-              (MINUS create|update IDENTIFIER COLON NEWLINE INDENT
-                [where COLON condition_string NEWLINE]
-                [set COLON NEWLINE assignment_list]
-              DEDENT)*
-            DEDENT
-        """
+        """Parse step effects block."""
         effects: list[StepEffect] = []
 
         if not self.match(TokenType.INDENT):
@@ -1326,75 +1294,71 @@ class ProcessParserMixin:
 
             if self.match(TokenType.MINUS):
                 self.advance()
-
-                # Parse action keyword (create or update)
-                action_token = self.current_token()
-                action_str = str(action_token.value).lower()
-                if action_str == "create":
-                    action = EffectAction.CREATE
-                elif action_str == "update":
-                    action = EffectAction.UPDATE
-                else:
-                    from ..errors import make_parse_error
-
-                    raise make_parse_error(
-                        f"Invalid effect action: '{action_str}' (expected 'create' or 'update')",
-                        self.file,
-                        action_token.line,
-                        action_token.column,
-                    )
-                self.advance()
-
-                # Parse entity name
-                entity_name = str(self.expect_identifier_or_keyword().value)
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-
-                # Parse effect body (where + set)
-                where_clause: str | None = None
-                assignments: list[ir.FieldAssignment] = []
-
-                if self.match(TokenType.INDENT):
-                    self.expect(TokenType.INDENT)
-
-                    while not self.match(TokenType.DEDENT):
-                        self.skip_newlines()
-                        if self.match(TokenType.DEDENT):
-                            break
-
-                        token = self.current_token()
-                        field_name = str(token.value).lower()
-
-                        if field_name == "where" or self.match(TokenType.WHERE):
-                            self.advance()
-                            self.expect(TokenType.COLON)
-                            where_clause = self._parse_condition_string()
-                            self.skip_newlines()
-
-                        elif field_name == "set" or self.match(TokenType.SETS):
-                            self.advance()
-                            self.expect(TokenType.COLON)
-                            self.skip_newlines()
-                            assignments = self._parse_field_assignments()
-
-                        else:
-                            self.advance()
-
-                    self.expect(TokenType.DEDENT)
-
-                effects.append(
-                    StepEffect(
-                        action=action,
-                        entity_name=entity_name,
-                        where=where_clause,
-                        assignments=assignments,
-                    )
-                )
+                effects.append(self._parse_single_effect())
             else:
                 self.advance()
 
         self.expect(TokenType.DEDENT)
         return effects
+
+    def _parse_single_effect(self) -> StepEffect:
+        """Parse a single create/update effect item."""
+        action_token = self.current_token()
+        action_str = str(action_token.value).lower()
+        if action_str == "create":
+            action = EffectAction.CREATE
+        elif action_str == "update":
+            action = EffectAction.UPDATE
+        else:
+            from ..errors import make_parse_error
+
+            raise make_parse_error(
+                f"Invalid effect action: '{action_str}' (expected 'create' or 'update')",
+                self.file,
+                action_token.line,
+                action_token.column,
+            )
+        self.advance()
+
+        entity_name = str(self.expect_identifier_or_keyword().value)
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+
+        where_clause: str | None = None
+        assignments: list[ir.FieldAssignment] = []
+
+        if self.match(TokenType.INDENT):
+            self.expect(TokenType.INDENT)
+
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+
+                token = self.current_token()
+                field_name = str(token.value).lower()
+
+                if field_name == "where" or self.match(TokenType.WHERE):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    where_clause = self._parse_condition_string()
+                    self.skip_newlines()
+                elif field_name == "set" or self.match(TokenType.SETS):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    self.skip_newlines()
+                    assignments = self._parse_field_assignments()
+                else:
+                    self.advance()
+
+            self.expect(TokenType.DEDENT)
+
+        return StepEffect(
+            action=action,
+            entity_name=entity_name,
+            where=where_clause,
+            assignments=assignments,
+        )
 
     def _parse_input_mappings(self) -> list[ir.InputMapping]:
         """Parse input mapping list."""
