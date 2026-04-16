@@ -1,4 +1,4 @@
-/* dazzle v0.57.0 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.57.1 | MIT License | https://github.com/manwithacat/dazzle */
 @layer base, framework, app, overrides;
 @layer framework {
 [x-cloak] {
