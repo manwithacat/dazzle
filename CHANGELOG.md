@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.18] - 2026-04-17
+
+### Fixed
+- `SessionManager.create_all_sessions` now attaches `X-Test-Secret` to its shared `httpx.AsyncClient` so every batched persona request carries the secret. Previously the batch path built a plain client and `create_session()` only injected the header when it built its own client — all personas 403'd on `/__test__/authenticate` even when the secret was correctly published to `runtime.json` by v0.57.13. Breaks had been masked because the single-call path worked (#791).
+
 ## [0.57.17] - 2026-04-17
 
 ### Added

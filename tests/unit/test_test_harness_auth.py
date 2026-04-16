@@ -100,6 +100,56 @@ class TestSessionManagerResolveSecret:
         assert mgr._resolve_test_secret() == ""
 
 
+class TestCreateAllSessionsCarriesSecret:
+    """Regression for #791 — the batch path built a fresh httpx client
+    without the X-Test-Secret header, so all personas 403'd even when
+    the secret was correctly published to runtime.json."""
+
+    def test_batch_client_carries_secret_header(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify create_all_sessions attaches X-Test-Secret to its shared client."""
+        import asyncio
+        from types import SimpleNamespace
+
+        from dazzle.testing.session_manager import PersonaSession, SessionManager
+
+        monkeypatch.delenv("DAZZLE_TEST_SECRET", raising=False)
+        (tmp_path / ".dazzle").mkdir()
+        (tmp_path / ".dazzle" / "runtime.json").write_text(
+            json.dumps({"test_secret": "batch-secret-123"})
+        )
+
+        mgr = SessionManager(tmp_path, base_url="http://localhost:8000")
+        observed_headers: list[dict[str, str]] = []
+
+        async def fake_create_session(persona_id, role=None, *, client=None):
+            if client is not None:
+                observed_headers.append(dict(client.headers))
+            return PersonaSession(
+                persona_id=persona_id,
+                user_id="u1",
+                email=f"{persona_id}@test.local",
+                role=role or persona_id,
+                session_token="tok",
+                base_url="http://localhost:8000",
+            )
+
+        monkeypatch.setattr(mgr, "create_session", fake_create_session)
+
+        appspec = SimpleNamespace(
+            personas=[SimpleNamespace(id="reader"), SimpleNamespace(id="author")],
+            name="demo",
+        )
+        asyncio.run(mgr.create_all_sessions(appspec, force=True))
+
+        assert len(observed_headers) == 2
+        for h in observed_headers:
+            # httpx lowercases header names internally
+            secret = h.get("x-test-secret") or h.get("X-Test-Secret")
+            assert secret == "batch-secret-123"
+
+
 class TestE2EAdapterResolvesSecret:
     """The anonymous SimpleAdapter inside E2ERunner.run_tests uses the same fallback."""
 

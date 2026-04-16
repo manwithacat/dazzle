@@ -207,7 +207,14 @@ class SessionManager:
             base_url=self.base_url,
         )
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Attach the X-Test-Secret header at the batch level so every
+        # persona's request carries it (#791). ``create_session`` only
+        # injected the header when it built its own client, so the
+        # shared client from this batch path was falling through to
+        # /__test__/authenticate with no secret.
+        test_secret = self._resolve_test_secret()
+        headers = {"X-Test-Secret": test_secret} if test_secret else {}
+        async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             for persona in personas:
                 pid = str(getattr(persona, "id", None) or getattr(persona, "name", "unknown"))
                 try:
