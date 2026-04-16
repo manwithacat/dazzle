@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-04-16
+
 ### Added
 - Agent-first development commands: `/improve`, `/qa`, `/spec-sync`, `/ship`, `/polish`, `/issues`
 - `dazzle agent sync` CLI command — installs/updates commands in user projects
