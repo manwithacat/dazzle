@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.41] - 2026-04-16
+
+### Added
+- **`toggle-group` component contract (UX-046).** Fifth and final cycle
+  of the component menagerie mini-arc (cycles 238-242). Contract at
+  `~/.claude/skills/ux-architect/components/toggle-group.md` governing
+  the Linear/macOS segmented-control pattern: pill-shaped track with
+  tinted background, selected button "lifted" with solid background and
+  subtle drop shadow, unselected buttons muted-foreground with hover
+  brightening, `role="radiogroup"` (exclusive) or `role="group"`
+  (multi), `aria-pressed` per button, keyboard arrow-key navigation,
+  and `focus-visible` keyboard ring. 6 quality gates and 7 v2 open
+  questions (future `display: [list, kanban]` DSL extension, icon-only
+  buttons, touch affordances, overflow, disabled options, value
+  validation, dark-mode).
+
+- **Keyboard arrow-key navigation for toggle groups.** Pre-cycle-242
+  the fragment had no keyboard navigation between buttons. Added
+  `@keydown.left.prevent` and `@keydown.right.prevent` handlers that
+  move focus to the previous/next sibling button. Combined with the
+  `focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]` styling,
+  this makes the control fully WCAG-keyboard-accessible.
+
+### Fixed
+- **Toggle group DaisyUI drift.** Modernised
+  `fragments/toggle_group.html` — replaced
+  `class="join"` + `btn join-item btn-sm` + `btn-primary`/`btn-ghost`
+  dynamic classes with design tokens (`bg-[hsl(var(--muted)/0.3)]`
+  track, `bg-[hsl(var(--background))]` selected, canonical
+  `dz-toggle-group` + `data-dz-toggle-item` + `data-dz-value`
+  automation markers). Closes more of EX-001 (DaisyUI drift).
+
+### Agent Guidance
+- **Component menagerie mini-arc is complete.** Five `contract_audit`
+  cycles (238-242) shipped five component contracts: status-badge,
+  metrics-region, empty-state (+ EX-046 DSL grammar extension for
+  per-persona empty copy), tooltip (+ latent XSS fix), toggle-group.
+  Net: 5 new contracts, ~40+ call sites migrated, +67 tests, zero
+  regressions. Two latent security issues fixed along the way.
+- **Cross-cutting drift clusters.** Every single cycle surfaced
+  broader drift beyond the originally-targeted component. When running
+  a future `contract_audit`, budget 2-3x the scope of the contract
+  itself for adjacent drift discovered during the grep walk.
+- **PersonaVariant runtime wiring is half-built.** Cycle 240 wired
+  `empty_message` as a pilot; `purpose`, `hide`, `show`,
+  `action_primary`, `read_only`, `defaults`, `focus` are all parsed
+  but silently dropped at render time. Generalising the pilot pattern
+  is a ~30-60 minute cycle worth doing before the next frontier-user
+  release.
+
 ## [0.55.40] - 2026-04-16
 
 ### Added

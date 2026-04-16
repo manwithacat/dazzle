@@ -1,19 +1,40 @@
-{# Toggle group — exclusive or multi-select button group #}
-{# Parameters: options (list of {value: str, label: str}), name (str), multi (bool, default: false), initial (str|None) #}
+{# Toggle group — exclusive (radiogroup) or multi-select button group.
+
+   Contract: ~/.claude/skills/ux-architect/components/toggle-group.md (UX-046)
+
+   A segmented control: a row of connected buttons where one (exclusive)
+   or several (multi) can be "pressed". Uses the ``dzToggleGroup`` Alpine
+   controller at ``dz-alpine.js:966`` for state + keyboard semantics.
+   Writes the selected value(s) to a hidden input for form submission.
+
+   Parameters:
+     name     : str                           — form field name (required)
+     options  : list of {value, label}        — button choices (required)
+     multi    : bool                          — true for multi-select (default false → exclusive)
+     initial  : str | None                    — pre-selected value (comma-separated for multi)
+     label    : str | None                    — ARIA group label (defaults to ``name``)
+#}
 {% set multi = multi | default(false) %}
 <div x-data="dzToggleGroup"
+     class="dz-toggle-group inline-flex rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.3)] p-0.5"
      data-dz-multi="{{ 'true' if multi else 'false' }}"
      {% if initial %}data-dz-value="{{ initial }}"{% endif %}
      role="{{ 'group' if multi else 'radiogroup' }}"
-     aria-label="{{ label | default(name) }}"
-     class="join">
+     aria-label="{{ label | default(name) }}">
+  {# Hidden input carries the (possibly joined) value for form submission #}
   <input type="hidden" name="{{ name }}" :value="multi ? (value || []).join(',') : (value || '')">
   {% for option in options %}
   <button type="button"
+          data-dz-toggle-item
+          data-dz-value="{{ option.value }}"
           @click="toggle('{{ option.value }}')"
-          :class="isSelected('{{ option.value }}') ? 'btn-primary' : 'btn-ghost'"
+          @keydown.left.prevent="$el.previousElementSibling && $el.previousElementSibling.focus()"
+          @keydown.right.prevent="$el.nextElementSibling && $el.nextElementSibling.tagName === 'BUTTON' && $el.nextElementSibling.focus()"
           :aria-pressed="isSelected('{{ option.value }}')"
-          class="btn join-item btn-sm">
+          :class="isSelected('{{ option.value }}')
+            ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
+            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'"
+          class="h-7 px-3 rounded-[3px] text-[12px] font-medium transition-[background-color,color,box-shadow] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
     {{ option.label }}
   </button>
   {% endfor %}

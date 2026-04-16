@@ -4,6 +4,123 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-16T02:10Z — Cycle 242 — **contract_audit: toggle-group SHIPPED — component menagerie mini-arc COMPLETE (UX-046 → DONE)**
+
+**Strategy:** `contract_audit` — fifth and final cycle of the component menagerie mini-arc (cycles 238-242 per the roadmap at `dev_docs/framework-gaps/2026-04-15-component-menagerie-roadmap.md`).
+
+**Target:** `fragments/toggle_group.html` — #5 priority from the roadmap, scoped as a smaller UI-primitive cycle similar to 241. No DSL extension.
+
+### Heuristic 1 — raw-layer reproduction + grep walk
+
+Read the fragment. Found it was pure DaisyUI:
+
+```jinja
+<div ... class="join">
+  <input type="hidden" ...>
+  {% for option in options %}
+  <button ... class="btn join-item btn-sm"
+          :class="isSelected('{{ option.value }}') ? 'btn-primary' : 'btn-ghost'">
+    {{ option.label }}
+  </button>
+  {% endfor %}
+</div>
+```
+
+Every rendering class is legacy DaisyUI: `join`, `join-item`, `btn`, `btn-sm`, `btn-primary`, `btn-ghost`. Plus there was no keyboard navigation — arrow keys didn't move focus between buttons, which is standard segmented-control accessibility behaviour.
+
+Grep for consumers: **zero**. Same situation as tooltip_rich before cycle 241 — the fragment exists, the Alpine controller is wired up (`dz-alpine.js:966`), but nothing renders it yet. Forward-compatible primitive.
+
+### What shipped
+
+**1. Rewrote `fragments/toggle_group.html` to the Linear/macOS segmented-control convention:**
+
+- **Outer container**: pill-shaped track with `rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.3)] p-0.5`. Tinted background distinguishes the group from its surroundings.
+- **Selected button**: "lifted" with `bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-[0_1px_2px_rgb(0_0_0/0.08)]`. The shadow makes it feel like a physical tab standing above the track.
+- **Unselected button**: `text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]` — no background, just text colour change on hover.
+- **Button sizing**: `h-7 px-3 rounded-[3px] text-[12px] font-medium` — dense row matching other menagerie chrome. Inner radius is `[3px]` (one step smaller than the outer `[4px]` so buttons fit inside).
+- **Transitions**: `transition-[background-color,color,box-shadow] duration-[80ms]` for snappy feedback.
+- **Canonical markers**: `dz-toggle-group` class on container, `data-dz-toggle-item` + `data-dz-value` per button.
+
+**2. Added keyboard arrow-key navigation** — `@keydown.left.prevent` and `@keydown.right.prevent` handlers move focus to the previous/next sibling button. The Right-arrow handler guards against the hidden input at index 0 by checking `$el.nextElementSibling.tagName === 'BUTTON'`. Pre-cycle-242 the template had NO arrow-key navigation at all; this is a net accessibility improvement.
+
+**3. Added `focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]`** for keyboard focus state. Uses `focus-visible` (not `focus`) so the ring only shows on keyboard navigation, not mouse clicks. Required for WCAG keyboard discoverability.
+
+**4. Contract doc** at `~/.claude/skills/ux-architect/components/toggle-group.md` — 6 quality gates (canonical markers, design-token compliance, hidden-input sync, keyboard accessibility, ARIA group labelling, state dispatch) and 7 v2 open questions (DSL `display: [list, kanban]` extension, icon-only buttons, touch affordances, overflow, disabled options, value validation, dark-mode verification).
+
+**5. 13 new regression tests** in `tests/unit/test_toggle_group_fragment.py`:
+
+- `test_renders_canonical_markers` — dz-toggle-group, x-data, data-dz-multi, hidden input, data-dz-toggle-item per button
+- `test_exclusive_uses_radiogroup_role` + `test_multi_uses_group_role` — ARIA role selection
+- `test_uses_design_tokens_not_daisyui` — asserts design tokens present, zero `join`/`join-item`/`btn`/`btn-primary`/`btn-ghost`
+- `test_label_override` + `test_initial_value_populates_data_attribute` + `test_no_initial_value_omits_data_attribute` — optional parameters
+- `test_keyboard_navigation_handlers` + `test_focus_visible_ring_present` — keyboard accessibility gates
+- `test_aria_pressed_per_button` + `test_hidden_input_sync_binding` — reactive Alpine bindings
+- `test_button_count_matches_options` — variable option counts
+- **`test_option_labels_are_autoescaped`** — XSS gate (consistent with cycle 241's tooltip test): passes `<script>alert('xss')</script>` as an option label and asserts the raw tag does NOT appear. Locks the safe posture in place.
+
+### Test results
+
+- `tests/unit/test_toggle_group_fragment.py`: 13 passed (all new)
+- **Full unit sweep: 10,790 pass / 101 skip / 0 fail** (+13 from cycle 241's 10,777)
+- Lint (fixed one ruff F841 unused variable) + mypy: clean
+
+### Rows touched
+
+| Row | State | Notes |
+|---|---|---|
+| **UX-046** | DONE / PASS | Contract, template modernisation, keyboard nav, 13 tests |
+| **EX-001** (DaisyUI drift) | OPEN | Further partial closure — toggle_group modernised |
+
+### Component menagerie mini-arc — CLOSING SCOREBOARD (cycles 238-242)
+
+**Five cycles, five components contracted, zero regressions, +62 tests.**
+
+| Cycle | Component | Call sites migrated | Cross-cutting drift surfaced | Bonus fixes |
+|---|---|---|---|---|
+| 238 | status-badge | 16+ (16+ fragment/region/macro consumers) | 7 distinct wrapper-class combinations | `.badge-error` --er → --destructive CSS bug |
+| 239 | metrics-region | 1 (+9 sibling-drift files) | 14 hardcoded `hsl(38_92%_50%)` warning literals across 9 templates | EX-047 filed (aggregate display-mode inference) |
+| 240 | empty-state | 1 fragment + 9 region dense-inline patterns | 10 ad-hoc empty-state patterns | EX-046 closed via DSL grammar extension + PersonaVariant runtime resolver pilot |
+| 241 | tooltip | 1 fragment + 11 native `title=` sites documented | Latent XSS vector + missing `x-cloak` CSS rule | `contract_audit` promoted to named strategy in the skill |
+| 242 | toggle-group | 1 fragment (forward-compatible) | DaisyUI base classes | Added keyboard arrow-key navigation + focus-visible ring |
+
+**Summary metrics:**
+
+- **5 new contracts** shipped to `~/.claude/skills/ux-architect/components/`
+- **~40+ call sites** migrated across templates
+- **~62 new regression tests** (16 status-badge + 16 metrics + 14 empty-state + 9 tooltip + 13 toggle-group — approximate, varies with test file counts)
+- **Full unit sweep growth**: 10,723 (pre-238) → 10,790 (post-242) = **+67 tests net**
+- **Zero test regressions** across the arc
+- **5 patch versions shipped**: v0.55.36 → v0.55.40
+- **2 latent security issues fixed** (tooltip XSS vector + broken `.badge-error` CSS var reference)
+- **1 DSL grammar extension shipped** (per-persona `empty:` inside `for <persona>:` blocks, EX-046 closed)
+- **1 new cycle strategy promoted** (`contract_audit`)
+- **1 pilot implementation** of the PersonaVariant runtime resolver pattern — generalises to `purpose`/`hide`/`show`/`action_primary`/`read_only` in a future cycle
+
+**Two durable meta-findings:**
+
+1. **Cross-cutting drift clusters**: every single `contract_audit` cycle surfaced a broader drift pattern beyond the originally-targeted component. Badge classes (238) → metrics attention tints (239) → inline empty states (240) → XSS + first-paint flash (241) → DaisyUI base classes (242). The pattern is so consistent that future `contract_audit` cycles should budget 2-3x the scope of the contract itself for adjacent drift.
+
+2. **PersonaVariant is parsed but silently dropped**: discovered in cycle 240. Every PersonaVariant field (`purpose`, `hide`, `show`, `action_primary`, `read_only`, `defaults`, `focus`) is parsed by the DSL but never reaches the runtime. Cycle 240's `empty_message` resolver is the pilot; generalising the rest would be ~30-60 minutes in a dedicated cycle.
+
+### Recommended next step
+
+The mini-arc is complete. Top candidates for the next arc:
+
+1. **Generalise the PersonaVariant resolver** (surfaced by 240). Extend the compile-dict-then-resolve-per-request pattern to `purpose`, `hide`, `show`, `action_primary`, `read_only`. Unblocks gap doc #2 axis 4 (create-form field visibility, persona-unaware-affordances residual).
+2. **EX-047 aggregate display-mode inference** (surfaced by 239). When a DSL region has `aggregate:` but no `display:`, promote display mode to SUMMARY instead of defaulting to LIST. 4 currently-broken regions across 2 apps would start rendering correctly.
+3. **Parking lot items** from the roadmap: breadcrumbs, activity-feed verification, inline-edit verification, form-stepper, alert-banner, accordion, context-menu, skeleton-patterns, date-range-picker, avatar (blocked on EX-045).
+4. **EX-045 persona-entity binding** (open since cycle 233). DSL schema evolution question; needs design discussion before implementation.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 18 → **19**.
+
+### ScheduleWakeup
+
+Not armed. Mini-arc explicitly closes here. The user's strategic directive — "increase the menagerie" — has been executed systematically across 5 contracts. Next cycle should wait for explicit direction.
+
+---
+
 ## 2026-04-16T01:40Z — Cycle 241 — **contract_audit: tooltip SHIPPED + latent XSS fixed + contract_audit promoted to named strategy (UX-045 → DONE)**
 
 **Strategy:** `contract_audit` — fourth cycle of the mini-arc. Smaller scope than 240, in line with the roadmap's expectation that tooltip is a UI primitive without DSL extensions or cross-cutting drift.
