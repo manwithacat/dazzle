@@ -1034,7 +1034,9 @@ class DSLTestGenerator:
         )
         self.coverage.personas_total = len(self.appspec.personas) if self.appspec.personas else 0
         self.coverage.auth_personas_total = (
-            len(self.appspec.personas) if self.appspec.personas else 0
+            sum(1 for p in self.appspec.personas if getattr(p, "interactive", True))
+            if self.appspec.personas
+            else 0
         )
         self.coverage.workspaces_total = (
             len(self.appspec.workspaces) if self.appspec.workspaces else 0
@@ -1110,6 +1112,10 @@ class DSLTestGenerator:
             self.coverage.personas_covered.add(persona.id)
 
         for persona in self.appspec.personas:
+            if not getattr(persona, "interactive", True):
+                # Non-interactive service personas have no credentials; auth
+                # lifecycle tests would always fail with 401/403 (#780).
+                continue
             designs.extend(self._persona_builder.generate_auth_lifecycle_tests(persona))
             self.coverage.auth_personas_covered.add(persona.id)
 

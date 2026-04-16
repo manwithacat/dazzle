@@ -234,3 +234,47 @@ class TestAuthTestTags:
         auth_tests = [d for d in suite.designs if "auth" in d.get("tags", [])]
         for test in auth_tests:
             assert test["persona"] == "teacher"
+
+
+SYSTEM = PersonaSpec(
+    id="system",
+    label="System",
+    description="Automated background processes",
+    goals=["run scheduled jobs"],
+    interactive=False,
+)
+
+
+class TestNonInteractivePersona:
+    """Auth lifecycle tests are skipped for non-interactive personas (#780)."""
+
+    def test_non_interactive_persona_no_auth_tests(self):
+        appspec = _make_appspec(personas=[SYSTEM])
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        auth_tests = [d for d in suite.designs if "auth" in d.get("tags", [])]
+        assert auth_tests == []
+
+    def test_mixed_personas_only_interactive_get_auth_tests(self):
+        appspec = _make_appspec(personas=[TEACHER, SYSTEM])
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        auth_tests = [d for d in suite.designs if "auth" in d.get("tags", [])]
+        assert len(auth_tests) == 6
+        assert all(t["persona"] == "teacher" for t in auth_tests)
+
+    def test_non_interactive_excluded_from_auth_coverage(self):
+        appspec = _make_appspec(personas=[TEACHER, SYSTEM])
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        assert suite.coverage.auth_personas_total == 1
+        assert suite.coverage.auth_personas_covered == {"teacher"}
+
+    def test_non_interactive_still_gets_persona_tests(self):
+        """Persona-level access/permission tests still run — only auth lifecycle is skipped."""
+        appspec = _make_appspec(personas=[SYSTEM])
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        # Persona is counted in personas_total and covered
+        assert suite.coverage.personas_total == 1
+        assert "system" in suite.coverage.personas_covered

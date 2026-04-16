@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.4] - 2026-04-16
+
+### Added
+- `persona` DSL blocks accept `interactive: true|false` to indicate whether a persona represents a login-capable human. Non-interactive service personas (e.g. a `system` persona for background jobs) are skipped by the auth-lifecycle test generator, eliminating guaranteed-to-fail AUTH_LOGIN_VALID/AUTH_REDIRECT/AUTH_SESSION_VALID tests (#780).
+
 ## [0.57.3] - 2026-04-16
 
 ### Fixed

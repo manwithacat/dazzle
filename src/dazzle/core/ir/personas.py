@@ -39,6 +39,12 @@ class PersonaSpec(BaseModel):
             ``<entity>.<link_via> == current_user.email``. Can be
             overridden to ``"id"`` or any other unique field that
             appears on both the backing entity and the auth user.
+        interactive: Whether this persona represents a human user that
+            logs in through the UI. Defaults to ``True``. Set to
+            ``False`` for automated service personas (e.g. a ``system``
+            persona for background processes) so the test generator
+            skips auth lifecycle tests that would always fail with
+            401/403.
     """
 
     id: str
@@ -50,6 +56,7 @@ class PersonaSpec(BaseModel):
     default_route: str | None = None
     backed_by: str | None = None  # Entity name (e.g. "Tester")
     link_via: str = "email"  # Join field (default: email)
+    interactive: bool = True
 
     model_config = ConfigDict(frozen=True)
 

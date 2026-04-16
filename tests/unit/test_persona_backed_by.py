@@ -71,6 +71,22 @@ entity Device "Device":
         assert p.backed_by == "Tester"
         assert p.link_via == "name"
 
+    def test_interactive_defaults_to_true(self) -> None:
+        personas = self._parse_personas('persona admin "Admin":\n  description: "Full access"\n')
+        assert personas[0].interactive is True
+
+    def test_interactive_false_parsed(self) -> None:
+        personas = self._parse_personas(
+            'persona system "System":\n'
+            '  description: "Automated background processes"\n'
+            "  interactive: false\n"
+        )
+        assert personas[0].interactive is False
+
+    def test_interactive_true_explicit(self) -> None:
+        personas = self._parse_personas('persona admin "Admin":\n  interactive: true\n')
+        assert personas[0].interactive is True
+
 
 # ---------------------------------------------------------------------------
 # Linker validation

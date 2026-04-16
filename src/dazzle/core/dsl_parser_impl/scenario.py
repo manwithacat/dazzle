@@ -55,6 +55,7 @@ class ScenarioParserMixin:
         default_route: str | None = None
         backed_by: str | None = None
         link_via: str = "email"
+        interactive: bool = True
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -122,6 +123,26 @@ class ScenarioParserMixin:
                 link_via = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # interactive: true|false (closes #780)
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "interactive":
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    interactive = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    interactive = False
+                else:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Expected true or false for interactive, got {token.value}",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
             else:
                 # Skip unknown fields
                 self.advance()
@@ -139,6 +160,7 @@ class ScenarioParserMixin:
             default_route=default_route,
             backed_by=backed_by,
             link_via=link_via,
+            interactive=interactive,
         )
 
     def parse_scenario(self) -> ir.ScenarioSpec:
