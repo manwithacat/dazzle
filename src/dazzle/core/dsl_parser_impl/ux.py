@@ -63,6 +63,7 @@ class UXParserMixin:
         search_first = False
         attention_signals: list[ir.AttentionSignal] = []
         persona_variants: list[ir.PersonaVariant] = []
+        bulk_actions: list[ir.BulkActionSpec] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -141,6 +142,10 @@ class UXParserMixin:
                 variant = self.parse_persona_variant()
                 persona_variants.append(variant)
 
+            # bulk_actions: indented block mapping action_name → field -> value
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "bulk_actions":
+                bulk_actions = self.parse_bulk_actions_block()
+
             else:
                 break
 
@@ -156,7 +161,89 @@ class UXParserMixin:
             search_first=search_first,
             attention_signals=attention_signals,
             persona_variants=persona_variants,
+            bulk_actions=bulk_actions,
         )
+
+    def parse_bulk_actions_block(self) -> list[ir.BulkActionSpec]:
+        """Parse the ``bulk_actions:`` sub-block of a ux: block (#785).
+
+        Syntax:
+            bulk_actions:
+              accept: status -> active
+              reject: status -> rejected
+
+        Each child line is ``<action_name>: <field> -> <value>`` where
+        ``value`` may be an identifier, quoted string, ``true``/``false``,
+        or numeric literal. Empty blocks raise a parse error to keep the
+        config intentional.
+        """
+        self.advance()  # consume 'bulk_actions' identifier
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        actions: list[ir.BulkActionSpec] = []
+        block_line = self.current_token().line
+        block_column = self.current_token().column
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            name_tok = self.expect_identifier_or_keyword()
+            action_name = name_tok.value
+            self.expect(TokenType.COLON)
+
+            field_tok = self.expect_identifier_or_keyword()
+            field_name = field_tok.value
+
+            # Accept either `->` or two tokens ARROW-like. The lexer emits
+            # ARROW for `->` in other contexts — reuse it here.
+            if self.match(TokenType.ARROW):
+                self.advance()
+            else:
+                token = self.current_token()
+                raise make_parse_error(
+                    f"Expected '->' in bulk_actions entry, got {token.value!r}",
+                    self.file,
+                    token.line,
+                    token.column,
+                )
+
+            # Target value: string literal, identifier, keyword, or bool
+            if self.match(TokenType.STRING):
+                target_value = self.current_token().value
+                self.advance()
+            elif self.match(TokenType.TRUE):
+                target_value = "true"
+                self.advance()
+            elif self.match(TokenType.FALSE):
+                target_value = "false"
+                self.advance()
+            else:
+                target_value = self.expect_identifier_or_keyword().value
+
+            actions.append(
+                ir.BulkActionSpec(
+                    name=action_name,
+                    field=field_name,
+                    target_value=str(target_value),
+                )
+            )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if not actions:
+            raise make_parse_error(
+                "bulk_actions: block must declare at least one action",
+                self.file,
+                block_line,
+                block_column,
+            )
+
+        return actions
 
     def parse_field_list(self) -> list[str]:
         """Parse comma-separated list of field names."""

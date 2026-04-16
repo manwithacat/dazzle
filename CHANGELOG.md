@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.11] - 2026-04-16
+
+### Added
+- `ux: bulk_actions:` DSL block on list-mode surfaces: binds named actions to single-field transitions (e.g. `accept: status -> active`). When present, the runtime mounts `POST /api/{entity_plural}/bulk` that accepts `{action, ids}` and applies the transition to every id. Returns per-id `{id, ok, error?}` rows plus a summary (#785).
+- `BulkActionSpec` IR type in `dazzle.core.ir`.
+
+### Agent Guidance
+- Add bulk actions to a list surface without hand-coding an endpoint:
+  ```dsl
+  surface insertion_point_review "Review":
+    uses entity InsertionPoint
+    mode: list
+    ux:
+      bulk_actions:
+        accept: status -> active
+        reject: status -> rejected
+  ```
+  The runtime exposes `POST /api/insertionpoints/bulk` — send `{"action": "accept", "ids": [...]}` to apply the transition. Target values may be identifiers, quoted strings (for multi-word states), or `true`/`false`. Each transition flows through the repository's `update` path, so scope and access rules apply per item.
+
 ## [0.57.10] - 2026-04-16
 
 ### Added

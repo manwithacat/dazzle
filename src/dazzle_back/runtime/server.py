@@ -997,6 +997,18 @@ class DazzleBackendApp:
             if search_router is not None:
                 self._app.include_router(search_router)
 
+        # Bulk-action endpoints (#785) — registered when any list-mode
+        # surface declares `ux: bulk_actions:`.
+        if self._repositories and self._appspec.surfaces:
+            from dazzle_back.runtime.bulk_routes import create_bulk_routes
+
+            bulk_router = create_bulk_routes(
+                surfaces=list(self._appspec.surfaces),
+                repositories=self._repositories,
+            )
+            if bulk_router is not None:
+                self._app.include_router(bulk_router)
+
         # Parent-scoped graph endpoints (#781) — registered when any
         # graph_node: block declares `parent: <ref_field>`.
         if node_graph_specs and self._repositories:

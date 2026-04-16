@@ -119,6 +119,36 @@ class SortSpec(BaseModel):
         return f"{self.field} {self.direction}"
 
 
+class BulkActionSpec(BaseModel):
+    """
+    Bulk action declaration on a list surface (#785).
+
+    Binds an action name to a single-field transition that will be
+    applied to every entity id supplied in a ``POST /api/{plural}/bulk``
+    request.
+
+    Example DSL:
+        ux:
+          bulk_actions:
+            accept: status -> active
+            reject: status -> rejected
+
+    Attributes:
+        name: Action name sent in the request body (e.g. ``"accept"``).
+        field: Entity field the action mutates (e.g. ``"status"``).
+        target_value: Value to assign to ``field`` for every selected id.
+    """
+
+    name: str
+    field: str
+    target_value: str
+
+    model_config = ConfigDict(frozen=True)
+
+    def __str__(self) -> str:
+        return f"{self.name}: {self.field} -> {self.target_value}"
+
+
 class UXSpec(BaseModel):
     """
     Complete UX specification for a surface.
@@ -134,6 +164,8 @@ class UXSpec(BaseModel):
         empty_message: Message shown when no data
         attention_signals: Data-driven priority indicators
         persona_variants: Role-specific adaptations
+        bulk_actions: Named field transitions exposed as
+            ``POST /api/{plural}/bulk`` endpoints (#785).
     """
 
     purpose: str | None = None
@@ -145,6 +177,7 @@ class UXSpec(BaseModel):
     search_first: bool = False
     attention_signals: list[AttentionSignal] = Field(default_factory=list)
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
+    bulk_actions: list[BulkActionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

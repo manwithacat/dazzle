@@ -712,6 +712,7 @@ from .triples import (
 # UX Semantic Layer
 from .ux import (
     AttentionSignal,
+    BulkActionSpec,
     PersonaVariant,
     SignalLevel,
     SortSpec,
@@ -794,6 +795,7 @@ __all__ = [
     # UX
     "SignalLevel",
     "AttentionSignal",
+    "BulkActionSpec",
     "PersonaVariant",
     "SortSpec",
     "UXSpec",
