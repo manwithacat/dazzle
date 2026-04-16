@@ -14,6 +14,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from functools import lru_cache
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
@@ -23,23 +24,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Lazy import TigerBeetle to allow running without it installed
-_tb_module: ModuleType | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_tb() -> ModuleType:
     """Lazy import TigerBeetle module."""
-    global _tb_module  # noqa: PLW0603  # lazy import for optional dependency
-    if _tb_module is None:
-        try:
-            from tigerbeetle import client as tb
+    try:
+        from tigerbeetle import client as tb
 
-            _tb_module = tb
-        except ImportError as e:
-            raise ImportError(
-                "TigerBeetle client not installed. Install with: pip install dazzle[tigerbeetle]"
-            ) from e
-    return _tb_module
+        return tb
+    except ImportError as e:
+        raise ImportError(
+            "TigerBeetle client not installed. Install with: pip install dazzle[tigerbeetle]"
+        ) from e
 
 
 @dataclass

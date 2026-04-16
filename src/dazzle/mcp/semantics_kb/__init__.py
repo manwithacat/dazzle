@@ -20,6 +20,7 @@ Usage:
 
 import logging
 import tomllib
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -32,8 +33,6 @@ logger = logging.getLogger(__name__)
 MCP_SEMANTICS_VERSION = _get_version()
 MCP_SEMANTICS_BUILD = 0
 
-# Cache for loaded data (TOML fallback only used when KG is not initialized)
-_semantic_cache: dict[str, Any] | None = None
 
 # TOML files to load (order doesn't matter) — used by seed.py
 TOML_FILES = [
@@ -287,13 +286,9 @@ def _load_toml_file(path: Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
+@lru_cache(maxsize=1)
 def _load_semantic_data() -> dict[str, Any]:
     """Load and merge all TOML files into unified index (fallback for when KG is not initialized)."""
-    global _semantic_cache  # noqa: PLW0603  # KG fallback cache, lazy-init
-
-    if _semantic_cache is not None:
-        return _semantic_cache
-
     kb_dir = Path(__file__).parent
     concepts: dict[str, Any] = {}
     patterns: dict[str, Any] = {}
@@ -313,13 +308,11 @@ def _load_semantic_data() -> dict[str, Any]:
         if "patterns" in data:
             patterns.update(data["patterns"])
 
-    _semantic_cache = {
+    return {
         "version": MCP_SEMANTICS_VERSION,
         "concepts": concepts,
         "patterns": patterns,
     }
-
-    return _semantic_cache
 
 
 # ---------------------------------------------------------------------------
@@ -491,8 +484,7 @@ def reload_cache() -> None:
     Also clears the TOML cache so that if the KG is not initialized the
     next ``get_semantic_index()`` call will re-read from disk.
     """
-    global _semantic_cache  # noqa: PLW0603  # KG fallback cache reset for re-seeding
-    _semantic_cache = None
+    _load_semantic_data.cache_clear()
 
     graph = _get_kg()
     if graph is not None:

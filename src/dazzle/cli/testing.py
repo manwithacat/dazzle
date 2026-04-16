@@ -5,6 +5,7 @@ Commands for generating and running E2E tests for Dazzle applications.
 """
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -950,7 +951,10 @@ def _build_assertion_handlers() -> dict[Any, Any]:
     }
 
 
-_ASSERTION_HANDLERS: dict[Any, Any] | None = None
+@lru_cache(maxsize=1)
+def _get_assertion_handlers() -> dict[Any, Any]:
+    """Return the assertion kind -> handler mapping, building it once on first call."""
+    return _build_assertion_handlers()
 
 
 def _execute_assertion_sync(
@@ -960,11 +964,9 @@ def _execute_assertion_sync(
     timeout: int,
 ) -> None:
     """Execute an assertion synchronously."""
-    global _ASSERTION_HANDLERS  # noqa: PLW0603  # lazy-init handler registry, immutable
-    if _ASSERTION_HANDLERS is None:
-        _ASSERTION_HANDLERS = _build_assertion_handlers()
+    handlers = _get_assertion_handlers()
 
-    handler = _ASSERTION_HANDLERS.get(assertion.kind)
+    handler = handlers.get(assertion.kind)
     if handler is None:
         raise ValueError(f"Unknown assertion kind: {assertion.kind}")
     handler(page, assertion, adapter, timeout)

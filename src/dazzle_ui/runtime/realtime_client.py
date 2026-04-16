@@ -8,6 +8,7 @@ This module now loads from that file via js_loader.py.
 The REALTIME_CLIENT_JS variable is kept for backward compatibility.
 """
 
+from functools import lru_cache
 
 # =============================================================================
 # Runtime Loading
@@ -901,16 +902,11 @@ _REALTIME_CLIENT_JS_INLINE = """
 })(typeof window !== 'undefined' ? window : global);
 """
 
-# Lazy-loaded realtime JS
-_REALTIME_JS_CACHED: str | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_realtime_js() -> str:
     """Get the realtime JS, loading from files if available."""
-    global _REALTIME_JS_CACHED  # noqa: PLW0603  # static asset cache, immutable once loaded
-    if _REALTIME_JS_CACHED is None:
-        _REALTIME_JS_CACHED = _load_realtime_js()
-    return _REALTIME_JS_CACHED
+    return _load_realtime_js()
 
 
 def get_realtime_client_js() -> str:

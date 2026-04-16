@@ -7,6 +7,7 @@ template loading from the templates/ directory.
 
 from __future__ import annotations
 
+import threading
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -424,15 +425,19 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     return env
 
 
-# Module-level singleton
+# Module-level singleton (guarded by lock for thread safety)
 _env: Environment | None = None
+_env_lock = threading.Lock()
 
 
 def get_jinja_env() -> Environment:
     """Get the shared Jinja2 environment (lazy singleton)."""
-    global _env  # noqa: PLW0603  # single-project Jinja2 env, lazy-init
-    if _env is None:
-        _env = create_jinja_env()
+    global _env  # noqa: PLW0603
+    if _env is not None:
+        return _env
+    with _env_lock:
+        if _env is None:
+            _env = create_jinja_env()
     return _env
 
 
@@ -442,8 +447,9 @@ def configure_project_templates(project_templates_dir: Path) -> None:
     Call this during app startup to enable project templates that override
     framework defaults.  Framework templates remain accessible via ``dz://``.
     """
-    global _env  # noqa: PLW0603  # project template override at startup
-    _env = create_jinja_env(project_templates_dir)
+    global _env  # noqa: PLW0603
+    with _env_lock:
+        _env = create_jinja_env(project_templates_dir)
 
 
 def render_page(

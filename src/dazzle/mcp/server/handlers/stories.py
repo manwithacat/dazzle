@@ -7,6 +7,7 @@ Handles DSL spec extraction, story proposal, saving, and retrieval.
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -39,30 +40,25 @@ MAX_TRANSITIONS_PER_ENTITY = 3
 # Trigger Mappings
 # =============================================================================
 
-# Lazy-initialized trigger mapping (imports aren't available at module load time)
-_TRIGGER_MAP: dict[Any, Any] | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_trigger_map() -> dict[Any, Any]:
     """Get or create the StoryTrigger to TestDesignTrigger mapping.
 
     Uses lazy initialization since the IR types aren't available at module load.
     """
-    global _TRIGGER_MAP  # noqa: PLW0603  # lazy-init, immutable once created
-    if _TRIGGER_MAP is None:
-        from dazzle.core.ir.stories import StoryTrigger
-        from dazzle.core.ir.test_design import TestDesignTrigger
+    from dazzle.core.ir.stories import StoryTrigger
+    from dazzle.core.ir.test_design import TestDesignTrigger
 
-        _TRIGGER_MAP = {
-            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
-            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
-            StoryTrigger.TIMER_ELAPSED: TestDesignTrigger.TIMER_ELAPSED,
-            StoryTrigger.EXTERNAL_EVENT: TestDesignTrigger.EXTERNAL_EVENT,
-            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
-            StoryTrigger.CRON_DAILY: TestDesignTrigger.CRON_DAILY,
-            StoryTrigger.CRON_HOURLY: TestDesignTrigger.CRON_HOURLY,
-        }
-    return _TRIGGER_MAP
+    return {
+        StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+        StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+        StoryTrigger.TIMER_ELAPSED: TestDesignTrigger.TIMER_ELAPSED,
+        StoryTrigger.EXTERNAL_EVENT: TestDesignTrigger.EXTERNAL_EVENT,
+        StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+        StoryTrigger.CRON_DAILY: TestDesignTrigger.CRON_DAILY,
+        StoryTrigger.CRON_HOURLY: TestDesignTrigger.CRON_HOURLY,
+    }
 
 
 @wrap_handler_errors
