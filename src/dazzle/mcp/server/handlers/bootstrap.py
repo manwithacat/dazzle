@@ -214,6 +214,14 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 ),
                 "Do NOT copy from example projects - generate from first principles",
             ],
+            "agent_commands_setup": {
+                "action": "Run `dazzle agent sync` to install autonomous development commands",
+                "description": (
+                    "Installs agent commands (/improve, /qa, /ship, etc.) that "
+                    "enable autonomous quality improvement and development workflows."
+                ),
+                "when": "after_first_successful_validate",
+            },
         }
     else:
         return {
@@ -318,4 +326,12 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                     "semantics(operation='tenancy') as security gates."
                 ),
             ],
+            "agent_commands_setup": {
+                "action": "Run `dazzle agent sync` to install autonomous development commands",
+                "description": (
+                    "Installs agent commands (/improve, /qa, /ship, etc.) that "
+                    "enable autonomous quality improvement and development workflows."
+                ),
+                "when": "after_first_successful_validate",
+            },
         }
