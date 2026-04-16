@@ -3,8 +3,8 @@
 import re
 from pathlib import Path
 
-from dazzle.cli.agent_commands.loader import DEFINITIONS_DIR, load_all_commands, load_command
-from dazzle.cli.agent_commands.models import (
+from dazzle.services.agent_commands.loader import DEFINITIONS_DIR, load_all_commands, load_command
+from dazzle.services.agent_commands.models import (
     CommandDefinition,
     CommandStatus,
     LoopConfig,
@@ -12,7 +12,7 @@ from dazzle.cli.agent_commands.models import (
     SyncManifest,
     ToolsConfig,
 )
-from dazzle.cli.agent_commands.renderer import (
+from dazzle.services.agent_commands.renderer import (
     TEMPLATES_DIR,
     evaluate_maturity,
     render_agents_md,

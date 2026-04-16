@@ -9,8 +9,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.cli.agent_commands.loader import load_all_commands
-from dazzle.cli.agent_commands.renderer import (
+from dazzle.services.agent_commands.loader import load_all_commands
+from dazzle.services.agent_commands.renderer import (
     build_project_context,
     evaluate_maturity,
     render_skill,

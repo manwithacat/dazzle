@@ -30,7 +30,7 @@ def sync_command(
         typer.echo(f"Error: {project} does not contain a dazzle.toml", err=True)
         raise typer.Exit(code=1)
 
-    from .renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     manifest = sync_to_project(project)
 

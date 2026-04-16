@@ -23,7 +23,7 @@ def minimal_project(tmp_path: Path) -> Path:
 
 
 def test_sync_creates_command_files(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     commands_dir = minimal_project / ".claude" / "commands"
@@ -34,7 +34,7 @@ def test_sync_creates_command_files(minimal_project: Path) -> None:
 
 
 def test_sync_creates_manifest(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     manifest_path = minimal_project / ".claude" / "commands" / ".manifest.json"
@@ -46,7 +46,7 @@ def test_sync_creates_manifest(minimal_project: Path) -> None:
 
 
 def test_sync_creates_agents_md(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     assert (minimal_project / "AGENTS.md").exists()
@@ -55,7 +55,7 @@ def test_sync_creates_agents_md(minimal_project: Path) -> None:
 
 
 def test_sync_seeds_backlog_files(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     assert (minimal_project / "agent" / "improve-backlog.md").exists()
@@ -63,7 +63,7 @@ def test_sync_seeds_backlog_files(minimal_project: Path) -> None:
 
 
 def test_sync_is_idempotent(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     first = (minimal_project / "AGENTS.md").read_text()
@@ -73,7 +73,7 @@ def test_sync_is_idempotent(minimal_project: Path) -> None:
 
 
 def test_sync_preserves_existing_backlogs(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     backlog = minimal_project / "agent" / "improve-backlog.md"
@@ -83,7 +83,7 @@ def test_sync_preserves_existing_backlogs(minimal_project: Path) -> None:
 
 
 def test_sync_appends_to_claude_md(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     claude_md = minimal_project / ".claude" / "CLAUDE.md"
     claude_md.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ def test_sync_appends_to_claude_md(minimal_project: Path) -> None:
 
 
 def test_sync_does_not_duplicate_claude_md_section(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     sync_to_project(minimal_project)
@@ -105,7 +105,7 @@ def test_sync_does_not_duplicate_claude_md_section(minimal_project: Path) -> Non
 
 
 def test_unavailable_commands_not_written(minimal_project: Path) -> None:
-    from dazzle.cli.agent_commands.renderer import sync_to_project
+    from dazzle.services.agent_commands.renderer import sync_to_project
 
     sync_to_project(minimal_project)
     commands_dir = minimal_project / ".claude" / "commands"
