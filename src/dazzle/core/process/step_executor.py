@@ -451,7 +451,7 @@ _PROCESS_QUERY_OPS: dict[str, str] = {
 }
 
 
-def _build_process_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
+def build_process_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
     """Build a parameterised WHERE clause from Django-style filter dict.
 
     Supports operators: eq (default), gt, gte, lt, lte, ne, in, not_in,
@@ -554,7 +554,7 @@ def _execute_query_step(
             ]
         resolved[key] = value
 
-    where_clause, params = _build_process_where_clause(resolved)
+    where_clause, params = build_process_where_clause(resolved)
     sql = f'SELECT * FROM "{table_name}"'  # noqa: S608
     if where_clause:
         sql += f" WHERE {where_clause}"

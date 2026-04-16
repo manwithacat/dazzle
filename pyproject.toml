@@ -285,7 +285,7 @@ module = "dazzle.mcp.server"
 disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
-module = ["dazzle.core.process.celery_tasks", "dazzle_back.runtime.process_celery_tasks"]
+module = ["dazzle.core.process.celery_tasks"]
 # Celery decorators are untyped
 disallow_untyped_decorators = false
 
