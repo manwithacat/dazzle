@@ -44,6 +44,21 @@ FIELD_TYPE_TO_INPUT: dict[FieldTypeKind, str] = {
 
 DEFAULT_INPUT_TYPE = "text"
 
+# ── Widget-aware input type equivalences ──────────────────────────────
+#
+# The Dazzle widget system renders fields with ``data-dz-widget`` attributes
+# on the input or a wrapping container. The HTML ``type`` attribute then
+# reflects the widget's storage shape (text/range/hidden) rather than the
+# DSL-declared field type. These equivalences let the scorer accept those
+# widget-rendered shapes as satisfying the expected type.
+_WIDGET_TYPE_EQUIVALENCES: dict[str, dict[str, set[str]]] = {
+    "datepicker": {"text": {"date", "datetime-local"}},
+    "daterange": {"text": {"date", "datetime-local"}},
+    "range-tooltip": {"range": {"number"}},
+    "richtext": {"hidden": {"text", "textarea", "select"}},
+    "tags": {"text": {"text"}},
+}
+
 # ── Composite score weights ───────────────────────────────────────────
 
 W_STRUCTURAL = 0.35
@@ -134,6 +149,43 @@ def parse_html(html: str) -> HTMLElement:
 
 
 # ── Structural checks ─────────────────────────────────────────────────
+
+
+def _iter_inputs_with_widget_context(
+    element: HTMLElement,
+    ancestor_widget: str = "",
+) -> list[tuple[HTMLElement, str]]:
+    """Walk the tree yielding (input_element, nearest_widget) pairs.
+
+    The widget is taken from ``data-dz-widget`` on the input itself when
+    present, otherwise from the nearest ancestor carrying the attribute.
+    Returns an empty string when no widget context applies.
+    """
+    result: list[tuple[HTMLElement, str]] = []
+    current_widget = element.get_attr("data-dz-widget", "") or ancestor_widget
+    if element.tag == "input":
+        result.append((element, current_widget))
+    for child in element.children:
+        result.extend(_iter_inputs_with_widget_context(child, current_widget))
+    return result
+
+
+def _input_type_satisfies(expected_type: str, actual_type: str, widget: str) -> bool:
+    """Whether the rendered input type matches the DSL-expected type.
+
+    Accepts widget-rendered equivalences (e.g. datepicker renders a text
+    input that semantically satisfies a ``date`` field).
+    """
+    if expected_type == actual_type:
+        return True
+    equiv = _WIDGET_TYPE_EQUIVALENCES.get(widget, {}).get(actual_type)
+    if equiv and expected_type in equiv:
+        return True
+    # Range inputs always satisfy number fields — the slider is semantically
+    # a number regardless of which widget (if any) decorates it.
+    if actual_type == "range" and expected_type == "number":
+        return True
+    return False
 
 
 def _field_names_from_surface(surface: SurfaceSpec) -> list[str]:
@@ -325,28 +377,31 @@ def _check_form_structure(
     # Check input types match field types
     if entity:
         entity_field_map = {f.name: f for f in entity.fields}
-        for inp in root.find_all("input"):
+        for inp, widget in _iter_inputs_with_widget_context(root):
             name = inp.get_attr("name")
-            if name in entity_field_map:
-                fspec = entity_field_map[name]
-                expected_type = FIELD_TYPE_TO_INPUT.get(fspec.type.kind, DEFAULT_INPUT_TYPE)
-                actual_type = inp.get_attr("type", "text")
-                if expected_type != actual_type and expected_type not in ("textarea", "file"):
-                    gaps.append(
-                        FidelityGap(
-                            category=FidelityGapCategory.INCORRECT_INPUT_TYPE,
-                            dimension="structural",
-                            severity="major",
-                            surface_name=surface.name,
-                            target=f"input[{name}]",
-                            expected=f"type='{expected_type}'",
-                            actual=f"type='{actual_type}'",
-                            recommendation=(
-                                f"Change input type to '{expected_type}' "
-                                f"for {fspec.type.kind.value} field."
-                            ),
-                        )
-                    )
+            if name not in entity_field_map:
+                continue
+            fspec = entity_field_map[name]
+            expected_type = FIELD_TYPE_TO_INPUT.get(fspec.type.kind, DEFAULT_INPUT_TYPE)
+            if expected_type in ("textarea", "file"):
+                continue
+            actual_type = inp.get_attr("type", "text")
+            if _input_type_satisfies(expected_type, actual_type, widget):
+                continue
+            gaps.append(
+                FidelityGap(
+                    category=FidelityGapCategory.INCORRECT_INPUT_TYPE,
+                    dimension="structural",
+                    severity="major",
+                    surface_name=surface.name,
+                    target=f"input[{name}]",
+                    expected=f"type='{expected_type}'",
+                    actual=f"type='{actual_type}'",
+                    recommendation=(
+                        f"Change input type to '{expected_type}' for {fspec.type.kind.value} field."
+                    ),
+                )
+            )
 
     return gaps
 

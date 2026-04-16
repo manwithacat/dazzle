@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.3] - 2026-04-16
+
+### Fixed
+- Fidelity scorer now recognises widget-rendered input types: datepicker (text→date/datetime), range-tooltip and bare `type="range"` (→number), richtext (hidden→text/textarea/select). Eliminates false-positive INCORRECT_INPUT_TYPE gaps introduced by the v0.56.0 widget system (#779).
+
 ## [0.57.2] - 2026-04-16
 
 ### Changed

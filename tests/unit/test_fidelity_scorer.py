@@ -580,3 +580,190 @@ class TestMoneyFieldExpansion:
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
         assert len(type_gaps) == 0
+
+
+class TestWidgetRenderedInputTypes:
+    """Widget-rendered input types satisfy the expected DSL type (#779)."""
+
+    def test_datepicker_on_date_field(self) -> None:
+        """Flatpickr datepicker: type='text' + data-dz-widget='datepicker' satisfies date."""
+        surface = _make_surface(
+            name="event_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["starts_on"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
+        )
+        html = """
+        <form hx-post="/events">
+            <input name="starts_on" type="text" data-dz-widget="datepicker">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_datepicker_on_datetime_field(self) -> None:
+        """Flatpickr datepicker with enableTime: satisfies datetime field."""
+        surface = _make_surface(
+            name="event_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["starts_at"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="starts_at", type=FieldType(kind=FieldTypeKind.DATETIME))],
+        )
+        html = """
+        <form hx-post="/events">
+            <input name="starts_at" type="text" data-dz-widget="datepicker">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_range_slider_on_int_field(self) -> None:
+        """Range slider: type='range' satisfies int/number field."""
+        surface = _make_surface(
+            name="settings_edit",
+            mode=SurfaceMode.EDIT,
+            field_names=["volume"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="volume", type=FieldType(kind=FieldTypeKind.INT))],
+        )
+        html = """
+        <form hx-put="/settings">
+            <div data-dz-widget="range-tooltip">
+                <input name="volume" type="range" min="0" max="100">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_range_slider_on_decimal_field(self) -> None:
+        """Range slider satisfies decimal fields as well."""
+        surface = _make_surface(
+            name="settings_edit",
+            mode=SurfaceMode.EDIT,
+            field_names=["opacity"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="opacity", type=FieldType(kind=FieldTypeKind.DECIMAL))],
+        )
+        html = """
+        <form hx-put="/settings">
+            <input name="opacity" type="range" min="0" max="1" step="0.01">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_richtext_hidden_input_on_str_field(self) -> None:
+        """Rich text widget: hidden input inside data-dz-widget='richtext' satisfies str."""
+        surface = _make_surface(
+            name="post_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["body"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="body", type=FieldType(kind=FieldTypeKind.STR, max_length=5000))],
+        )
+        html = """
+        <form hx-post="/posts">
+            <div data-dz-widget="richtext">
+                <div class="quill-editor"></div>
+                <input type="hidden" name="body">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_richtext_hidden_input_on_enum_field(self) -> None:
+        """Rich text widget on enum: hidden input satisfies select expectation."""
+        surface = _make_surface(
+            name="post_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["category"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="category", type=FieldType(kind=FieldTypeKind.ENUM))],
+        )
+        html = """
+        <form hx-post="/posts">
+            <div data-dz-widget="richtext">
+                <input type="hidden" name="category">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_unknown_widget_still_flags_mismatch(self) -> None:
+        """Unknown widget name doesn't silently bypass the type check."""
+        surface = _make_surface(
+            name="event_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["starts_on"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
+        )
+        html = """
+        <form hx-post="/events">
+            <input name="starts_on" type="text" data-dz-widget="mysterywidget">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert len(type_gaps) == 1
+
+    def test_plain_mismatch_without_widget_still_flags(self) -> None:
+        """Type mismatch with no widget context still produces a gap."""
+        surface = _make_surface(
+            name="event_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["starts_on"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
+        )
+        html = """
+        <form hx-post="/events">
+            <input name="starts_on" type="text">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert len(type_gaps) == 1
