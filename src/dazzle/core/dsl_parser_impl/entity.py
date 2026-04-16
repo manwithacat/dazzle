@@ -5,6 +5,7 @@ Handles entity declarations including fields, constraints, state machines,
 access rules, invariants, and LLM cognition features.
 """
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +14,47 @@ from ..errors import make_parse_error
 from ..lexer import TokenType
 from .fitness import parse_fitness_block
 from .lifecycle import parse_lifecycle_block
+
+
+@dataclass
+class _EntityParseContext:
+    """Accumulator for all sub-parts parsed inside an entity block."""
+
+    # LLM cognition (v0.7.1)
+    intent: str | None = None
+    domain: str | None = None
+    patterns: list[str] = field(default_factory=list)
+    extends: list[str] = field(default_factory=list)
+    examples: list[ir.ExampleRecord] = field(default_factory=list)
+    # Semantic archetype (v0.10.3)
+    archetype_kind: ir.ArchetypeKind | None = None
+    # Soft delete and bulk config (v0.34.0)
+    soft_delete: bool = False
+    bulk_config: ir.BulkConfig | None = None
+    # Seed template (v0.38.0)
+    seed_template: ir.SeedTemplateSpec | None = None
+    # Display field (v0.44.0)
+    display_field: str | None = None
+    # Graph semantics (v0.46.0)
+    graph_edge: ir.GraphEdgeSpec | None = None
+    graph_node: ir.GraphNodeSpec | None = None
+    # Lifecycle (ADR-0020)
+    lifecycle: ir.LifecycleSpec | None = None
+    # Fitness (Agent-Led Fitness v1)
+    fitness_spec: ir.FitnessSpec | None = None
+
+    # Fields
+    fields: list[ir.FieldSpec] = field(default_factory=list)
+    computed_fields: list[ir.ComputedFieldSpec] = field(default_factory=list)
+    constraints: list[ir.Constraint] = field(default_factory=list)
+    visibility_rules: list[ir.VisibilityRule] = field(default_factory=list)
+    permission_rules: list[ir.PermissionRule] = field(default_factory=list)
+    scope_rules: list[ir.ScopeRule] = field(default_factory=list)
+    transitions: list[ir.StateTransition] = field(default_factory=list)
+    transition_effects: list[tuple[str, str, list[ir.StepEffect]]] = field(default_factory=list)
+    invariants: list[ir.InvariantSpec] = field(default_factory=list)
+    publishes: list[ir.PublishSpec] = field(default_factory=list)
+    audit_config: ir.AuditConfig | None = None
 
 
 class EntityParserMixin:
@@ -51,672 +93,646 @@ class EntityParserMixin:
         _parse_construct_header: Any
 
     def parse_entity(self) -> ir.EntitySpec:
-        """Parse entity declaration."""
+        """Parse entity declaration.
+
+        Dispatches each keyword to a dedicated ``_parse_entity_*`` helper,
+        accumulating results in an ``_EntityParseContext``.
+        """
         name, title, loc = self._parse_construct_header(TokenType.ENTITY)
-
-        # v0.7.1: New fields for LLM cognition
-        intent: str | None = None
-        domain: str | None = None
-        patterns: list[str] = []
-        extends: list[str] = []
-        examples: list[ir.ExampleRecord] = []
-        # v0.10.3: Semantic archetype
-        archetype_kind: ir.ArchetypeKind | None = None
-        # v0.34.0: Soft delete and bulk config
-        soft_delete: bool = False
-        bulk_config: ir.BulkConfig | None = None
-        # v0.38.0: Seed template
-        seed_template: ir.SeedTemplateSpec | None = None
-        # v0.44.0: Explicit display field for FK references
-        display_field: str | None = None
-        # v0.46.0: Graph semantics (#619)
-        graph_edge: ir.GraphEdgeSpec | None = None
-        graph_node: ir.GraphNodeSpec | None = None
-        # ADR-0020: Lifecycle evidence predicates
-        lifecycle: ir.LifecycleSpec | None = None
-        # Agent-Led Fitness v1: per-entity repr_fields
-        fitness_spec: ir.FitnessSpec | None = None
-
-        fields: list[ir.FieldSpec] = []
-        computed_fields: list[ir.ComputedFieldSpec] = []
-        constraints: list[ir.Constraint] = []
-        visibility_rules: list[ir.VisibilityRule] = []
-        permission_rules: list[ir.PermissionRule] = []
-        scope_rules: list[ir.ScopeRule] = []
-        transitions: list[ir.StateTransition] = []
-        transition_effects: list[tuple[str, str, list[ir.StepEffect]]] = []
-        invariants: list[ir.InvariantSpec] = []
-        publishes: list[ir.PublishSpec] = []
-        audit_config: ir.AuditConfig | None = None
+        ctx = _EntityParseContext()
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
 
-            # v0.7.1: Check for intent: declaration
             if self.match(TokenType.INTENT):
+                ctx.intent = self._parse_entity_intent()
+            elif self.match(TokenType.DOMAIN):
+                ctx.domain = self._parse_entity_domain()
+            elif self.match(TokenType.PATTERNS):
+                ctx.patterns = self._parse_entity_patterns()
+            elif self.match(TokenType.EXTENDS):
+                ctx.extends = self._parse_entity_extends()
+            elif self.match(TokenType.ARCHETYPE):
+                ctx.archetype_kind = self._parse_entity_archetype()
+            elif self.match(TokenType.EXAMPLES):
+                ctx.examples.extend(self._parse_entity_examples())
+            elif self.match(TokenType.UNIQUE, TokenType.INDEX):
+                ctx.constraints.append(self._parse_entity_constraint())
+            elif self.match(TokenType.INVARIANT):
+                ctx.invariants.append(self._parse_entity_invariant())
+            elif self.match(TokenType.VISIBLE):
+                ctx.visibility_rules.extend(self._parse_entity_visible_block())
+            elif self.match(TokenType.PERMISSIONS):
+                ctx.permission_rules.extend(self._parse_entity_permissions_block())
+            elif self.match(TokenType.ACCESS):
+                self._parse_entity_access_block(ctx)
+            elif self.match(TokenType.PERMIT):
+                ctx.permission_rules.extend(self._parse_entity_policy_block(ir.PolicyEffect.PERMIT))
+            elif self.match(TokenType.FORBID):
+                ctx.permission_rules.extend(self._parse_entity_policy_block(ir.PolicyEffect.FORBID))
+            elif self.match(TokenType.SCOPE):
+                ctx.scope_rules.extend(self._parse_entity_scope_block())
+            elif self.match(TokenType.AUDIT):
+                ctx.audit_config = self._parse_entity_audit()
+            elif self.match(TokenType.SOFT_DELETE):
                 self.advance()
-                self.expect(TokenType.COLON)
-                intent = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-                continue
-
-            # v0.7.1: Check for domain: declaration
-            if self.match(TokenType.DOMAIN):
-                self.advance()
-                self.expect(TokenType.COLON)
-                domain = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-                continue
-
-            # v0.7.1: Check for patterns: declaration
-            if self.match(TokenType.PATTERNS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                patterns = [self.expect_identifier_or_keyword().value]
-                while self.match(TokenType.COMMA):
-                    self.advance()
-                    patterns.append(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-                continue
-
-            # v0.7.1: Check for extends: declaration
-            if self.match(TokenType.EXTENDS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                extends = [self.expect(TokenType.IDENTIFIER).value]
-                while self.match(TokenType.COMMA):
-                    self.advance()
-                    extends.append(self.expect(TokenType.IDENTIFIER).value)
-                self.skip_newlines()
-                continue
-
-            # v0.10.3: Check for archetype: declaration (semantic archetype)
-            if self.match(TokenType.ARCHETYPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                archetype_value = self.expect_identifier_or_keyword().value
-                archetype_kind = self._map_archetype_kind(archetype_value)
-                self.skip_newlines()
-                continue
-
-            # v0.7.1: Check for examples: block
-            if self.match(TokenType.EXAMPLES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    example = self._parse_example_record()
-                    examples.append(example)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for constraints
-            if self.match(TokenType.UNIQUE, TokenType.INDEX):
-                constraint_kind = self.advance().type
-                kind = (
-                    ir.ConstraintKind.UNIQUE
-                    if constraint_kind == TokenType.UNIQUE
-                    else ir.ConstraintKind.INDEX
-                )
-
-                # Parse field list
-                field_names = [self.expect_identifier_or_keyword().value]
-                while self.match(TokenType.COMMA):
-                    self.advance()
-                    field_names.append(self.expect_identifier_or_keyword().value)
-
-                constraints.append(ir.Constraint(kind=kind, fields=field_names))
-                self.skip_newlines()
-                continue
-
-            # Check for invariant declaration (with optional message/code)
-            if self.match(TokenType.INVARIANT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                # v0.30.0: Use unified expression language
-                inv_expr = self.collect_line_as_expr()
-                self.skip_newlines()
-
-                # v0.7.1: Check for optional message: and code: on next lines
-                inv_message: str | None = None
-                inv_code: str | None = None
-
-                # Check for indented message/code block
-                if self.match(TokenType.INDENT):
-                    self.advance()
-                    while not self.match(TokenType.DEDENT):
-                        self.skip_newlines()
-                        if self.match(TokenType.DEDENT):
-                            break
-                        if self.match(TokenType.MESSAGE):
-                            self.advance()
-                            self.expect(TokenType.COLON)
-                            inv_message = self.expect(TokenType.STRING).value
-                        elif self.match(TokenType.CODE):
-                            self.advance()
-                            self.expect(TokenType.COLON)
-                            inv_code = self.expect_identifier_or_keyword().value
-                        else:
-                            # Not message or code, break out
-                            break
-                        self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        self.advance()
-
-                invariants.append(
-                    ir.InvariantSpec(
-                        invariant_expr=inv_expr,
-                        message=inv_message,
-                        code=inv_code,
-                    )
-                )
-                continue
-
-            # Check for visible: block
-            if self.match(TokenType.VISIBLE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    visibility_rules.append(self._parse_visibility_rule())
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for permissions: block
-            if self.match(TokenType.PERMISSIONS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    permission_rules.append(self._parse_permission_rule())
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for access: block (shorthand for read/write rules)
-            if self.match(TokenType.ACCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    # Parse read:, write:, delete:, create:, or list: rule
-                    if self.match(TokenType.READ):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        condition = self.parse_condition_expr()
-                        # read: maps to both visibility rule AND permit READ
-                        visibility_rules.append(
-                            ir.VisibilityRule(
-                                context=ir.AuthContext.AUTHENTICATED,
-                                condition=condition,
-                            )
-                        )
-                        permission_rules.append(
-                            ir.PermissionRule(
-                                operation=ir.PermissionKind.READ,
-                                require_auth=True,
-                                condition=condition,
-                                effect=ir.PolicyEffect.PERMIT,
-                            )
-                        )
-                    elif self.match(TokenType.WRITE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        condition = self.parse_condition_expr()
-                        # write: maps to CREATE, UPDATE permissions
-                        for op in [
-                            ir.PermissionKind.CREATE,
-                            ir.PermissionKind.UPDATE,
-                        ]:
-                            permission_rules.append(
-                                ir.PermissionRule(
-                                    operation=op,
-                                    require_auth=True,
-                                    condition=condition,
-                                    effect=ir.PolicyEffect.PERMIT,
-                                )
-                            )
-                    elif self.match(TokenType.DELETE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        condition = self.parse_condition_expr()
-                        permission_rules.append(
-                            ir.PermissionRule(
-                                operation=ir.PermissionKind.DELETE,
-                                require_auth=True,
-                                condition=condition,
-                                effect=ir.PolicyEffect.PERMIT,
-                            )
-                        )
-                    elif self.match(TokenType.CREATE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        condition = self.parse_condition_expr()
-                        permission_rules.append(
-                            ir.PermissionRule(
-                                operation=ir.PermissionKind.CREATE,
-                                require_auth=True,
-                                condition=condition,
-                                effect=ir.PolicyEffect.PERMIT,
-                            )
-                        )
-                    elif self.match(TokenType.LIST):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        condition = self.parse_condition_expr()
-                        permission_rules.append(
-                            ir.PermissionRule(
-                                operation=ir.PermissionKind.LIST,
-                                require_auth=True,
-                                condition=condition,
-                                effect=ir.PolicyEffect.PERMIT,
-                            )
-                        )
-                    else:
-                        token = self.current_token()
-                        raise make_parse_error(
-                            f"Expected 'read', 'write', 'create', 'delete', or 'list' "
-                            f"in access block, got {token.type.value}",
-                            self.file,
-                            token.line,
-                            token.column,
-                        )
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for permit: block (Cedar-style explicit permit rules)
-            if self.match(TokenType.PERMIT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    rule = self._parse_policy_rule(ir.PolicyEffect.PERMIT)
-                    permission_rules.append(rule)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for forbid: block (Cedar-style explicit forbid rules)
-            if self.match(TokenType.FORBID):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    rule = self._parse_policy_rule(ir.PolicyEffect.FORBID)
-                    permission_rules.append(rule)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for scope: block (row-filtering rules with for: clauses)
-            if self.match(TokenType.SCOPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    scope_rule = self._parse_scope_rule()
-                    scope_rules.append(scope_rule)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # Check for audit: directive
-            if self.match(TokenType.AUDIT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                audit_config = self._parse_audit_directive()
-                self.skip_newlines()
-                continue
-
-            # v0.34.0: Check for soft_delete flag
-            if self.match(TokenType.SOFT_DELETE):
-                self.advance()
-                soft_delete = True
-                self.skip_newlines()
-                continue
-
-            # v0.34.0: Check for bulk: block
-            if self.match(TokenType.BULK):
-                self.advance()
-                self.expect(TokenType.COLON)
-                bulk_config = self._parse_bulk_config()
-                self.skip_newlines()
-                continue
-
-            # v0.46.0: Check for graph_edge: block (#619)
-            if self.match(TokenType.GRAPH_EDGE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                ge_block_line = self.current_token().line
-                ge_block_column = self.current_token().column
-                ge_source: str | None = None
-                ge_target: str | None = None
-                ge_type: str | None = None
-                ge_weight: str | None = None
-                ge_directed: bool = True
-                ge_acyclic: bool = False
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    if self.match(TokenType.SOURCE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        ge_source = self.expect_identifier_or_keyword().value
-                    elif self.match(TokenType.TARGET):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        ge_target = self.expect_identifier_or_keyword().value
-                    elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "type":
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        ge_type = self.expect_identifier_or_keyword().value
-                    elif self.match(TokenType.WEIGHT):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        ge_weight = self.expect_identifier_or_keyword().value
-                    elif self.match(TokenType.DIRECTED):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        if self.match(TokenType.TRUE):
-                            self.advance()
-                            ge_directed = True
-                        elif self.match(TokenType.FALSE):
-                            self.advance()
-                            ge_directed = False
-                        else:
-                            raise make_parse_error(
-                                "Expected true or false for directed",
-                                self.file,
-                                self.current_token().line,
-                                self.current_token().column,
-                            )
-                    elif self.match(TokenType.ACYCLIC):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        if self.match(TokenType.TRUE):
-                            self.advance()
-                            ge_acyclic = True
-                        elif self.match(TokenType.FALSE):
-                            self.advance()
-                            ge_acyclic = False
-                        else:
-                            raise make_parse_error(
-                                "Expected true or false for acyclic",
-                                self.file,
-                                self.current_token().line,
-                                self.current_token().column,
-                            )
-                    else:
-                        raise make_parse_error(
-                            f"Unexpected token in graph_edge: block: {self.current_token().value}",
-                            self.file,
-                            self.current_token().line,
-                            self.current_token().column,
-                        )
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-
-                if ge_source is None or ge_target is None:
-                    raise make_parse_error(
-                        "graph_edge: requires both source and target fields",
-                        self.file,
-                        ge_block_line,
-                        ge_block_column,
-                    )
-
-                graph_edge = ir.GraphEdgeSpec(
-                    source=ge_source,
-                    target=ge_target,
-                    type_field=ge_type,
-                    weight_field=ge_weight,
-                    directed=ge_directed,
-                    acyclic=ge_acyclic,
-                )
-                self.skip_newlines()
-                continue
-
-            # v0.46.0: Check for graph_node: block (#619)
-            if self.match(TokenType.GRAPH_NODE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                gn_block_line = self.current_token().line
-                gn_block_column = self.current_token().column
-                gn_edges: str | None = None
-                gn_display: str | None = None
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    if self.match(TokenType.EDGES):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        gn_edges = self.expect_identifier_or_keyword().value
-                    elif self.match(TokenType.DISPLAY):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        gn_display = self.expect_identifier_or_keyword().value
-                    else:
-                        raise make_parse_error(
-                            f"Unexpected token in graph_node: block: {self.current_token().value}",
-                            self.file,
-                            self.current_token().line,
-                            self.current_token().column,
-                        )
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-
-                if gn_edges is None:
-                    raise make_parse_error(
-                        "graph_node: requires an edges field",
-                        self.file,
-                        gn_block_line,
-                        gn_block_column,
-                    )
-
-                graph_node = ir.GraphNodeSpec(
-                    edge_entity=gn_edges,
-                    display=gn_display,
-                )
-                self.skip_newlines()
-                continue
-
-            # Check for transitions: block (state machines)
-            if self.match(TokenType.TRANSITIONS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    transition = self._parse_state_transition()
-                    transitions.append(transition)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # v0.39.0: Check for on_transition: block
-            if self.match(TokenType.ON_TRANSITION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    effect_entry = self._parse_transition_effect()
-                    transition_effects.append(effect_entry)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-                self.skip_newlines()
-                continue
-
-            # v0.38.0: Check for seed: block
-            if self.match(TokenType.SEED):
-                self.advance()
-                self.expect(TokenType.COLON)
-                seed_template = self._parse_seed_template()
-                self.skip_newlines()
-                continue
-
-            # v0.18.0: Check for publish declaration
-            if self.match(TokenType.PUBLISH):
-                publish_spec = self.parse_publish_directive(entity_name=name)
-                publishes.append(publish_spec)
-                self.skip_newlines()
-                continue
-
-            # ADR-0020: lifecycle: block
-            if self.match(TokenType.LIFECYCLE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                lifecycle = parse_lifecycle_block(self)  # type: ignore[arg-type]
-                self.skip_newlines()
-                continue
-
-            # Agent-Led Fitness v1: fitness: block
-            if self.match(TokenType.FITNESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                declared_field_names = {f.name for f in fields}
-                fitness_spec = parse_fitness_block(
-                    self,  # type: ignore[arg-type]
-                    declared_field_names,
-                )
-                self.skip_newlines()
-                continue
-
-            # v0.44.0: display_field: <field_name>
-            if self.match(TokenType.DISPLAY_FIELD):
-                self.advance()
-                self.expect(TokenType.COLON)
-                display_field = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-                continue
-
-            # Parse field
-            field_name = self.expect_identifier_or_keyword().value
-            self.expect(TokenType.COLON)
-
-            # Check for computed field
-            if self.match(TokenType.COMPUTED):
-                self.advance()
-                # v0.30.0: Use unified expression language
-                comp_expr = self.collect_line_as_expr()
-                computed_fields.append(
-                    ir.ComputedFieldSpec(
-                        name=field_name,
-                        computed_expr=comp_expr,
-                    )
-                )
+                ctx.soft_delete = True
+            elif self.match(TokenType.BULK):
+                ctx.bulk_config = self._parse_entity_bulk()
+            elif self.match(TokenType.GRAPH_EDGE):
+                ctx.graph_edge = self._parse_entity_graph_edge()
+            elif self.match(TokenType.GRAPH_NODE):
+                ctx.graph_node = self._parse_entity_graph_node()
+            elif self.match(TokenType.TRANSITIONS):
+                ctx.transitions.extend(self._parse_entity_transitions_block())
+            elif self.match(TokenType.ON_TRANSITION):
+                ctx.transition_effects.extend(self._parse_entity_on_transition_block())
+            elif self.match(TokenType.SEED):
+                ctx.seed_template = self._parse_entity_seed()
+            elif self.match(TokenType.PUBLISH):
+                ctx.publishes.append(self.parse_publish_directive(entity_name=name))
+            elif self.match(TokenType.LIFECYCLE):
+                ctx.lifecycle = self._parse_entity_lifecycle()
+            elif self.match(TokenType.FITNESS):
+                ctx.fitness_spec = self._parse_entity_fitness(ctx.fields)
+            elif self.match(TokenType.DISPLAY_FIELD):
+                ctx.display_field = self._parse_entity_display_field()
             else:
-                field_type = self.parse_type_spec()
-                modifiers, default, default_expr = self.parse_field_modifiers()
-
-                fields.append(
-                    ir.FieldSpec(
-                        name=field_name,
-                        type=field_type,
-                        modifiers=modifiers,
-                        default=default,
-                        default_expr=default_expr,
-                    )
-                )
+                self._parse_entity_field_declaration(ctx)
+                continue  # field parsing handles its own skip_newlines
 
             self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
 
+        return self._build_entity_spec(name, title, loc, ctx)
+
+    # ------------------------------------------------------------------
+    # Entity keyword helpers
+    # ------------------------------------------------------------------
+
+    def _parse_entity_intent(self) -> str:
+        """Parse ``intent: "..."`` declaration."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self.expect(TokenType.STRING).value
+
+    def _parse_entity_domain(self) -> str:
+        """Parse ``domain: name`` declaration."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self.expect_identifier_or_keyword().value
+
+    def _parse_entity_patterns(self) -> list[str]:
+        """Parse ``patterns: a, b, c`` declaration."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        patterns = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.COMMA):
+            self.advance()
+            patterns.append(self.expect_identifier_or_keyword().value)
+        return patterns
+
+    def _parse_entity_extends(self) -> list[str]:
+        """Parse ``extends: A, B`` declaration."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        extends = [self.expect(TokenType.IDENTIFIER).value]
+        while self.match(TokenType.COMMA):
+            self.advance()
+            extends.append(self.expect(TokenType.IDENTIFIER).value)
+        return extends
+
+    def _parse_entity_archetype(self) -> ir.ArchetypeKind:
+        """Parse ``archetype: kind`` declaration."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        archetype_value = self.expect_identifier_or_keyword().value
+        return self._map_archetype_kind(archetype_value)
+
+    def _parse_entity_examples(self) -> list[ir.ExampleRecord]:
+        """Parse ``examples:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        examples: list[ir.ExampleRecord] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            examples.append(self._parse_example_record())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return examples
+
+    def _parse_entity_constraint(self) -> ir.Constraint:
+        """Parse ``unique`` or ``index`` constraint with field list."""
+        constraint_kind = self.advance().type
+        kind = (
+            ir.ConstraintKind.UNIQUE
+            if constraint_kind == TokenType.UNIQUE
+            else ir.ConstraintKind.INDEX
+        )
+        field_names = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.COMMA):
+            self.advance()
+            field_names.append(self.expect_identifier_or_keyword().value)
+        return ir.Constraint(kind=kind, fields=field_names)
+
+    def _parse_entity_invariant(self) -> ir.InvariantSpec:
+        """Parse ``invariant:`` with optional indented message/code."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        inv_expr = self.collect_line_as_expr()
+        self.skip_newlines()
+
+        inv_message: str | None = None
+        inv_code: str | None = None
+
+        if self.match(TokenType.INDENT):
+            self.advance()
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+                if self.match(TokenType.MESSAGE):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    inv_message = self.expect(TokenType.STRING).value
+                elif self.match(TokenType.CODE):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    inv_code = self.expect_identifier_or_keyword().value
+                else:
+                    break
+                self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                self.advance()
+
+        return ir.InvariantSpec(
+            invariant_expr=inv_expr,
+            message=inv_message,
+            code=inv_code,
+        )
+
+    def _parse_entity_visible_block(self) -> list[ir.VisibilityRule]:
+        """Parse ``visible:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        rules: list[ir.VisibilityRule] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            rules.append(self._parse_visibility_rule())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return rules
+
+    def _parse_entity_permissions_block(self) -> list[ir.PermissionRule]:
+        """Parse ``permissions:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        rules: list[ir.PermissionRule] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            rules.append(self._parse_permission_rule())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return rules
+
+    def _parse_entity_access_block(self, ctx: _EntityParseContext) -> None:
+        """Parse ``access:`` shorthand block (read/write/create/delete/list).
+
+        Mutates *ctx* in-place because ``read:`` produces both a visibility
+        rule and a permission rule, and ``write:`` fans out to CREATE + UPDATE.
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.READ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                ctx.visibility_rules.append(
+                    ir.VisibilityRule(
+                        context=ir.AuthContext.AUTHENTICATED,
+                        condition=condition,
+                    )
+                )
+                ctx.permission_rules.append(
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.READ,
+                        require_auth=True,
+                        condition=condition,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                )
+            elif self.match(TokenType.WRITE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                for op in [
+                    ir.PermissionKind.CREATE,
+                    ir.PermissionKind.UPDATE,
+                ]:
+                    ctx.permission_rules.append(
+                        ir.PermissionRule(
+                            operation=op,
+                            require_auth=True,
+                            condition=condition,
+                            effect=ir.PolicyEffect.PERMIT,
+                        )
+                    )
+            elif self.match(TokenType.DELETE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                ctx.permission_rules.append(
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.DELETE,
+                        require_auth=True,
+                        condition=condition,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                )
+            elif self.match(TokenType.CREATE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                ctx.permission_rules.append(
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.CREATE,
+                        require_auth=True,
+                        condition=condition,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                )
+            elif self.match(TokenType.LIST):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                ctx.permission_rules.append(
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.LIST,
+                        require_auth=True,
+                        condition=condition,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                )
+            else:
+                token = self.current_token()
+                raise make_parse_error(
+                    f"Expected 'read', 'write', 'create', 'delete', or 'list' "
+                    f"in access block, got {token.type.value}",
+                    self.file,
+                    token.line,
+                    token.column,
+                )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+    def _parse_entity_policy_block(self, effect: ir.PolicyEffect) -> list[ir.PermissionRule]:
+        """Parse ``permit:`` or ``forbid:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        rules: list[ir.PermissionRule] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            rules.append(self._parse_policy_rule(effect))
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return rules
+
+    def _parse_entity_scope_block(self) -> list[ir.ScopeRule]:
+        """Parse ``scope:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        rules: list[ir.ScopeRule] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            rules.append(self._parse_scope_rule())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return rules
+
+    def _parse_entity_audit(self) -> ir.AuditConfig:
+        """Parse ``audit:`` directive."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self._parse_audit_directive()
+
+    def _parse_entity_bulk(self) -> ir.BulkConfig:
+        """Parse ``bulk:`` block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self._parse_bulk_config()
+
+    def _parse_entity_graph_edge(self) -> ir.GraphEdgeSpec:
+        """Parse ``graph_edge:`` indented block (v0.46.0, #619)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        ge_block_line = self.current_token().line
+        ge_block_column = self.current_token().column
+        ge_source: str | None = None
+        ge_target: str | None = None
+        ge_type: str | None = None
+        ge_weight: str | None = None
+        ge_directed: bool = True
+        ge_acyclic: bool = False
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.SOURCE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                ge_source = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.TARGET):
+                self.advance()
+                self.expect(TokenType.COLON)
+                ge_target = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "type":
+                self.advance()
+                self.expect(TokenType.COLON)
+                ge_type = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.WEIGHT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                ge_weight = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.DIRECTED):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    ge_directed = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    ge_directed = False
+                else:
+                    raise make_parse_error(
+                        "Expected true or false for directed",
+                        self.file,
+                        self.current_token().line,
+                        self.current_token().column,
+                    )
+            elif self.match(TokenType.ACYCLIC):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    ge_acyclic = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    ge_acyclic = False
+                else:
+                    raise make_parse_error(
+                        "Expected true or false for acyclic",
+                        self.file,
+                        self.current_token().line,
+                        self.current_token().column,
+                    )
+            else:
+                raise make_parse_error(
+                    f"Unexpected token in graph_edge: block: {self.current_token().value}",
+                    self.file,
+                    self.current_token().line,
+                    self.current_token().column,
+                )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if ge_source is None or ge_target is None:
+            raise make_parse_error(
+                "graph_edge: requires both source and target fields",
+                self.file,
+                ge_block_line,
+                ge_block_column,
+            )
+
+        return ir.GraphEdgeSpec(
+            source=ge_source,
+            target=ge_target,
+            type_field=ge_type,
+            weight_field=ge_weight,
+            directed=ge_directed,
+            acyclic=ge_acyclic,
+        )
+
+    def _parse_entity_graph_node(self) -> ir.GraphNodeSpec:
+        """Parse ``graph_node:`` indented block (v0.46.0, #619)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        gn_block_line = self.current_token().line
+        gn_block_column = self.current_token().column
+        gn_edges: str | None = None
+        gn_display: str | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.EDGES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                gn_edges = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.DISPLAY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                gn_display = self.expect_identifier_or_keyword().value
+            else:
+                raise make_parse_error(
+                    f"Unexpected token in graph_node: block: {self.current_token().value}",
+                    self.file,
+                    self.current_token().line,
+                    self.current_token().column,
+                )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if gn_edges is None:
+            raise make_parse_error(
+                "graph_node: requires an edges field",
+                self.file,
+                gn_block_line,
+                gn_block_column,
+            )
+
+        return ir.GraphNodeSpec(
+            edge_entity=gn_edges,
+            display=gn_display,
+        )
+
+    def _parse_entity_transitions_block(self) -> list[ir.StateTransition]:
+        """Parse ``transitions:`` indented block."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        transitions: list[ir.StateTransition] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            transitions.append(self._parse_state_transition())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return transitions
+
+    def _parse_entity_on_transition_block(
+        self,
+    ) -> list[tuple[str, str, list[ir.StepEffect]]]:
+        """Parse ``on_transition:`` indented block (v0.39.0)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        effects: list[tuple[str, str, list[ir.StepEffect]]] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            effects.append(self._parse_transition_effect())
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return effects
+
+    def _parse_entity_seed(self) -> ir.SeedTemplateSpec:
+        """Parse ``seed:`` block (v0.38.0)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self._parse_seed_template()
+
+    def _parse_entity_lifecycle(self) -> ir.LifecycleSpec:
+        """Parse ``lifecycle:`` block (ADR-0020)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return parse_lifecycle_block(self)  # type: ignore[arg-type]
+
+    def _parse_entity_fitness(self, fields: list[ir.FieldSpec]) -> ir.FitnessSpec:
+        """Parse ``fitness:`` block (Agent-Led Fitness v1)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        declared_field_names = {f.name for f in fields}
+        return parse_fitness_block(
+            self,  # type: ignore[arg-type]
+            declared_field_names,
+        )
+
+    def _parse_entity_display_field(self) -> str:
+        """Parse ``display_field: name`` declaration (v0.44.0)."""
+        self.advance()
+        self.expect(TokenType.COLON)
+        return self.expect_identifier_or_keyword().value
+
+    def _parse_entity_field_declaration(self, ctx: _EntityParseContext) -> None:
+        """Parse a regular or computed field declaration (the default branch)."""
+        field_name = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.COLON)
+
+        if self.match(TokenType.COMPUTED):
+            self.advance()
+            comp_expr = self.collect_line_as_expr()
+            ctx.computed_fields.append(
+                ir.ComputedFieldSpec(
+                    name=field_name,
+                    computed_expr=comp_expr,
+                )
+            )
+        else:
+            field_type = self.parse_type_spec()
+            modifiers, default, default_expr = self.parse_field_modifiers()
+            ctx.fields.append(
+                ir.FieldSpec(
+                    name=field_name,
+                    type=field_type,
+                    modifiers=modifiers,
+                    default=default,
+                    default_expr=default_expr,
+                )
+            )
+
+        self.skip_newlines()
+
+    # ------------------------------------------------------------------
+    # Entity construction
+    # ------------------------------------------------------------------
+
+    def _build_entity_spec(
+        self,
+        name: str,
+        title: str,
+        loc: ir.SourceLocation,
+        ctx: _EntityParseContext,
+    ) -> ir.EntitySpec:
+        """Assemble the final EntitySpec from parsed context."""
         # Build access spec if any rules were defined
         access = None
-        if visibility_rules or permission_rules or scope_rules:
+        if ctx.visibility_rules or ctx.permission_rules or ctx.scope_rules:
             access = ir.AccessSpec(
-                visibility=visibility_rules,
-                permissions=permission_rules,
-                scopes=scope_rules,
+                visibility=ctx.visibility_rules,
+                permissions=ctx.permission_rules,
+                scopes=ctx.scope_rules,
             )
 
         # Merge on_transition effects into transitions
-        if transition_effects:
+        transitions = ctx.transitions
+        if ctx.transition_effects:
             transitions = _merge_transition_effects(
-                transitions, transition_effects, self.file, self.current_token().line
+                transitions,
+                ctx.transition_effects,
+                self.file,
+                self.current_token().line,
             )
 
         # Build state machine spec if transitions were defined
@@ -730,18 +746,18 @@ class EntityParserMixin:
             all_transition_states = {t.from_state for t in transitions} | {
                 t.to_state for t in transitions
             }
-            for field in fields:
-                if field.type.kind == ir.FieldTypeKind.ENUM and field.type.enum_values:
-                    if all_transition_states.issubset(set(field.type.enum_values)):
-                        status_field_name = field.name
-                        states = field.type.enum_values
+            for f in ctx.fields:
+                if f.type.kind == ir.FieldTypeKind.ENUM and f.type.enum_values:
+                    if all_transition_states.issubset(set(f.type.enum_values)):
+                        status_field_name = f.name
+                        states = f.type.enum_values
                         break
             # Fallback: field named "status" (backward compat)
             if not status_field_name:
-                for field in fields:
-                    if field.name == "status" and field.type.kind == ir.FieldTypeKind.ENUM:
-                        status_field_name = field.name
-                        states = field.type.enum_values or []
+                for f in ctx.fields:
+                    if f.name == "status" and f.type.kind == ir.FieldTypeKind.ENUM:
+                        status_field_name = f.name
+                        states = f.type.enum_values or []
                         break
 
             if status_field_name:
@@ -754,28 +770,28 @@ class EntityParserMixin:
         return ir.EntitySpec(
             name=name,
             title=title,
-            intent=intent,
-            domain=domain,
-            patterns=patterns,
-            extends=extends,
-            archetype_kind=archetype_kind,
-            fields=fields,
-            computed_fields=computed_fields,
-            invariants=invariants,
-            constraints=constraints,
+            intent=ctx.intent,
+            domain=ctx.domain,
+            patterns=ctx.patterns,
+            extends=ctx.extends,
+            archetype_kind=ctx.archetype_kind,
+            fields=ctx.fields,
+            computed_fields=ctx.computed_fields,
+            invariants=ctx.invariants,
+            constraints=ctx.constraints,
             access=access,
-            audit=audit_config,
-            soft_delete=soft_delete,
-            bulk=bulk_config,
+            audit=ctx.audit_config,
+            soft_delete=ctx.soft_delete,
+            bulk=ctx.bulk_config,
             state_machine=state_machine,
-            lifecycle=lifecycle,
-            fitness=fitness_spec,
-            examples=examples,
-            publishes=publishes,
-            seed_template=seed_template,
-            display_field=display_field,
-            graph_edge=graph_edge,
-            graph_node=graph_node,
+            lifecycle=ctx.lifecycle,
+            fitness=ctx.fitness_spec,
+            examples=ctx.examples,
+            publishes=ctx.publishes,
+            seed_template=ctx.seed_template,
+            display_field=ctx.display_field,
+            graph_edge=ctx.graph_edge,
+            graph_node=ctx.graph_node,
             source=loc,
         )
 
