@@ -62,9 +62,1510 @@ PROJECT_PATH_SCHEMA = {
 }
 
 
+# =========================================================================
+# Per-tool factory functions (private)
+# =========================================================================
+
+
+def _tool_dsl() -> Tool:
+    """DSL operations (replaces 7 tools)."""
+    return Tool(
+        name="dsl",
+        description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "validate",
+                        "list_modules",
+                        "inspect_entity",
+                        "inspect_surface",
+                        "analyze",
+                        "lint",
+                        "get_spec",
+                        "fidelity",
+                        "list_fragments",
+                        "export_frontend_spec",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Entity or surface name (for inspect_entity/inspect_surface)",
+                },
+                "extended": {
+                    "type": "boolean",
+                    "description": "Run extended checks (for lint)",
+                },
+                "entity_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Entity names to fetch full details for (for get_spec). Omit for summary.",
+                },
+                "surface_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Surface names to fetch full details for (for get_spec). Omit for summary.",
+                },
+                "surface_filter": {
+                    "type": "string",
+                    "description": "Filter to a specific surface name (for fidelity)",
+                },
+                "gaps_only": {
+                    "type": "boolean",
+                    "description": "Omit surfaces with fidelity=1.0 (for fidelity)",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["markdown", "json"],
+                    "description": "Output format (for export_frontend_spec, default: markdown)",
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria",
+                },
+                "entities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter to specific entity names (for export_frontend_spec)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_api_pack() -> Tool:
+    """API packs (replaces 5 tools)."""
+    return Tool(
+        name="api_pack",
+        description="API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "list",
+                        "search",
+                        "get",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "pack_name": {
+                    "type": "string",
+                    "description": "Pack name (for get)",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query (for search)",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category (for search)",
+                },
+                "provider": {
+                    "type": "string",
+                    "description": "Filter by provider (for search)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_mock() -> Tool:
+    """Mock server management."""
+    return Tool(
+        name="mock",
+        description="Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "status",
+                        "request_log",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "vendor": {
+                    "type": "string",
+                    "description": "API pack name (e.g. 'sumsub_kyc')",
+                },
+                "method": {
+                    "type": "string",
+                    "description": "Filter by HTTP method (for request_log)",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Filter by path substring (for request_log)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (for request_log, default: 20)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_db() -> Tool:
+    """DB operations (read-only)."""
+    return Tool(
+        name="db",
+        description="Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["status", "verify"],
+                    "description": "Operation to perform",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_story() -> Tool:
+    """Stories (replaces 6 tools)."""
+    return Tool(
+        name="story",
+        description="Story operations: get, wall, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "get",
+                        "coverage",
+                        "scope_fidelity",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "status_filter": {
+                    "type": "string",
+                    "enum": ["all", "accepted", "rejected", "draft"],
+                    "description": "Filter by status (for get)",
+                },
+                "story_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Story IDs (for get: fetch full details)",
+                },
+                "view": {
+                    "type": "string",
+                    "enum": ["wall"],
+                    "description": (
+                        "View mode for get operation. "
+                        "'wall' groups stories by implementation status "
+                        "(working/needs polish/not started)"
+                    ),
+                },
+                "persona": {
+                    "type": "string",
+                    "description": "Filter stories by persona/actor name (for get with view=wall)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_rhythm() -> Tool:
+    """Rhythm operations."""
+    return Tool(
+        name="rhythm",
+        description="Rhythm operations: get, list, coverage. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "get",
+                        "list",
+                        "coverage",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Rhythm name (for get)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_demo_data() -> Tool:
+    """Demo data (replaces 4 tools)."""
+    return Tool(
+        name="demo_data",
+        description="Demo data operations: get. Retrieve the current demo data blueprint.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["get"],
+                    "description": "Operation to perform",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_feedback() -> Tool:
+    """Feedback — human-to-agent feedback loop."""
+    return Tool(
+        name="feedback",
+        description=(
+            "Feedback operations: list, get, triage, resolve. "
+            "Query and manage user-submitted feedback reports. "
+            "Use 'list' to see open feedback, 'get' for detail, "
+            "'triage' to mark as triaged, 'resolve' to close."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["list", "get", "triage", "resolve"],
+                    "description": "Operation to perform",
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Feedback report ID (required for get/triage/resolve)",
+                },
+                "status": {"type": "string", "description": "Filter by status (list only)"},
+                "category": {"type": "string", "description": "Filter by category (list only)"},
+                "severity": {"type": "string", "description": "Filter by severity (list only)"},
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (list only, default 20)",
+                },
+                "agent_notes": {
+                    "type": "string",
+                    "description": "Agent notes (triage/resolve)",
+                },
+                "agent_classification": {
+                    "type": "string",
+                    "description": "Classification (triage only)",
+                },
+                "assigned_to": {"type": "string", "description": "Assign to (triage only)"},
+                "resolved_by": {"type": "string", "description": "Who resolved (resolve only)"},
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_test_design() -> Tool:
+    """Test design (replaces 7 tools + 2 new autonomous operations)."""
+    return Tool(
+        name="test_design",
+        description="Test design operations: get, gaps. Query test designs and identify coverage gaps.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "get",
+                        "gaps",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "status_filter": {
+                    "type": "string",
+                    "enum": [
+                        "all",
+                        "proposed",
+                        "accepted",
+                        "implemented",
+                        "verified",
+                        "rejected",
+                    ],
+                    "description": "Filter by status (for get)",
+                },
+                "test_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Test design IDs to fetch full details (for get)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_sitespec() -> Tool:
+    """SiteSpec (replaces 3 tools + copy + coherence operations)."""
+    return Tool(
+        name="sitespec",
+        description="SiteSpec operations: get, validate, scaffold, coherence, review, advise. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Use 'advise' to get proactive layout improvement suggestions. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "get",
+                        "validate",
+                        "scaffold",
+                        "get_copy",
+                        "scaffold_copy",
+                        "review_copy",
+                        "coherence",
+                        "review",
+                        "get_theme",
+                        "scaffold_theme",
+                        "validate_theme",
+                        "generate_tokens",
+                        "generate_imagery_prompts",
+                        "advise",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "use_defaults": {
+                    "type": "boolean",
+                    "description": "Use defaults when missing (for get, get_theme)",
+                },
+                "check_content_files": {
+                    "type": "boolean",
+                    "description": "Check content files (for validate)",
+                },
+                "product_name": {
+                    "type": "string",
+                    "description": "Product name (for scaffold, scaffold_copy)",
+                },
+                "overwrite": {
+                    "type": "boolean",
+                    "description": "Overwrite existing (for scaffold, scaffold_copy, scaffold_theme)",
+                },
+                "business_context": {
+                    "type": "string",
+                    "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
+                },
+                "brand_hue": {
+                    "type": "number",
+                    "description": "Brand hue 0-360 on OKLCH wheel (for scaffold_theme)",
+                },
+                "brand_chroma": {
+                    "type": "number",
+                    "description": "Brand chroma 0-0.4 (for scaffold_theme)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_semantics() -> Tool:
+    """Semantics (replaces 5 tools)."""
+    return Tool(
+        name="semantics",
+        description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "extract",
+                        "validate_events",
+                        "tenancy",
+                        "compliance",
+                        "analytics",
+                        "extract_guards",
+                    ],
+                    "description": "Operation to perform",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_process() -> Tool:
+    """Processes (replaces 7 tools)."""
+    return Tool(
+        name="process",
+        description="Process operations: list, inspect, list_runs, get_run, coverage",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "list",
+                        "inspect",
+                        "list_runs",
+                        "get_run",
+                        "coverage",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "process_name": {
+                    "type": "string",
+                    "description": "Process name (for inspect)",
+                },
+                "run_id": {
+                    "type": "string",
+                    "description": "Run ID (for get_run)",
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "running",
+                        "draining",
+                        "suspended",
+                        "waiting",
+                        "completed",
+                        "failed",
+                        "compensating",
+                        "cancelled",
+                    ],
+                    "description": "Filter by status (for list_runs)",
+                },
+                "status_filter": {
+                    "type": "string",
+                    "enum": ["all", "covered", "partial", "uncovered"],
+                    "description": "Filter by coverage status (for coverage, default: all)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (for list_runs, coverage; default: 50)",
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Skip N results for pagination (for coverage, default: 0)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_status() -> Tool:
+    """Status (replaces 2 tools)."""
+    return Tool(
+        name="status",
+        description="Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity' to see real-time MCP tool invocations and progress — supports cursor-based polling for watcher agents.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["mcp", "logs", "active_project", "telemetry", "activity"],
+                    "description": "Operation to perform",
+                },
+                "reload": {
+                    "type": "boolean",
+                    "description": "Reload modules (for mcp)",
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "Number of entries (for logs, telemetry, activity)",
+                },
+                "level": {
+                    "type": "string",
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+                    "description": "Filter by level (for logs)",
+                },
+                "errors_only": {
+                    "type": "boolean",
+                    "description": "Show only errors (for logs)",
+                },
+                "tool_name": {
+                    "type": "string",
+                    "description": "Filter by tool name (for telemetry)",
+                },
+                "since_minutes": {
+                    "type": "integer",
+                    "description": "Only show invocations from the last N minutes (for telemetry)",
+                },
+                "stats_only": {
+                    "type": "boolean",
+                    "description": "Only return aggregate stats, no individual invocations (for telemetry)",
+                },
+                "cursor_seq": {
+                    "type": "integer",
+                    "description": "Sequence number to read after (for activity, 0 = from start)",
+                },
+                "cursor_epoch": {
+                    "type": "integer",
+                    "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["structured", "formatted"],
+                    "description": "Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_knowledge() -> Tool:
+    """Knowledge (replaces 5 tools, now primarily via Resources)."""
+    return Tool(
+        name="knowledge",
+        description="Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, get_spec, search_commands. Note: Static content also available via MCP Resources.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "concept",
+                        "examples",
+                        "cli_help",
+                        "workflow",
+                        "inference",
+                        "changelog",
+                        "get_spec",
+                        "search_commands",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "term": {
+                    "type": "string",
+                    "description": "Concept/pattern name (for concept)",
+                },
+                "features": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Features to search (for examples)",
+                },
+                "complexity": {
+                    "type": "string",
+                    "enum": ["beginner", "intermediate", "advanced"],
+                    "description": "Complexity level (for examples)",
+                },
+                "command": {
+                    "type": "string",
+                    "description": "CLI command (for cli_help)",
+                },
+                "workflow": {
+                    "type": "string",
+                    "description": "Workflow name (for workflow)",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query (for inference)",
+                },
+                "detail": {
+                    "type": "string",
+                    "enum": ["minimal", "full"],
+                    "description": "Detail level (for inference)",
+                },
+                "list_all": {
+                    "type": "boolean",
+                    "description": "List all triggers (for inference)",
+                },
+                "since": {
+                    "type": "string",
+                    "description": "Version filter (for changelog, e.g. '0.48.0')",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_pitch() -> Tool:
+    """Pitch (investor pitch deck generation)."""
+    return Tool(
+        name="pitch",
+        description="Pitch deck operations: get. Retrieve the current pitchspec.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "get",
+                    ],
+                    "description": "Operation to perform",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_user_management() -> Tool:
+    """User management (auth user/session CRUD)."""
+    return Tool(
+        name="user_management",
+        description=(
+            "User management operations: list, create, get, update, "
+            "reset_password, deactivate, list_sessions, revoke_session, config. "
+            "Manage auth users and sessions in SQLite or PostgreSQL."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "list",
+                        "create",
+                        "get",
+                        "update",
+                        "reset_password",
+                        "deactivate",
+                        "list_sessions",
+                        "revoke_session",
+                        "config",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "email": {
+                    "type": "string",
+                    "description": "User email (for create, get)",
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "User UUID (for get, update, reset_password, deactivate, list_sessions)",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Display name (for create)",
+                },
+                "username": {
+                    "type": "string",
+                    "description": "New display name (for update)",
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Role names (for create, update)",
+                },
+                "role": {
+                    "type": "string",
+                    "description": "Filter by role (for list)",
+                },
+                "is_superuser": {
+                    "type": "boolean",
+                    "description": "Superuser flag (for create, update)",
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "description": "Active status (for update)",
+                },
+                "active_only": {
+                    "type": "boolean",
+                    "description": "Only active users/sessions (for list, list_sessions; default: true)",
+                },
+                "password": {
+                    "type": "string",
+                    "description": "Explicit password (for create, reset_password). If omitted, a random password is generated.",
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": "Session ID (for revoke_session)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (for list, list_sessions; default: 50)",
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Pagination offset (for list; default: 0)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_user_profile() -> Tool:
+    """User profile (adaptive persona inference)."""
+    return Tool(
+        name="user_profile",
+        description=(
+            "User profile for adaptive persona inference. "
+            "Operations: observe (analyze recent tool invocations), "
+            "observe_message (analyze user message vocabulary), "
+            "get (return current profile context), "
+            "reset (delete and return fresh default)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["observe", "observe_message", "get", "reset"],
+                    "description": "Operation to perform",
+                },
+                "message_text": {
+                    "type": "string",
+                    "description": "User message text (for observe_message)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max invocations to analyze (for observe; default: 50)",
+                },
+                "since_minutes": {
+                    "type": "integer",
+                    "description": "Only analyze invocations from last N minutes (for observe; default: 30)",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_bootstrap() -> Tool:
+    """Bootstrap (entry point for naive app requests)."""
+    return Tool(
+        name="bootstrap",
+        description=(
+            "Entry point for 'build me an app' requests. Scans for spec files, "
+            "runs cognition pass, and returns a mission briefing with agent instructions. "
+            "Call this first when a user wants to build an app. Returns structured "
+            "guidance for the next steps: either questions to ask the user, or "
+            "instructions for DSL generation. The workflow includes mandatory RBAC: "
+            "every entity must have permit:/forbid: access rules, verified via "
+            "policy(operation='access_matrix') before the app is considered complete."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "spec_text": {
+                    "type": "string",
+                    "description": "Optional: spec text if provided directly by user",
+                },
+                "spec_path": {
+                    "type": "string",
+                    "description": "Optional: path to spec file",
+                },
+                "project_path": {
+                    "type": "string",
+                    "description": "Optional: project directory to scan for specs",
+                },
+            },
+            "required": [],
+        },
+    )
+
+
+def _tool_spec_analyze() -> Tool:
+    """Spec analyze (individual cognition operations)."""
+    return Tool(
+        name="spec_analyze",
+        description=(
+            "Analyze narrative specs before DSL generation. Operations: "
+            "discover_entities (extract nouns/relationships), "
+            "identify_lifecycles (find state transitions), "
+            "extract_personas (identify user roles), "
+            "surface_rules (extract business rules), "
+            "generate_questions (surface ambiguities), "
+            "refine_spec (produce structured spec from all analyses)"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "discover_entities",
+                        "identify_lifecycles",
+                        "extract_personas",
+                        "surface_rules",
+                        "generate_questions",
+                        "refine_spec",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "spec_text": {
+                    "type": "string",
+                    "description": "The narrative spec text to analyze",
+                },
+                "entities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Entity names (for identify_lifecycles, generate_questions)",
+                },
+                "answers": {
+                    "type": "object",
+                    "description": "Answers to generated questions (for refine_spec)",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_graph() -> Tool:
+    """Graph (knowledge graph operations)."""
+    return Tool(
+        name="graph",
+        description=(
+            "Knowledge graph operations for codebase understanding. Operations: "
+            "query (search entities by text), "
+            "dependencies (what does X depend on?), "
+            "dependents (what depends on X?), "
+            "neighbourhood (entities within N hops), "
+            "paths (find paths between entities), "
+            "stats (graph statistics), "
+            "populate (refresh graph from source), "
+            "concept (look up a framework concept by name), "
+            "inference (find inference patterns matching a query), "
+            "related (get related concepts for an entity), "
+            "export (export project KG data to JSON), "
+            "import (import KG data from JSON), "
+            "triggers (show what fires when an entity event occurs), "
+            "topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "query",
+                        "dependencies",
+                        "dependents",
+                        "neighbourhood",
+                        "paths",
+                        "stats",
+                        "populate",
+                        "concept",
+                        "inference",
+                        "related",
+                        "export",
+                        "import",
+                        "triggers",
+                        "topology",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "text": {
+                    "type": "string",
+                    "description": "Search text (for query)",
+                },
+                "entity_id": {
+                    "type": "string",
+                    "description": "Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)",
+                },
+                "source_id": {
+                    "type": "string",
+                    "description": "Source entity ID (for paths)",
+                },
+                "target_id": {
+                    "type": "string",
+                    "description": "Target entity ID (for paths)",
+                },
+                "depth": {
+                    "type": "integer",
+                    "description": "Traversal depth (for neighbourhood, default: 1)",
+                },
+                "transitive": {
+                    "type": "boolean",
+                    "description": "Include transitive deps (for dependencies, dependents)",
+                },
+                "relation_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter by relation types: imports, contains, inherits, depends_on",
+                },
+                "entity_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter by entity types: file, module, class, function",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default: 20)",
+                },
+                "root_path": {
+                    "type": "string",
+                    "description": "Path to populate from (for populate)",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Entity or concept name (for concept, related, triggers)",
+                },
+                "entity": {
+                    "type": "string",
+                    "description": "Entity name (for triggers, e.g. 'Ticket')",
+                },
+                "event": {
+                    "type": "string",
+                    "enum": ["created", "updated", "deleted"],
+                    "description": "Event type (for triggers, default: created)",
+                },
+                "data": {
+                    "type": "object",
+                    "description": "JSON export data to import (for import)",
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to JSON file to import (for import, alternative to data)",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["merge", "replace"],
+                    "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_discovery() -> Tool:
+    """Discovery operations (capability discovery agent)."""
+    return Tool(
+        name="discovery",
+        description=(
+            "Capability discovery operations: "
+            "coherence (persona-by-persona authenticated UX coherence score)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "coherence",
+                    ],
+                    "description": "Operation to perform",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_e2e() -> Tool:
+    """E2E environment operations."""
+    return Tool(
+        name="e2e",
+        description=(
+            "E2E environment operations (read-only). "
+            "Operations: list_modes (available runner modes), "
+            "describe_mode (single mode details), "
+            "status (lock + runtime + log-tail for an example app), "
+            "list_baselines (hash-tagged db snapshot files for an example). "
+            "Process operations (start/stop) live in the CLI only."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "list_modes",
+                        "describe_mode",
+                        "status",
+                        "list_baselines",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Mode name (for describe_mode)",
+                },
+                "project_root": {
+                    "type": "string",
+                    "description": "Path to an example app (for status/list_baselines)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_fitness() -> Tool:
+    """Fitness triage (read-only)."""
+    return Tool(
+        name="fitness",
+        description=(
+            "Agent-Led Fitness Methodology queries (read-only). "
+            "Operations: queue (ranked deduped finding clusters for "
+            "a project). To regenerate the queue, use CLI: "
+            "dazzle fitness triage."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["queue"],
+                    "description": "Operation to perform",
+                },
+                "project_root": {
+                    "type": "string",
+                    "description": "Path to an example app project",
+                },
+                "top": {
+                    "type": "integer",
+                    "description": "Max clusters to return (default 10)",
+                    "default": 10,
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation", "project_root"],
+        },
+    )
+
+
+def _tool_policy() -> Tool:
+    """Policy analysis (RBAC access control)."""
+    return Tool(
+        name="policy",
+        description=(
+            "Policy analysis operations for RBAC access control. "
+            "Operations: analyze (find entities without access rules), "
+            "conflicts (detect contradictory permit/forbid rules), "
+            "coverage (permission matrix: persona x entity x operation), "
+            "simulate (trace which rules fire for a given persona + entity + operation), "
+            "access_matrix (full RBAC access matrix from rbac module), "
+            "verify_status (summary of last `dazzle rbac verify` run)"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "analyze",
+                        "conflicts",
+                        "coverage",
+                        "simulate",
+                        "access_matrix",
+                        "verify_status",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "entity_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter to specific entity names (optional)",
+                },
+                "persona": {
+                    "type": "string",
+                    "description": "Persona ID (required for simulate)",
+                },
+                "operation_kind": {
+                    "type": "string",
+                    "enum": ["create", "read", "update", "delete", "list"],
+                    "description": "CRUD operation to simulate (required for simulate)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_composition() -> Tool:
+    """Composition (visual hierarchy audit + LLM evaluation)."""
+    return Tool(
+        name="composition",
+        description=(
+            "Composition analysis: audit (DOM-level visual hierarchy audit), "
+            "capture (Playwright section-level screenshots), "
+            "analyze (LLM visual evaluation of captured screenshots), "
+            "report (combined audit+capture+analyze with merged scoring), "
+            "bootstrap (generate synthetic reference library for few-shot evaluation). "
+            "Audit computes attention weights using a 5-factor model and evaluates "
+            "composition rules. Capture takes section-level screenshots from a "
+            "running app. Analyze uses Claude vision to evaluate screenshots for "
+            "rendering fidelity, icon/media issues, color consistency, layout "
+            "overflow, visual hierarchy, and responsive fidelity. Report runs "
+            "audit (always) + visual pipeline (when base_url given) and merges "
+            "into a combined score. Bootstrap generates synthetic reference images "
+            "for few-shot visual evaluation prompts. Inspect_styles extracts "
+            "computed CSS styles via Playwright getComputedStyle() for agent-driven "
+            "layout diagnosis (zero LLM tokens)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "audit",
+                        "capture",
+                        "analyze",
+                        "report",
+                        "bootstrap",
+                        "inspect_styles",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "base_url": {
+                    "type": "string",
+                    "description": "Server URL (required for capture, e.g. http://localhost:3000)",
+                },
+                "pages": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Filter to specific page routes (e.g. ["/", "/about"])',
+                },
+                "viewports": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Viewport names for capture (default: ["desktop"]). Options: desktop, mobile',
+                },
+                "focus": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Visual eval dimensions to focus on (for analyze). "
+                        "Options: content_rendering, icon_media, color_consistency, "
+                        "layout_overflow, visual_hierarchy, responsive_fidelity"
+                    ),
+                },
+                "token_budget": {
+                    "type": "integer",
+                    "description": "Max tokens for visual analysis (default: 50000)",
+                },
+                "route": {
+                    "type": "string",
+                    "description": 'Page route to inspect (for inspect_styles, default: "/")',
+                },
+                "selectors": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": (
+                        "Label-to-CSS-selector mapping (for inspect_styles). "
+                        'E.g. {"hero": ".dz-hero-with-media", "media": ".dz-hero-media"}'
+                    ),
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "CSS properties to inspect (for inspect_styles). "
+                        "Defaults to layout properties: display, flex-direction, position, "
+                        "width, height, overflow, gap, etc."
+                    ),
+                },
+                "overwrite": {
+                    "type": "boolean",
+                    "description": "Overwrite existing reference library (for bootstrap, default: false)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_test_intelligence() -> Tool:
+    """Test intelligence (test history and failure patterns)."""
+    return Tool(
+        name="test_intelligence",
+        description=(
+            "Query persisted test result history. Operations: "
+            "summary (recent runs overview), "
+            "failures (failure patterns, flaky tests, persistent failures), "
+            "regression (tests that went pass→fail between last two runs), "
+            "coverage (success rate trend across recent runs), "
+            "context (single-call AI-ready snapshot combining all above), "
+            "journey (most recent E2E journey analysis). "
+            "Results are automatically persisted by dsl_test run_all."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "summary",
+                        "failures",
+                        "regression",
+                        "coverage",
+                        "context",
+                        "journey",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of recent runs to analyze (default: 10)",
+                },
+                "run_id": {
+                    "type": "string",
+                    "description": "Specific run ID to query test cases for",
+                },
+                "failure_type": {
+                    "type": "string",
+                    "enum": [
+                        "rbac_denied",
+                        "validation_error",
+                        "dsl_surface_gap",
+                        "state_machine",
+                        "timeout",
+                        "framework_bug",
+                        "unknown",
+                    ],
+                    "description": "Filter by failure type (for failures)",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by test category (for failures)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_sentinel() -> Tool:
+    """Sentinel (SaaS failure-mode detection)."""
+    return Tool(
+        name="sentinel",
+        description=(
+            "Sentinel operations: findings (get findings from latest/specific scan), "
+            "status (available agents and last scan), "
+            "history (list recent scans), "
+            "fuzz_summary (run a small mutation fuzz campaign and return the markdown report). "
+            "Deterministic static analysis of the IR — no source code scanning."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "findings",
+                        "status",
+                        "history",
+                        "fuzz_summary",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "severity_threshold": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "low", "info"],
+                    "description": "Minimum severity to include (for findings). Default: info.",
+                },
+                "agent": {
+                    "type": "string",
+                    "description": "Filter findings by agent ID (for findings).",
+                },
+                "severity": {
+                    "type": "string",
+                    "description": "Filter findings by severity (for findings).",
+                },
+                "scan_id": {
+                    "type": "string",
+                    "description": "Specific scan ID (for findings).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max scans to return (for history). Default: 10.",
+                },
+                "samples": {
+                    "type": "integer",
+                    "description": "Samples per layer for fuzz_summary. Default: 10.",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_llm() -> Tool:
+    """LLM (intent/model inspection)."""
+    return Tool(
+        name="llm",
+        description=(
+            "LLM operations: list_intents (declared intents), "
+            "list_models (declared models), "
+            "inspect_intent (detailed intent view with resolved model), "
+            "get_config (module-level LLM configuration)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": [
+                        "list_intents",
+                        "list_models",
+                        "inspect_intent",
+                        "get_config",
+                    ],
+                    "description": "Operation to perform",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Intent name (for inspect_intent)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_param() -> Tool:
+    """Param (runtime parameter inspection)."""
+    return Tool(
+        name="param",
+        description=(
+            "Query runtime parameter declarations. Operations: "
+            "list (all declared params with defaults), "
+            "get (specific param by key with type, constraints, scope)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["list", "get"],
+                    "description": "Operation to perform",
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Parameter key (for 'get' operation)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_conformance() -> Tool:
+    """Conformance (DSL conformance testing)."""
+    return Tool(
+        name="conformance",
+        description=(
+            "DSL conformance testing operations. "
+            "summary: run derivation pipeline and return coverage metrics (total cases, per-entity counts, scope types). "
+            "cases: return all conformance cases for a specific entity (requires entity_name). "
+            "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering). "
+            "monitor_status: return current runtime conformance monitor state (observations collected)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["summary", "cases", "gaps", "monitor_status"],
+                    "description": "Operation to perform",
+                },
+                "entity_name": {
+                    "type": "string",
+                    "description": "Entity name (required for cases)",
+                },
+                "auth_enabled": {
+                    "type": "boolean",
+                    "description": "Include unauthenticated (401) cases (default: true)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_compliance() -> Tool:
+    """Compliance documentation operations."""
+    return Tool(
+        name="compliance",
+        description=(
+            "Compliance documentation operations. "
+            "compile: compile taxonomy + evidence into AuditSpec. "
+            "evidence: extract DSL evidence summary. "
+            "gaps: list controls with gaps or partial evidence. "
+            "summary: quick compliance posture summary. "
+            "review: generate review data for gap remediation."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["compile", "evidence", "gaps", "summary", "review"],
+                    "description": "Operation to perform",
+                },
+                "framework": {
+                    "type": "string",
+                    "description": "Framework ID: iso27001 or soc2 (default: iso27001)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_agent_commands() -> Tool:
+    """Agent commands (autonomous development skill management)."""
+    return Tool(
+        name="agent_commands",
+        description=(
+            "Agent development commands: list (available commands with maturity status), "
+            "get (rendered skill content for a command), "
+            "check_updates (version comparison for sync)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                **PROJECT_PATH_SCHEMA,
+                "operation": {
+                    "type": "string",
+                    "enum": ["list", "get", "check_updates"],
+                    "description": "Operation to perform",
+                },
+                "command": {
+                    "type": "string",
+                    "description": "Command name (for 'get' operation)",
+                },
+                "commands_version": {
+                    "type": "string",
+                    "description": "Local commands_version from .manifest.json (for 'check_updates')",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def get_consolidated_tools() -> list[Tool]:
     """
-    Get consolidated tools (18 tools — knowledge/query operations only).
+    Get consolidated tools (knowledge/query operations only).
 
     Process operations (dsl_test, e2e_test, nightly, pipeline, pulse,
     contribution) are available via CLI commands instead.
@@ -72,1472 +1573,39 @@ def get_consolidated_tools() -> list[Tool]:
     Each tool uses an 'operation' enum to specify the action, preserving
     discoverability while reducing schema overhead.
     """
-    # NOTE: Process operations (dsl_test, e2e_test, nightly, pipeline, pulse,
-    # contribution) have been moved to CLI commands. Only knowledge/query
-    # operations remain in the MCP server.
     return [
-        # =====================================================================
-        # DSL Operations (replaces 7 tools)
-        # =====================================================================
-        Tool(
-            name="dsl",
-            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "validate",
-                            "list_modules",
-                            "inspect_entity",
-                            "inspect_surface",
-                            "analyze",
-                            "lint",
-                            "get_spec",
-                            "fidelity",
-                            "list_fragments",
-                            "export_frontend_spec",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Entity or surface name (for inspect_entity/inspect_surface)",
-                    },
-                    "extended": {
-                        "type": "boolean",
-                        "description": "Run extended checks (for lint)",
-                    },
-                    "entity_names": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Entity names to fetch full details for (for get_spec). Omit for summary.",
-                    },
-                    "surface_names": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Surface names to fetch full details for (for get_spec). Omit for summary.",
-                    },
-                    "surface_filter": {
-                        "type": "string",
-                        "description": "Filter to a specific surface name (for fidelity)",
-                    },
-                    "gaps_only": {
-                        "type": "boolean",
-                        "description": "Omit surfaces with fidelity=1.0 (for fidelity)",
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["markdown", "json"],
-                        "description": "Output format (for export_frontend_spec, default: markdown)",
-                    },
-                    "sections": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria",
-                    },
-                    "entities": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter to specific entity names (for export_frontend_spec)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # API Packs (replaces 5 tools)
-        # =====================================================================
-        Tool(
-            name="api_pack",
-            description="API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "list",
-                            "search",
-                            "get",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "pack_name": {
-                        "type": "string",
-                        "description": "Pack name (for get)",
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Search query (for search)",
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category (for search)",
-                    },
-                    "provider": {
-                        "type": "string",
-                        "description": "Filter by provider (for search)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Mock Server Management (NEW)
-        # =====================================================================
-        Tool(
-            name="mock",
-            description="Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "status",
-                            "request_log",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "vendor": {
-                        "type": "string",
-                        "description": "API pack name (e.g. 'sumsub_kyc')",
-                    },
-                    "method": {
-                        "type": "string",
-                        "description": "Filter by HTTP method (for request_log)",
-                    },
-                    "path": {
-                        "type": "string",
-                        "description": "Filter by path substring (for request_log)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results (for request_log, default: 20)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # DB Operations (read-only — write ops are CLI-only)
-        # =====================================================================
-        Tool(
-            name="db",
-            description="Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection).",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["status", "verify"],
-                        "description": "Operation to perform",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Stories (replaces 6 tools)
-        # =====================================================================
-        Tool(
-            name="story",
-            description="Story operations: get, wall, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "get",
-                            "coverage",
-                            "scope_fidelity",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "status_filter": {
-                        "type": "string",
-                        "enum": ["all", "accepted", "rejected", "draft"],
-                        "description": "Filter by status (for get)",
-                    },
-                    "story_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Story IDs (for get: fetch full details)",
-                    },
-                    "view": {
-                        "type": "string",
-                        "enum": ["wall"],
-                        "description": (
-                            "View mode for get operation. "
-                            "'wall' groups stories by implementation status "
-                            "(working/needs polish/not started)"
-                        ),
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Filter stories by persona/actor name (for get with view=wall)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Rhythm
-        # =====================================================================
-        Tool(
-            name="rhythm",
-            description="Rhythm operations: get, list, coverage. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "get",
-                            "list",
-                            "coverage",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Rhythm name (for get)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Demo Data (replaces 4 tools)
-        # =====================================================================
-        Tool(
-            name="demo_data",
-            description="Demo data operations: get. Retrieve the current demo data blueprint.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["get"],
-                        "description": "Operation to perform",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Feedback — human→agent feedback loop
-        # =====================================================================
-        Tool(
-            name="feedback",
-            description=(
-                "Feedback operations: list, get, triage, resolve. "
-                "Query and manage user-submitted feedback reports. "
-                "Use 'list' to see open feedback, 'get' for detail, "
-                "'triage' to mark as triaged, 'resolve' to close."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["list", "get", "triage", "resolve"],
-                        "description": "Operation to perform",
-                    },
-                    "id": {
-                        "type": "string",
-                        "description": "Feedback report ID (required for get/triage/resolve)",
-                    },
-                    "status": {"type": "string", "description": "Filter by status (list only)"},
-                    "category": {"type": "string", "description": "Filter by category (list only)"},
-                    "severity": {"type": "string", "description": "Filter by severity (list only)"},
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results (list only, default 20)",
-                    },
-                    "agent_notes": {
-                        "type": "string",
-                        "description": "Agent notes (triage/resolve)",
-                    },
-                    "agent_classification": {
-                        "type": "string",
-                        "description": "Classification (triage only)",
-                    },
-                    "assigned_to": {"type": "string", "description": "Assign to (triage only)"},
-                    "resolved_by": {"type": "string", "description": "Who resolved (resolve only)"},
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Test Design (replaces 7 tools + 2 new autonomous operations)
-        # =====================================================================
-        Tool(
-            name="test_design",
-            description="Test design operations: get, gaps. Query test designs and identify coverage gaps.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "get",
-                            "gaps",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "status_filter": {
-                        "type": "string",
-                        "enum": [
-                            "all",
-                            "proposed",
-                            "accepted",
-                            "implemented",
-                            "verified",
-                            "rejected",
-                        ],
-                        "description": "Filter by status (for get)",
-                    },
-                    "test_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Test design IDs to fetch full details (for get)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # SiteSpec (replaces 3 tools + copy + coherence operations)
-        # =====================================================================
-        Tool(
-            name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold, coherence, review, advise. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Use 'advise' to get proactive layout improvement suggestions. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "get",
-                            "validate",
-                            "scaffold",
-                            "get_copy",
-                            "scaffold_copy",
-                            "review_copy",
-                            "coherence",
-                            "review",
-                            "get_theme",
-                            "scaffold_theme",
-                            "validate_theme",
-                            "generate_tokens",
-                            "generate_imagery_prompts",
-                            "advise",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "use_defaults": {
-                        "type": "boolean",
-                        "description": "Use defaults when missing (for get, get_theme)",
-                    },
-                    "check_content_files": {
-                        "type": "boolean",
-                        "description": "Check content files (for validate)",
-                    },
-                    "product_name": {
-                        "type": "string",
-                        "description": "Product name (for scaffold, scaffold_copy)",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing (for scaffold, scaffold_copy, scaffold_theme)",
-                    },
-                    "business_context": {
-                        "type": "string",
-                        "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
-                    },
-                    "brand_hue": {
-                        "type": "number",
-                        "description": "Brand hue 0-360 on OKLCH wheel (for scaffold_theme)",
-                    },
-                    "brand_chroma": {
-                        "type": "number",
-                        "description": "Brand chroma 0-0.4 (for scaffold_theme)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Semantics (replaces 5 tools)
-        # =====================================================================
-        Tool(
-            name="semantics",
-            description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "extract",
-                            "validate_events",
-                            "tenancy",
-                            "compliance",
-                            "analytics",
-                            "extract_guards",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Processes (replaces 7 tools)
-        # =====================================================================
-        Tool(
-            name="process",
-            description="Process operations: list, inspect, list_runs, get_run, coverage",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "list",
-                            "inspect",
-                            "list_runs",
-                            "get_run",
-                            "coverage",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "process_name": {
-                        "type": "string",
-                        "description": "Process name (for inspect)",
-                    },
-                    "run_id": {
-                        "type": "string",
-                        "description": "Run ID (for get_run)",
-                    },
-                    "status": {
-                        "type": "string",
-                        "enum": [
-                            "pending",
-                            "running",
-                            "draining",
-                            "suspended",
-                            "waiting",
-                            "completed",
-                            "failed",
-                            "compensating",
-                            "cancelled",
-                        ],
-                        "description": "Filter by status (for list_runs)",
-                    },
-                    "status_filter": {
-                        "type": "string",
-                        "enum": ["all", "covered", "partial", "uncovered"],
-                        "description": "Filter by coverage status (for coverage, default: all)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results (for list_runs, coverage; default: 50)",
-                    },
-                    "offset": {
-                        "type": "integer",
-                        "description": "Skip N results for pagination (for coverage, default: 0)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Status (replaces 2 tools)
-        # =====================================================================
-        Tool(
-            name="status",
-            description="Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity' to see real-time MCP tool invocations and progress — supports cursor-based polling for watcher agents.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["mcp", "logs", "active_project", "telemetry", "activity"],
-                        "description": "Operation to perform",
-                    },
-                    "reload": {
-                        "type": "boolean",
-                        "description": "Reload modules (for mcp)",
-                    },
-                    "count": {
-                        "type": "integer",
-                        "description": "Number of entries (for logs, telemetry, activity)",
-                    },
-                    "level": {
-                        "type": "string",
-                        "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
-                        "description": "Filter by level (for logs)",
-                    },
-                    "errors_only": {
-                        "type": "boolean",
-                        "description": "Show only errors (for logs)",
-                    },
-                    "tool_name": {
-                        "type": "string",
-                        "description": "Filter by tool name (for telemetry)",
-                    },
-                    "since_minutes": {
-                        "type": "integer",
-                        "description": "Only show invocations from the last N minutes (for telemetry)",
-                    },
-                    "stats_only": {
-                        "type": "boolean",
-                        "description": "Only return aggregate stats, no individual invocations (for telemetry)",
-                    },
-                    "cursor_seq": {
-                        "type": "integer",
-                        "description": "Sequence number to read after (for activity, 0 = from start)",
-                    },
-                    "cursor_epoch": {
-                        "type": "integer",
-                        "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["structured", "formatted"],
-                        "description": "Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Knowledge (replaces 5 tools → but now primarily via Resources)
-        # This single tool remains for backward compatibility and complex queries
-        # =====================================================================
-        Tool(
-            name="knowledge",
-            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, get_spec, search_commands. Note: Static content also available via MCP Resources.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "concept",
-                            "examples",
-                            "cli_help",
-                            "workflow",
-                            "inference",
-                            "changelog",
-                            "get_spec",
-                            "search_commands",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "term": {
-                        "type": "string",
-                        "description": "Concept/pattern name (for concept)",
-                    },
-                    "features": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Features to search (for examples)",
-                    },
-                    "complexity": {
-                        "type": "string",
-                        "enum": ["beginner", "intermediate", "advanced"],
-                        "description": "Complexity level (for examples)",
-                    },
-                    "command": {
-                        "type": "string",
-                        "description": "CLI command (for cli_help)",
-                    },
-                    "workflow": {
-                        "type": "string",
-                        "description": "Workflow name (for workflow)",
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Search query (for inference)",
-                    },
-                    "detail": {
-                        "type": "string",
-                        "enum": ["minimal", "full"],
-                        "description": "Detail level (for inference)",
-                    },
-                    "list_all": {
-                        "type": "boolean",
-                        "description": "List all triggers (for inference)",
-                    },
-                    "since": {
-                        "type": "string",
-                        "description": "Version filter (for changelog, e.g. '0.48.0')",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Pitch (investor pitch deck generation)
-        # =====================================================================
-        Tool(
-            name="pitch",
-            description="Pitch deck operations: get. Retrieve the current pitchspec.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "get",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # User Management (auth user/session CRUD)
-        # =====================================================================
-        Tool(
-            name="user_management",
-            description=(
-                "User management operations: list, create, get, update, "
-                "reset_password, deactivate, list_sessions, revoke_session, config. "
-                "Manage auth users and sessions in SQLite or PostgreSQL."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "list",
-                            "create",
-                            "get",
-                            "update",
-                            "reset_password",
-                            "deactivate",
-                            "list_sessions",
-                            "revoke_session",
-                            "config",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "User email (for create, get)",
-                    },
-                    "user_id": {
-                        "type": "string",
-                        "description": "User UUID (for get, update, reset_password, deactivate, list_sessions)",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Display name (for create)",
-                    },
-                    "username": {
-                        "type": "string",
-                        "description": "New display name (for update)",
-                    },
-                    "roles": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Role names (for create, update)",
-                    },
-                    "role": {
-                        "type": "string",
-                        "description": "Filter by role (for list)",
-                    },
-                    "is_superuser": {
-                        "type": "boolean",
-                        "description": "Superuser flag (for create, update)",
-                    },
-                    "is_active": {
-                        "type": "boolean",
-                        "description": "Active status (for update)",
-                    },
-                    "active_only": {
-                        "type": "boolean",
-                        "description": "Only active users/sessions (for list, list_sessions; default: true)",
-                    },
-                    "password": {
-                        "type": "string",
-                        "description": "Explicit password (for create, reset_password). If omitted, a random password is generated.",
-                    },
-                    "session_id": {
-                        "type": "string",
-                        "description": "Session ID (for revoke_session)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results (for list, list_sessions; default: 50)",
-                    },
-                    "offset": {
-                        "type": "integer",
-                        "description": "Pagination offset (for list; default: 0)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # User Profile (adaptive persona inference)
-        # =====================================================================
-        Tool(
-            name="user_profile",
-            description=(
-                "User profile for adaptive persona inference. "
-                "Operations: observe (analyze recent tool invocations), "
-                "observe_message (analyze user message vocabulary), "
-                "get (return current profile context), "
-                "reset (delete and return fresh default)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["observe", "observe_message", "get", "reset"],
-                        "description": "Operation to perform",
-                    },
-                    "message_text": {
-                        "type": "string",
-                        "description": "User message text (for observe_message)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max invocations to analyze (for observe; default: 50)",
-                    },
-                    "since_minutes": {
-                        "type": "integer",
-                        "description": "Only analyze invocations from last N minutes (for observe; default: 30)",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Bootstrap (entry point for naive app requests)
-        # =====================================================================
-        Tool(
-            name="bootstrap",
-            description=(
-                "Entry point for 'build me an app' requests. Scans for spec files, "
-                "runs cognition pass, and returns a mission briefing with agent instructions. "
-                "Call this first when a user wants to build an app. Returns structured "
-                "guidance for the next steps: either questions to ask the user, or "
-                "instructions for DSL generation. The workflow includes mandatory RBAC: "
-                "every entity must have permit:/forbid: access rules, verified via "
-                "policy(operation='access_matrix') before the app is considered complete."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "spec_text": {
-                        "type": "string",
-                        "description": "Optional: spec text if provided directly by user",
-                    },
-                    "spec_path": {
-                        "type": "string",
-                        "description": "Optional: path to spec file",
-                    },
-                    "project_path": {
-                        "type": "string",
-                        "description": "Optional: project directory to scan for specs",
-                    },
-                },
-                "required": [],
-            },
-        ),
-        # =====================================================================
-        # Spec Analyze (individual cognition operations)
-        # =====================================================================
-        Tool(
-            name="spec_analyze",
-            description=(
-                "Analyze narrative specs before DSL generation. Operations: "
-                "discover_entities (extract nouns/relationships), "
-                "identify_lifecycles (find state transitions), "
-                "extract_personas (identify user roles), "
-                "surface_rules (extract business rules), "
-                "generate_questions (surface ambiguities), "
-                "refine_spec (produce structured spec from all analyses)"
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "discover_entities",
-                            "identify_lifecycles",
-                            "extract_personas",
-                            "surface_rules",
-                            "generate_questions",
-                            "refine_spec",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "spec_text": {
-                        "type": "string",
-                        "description": "The narrative spec text to analyze",
-                    },
-                    "entities": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Entity names (for identify_lifecycles, generate_questions)",
-                    },
-                    "answers": {
-                        "type": "object",
-                        "description": "Answers to generated questions (for refine_spec)",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Graph (knowledge graph operations)
-        # =====================================================================
-        Tool(
-            name="graph",
-            description=(
-                "Knowledge graph operations for codebase understanding. Operations: "
-                "query (search entities by text), "
-                "dependencies (what does X depend on?), "
-                "dependents (what depends on X?), "
-                "neighbourhood (entities within N hops), "
-                "paths (find paths between entities), "
-                "stats (graph statistics), "
-                "populate (refresh graph from source), "
-                "concept (look up a framework concept by name), "
-                "inference (find inference patterns matching a query), "
-                "related (get related concepts for an entity), "
-                "export (export project KG data to JSON), "
-                "import (import KG data from JSON), "
-                "triggers (show what fires when an entity event occurs), "
-                "topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)"
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "query",
-                            "dependencies",
-                            "dependents",
-                            "neighbourhood",
-                            "paths",
-                            "stats",
-                            "populate",
-                            "concept",
-                            "inference",
-                            "related",
-                            "export",
-                            "import",
-                            "triggers",
-                            "topology",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "Search text (for query)",
-                    },
-                    "entity_id": {
-                        "type": "string",
-                        "description": "Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)",
-                    },
-                    "source_id": {
-                        "type": "string",
-                        "description": "Source entity ID (for paths)",
-                    },
-                    "target_id": {
-                        "type": "string",
-                        "description": "Target entity ID (for paths)",
-                    },
-                    "depth": {
-                        "type": "integer",
-                        "description": "Traversal depth (for neighbourhood, default: 1)",
-                    },
-                    "transitive": {
-                        "type": "boolean",
-                        "description": "Include transitive deps (for dependencies, dependents)",
-                    },
-                    "relation_types": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter by relation types: imports, contains, inherits, depends_on",
-                    },
-                    "entity_types": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter by entity types: file, module, class, function",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results (default: 20)",
-                    },
-                    "root_path": {
-                        "type": "string",
-                        "description": "Path to populate from (for populate)",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Entity or concept name (for concept, related, triggers)",
-                    },
-                    "entity": {
-                        "type": "string",
-                        "description": "Entity name (for triggers, e.g. 'Ticket')",
-                    },
-                    "event": {
-                        "type": "string",
-                        "enum": ["created", "updated", "deleted"],
-                        "description": "Event type (for triggers, default: created)",
-                    },
-                    "data": {
-                        "type": "object",
-                        "description": "JSON export data to import (for import)",
-                    },
-                    "file_path": {
-                        "type": "string",
-                        "description": "Path to JSON file to import (for import, alternative to data)",
-                    },
-                    "mode": {
-                        "type": "string",
-                        "enum": ["merge", "replace"],
-                        "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Discovery Operations (capability discovery agent)
-        # =====================================================================
-        Tool(
-            name="discovery",
-            description=(
-                "Capability discovery operations: "
-                "coherence (persona-by-persona authenticated UX coherence score)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "coherence",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # E2E Environment Operations
-        # =====================================================================
-        Tool(
-            name="e2e",
-            description=(
-                "E2E environment operations (read-only). "
-                "Operations: list_modes (available runner modes), "
-                "describe_mode (single mode details), "
-                "status (lock + runtime + log-tail for an example app), "
-                "list_baselines (hash-tagged db snapshot files for an example). "
-                "Process operations (start/stop) live in the CLI only."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "list_modes",
-                            "describe_mode",
-                            "status",
-                            "list_baselines",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Mode name (for describe_mode)",
-                    },
-                    "project_root": {
-                        "type": "string",
-                        "description": "Path to an example app (for status/list_baselines)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Fitness Triage (read-only — regenerate via CLI)
-        # =====================================================================
-        Tool(
-            name="fitness",
-            description=(
-                "Agent-Led Fitness Methodology queries (read-only). "
-                "Operations: queue (ranked deduped finding clusters for "
-                "a project). To regenerate the queue, use CLI: "
-                "dazzle fitness triage."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["queue"],
-                        "description": "Operation to perform",
-                    },
-                    "project_root": {
-                        "type": "string",
-                        "description": "Path to an example app project",
-                    },
-                    "top": {
-                        "type": "integer",
-                        "description": "Max clusters to return (default 10)",
-                        "default": 10,
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation", "project_root"],
-            },
-        ),
-        # =====================================================================
-        # Policy Analysis (RBAC access control)
-        # =====================================================================
-        Tool(
-            name="policy",
-            description=(
-                "Policy analysis operations for RBAC access control. "
-                "Operations: analyze (find entities without access rules), "
-                "conflicts (detect contradictory permit/forbid rules), "
-                "coverage (permission matrix: persona x entity x operation), "
-                "simulate (trace which rules fire for a given persona + entity + operation), "
-                "access_matrix (full RBAC access matrix from rbac module), "
-                "verify_status (summary of last `dazzle rbac verify` run)"
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "analyze",
-                            "conflicts",
-                            "coverage",
-                            "simulate",
-                            "access_matrix",
-                            "verify_status",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "entity_names": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter to specific entity names (optional)",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Persona ID (required for simulate)",
-                    },
-                    "operation_kind": {
-                        "type": "string",
-                        "enum": ["create", "read", "update", "delete", "list"],
-                        "description": "CRUD operation to simulate (required for simulate)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Composition (visual hierarchy audit + LLM evaluation)
-        # =====================================================================
-        Tool(
-            name="composition",
-            description=(
-                "Composition analysis: audit (DOM-level visual hierarchy audit), "
-                "capture (Playwright section-level screenshots), "
-                "analyze (LLM visual evaluation of captured screenshots), "
-                "report (combined audit+capture+analyze with merged scoring), "
-                "bootstrap (generate synthetic reference library for few-shot evaluation). "
-                "Audit computes attention weights using a 5-factor model and evaluates "
-                "composition rules. Capture takes section-level screenshots from a "
-                "running app. Analyze uses Claude vision to evaluate screenshots for "
-                "rendering fidelity, icon/media issues, color consistency, layout "
-                "overflow, visual hierarchy, and responsive fidelity. Report runs "
-                "audit (always) + visual pipeline (when base_url given) and merges "
-                "into a combined score. Bootstrap generates synthetic reference images "
-                "for few-shot visual evaluation prompts. Inspect_styles extracts "
-                "computed CSS styles via Playwright getComputedStyle() for agent-driven "
-                "layout diagnosis (zero LLM tokens)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "audit",
-                            "capture",
-                            "analyze",
-                            "report",
-                            "bootstrap",
-                            "inspect_styles",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Server URL (required for capture, e.g. http://localhost:3000)",
-                    },
-                    "pages": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": 'Filter to specific page routes (e.g. ["/", "/about"])',
-                    },
-                    "viewports": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": 'Viewport names for capture (default: ["desktop"]). Options: desktop, mobile',
-                    },
-                    "focus": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": (
-                            "Visual eval dimensions to focus on (for analyze). "
-                            "Options: content_rendering, icon_media, color_consistency, "
-                            "layout_overflow, visual_hierarchy, responsive_fidelity"
-                        ),
-                    },
-                    "token_budget": {
-                        "type": "integer",
-                        "description": "Max tokens for visual analysis (default: 50000)",
-                    },
-                    "route": {
-                        "type": "string",
-                        "description": 'Page route to inspect (for inspect_styles, default: "/")',
-                    },
-                    "selectors": {
-                        "type": "object",
-                        "additionalProperties": {"type": "string"},
-                        "description": (
-                            "Label-to-CSS-selector mapping (for inspect_styles). "
-                            'E.g. {"hero": ".dz-hero-with-media", "media": ".dz-hero-media"}'
-                        ),
-                    },
-                    "properties": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": (
-                            "CSS properties to inspect (for inspect_styles). "
-                            "Defaults to layout properties: display, flex-direction, position, "
-                            "width, height, overflow, gap, etc."
-                        ),
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing reference library (for bootstrap, default: false)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Test Intelligence (test history and failure patterns)
-        # =====================================================================
-        Tool(
-            name="test_intelligence",
-            description=(
-                "Query persisted test result history. Operations: "
-                "summary (recent runs overview), "
-                "failures (failure patterns, flaky tests, persistent failures), "
-                "regression (tests that went pass→fail between last two runs), "
-                "coverage (success rate trend across recent runs), "
-                "context (single-call AI-ready snapshot combining all above), "
-                "journey (most recent E2E journey analysis). "
-                "Results are automatically persisted by dsl_test run_all."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "summary",
-                            "failures",
-                            "regression",
-                            "coverage",
-                            "context",
-                            "journey",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Number of recent runs to analyze (default: 10)",
-                    },
-                    "run_id": {
-                        "type": "string",
-                        "description": "Specific run ID to query test cases for",
-                    },
-                    "failure_type": {
-                        "type": "string",
-                        "enum": [
-                            "rbac_denied",
-                            "validation_error",
-                            "dsl_surface_gap",
-                            "state_machine",
-                            "timeout",
-                            "framework_bug",
-                            "unknown",
-                        ],
-                        "description": "Filter by failure type (for failures)",
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by test category (for failures)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Sentinel (SaaS failure-mode detection)
-        # =====================================================================
-        Tool(
-            name="sentinel",
-            description=(
-                "Sentinel operations: findings (get findings from latest/specific scan), "
-                "status (available agents and last scan), "
-                "history (list recent scans), "
-                "fuzz_summary (run a small mutation fuzz campaign and return the markdown report). "
-                "Deterministic static analysis of the IR — no source code scanning."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "findings",
-                            "status",
-                            "history",
-                            "fuzz_summary",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "severity_threshold": {
-                        "type": "string",
-                        "enum": ["critical", "high", "medium", "low", "info"],
-                        "description": "Minimum severity to include (for findings). Default: info.",
-                    },
-                    "agent": {
-                        "type": "string",
-                        "description": "Filter findings by agent ID (for findings).",
-                    },
-                    "severity": {
-                        "type": "string",
-                        "description": "Filter findings by severity (for findings).",
-                    },
-                    "scan_id": {
-                        "type": "string",
-                        "description": "Specific scan ID (for findings).",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max scans to return (for history). Default: 10.",
-                    },
-                    "samples": {
-                        "type": "integer",
-                        "description": "Samples per layer for fuzz_summary. Default: 10.",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # LLM (intent/model inspection)
-        # =====================================================================
-        Tool(
-            name="llm",
-            description=(
-                "LLM operations: list_intents (declared intents), "
-                "list_models (declared models), "
-                "inspect_intent (detailed intent view with resolved model), "
-                "get_config (module-level LLM configuration)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "list_intents",
-                            "list_models",
-                            "inspect_intent",
-                            "get_config",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Intent name (for inspect_intent)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Param (runtime parameter inspection)
-        # =====================================================================
-        Tool(
-            name="param",
-            description=(
-                "Query runtime parameter declarations. Operations: "
-                "list (all declared params with defaults), "
-                "get (specific param by key with type, constraints, scope)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["list", "get"],
-                        "description": "Operation to perform",
-                    },
-                    "key": {
-                        "type": "string",
-                        "description": "Parameter key (for 'get' operation)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Conformance (DSL conformance testing)
-        # =====================================================================
-        Tool(
-            name="conformance",
-            description=(
-                "DSL conformance testing operations. "
-                "summary: run derivation pipeline and return coverage metrics (total cases, per-entity counts, scope types). "
-                "cases: return all conformance cases for a specific entity (requires entity_name). "
-                "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering). "
-                "monitor_status: return current runtime conformance monitor state (observations collected)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["summary", "cases", "gaps", "monitor_status"],
-                        "description": "Operation to perform",
-                    },
-                    "entity_name": {
-                        "type": "string",
-                        "description": "Entity name (required for cases)",
-                    },
-                    "auth_enabled": {
-                        "type": "boolean",
-                        "description": "Include unauthenticated (401) cases (default: true)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        Tool(
-            name="compliance",
-            description=(
-                "Compliance documentation operations. "
-                "compile: compile taxonomy + evidence into AuditSpec. "
-                "evidence: extract DSL evidence summary. "
-                "gaps: list controls with gaps or partial evidence. "
-                "summary: quick compliance posture summary. "
-                "review: generate review data for gap remediation."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["compile", "evidence", "gaps", "summary", "review"],
-                        "description": "Operation to perform",
-                    },
-                    "framework": {
-                        "type": "string",
-                        "description": "Framework ID: iso27001 or soc2 (default: iso27001)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Agent Commands (autonomous development skill management)
-        # =====================================================================
-        Tool(
-            name="agent_commands",
-            description=(
-                "Agent development commands: list (available commands with maturity status), "
-                "get (rendered skill content for a command), "
-                "check_updates (version comparison for sync)."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    **PROJECT_PATH_SCHEMA,
-                    "operation": {
-                        "type": "string",
-                        "enum": ["list", "get", "check_updates"],
-                        "description": "Operation to perform",
-                    },
-                    "command": {
-                        "type": "string",
-                        "description": "Command name (for 'get' operation)",
-                    },
-                    "commands_version": {
-                        "type": "string",
-                        "description": "Local commands_version from .manifest.json (for 'check_updates')",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
+        _tool_dsl(),
+        _tool_api_pack(),
+        _tool_mock(),
+        _tool_db(),
+        _tool_story(),
+        _tool_rhythm(),
+        _tool_demo_data(),
+        _tool_feedback(),
+        _tool_test_design(),
+        _tool_sitespec(),
+        _tool_semantics(),
+        _tool_process(),
+        _tool_status(),
+        _tool_knowledge(),
+        _tool_pitch(),
+        _tool_user_management(),
+        _tool_user_profile(),
+        _tool_bootstrap(),
+        _tool_spec_analyze(),
+        _tool_graph(),
+        _tool_discovery(),
+        _tool_e2e(),
+        _tool_fitness(),
+        _tool_policy(),
+        _tool_composition(),
+        _tool_test_intelligence(),
+        _tool_sentinel(),
+        _tool_llm(),
+        _tool_param(),
+        _tool_conformance(),
+        _tool_compliance(),
+        _tool_agent_commands(),
     ]
 
 
