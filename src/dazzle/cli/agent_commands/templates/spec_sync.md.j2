@@ -1,0 +1,61 @@
+# {{ cmd.title }} — Spec / DSL Sync
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Goal
+
+Synchronise the external specification document (SPEC.md) with the DSL definitions.
+Identify drift between what the spec describes and what the DSL implements, then propose patches.
+
+## Workflow (One-Shot)
+
+### 1. Parse the Spec
+
+Read `SPEC.md` from the project root. Extract:
+- Entity names and their key fields
+- Described user roles / personas
+- Described workflows and user journeys
+
+Use MCP `spec_analyze.discover_entities` to assist extraction.
+
+### 2. Parse the DSL
+
+Run MCP `dsl.validate` to confirm the DSL is valid.
+Use MCP `dsl.inspect_entity` for each entity found in step 1.
+
+### 3. Diff
+
+Compare the two sides and categorise differences:
+- **Spec-only**: described in SPEC.md but missing from DSL
+- **DSL-only**: defined in DSL but not mentioned in SPEC.md
+- **Diverged**: present in both but with conflicting details (fields, types, relationships)
+
+### 4. Propose Patches
+
+For each difference:
+- If the DSL is behind the spec → propose DSL additions/changes
+- If the spec is behind the DSL → propose spec text updates
+- If genuinely conflicting → flag for human review
+
+Present patches as clear diffs. Do NOT apply changes automatically.
+
+### 5. Report
+
+Output a summary table:
+```
+| Item       | Status     | Action Needed        |
+|------------|------------|----------------------|
+| Entity Foo | Spec-only  | Add to DSL           |
+| Entity Bar | Diverged   | Review field types   |
+```
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- Do NOT modify files without explicit user approval.
+- Prefer DSL as source of truth for implementation details.
+- Prefer SPEC.md as source of truth for business intent.

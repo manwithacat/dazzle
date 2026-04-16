@@ -1,0 +1,55 @@
+# {{ cmd.title }} — Validate and Ship
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Goal
+
+Run pre-flight checks, commit all staged work, push to the remote, and verify a clean worktree.
+
+## Workflow (One-Shot)
+
+### 1. Pre-Flight Checks
+
+Run each check in order. Stop on any failure.
+
+1. `git status` — confirm no unexpected untracked files
+2. `dazzle validate` — DSL must parse and link cleanly
+3. `dazzle lint` — no lint errors
+4. MCP `sentinel.findings` — no unresolved security findings
+
+### 2. Run Tests (if available)
+
+If a test suite exists:
+- `pytest tests/ -m "not e2e"` — unit tests must pass
+
+If tests fail, stop and report. Do NOT push broken code.
+
+### 3. Commit
+
+If there are uncommitted changes:
+- Stage relevant files (avoid secrets, `.env`, large binaries)
+- Commit with a descriptive message summarising the changes
+
+### 4. Push
+
+- `git push` to the current branch's upstream
+- If no upstream is set, use `git push -u origin <branch>`
+
+### 5. Verify Clean
+
+After pushing:
+- `git status` — worktree must be clean
+- If any files remain (e.g. `dist/`), commit them and push again
+
+Report the final commit SHA and branch name.
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- Never force-push to main/master.
+- Never commit `.env`, credentials, or secrets.
+- If pre-flight fails, report the issue and stop — do not push.

@@ -1,0 +1,77 @@
+# {{ cmd.title }} — GitHub Issue Resolver
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Prerequisites
+
+A GitHub remote must be configured.
+
+## Goal
+
+Triage open GitHub issues, pick one, investigate, fix, verify, ship, and repeat.
+
+## Cycle: Triage → Pick → Investigate → Fix → Verify → Ship → Loop
+
+### 1. Triage
+
+Fetch open issues:
+```bash
+gh issue list --state open --limit 20
+```
+
+Skip issues labelled `future` or `wontfix`.
+Categorise remaining issues by priority (bug > enhancement > chore).
+
+### 2. Pick
+
+Select the highest-priority unassigned issue.
+Prefer bugs over enhancements, and quick fixes over large changes.
+
+### 3. Investigate
+
+- Read the issue description and any linked code
+- Use MCP `dsl.validate` and `dsl.lint` to check current project state
+- Reproduce the issue if possible
+
+### 4. Fix
+
+Implement the minimal fix:
+- Follow the project's style guide
+- Add or update tests if applicable
+- Keep the change focused on the issue
+
+### 5. Verify
+
+- CLI: `dazzle validate` — DSL must pass
+- CLI: `dazzle lint` — no new lint warnings
+- `pytest tests/ -m "not e2e"` — unit tests pass
+
+### 6. Ship
+
+- Commit with a message referencing the issue: `fix: <description> (closes #<number>)`
+- `git push`
+- Close the issue:
+  ```bash
+  gh issue close <number> --comment "Fixed in <sha>"
+  ```
+
+Log the result to `{{ cmd.loop.backlog_file }}`:
+```
+[YYYY-MM-DD HH:MM] #<number>: <title> — FIXED (commit <sha>)
+```
+
+### 7. Loop
+
+Return to step 1. Stop after {{ cmd.loop.max_cycles }} cycles or when no actionable issues remain.
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- One issue per cycle.
+- Never force-push to main/master.
+- If an issue requires a breaking change, flag it for human review instead of fixing.
+- Skip issues labelled `future` unless explicitly instructed.

@@ -1,0 +1,32 @@
+## Autonomous Development Commands
+
+This project has agent commands synced by Dazzle. Run `dazzle agent sync` to update.
+
+### Available Commands
+
+{% for cmd, available, reason in commands %}
+{% if available %}
+- `/{{ cmd.name }}` — {{ cmd.description }}
+{% endif %}
+{% endfor %}
+
+### Running Loop Commands
+
+Loop commands maintain state in the `agent/` directory:
+{% for cmd, available, reason in commands %}
+{% if available and cmd.loop %}
+- `/{{ cmd.name }}`: backlog at `{{ cmd.loop.backlog_file }}`, log at `{{ cmd.loop.log_file }}`
+{% endif %}
+{% endfor %}
+
+### State Files
+
+- **Backlogs** (`agent/*-backlog.md`): Pending work items seeded by MCP tools.
+- **Logs** (`agent/*-log.md`): Completed work with timestamps and commit SHAs.
+- **Lock files** (`agent/*.lock`): Prevent concurrent loop execution.
+
+### Agent Tool Convention
+
+- MCP tools for reads: `dsl.validate`, `dsl.lint`, `story.coverage`, `composition.audit`
+- CLI tools for writes: `dazzle validate`, `dazzle lint`, `pytest`, `git commit`
+- Always validate before committing. One change per cycle for loop commands.

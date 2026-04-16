@@ -1,4 +1,4 @@
-"""Tests for agent command data models and TOML loader."""
+"""Tests for agent command data models, TOML loader, and renderer."""
 
 import re
 from pathlib import Path
@@ -11,6 +11,13 @@ from dazzle.cli.agent_commands.models import (
     MaturityGate,
     SyncManifest,
     ToolsConfig,
+)
+from dazzle.cli.agent_commands.renderer import (
+    TEMPLATES_DIR,
+    evaluate_maturity,
+    render_agents_md,
+    render_claude_md_section,
+    render_skill,
 )
 
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -204,3 +211,180 @@ def test_all_commands_have_template_files() -> None:
         assert cmd.template_file.endswith(".md.j2"), (
             f"Command {cmd.name!r} template_file {cmd.template_file!r} should end with '.md.j2'"
         )
+
+
+# ---------------------------------------------------------------------------
+# Maturity gate tests
+# ---------------------------------------------------------------------------
+
+
+def _make_project_context(**overrides: object) -> dict:
+    """Build a minimal project context dict with sensible defaults."""
+    ctx: dict = {
+        "entity_count": 5,
+        "surface_count": 5,
+        "story_count": 5,
+        "has_spec_md": True,
+        "has_github_remote": True,
+        "validate_passes": True,
+        "app_running": True,
+        "entity_names": ["Task"],
+        "persona_names": ["admin"],
+        "surface_names": ["task_list"],
+        "project_name": "test_project",
+    }
+    ctx.update(overrides)
+    return ctx
+
+
+def test_evaluate_maturity_all_met() -> None:
+    gate = MaturityGate(min_entities=1)
+    ctx = _make_project_context(entity_count=3)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is True
+    assert reason is None
+
+
+def test_evaluate_maturity_entities_unmet() -> None:
+    gate = MaturityGate(min_entities=2)
+    ctx = _make_project_context(entity_count=1)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert "entities" in reason
+
+
+def test_evaluate_maturity_surfaces_unmet() -> None:
+    gate = MaturityGate(min_surfaces=3)
+    ctx = _make_project_context(surface_count=1)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert "surfaces" in reason
+
+
+def test_evaluate_maturity_spec_md_required() -> None:
+    gate = MaturityGate(requires_spec_md=True)
+    ctx = _make_project_context(has_spec_md=False)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert "SPEC.md" in reason
+
+
+def test_evaluate_maturity_github_remote_required() -> None:
+    gate = MaturityGate(requires_github_remote=True)
+    ctx = _make_project_context(has_github_remote=False)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert "GitHub" in reason
+
+
+def test_evaluate_maturity_validate_required() -> None:
+    gate = MaturityGate(requires=["validate"])
+    ctx = _make_project_context(validate_passes=False)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert "validate" in reason.lower()
+
+
+def test_evaluate_maturity_empty_gate_always_available() -> None:
+    gate = MaturityGate()
+    ctx = _make_project_context(
+        entity_count=0,
+        surface_count=0,
+        story_count=0,
+        has_spec_md=False,
+        has_github_remote=False,
+        validate_passes=False,
+        app_running=False,
+    )
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is True
+    assert reason is None
+
+
+# ---------------------------------------------------------------------------
+# Template tests
+# ---------------------------------------------------------------------------
+
+_EXPECTED_TEMPLATES = [
+    "improve.md.j2",
+    "qa.md.j2",
+    "spec_sync.md.j2",
+    "ship.md.j2",
+    "polish.md.j2",
+    "issues.md.j2",
+    "agents_md.j2",
+    "claude_md_section.j2",
+]
+
+
+def test_all_templates_exist() -> None:
+    for name in _EXPECTED_TEMPLATES:
+        path = TEMPLATES_DIR / name
+        assert path.exists(), f"Template {name} not found at {path}"
+
+
+def test_render_improve_skill() -> None:
+    cmd = CommandDefinition(
+        name="improve",
+        version="1.0.0",
+        title="Improve",
+        description="Autonomous improvement loop.",
+        pattern="loop",
+        maturity=MaturityGate(min_entities=1),
+        loop=LoopConfig(
+            backlog_file="agent/improve-backlog.md",
+            log_file="agent/improve-log.md",
+            lock_file="agent/improve.lock",
+            max_cycles=50,
+        ),
+        tools=ToolsConfig(mcp=["dsl.lint"], cli=["dazzle validate"]),
+        template_file="improve.md.j2",
+    )
+    ctx = _make_project_context()
+    output = render_skill(cmd, ctx)
+    assert "Autonomous Improvement Loop" in output
+    assert "agent/improve-backlog.md" in output
+    assert "dsl.lint" in output
+
+
+def test_render_agents_md() -> None:
+    cmd = CommandDefinition(
+        name="improve",
+        version="1.0.0",
+        title="Improve",
+        description="Autonomous improvement loop.",
+        pattern="loop",
+        maturity=MaturityGate(min_entities=1),
+        loop=LoopConfig(backlog_file="agent/improve-backlog.md"),
+        tools=ToolsConfig(mcp=["dsl.lint"]),
+        template_file="improve.md.j2",
+    )
+    commands = [(cmd, True, None)]
+    ctx = _make_project_context()
+    output = render_agents_md(commands, ctx)
+    assert "# Agent Commands" in output
+    assert "/improve" in output
+
+
+def test_render_claude_md_section() -> None:
+    cmd = CommandDefinition(
+        name="improve",
+        version="1.0.0",
+        title="Improve",
+        description="Autonomous improvement loop.",
+        pattern="loop",
+        maturity=MaturityGate(min_entities=1),
+        loop=LoopConfig(backlog_file="agent/improve-backlog.md"),
+        tools=ToolsConfig(mcp=["dsl.lint"]),
+        template_file="improve.md.j2",
+    )
+    commands = [(cmd, True, None)]
+    ctx = _make_project_context()
+    output = render_claude_md_section(commands, ctx)
+    assert "## Autonomous Development Commands" in output
+    assert "Agent Tool Convention" in output

@@ -1,0 +1,71 @@
+# {{ cmd.title }} — UX Polish Cycle
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Prerequisites
+
+- A running app is required (`dazzle serve`)
+- The project must have 3+ surfaces defined
+
+## Goal
+
+Improve the UX quality of surfaces by auditing, investigating, fixing, and verifying.
+
+## Cycle: Audit → Pick → Investigate → Fix → Verify → Loop
+
+### 1. Audit
+
+Assess current UX quality by running:
+- MCP `composition.audit` — surface-level composition health
+- MCP `dsl.validate` — confirm DSL integrity
+- CLI: `dazzle validate`
+
+Rank surfaces by severity of issues found.
+
+### 2. Pick
+
+Select the surface with the worst audit score from `{{ cmd.loop.backlog_file }}`.
+If the backlog is empty, populate it from the audit results.
+
+### 3. Investigate
+
+For the selected surface:
+- MCP `dsl.inspect_surface` to review its definition
+- Observe the surface in the running app
+- Note layout issues, missing fields, confusing labels, broken interactions
+
+### 4. Fix
+
+Make targeted improvements:
+- Fix layout and field ordering issues in the DSL
+- Improve labels and descriptions
+- Correct component type mismatches
+
+Keep changes minimal — one surface per cycle.
+
+### 5. Verify
+
+After fixing:
+- CLI: `dazzle validate` — DSL still valid
+- CLI: `dazzle ux verify` — UX contracts pass
+- Visually confirm the surface in the running app
+
+Commit the fix and log to `{{ cmd.loop.log_file }}`:
+```
+[YYYY-MM-DD HH:MM] Polished: <surface_name> — <summary> (commit <sha>)
+```
+
+### 6. Loop
+
+Return to step 2. Stop after {{ cmd.loop.max_cycles }} cycles or when all surfaces pass audit.
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- One surface per cycle — do not batch multiple surfaces.
+- Do not change entity definitions unless required by the surface fix.
+- Preserve existing field ordering unless there is a clear UX reason to change it.

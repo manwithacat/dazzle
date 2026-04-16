@@ -1,0 +1,62 @@
+# {{ cmd.title }} — Autonomous Improvement Loop
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Goal
+
+Find gaps in the codebase, fix them, verify the fix, commit, and repeat.
+
+## Cycle: Seed → Pick → Fix → Verify → Commit → Log → Loop
+
+### 1. Seed the Backlog
+
+If `{{ cmd.loop.backlog_file }}` is empty, populate it by running:
+- MCP `dsl.lint` — collect lint warnings
+- MCP `story.coverage` — find uncovered stories
+- MCP `test_intelligence.coverage` — find untested code paths
+
+Append each finding as a `- [ ] ...` checkbox line.
+
+### 2. Pick
+
+Choose the top unchecked item from `{{ cmd.loop.backlog_file }}`.
+Prefer items that are quick wins (lint fixes, missing validations).
+
+### 3. Fix
+
+Make the minimal change to resolve the issue.
+Follow the project's style guide. Keep functions small and single-purpose.
+
+### 4. Verify
+
+Run these checks to confirm the fix:
+- CLI: `dazzle validate` — DSL must parse cleanly
+- CLI: `dazzle lint` — no new warnings introduced
+- CLI: `pytest tests/ -m "not e2e"` — all unit tests pass
+
+### 5. Commit
+
+Stage changed files and commit with a descriptive message.
+Do NOT commit unrelated changes.
+
+### 6. Log
+
+Mark the backlog item as `- [x]` and append a summary line to `{{ cmd.loop.log_file }}`:
+```
+[YYYY-MM-DD HH:MM] Fixed: <description> (commit <sha>)
+```
+
+### 7. Loop
+
+Return to step 2. Stop after {{ cmd.loop.max_cycles }} cycles or when the backlog is empty.
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- One fix per cycle — do not batch unrelated changes.
+- If a fix introduces new warnings, fix those before moving on.
+- If you cannot resolve an item after two attempts, mark it `- [~]` (skipped) and move on.

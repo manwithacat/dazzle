@@ -1,0 +1,65 @@
+# {{ cmd.title }} — Quality Assurance Cycle
+
+You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}** project.
+
+## Prerequisites
+
+A running app is required (`dazzle serve`).
+
+## Goal
+
+Verify stories against the running application, report failures, and fix regressions.
+
+## Cycle: Seed → Pick → Test → Assess → Commit → Loop
+
+### 1. Seed the Backlog
+
+If `{{ cmd.loop.backlog_file }}` is empty, populate it by running:
+- MCP `story.coverage` — list stories lacking verification
+- MCP `dsl.validate` — confirm DSL is valid before testing
+
+Append each unverified story as a `- [ ] story:<story_id>` checkbox line.
+
+### 2. Pick
+
+Choose the top unchecked story from `{{ cmd.loop.backlog_file }}`.
+Prioritise stories tied to critical user journeys.
+
+### 3. Test
+
+Verify the story against the running app:
+- Use MCP `story.get` to retrieve story steps
+- Execute each step against the running app
+- Record pass/fail for each step
+
+### 4. Assess
+
+If the story fails:
+- Investigate the root cause
+- Make the minimal fix
+- Re-run verification to confirm
+
+If the story passes, move to the next item.
+
+### 5. Commit
+
+Stage and commit any fixes with a descriptive message referencing the story ID.
+Append a result line to `{{ cmd.loop.log_file }}`:
+```
+[YYYY-MM-DD HH:MM] story:<id> — PASS|FAIL: <summary> (commit <sha>)
+```
+
+### 6. Loop
+
+Return to step 2. Stop after {{ cmd.loop.max_cycles }} cycles or when the backlog is empty.
+
+## Available Tools
+
+**MCP**: {{ cmd.tools.mcp | join(", ") }}
+**CLI**: {{ cmd.tools.cli | join(", ") }}
+
+## Rules
+
+- Test one story per cycle.
+- Do not modify story definitions — only fix implementation code.
+- If a failure requires a DSL change, log it as a separate backlog item.
