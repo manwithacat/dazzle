@@ -4,7 +4,106 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
-## 2026-04-16T01:05Z — Cycle 240 — **contract_audit: empty-state SHIPPED + EX-046 closed (UX-043 → DONE)**
+## 2026-04-16T01:40Z — Cycle 241 — **contract_audit: tooltip SHIPPED + latent XSS fixed + contract_audit promoted to named strategy (UX-045 → DONE)**
+
+**Strategy:** `contract_audit` — fourth cycle of the mini-arc. Smaller scope than 240, in line with the roadmap's expectation that tooltip is a UI primitive without DSL extensions or cross-cutting drift.
+
+**Target:** `fragments/tooltip_rich.html` — #4 priority from the cycle 237 roadmap.
+
+### Heuristic 1 — raw-layer reproduction + grep walk
+
+Read the existing `tooltip_rich.html` fragment. Immediate findings:
+
+1. **Latent XSS vector**: `{{ content | safe }}` — the fragment piped user-supplied content through `| safe`, bypassing Jinja autoescape. If a DSL author passed a value from any untrusted source (a column value, a user-authored description, an API response), it would render as raw HTML. No known consumer was affected, but this was a pre-positioned landmine.
+2. **DaisyUI drift**: `bg-neutral text-neutral-content rounded-box shadow-lg` — all four classes are legacy DaisyUI.
+3. **`text-sm`** — not the canonical `text-[12px]` or `text-[13px]` for dense chrome.
+4. **No canonical markers**: no `dz-tooltip` class, no `data-dz-position`, no `data-dz-tooltip-panel`, no automation hooks.
+
+Grep walk across the template set:
+
+- **Zero consumers** use the rich fragment — it's a forward-compatible primitive.
+- **11 call sites** use native HTML `title="..."` attribute across `table_rows`, `list`, `grid`, `timeline`, `tab_data`, `metrics`, `workspace/_content`, `layouts/app_shell`, `site/sections/logo_cloud`, `site/includes/theme_toggle`.
+
+### Side discovery: missing `x-cloak` CSS rule
+
+While modernising the fragment I added `x-cloak` to prevent the tooltip panel from flashing on first paint. Then I discovered the framework CSS has **no** `[x-cloak] { display: none !important; }` rule — only the test harness has it. This means **every existing `x-cloak` consumer** (search_input, search_select, table_pagination, bulk_actions) was subject to the same first-paint flash. Fixed as housekeeping by adding the rule to `dazzle-layer.css`.
+
+### What shipped
+
+**1. Modernised `fragments/tooltip_rich.html`:**
+
+- DaisyUI `bg-neutral text-neutral-content rounded-box shadow-lg` → `bg-[hsl(var(--foreground))] text-[hsl(var(--background))] rounded-[4px] shadow-[0_4px_12px_rgb(0_0_0/0.15),0_1px_3px_rgb(0_0_0/0.08)]`. Inverted colour scheme (dark tooltip on light page, light tooltip on dark page) is the Linear / macOS / system convention.
+- `text-sm` → `text-[12px] font-medium leading-snug` (denser chrome copy).
+- Added `dz-tooltip` class marker, `data-dz-position` attribute, `data-dz-tooltip-panel` panel marker.
+- Added `x-cloak` to prevent first-paint flash (now works because of the CSS rule added in the same commit).
+- **Removed `| safe` from `{{ content }}`** — content is now HTML-escaped by Jinja autoescape. The trigger still uses `| safe` because the trigger is intentionally markup (caller supplies a button with nested icon).
+
+**2. Framework CSS housekeeping** — added `[x-cloak] { display: none !important; }` to `src/dazzle_ui/runtime/static/css/dazzle-layer.css`. Fixes first-paint flash for 5 existing consumers (tooltip, search_input, search_select, table_pagination, bulk_actions) as a single one-line addition.
+
+**3. Contract doc** at `~/.claude/skills/ux-architect/components/tooltip.md` — 6 quality gates (canonical markers, design-token compliance, autoescape on content, aria-label duplication on icon-only native tooltips, keyboard accessibility via focus triggers, x-cloak CSS rule presence), 7 v2 open questions.
+
+**4. Skill promotion — `contract_audit` is now a named strategy.** Updated `.claude/commands/ux-cycle.md` to add `contract_audit` as strategy #5 alongside `missing_contracts`, `edge_cases`, `framework_gap_analysis`, `finding_investigation`. Track record cited: cycles 238 (status-badge), 239 (metrics-region), 240 (empty-state + EX-046) — three successful iterations each ran the same shape (pick ungoverned template → HTTP-reproduce → grep call sites → build contract + fix + macro in one commit → cross-app verify → regression tests). Added as strategy 5 with a "Use when" rubric distinguishing it from `missing_contracts` (which proposes WHICH components to contract; contract_audit executes the fix for a specific already-chosen target).
+
+**5. 9 new regression tests** in `tests/unit/test_tooltip_fragment.py`:
+
+- `test_renders_canonical_markers` — dz-tooltip, data-dz-position, data-dz-tooltip-panel, x-data, role, x-cloak, content
+- `test_uses_design_tokens_not_daisyui` — asserts canonical tokens present, legacy classes absent (bg-neutral, text-neutral-content, rounded-box, shadow-lg)
+- `test_position_override` — accepts top/right/bottom/left
+- `test_delay_parameters` + `test_default_delays` — 200ms/100ms defaults, overrides propagate
+- `test_both_hover_and_focus_triggers` — keyboard accessibility (@focusin/@focusout required)
+- **`test_content_is_autoescaped`** — the XSS fix gate. Passes `<script>alert('xss')</script>` and asserts the raw tag does NOT appear in rendered output. This test IS the defence.
+- `test_trigger_block_allows_html` — trigger block intentionally preserves HTML (via `| safe` inside the block)
+- `test_x_cloak_rule_present_in_framework_css` — reads `dazzle-layer.css` and asserts `[x-cloak]` + `display: none` are present
+
+### Scope trade-offs
+
+- **No example app migrations.** The rich fragment has zero consumers; contract is forward-compatible. First real adopter is up to frontier user needs.
+- **No migration of the 11 native `title=` call sites.** Contract documents both shapes (native default + rich escape hatch) as canonical. Native `title=` is contract-compliant as written — no changes required.
+- **No `dz-icon-btn` helper class.** Filed as v2 open question. Cosmetic; parked until the icon-button pattern surfaces enough drift to warrant a helper.
+
+### Test results
+
+- `tests/unit/test_tooltip_fragment.py`: 9 passed (all new)
+- **Full unit sweep: 10,777 pass / 101 skip / 0 fail** (+9 from cycle 240's 10,768)
+- Lint + mypy: clean
+
+### Rows touched
+
+| Row | State | Notes |
+|---|---|---|
+| **UX-045** | DONE / PASS | Contract written, fragment modernised, CSS rule added, skill promoted, 9 tests pass |
+| **UX-044 renumbering** | fixed | Cycle 240's empty-state was originally filed as UX-043 but collided with the pre-existing `UX-043 inline-edit` row from cycle 203. Renumbered to UX-044 this cycle. |
+| **EX-001** (DaisyUI drift) | OPEN | Further partial closure — tooltip_rich modernised |
+
+### Meta
+
+Four `contract_audit` iterations now in the ledger (238/239/240/241). The strategy is formally documented in the skill. Cross-cutting drift clusters continue to surface: cycle 238 found `badge_class` drift (16 sites), 239 found `hsl(38_92%_50%)` drift (14 sites), 240 found inline empty-state patterns (10 sites) + DaisyUI button classes (1 site), 241 found a latent XSS vector + missing x-cloak CSS rule. Every cycle has produced at least one "the original bug was different from what I expected" finding when the contract audit surfaced adjacent issues.
+
+### Security note
+
+The `| safe` → autoescape fix on `content` is a latent-vulnerability mitigation, not a production-exploit patch. No known call site passes untrusted input through the fragment (zero consumers), so no apps were affected. But the pattern was pre-positioned: a future DSL author who wrote `{% include "fragments/tooltip_rich.html" with content = description %}` against a user-authored description field would have had a reflected-XSS vector with no warning. The fix removes the landmine. The regression test `test_content_is_autoescaped` pins the safe posture in place — any future edit that reinstates `| safe` will fail the test.
+
+### Explore budget
+
+`.dazzle/ux-cycle-explore-count` = 17 → **18**.
+
+### ScheduleWakeup
+
+Not armed. Cycle 241 completes the small-scope cycle the roadmap asked for. Cycle 242 (toggle-group / segmented control) is queued.
+
+| Cycle | Target | Status |
+|---|---|---|
+| 238 | status-badge | ✅ |
+| 239 | metrics-region | ✅ |
+| 240 | empty-state + EX-046 | ✅ |
+| 241 | tooltip + x-cloak CSS + skill promotion | ✅ |
+| 242 | toggle-group | 🔜 |
+
+Roadmap progress: 4/5 mini-arc cycles shipped. One more to close the first batch.
+
+---
+
+## 2026-04-16T01:05Z — Cycle 240 — **contract_audit: empty-state SHIPPED + EX-046 closed (UX-044 → DONE)**
 
 **Strategy:** `contract_audit` — third cycle of the mini-arc. Combines a template modernisation + 9-region consolidation + a DSL grammar extension (the EX-046 per-persona `empty:` override) into one cycle, using EX-046 as the pilot implementation for the broader PersonaVariant-wiring gap.
 
@@ -81,7 +180,7 @@ Zero legacy DaisyUI class names in any rendered output. The fragment consumers n
 
 | Row | Previous state | New state | Rationale |
 |---|---|---|---|
-| **UX-043** | (new row) | **DONE / PASS** | Contract written, fragment modernised, 9 regions migrated, grammar extension shipped, 14 tests pass |
+| **UX-044** | (new row) | **DONE / PASS** | Contract written, fragment modernised, 9 regions migrated, grammar extension shipped, 14 tests pass (originally filed as UX-043 but that ID was already claimed by inline-edit in cycle 203; renumbered in cycle 241) |
 | **EX-046** | OPEN | **FIXED_LOCALLY** | Grammar extension + IR + compile-time dict + per-request resolver all shipped. Gap doc #2 axis 4 (create-form field visibility — the persona-unaware-affordances residual) now has a clear path via the generalisable resolver pattern, though those are separate rows |
 | **EX-001** (DaisyUI drift) | OPEN | OPEN (further partial closure) | Added `fragments/empty_state.html` + 9 region templates to the migrated side |
 

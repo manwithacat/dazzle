@@ -1,19 +1,48 @@
-{# Rich tooltip — HTML content tooltip with show/hide delay #}
-{# Parameters: content (str|html), position (str, default: top), show_delay (int ms, default: 200), hide_delay (int ms, default: 100) #}
+{# Rich tooltip fragment — canonical renderer (cycle 241).
+
+   Contract: ~/.claude/skills/ux-architect/components/tooltip.md (UX-044)
+
+   HTML-content tooltip with configurable show/hide delays and positioning.
+   Uses the ``dzTooltip`` Alpine controller (dz-alpine.js:805) and the
+   ``x-anchor`` plugin for Floating-UI-based positioning.
+
+   Use this fragment when the tooltip content needs HTML structure
+   (rich formatting, icons, multiple lines). For plain-text tooltips on
+   icon buttons or truncated values, prefer the browser-native
+   ``title="..."`` attribute — it's zero-JS, universally accessible,
+   and governed by the same contract as the rich variant.
+
+   Parameters:
+     trigger      : HTML | str  — the element that triggers the tooltip.
+                                  Passed through ``| safe``; the caller
+                                  is responsible for the markup shape.
+     content      : str          — tooltip body. Plain text only — any
+                                  markup is HTML-escaped by Jinja's
+                                  autoescape. Keep it short (max-w-xs
+                                  wraps at roughly 20ch).
+     position     : str          — top | right | bottom | left (default top)
+     show_delay   : int          — ms before showing (default 200)
+     hide_delay   : int          — ms before hiding (default 100)
+#}
 {% set position = position | default('top') %}
-<div x-data="dzTooltip" class="relative inline-block"
+<div x-data="dzTooltip"
+     class="dz-tooltip relative inline-block"
      data-dz-delay="{{ show_delay | default(200) }}"
      data-dz-hide-delay="{{ hide_delay | default(100) }}"
-     @mouseenter="show()" @mouseleave="hide()"
-     @focusin="show()" @focusout="hide()">
+     data-dz-position="{{ position }}"
+     @mouseenter="show()"
+     @mouseleave="hide()"
+     @focusin="show()"
+     @focusout="hide()">
 
   {# Trigger — wraps caller content #}
   {% block tooltip_trigger %}
   {{ trigger | safe if trigger else '' }}
   {% endblock %}
 
-  {# Tooltip content #}
+  {# Tooltip panel — positioned via Alpine x-anchor + floating-ui. #}
   <div x-show="visible"
+       x-cloak
        x-transition:enter="transition ease-out duration-100"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100"
@@ -22,8 +51,9 @@
        x-transition:leave-end="opacity-0"
        x-anchor.{{ position }}="$el.parentElement"
        role="tooltip"
-       class="absolute z-50 px-3 py-2 text-sm bg-neutral text-neutral-content rounded-box shadow-lg max-w-xs"
+       data-dz-tooltip-panel
+       class="absolute z-50 px-2 py-1 rounded-[4px] max-w-xs text-[12px] font-medium leading-snug bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-[0_4px_12px_rgb(0_0_0/0.15),0_1px_3px_rgb(0_0_0/0.08)]"
        :aria-hidden="!visible">
-    {{ content | safe }}
+    {{ content }}
   </div>
 </div>

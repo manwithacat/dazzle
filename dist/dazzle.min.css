@@ -1,6 +1,9 @@
-/* dazzle v0.55.38 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.55.39 | MIT License | https://github.com/manwithacat/dazzle */
 @layer base, framework, app, overrides;
 @layer framework {
+[x-cloak] {
+display: none !important;
+}
 #app,
 .dz-app {
 min-height: 100vh;

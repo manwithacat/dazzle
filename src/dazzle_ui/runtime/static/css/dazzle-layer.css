@@ -12,6 +12,21 @@
    ============================================================================= */
 
 /* =============================================================================
+   Alpine x-cloak — hide elements until Alpine has initialised.
+
+   Without this rule, any element marked ``x-cloak`` briefly renders with
+   its initial markup before Alpine removes the attribute (flash of
+   un-initialised state, visible on slow devices and hydration paths).
+   Added in cycle 241 during the tooltip contract audit — tooltip_rich,
+   search_input, search_select, table_pagination, bulk_actions all use
+   x-cloak and were all subject to this flash until this rule landed.
+   ============================================================================= */
+
+[x-cloak] {
+  display: none !important;
+}
+
+/* =============================================================================
    App Shell - Root layout structure
    ============================================================================= */
 

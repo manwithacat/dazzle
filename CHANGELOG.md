@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.40] - 2026-04-16
+
+### Added
+- **`tooltip` component contract (UX-045).** Fourth cycle of the component
+  menagerie mini-arc. Contract at
+  `~/.claude/skills/ux-architect/components/tooltip.md` governing two
+  canonical shapes: the native `title="..."` attribute (default, zero-JS,
+  screen-reader-accessible — used for short plain-text labels on icon
+  buttons and truncated cells) and the rich Alpine fragment at
+  `fragments/tooltip_rich.html` (HTML-content-capable, positioning-aware,
+  with configurable show/hide delays). 6 quality gates and 7 v2 open
+  questions.
+
+- **`[x-cloak] { display: none !important; }` CSS rule** in
+  `dazzle-layer.css`. Without this rule, every Alpine component using
+  `x-cloak` (tooltip_rich, search_input, search_select, table_pagination,
+  bulk_actions) flashed briefly on first paint before Alpine removed the
+  attribute. Single one-line addition fixes all 5 existing consumers.
+
+- **`contract_audit` promoted to a named cycle strategy.** Added to
+  `.claude/commands/ux-cycle.md` as strategy #5 alongside
+  `missing_contracts`/`edge_cases`/`framework_gap_analysis`/
+  `finding_investigation`. Track record: cycles 238 (status-badge), 239
+  (metrics-region), 240 (empty-state + EX-046 grammar extension), 241
+  (tooltip + latent XSS fix) — four successful iterations of the same
+  shape. Distinct from `missing_contracts` in that it executes the fix
+  for a specific already-chosen target rather than proposing which
+  components to contract.
+
+### Fixed
+- **Latent XSS vector in `fragments/tooltip_rich.html`.** The fragment
+  piped user-supplied `content` through `| safe`, bypassing Jinja
+  autoescape. No known consumer was affected (the fragment has zero
+  template call sites), but the pattern was a pre-positioned landmine
+  for any future DSL author who wired a user-authored description into
+  a tooltip. Removed `| safe` from `{{ content }}`; the trigger block
+  retains `| safe` because triggers are intentionally markup. Regression
+  test `test_content_is_autoescaped` pins the safe posture in place —
+  it passes `<script>alert('xss')</script>` and asserts the raw tag
+  does not appear in rendered output.
+
+- **Tooltip fragment DaisyUI drift.** Modernised
+  `fragments/tooltip_rich.html` — replaced
+  `bg-neutral text-neutral-content rounded-box shadow-lg` with inverted
+  design tokens (`bg-[hsl(var(--foreground))] text-[hsl(var(--background))]`
+  for the Linear/macOS tooltip convention) and explicit two-layer shadow.
+  Added canonical `dz-tooltip` class marker, `data-dz-position` attribute,
+  `data-dz-tooltip-panel` panel marker for automation.
+
+### Agent Guidance
+- **Prefer native `title="..."` for tooltips unless you need HTML
+  content or positioning.** Native title attributes are zero-JS,
+  universally accessible, and contract-compliant as written. Only reach
+  for the rich Alpine fragment when you need structured markup,
+  configurable positioning, or delay tuning. On icon-only triggers,
+  always pair `title=` with a matching `aria-label` for screen readers.
+- **Never pipe tooltip content through `| safe`.** Jinja autoescape is
+  the security posture. Callers needing HTML content should extend the
+  trigger block (which IS `| safe`) rather than the content slot.
+- **`contract_audit` is now a fully-supported cycle strategy.** When
+  the user asks for component-quality work or references the cycle 237
+  roadmap, `contract_audit` is the right shape: pick a known-templated-
+  but-ungoverned component, reproduce drift, grep call sites, build
+  contract + fix + tests in one commit.
+
 ## [0.55.39] - 2026-04-16
 
 ### Added
