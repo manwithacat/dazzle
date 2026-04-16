@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.5] - 2026-04-16
+
+### Added
+- Standalone `GET /api/workspaces/{name}/stats` endpoint returns aggregate metrics as JSON (namespaced by region name) for every workspace region that declares an `aggregates:` block. Enables headless/API-first consumption of dashboard KPIs without rendering the UI (#783).
+
+### Fixed
+- `serializers.py` now passes `set(...)` to Pydantic `model_dump(include=...)`; fixes two mypy errors introduced by the v0.57.2 frozenset-conversion sweep where `frozenset[str]` is not a valid `IncEx` type.
+
 ## [0.57.4] - 2026-04-16
 
 ### Added

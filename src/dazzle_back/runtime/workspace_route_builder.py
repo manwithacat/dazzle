@@ -15,6 +15,7 @@ from dazzle_back.runtime.workspace_rendering import (
     _build_surface_columns,
     _workspace_batch_handler,
     _workspace_region_handler,
+    _workspace_stats_handler,
 )
 
 logger = logging.getLogger(__name__)
@@ -271,6 +272,23 @@ class WorkspaceRouteBuilder:
                     f"/api/workspaces/{ws_name}/batch",
                     tags=["Workspaces"],
                 )(_make_batch_route(_batch_ctxs))
+
+                # Stats endpoint: standalone JSON for workspace aggregates (#783)
+                _stats_ctxs = [c for c in _ws_region_ctxs if c.ctx_region.aggregates]
+                if _stats_ctxs:
+
+                    def _make_stats_route(
+                        ctxs: list[WorkspaceRegionContext],
+                    ) -> Any:
+                        async def workspace_stats(request: Request) -> Any:
+                            return await _workspace_stats_handler(request, ctxs)
+
+                        return workspace_stats
+
+                    app.get(
+                        f"/api/workspaces/{ws_name}/stats",
+                        tags=["Workspaces"],
+                    )(_make_stats_route(_stats_ctxs))
 
                 # Context selector options endpoint (v0.38.0)
                 _ctx_sel = workspace.context_selector

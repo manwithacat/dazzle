@@ -1106,6 +1106,67 @@ async def _workspace_batch_handler(
     return {"regions": regions}
 
 
+async def _workspace_stats_handler(
+    request: Any,
+    region_ctxs: list[WorkspaceRegionContext],
+) -> dict[str, Any]:
+    """Compute workspace aggregate metrics as standalone JSON (closes #783).
+
+    Returns ``{"workspace": name, "stats": {region_name: {metric: value}}}``.
+    Only regions with a non-empty ``aggregates`` mapping contribute.
+    Items-based aggregates (``count`` alone or ``sum:field``) resolve to 0 —
+    callers needing those values should invoke the region endpoint directly.
+    """
+    from fastapi import HTTPException
+
+    # Enforce auth (same shape as batch handler: any region that requires it).
+    for ctx in region_ctxs:
+        if ctx.require_auth:
+            auth_ctx = None
+            if ctx.auth_middleware:
+                try:
+                    auth_ctx = ctx.auth_middleware.get_auth_context(request)
+                except Exception:
+                    logger.warning("Failed to get auth context for stats request", exc_info=True)
+            if not (auth_ctx and auth_ctx.is_authenticated):
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
+                is_super = auth_ctx.user and auth_ctx.user.is_superuser
+                normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
+                if not is_super and not any(
+                    r in ctx.ws_access.allow_personas for r in normalized_roles
+                ):
+                    raise HTTPException(status_code=403, detail="Workspace access denied")
+            break
+
+    workspace_name = ""
+    if region_ctxs:
+        endpoint = region_ctxs[0].ctx_region.endpoint or ""
+        if "/api/workspaces/" in endpoint:
+            workspace_name = endpoint.split("/api/workspaces/")[1].split("/")[0]
+
+    stats: dict[str, dict[str, Any]] = {}
+    seen_regions: set[str] = set()
+    for ctx in region_ctxs:
+        aggregates = ctx.ctx_region.aggregates
+        if not aggregates:
+            continue
+        region_name = ctx.ctx_region.name
+        if region_name in seen_regions:
+            continue
+        seen_regions.add(region_name)
+
+        metrics = await _compute_aggregate_metrics(
+            aggregates,
+            ctx.repositories,
+            total=0,
+            items=[],
+        )
+        stats[region_name] = {m["label"]: m["value"] for m in metrics}
+
+    return {"workspace": workspace_name, "stats": stats}
+
+
 async def _fetch_count_metric(
     metric_name: str,
     agg_repo: Any,

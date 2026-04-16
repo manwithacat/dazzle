@@ -1164,3 +1164,135 @@ class TestCurrentUserDotNotation:
         value = {"kind": "identifier", "value": "current_user.team_id"}
         result = _resolve_value(value, context)
         assert result == "team-789"
+
+
+# ===========================================================================
+# Workspace stats endpoint (#783)
+# ===========================================================================
+
+
+class TestWorkspaceStatsHandler:
+    """_workspace_stats_handler computes region aggregates as standalone JSON."""
+
+    def _make_ctx(
+        self,
+        *,
+        region_name: str,
+        aggregates: dict[str, str],
+        repositories: dict[str, Any] | None = None,
+        endpoint: str = "/api/workspaces/dash/regions/r",
+        require_auth: bool = False,
+        ws_access: Any = None,
+        auth_middleware: Any = None,
+    ) -> Any:
+        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+
+        return WorkspaceRegionContext(
+            ctx_region=SimpleNamespace(
+                display="LIST",
+                limit=None,
+                empty_message="",
+                aggregates=aggregates,
+                group_by="",
+                template="workspace/regions/list.html",
+                title=region_name.title(),
+                name=region_name,
+                endpoint=endpoint,
+                action_url="",
+                source_tabs=[],
+            ),
+            ir_region=SimpleNamespace(sort=[], filter=None),
+            source="Task",
+            entity_spec=None,
+            attention_signals=[],
+            ws_access=ws_access,
+            repositories=repositories or {},
+            require_auth=require_auth,
+            auth_middleware=auth_middleware,
+        )
+
+    async def test_returns_empty_stats_when_no_aggregates(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+
+        ctx = self._make_ctx(region_name="tasks", aggregates={})
+        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
+        assert result == {"workspace": "dash", "stats": {}}
+
+    async def test_computes_count_entity_aggregates(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+
+        class FakeRepo:
+            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
+                return {"items": [], "total": 42}
+
+        ctx = self._make_ctx(
+            region_name="overview",
+            aggregates={"total_work": "count(Work)"},
+            repositories={"Work": FakeRepo()},
+        )
+        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
+        assert result["workspace"] == "dash"
+        assert result["stats"] == {"overview": {"Total Work": 42}}
+
+    async def test_namespaces_stats_by_region(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+
+        class FakeRepo:
+            def __init__(self, total: int) -> None:
+                self._total = total
+
+            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
+                return {"items": [], "total": self._total}
+
+        ctx1 = self._make_ctx(
+            region_name="kpis",
+            aggregates={"active_works": "count(Work)"},
+            repositories={"Work": FakeRepo(10)},
+        )
+        ctx2 = self._make_ctx(
+            region_name="campaigns",
+            aggregates={"running": "count(Campaign)"},
+            repositories={"Campaign": FakeRepo(3)},
+        )
+        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx1, ctx2])
+        assert result["stats"]["kpis"] == {"Active Works": 10}
+        assert result["stats"]["campaigns"] == {"Running": 3}
+
+    async def test_skips_regions_without_aggregates(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+
+        class FakeRepo:
+            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
+                return {"items": [], "total": 5}
+
+        plain = self._make_ctx(region_name="plain", aggregates={})
+        with_agg = self._make_ctx(
+            region_name="with_agg",
+            aggregates={"n": "count(Task)"},
+            repositories={"Task": FakeRepo()},
+        )
+        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [plain, with_agg])
+        assert "plain" not in result["stats"]
+        assert result["stats"]["with_agg"] == {"N": 5}
+
+    async def test_requires_auth_when_configured(self) -> None:
+        from fastapi import HTTPException
+
+        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+
+        class FailingAuth:
+            def get_auth_context(self, request: Any) -> Any:
+                return SimpleNamespace(is_authenticated=False, user=None, roles=[])
+
+        ctx = self._make_ctx(
+            region_name="kpis",
+            aggregates={"n": "count(Task)"},
+            require_auth=True,
+            auth_middleware=FailingAuth(),
+        )
+        try:
+            await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
+        except HTTPException as e:
+            assert e.status_code == 401
+        else:
+            raise AssertionError("Expected 401 HTTPException")

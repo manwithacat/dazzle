@@ -46,12 +46,12 @@ def serialize_story_summary(story: StorySpec) -> dict[str, Any]:
 
     Used by default in list/propose responses to reduce context window usage.
     """
-    return story.model_dump(mode="json", include=_STORY_SUMMARY_FIELDS)
+    return story.model_dump(mode="json", include=set(_STORY_SUMMARY_FIELDS))
 
 
 def serialize_story(story: StorySpec) -> dict[str, Any]:
     """Full story serialization — the canonical format for story responses."""
-    return story.model_dump(mode="json", include=_STORY_FULL_FIELDS)
+    return story.model_dump(mode="json", include=set(_STORY_FULL_FIELDS))
 
 
 # =============================================================================
@@ -83,13 +83,13 @@ _TD_FULL_FIELDS = frozenset(
 
 def serialize_test_design_summary(td: Any) -> dict[str, Any]:
     """Compact test design summary: ID, title, persona, status."""
-    result: dict[str, Any] = td.model_dump(mode="json", include=_TD_SUMMARY_FIELDS)
+    result: dict[str, Any] = td.model_dump(mode="json", include=set(_TD_SUMMARY_FIELDS))
     return result
 
 
 def serialize_test_design(td: Any) -> dict[str, Any]:
     """Full test design serialization with steps, outcomes, and metadata."""
-    result: dict[str, Any] = td.model_dump(mode="json", include=_TD_FULL_FIELDS)
+    result: dict[str, Any] = td.model_dump(mode="json", include=set(_TD_FULL_FIELDS))
     return result
 
 
