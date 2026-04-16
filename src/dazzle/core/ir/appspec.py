@@ -194,164 +194,168 @@ class AppSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    # ------------------------------------------------------------------
+    # Query methods — delegates to appspec_queries.py free functions.
+    # Kept here for backward compatibility (100+ call sites).
+    # ------------------------------------------------------------------
+
     def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
-        return self.domain.get_entity(name)
+        from .appspec_queries import get_entity as _q
+
+        return _q(self, name)
 
     def get_archetype(self, name: str) -> ArchetypeSpec | None:
         """Get archetype by name."""
-        for archetype in self.archetypes:
-            if archetype.name == name:
-                return archetype
-        return None
+        from .appspec_queries import get_archetype as _q
+
+        return _q(self, name)
 
     def get_surface(self, name: str) -> SurfaceSpec | None:
         """Get surface by name."""
-        for surface in self.surfaces:
-            if surface.name == name:
-                return surface
-        return None
+        from .appspec_queries import get_surface as _q
+
+        return _q(self, name)
 
     def get_workspace(self, name: str) -> WorkspaceSpec | None:
         """Get workspace by name."""
-        for workspace in self.workspaces:
-            if workspace.name == name:
-                return workspace
-        return None
+        from .appspec_queries import get_workspace as _q
+
+        return _q(self, name)
 
     def get_experience(self, name: str) -> ExperienceSpec | None:
         """Get experience by name."""
-        for experience in self.experiences:
-            if experience.name == name:
-                return experience
-        return None
+        from .appspec_queries import get_experience as _q
+
+        return _q(self, name)
 
     def get_api(self, name: str) -> APISpec | None:
         """Get external API by name."""
-        for api in self.apis:
-            if api.name == name:
-                return api
-        return None
+        from .appspec_queries import get_api as _q
+
+        return _q(self, name)
 
     def get_domain_service(self, name: str) -> DomainServiceSpec | None:
         """Get domain service by name."""
-        for service in self.domain_services:
-            if service.name == name:
-                return service
-        return None
+        from .appspec_queries import get_domain_service as _q
+
+        return _q(self, name)
 
     def get_test(self, name: str) -> TestSpec | None:
         """Get test by name."""
-        for test in self.tests:
-            if test.name == name:
-                return test
-        return None
+        from .appspec_queries import get_test as _q
+
+        return _q(self, name)
 
     def get_foreign_model(self, name: str) -> ForeignModelSpec | None:
         """Get foreign model by name."""
-        for fm in self.foreign_models:
-            if fm.name == name:
-                return fm
-        return None
+        from .appspec_queries import get_foreign_model as _q
+
+        return _q(self, name)
 
     def get_integration(self, name: str) -> IntegrationSpec | None:
         """Get integration by name."""
-        for integration in self.integrations:
-            if integration.name == name:
-                return integration
-        return None
+        from .appspec_queries import get_integration as _q
+
+        return _q(self, name)
 
     def get_flow(self, flow_id: str) -> FlowSpec | None:
         """Get E2E flow by ID."""
-        for flow in self.e2e_flows:
-            if flow.id == flow_id:
-                return flow
-        return None
+        from .appspec_queries import get_flow as _q
+
+        return _q(self, flow_id)
 
     def get_fixture(self, fixture_id: str) -> FixtureSpec | None:
         """Get fixture by ID."""
-        for fixture in self.fixtures:
-            if fixture.id == fixture_id:
-                return fixture
-        return None
+        from .appspec_queries import get_fixture as _q
+
+        return _q(self, fixture_id)
 
     def get_flows_by_entity(self, entity: str) -> list[FlowSpec]:
         """Get all E2E flows for a given entity."""
-        return [f for f in self.e2e_flows if f.entity == entity]
+        from .appspec_queries import get_flows_by_entity as _q
+
+        return _q(self, entity)
 
     def get_flows_by_priority(self, priority: FlowPriority) -> list[FlowSpec]:
         """Get all E2E flows with given priority."""
-        return [f for f in self.e2e_flows if f.priority == priority]
+        from .appspec_queries import get_flows_by_priority as _q
+
+        return _q(self, priority)
 
     def get_persona(self, persona_id: str) -> PersonaSpec | None:
         """Get persona by ID."""
-        for persona in self.personas:
-            if persona.id == persona_id:
-                return persona
-        return None
+        from .appspec_queries import get_persona as _q
+
+        return _q(self, persona_id)
 
     def get_scenario(self, scenario_id: str) -> ScenarioSpec | None:
         """Get scenario by ID."""
-        for scenario in self.scenarios:
-            if scenario.id == scenario_id:
-                return scenario
-        return None
+        from .appspec_queries import get_scenario as _q
+
+        return _q(self, scenario_id)
 
     # Story getters (v0.22.0)
 
     def get_story(self, story_id: str) -> StorySpec | None:
         """Get story by ID."""
-        for story in self.stories:
-            if story.story_id == story_id:
-                return story
-        return None
+        from .appspec_queries import get_story as _q
+
+        return _q(self, story_id)
 
     def get_stories_by_actor(self, actor: str) -> list[StorySpec]:
         """Get all stories for a given actor/persona."""
-        return [s for s in self.stories if s.actor == actor]
+        from .appspec_queries import get_stories_by_actor as _q
+
+        return _q(self, actor)
 
     def get_stories_by_entity(self, entity_name: str) -> list[StorySpec]:
         """Get all stories involving a specific entity."""
-        return [s for s in self.stories if entity_name in s.scope]
+        from .appspec_queries import get_stories_by_entity as _q
+
+        return _q(self, entity_name)
 
     # Rule getters (v0.41.0 Convergent BDD)
 
     def get_rule(self, rule_id: str) -> RuleSpec | None:
         """Get rule by ID."""
-        for rule in self.rules:
-            if rule.rule_id == rule_id:
-                return rule
-        return None
+        from .appspec_queries import get_rule as _q
+
+        return _q(self, rule_id)
 
     def get_rules_by_scope(self, entity_name: str) -> list[RuleSpec]:
         """Get all rules whose scope includes a specific entity."""
-        return [r for r in self.rules if entity_name in r.scope]
+        from .appspec_queries import get_rules_by_scope as _q
+
+        return _q(self, entity_name)
 
     # Question getters (v0.41.0 Convergent BDD)
 
     def get_question(self, question_id: str) -> QuestionSpec | None:
         """Get question by ID."""
-        for question in self.questions:
-            if question.question_id == question_id:
-                return question
-        return None
+        from .appspec_queries import get_question as _q
+
+        return _q(self, question_id)
 
     def get_questions_blocking(self, artefact_id: str) -> list[QuestionSpec]:
         """Get all open questions that block a specific artefact."""
-        return [q for q in self.questions if artefact_id in q.blocks]
+        from .appspec_queries import get_questions_blocking as _q
+
+        return _q(self, artefact_id)
 
     # Grant Schema getters (v0.42.0 Runtime RBAC)
 
     def get_grant_schema(self, name: str) -> GrantSchemaSpec | None:
         """Get grant schema by name."""
-        for schema in self.grant_schemas:
-            if schema.name == name:
-                return schema
-        return None
+        from .appspec_queries import get_grant_schema as _q
+
+        return _q(self, name)
 
     def get_grant_schemas_by_scope(self, entity_name: str) -> list[GrantSchemaSpec]:
         """Get all grant schemas scoped to a specific entity."""
-        return [s for s in self.grant_schemas if s.scope == entity_name]
+        from .appspec_queries import get_grant_schemas_by_scope as _q
+
+        return _q(self, entity_name)
 
     # Triple getters (v0.50.0 IR Triple Enrichment)
 
@@ -378,179 +382,175 @@ class AppSpec(BaseModel):
 
     def get_triples_for_entity(self, entity: str) -> list[VerifiableTriple]:
         """Get all triples for a given entity."""
-        return self._triples_by_entity.get(entity, [])
+        from .appspec_queries import get_triples_for_entity as _q
+
+        return _q(self, entity)
 
     def get_triples_for_persona(self, persona: str) -> list[VerifiableTriple]:
         """Get all triples for a given persona."""
-        return self._triples_by_persona.get(persona, [])
+        from .appspec_queries import get_triples_for_persona as _q
+
+        return _q(self, persona)
 
     def get_triple(self, entity: str, surface: str, persona: str) -> VerifiableTriple | None:
         """Get a specific triple by entity, surface, and persona."""
-        return self._triple_index.get((entity, surface, persona))
+        from .appspec_queries import get_triple as _q
+
+        return _q(self, entity, surface, persona)
 
     # Messaging getters (v0.9.0)
 
     def get_message(self, name: str) -> MessageSpec | None:
         """Get message schema by name."""
-        for message in self.messages:
-            if message.name == name:
-                return message
-        return None
+        from .appspec_queries import get_message as _q
+
+        return _q(self, name)
 
     def get_channel(self, name: str) -> ChannelSpec | None:
         """Get channel by name."""
-        for channel in self.channels:
-            if channel.name == name:
-                return channel
-        return None
+        from .appspec_queries import get_channel as _q
+
+        return _q(self, name)
 
     def get_asset(self, name: str) -> AssetSpec | None:
         """Get asset by name."""
-        for asset in self.assets:
-            if asset.name == name:
-                return asset
-        return None
+        from .appspec_queries import get_asset as _q
+
+        return _q(self, name)
 
     def get_document(self, name: str) -> DocumentSpec | None:
         """Get document by name."""
-        for document in self.documents:
-            if document.name == name:
-                return document
-        return None
+        from .appspec_queries import get_document as _q
+
+        return _q(self, name)
 
     def get_template(self, name: str) -> TemplateSpec | None:
         """Get template by name."""
-        for template in self.templates:
-            if template.name == name:
-                return template
-        return None
+        from .appspec_queries import get_template as _q
+
+        return _q(self, name)
 
     # HLESS getters (v0.19.0)
 
     def get_stream(self, name: str) -> StreamSpec | None:
         """Get stream by name."""
-        for stream in self.streams:
-            if stream.name == name:
-                return stream
-        return None
+        from .appspec_queries import get_stream as _q
+
+        return _q(self, name)
 
     # LLM getters (v0.21.0 - Issue #33)
 
     def get_llm_model(self, name: str) -> LLMModelSpec | None:
         """Get LLM model by name."""
-        for model in self.llm_models:
-            if model.name == name:
-                return model
-        return None
+        from .appspec_queries import get_llm_model as _q
+
+        return _q(self, name)
 
     def get_llm_intent(self, name: str) -> LLMIntentSpec | None:
         """Get LLM intent by name."""
-        for intent in self.llm_intents:
-            if intent.name == name:
-                return intent
-        return None
+        from .appspec_queries import get_llm_intent as _q
+
+        return _q(self, name)
 
     # Process getters (v0.23.0)
 
     def get_process(self, name: str) -> ProcessSpec | None:
         """Get process by name."""
-        for process in self.processes:
-            if process.name == name:
-                return process
-        return None
+        from .appspec_queries import get_process as _q
+
+        return _q(self, name)
 
     def get_schedule(self, name: str) -> ScheduleSpec | None:
         """Get schedule by name."""
-        for schedule in self.schedules:
-            if schedule.name == name:
-                return schedule
-        return None
+        from .appspec_queries import get_schedule as _q
+
+        return _q(self, name)
 
     def get_processes_by_story(self, story_id: str) -> list[ProcessSpec]:
         """Get all processes that implement a specific story."""
-        return [p for p in self.processes if story_id in p.implements]
+        from .appspec_queries import get_processes_by_story as _q
+
+        return _q(self, story_id)
 
     def get_schedules_by_story(self, story_id: str) -> list[ScheduleSpec]:
         """Get all schedules that implement a specific story."""
-        return [s for s in self.schedules if story_id in s.implements]
+        from .appspec_queries import get_schedules_by_story as _q
+
+        return _q(self, story_id)
 
     # Ledger getters (v0.24.0 TigerBeetle Integration)
 
     def get_ledger(self, name: str) -> LedgerSpec | None:
         """Get ledger by name."""
-        for ledger in self.ledgers:
-            if ledger.name == name:
-                return ledger
-        return None
+        from .appspec_queries import get_ledger as _q
+
+        return _q(self, name)
 
     def get_transaction(self, name: str) -> TransactionSpec | None:
         """Get transaction by name."""
-        for transaction in self.transactions:
-            if transaction.name == name:
-                return transaction
-        return None
+        from .appspec_queries import get_transaction as _q
+
+        return _q(self, name)
 
     def get_transactions_by_ledger(self, ledger_name: str) -> list[TransactionSpec]:
         """Get all transactions that affect a specific ledger."""
-        return [t for t in self.transactions if ledger_name in t.affected_ledgers]
+        from .appspec_queries import get_transactions_by_ledger as _q
+
+        return _q(self, ledger_name)
 
     def get_ledgers_by_currency(self, currency: str) -> list[LedgerSpec]:
         """Get all ledgers with a specific currency."""
-        return [ledger for ledger in self.ledgers if ledger.currency == currency]
+        from .appspec_queries import get_ledgers_by_currency as _q
+
+        return _q(self, currency)
 
     # Enum getters (v0.25.0)
 
     def get_enum(self, name: str) -> EnumSpec | None:
         """Get shared enum by name."""
-        for enum in self.enums:
-            if enum.name == name:
-                return enum
-        return None
+        from .appspec_queries import get_enum as _q
+
+        return _q(self, name)
 
     # View getters (v0.25.0)
 
     def get_view(self, name: str) -> ViewSpec | None:
         """Get view by name."""
-        for view in self.views:
-            if view.name == name:
-                return view
-        return None
+        from .appspec_queries import get_view as _q
+
+        return _q(self, name)
 
     # Webhook getters (v0.25.0)
 
     def get_webhook(self, name: str) -> WebhookSpec | None:
         """Get webhook by name."""
-        for webhook in self.webhooks:
-            if webhook.name == name:
-                return webhook
-        return None
+        from .appspec_queries import get_webhook as _q
+
+        return _q(self, name)
 
     # Approval getters (v0.25.0)
 
     def get_approval(self, name: str) -> ApprovalSpec | None:
         """Get approval by name."""
-        for approval in self.approvals:
-            if approval.name == name:
-                return approval
-        return None
+        from .appspec_queries import get_approval as _q
+
+        return _q(self, name)
 
     # SLA getters (v0.25.0)
 
     def get_sla(self, name: str) -> SLASpec | None:
         """Get SLA by name."""
-        for sla in self.slas:
-            if sla.name == name:
-                return sla
-        return None
+        from .appspec_queries import get_sla as _q
+
+        return _q(self, name)
 
     # Island getters
 
     def get_island(self, name: str) -> IslandSpec | None:
         """Get island by name."""
-        for island in self.islands:
-            if island.name == name:
-                return island
-        return None
+        from .appspec_queries import get_island as _q
+
+        return _q(self, name)
 
     @property
     def type_catalog(self) -> dict[str, list[FieldType]]:
@@ -566,26 +566,9 @@ class AppSpec(BaseModel):
         Returns:
             Dict mapping field names to list of FieldType objects
         """
-        catalog: dict[str, list[FieldType]] = {}
+        from .appspec_queries import type_catalog as _q
 
-        # Collect from entities
-        for entity in self.domain.entities:
-            for field in entity.fields:
-                if field.name not in catalog:
-                    catalog[field.name] = []
-                # Only add if not already present (avoid duplicates)
-                if field.type not in catalog[field.name]:
-                    catalog[field.name].append(field.type)
-
-        # Collect from foreign models
-        for foreign_model in self.foreign_models:
-            for field in foreign_model.fields:
-                if field.name not in catalog:
-                    catalog[field.name] = []
-                if field.type not in catalog[field.name]:
-                    catalog[field.name].append(field.type)
-
-        return catalog
+        return _q(self)
 
     def get_field_type_conflicts(self) -> list[str]:
         """
@@ -594,25 +577,6 @@ class AppSpec(BaseModel):
         Returns:
             List of warning messages about type conflicts
         """
-        conflicts = []
-        for field_name, types in self.type_catalog.items():
-            if len(types) > 1:
-                type_descriptions = [
-                    f"{t.kind.value}"
-                    + (
-                        f"({t.max_length})"
-                        if t.max_length
-                        else f"({t.precision},{t.scale})"
-                        if t.precision
-                        else f"[{','.join(t.enum_values)}]"
-                        if t.enum_values
-                        else f" {t.ref_entity}"
-                        if t.ref_entity
-                        else ""
-                    )
-                    for t in types
-                ]
-                conflicts.append(
-                    f"Field '{field_name}' has inconsistent types: {', '.join(type_descriptions)}"
-                )
-        return conflicts
+        from .appspec_queries import get_field_type_conflicts as _q
+
+        return _q(self)
