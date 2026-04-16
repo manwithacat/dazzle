@@ -263,7 +263,7 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             try:
                 user = deps.auth_store.get_user_by_email(email)
                 if not user:
-                    deps.auth_store.create_user(
+                    user = deps.auth_store.create_user(
                         email=email,
                         password=password,
                         username=p.get("label") or pid,
@@ -273,10 +273,74 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
                     # Roles may be stale -- reset to the canonical persona role
                     # so authenticate calls after reset always get the right role.
                     deps.auth_store.update_user(user.id, roles=[pid])
+                # Mirror into User domain entity (#778)
+                if user:
+                    _mirror_auth_user_to_domain(
+                        deps, str(user.id), email, p.get("label") or pid, pid
+                    )
             except Exception:
                 logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
 
     return {"status": "reset_complete"}
+
+
+def _mirror_auth_user_to_domain(
+    deps: _TestDeps, user_id: str, email: str, name: str, role: str
+) -> None:
+    """Mirror an auth-store user into the DSL-defined User domain entity.
+
+    Closes manwithacat/dazzle#778. The QA/test auth flow provisions users
+    into the auth store but not into the domain ``User`` entity table.
+    Any app with ``ref User`` foreign keys then fails on create because
+    the referenced User row doesn't exist.
+
+    This helper upserts a matching row into the ``User`` entity table
+    (if one exists in the app's schema). It's called after every auth
+    user creation in the test/QA path so the two stores stay in sync.
+
+    The upsert uses ``INSERT ... ON CONFLICT (id) DO UPDATE`` so it's
+    safe to call repeatedly (idempotent). Only the ``User`` entity is
+    mirrored — other persona-backed entities (Tester, Agent, etc.) are
+    handled by the ``backed_by`` DSL construct (cycle 248).
+    """
+    user_sql = deps.entity_sql.get("User")
+    if user_sql is None:
+        return  # App has no User entity — nothing to mirror
+
+    try:
+        with deps.db_manager.connection() as conn:
+            # Check if the User table has the expected columns
+            # Attempt a simple upsert with common User entity fields
+            conn.execute(
+                """
+                INSERT INTO "User" (id, email, name, role, is_active, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                    email = EXCLUDED.email,
+                    name = EXCLUDED.name,
+                    role = EXCLUDED.role,
+                    is_active = EXCLUDED.is_active
+                """,
+                (user_id, email, name, role, True),
+            )
+            conn.commit()
+    except Exception:
+        # The User entity may have a different schema than expected
+        # (different columns, SQLite vs Postgres syntax, etc.).
+        # Fall back to a minimal insert with just id + email.
+        try:
+            with deps.db_manager.connection() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO "User" (id, email, name, is_active, created_at)
+                    VALUES (%s, %s, %s, %s, NOW())
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    (user_id, email, name, True),
+                )
+                conn.commit()
+        except Exception:
+            logger.debug("Could not mirror auth user %s into User entity", user_id, exc_info=True)
 
 
 async def _get_snapshot(deps: _TestDeps) -> SnapshotResponse:
@@ -333,6 +397,9 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
         session = deps.auth_store.create_session(user)
         session_token = session.id
         user_id = str(user.id)
+
+        # Mirror auth user into User domain entity (#778)
+        _mirror_auth_user_to_domain(deps, user_id, email, username, role)
     else:
         user_id = str(uuid.uuid4())
         session_token = str(uuid.uuid4())
