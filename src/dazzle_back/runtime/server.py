@@ -984,6 +984,19 @@ class DazzleBackendApp:
                 url_prefix="/files",
             )
 
+        # Cross-entity search endpoint (#782) — registered only when any
+        # entity has declared search fields (surface search_fields: or
+        # entity `searchable` modifiers).
+        if self._entity_search_fields and self._repositories:
+            from dazzle_back.runtime.search_routes import create_search_routes
+
+            search_router = create_search_routes(
+                repositories=self._repositories,
+                entity_search_fields=self._entity_search_fields,
+            )
+            if search_router is not None:
+                self._app.include_router(search_router)
+
         # Test routes
         if self._enable_test_mode and self._db_manager:
             from dazzle_back.runtime.test_routes import create_test_routes

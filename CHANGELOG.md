@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.7] - 2026-04-16
+
+### Added
+- Cross-entity search endpoint `GET /api/search?q=...` registered automatically when any entity declares searchable fields. Results are grouped by entity with per-entity `total`, `fields`, and `items`. Supports `?entity=<name>` to restrict scope and `?limit=N` (1–100) per entity (#782).
+- Entity-level `searchable` modifier on fields now registers those fields for search without needing a matching surface `search_fields:` declaration. Surface declarations still take precedence when both are present (#782).
+
+### Agent Guidance
+- Declare searchable fields on the entity for a zero-surface cross-entity search:
+  ```dsl
+  entity Work "Work":
+    title: str(300) required searchable
+    description: text searchable
+  ```
+  When multiple entities declare searchable fields, the runtime exposes `GET /api/search?q=...` fanning out across them. Surface-level `search_fields:` is still supported and takes precedence for that entity.
+
 ## [0.57.6] - 2026-04-16
 
 ### Added

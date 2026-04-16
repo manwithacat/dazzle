@@ -225,12 +225,15 @@ def build_entity_list_projections(
 
 def build_entity_search_fields(
     surfaces: list[SurfaceSpec],
+    entities: list[Any] | None = None,
 ) -> dict[str, list[str]]:
-    """Pre-plan search fields for each entity from surface declarations.
+    """Pre-plan search fields for each entity.
 
-    Extracts ``search_fields`` from list-mode surfaces. When a surface
-    declares explicit search fields, those are used for LIKE-based search
-    on the entity's list endpoint.
+    Surface ``search_fields:`` declarations take precedence. Where a surface
+    doesn't declare explicit search fields, entity-level ``searchable``
+    modifiers (``FieldModifier.SEARCHABLE``) are used as the fallback, so
+    ``title: str(300) searchable`` registers the field for search without
+    needing a matching surface declaration (#782).
 
     Returns a mapping of ``{entity_name: [field_names]}``.
     """
@@ -242,6 +245,13 @@ def build_entity_search_fields(
         sf = surface.search_fields
         if sf:
             result[entity_ref] = list(sf)
+    if entities:
+        for entity in entities:
+            if entity.name in result:
+                continue
+            ir_fields = getattr(entity, "searchable_fields", None)
+            if ir_fields:
+                result[entity.name] = [f.name for f in ir_fields]
     return result
 
 
@@ -340,8 +350,11 @@ def build_server_config(
         views=appspec.views,
     )
 
-    # Extract search fields from surface declarations
-    entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
+    # Extract search fields: surface declarations first, then IR searchable modifiers (#782)
+    entity_search_fields = build_entity_search_fields(
+        surfaces=appspec.surfaces,
+        entities=list(appspec.domain.entities) if appspec.domain else None,
+    )
 
     # Extract filter fields from surface UX declarations
     entity_filter_fields = build_entity_filter_fields(surfaces=appspec.surfaces)
