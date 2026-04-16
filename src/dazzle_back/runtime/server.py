@@ -997,6 +997,19 @@ class DazzleBackendApp:
             if search_router is not None:
                 self._app.include_router(search_router)
 
+        # Parent-scoped graph endpoints (#781) — registered when any
+        # graph_node: block declares `parent: <ref_field>`.
+        if node_graph_specs and self._repositories:
+            from dazzle_back.runtime.graph_routes import build_parent_graph_routes
+
+            parent_graph_router = build_parent_graph_routes(
+                node_graph_specs=node_graph_specs,
+                entities=self._entities,
+                repositories=self._repositories,
+            )
+            if parent_graph_router is not None:
+                self._app.include_router(parent_graph_router)
+
         # Test routes
         if self._enable_test_mode and self._db_manager:
             from dazzle_back.runtime.test_routes import create_test_routes

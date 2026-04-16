@@ -573,6 +573,7 @@ class EntityParserMixin:
         gn_block_column = self.current_token().column
         gn_edges: str | None = None
         gn_display: str | None = None
+        gn_parent: str | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -587,6 +588,11 @@ class EntityParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 gn_display = self.expect_identifier_or_keyword().value
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "parent":
+                # parent: <ref_field> — closes #781
+                self.advance()
+                self.expect(TokenType.COLON)
+                gn_parent = self.expect_identifier_or_keyword().value
             else:
                 raise make_parse_error(
                     f"Unexpected token in graph_node: block: {self.current_token().value}",
@@ -609,6 +615,7 @@ class EntityParserMixin:
         return ir.GraphNodeSpec(
             edge_entity=gn_edges,
             display=gn_display,
+            parent_field=gn_parent,
         )
 
     def _parse_entity_transitions_block(self) -> list[ir.StateTransition]:

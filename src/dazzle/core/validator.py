@@ -2342,12 +2342,25 @@ def _validate_graph_node(
         if edge_ent.graph_edge is None:
             errors.append(f"graph_node edges '{gn.edge_entity}' does not declare graph_edge:")
 
+    field_map = {f.name: f for f in entity.fields}
     if gn.display is not None:
-        field_map = {f.name: f for f in entity.fields}
         if gn.display not in field_map:
             errors.append(f"graph_node display '{gn.display}' is not a field on {entity.name}")
     else:
         warnings.append("graph_node has no display field — labels use default fallback")
+
+    # parent_field must reference a real ref field (#781)
+    if gn.parent_field is not None:
+        parent_spec = field_map.get(gn.parent_field)
+        if parent_spec is None:
+            errors.append(f"graph_node parent '{gn.parent_field}' is not a field on {entity.name}")
+        elif (
+            parent_spec.type.kind.value not in ("ref", "belongs_to")
+            or not parent_spec.type.ref_entity
+        ):
+            errors.append(
+                f"graph_node parent '{gn.parent_field}' on {entity.name} must be a ref field"
+            )
 
 
 def validate_lifecycles(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:

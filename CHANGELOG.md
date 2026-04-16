@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.8] - 2026-04-16
+
+### Added
+- Parent-scoped graph endpoint `GET /api/{parent_plural}/{id}/graph` auto-registered when a `graph_node:` block declares `parent: <ref_field>`. Returns every node whose parent_field equals `{id}` plus the edges connecting them, serialized via `GraphSerializer`. Supports `?format=cytoscape|d3|raw` (default: cytoscape). Complements the existing seed-based neighborhood endpoint (#781).
+- `GraphNodeSpec.parent_field` (optional) + matching DSL `parent: <ref_field>` inside the `graph_node:` block. Validator enforces that the named field exists and is a ref field.
+
+### Agent Guidance
+- Declare the parent relationship on the node entity to expose a graph view keyed off the parent:
+  ```dsl
+  entity Node "Graph Node":
+    id: uuid pk
+    work_id: ref Work required
+    title: str(200) required
+    graph_node:
+      edges: NodeEdge
+      display: title
+      parent: work_id
+  ```
+  The runtime will mount `GET /api/works/{id}/graph` returning Cytoscape.js JSON for every node belonging to that Work plus the edges between them. The seed-based neighborhood endpoint at `/api/nodes/{id}/graph` remains available for traversal from a single node.
+
 ## [0.57.7] - 2026-04-16
 
 ### Added

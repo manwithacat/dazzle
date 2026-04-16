@@ -253,10 +253,17 @@ class GraphNodeSpec(BaseModel):
 
     Declares that this entity represents nodes connected by a specific
     edge entity.
+
+    ``parent_field`` (optional) names a ref field on the node entity that
+    points to an owning parent entity (e.g. a ``work_id`` FK on ``Node``
+    linking to ``Work``). When set, the runtime generates a
+    ``GET /api/{parent_plural}/{id}/graph`` endpoint that returns every
+    node sharing that parent plus the edges connecting them (#781).
     """
 
     edge_entity: str
     display: str | None = None
+    parent_field: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
