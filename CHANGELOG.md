@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Agent-first development commands: `/improve`, `/qa`, `/spec-sync`, `/ship`, `/polish`, `/issues`
+- `dazzle agent sync` CLI command — installs/updates commands in user projects
+- MCP `agent_commands` tool (list, get, check_updates) for runtime capability discovery
+- `AGENTS.md` cross-tool convention file generation (Copilot, Cursor, Windsurf, Codex)
+- Agent Tool Convention — backlog/log pattern for `agent/` directory
+- Bootstrap integration nudges agents to install commands on new projects
+- 39 new tests for agent command infrastructure
+
+### Agent Guidance
+- New projects: run `dazzle agent sync` after first successful `dazzle validate`
+- Agent commands track state in `agent/` (git-tracked backlogs and logs)
+- Session-start: call `mcp__dazzle__agent_commands operation=check_updates` for new capabilities
+- Design: `docs/superpowers/specs/2026-04-16-agent-commands-design.md`
+
 ## [0.56.0] - 2026-04-16
 
 **Minor release — UX modernisation arc complete.** Consolidates 12 patch
