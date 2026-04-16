@@ -252,29 +252,22 @@ class TestActivities:
     async def test_create_human_task_activity(self) -> None:
         """Test human task creation activity."""
         from dazzle.core.process.activities import (
-            _task_store,
+            _TEMPORAL_AVAILABLE,
             clear_task_store,
+            complete_task,
+            get_task,
+            list_tasks,
         )
 
-        # Clear store first
-        clear_task_store()
-
-        # Import activity function directly for unit testing
-        from dazzle.core.process.activities import _TEMPORAL_AVAILABLE
+        await clear_task_store()
 
         if not _TEMPORAL_AVAILABLE:
             pytest.skip("Temporal activities not available")
 
-        # Activities are registered, but we test the underlying logic
         from datetime import UTC, datetime
 
-        # Create a mock task directly in store for testing
         from dazzle.core.process import ProcessTask
-        from dazzle.core.process.activities import (
-            complete_task_in_db,
-            get_task_from_db,
-            list_tasks_from_db,
-        )
+        from dazzle.core.process.task_store import get_task_store
 
         task = ProcessTask(
             task_id="test-task-1",
@@ -285,26 +278,22 @@ class TestActivities:
             entity_id="doc-1",
             due_at=datetime.now(UTC),
         )
-        _task_store[task.task_id] = task
+        await get_task_store().save(task)
 
-        # Test get
-        result = await get_task_from_db("test-task-1")
+        result = await get_task("test-task-1")
         assert result is not None
         assert result.task_id == "test-task-1"
 
-        # Test list
-        tasks = await list_tasks_from_db(run_id="workflow-123")
+        tasks = await list_tasks(run_id="workflow-123")
         assert len(tasks) == 1
 
-        # Test complete
-        await complete_task_in_db("test-task-1", "approved")
-        updated = await get_task_from_db("test-task-1")
+        await complete_task("test-task-1", "approved")
+        updated = await get_task("test-task-1")
         assert updated is not None
         assert updated.status == TaskStatus.COMPLETED
         assert updated.outcome == "approved"
 
-        # Cleanup
-        clear_task_store()
+        await clear_task_store()
 
 
 @pytest.mark.temporal

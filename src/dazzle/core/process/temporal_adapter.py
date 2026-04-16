@@ -679,13 +679,12 @@ class TemporalAdapter(ProcessAdapter):
         await handle.signal(signal_name, payload or {})
         logger.info("Sent signal '%s' to workflow %s", signal_name, run_id)
 
-    # Human Tasks
+    # Human Tasks — delegate to the pluggable TaskStoreBackend (#787).
     async def get_task(self, task_id: str) -> ProcessTask | None:
         """Get a human task by ID."""
-        # Tasks are stored in database, not Temporal
-        from .activities import get_task_from_db
+        from .task_store import get_task_store
 
-        return await get_task_from_db(task_id)
+        return await get_task_store().get(task_id)
 
     async def list_tasks(
         self,
@@ -695,9 +694,9 @@ class TemporalAdapter(ProcessAdapter):
         limit: int = 100,
     ) -> list[ProcessTask]:
         """List human tasks."""
-        from .activities import list_tasks_from_db
+        from .task_store import get_task_store
 
-        return await list_tasks_from_db(
+        return await get_task_store().list(
             run_id=run_id,
             assignee_id=assignee_id,
             status=status,
@@ -712,15 +711,14 @@ class TemporalAdapter(ProcessAdapter):
         completed_by: str | None = None,
     ) -> None:
         """Complete a human task by signaling the workflow."""
-        # Get task to find workflow
-        task = await self.get_task(task_id)
+        from .task_store import get_task_store
+
+        store = get_task_store()
+        task = await store.get(task_id)
         if not task:
             raise ValueError(f"Task '{task_id}' not found")
 
-        # Update task in database
-        from .activities import complete_task_in_db
-
-        await complete_task_in_db(task_id, outcome, outcome_data, completed_by)
+        await store.complete(task_id, outcome, outcome_data, completed_by)
 
         # Signal the workflow
         if self._client:
@@ -741,9 +739,9 @@ class TemporalAdapter(ProcessAdapter):
         reason: str | None = None,
     ) -> None:
         """Reassign a human task."""
-        from .activities import reassign_task_in_db
+        from .task_store import get_task_store
 
-        await reassign_task_in_db(task_id, new_assignee_id, reason)
+        await get_task_store().reassign(task_id, new_assignee_id, reason)
         logger.info("Reassigned task %s to %s", task_id, new_assignee_id)
 
     # Status Mapping

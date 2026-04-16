@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.9] - 2026-04-16
+
+### Changed
+- Replace in-process `_task_store: dict[str, ProcessTask]` with pluggable `TaskStoreBackend` protocol + default `InMemoryTaskStore` (`src/dazzle/core/process/task_store.py`). `TemporalAdapter` now fetches tasks via `get_task_store()` so deployments can register a durable backend with `set_task_store(backend)` at startup before creating an adapter (#787).
+- Renamed activities module helpers: `get_task_from_db` → `get_task`, `list_tasks_from_db` → `list_tasks`, `complete_task_in_db` → `complete_task`, `reassign_task_in_db` → `reassign_task`. Also: `clear_task_store()` is now an async coroutine that calls `backend.clear()`. Updated all in-tree callers; there is no backward-compat shim.
+
+### Agent Guidance
+- The in-memory task store is **not durable** — tasks vanish on process exit. Production deployments running Temporal must register a database-backed `TaskStoreBackend` before creating `TemporalAdapter`:
+  ```python
+  from dazzle.core.process.task_store import set_task_store
+  set_task_store(MyPostgresTaskStore(...))
+  ```
+  The protocol contract is `save / get / list / complete / reassign / escalate / clear` — all async.
+
 ## [0.57.8] - 2026-04-16
 
 ### Added

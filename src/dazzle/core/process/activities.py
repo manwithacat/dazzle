@@ -14,16 +14,13 @@ from typing import Any
 from uuid import uuid4
 
 from .adapter import ProcessTask, TaskStatus
+from .task_store import TaskStoreBackend, get_task_store
 
 logger = logging.getLogger(__name__)
 
 # Activity registry for dynamic loading
 _activity_registry: list[Any] = []
 _activity_registry_lock = threading.Lock()
-
-# In-memory task store (for development - production uses database)
-_task_store: dict[str, ProcessTask] = {}
-_task_store_lock = threading.Lock()
 
 
 def get_all_activities() -> list[Any]:
@@ -92,9 +89,7 @@ if _TEMPORAL_AVAILABLE:
             due_at=due_at,
         )
 
-        # Store task (in production, this would be database insert)
-        with _task_store_lock:
-            _task_store[task_id] = task
+        await get_task_store().save(task)
 
         activity.logger.info("Created human task %s for step '%s'", task_id, params["step_name"])
 
@@ -113,14 +108,7 @@ if _TEMPORAL_AVAILABLE:
         task_id = params["task_id"]
         step_name = params.get("step_name", "unknown")
 
-        with _task_store_lock:
-            if task_id in _task_store:
-                task = _task_store[task_id]
-                task.status = TaskStatus.ESCALATED
-                task.escalated_at = datetime.now(UTC)
-                found = True
-            else:
-                found = False
+        found = await get_task_store().escalate(task_id)
         if found:
             activity.logger.warning("Escalated human task %s (step: %s)", task_id, step_name)
         else:
@@ -187,90 +175,60 @@ if _TEMPORAL_AVAILABLE:
         )
 
 
-# Database operations for tasks (used by adapter)
-async def get_task_from_db(task_id: str) -> ProcessTask | None:
-    """
-    Get a task from the database.
-
-    In development mode, uses in-memory store.
-    Production would use actual database.
-    """
-    with _task_store_lock:
-        return _task_store.get(task_id)
+# Task store operations (used by TemporalAdapter) — delegate to the
+# registered backend. Swap the backend with ``set_task_store()`` before
+# the adapter is created to persist tasks durably.
+async def get_task(task_id: str) -> ProcessTask | None:
+    """Fetch a task by id from the active task store."""
+    return await get_task_store().get(task_id)
 
 
-async def list_tasks_from_db(
+async def list_tasks(
     run_id: str | None = None,
     assignee_id: str | None = None,
     status: TaskStatus | None = None,
     limit: int = 100,
 ) -> list[ProcessTask]:
-    """
-    List tasks from the database with filters.
-    """
-    with _task_store_lock:
-        tasks = list(_task_store.values())
-
-    # Apply filters
-    if run_id:
-        tasks = [t for t in tasks if t.run_id == run_id]
-    if assignee_id:
-        tasks = [t for t in tasks if t.assignee_id == assignee_id]
-    if status:
-        tasks = [t for t in tasks if t.status == status]
-
-    return tasks[:limit]
+    """List tasks matching the supplied filters."""
+    return await get_task_store().list(
+        run_id=run_id,
+        assignee_id=assignee_id,
+        status=status,
+        limit=limit,
+    )
 
 
-async def complete_task_in_db(
+async def complete_task(
     task_id: str,
     outcome: str,
     outcome_data: dict[str, Any] | None = None,
     completed_by: str | None = None,
-) -> None:
-    """
-    Mark a task as completed in the database.
-    """
-    with _task_store_lock:
-        if task_id in _task_store:
-            task = _task_store[task_id]
-            task.status = TaskStatus.COMPLETED
-            task.outcome = outcome
-            task.outcome_data = outcome_data
-            task.completed_at = datetime.now(UTC)
-            completed = True
-        else:
-            completed = False
-    if completed:
-        logger.info("Task %s completed with outcome '%s'", task_id, outcome)
+) -> bool:
+    """Mark a task completed. Returns ``True`` iff a task was updated."""
+    return await get_task_store().complete(task_id, outcome, outcome_data, completed_by)
 
 
-async def reassign_task_in_db(
+async def reassign_task(
     task_id: str,
     new_assignee_id: str,
     reason: str | None = None,
-) -> None:
-    """
-    Reassign a task to a new user.
-    """
-    with _task_store_lock:
-        if task_id in _task_store:
-            task = _task_store[task_id]
-            old_assignee = task.assignee_id
-            task.assignee_id = new_assignee_id
-            found = True
-        else:
-            old_assignee = None
-            found = False
-    if found:
-        logger.info(
-            f"Task {task_id} reassigned from {old_assignee} to {new_assignee_id}"
-            + (f": {reason}" if reason else "")
-        )
+) -> bool:
+    """Reassign a task. Returns ``True`` iff a task was updated."""
+    return await get_task_store().reassign(task_id, new_assignee_id, reason)
 
 
-# Clear task store (for testing)
-def clear_task_store() -> None:
-    """Clear the in-memory task store (for testing)."""
-    with _task_store_lock:
-        _task_store.clear()
+# Re-exported for tests that need to reset state between runs.
+async def clear_task_store() -> None:
+    """Clear all tasks from the active store (for tests only)."""
+    await get_task_store().clear()
+
+
+__all__ = [
+    "TaskStoreBackend",
+    "clear_task_store",
+    "complete_task",
+    "get_all_activities",
+    "get_task",
+    "list_tasks",
+    "reassign_task",
+]
