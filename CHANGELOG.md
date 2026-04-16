@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.12] - 2026-04-16
+
+### Added
+- `dazzle agent seed <command>` — runs lint/validate pipelines and seeds a command's backlog file. Replaces the manual pipeline JSON parsing that outer assistants used to do inside the `/improve` loop (#788).
+- `dazzle agent signals` — emits or consumes cross-loop signals via `.dazzle/signals/`. `--emit <kind> [--payload JSON]` drops a signal for other loops; `--consume [--kind K]` lists signals since the source's last run and marks the run (#788).
+- `CommandDefinition.batch_compatible` + `signals_emit` / `signals_consume` metadata fields. The Jinja template renderer materialises declared signals into explicit consume/emit steps in the rendered skill markdown, and `batch_compatible` surfaces a grouping OBSERVE step in `/improve` that bundles identical-pattern gaps into one cycle (#788).
+- Live-app health probe in `build_project_context` — detects `.dazzle/runtime.json`/`.dazzle/*.lock` markers and falls back to TCP probes on localhost:3000/8000. Gates for `requires_running_app` now reflect reality instead of always defaulting to `False` (#788).
+
+### Changed
+- Rewrote `improve.md.j2` from a generic stub to the full OBSERVE→ENHANCE→BUILD→VERIFY→REPORT playbook (based on the canonical `.claude/commands/improve.md`) with signal + batch awareness baked in. Bumped `/improve` to v1.1.0.
+- Rewrote `polish.md.j2` to include a mandatory **Triage** step that filters audit findings against open GitHub issues and MCP `sentinel.findings` before marking anything actionable. Closes the feedback that `/polish` produced false positives tracing to known framework issues (#788). Bumped `/polish` to v1.1.0.
+
+### Agent Guidance
+- Loops now coordinate via signals. `/improve` emits `fix-committed` after a successful cycle; `/polish` emits `polish-complete` and consumes `fix-committed` + `ux-component-shipped`. Use `dazzle agent signals --source <loop> --consume` at the start of each cycle and `--emit <kind>` at the end of a successful cycle. Marker + signal files live in `.dazzle/signals/`.
+- `/improve` can now batch identical-pattern gaps (same gap_type + target_file + category) into a single cycle. The template's OBSERVE step groups rows before marking them IN_PROGRESS. Set `batch_compatible = true` in a command's TOML to opt in.
+- If `/polish` finds an issue already tracked in a GitHub issue or sentinel finding, the triage step marks the row BLOCKED with `tracked: #N` — don't waste cycles re-reporting known framework-level bugs.
+- New seed invocation: `dazzle agent seed improve` / `dazzle agent seed polish` writes the backlog file from live pipeline output. No more hand-parsing JSON in the outer assistant.
+
 ## [0.57.11] - 2026-04-16
 
 ### Added

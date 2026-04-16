@@ -37,7 +37,20 @@ class ToolsConfig:
 
 @dataclass
 class CommandDefinition:
-    """A fully resolved agent command definition loaded from TOML."""
+    """A fully resolved agent command definition loaded from TOML.
+
+    ``batch_compatible`` (#788) signals that the command's loop can
+    group identical-pattern backlog items into a single cycle instead
+    of processing them one-by-one. OBSERVE steps should group items by
+    shape (gap type, category, target file) and treat the group as a
+    single work unit when this flag is set.
+
+    ``signals_emit`` / ``signals_consume`` (#788) declare which
+    inter-loop signals the command produces and responds to. The
+    template renderer materialises these into explicit steps — a
+    consume-signals check at the top of the cycle and an emit step at
+    the end of a successful cycle.
+    """
 
     name: str
     version: str
@@ -48,6 +61,9 @@ class CommandDefinition:
     loop: LoopConfig | None = None
     tools: ToolsConfig = field(default_factory=ToolsConfig)
     template_file: str = ""
+    batch_compatible: bool = False
+    signals_emit: list[str] = field(default_factory=list)
+    signals_consume: list[str] = field(default_factory=list)
 
 
 @dataclass

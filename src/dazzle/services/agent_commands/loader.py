@@ -17,6 +17,7 @@ def load_command(path: Path) -> CommandDefinition:
     loop_data = data.get("loop", None)
     tools_data = data.get("tools", {})
     tmpl = data.get("skill_template", {})
+    signals_data = data.get("signals", {})
 
     maturity = MaturityGate(
         min_entities=mat.get("min_entities", 0),
@@ -53,6 +54,9 @@ def load_command(path: Path) -> CommandDefinition:
         loop=loop,
         tools=tools,
         template_file=tmpl.get("file", ""),
+        batch_compatible=cmd.get("batch_compatible", False),
+        signals_emit=list(signals_data.get("emit", [])),
+        signals_consume=list(signals_data.get("consume", [])),
     )
 
 

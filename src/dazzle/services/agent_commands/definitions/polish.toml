@@ -1,13 +1,16 @@
 [command]
 name = "polish"
-version = "1.0.0"
+version = "1.1.0"
 title = "Polish"
-description = "UX polish loop — refine surfaces in a running app."
+description = "Surface-level UX polish cycle — audit, investigate, fix, verify."
 pattern = "loop"
+batch_compatible = false
 
 [maturity]
+min_entities = 1
 min_surfaces = 3
 requires_running_app = true
+requires = ["validate"]
 
 [loop]
 backlog_file = "agent/polish-backlog.md"
@@ -16,9 +19,25 @@ lock_file = "agent/polish.lock"
 max_cycles = 50
 stale_lock_minutes = 30
 
+[signals]
+# React to shipped fixes so polish doesn't re-report the same issue.
+consume = [
+    "fix-committed",
+    "ux-component-shipped",
+]
+# Other loops can tune their behaviour when polish reaches steady state.
+emit = [
+    "polish-complete",
+]
+
 [tools]
-mcp = ["dsl.validate", "dsl.inspect_surface", "composition.audit"]
-cli = ["dazzle validate", "dazzle ux verify"]
+mcp = ["composition.audit", "dsl.validate", "dsl.inspect_surface", "sentinel.findings"]
+cli = [
+    "dazzle validate",
+    "dazzle ux verify",
+    "dazzle agent signals",
+    "gh issue list",
+]
 
 [skill_template]
 file = "polish.md.j2"

@@ -1,9 +1,12 @@
 [command]
 name = "improve"
-version = "1.0.0"
+version = "1.1.0"
 title = "Improve"
 description = "Autonomous improvement loop — find gaps, fix them, verify, commit."
 pattern = "loop"
+# Groups identical-pattern gaps (same gap_type, target, category) into
+# one cycle — closes #788 batch_compatible feedback.
+batch_compatible = true
 
 [maturity]
 min_entities = 1
@@ -16,9 +19,20 @@ lock_file = "agent/improve.lock"
 max_cycles = 50
 stale_lock_minutes = 30
 
+[signals]
+# Consume: re-seed rows referencing components /ux-cycle just shipped.
+consume = [
+    "ux-component-shipped",
+    "polish-complete",
+]
+# Emit: let /polish + /ux-cycle know when we've closed a backlog row.
+emit = [
+    "fix-committed",
+]
+
 [tools]
-mcp = ["dsl.lint", "dsl.validate", "dsl.analyze"]
-cli = ["dazzle validate", "dazzle lint"]
+mcp = ["dsl.lint", "dsl.validate", "dsl.analyze", "dsl.fidelity", "conformance.summary"]
+cli = ["dazzle validate", "dazzle lint", "dazzle agent seed", "dazzle agent signals"]
 
 [skill_template]
 file = "improve.md.j2"

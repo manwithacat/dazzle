@@ -4,60 +4,142 @@ You are running the **{{ cmd.name }}** command for the **{{ ctx.project_name }}*
 
 ## Prerequisites
 
-- A running app is required (`dazzle serve`)
-- The project must have 3+ surfaces defined
+- A running app is required (`dazzle serve`).
+- The project must have 3+ surfaces defined.
 
 ## Goal
 
-Improve the UX quality of surfaces by auditing, investigating, fixing, and verifying.
+Improve the UX quality of surfaces by auditing, investigating, fixing,
+and verifying. One surface per cycle — quality beats throughput.
 
-## Cycle: Audit → Pick → Investigate → Fix → Verify → Loop
+## Cycle: Audit → Triage → Pick → Investigate → Fix → Verify → Loop
+{% if cmd.signals_consume %}
+
+### 0. Consume signals first
+
+Before reading the backlog, check `.dazzle/signals/` for events emitted
+by other loops since our last run:
+
+```
+dazzle agent signals --source {{ cmd.name }} --consume
+```
+
+Kinds this command subscribes to:
+{% for signal_kind in cmd.signals_consume %}
+- `{{ signal_kind }}` — if seen, re-audit any row referencing the
+  affected surface/entity; a fix may have already resolved the issue
+{% endfor %}
+{% endif %}
 
 ### 1. Audit
 
-Assess current UX quality by running:
+Assess current UX quality against the running app:
+
 - MCP `composition.audit` — surface-level composition health
 - MCP `dsl.validate` — confirm DSL integrity
 - CLI: `dazzle validate`
 
-Rank surfaces by severity of issues found.
+Rank surfaces by severity.
 
-### 2. Pick
+### 2. Triage — filter out known issues
 
-Select the surface with the worst audit score from `{{ cmd.loop.backlog_file }}`.
-If the backlog is empty, populate it from the audit results.
+**Do NOT mark a gap actionable before checking it against known issues
+and the sentinel log.** Silent false positives are the #1 wasted-cycle
+source for polish.
 
-### 3. Investigate
+For each new audit finding:
+
+1. **GitHub issues** — run:
+   ```
+   gh issue list --state open --search "<surface-name> in:title,body" --limit 5
+   ```
+   If an open issue already describes the finding, mark the backlog row
+   `BLOCKED` with `tracked: #NNN` in Notes. Skip to the next finding.
+
+2. **Sentinel findings** — run:
+   ```
+   mcp__dazzle__sentinel operation=findings
+   ```
+   If the finding correlates with an existing sentinel entry (same
+   surface + same category), mark the backlog row `BLOCKED` with
+   `sentinel: <finding-id>`. Don't attempt a fix — the framework-side
+   investigation owns it.
+
+3. **Recently-shipped fix-committed signal** — if step 0 surfaced a
+   `fix-committed` signal for this surface, re-run the audit with
+   `dazzle validate --verbose` to confirm the finding is still real.
+   If not, mark DONE.
+
+Findings that survive triage become new PENDING rows in
+`{{ cmd.loop.backlog_file }}`.
+
+### 3. Pick
+
+Select the surface with the worst post-triage audit score from
+`{{ cmd.loop.backlog_file }}`. Mark IN_PROGRESS.
+
+### 4. Investigate
 
 For the selected surface:
 - MCP `dsl.inspect_surface` to review its definition
-- Observe the surface in the running app
-- Note layout issues, missing fields, confusing labels, broken interactions
+- Observe the surface in the running app (click in, fill forms, watch
+  for silent failures)
+- Note layout issues, missing fields, confusing labels, broken
+  interactions
 
-### 4. Fix
+### 5. Fix
 
 Make targeted improvements:
-- Fix layout and field ordering issues in the DSL
+- Fix layout and field ordering in the DSL
 - Improve labels and descriptions
 - Correct component type mismatches
 
-Keep changes minimal — one surface per cycle.
+**Scope rule:** if the fix requires framework changes (template macros,
+widget renderers, scope resolver), DO NOT attempt them here. File a
+GitHub issue, mark the backlog row BLOCKED with the issue number, and
+move on. Polish operates on project-level DSL only.
 
-### 5. Verify
+### 6. Verify
 
 After fixing:
 - CLI: `dazzle validate` — DSL still valid
 - CLI: `dazzle ux verify` — UX contracts pass
-- Visually confirm the surface in the running app
+- Visually reconfirm the surface in the running app
 
-Commit the fix and log to `{{ cmd.loop.log_file }}`:
+Commit the fix:
+
+```
+git commit -am "polish({surface}): <summary>"
+```
+
+Append to `{{ cmd.loop.log_file }}`:
 ```
 [YYYY-MM-DD HH:MM] Polished: <surface_name> — <summary> (commit <sha>)
 ```
+{% if cmd.signals_emit %}
 
-### 6. Loop
+### 7. Emit signals
 
-Return to step 2. Stop after {{ cmd.loop.max_cycles }} cycles or when all surfaces pass audit.
+When a cycle closes the last actionable row in the backlog, emit:
+
+```
+dazzle agent signals --source {{ cmd.name }} --emit polish-complete \
+    --payload '{"cycle": <N>, "closed": <row_count>}'
+```
+
+Kinds this command emits:
+{% for signal_kind in cmd.signals_emit %}
+- `{{ signal_kind }}`
+{% endfor %}
+
+Downstream loops use this to know when it's safe to re-seed.
+{% endif %}
+
+### 8. Loop
+
+Return to step 0 (consume signals). Stop after {{ cmd.loop.max_cycles }}
+cycles or when all surfaces pass audit (in which case emit
+`polish-complete` and exit).
 
 ## Available Tools
 
@@ -68,4 +150,7 @@ Return to step 2. Stop after {{ cmd.loop.max_cycles }} cycles or when all surfac
 
 - One surface per cycle — do not batch multiple surfaces.
 - Do not change entity definitions unless required by the surface fix.
-- Preserve existing field ordering unless there is a clear UX reason to change it.
+- Preserve existing field ordering unless there is a clear UX reason to
+  change it.
+- Triage (step 2) is non-optional. A finding that duplicates an open
+  GitHub issue or sentinel entry is NOT actionable in this loop.

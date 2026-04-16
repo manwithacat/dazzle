@@ -51,6 +51,42 @@ def evaluate_maturity(gate: MaturityGate, ctx: dict[str, Any]) -> tuple[bool, st
     return True, None
 
 
+_APP_HEALTH_PORTS: tuple[int, ...] = (3000, 8000)
+
+
+def _probe_running_app(project_root: Path) -> bool:
+    """Detect a locally-running Dazzle app (#788).
+
+    Checks, in order:
+      1. ``.dazzle/runtime.json`` or ``.dazzle/*.lock`` marker files in
+         the project (written by ``dazzle serve``).
+      2. TCP socket probes against common local ports. We only care
+         whether something is listening — not what it serves — so a
+         successful ``connect()`` is enough.
+
+    Returns ``True`` as soon as any probe succeeds. Socket failures are
+    swallowed — ``False`` just means "no running app detected," not
+    "the probe crashed."
+    """
+    dazzle_dir = project_root / ".dazzle"
+    if dazzle_dir.is_dir():
+        if (dazzle_dir / "runtime.json").is_file():
+            return True
+        for lock in dazzle_dir.glob("*.lock"):
+            if lock.is_file():
+                return True
+
+    import socket
+
+    for port in _APP_HEALTH_PORTS:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.25):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def build_project_context(project_root: Path) -> dict[str, Any]:
     """Introspect a Dazzle project directory and return context for rendering."""
     ctx: dict[str, Any] = {
@@ -78,6 +114,9 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
             ctx["has_github_remote"] = "github.com" in content
         except Exception:
             pass
+
+    # Probe for a running app — populates requires_running_app gates (#788)
+    ctx["app_running"] = _probe_running_app(project_root)
 
     # Try to parse AppSpec for counts
     try:
