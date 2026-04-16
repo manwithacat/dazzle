@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.1] - 2026-04-16
+
+### Fixed
+- Process executors: DB-connection failures now raise instead of silently returning `{}`
+- Process executors: foreach steps with 100% sub-step failures now raise instead of reporting success
+- Silent email message-read error (`JSONDecodeError`/`KeyError` caught with bare pass)
+- Thread-unsafe lazy-init singletons converted to `lru_cache` or `threading.Lock` (7 locations)
+- Bare `# type: ignore` comments replaced with specific error codes
+
+### Changed
+- Moved `agent_commands` shared modules to `dazzle.services` (fixes MCP→CLI import cycle)
+- Consolidated divergent HTTP retry implementations into `dazzle.core.http_client`
+- Deleted duplicate Celery module (`process_celery_tasks.py`, ~750 lines)
+- Split `get_consolidated_tools()` from 1477-line function into per-tool factories
+- Replaced 30 `Any` annotations with concrete types in `route_generator.py` and `server.py`
+- Moved `field_value_gen` to `dazzle.core.field_values` (fixes UI→testing layer violation)
+
 ## [0.57.0] - 2026-04-16
 
 ### Added
