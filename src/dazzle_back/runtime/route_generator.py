@@ -851,12 +851,14 @@ def _build_cedar_handler(
             raise HTTPException(status_code=403, detail="Forbidden")
 
         current_user = str(user.id) if user else None
+        _user_email = getattr(user, "email", None) if user else None
         raw_roles = list(getattr(user, "roles", [])) if user else []
         _is_su = ctx.is_superuser
         result = await core_fn(
             id,
             request,
             current_user=current_user,
+            user_email=_user_email,
             existing=existing,
             user_roles=raw_roles,
             is_superuser=_is_su,
@@ -934,10 +936,12 @@ def _build_auth_handler(
 
         raw_roles = list(getattr(user, "roles", [])) if user else []
         _is_su = getattr(user, "is_superuser", False) if user else False
+        _user_email = getattr(user, "email", None) if user else None
         result = await core_fn(
             id,
             request,
             current_user=current_user,
+            user_email=_user_email,
             existing=existing,
             user_roles=raw_roles,
             is_superuser=_is_su,
@@ -1832,6 +1836,95 @@ def _extract_result_id(result: Any) -> str | None:
     return None
 
 
+async def resolve_backed_entity_refs(
+    body: dict[str, Any],
+    input_schema: type[BaseModel],
+    persona_ref_map: dict[str, tuple[str, str, Any]] | None,
+    user_roles: list[str],
+    current_user: str | None,
+    user_email: str | None,
+) -> None:
+    """Auto-inject persona-backed entity refs into missing form fields.
+
+    Cycle 249 (closes EX-049). When a ``ref Tester`` field is missing
+    from the request body AND the current user's role is ``tester``
+    AND persona ``tester`` declares ``backed_by: Tester``, this
+    helper looks up the Tester row via the ``link_via`` field and
+    injects the Tester's ID.
+
+    Args:
+        body: Parsed request body dict (mutated in place).
+        input_schema: Pydantic schema for required-field detection.
+        persona_ref_map: Maps ``fk_field_name`` →
+            ``(target_entity, link_via, repository)`` for each ref
+            field that targets a persona-backed entity. Built at
+            route-registration time from ``entity_ref_targets`` +
+            the appspec's ``backed_by`` declarations.
+        user_roles: The current user's roles (with or without
+            ``role_`` prefix).
+        current_user: Auth user id string (used for ``link_via: id``).
+        user_email: Auth user email (used for ``link_via: email``).
+    """
+    if not persona_ref_map or not user_roles:
+        return
+
+    for fk_field, (target_entity, link_via, repo) in persona_ref_map.items():
+        # Skip if the body already has a value for this field
+        existing = body.get(fk_field)
+        if existing is not None:
+            continue
+
+        # Skip if the field isn't required on the schema
+        field_info = input_schema.model_fields.get(fk_field)
+        if field_info is None or not field_info.is_required():
+            continue
+
+        # Resolve the lookup value based on link_via
+        if link_via == "id" and current_user:
+            # Convention: auth user ID == entity ID (zero-cost, no DB lookup)
+            body[fk_field] = current_user
+        elif link_via == "email" and user_email and repo:
+            # DB lookup: find the entity row where email matches
+            try:
+                result = await repo.get_one(filters={link_via: user_email})
+                if result:
+                    entity_id = getattr(result, "id", None) or (
+                        result.get("id") if isinstance(result, dict) else None
+                    )
+                    if entity_id:
+                        body[fk_field] = str(entity_id)
+            except Exception:
+                import logging
+
+                logging.getLogger(__name__).debug(
+                    "backed_by lookup failed for %s.%s=%s",
+                    target_entity,
+                    link_via,
+                    user_email,
+                    exc_info=True,
+                )
+        elif user_email and repo:
+            # Generic link_via field — DB lookup
+            try:
+                result = await repo.get_one(filters={link_via: user_email})
+                if result:
+                    entity_id = getattr(result, "id", None) or (
+                        result.get("id") if isinstance(result, dict) else None
+                    )
+                    if entity_id:
+                        body[fk_field] = str(entity_id)
+            except Exception:
+                import logging
+
+                logging.getLogger(__name__).debug(
+                    "backed_by lookup failed for %s.%s=%s",
+                    target_entity,
+                    link_via,
+                    user_email,
+                    exc_info=True,
+                )
+
+
 def inject_current_user_refs(
     body: dict[str, Any],
     input_schema: type[BaseModel],
@@ -1890,6 +1983,7 @@ def create_create_handler(
     cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     user_ref_fields: list[str] | None = None,
+    persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -1901,6 +1995,10 @@ def create_create_handler(
             validation, provided the field is declared required in the
             Pydantic input schema. See ``inject_current_user_refs``.
             Closes manwithacat/dazzle#774.
+        persona_ref_map: Maps ``fk_field_name`` →
+            ``(target_entity, link_via, repository)`` for each ref
+            field that targets a persona-backed entity. Cycle 249
+            (closes EX-049). See ``resolve_backed_entity_refs``.
     """
 
     def _build_redirect_url(result: Any) -> str | None:
@@ -1929,6 +2027,22 @@ def create_create_handler(
         # Auto-inject current_user for missing required `ref User` fields
         # (manwithacat/dazzle#774). See inject_current_user_refs for the full rule set.
         inject_current_user_refs(body, input_schema, user_ref_fields, current_user)
+
+        # Auto-inject persona-backed entity refs for missing required fields
+        # (cycle 249, closes EX-049). See resolve_backed_entity_refs for
+        # the full rule set. Uses user_email from the auth context to do
+        # an async DB lookup when link_via != "id".
+        _user_email = _extra.get("user_email")
+        _user_roles = _extra.get("user_roles", [])
+        if persona_ref_map:
+            await resolve_backed_entity_refs(
+                body,
+                input_schema,
+                persona_ref_map,
+                _user_roles or [],
+                current_user,
+                _user_email,
+            )
 
         data = input_schema.model_validate(body)
 
@@ -1980,6 +2094,7 @@ def create_update_handler(
         existing: Any = None,
         user_roles: list[str] | None = None,
         is_superuser: bool = False,
+        **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
@@ -2601,6 +2716,10 @@ class RouteGenerator:
         self.entity_graph_specs = entity_graph_specs or {}
         self.node_graph_specs = node_graph_specs or {}
         self.db_manager = db_manager
+        # Cycle 249 (EX-049): persona-backed entity map.
+        # Maps entity_name → (persona_id, link_via) for each persona that
+        # declares ``backed_by``. Built by the caller from appspec.personas.
+        self.persona_backed_entities: dict[str, tuple[str, str]] = {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -2684,6 +2803,22 @@ class RouteGenerator:
                 _user_ref_fields = [
                     fk_field for fk_field, target in _refs.items() if target == "User"
                 ]
+                # Cycle 249 (EX-049): build persona_ref_map for backed_by auto-injection.
+                # For each ref field that targets a persona-backed entity, record
+                # the link_via + repository so the create handler can do the async
+                # lookup at request time.
+                _persona_ref_map: dict[str, tuple[str, str, Any]] | None = None
+                _backed = getattr(self, "persona_backed_entities", None) or {}
+                if _backed:
+                    _prm: dict[str, tuple[str, str, Any]] = {}
+                    for fk_field, target in _refs.items():
+                        if target in _backed and target != "User":
+                            _persona_id, _link_via = _backed[target]
+                            _target_repo = self.services.get(target)
+                            if _target_repo:
+                                _prm[fk_field] = (target, _link_via, _target_repo)
+                    _persona_ref_map = _prm or None
+
                 handler = create_create_handler(
                     service,
                     create_schema,
@@ -2696,6 +2831,7 @@ class RouteGenerator:
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
                     user_ref_fields=_user_ref_fields or None,
+                    persona_ref_map=_persona_ref_map,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:

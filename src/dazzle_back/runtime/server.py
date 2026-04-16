@@ -864,6 +864,17 @@ class DazzleBackendApp:
             node_graph_specs=node_graph_specs,
             db_manager=self._db_manager,
         )
+
+        # Cycle 249 (EX-049): populate persona_backed_entities from appspec
+        # so the create handler can auto-inject refs to backing entities.
+        if self._appspec and self._appspec.personas:
+            for persona in self._appspec.personas:
+                if persona.backed_by:
+                    route_generator.persona_backed_entities[persona.backed_by] = (
+                        persona.id,
+                        persona.link_via,
+                    )
+
         router = route_generator.generate_all_routes(
             self._endpoint_specs,
             service_specs,

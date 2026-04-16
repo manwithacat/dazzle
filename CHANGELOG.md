@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.46] - 2026-04-16
+
+### Added
+- **Runtime auto-injection for persona-backed entities (cycle 249,
+  closes EX-049).** Completes the cycle 248 `backed_by` feature by
+  wiring the declaration through at runtime. New async
+  `resolve_backed_entity_refs` helper in `route_generator.py` runs
+  in the create handler after `inject_current_user_refs`. When a
+  `ref Tester` field is missing from the body AND persona `tester`
+  declares `backed_by: Tester`, the helper resolves the backing
+  entity: for `link_via: id` it injects `current_user` directly
+  (zero-cost, same convention as the existing #774 pattern); for
+  `link_via: email` it does an async `repo.get_one({email: user_email})`
+  lookup. The `persona_ref_map` is built at route-registration time
+  from `entity_ref_targets` + `persona_backed_entities` (populated
+  from the appspec in `server.py`). Auth wrappers now pass
+  `user_email` alongside `current_user` to all core handlers.
+
+### Fixed
+- **Cedar update handler missing `**_extra` kwargs.** The update
+  handler with Cedar access control had an explicit signature that
+  rejected unexpected keyword arguments. Adding `user_email` to the
+  auth wrapper exposed this as a TypeError. Added `**_extra` to the
+  signature for forward compatibility with future auth-context fields.
+
+### Agent Guidance
+- **When adding a new field to the auth-wrapper→core-handler call
+  path**, ensure ALL handler `_core` signatures accept `**_extra`
+  or the specific new kwarg. There are 4 distinct `_core` functions
+  in `route_generator.py` (read/create/update/delete); the update
+  handler's Cedar variant was the only one missing `**_extra` before
+  this fix. Cycle 249 adds `user_email` — any future auth-context
+  field should also be passed as a kwarg and accepted via `**_extra`.
+
 ## [0.55.45] - 2026-04-16
 
 ### Added
