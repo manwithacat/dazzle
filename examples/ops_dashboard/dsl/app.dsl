@@ -15,6 +15,7 @@ app ops_dashboard "Operations Dashboard":
 # =============================================================================
 
 entity System "System":
+  display_field: name
   id: uuid pk
   name: str(200) required
   service_type: enum[web,api,database,cache,queue]=web

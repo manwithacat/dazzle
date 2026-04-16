@@ -26,6 +26,7 @@ feedback_widget: enabled
 # =============================================================================
 
 entity User "Team Member":
+  display_field: name
   id: uuid pk
   email: str(200) unique required
   name: str(100) required
@@ -51,6 +52,7 @@ entity User "Team Member":
 # =============================================================================
 
 entity Task "Task":
+  display_field: title
   id: uuid pk
   title: str(200) required
   description: text
