@@ -15,7 +15,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from functools import lru_cache
-from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -26,8 +25,13 @@ logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
-def _get_tb() -> ModuleType:
-    """Lazy import TigerBeetle module."""
+def _get_tb() -> Any:
+    """Lazy import TigerBeetle module.
+
+    Returns the imported module as ``Any`` because the external package
+    ships no type stubs; callers that need a tighter type can annotate
+    at the use site.
+    """
     try:
         from tigerbeetle import client as tb
 
