@@ -50,6 +50,7 @@ persona manager "Manager":
 
 # Entity: Device
 entity Device "Device":
+  display_field: name
   id: uuid pk
   name: str(200) required
   model: str(200) required
@@ -89,6 +90,7 @@ entity Device "Device":
 
 # Entity: Tester
 entity Tester "Tester":
+  display_field: name
   id: uuid pk
   name: str(200) required
   email: str(255) required unique
