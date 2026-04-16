@@ -1,0 +1,17 @@
+[command]
+name = "ship"
+version = "1.0.0"
+title = "Ship"
+description = "One-shot ship — commit, push, and verify CI."
+pattern = "one-shot"
+
+[maturity]
+min_entities = 1
+requires = ["validate"]
+
+[tools]
+mcp = ["dsl.validate", "dsl.lint", "sentinel.findings"]
+cli = ["dazzle validate", "dazzle lint", "dazzle sentinel scan"]
+
+[skill_template]
+file = "ship.md.j2"

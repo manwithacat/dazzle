@@ -1,0 +1,23 @@
+[command]
+name = "issues"
+version = "1.0.0"
+title = "Issues"
+description = "Iterative GitHub issue resolver — triage, implement, ship, repeat."
+pattern = "loop"
+
+[maturity]
+requires_github_remote = true
+
+[loop]
+backlog_file = "agent/issues-log.md"
+log_file = "agent/issues-log.md"
+lock_file = "agent/issues.lock"
+max_cycles = 50
+stale_lock_minutes = 30
+
+[tools]
+mcp = ["dsl.validate", "dsl.lint"]
+cli = ["dazzle validate", "dazzle lint"]
+
+[skill_template]
+file = "issues.md.j2"

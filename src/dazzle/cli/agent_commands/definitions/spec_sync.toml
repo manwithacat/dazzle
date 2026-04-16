@@ -1,0 +1,16 @@
+[command]
+name = "spec-sync"
+version = "1.0.0"
+title = "Spec Sync"
+description = "One-shot sync of DSL definitions with an external spec document."
+pattern = "one-shot"
+
+[maturity]
+requires_spec_md = true
+
+[tools]
+mcp = ["dsl.validate", "dsl.inspect_entity", "spec_analyze.discover_entities"]
+cli = ["dazzle validate"]
+
+[skill_template]
+file = "spec_sync.md.j2"

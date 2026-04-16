@@ -1,0 +1,24 @@
+[command]
+name = "qa"
+version = "1.0.0"
+title = "QA"
+description = "Agent-driven QA loop — verify stories against a running app."
+pattern = "loop"
+
+[maturity]
+min_stories = 1
+requires_running_app = true
+
+[loop]
+backlog_file = "agent/qa-backlog.md"
+log_file = "agent/qa-log.md"
+lock_file = "agent/qa.lock"
+max_cycles = 50
+stale_lock_minutes = 30
+
+[tools]
+mcp = ["dsl.validate", "story.get", "story.coverage"]
+cli = ["dazzle test run", "dazzle test coverage"]
+
+[skill_template]
+file = "qa.md.j2"
