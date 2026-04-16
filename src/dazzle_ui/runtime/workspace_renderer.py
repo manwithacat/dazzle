@@ -252,6 +252,18 @@ def build_workspace_context(
             display_mode = display_mode.value
         display_mode = str(display_mode).upper()
 
+        # Cycle 246 — EX-047 aggregate display-mode inference.
+        # When a region declares `aggregate: { ... }` but omits an
+        # explicit `display:`, the parser default was LIST, which
+        # routed the region to the list template and silently dropped
+        # the aggregates. Promote to SUMMARY so the metrics template
+        # renders the tiles. Confirmed on 4 broken regions across 2
+        # apps (simple_task admin_dashboard.metrics,
+        # admin_dashboard.team_metrics, team_overview.metrics,
+        # fieldtest_hub engineering_dashboard.metrics).
+        if display_mode == "LIST" and region.aggregates:
+            display_mode = "SUMMARY"
+
         template = DISPLAY_TEMPLATE_MAP.get(display_mode, "workspace/regions/list.html")
 
         col_span = _default_col_span(stage, idx)

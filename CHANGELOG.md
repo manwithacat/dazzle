@@ -9,6 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.43] - 2026-04-16
+
+### Added
+- **Per-persona `read_only` for list surfaces (cycle 244, EX-048
+  partial).** Extended `_apply_persona_overrides` to handle the
+  cycle 240 PersonaVariant resolver pattern with a third field.
+  When a DSL variant declares `for <persona>: read_only: true`,
+  the per-request table copy has `create_url=None`,
+  `bulk_actions=False`, and `inline_editable=[]` before rendering.
+  Distinct from the existing `_should_suppress_mutations` helper
+  (which gates on `permit:` rules) — this is an explicit
+  persona-variant declaration.
+
+- **Per-persona `hide` + `read_only` for form surfaces (cycle 245,
+  closes gap doc #2 axis 4).** New `_apply_persona_form_overrides`
+  helper in `page_routes.py`, parallel to cycle 243's table
+  resolver. `FormContext.persona_hide: dict[str, list[str]]` and
+  `FormContext.persona_read_only: set[str]` compiled from
+  `ux.persona_variants` in `_compile_form_surface`. At request
+  time, hidden fields are removed from `req_form.fields`, every
+  section's field list, AND `req_form.initial_values` (defensive
+  — prevents hidden-field injection via pre-filled POST bodies).
+  Read-only forms raise `HTTPException(403)` because a form is
+  inherently a mutation affordance. Added a new per-request branch
+  for CREATE-mode forms which previously used `ctx.form` directly
+  with no mutation. **Closes gap doc #2 axis 4**:
+  persona-unaware create-form field visibility is now a
+  DSL-declarable override via `for <persona>: hide: field1, field2`
+  on create/edit surfaces.
+
+### Fixed
+- **Aggregate display-mode inference (cycle 246, closes EX-047).**
+  When a DSL region declared `aggregate: { ... }` but omitted
+  `display:`, the display mode defaulted to LIST, routing the
+  region through the list template which dropped the aggregates
+  and rendered as an empty list. Fixed in `workspace_renderer.py`
+  with a 3-line inference: if `display_mode == "LIST"` and
+  `region.aggregates` is non-empty, promote to `SUMMARY`. Closes
+  4 previously-broken regions across 2 apps: simple_task
+  `admin_dashboard.metrics`, `admin_dashboard.team_metrics`,
+  `team_overview.metrics`, fieldtest_hub
+  `engineering_dashboard.metrics`. Cross-app HTTP verified:
+  simple_task admin_dashboard/metrics now renders 5 tiles (Total
+  Tasks / Todo / In Progress / In Review / Done), previously zero.
+
+### Agent Guidance
+- **PersonaVariant runtime wiring pattern is now well-established.**
+  Four cycles (240/243/244/245) have used the same shape: compile
+  a `persona_<field>s: dict|set` into the relevant template
+  context, populate from `ux.persona_variants` in the compiler,
+  resolve per-request via `_apply_persona_overrides` (tables) or
+  `_apply_persona_form_overrides` (forms). Both helpers use
+  first-wins role matching with `role_` prefix stripping. When
+  extending to a new PersonaVariant field, follow the same recipe
+  in the relevant helper's docstring.
+- **Aggregate regions default to SUMMARY now.** If a DSL region
+  has `aggregate:` without explicit `display:`, it renders as a
+  KPI tile grid (via metrics.html), not as an empty list. If you
+  want a list with aggregates below it, use `display: summary`
+  explicitly — the metrics template supports both.
+
 ## [0.55.42] - 2026-04-16
 
 ### Added

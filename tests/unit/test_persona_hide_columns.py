@@ -223,6 +223,19 @@ class TestPersonaHideCompilation:
         assert table.persona_hide == {"member": ["assigned_to"]}
         assert table.persona_empty_messages == {"member": "You have no assigned tasks"}
 
+    def test_read_only_populates_set(self) -> None:
+        """Cycle 244 — read_only variant populates persona_read_only."""
+        ux = ir.UXSpec(
+            persona_variants=[
+                ir.PersonaVariant(persona="member", read_only=True),
+                ir.PersonaVariant(persona="admin", read_only=False),
+            ],
+        )
+        page = self._compile(ux)
+        table = page.table
+        assert table is not None
+        assert table.persona_read_only == {"member"}
+
 
 # ---------------------------------------------------------------------------
 # Resolver — the per-request helper that applies the overrides
@@ -349,3 +362,85 @@ class TestApplyPersonaOverrides:
         table = self._make_table(persona_hide={"member": []})
         _apply_persona_overrides(table, ["member"])
         assert all(not c.hidden for c in table.columns)
+
+    # --- Cycle 244 — read_only PersonaVariant extension ---
+
+    def _make_mutable_table(
+        self,
+        persona_read_only: set[str] | None = None,
+    ):
+        from dazzle_ui.runtime.template_context import ColumnContext, TableContext
+
+        return TableContext(
+            entity_name="Task",
+            title="Tasks",
+            api_endpoint="/tasks",
+            columns=[
+                ColumnContext(key="title", label="Title", type="text"),
+                ColumnContext(key="status", label="Status", type="badge"),
+            ],
+            create_url="/app/task/create",
+            bulk_actions=True,
+            inline_editable=["title", "status"],
+            persona_read_only=persona_read_only or set(),
+        )
+
+    def test_read_only_suppresses_mutations(self) -> None:
+        from dazzle_ui.runtime.page_routes import _apply_persona_overrides
+
+        table = self._make_mutable_table(persona_read_only={"member"})
+        _apply_persona_overrides(table, ["member"])
+        assert table.create_url is None
+        assert table.bulk_actions is False
+        assert table.inline_editable == []
+
+    def test_read_only_non_matching_persona_preserves_mutations(self) -> None:
+        from dazzle_ui.runtime.page_routes import _apply_persona_overrides
+
+        table = self._make_mutable_table(persona_read_only={"member"})
+        _apply_persona_overrides(table, ["admin"])
+        assert table.create_url == "/app/task/create"
+        assert table.bulk_actions is True
+        assert table.inline_editable == ["title", "status"]
+
+    def test_read_only_stacks_with_hide(self) -> None:
+        """A persona can be both read-only AND have hide overrides."""
+        from dazzle_ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle_ui.runtime.template_context import ColumnContext, TableContext
+
+        table = TableContext(
+            entity_name="Task",
+            title="Tasks",
+            api_endpoint="/tasks",
+            columns=[
+                ColumnContext(key="title", label="Title", type="text"),
+                ColumnContext(key="assigned_to", label="Assignee", type="text"),
+            ],
+            create_url="/app/task/create",
+            bulk_actions=True,
+            inline_editable=["title"],
+            persona_hide={"member": ["assigned_to"]},
+            persona_read_only={"member"},
+        )
+        _apply_persona_overrides(table, ["member"])
+        # hide applied
+        assert next(c for c in table.columns if c.key == "assigned_to").hidden is True
+        # read_only applied
+        assert table.create_url is None
+        assert table.bulk_actions is False
+        assert table.inline_editable == []
+
+    def test_read_only_respects_role_prefix(self) -> None:
+        from dazzle_ui.runtime.page_routes import _apply_persona_overrides
+
+        table = self._make_mutable_table(persona_read_only={"member"})
+        _apply_persona_overrides(table, ["role_member"])
+        assert table.create_url is None
+
+    def test_read_only_empty_set_is_noop(self) -> None:
+        from dazzle_ui.runtime.page_routes import _apply_persona_overrides
+
+        table = self._make_mutable_table(persona_read_only=set())
+        _apply_persona_overrides(table, ["member"])
+        assert table.create_url == "/app/task/create"
+        assert table.bulk_actions is True

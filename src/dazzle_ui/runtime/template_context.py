@@ -122,6 +122,16 @@ class TableContext(BaseModel):
     # list, the matching columns on the per-request table copy have
     # ``hidden=True`` set before rendering.
     persona_hide: dict[str, list[str]] = Field(default_factory=dict)
+    # Per-persona read-only declarations, keyed by persona id.
+    # Compiled from `for <persona>: read_only: true` DSL blocks
+    # (cycle 244, continues the EX-048 PersonaVariant wiring work).
+    # Resolved at request time — when the current user's persona is
+    # in this set, the per-request table copy has ``create_url``,
+    # ``bulk_actions``, and ``inline_editable`` all suppressed before
+    # rendering. Distinct from the existing ``_should_suppress_mutations``
+    # helper which gates on ``permit:`` rules; this set gates on an
+    # explicit DSL persona-variant declaration.
+    persona_read_only: set[str] = Field(default_factory=set)
     search_first: bool = False
     filter_values: dict[str, str] = Field(default_factory=dict)
     table_id: str = ""
@@ -150,6 +160,22 @@ class FormContext(BaseModel):
     cancel_url: str = "/"
     initial_values: dict[str, Any] = Field(default_factory=dict)
     sections: list[FormSectionContext] = Field(default_factory=list)
+    # Per-persona field hide lists, keyed by persona id.
+    # Compiled from `for <persona>: hide: field1, field2` DSL blocks
+    # (cycle 245, extends the cycle 243 TableContext pattern to forms).
+    # Resolved at request time in page_routes.py — when the current
+    # user's persona has a hide list, the matching fields and
+    # initial_values entries on the per-request form copy are removed
+    # before rendering. Closes gap doc #2 axis 4 (persona-unaware
+    # create-form field visibility, residual from cycles 221/234).
+    persona_hide: dict[str, list[str]] = Field(default_factory=dict)
+    # Per-persona read-only declarations, keyed by persona id.
+    # Compiled from `for <persona>: read_only: true` DSL blocks
+    # (cycle 245). Resolved at request time — when the current user's
+    # persona is in this set, the per-request form copy returns 403
+    # (handled at the page_routes level; the form should never render
+    # for a read-only persona).
+    persona_read_only: set[str] = Field(default_factory=set)
 
 
 class TransitionContext(BaseModel):

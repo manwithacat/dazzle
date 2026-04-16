@@ -276,8 +276,9 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
 
     persona_empty = getattr(req_table, "persona_empty_messages", None) or {}
     persona_hide = getattr(req_table, "persona_hide", None) or {}
+    persona_read_only = getattr(req_table, "persona_read_only", None) or set()
 
-    if not persona_empty and not persona_hide:
+    if not persona_empty and not persona_hide and not persona_read_only:
         return
 
     for role in user_roles:
@@ -303,12 +304,92 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
                         col.hidden = True
             matched = True
 
+        # Read-only persona declaration (cycle 244). Suppresses every
+        # mutation affordance on the table: Create button, bulk-action
+        # bar, and inline-edit. Distinct from ``_should_suppress_mutations``
+        # which gates on ``permit:`` rules — this is an explicit DSL
+        # persona-variant declaration and takes precedence.
+        if normalised in persona_read_only:
+            req_table.create_url = None
+            req_table.bulk_actions = False
+            req_table.inline_editable = []
+            matched = True
+
         # First matching persona wins for all override fields. Stops
         # the loop early so later roles can't silently clobber earlier
         # ones — the user's primary persona (typically first in the
         # user_roles list) takes precedence.
         if matched:
             return
+
+
+def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
+    """Apply per-persona PersonaVariant overrides to a per-request form copy.
+
+    Cycle 245 — form-surface parallel to ``_apply_persona_overrides``.
+    Walks ``user_roles`` (with the ``role_`` prefix stripped) in order
+    and applies the first matching persona's overrides from the
+    compile-time dicts on ``req_form``:
+
+    - ``persona_hide: dict[str, list[str]]`` — field hide list per persona
+    - ``persona_read_only: set[str]`` — persona ids that cannot mutate
+
+    Hide semantics: fields whose ``name`` is in the persona's hide list
+    are removed from ``req_form.fields``, ``req_form.sections[*].fields``,
+    and ``req_form.initial_values``. Removing from initial_values as
+    well prevents any pre-filled value from landing in the POST body
+    (defensive against hidden-field injection — the hidden fields
+    genuinely don't exist for this persona).
+
+    Read-only semantics: if the persona is in ``persona_read_only``,
+    the helper returns ``True`` to signal the caller should abort
+    form rendering entirely (typically by raising 403 or redirecting
+    to the read-only detail view). The helper does NOT mutate the
+    form in this case — the caller decides what to do.
+
+    Returns ``True`` if the persona is read-only (caller should
+    abort), ``False`` otherwise.
+
+    Closes gap doc #2 axis 4 (persona-unaware-affordances, create-form
+    field visibility) for the list-to-form half. The list-column half
+    was closed in cycle 243.
+    """
+    if not user_roles:
+        return False
+
+    persona_hide = getattr(req_form, "persona_hide", None) or {}
+    persona_read_only = getattr(req_form, "persona_read_only", None) or set()
+
+    if not persona_hide and not persona_read_only:
+        return False
+
+    for role in user_roles:
+        normalised = role.removeprefix("role_")
+
+        matched = False
+
+        # Read-only persona declaration. Signal caller to abort.
+        if normalised in persona_read_only:
+            return True
+
+        # Field hide override. Remove matching fields from the flat
+        # list, every section's field list, and initial_values.
+        if normalised in persona_hide:
+            hide_set = set(persona_hide[normalised])
+            if hide_set:
+                req_form.fields = [f for f in req_form.fields if f.name not in hide_set]
+                for section in req_form.sections or []:
+                    section.fields = [f for f in section.fields if f.name not in hide_set]
+                if req_form.initial_values:
+                    for key in list(req_form.initial_values.keys()):
+                        if key in hide_set:
+                            del req_form.initial_values[key]
+            matched = True
+
+        if matched:
+            return False
+
+    return False
 
 
 def _filter_nav_by_entity_access(
@@ -748,6 +829,30 @@ async def _page_handler(
         req_form.action_url = req_form.action_url.replace("{id}", str(path_id))
         if req_form.cancel_url:
             req_form.cancel_url = req_form.cancel_url.replace("{id}", str(path_id))
+
+        # Cycle 245 — apply per-persona PersonaVariant overrides to the
+        # per-request form copy. Mirrors the cycle 243 list-surface
+        # pattern. Returns True if the persona is read-only, in which
+        # case we abort form rendering with a 403.
+        if ctx.user_roles and _apply_persona_form_overrides(req_form, ctx.user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="This surface is read-only for your role",
+            )
+
+        _ctx_overrides["form"] = req_form
+
+    elif ctx.form and ctx.form.mode == "create":
+        # Cycle 245 — create forms previously used ctx.form directly
+        # with no per-request mutation. Now they need a per-request
+        # copy so PersonaVariant hide/read_only overrides can apply.
+        req_form = ctx.form.model_copy(deep=True)
+
+        if ctx.user_roles and _apply_persona_form_overrides(req_form, ctx.user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="This surface is read-only for your role",
+            )
 
         _ctx_overrides["form"] = req_form
 

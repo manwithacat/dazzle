@@ -172,6 +172,100 @@ class TestRegionContextWiring:
         ctx = build_workspace_context(ws)
         assert ctx.regions[0].sort == [{"field": "due_date", "direction": "desc"}]
 
+    # ---- Cycle 246 — EX-047 aggregate display-mode inference ----
+
+    def _make_workspace_with_aggregate(self, display: Any = None):
+        """Region with aggregates and configurable (or default) display."""
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+
+        kwargs = {
+            "name": "metrics",
+            "source": "Task",
+            "aggregates": {
+                "total": "count(Task)",
+                "done": "count(Task where status = done)",
+            },
+        }
+        if display is not None:
+            kwargs["display"] = display
+        else:
+            # Default — don't pass display, use IR default (LIST)
+            pass
+        region = WorkspaceRegion(**kwargs)
+        return WorkspaceSpec(name="admin_dashboard", title="Admin", regions=[region])
+
+    def test_aggregate_without_display_promotes_to_summary(self) -> None:
+        """Region with `aggregate:` but no `display:` should route to SUMMARY.
+
+        Before cycle 246 the display defaulted to LIST, routing the
+        region through list.html which dropped the aggregates and
+        rendered as an empty list. 4 regions across 2 apps were
+        affected: simple_task admin_dashboard.metrics +
+        admin_dashboard.team_metrics + team_overview.metrics,
+        fieldtest_hub engineering_dashboard.metrics.
+        """
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = self._make_workspace_with_aggregate(display=None)
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].display == "SUMMARY"
+        assert ctx.regions[0].template == "workspace/regions/metrics.html"
+
+    def test_explicit_display_summary_preserved(self) -> None:
+        """Explicit `display: summary` is unchanged by the inference."""
+        from dazzle.core.ir.workspaces import DisplayMode
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = self._make_workspace_with_aggregate(display=DisplayMode.SUMMARY)
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].display == "SUMMARY"
+        assert ctx.regions[0].template == "workspace/regions/metrics.html"
+
+    def test_explicit_display_list_with_aggregates_still_promotes(self) -> None:
+        """An explicit `display: list` with aggregates is still promoted.
+
+        The inference fires on ``display_mode == "LIST"`` which is
+        either the parser default OR an explicit declaration. Both
+        cases are treated the same because: (a) the DSL author who
+        explicitly writes `display: list` probably means "tabular
+        output not metrics", but they also wrote `aggregate:` — which
+        is contradictory; (b) promoting is the forgiving option, since
+        the alternative is silently dropping the aggregates. A future
+        cycle could add a lint warning for the contradiction.
+        """
+        from dazzle.core.ir.workspaces import DisplayMode
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = self._make_workspace_with_aggregate(display=DisplayMode.LIST)
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].display == "SUMMARY"
+
+    def test_no_aggregates_preserves_list_default(self) -> None:
+        """A plain list region without aggregates is unaffected."""
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        region = WorkspaceRegion(name="tasks", source="Task")
+        ws = WorkspaceSpec(name="ws", title="WS", regions=[region])
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].display == "LIST"
+        assert ctx.regions[0].template == "workspace/regions/list.html"
+
+    def test_kanban_with_aggregates_preserved(self) -> None:
+        """A kanban region with aggregates stays kanban (inference only touches LIST)."""
+        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        region = WorkspaceRegion(
+            name="board",
+            source="Task",
+            display=DisplayMode.KANBAN,
+            aggregates={"total": "count(Task)"},
+        )
+        ws = WorkspaceSpec(name="ws", title="WS", regions=[region])
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].display == "KANBAN"
+
 
 # ---------------------------------------------------------------------------
 # Step 3 — _parse_simple_where

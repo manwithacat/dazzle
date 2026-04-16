@@ -800,12 +800,15 @@ def _compile_list_surface(
     # to the runtime.
     persona_empty_messages: dict[str, str] = {}
     persona_hide: dict[str, list[str]] = {}
+    persona_read_only: set[str] = set()
     if ux and ux.persona_variants:
         for _variant in ux.persona_variants:
             if _variant.empty_message:
                 persona_empty_messages[_variant.persona] = _variant.empty_message
             if _variant.hide:
                 persona_hide[_variant.persona] = list(_variant.hide)
+            if _variant.read_only:
+                persona_read_only.add(_variant.persona)
 
     table_id = f"dt-{surface.name}"
 
@@ -841,6 +844,7 @@ def _compile_list_surface(
             empty_message=empty_message,
             persona_empty_messages=persona_empty_messages,
             persona_hide=persona_hide,
+            persona_read_only=persona_read_only,
             search_first=search_first,
             table_id=table_id,
             inline_editable=inline_editable,
@@ -860,6 +864,21 @@ def _compile_form_surface(
     """Compile a CREATE or EDIT mode surface to a PageContext with form context."""
     fields = _build_form_fields(surface, entity)
     sections = _build_form_sections(surface, entity)
+
+    # Cycle 245 — collect persona-variant overrides for form surfaces.
+    # Mirrors the cycle 243 list-surface path. Currently wires `hide`
+    # and `read_only`; future cycles can extend with `defaults`,
+    # `show`, and `action_primary`.
+    ux = surface.ux
+    persona_hide: dict[str, list[str]] = {}
+    persona_read_only: set[str] = set()
+    if ux and ux.persona_variants:
+        for _variant in ux.persona_variants:
+            if _variant.hide:
+                persona_hide[_variant.persona] = list(_variant.hide)
+            if _variant.read_only:
+                persona_read_only.add(_variant.persona)
+
     if surface.mode == SurfaceMode.CREATE:
         return PageContext(
             page_title=surface.title or f"Create {entity_name}",
@@ -873,6 +892,8 @@ def _compile_form_surface(
                 mode="create",
                 cancel_url=f"{app_prefix}/{entity_slug}",
                 sections=sections,
+                persona_hide=persona_hide,
+                persona_read_only=persona_read_only,
             ),
         )
     else:
@@ -888,6 +909,8 @@ def _compile_form_surface(
                 mode="edit",
                 cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
                 sections=sections,
+                persona_hide=persona_hide,
+                persona_read_only=persona_read_only,
             ),
         )
 
