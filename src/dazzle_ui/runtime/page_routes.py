@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import os
+import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -473,6 +474,550 @@ class _PageDeps:
 
 
 # =============================================================================
+# Per-request context for _page_handler helpers
+# =============================================================================
+
+
+@dataclass
+class _PageRequestContext:
+    """Shared state built once per request, passed to each handler helper."""
+
+    deps: _PageDeps
+    ctx: Any
+    request: Any  # FastAPI Request
+    auth_ctx: Any  # AuthContext | None
+    surface_name: str | None
+    effective_backend_url: str
+    cookies: dict[str, str] | None
+    path_id: Any  # str | None
+    ctx_overrides: dict[str, Any] = field(default_factory=dict)
+
+
+# =============================================================================
+# _page_handler helper functions
+# =============================================================================
+
+
+def _inject_auth_context(prc: _PageRequestContext) -> None:
+    """Resolve auth context from request and inject into page context."""
+    if prc.deps.get_auth_context is None:
+        return
+    try:
+        prc.auth_ctx = prc.deps.get_auth_context(prc.request)
+        prc.ctx.is_authenticated = bool(prc.auth_ctx and prc.auth_ctx.is_authenticated)
+        if prc.auth_ctx and prc.auth_ctx.user:
+            prc.ctx.user_email = prc.auth_ctx.user.email or ""
+            prc.ctx.user_name = prc.auth_ctx.user.username or ""
+            prc.ctx.user_preferences = prc.auth_ctx.preferences or {}
+            # Persona-aware nav filtering: match user roles against
+            # per-persona nav variants compiled from workspace access.
+            roles = getattr(prc.auth_ctx.user, "roles", None) or []
+            prc.ctx.user_roles = list(roles)
+            if prc.ctx.nav_by_persona and roles:
+                for role in roles:
+                    # Roles use "role_" prefix; persona IDs don't
+                    persona_nav = prc.ctx.nav_by_persona.get(role.removeprefix("role_"))
+                    if persona_nav is not None:
+                        prc.ctx.nav_items = persona_nav
+                        break
+
+            # Filter out nav items for entities the user cannot LIST (#583).
+            # This catches entities that appear in an allowed workspace but
+            # whose permit: rules deny the user's role.
+            if prc.ctx.nav_items and prc.deps.entity_cedar_specs and prc.deps.route_entity:
+                prc.ctx.nav_items = _filter_nav_by_entity_access(
+                    prc.ctx.nav_items, prc.deps, prc.auth_ctx
+                )
+    except Exception:
+        logger.debug("Failed to resolve auth context for page", exc_info=True)
+
+
+def _check_surface_access(prc: _PageRequestContext) -> Response | None:
+    """Enforce surface-level access control. Returns a Response to abort, or None."""
+    from dazzle_ui.runtime.surface_access import (
+        SurfaceAccessDenied,
+        check_surface_access,
+    )
+
+    if not prc.surface_name or prc.surface_name not in prc.deps.access_configs:
+        return None
+
+    ac = prc.deps.access_configs[prc.surface_name]
+    user = None
+    user_personas: list[str] | None = None
+    if prc.auth_ctx and prc.auth_ctx.is_authenticated and prc.auth_ctx.user:
+        user = {"id": getattr(prc.auth_ctx.user, "id", None)}
+        _raw = list(getattr(prc.auth_ctx.user, "roles", []))
+        user_personas = [r.removeprefix("role_") for r in _raw]
+    try:
+        check_surface_access(ac, user, user_personas=user_personas, is_api_request=False)
+    except SurfaceAccessDenied as e:
+        if e.is_auth_required and e.redirect_url:
+            return RedirectResponse(url=e.redirect_url, status_code=302)
+        return JSONResponse(
+            status_code=403,
+            content={"detail": e.reason},
+        )
+    return None
+
+
+def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
+    """Enforce entity-level Cedar access rules on page routes (#527).
+
+    Mirrors the LIST gate in route_generator.py: only enforce when all
+    permission rules for the operation are pure role checks (no field
+    conditions). Field-condition rules need a record to evaluate -- those
+    are handled at query time by the API layer's row filters.
+
+    Returns a Response to abort, or None to continue.
+    """
+    if not prc.surface_name or not prc.deps.entity_cedar_specs or prc.auth_ctx is None:
+        return None
+
+    _entity_name = prc.deps.surface_entity.get(prc.surface_name)
+    _cedar_spec = prc.deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
+    if _cedar_spec is None or prc.deps.evaluate_permission is None:
+        return None
+
+    # Determine operation: list surfaces use LIST, create surfaces
+    # use CREATE, others use READ.
+    _mode = prc.deps.surface_mode.get(prc.surface_name, "list")
+    if _mode == "list":
+        _op = AccessOperationKind.LIST
+    elif _mode == "create":
+        _op = AccessOperationKind.CREATE
+    else:
+        _op = AccessOperationKind.READ
+
+    # Only gate when all rules for this operation are pure role checks.
+    # When scopes are present, permit rules are guaranteed role-only
+    # (scope: blocks hold all field-condition logic), so always fire
+    # the gate. When scopes are absent (backward compat), skip if any
+    # rule carries a field condition -- those require a record to evaluate
+    # and are handled at query time by the API layer's row filters.
+    _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
+    _has_scopes = bool(getattr(_cedar_spec, "scopes", None))
+
+    _has_field_conditions = (
+        False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
+    )
+    if not _op_rules or _has_field_conditions:
+        return None
+
+    # Build AccessRuntimeContext from auth context
+    _user = prc.auth_ctx.user if prc.auth_ctx.is_authenticated else None
+    _raw_roles = list(getattr(_user, "roles", [])) if _user else []
+    _runtime_ctx = AccessRuntimeContext(
+        user_id=str(_user.id) if _user else None,
+        roles=[r.removeprefix("role_") for r in _raw_roles],
+        is_superuser=getattr(_user, "is_superuser", False) if _user else False,
+    )
+    _decision = prc.deps.evaluate_permission(
+        _cedar_spec,
+        _op,
+        None,
+        _runtime_ctx,
+        entity_name=_entity_name or "",
+    )
+    if not _decision.allowed:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Forbidden"},
+        )
+    return None
+
+
+async def _handle_detail(prc: _PageRequestContext) -> None:
+    """Fetch and prepare detail page data for the per-request context."""
+    req_detail = prc.ctx.detail.model_copy(deep=True)
+
+    # Fetch item data using the API endpoint template
+    req_detail.item = await _fetch_json(
+        prc.effective_backend_url,
+        prc.ctx.detail.api_endpoint or prc.ctx.detail.delete_url,
+        prc.path_id,
+        prc.cookies,
+    )
+    # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
+    if req_detail.item and "error" not in req_detail.item:
+        if prc.deps.inject_display_names is not None:
+            req_detail.item = prc.deps.inject_display_names(req_detail.item)
+
+    if "error" in req_detail.item:
+        logger.warning(
+            "Detail page data fetch failed for %s/%s: %s",
+            prc.ctx.detail.entity_name,
+            prc.path_id,
+            req_detail.item.get("error"),
+        )
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # Evaluate when_expr for conditional field visibility (#363)
+    if req_detail.item and "error" not in req_detail.item:
+        from dazzle_ui.utils.expression_eval import evaluate_when_expr
+
+        for _field in req_detail.fields:
+            if _field.when_expr:
+                _field.visible = evaluate_when_expr(_field.when_expr, req_detail.item)
+
+    # Evaluate role-based visible conditions (#487)
+    if prc.ctx.user_roles is not None:
+        from dazzle_ui.utils.condition_eval import evaluate_condition
+
+        _role_ctx = {
+            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
+        }
+        for _field in req_detail.fields:
+            if _field.visible_condition:
+                if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
+                    _field.visible = False
+
+        # Hide related tabs whose visible_condition doesn't match (#501)
+        for _group in req_detail.related_groups:
+            for _tab in _group.tabs:
+                if _tab.visible_condition:
+                    if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
+                        _tab.visible = False
+
+    # Suppress Edit/Delete buttons when permit rules deny the operation
+    # or when the workspace declares read_only for the user's persona (#550, #552).
+    if prc.ctx.user_roles is not None:
+        _suppress = _should_suppress_mutations(
+            prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
+        )
+        if _suppress:
+            req_detail.edit_url = None
+            req_detail.delete_url = None
+            req_detail.transitions = []
+            req_detail.integration_actions = []
+        else:
+            # Fine-grained: check UPDATE and DELETE individually
+            if req_detail.edit_url and not _user_can_mutate(
+                prc.deps, prc.surface_name, "update", prc.auth_ctx
+            ):
+                req_detail.edit_url = None
+            if req_detail.delete_url and not _user_can_mutate(
+                prc.deps, prc.surface_name, "delete", prc.auth_ctx
+            ):
+                req_detail.delete_url = None
+
+    # Substitute {id} in the per-request copy only
+    if req_detail.edit_url:
+        req_detail.edit_url = req_detail.edit_url.replace("{id}", str(prc.path_id))
+    if req_detail.delete_url:
+        req_detail.delete_url = req_detail.delete_url.replace("{id}", str(prc.path_id))
+    for _t in req_detail.transitions:
+        if _t.api_url and "{id}" in _t.api_url:
+            _t.api_url = _t.api_url.replace("{id}", str(prc.path_id))
+    for _a in req_detail.integration_actions:
+        if _a.api_url and "{id}" in _a.api_url:
+            _a.api_url = _a.api_url.replace("{id}", str(prc.path_id))
+
+    # Fetch related entity data for tabs (hub-and-spoke, #301)
+    if req_detail.related_groups and prc.path_id:
+
+        async def _fetch_related_tab(tab: Any, _id: str, _backend: str, _ck: Any) -> None:
+            filter_params: dict[str, str] = {
+                f"filter[{tab.filter_field}]": _id,
+                "page": "1",
+                "page_size": "50",
+            }
+            # Polymorphic FK (#321): add type discriminator filter
+            if tab.filter_type_field and tab.filter_type_value:
+                filter_params[f"filter[{tab.filter_type_field}]"] = tab.filter_type_value
+            params = urllib.parse.urlencode(filter_params)
+            url = f"{_backend}{tab.api_endpoint}?{params}"
+            try:
+                data = await _fetch_url(url, _ck)
+                tab.rows = data.get("items", [])
+                tab.total = data.get("total", len(tab.rows))
+            except Exception:
+                logger.warning(
+                    "Failed to fetch related %s for %s",
+                    tab.entity_name,
+                    _id,
+                    exc_info=True,
+                )
+
+        all_tabs = [tab for _group in req_detail.related_groups for tab in _group.tabs]
+        await asyncio.gather(
+            *[
+                _fetch_related_tab(tab, str(prc.path_id), prc.effective_backend_url, prc.cookies)
+                for tab in all_tabs
+            ]
+        )
+
+    prc.ctx_overrides["detail"] = req_detail
+
+
+async def _handle_review(prc: _PageRequestContext) -> None:
+    """Fetch and prepare review page data for the per-request context."""
+    req_review = prc.ctx.review.model_copy(deep=True)
+
+    # Fetch the current item
+    req_review.item = await _fetch_json(
+        prc.effective_backend_url,
+        f"{prc.ctx.review.api_endpoint}/{{id}}",
+        prc.path_id,
+        prc.cookies,
+    )
+    if "error" in req_review.item:
+        logger.warning(
+            "Review page data fetch failed for %s/%s",
+            prc.ctx.review.entity_name,
+            prc.path_id,
+        )
+
+    # Evaluate when_expr for conditional field visibility (#363)
+    if req_review.item and "error" not in req_review.item:
+        from dazzle_ui.utils.expression_eval import evaluate_when_expr
+
+        for _field in req_review.fields:
+            if _field.when_expr:
+                _field.visible = evaluate_when_expr(_field.when_expr, req_review.item)
+
+    # Evaluate role-based visible conditions (#487)
+    if prc.ctx.user_roles is not None:
+        from dazzle_ui.utils.condition_eval import evaluate_condition
+
+        _role_ctx = {
+            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
+        }
+        for _field in req_review.fields:
+            if _field.visible_condition:
+                if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
+                    _field.visible = False
+
+    # Substitute {id} in action transition URLs
+    for action in req_review.actions:
+        if action.transition_url and "{id}" in action.transition_url:
+            action.transition_url = action.transition_url.replace("{id}", str(prc.path_id))
+
+    # Fetch the review queue to compute position + navigation
+    # Use the same filter from request params (e.g. filter[status]=prepared)
+    queue_params: dict[str, str] = {"page_size": "1000"}
+    for key, val in prc.request.query_params.items():
+        if key.startswith("filter[") and val:
+            queue_params[key] = val
+    queue_qs = urllib.parse.urlencode(queue_params)
+    queue_url = f"{prc.effective_backend_url}{prc.ctx.review.api_endpoint}?{queue_qs}"
+    try:
+        queue_data = await _fetch_url(queue_url, prc.cookies)
+        queue_items = queue_data.get("items", [])
+        queue_ids = [str(item.get("id", "")) for item in queue_items]
+        req_review.queue_total = len(queue_ids)
+
+        current_id = str(prc.path_id)
+        if current_id in queue_ids:
+            pos = queue_ids.index(current_id)
+            req_review.queue_position = pos
+            # Build prev/next URLs preserving filter params
+            filter_qs = urllib.parse.urlencode(
+                {k: v for k, v in prc.request.query_params.items() if k.startswith("filter[")}
+            )
+            base = prc.ctx.review.queue_url.rstrip("/")
+            suffix = f"?{filter_qs}" if filter_qs else ""
+            if pos > 0:
+                req_review.prev_url = f"{base}/{queue_ids[pos - 1]}{suffix}"
+            if pos < len(queue_ids) - 1:
+                req_review.next_url = f"{base}/{queue_ids[pos + 1]}{suffix}"
+    except Exception:
+        logger.warning(
+            "Failed to fetch review queue for %s",
+            prc.ctx.review.entity_name,
+            exc_info=True,
+        )
+
+    prc.ctx_overrides["review"] = req_review
+
+
+async def _handle_edit_form(prc: _PageRequestContext) -> None:
+    """Fetch and prepare edit form data for the per-request context."""
+    req_form = prc.ctx.form.model_copy(deep=True)
+
+    # Fetch existing data using the *original* URL template
+    form_data = await _fetch_json(
+        prc.effective_backend_url, prc.ctx.form.action_url, prc.path_id, prc.cookies
+    )
+    if "error" not in form_data:
+        req_form.initial_values = form_data
+    else:
+        logger.warning("Failed to fetch initial form values for %s", prc.path_id)
+        raise HTTPException(status_code=404, detail="Not found")
+
+    req_form.action_url = req_form.action_url.replace("{id}", str(prc.path_id))
+    if req_form.cancel_url:
+        req_form.cancel_url = req_form.cancel_url.replace("{id}", str(prc.path_id))
+
+    # Cycle 245 -- apply per-persona PersonaVariant overrides to the
+    # per-request form copy. Mirrors the cycle 243 list-surface
+    # pattern. Returns True if the persona is read-only, in which
+    # case we abort form rendering with a 403.
+    if prc.ctx.user_roles and _apply_persona_form_overrides(req_form, prc.ctx.user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="This surface is read-only for your role",
+        )
+
+    prc.ctx_overrides["form"] = req_form
+
+
+def _handle_create_form(prc: _PageRequestContext) -> None:
+    """Prepare create form data for the per-request context."""
+    # Cycle 245 -- create forms previously used ctx.form directly
+    # with no per-request mutation. Now they need a per-request
+    # copy so PersonaVariant hide/read_only overrides can apply.
+    req_form = prc.ctx.form.model_copy(deep=True)
+
+    if prc.ctx.user_roles and _apply_persona_form_overrides(req_form, prc.ctx.user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="This surface is read-only for your role",
+        )
+
+    prc.ctx_overrides["form"] = req_form
+
+
+async def _handle_table(prc: _PageRequestContext) -> None:
+    """Fetch and prepare table/list data for the per-request context."""
+    # Per-request copy -- the shared ctx.table is compiled once and
+    # reused across requests.  Mutations (hidden columns, rows,
+    # create_url suppression) must not leak between requests (#587).
+    req_table = prc.ctx.table.model_copy(deep=True)
+
+    # Suppress Create button when user lacks CREATE permission or workspace is read_only
+    if prc.ctx.user_roles is not None and req_table.create_url:
+        if _should_suppress_mutations(
+            prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
+        ) or not _user_can_mutate(prc.deps, prc.surface_name, "create", prc.auth_ctx):
+            req_table.create_url = None
+
+    # Suppress the bulk-action-bar "Delete X items" affordance when the
+    # current persona cannot delete this entity. Closes EX-040 (cycle
+    # 223 observation: bulk-action bar shown to fieldtest_hub/tester
+    # on 4 entity lists despite delete being engineer-only per DSL).
+    # The template_compiler sets ``bulk_actions=True`` unconditionally
+    # at compile time because there is no request context then; we
+    # resolve per-persona here in the per-request copy, mirroring the
+    # create_url suppression above. ``_user_can_mutate`` correctly
+    # distinguishes "no rules / field-conditioned rules" (allow --
+    # record-level) from "role-gate denies mutation" (suppress).
+    if prc.ctx.user_roles is not None and req_table.bulk_actions:
+        if _should_suppress_mutations(
+            prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
+        ) or not _user_can_mutate(prc.deps, prc.surface_name, "delete", prc.auth_ctx):
+            req_table.bulk_actions = False
+
+    # Apply per-persona PersonaVariant overrides to the per-request
+    # table copy. Extracted to a helper in cycle 243 so the resolver
+    # logic is testable without a full request context, and so new
+    # PersonaVariant fields can be added in one place.
+    if prc.ctx.user_roles:
+        _apply_persona_overrides(req_table, prc.ctx.user_roles)
+
+    # Evaluate role-based visible_condition on list columns (#585)
+    if prc.ctx.user_roles is not None:
+        from dazzle_ui.utils.condition_eval import evaluate_condition
+
+        _role_ctx = {
+            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
+        }
+        for _col in req_table.columns:
+            if _col.visible_condition:
+                if not evaluate_condition(_col.visible_condition, {}, _role_ctx):
+                    _col.hidden = True
+
+    # Forward all DataTable query params to backend API
+    api_params: dict[str, str] = {}
+    for key in ("page", "page_size", "sort", "dir", "search"):
+        _qval = prc.request.query_params.get(key)
+        if _qval:
+            api_params[key] = _qval
+    for key, val in prc.request.query_params.items():
+        if key.startswith("filter[") and val:
+            api_params[key] = val
+    api_params.setdefault("page", "1")
+
+    # search_first: skip initial fetch until user provides search/filter
+    _has_search = bool(api_params.get("search"))
+    _has_filter = any(k.startswith("filter[") for k in api_params)
+    _skip_fetch = req_table.search_first and not _has_search and not _has_filter
+
+    if _skip_fetch:
+        req_table.rows = []
+        req_table.total = 0
+    else:
+        query_string = urllib.parse.urlencode(api_params)
+        fetch_url = f"{prc.effective_backend_url}{req_table.api_endpoint}?{query_string}"
+
+        try:
+            data = await _fetch_url(fetch_url, prc.cookies)
+            items = data.get("items", [])
+            if items and isinstance(items[0], dict):
+                req_table.rows = items
+            req_table.total = data.get("total", len(items))
+        except Exception:
+            logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
+            req_table.rows = []
+            req_table.total = 0
+
+    # Update table context with current sort/filter state from request
+    req_table.sort_field = prc.request.query_params.get("sort", req_table.default_sort_field)
+    req_table.sort_dir = prc.request.query_params.get("dir", req_table.default_sort_dir)
+    req_table.filter_values = {
+        k[7:-1]: v
+        for k, v in prc.request.query_params.items()
+        if k.startswith("filter[") and k.endswith("]") and v
+    }
+    prc.ctx_overrides["table"] = req_table
+
+
+def _render_response(prc: _PageRequestContext) -> Response:
+    """Build the final HTML response, handling HTMX fragment/drawer/full modes."""
+    from dazzle_ui.runtime.htmx import HtmxDetails
+    from dazzle_ui.runtime.template_renderer import render_page
+
+    htmx = HtmxDetails.from_request(prc.request)
+
+    # Boosted navigations: update nav highlighting from the actual URL
+    if htmx.current_url:
+        from urllib.parse import urlparse
+
+        prc.ctx.current_route = urlparse(htmx.current_url).path
+
+    # Build per-request context with table/detail/form overrides.
+    # All three use deep copies to prevent cross-request mutation
+    # of the shared compiled ctx (#291, #587).
+    render_ctx = prc.ctx.model_copy(update=prc.ctx_overrides) if prc.ctx_overrides else prc.ctx
+
+    # Fragment targeting: nav links target #main-content directly,
+    # so return only the content template (no layout wrapper).
+    if htmx.wants_fragment:
+        html = render_page(render_ctx, content_only=True)
+        headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
+        return HTMLResponse(content=html, headers=headers)  # nosemgrep
+
+    # Drawer targeting: workspace action clicks load detail into
+    # a slide-over drawer -- return content-only + open trigger.
+    if htmx.wants_drawer:
+        html = render_page(render_ctx, content_only=True)
+        triggers = {
+            "dz:drawerOpen": {"url": str(prc.request.url)},
+            "dz:titleUpdate": render_ctx.page_title,
+        }
+        return HTMLResponse(
+            content=html,  # nosemgrep
+            headers={"HX-Trigger-After-Swap": json.dumps(triggers)},
+        )
+
+    # Any HTMX request can receive body-only HTML -- the client
+    # extracts <body> content anyway.  History-restore is the one
+    # exception: the browser needs a full document for cache misses.
+    html = render_page(render_ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
+    return HTMLResponse(content=html)  # nosemgrep
+
+
+# =============================================================================
 # Module-level handler functions
 # =============================================================================
 
@@ -485,512 +1030,57 @@ async def _page_handler(
     request: Request,
 ) -> Response:
     """Handle a page route: fetch data, enforce access, render HTML."""
-    from dazzle_ui.runtime.surface_access import (
-        SurfaceAccessDenied,
-        check_surface_access,
-    )
-    from dazzle_ui.runtime.template_renderer import render_page
-
     # Set current route for nav highlighting
     ctx.current_route = route_path
 
-    # Inject auth context if available
-    auth_ctx = None
-    if deps.get_auth_context is not None:
-        try:
-            auth_ctx = deps.get_auth_context(request)
-            ctx.is_authenticated = bool(auth_ctx and auth_ctx.is_authenticated)
-            if auth_ctx and auth_ctx.user:
-                ctx.user_email = auth_ctx.user.email or ""
-                ctx.user_name = auth_ctx.user.username or ""
-                ctx.user_preferences = auth_ctx.preferences or {}
-                # Persona-aware nav filtering: match user roles against
-                # per-persona nav variants compiled from workspace access.
-                roles = getattr(auth_ctx.user, "roles", None) or []
-                ctx.user_roles = list(roles)
-                if ctx.nav_by_persona and roles:
-                    for role in roles:
-                        # Roles use "role_" prefix; persona IDs don't
-                        persona_nav = ctx.nav_by_persona.get(role.removeprefix("role_"))
-                        if persona_nav is not None:
-                            ctx.nav_items = persona_nav
-                            break
-
-                # Filter out nav items for entities the user cannot LIST (#583).
-                # This catches entities that appear in an allowed workspace but
-                # whose permit: rules deny the user's role.
-                if ctx.nav_items and deps.entity_cedar_specs and deps.route_entity:
-                    ctx.nav_items = _filter_nav_by_entity_access(ctx.nav_items, deps, auth_ctx)
-        except Exception:
-            logger.debug("Failed to resolve auth context for page", exc_info=True)
-
-    # Enforce surface access control
     surface_name = view_name or getattr(ctx, "view_name", None)
-    if surface_name and surface_name in deps.access_configs:
-        ac = deps.access_configs[surface_name]
-        user = None
-        user_personas: list[str] | None = None
-        if auth_ctx and auth_ctx.is_authenticated and auth_ctx.user:
-            user = {"id": getattr(auth_ctx.user, "id", None)}
-            _raw = list(getattr(auth_ctx.user, "roles", []))
-            user_personas = [r.removeprefix("role_") for r in _raw]
-        try:
-            check_surface_access(ac, user, user_personas=user_personas, is_api_request=False)
-        except SurfaceAccessDenied as e:
-            if e.is_auth_required and e.redirect_url:
-                return RedirectResponse(url=e.redirect_url, status_code=302)
-            return JSONResponse(
-                status_code=403,
-                content={"detail": e.reason},
-            )
-
-    # Enforce entity-level Cedar access rules on page routes (#527).
-    # Mirrors the LIST gate in route_generator.py: only enforce when all
-    # permission rules for the operation are pure role checks (no field
-    # conditions). Field-condition rules need a record to evaluate — those
-    # are handled at query time by the API layer's row filters.
-    if surface_name and deps.entity_cedar_specs and auth_ctx is not None:
-        _entity_name = deps.surface_entity.get(surface_name)
-        _cedar_spec = deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
-        if _cedar_spec is not None and deps.evaluate_permission is not None:
-            # Determine operation: list surfaces use LIST, create surfaces
-            # use CREATE, others use READ.
-            _mode = deps.surface_mode.get(surface_name, "list")
-            if _mode == "list":
-                _op = AccessOperationKind.LIST
-            elif _mode == "create":
-                _op = AccessOperationKind.CREATE
-            else:
-                _op = AccessOperationKind.READ
-
-            # Only gate when all rules for this operation are pure role checks.
-            # When scopes are present, permit rules are guaranteed role-only
-            # (scope: blocks hold all field-condition logic), so always fire
-            # the gate. When scopes are absent (backward compat), skip if any
-            # rule carries a field condition — those require a record to evaluate
-            # and are handled at query time by the API layer's row filters.
-            _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
-            _has_scopes = bool(getattr(_cedar_spec, "scopes", None))
-
-            _has_field_conditions = (
-                False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
-            )
-            if _op_rules and not _has_field_conditions:
-                # Build AccessRuntimeContext from auth context
-                _user = auth_ctx.user if auth_ctx.is_authenticated else None
-                _raw_roles = list(getattr(_user, "roles", [])) if _user else []
-                _runtime_ctx = AccessRuntimeContext(
-                    user_id=str(_user.id) if _user else None,
-                    roles=[r.removeprefix("role_") for r in _raw_roles],
-                    is_superuser=getattr(_user, "is_superuser", False) if _user else False,
-                )
-                _decision = deps.evaluate_permission(
-                    _cedar_spec,
-                    _op,
-                    None,
-                    _runtime_ctx,
-                    entity_name=_entity_name or "",
-                )
-                if not _decision.allowed:
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "Forbidden"},
-                    )
-
-    # Derive backend URL from request so it works on dynamic-port
-    # platforms (Heroku, Railway, etc.) where the default 8000 is wrong.
     effective_backend_url = _resolve_backend_url(request, deps.backend_url)
-
-    # Forward session cookies so internal API calls are authenticated.
-    # Without this, CRUD endpoints return 404 (auth-required routes).
-    _cookies = dict(request.cookies) if request.cookies else None
-
-    # For detail/edit pages, extract {id} from path params.
-    # IMPORTANT: use per-request copies of detail/form contexts
-    # because URL templates contain {id} placeholders that get
-    # replaced with actual IDs.  Mutating the shared ctx would
-    # corrupt templates for subsequent requests (#291).
+    cookies = dict(request.cookies) if request.cookies else None
     path_id = request.path_params.get("id")
-    _ctx_overrides: dict[str, Any] = {}
+
+    prc = _PageRequestContext(
+        deps=deps,
+        ctx=ctx,
+        request=request,
+        auth_ctx=None,
+        surface_name=surface_name,
+        effective_backend_url=effective_backend_url,
+        cookies=cookies,
+        path_id=path_id,
+    )
+
+    # Phase 1: Auth + access control
+    _inject_auth_context(prc)
+
+    denied = _check_surface_access(prc)
+    if denied is not None:
+        return denied
+
+    denied = _check_entity_cedar_access(prc)
+    if denied is not None:
+        return denied
+
+    # Phase 2: Per-request data preparation
+    # Detail page (path_id + detail context present)
     if path_id and ctx.detail:
-        req_detail = ctx.detail.model_copy(deep=True)
+        await _handle_detail(prc)
 
-        # Fetch item data using the API endpoint template
-        req_detail.item = await _fetch_json(
-            effective_backend_url,
-            ctx.detail.api_endpoint or ctx.detail.delete_url,
-            path_id,
-            _cookies,
-        )
-        # Resolve FK dicts → display strings so detail fields show names not UUIDs (#663)
-        if req_detail.item and "error" not in req_detail.item:
-            if deps.inject_display_names is not None:
-                req_detail.item = deps.inject_display_names(req_detail.item)
-
-        if "error" in req_detail.item:
-            logger.warning(
-                "Detail page data fetch failed for %s/%s: %s",
-                ctx.detail.entity_name,
-                path_id,
-                req_detail.item.get("error"),
-            )
-            raise HTTPException(status_code=404, detail="Not found")
-
-        # Evaluate when_expr for conditional field visibility (#363)
-        if req_detail.item and "error" not in req_detail.item:
-            from dazzle_ui.utils.expression_eval import evaluate_when_expr
-
-            for _field in req_detail.fields:
-                if _field.when_expr:
-                    _field.visible = evaluate_when_expr(_field.when_expr, req_detail.item)
-
-        # Evaluate role-based visible conditions (#487)
-        if ctx.user_roles is not None:
-            from dazzle_ui.utils.condition_eval import evaluate_condition
-
-            _role_ctx = {
-                "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
-            }
-            for _field in req_detail.fields:
-                if _field.visible_condition:
-                    if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
-                        _field.visible = False
-
-            # Hide related tabs whose visible_condition doesn't match (#501)
-            for _group in req_detail.related_groups:
-                for _tab in _group.tabs:
-                    if _tab.visible_condition:
-                        if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
-                            _tab.visible = False
-
-        # Suppress Edit/Delete buttons when permit rules deny the operation
-        # or when the workspace declares read_only for the user's persona (#550, #552).
-        if ctx.user_roles is not None:
-            _suppress_mutations = _should_suppress_mutations(
-                deps, surface_name, auth_ctx, ctx.user_roles
-            )
-            if _suppress_mutations:
-                req_detail.edit_url = None
-                req_detail.delete_url = None
-                req_detail.transitions = []
-                req_detail.integration_actions = []
-            else:
-                # Fine-grained: check UPDATE and DELETE individually
-                if req_detail.edit_url and not _user_can_mutate(
-                    deps, surface_name, "update", auth_ctx
-                ):
-                    req_detail.edit_url = None
-                if req_detail.delete_url and not _user_can_mutate(
-                    deps, surface_name, "delete", auth_ctx
-                ):
-                    req_detail.delete_url = None
-
-        # Substitute {id} in the per-request copy only
-        if req_detail.edit_url:
-            req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))
-        if req_detail.delete_url:
-            req_detail.delete_url = req_detail.delete_url.replace("{id}", str(path_id))
-        for _t in req_detail.transitions:
-            if _t.api_url and "{id}" in _t.api_url:
-                _t.api_url = _t.api_url.replace("{id}", str(path_id))
-        for _a in req_detail.integration_actions:
-            if _a.api_url and "{id}" in _a.api_url:
-                _a.api_url = _a.api_url.replace("{id}", str(path_id))
-
-        # Fetch related entity data for tabs (hub-and-spoke, #301)
-        if req_detail.related_groups and path_id:
-            import urllib.parse
-
-            async def _fetch_related_tab(tab: Any, _id: str, _backend: str, _ck: Any) -> None:
-                filter_params: dict[str, str] = {
-                    f"filter[{tab.filter_field}]": _id,
-                    "page": "1",
-                    "page_size": "50",
-                }
-                # Polymorphic FK (#321): add type discriminator filter
-                if tab.filter_type_field and tab.filter_type_value:
-                    filter_params[f"filter[{tab.filter_type_field}]"] = tab.filter_type_value
-                params = urllib.parse.urlencode(filter_params)
-                url = f"{_backend}{tab.api_endpoint}?{params}"
-                try:
-                    data = await _fetch_url(url, _ck)
-                    tab.rows = data.get("items", [])
-                    tab.total = data.get("total", len(tab.rows))
-                except Exception:
-                    logger.warning(
-                        "Failed to fetch related %s for %s",
-                        tab.entity_name,
-                        _id,
-                        exc_info=True,
-                    )
-
-            all_tabs = [tab for _group in req_detail.related_groups for tab in _group.tabs]
-            await asyncio.gather(
-                *[
-                    _fetch_related_tab(tab, str(path_id), effective_backend_url, _cookies)
-                    for tab in all_tabs
-                ]
-            )
-
-        _ctx_overrides["detail"] = req_detail
-
+    # Review page (path_id + review context present)
     if path_id and ctx.review:
-        req_review = ctx.review.model_copy(deep=True)
+        await _handle_review(prc)
 
-        # Fetch the current item
-        req_review.item = await _fetch_json(
-            effective_backend_url,
-            f"{ctx.review.api_endpoint}/{{id}}",
-            path_id,
-            _cookies,
-        )
-        if "error" in req_review.item:
-            logger.warning(
-                "Review page data fetch failed for %s/%s",
-                ctx.review.entity_name,
-                path_id,
-            )
-
-        # Evaluate when_expr for conditional field visibility (#363)
-        if req_review.item and "error" not in req_review.item:
-            from dazzle_ui.utils.expression_eval import evaluate_when_expr
-
-            for _field in req_review.fields:
-                if _field.when_expr:
-                    _field.visible = evaluate_when_expr(_field.when_expr, req_review.item)
-
-        # Evaluate role-based visible conditions (#487)
-        if ctx.user_roles is not None:
-            from dazzle_ui.utils.condition_eval import evaluate_condition
-
-            _role_ctx = {
-                "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
-            }
-            for _field in req_review.fields:
-                if _field.visible_condition:
-                    if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
-                        _field.visible = False
-
-        # Substitute {id} in action transition URLs
-        for action in req_review.actions:
-            if action.transition_url and "{id}" in action.transition_url:
-                action.transition_url = action.transition_url.replace("{id}", str(path_id))
-
-        # Fetch the review queue to compute position + navigation
-        import urllib.parse as _urlparse
-
-        # Use the same filter from request params (e.g. filter[status]=prepared)
-        queue_params: dict[str, str] = {"page_size": "1000"}
-        for key, val in request.query_params.items():
-            if key.startswith("filter[") and val:
-                queue_params[key] = val
-        queue_qs = _urlparse.urlencode(queue_params)
-        queue_url = f"{effective_backend_url}{ctx.review.api_endpoint}?{queue_qs}"
-        try:
-            queue_data = await _fetch_url(queue_url, _cookies)
-            queue_items = queue_data.get("items", [])
-            queue_ids = [str(item.get("id", "")) for item in queue_items]
-            req_review.queue_total = len(queue_ids)
-
-            current_id = str(path_id)
-            if current_id in queue_ids:
-                pos = queue_ids.index(current_id)
-                req_review.queue_position = pos
-                # Build prev/next URLs preserving filter params
-                filter_qs = _urlparse.urlencode(
-                    {k: v for k, v in request.query_params.items() if k.startswith("filter[")}
-                )
-                base = ctx.review.queue_url.rstrip("/")
-                suffix = f"?{filter_qs}" if filter_qs else ""
-                if pos > 0:
-                    req_review.prev_url = f"{base}/{queue_ids[pos - 1]}{suffix}"
-                if pos < len(queue_ids) - 1:
-                    req_review.next_url = f"{base}/{queue_ids[pos + 1]}{suffix}"
-        except Exception:
-            logger.warning(
-                "Failed to fetch review queue for %s",
-                ctx.review.entity_name,
-                exc_info=True,
-            )
-
-        _ctx_overrides["review"] = req_review
-
+    # Edit form (path_id + form in edit mode)
     if path_id and ctx.form and ctx.form.mode == "edit":
-        req_form = ctx.form.model_copy(deep=True)
-
-        # Fetch existing data using the *original* URL template
-        form_data = await _fetch_json(effective_backend_url, ctx.form.action_url, path_id, _cookies)
-        if "error" not in form_data:
-            req_form.initial_values = form_data
-        else:
-            logger.warning("Failed to fetch initial form values for %s", path_id)
-            raise HTTPException(status_code=404, detail="Not found")
-
-        req_form.action_url = req_form.action_url.replace("{id}", str(path_id))
-        if req_form.cancel_url:
-            req_form.cancel_url = req_form.cancel_url.replace("{id}", str(path_id))
-
-        # Cycle 245 — apply per-persona PersonaVariant overrides to the
-        # per-request form copy. Mirrors the cycle 243 list-surface
-        # pattern. Returns True if the persona is read-only, in which
-        # case we abort form rendering with a 403.
-        if ctx.user_roles and _apply_persona_form_overrides(req_form, ctx.user_roles):
-            raise HTTPException(
-                status_code=403,
-                detail="This surface is read-only for your role",
-            )
-
-        _ctx_overrides["form"] = req_form
-
+        await _handle_edit_form(prc)
     elif ctx.form and ctx.form.mode == "create":
-        # Cycle 245 — create forms previously used ctx.form directly
-        # with no per-request mutation. Now they need a per-request
-        # copy so PersonaVariant hide/read_only overrides can apply.
-        req_form = ctx.form.model_copy(deep=True)
+        _handle_create_form(prc)
 
-        if ctx.user_roles and _apply_persona_form_overrides(req_form, ctx.user_roles):
-            raise HTTPException(
-                status_code=403,
-                detail="This surface is read-only for your role",
-            )
-
-        _ctx_overrides["form"] = req_form
-
+    # Table / list page
     if ctx.table:
-        # Per-request copy — the shared ctx.table is compiled once and
-        # reused across requests.  Mutations (hidden columns, rows,
-        # create_url suppression) must not leak between requests (#587).
-        req_table = ctx.table.model_copy(deep=True)
+        await _handle_table(prc)
 
-        # Suppress Create button when user lacks CREATE permission or workspace is read_only
-        if ctx.user_roles is not None and req_table.create_url:
-            if _should_suppress_mutations(
-                deps, surface_name, auth_ctx, ctx.user_roles
-            ) or not _user_can_mutate(deps, surface_name, "create", auth_ctx):
-                req_table.create_url = None
-
-        # Suppress the bulk-action-bar "Delete X items" affordance when the
-        # current persona cannot delete this entity. Closes EX-040 (cycle
-        # 223 observation: bulk-action bar shown to fieldtest_hub/tester
-        # on 4 entity lists despite delete being engineer-only per DSL).
-        # The template_compiler sets ``bulk_actions=True`` unconditionally
-        # at compile time because there is no request context then; we
-        # resolve per-persona here in the per-request copy, mirroring the
-        # create_url suppression above. ``_user_can_mutate`` correctly
-        # distinguishes "no rules / field-conditioned rules" (allow —
-        # record-level) from "role-gate denies mutation" (suppress).
-        if ctx.user_roles is not None and req_table.bulk_actions:
-            if _should_suppress_mutations(
-                deps, surface_name, auth_ctx, ctx.user_roles
-            ) or not _user_can_mutate(deps, surface_name, "delete", auth_ctx):
-                req_table.bulk_actions = False
-
-        # Apply per-persona PersonaVariant overrides to the per-request
-        # table copy. Extracted to a helper in cycle 243 so the resolver
-        # logic is testable without a full request context, and so new
-        # PersonaVariant fields can be added in one place.
-        if ctx.user_roles:
-            _apply_persona_overrides(req_table, ctx.user_roles)
-
-        # Evaluate role-based visible_condition on list columns (#585)
-        if ctx.user_roles is not None:
-            from dazzle_ui.utils.condition_eval import evaluate_condition
-
-            _role_ctx = {
-                "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
-            }
-            for _col in req_table.columns:
-                if _col.visible_condition:
-                    if not evaluate_condition(_col.visible_condition, {}, _role_ctx):
-                        _col.hidden = True
-
-        # Fetch list data from backend
-        import urllib.parse
-
-        # Forward all DataTable query params to backend API
-        api_params: dict[str, str] = {}
-        for key in ("page", "page_size", "sort", "dir", "search"):
-            _qval = request.query_params.get(key)
-            if _qval:
-                api_params[key] = _qval
-        for key, val in request.query_params.items():
-            if key.startswith("filter[") and val:
-                api_params[key] = val
-        api_params.setdefault("page", "1")
-
-        # search_first: skip initial fetch until user provides search/filter
-        _has_search = bool(api_params.get("search"))
-        _has_filter = any(k.startswith("filter[") for k in api_params)
-        _skip_fetch = req_table.search_first and not _has_search and not _has_filter
-
-        if _skip_fetch:
-            req_table.rows = []
-            req_table.total = 0
-        else:
-            query_string = urllib.parse.urlencode(api_params)
-            fetch_url = f"{effective_backend_url}{req_table.api_endpoint}?{query_string}"
-
-            try:
-                data = await _fetch_url(fetch_url, _cookies)
-                items = data.get("items", [])
-                if items and isinstance(items[0], dict):
-                    req_table.rows = items
-                req_table.total = data.get("total", len(items))
-            except Exception:
-                logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
-                req_table.rows = []
-                req_table.total = 0
-
-        # Update table context with current sort/filter state from request
-        req_table.sort_field = request.query_params.get("sort", req_table.default_sort_field)
-        req_table.sort_dir = request.query_params.get("dir", req_table.default_sort_dir)
-        req_table.filter_values = {
-            k[7:-1]: v
-            for k, v in request.query_params.items()
-            if k.startswith("filter[") and k.endswith("]") and v
-        }
-        _ctx_overrides["table"] = req_table
-
-    from dazzle_ui.runtime.htmx import HtmxDetails
-
-    htmx = HtmxDetails.from_request(request)
-
-    # Boosted navigations: update nav highlighting from the actual URL
-    if htmx.current_url:
-        from urllib.parse import urlparse
-
-        ctx.current_route = urlparse(htmx.current_url).path
-
-    # Build per-request context with table/detail/form overrides.
-    # All three use deep copies to prevent cross-request mutation
-    # of the shared compiled ctx (#291, #587).
-    render_ctx = ctx.model_copy(update=_ctx_overrides) if _ctx_overrides else ctx
-
-    # Fragment targeting: nav links target #main-content directly,
-    # so return only the content template (no layout wrapper).
-    if htmx.wants_fragment:
-        html = render_page(render_ctx, content_only=True)
-        headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
-        return HTMLResponse(content=html, headers=headers)  # nosemgrep
-
-    # Drawer targeting: workspace action clicks load detail into
-    # a slide-over drawer — return content-only + open trigger.
-    if htmx.wants_drawer:
-        html = render_page(render_ctx, content_only=True)
-        triggers = {
-            "dz:drawerOpen": {"url": str(request.url)},
-            "dz:titleUpdate": render_ctx.page_title,
-        }
-        return HTMLResponse(
-            content=html,  # nosemgrep
-            headers={"HX-Trigger-After-Swap": json.dumps(triggers)},
-        )
-
-    # Any HTMX request can receive body-only HTML — the client
-    # extracts <body> content anyway.  History-restore is the one
-    # exception: the browser needs a full document for cache misses.
-    html = render_page(render_ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
-    return HTMLResponse(content=html)  # nosemgrep
+    # Phase 3: Render response
+    return _render_response(prc)
 
 
 def _make_page_handler(
