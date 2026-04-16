@@ -164,6 +164,16 @@ Once ALL subagents complete, compile the results into:
 - Resolved since last round: [list any that are gone]
 ```
 
-Save the report to `dev_docs/smells-report.md`.
+Save the report to `agent/smells-report.md`.
+
+Then append a timestamped summary to `agent/smells-log.md` (create if it doesn't exist):
+
+```
+## Smells Run — [date]
+- Regressions: X/Y checks passed
+- New patterns: Z found
+- Top concern: [highest priority pattern]
+- Commit: [current HEAD sha]
+```
 
 Do NOT make any changes to the code. This is a read-only analysis.
