@@ -72,6 +72,13 @@ class PersonaVariant(BaseModel):
         read_only: Whether mutations are disabled
         defaults: Default field values for forms (e.g., {"assigned_to": "current_user"})
         focus: Workspace regions to emphasize for this persona
+        empty_message: Persona-specific empty-state copy. When present,
+            overrides the surface-level ``empty:`` string at render time
+            for this persona only. Added in cycle 240 (closes EX-046) so
+            DSL authors can write action-oriented copy for creating
+            personas ("Add your first task") and read-only-friendly copy
+            for viewing personas ("No tasks yet") without two separate
+            surfaces.
     """
 
     persona: str
@@ -85,6 +92,7 @@ class PersonaVariant(BaseModel):
     read_only: bool = False
     defaults: dict[str, Any] = Field(default_factory=dict)  # Field default values
     focus: list[str] = Field(default_factory=list)  # Workspace regions to emphasize
+    empty_message: str | None = None  # Per-persona empty-state copy override
 
     model_config = ConfigDict(frozen=True)
 

@@ -75,5 +75,5 @@
 <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
 {% endif %}
 {% else %}
-<p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+<p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
 {% endif %}

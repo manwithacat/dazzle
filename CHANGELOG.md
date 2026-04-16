@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.39] - 2026-04-16
+
+### Added
+- **`empty-state` component contract (UX-043).** Third cycle of the component
+  menagerie mini-arc. Two canonical shapes now formally governed: the full
+  fragment at `fragments/empty_state.html` (SVG + copy + optional CTA button
+  for list/grid/kanban/tree) and the dense inline `<p class="dz-empty-dense">`
+  pattern (for inline-card regions like metrics/bar_chart/timeline/queue).
+  Canonical class markers: `dz-empty-state` + `data-dz-empty-kind` +
+  `data-dz-empty-cta`, `dz-empty-dense`, with `role="status"` ARIA
+  everywhere. Contract at
+  `~/.claude/skills/ux-architect/components/empty-state.md` with 5
+  quality gates and 7 v2 open questions.
+
+- **Per-persona `empty:` override (EX-046 closed).** DSL authors can now
+  declare persona-specific empty-state copy inside `for <persona>:` blocks:
+  ```dsl
+  ux:
+    empty: "No tasks yet"
+    for member:
+      empty: "You have no assigned tasks"
+  ```
+  New `ir.PersonaVariant.empty_message: str | None` field, parser support
+  in `UXParserMixin.parse_persona_variant`, compile-time collection into
+  `TableContext.persona_empty_messages: dict[str, str]` at
+  `_compile_list_surface`, and a per-request resolver in `page_routes.py`
+  that looks up the current user's role and swaps `req_table.empty_message`
+  before rendering. **This is the pilot implementation for PersonaVariant
+  runtime wiring** — the same compile-dict-then-resolve-per-request
+  pattern can generalise to `purpose`, `hide`, `show`, `action_primary`,
+  `read_only`, which are currently parsed but silently dropped at render
+  time.
+
+### Fixed
+- **Legacy DaisyUI classes in `fragments/empty_state.html`.** Modernised
+  the canonical full empty-state fragment to use design tokens instead
+  of `btn btn-primary btn-sm` + `text-base-content/50`. The CTA button
+  now uses `bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]`
+  matching the canonical button anatomy used elsewhere. Closes more
+  of EX-001 (DaisyUI drift).
+
+- **Dense empty-state drift across 9 region templates.** `bar_chart`,
+  `detail`, `funnel_chart`, `heatmap`, `metrics`, `progress`, `queue`,
+  `tab_data`, `timeline` all had inline empty-state `<p>` tags with
+  inconsistent classes. Added canonical `dz-empty-dense` class marker +
+  `role="status"` everywhere. Fixed `tab_data` and `funnel_chart` legacy
+  `text-sm opacity-50` (non-token fallback) to use the canonical
+  `text-[13px] text-[hsl(var(--muted-foreground))]` design token.
+
+### Agent Guidance
+- **Use the canonical empty-state patterns.** For primary entity list
+  surfaces, `{% include "fragments/empty_state.html" %}`. For inline
+  dense regions (charts/metrics/timelines/queues), use
+  `<p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">`.
+  Never inline an ad-hoc empty-state `<p>` or `<div>`.
+- **When extending PersonaVariant wiring, follow the cycle 240 pilot
+  pattern.** Compile a `persona_<field>s: dict[str, T]` into the
+  relevant template context at compile time; resolve per-request in
+  `page_routes.py` by walking `ctx.user_roles` (stripping the `role_`
+  prefix) and swapping the request-copy field before rendering. This
+  mirrors the cycle 228 bulk-action-bar suppression pattern and the
+  cycle 240 `empty_message` resolver.
+
 ## [0.55.38] - 2026-04-16
 
 ### Added

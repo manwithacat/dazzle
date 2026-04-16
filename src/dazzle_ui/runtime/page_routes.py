@@ -711,6 +711,22 @@ async def _page_handler(
             ) or not _user_can_mutate(deps, surface_name, "delete", auth_ctx):
                 req_table.bulk_actions = False
 
+        # Resolve per-persona empty_message override (cycle 240, closes
+        # EX-046). The compiler ships a ``persona_empty_messages`` dict
+        # keyed by persona id; at request time we look up the first role
+        # that matches and swap ``empty_message`` for the override.
+        # DSL syntax:
+        #     ux:
+        #       empty: "Add your first task"
+        #       for member:
+        #         empty: "No tasks assigned yet"
+        if req_table.persona_empty_messages and ctx.user_roles:
+            for _role in ctx.user_roles:
+                _normalised = _role.removeprefix("role_")
+                if _normalised in req_table.persona_empty_messages:
+                    req_table.empty_message = req_table.persona_empty_messages[_normalised]
+                    break
+
         # Evaluate role-based visible_condition on list columns (#585)
         if ctx.user_roles is not None:
             from dazzle_ui.utils.condition_eval import evaluate_condition

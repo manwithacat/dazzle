@@ -21,6 +21,6 @@
   <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
   {% endif %}
   {% else %}
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
+  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
   {% endif %}
 {% endcall %}

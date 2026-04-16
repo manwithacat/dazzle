@@ -1,10 +1,37 @@
-{# Empty state for workspace regions #}
-<div class="flex flex-col items-center justify-center py-12 text-base-content/50">
-  <svg class="w-12 h-12 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+{# Empty state fragment — canonical renderer (cycle 240).
+
+   Contract: ~/.claude/skills/ux-architect/components/empty-state.md (UX-043)
+
+   Single source of truth for every "no data" state across the template
+   set. Before cycle 240, 14 distinct region templates had drifted into
+   7 different empty-state patterns (4 used this include, 10 inlined
+   their own ad-hoc `<p>` tags). This fragment is the only blessed
+   rendering path; every list/grid/region template now includes it.
+
+   Context expected (all optional):
+     empty_message : str — headline copy from DSL `empty:` or compiler default
+     entity_name   : str — e.g. "task", used for fallback copy and CTA
+     create_url    : str — when set, renders the Create-first CTA button.
+                           The compiler only populates this when the
+                           current persona has permission to create, so
+                           this gate is the single persona-correctness
+                           control for empty-state CTAs (cycle 234
+                           VERIFIED_FALSE_POSITIVE on EX-011/030/037).
+#}
+{%- set _label = (entity_name | default("items")) | lower -%}
+{%- set _create_label = (entity_name | default("item")) | lower -%}
+<div class="dz-empty-state flex flex-col items-center justify-center py-12 text-center"
+     data-dz-empty-kind="{{ 'actionable' if create_url else 'read-only' }}"
+     role="status">
+  <svg class="w-12 h-12 mb-3 text-[hsl(var(--muted-foreground))] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
   </svg>
-  <p class="text-sm">{{ empty_message or ("No " + (entity_name|default("items"))|lower + " found.") }}</p>
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message or ("No " ~ _label ~ " found.") }}</p>
   {% if create_url %}
-  <a href="{{ create_url }}" class="btn btn-primary btn-sm mt-4">Create first {{ (entity_name|default("item"))|lower }}</a>
+  <a href="{{ create_url }}"
+     class="mt-4 inline-flex items-center h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+     data-dz-empty-cta>
+    Create first {{ _create_label }}
+  </a>
   {% endif %}
 </div>

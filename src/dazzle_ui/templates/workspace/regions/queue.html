@@ -103,6 +103,6 @@
   <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items | length }} of {{ total }}</p>
   {% endif %}
   {% else %}
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))] py-4 text-center">{{ empty_message | default("Queue is empty.") }}</p>
+  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))] py-4 text-center" role="status">{{ empty_message | default("Queue is empty.") }}</p>
   {% endif %}
 {% endcall %}

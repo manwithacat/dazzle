@@ -789,6 +789,18 @@ def _compile_list_surface(
         if ux and ux.empty_message
         else ("Use search or filters to find results." if search_first else "No items found.")
     )
+
+    # Per-persona empty-message overrides (cycle 240, closes EX-046).
+    # Collect `for <persona>: empty: "..."` strings into a dict so the
+    # per-request path in page_routes.py can swap ``empty_message`` for
+    # the current user's persona. Compile-time has no persona context,
+    # so we ship the whole dict and resolve at request time.
+    persona_empty_messages: dict[str, str] = {}
+    if ux and ux.persona_variants:
+        for _variant in ux.persona_variants:
+            if _variant.empty_message:
+                persona_empty_messages[_variant.persona] = _variant.empty_message
+
     table_id = f"dt-{surface.name}"
 
     # Derive inline-editable columns from field types.
@@ -821,6 +833,7 @@ def _compile_list_surface(
             sort_dir=default_sort_dir,
             search_fields=search_fields,
             empty_message=empty_message,
+            persona_empty_messages=persona_empty_messages,
             search_first=search_first,
             table_id=table_id,
             inline_editable=inline_editable,

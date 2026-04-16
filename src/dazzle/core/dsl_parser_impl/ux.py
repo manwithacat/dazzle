@@ -307,6 +307,7 @@ class UXParserMixin:
               show_aggregate: metric1, metric2
               action_primary: surface_name
               read_only: true|false
+              empty: "..."   # cycle 240, closes EX-046
         """
         self.expect(TokenType.FOR)
         persona = self.expect_identifier_or_keyword().value
@@ -324,6 +325,7 @@ class UXParserMixin:
         read_only = False
         defaults: dict[str, Any] = {}
         focus: list[str] = []
+        empty_message: str | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -427,6 +429,14 @@ class UXParserMixin:
                 focus = self.parse_field_list()
                 self.skip_newlines()
 
+            # empty: "..."  — per-persona empty-state copy override
+            # (cycle 240, closes EX-046)
+            elif self.match(TokenType.EMPTY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                empty_message = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
             else:
                 break
 
@@ -444,4 +454,5 @@ class UXParserMixin:
             read_only=read_only,
             defaults=defaults,
             focus=focus,
+            empty_message=empty_message,
         )

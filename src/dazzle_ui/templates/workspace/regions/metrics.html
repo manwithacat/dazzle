@@ -16,7 +16,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No metrics available.") }}</p>
+  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No metrics available.") }}</p>
   {% endif %}
 
   {% if items and columns %}

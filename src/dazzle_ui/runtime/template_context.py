@@ -108,6 +108,12 @@ class TableContext(BaseModel):
     default_sort_dir: str = "asc"
     search_fields: list[str] = Field(default_factory=list)
     empty_message: str = "No items found."
+    # Per-persona empty_message overrides, keyed by persona id.
+    # Compiled from `for <persona>: empty: "..."` DSL blocks (cycle 240,
+    # closes EX-046). Resolved at request time in page_routes.py — when
+    # the current user's persona has an override, ``empty_message`` is
+    # replaced on the per-request table copy before rendering.
+    persona_empty_messages: dict[str, str] = Field(default_factory=dict)
     search_first: bool = False
     filter_values: dict[str, str] = Field(default_factory=dict)
     table_id: str = ""
