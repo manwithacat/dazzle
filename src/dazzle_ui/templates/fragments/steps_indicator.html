@@ -1,11 +1,22 @@
-{# Visual step indicator for multi-step flows — DaisyUI steps component #}
-{# Parameters: steps (list of {label: str}), current_step (int, 1-based) #}
+{# Visual step indicator for multi-step flows — pure Tailwind (cycle 251).
+   Parameters: steps (list of {label: str}), current_step (int, 1-based) #}
 {% set current = current_step | default(1) %}
-<ul class="steps w-full">
+<ol class="dz-steps flex items-center w-full">
   {% for step in steps %}
-  <li class="step{% if loop.index <= current %} step-primary{% endif %}"
+  <li class="flex items-center{% if not loop.last %} flex-1{% endif %}"
       {% if loop.index == current %}aria-current="step"{% endif %}>
-    {{ step.label }}
+    <div class="flex items-center gap-2">
+      <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold
+                   {% if loop.index <= current %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]{% else %}bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]{% endif %}">
+        {{ loop.index }}
+      </span>
+      <span class="text-[13px] {% if loop.index <= current %}text-[hsl(var(--foreground))] font-medium{% else %}text-[hsl(var(--muted-foreground))]{% endif %}">
+        {{ step.label }}
+      </span>
+    </div>
+    {% if not loop.last %}
+    <div class="flex-1 mx-3 h-px {% if loop.index < current %}bg-[hsl(var(--primary))]{% else %}bg-[hsl(var(--border))]{% endif %}"></div>
+    {% endif %}
   </li>
   {% endfor %}
-</ul>
+</ol>

@@ -15,11 +15,11 @@
   {# CSS Cascade Layer order — defines priority: base < framework < app < overrides #}
   <style>@layer base, framework, app, overrides;</style>
 
-  {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
+  {# Tailwind CSS — compiled bundle or CDN fallback for dev (#377).
+     DaisyUI removed in v0.56.0; all components use design-system.css tokens. #}
   {% if _tailwind_bundled | default(false) %}
   <link rel="stylesheet" href="{{ 'css/dazzle-bundle.css' | static_url }}">
   {% else %}
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" integrity="sha384-hlhTcK8D1Pj0594UWVQ6V40KGnB4Y8+Pf6mov3DVLV2lr0PqHuq/x1lVg/hZn7jt" crossorigin="anonymous" />
   {# nosemgrep: missing-integrity — tailwindcss CDN is a mutable dev-only URL; SRI is incompatible with dynamic content #}
   <script src="https://cdn.tailwindcss.com"></script>
   {% endif %}

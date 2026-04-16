@@ -5,16 +5,28 @@
   {# Title #}
   <h2 class="text-2xl font-bold mb-6">{{ experience.title }}</h2>
 
-  {# Progress indicator (DaisyUI steps) #}
+  {# Progress indicator — pure Tailwind stepper (cycle 251) #}
   {% if experience.steps | length > 1 %}
-  <ul class="steps steps-horizontal w-full mb-8">
+  <ol class="dz-steps flex items-center w-full mb-8">
     {% for step in experience.steps %}
-    <li class="step{% if step.is_completed or step.is_current %} step-primary{% endif %}"
-        data-dz-exp-step="{{ step.name }}">
-      {{ step.title }}
+    <li class="flex items-center{% if not loop.last %} flex-1{% endif %}"
+        data-dz-exp-step="{{ step.name }}"
+        {% if step.is_current %}aria-current="step"{% endif %}>
+      <div class="flex items-center gap-2">
+        <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold
+                     {% if step.is_completed or step.is_current %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]{% else %}bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]{% endif %}">
+          {{ loop.index }}
+        </span>
+        <span class="text-[13px] {% if step.is_completed or step.is_current %}text-[hsl(var(--foreground))] font-medium{% else %}text-[hsl(var(--muted-foreground))]{% endif %}">
+          {{ step.title }}
+        </span>
+      </div>
+      {% if not loop.last %}
+      <div class="flex-1 mx-3 h-px {% if step.is_completed %}bg-[hsl(var(--primary))]{% else %}bg-[hsl(var(--border))]{% endif %}"></div>
+      {% endif %}
     </li>
     {% endfor %}
-  </ul>
+  </ol>
   {% endif %}
 
   {# Step content #}
@@ -67,7 +79,7 @@
               </button>
               {% for tr in experience.transitions %}
                 {% if tr.event != 'success' %}
-                <button type="button" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}"
+                <button type="button" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}"
                         hx-post="{{ tr.url }}"
                         hx-target="body"
                         hx-swap="innerHTML">
@@ -87,7 +99,7 @@
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
@@ -100,21 +112,21 @@
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
         {% endif %}
 
       {% else %}
-        <div class="alert alert-info">
+        <div class="flex items-center gap-3 px-4 py-3 rounded-[4px] bg-[hsl(var(--info)/0.08)] border border-[hsl(var(--info)/0.2)] text-[13px] text-[hsl(var(--foreground))]" role="alert">
           <span>This step is ready.</span>
         </div>
         {% if experience.transitions %}
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
           <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
+            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
           </form>
           {% endfor %}
         </div>
@@ -131,7 +143,7 @@
       <div class="flex gap-3 pt-4 justify-center">
         {% for tr in experience.transitions %}
         <form method="post" action="{{ tr.url }}">
-          <button type="submit" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] btn-{{ tr.style }}">{{ tr.label }}</button>
+          <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
         </form>
         {% endfor %}
       </div>

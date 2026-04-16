@@ -79,7 +79,9 @@ class TestStepsIndicator:
         steps = [{"label": "Info"}, {"label": "Review"}, {"label": "Done"}]
         tmpl = jinja_env.from_string('{% include "fragments/steps_indicator.html" %}')
         html = tmpl.render(steps=steps, current_step=2)
-        assert html.count("step-primary") == 2
+        # Cycle 251 — migrated from DaisyUI step-primary to design tokens
+        assert "dz-steps" in html
+        assert "bg-[hsl(var(--primary))]" in html  # completed/current steps
         assert 'aria-current="step"' in html
 
 

@@ -2,18 +2,21 @@
 <section{{ section_id_attr(section) }} class="dz-section dz-section-steps">
   <div class="dz-section-content">
     {{ section_header(section) }}
-    <ul class="steps steps-vertical lg:steps-horizontal">
+    <ol class="dz-steps flex flex-col lg:flex-row items-start lg:items-center w-full gap-4 lg:gap-0">
       {% for item in section["items"] | default([]) %}
-      <li class="step step-primary">
-        <div class="dz-step-item">
-          <span class="dz-step-number">{{ loop.index }}</span>
-          <div class="dz-step-content">
-            <h3>{{ item.title | default("") }}</h3>
-            <p>{{ item.body | default("") }}</p>
-          </div>
+      <li class="flex items-start lg:items-center gap-3{% if not loop.last %} lg:flex-1{% endif %}">
+        <span class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-semibold bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+          {{ loop.index }}
+        </span>
+        <div class="dz-step-content">
+          <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))]">{{ item.title | default("") }}</h3>
+          <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ item.body | default("") }}</p>
         </div>
+        {% if not loop.last %}
+        <div class="hidden lg:block flex-1 mx-3 h-px bg-[hsl(var(--border))]"></div>
+        {% endif %}
       </li>
       {% endfor %}
-    </ul>
+    </ol>
   </div>
 </section>

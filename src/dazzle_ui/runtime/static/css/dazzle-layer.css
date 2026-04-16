@@ -1,14 +1,14 @@
 /* =============================================================================
    DAZZLE Semantic Layer
 
-   Thin semantic aliases on top of DaisyUI + Tailwind.
+   Thin semantic aliases on top of Tailwind + design-system.css tokens.
+   DaisyUI was removed in v0.56.0; all component styling is now via
+   inline Tailwind classes with hsl(var(--token)) design-system variables.
+
    This layer provides:
    1. App shell structure (.dz-app, .dz-app__main)
    2. Semantic workspace/panel classes
    3. Custom semantic attributes for LLM-readability
-
-   DaisyUI provides: btn, input, select, table, card, alert, badge, loading, etc.
-   Tailwind provides: flex, grid, gap-*, p-*, m-*, text-*, bg-base-*, etc.
    ============================================================================= */
 
 /* =============================================================================
@@ -38,7 +38,7 @@
 }
 
 .dz-app__header {
-  /* Use DaisyUI navbar inside this */
+
 }
 
 .dz-app__main {
@@ -62,38 +62,38 @@
 }
 
 .dz-app__sidebar {
-  /* Use DaisyUI drawer inside this */
+
 }
 
 .dz-app__footer {
-  /* Use DaisyUI footer inside this */
+
 }
 
 /* =============================================================================
    Workspace Semantic Classes
 
    These provide semantic meaning for LLM operations while
-   leveraging DaisyUI/Tailwind for actual styling.
+   using Tailwind + design-system.css tokens for styling.
    ============================================================================= */
 
 /* Workspace container - a logical grouping of related UI */
 .dz-workspace {
-  /* Typically a DaisyUI card or just a container */
+
 }
 
 /* Metric card - for displaying KPIs/stats */
 .dz-metric-card {
-  /* Use DaisyUI stats component */
+
 }
 
 /* List panel - for entity listings */
 .dz-list-panel {
-  /* Use DaisyUI card + table */
+
 }
 
 /* Detail panel - for entity detail views */
 .dz-detail-panel {
-  /* Use DaisyUI card */
+
 }
 
 /* Form panel - for create/edit forms */

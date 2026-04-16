@@ -9,7 +9,7 @@
 
 {# Visible search input updated with display value #}
 <input type="text" id="search-input-{{ field_name }}"
-       class="input border border-[hsl(var(--border))] w-full" value="{{ display_val }}"
+       class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))]" value="{{ display_val }}"
        hx-swap-oob="true" />
 
 {# Autofill mapped fields #}

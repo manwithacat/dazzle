@@ -526,256 +526,13 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   letter-spacing: -0.01em;
 }
 
-.card-body {
-  gap: 0.75rem;
-}
+/* Legacy DaisyUI shim classes (.card-body, .btn, .btn-primary, .btn-ghost,
+   .btn-outline, .btn-error, .input, .select, .textarea, .label-text,
+   .table, .table thead th, .table tbody td) removed in v0.56.0.
+   All components now use inline Tailwind with hsl(var(--token)) variables.
+   See the component contracts at ~/.claude/skills/ux-architect/components/. */
 
-/* --- Buttons --- */
-
-.btn {
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
-  transition: all var(--duration-fast) var(--ease-default);
-}
-
-.btn:hover {
-  box-shadow: var(--shadow-sm);
-}
-
-.btn:active {
-  transform: scale(var(--btn-focus-scale));
-}
-
-.btn:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
-}
-
-.btn-primary {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
-}
-
-.btn-primary:hover {
-  background: hsl(var(--primary) / 0.9);
-  border-color: hsl(var(--primary) / 0.9);
-}
-
-.btn-ghost {
-  box-shadow: none;
-  background: transparent;
-}
-
-.btn-ghost:hover {
-  box-shadow: none;
-  background: hsl(var(--accent));
-}
-
-.btn-outline {
-  border: 1px solid hsl(var(--border));
-  background: transparent;
-  color: hsl(var(--foreground));
-}
-
-.btn-outline:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-  border-color: hsl(var(--border));
-}
-
-/* Destructive button */
-.btn-error {
-  background: hsl(var(--destructive));
-  color: hsl(var(--destructive-foreground));
-  border-color: hsl(var(--destructive));
-}
-
-.btn-error:hover {
-  background: hsl(var(--destructive) / 0.9);
-}
-
-/* --- Form Inputs --- */
-
-.input,
-.select,
-.textarea {
-  border: 1px solid hsl(var(--input));
-  border-radius: var(--radius-md);
-  background: transparent;
-  transition: border-color var(--duration-fast) var(--ease-default),
-              box-shadow var(--duration-fast) var(--ease-default);
-}
-
-.input:focus,
-.select:focus,
-.textarea:focus {
-  border-color: hsl(var(--ring));
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15);
-  outline: none;
-}
-
-.input:hover:not(:focus),
-.select:hover:not(:focus),
-.textarea:hover:not(:focus) {
-  border-color: hsl(var(--foreground) / 0.2);
-}
-
-.label-text {
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: hsl(var(--foreground));
-  letter-spacing: 0.01em;
-}
-
-.input::placeholder,
-.textarea::placeholder {
-  color: hsl(var(--muted-foreground));
-}
-
-/* --- Tables --- */
-
-.table {
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.table thead th {
-  background: hsl(var(--muted));
-  font-weight: 500;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: hsl(var(--muted-foreground));
-  border-block-end: 1px solid hsl(var(--border));
-  padding-block: 0.75rem;
-  padding-inline: 1rem;
-}
-
-.table tbody tr {
-  transition: background var(--duration-fast) var(--ease-default);
-}
-
-.table tbody tr:hover {
-  background: hsl(var(--muted) / 0.5);
-}
-
-.table tbody td {
-  padding-block: 0.75rem;
-  padding-inline: 1rem;
-  border-block-end: 1px solid hsl(var(--border) / 0.5);
-  vertical-align: middle;
-}
-
-.table tbody tr:last-child td {
-  border-block-end: none;
-}
-
-/* --- Badges --- */
-
-.badge {
-  font-weight: 500;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-full);
-  border: none;
-}
-
-.badge-primary {
-  background: hsl(var(--primary) / 0.1);
-  color: hsl(var(--primary));
-}
-
-.badge-success {
-  background: hsl(var(--success) / 0.1);
-  color: hsl(var(--success));
-}
-
-.badge-warning {
-  background: hsl(var(--warning) / 0.1);
-  color: hsl(var(--warning));
-}
-
-.badge-error {
-  background: hsl(var(--destructive) / 0.1);
-  color: hsl(var(--destructive));
-}
-
-.badge-info {
-  background: hsl(var(--info) / 0.1);
-  color: hsl(var(--info));
-}
-
-.badge-ghost {
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-}
-
-/* --- Stats/Metrics --- */
-
-.stats {
-  box-shadow: var(--shadow-sm);
-  border: 1px solid hsl(var(--border));
-}
-
-.stat {
-  padding: 1.25rem 1.5rem;
-}
-
-.stat-title {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: hsl(var(--muted-foreground));
-  font-weight: 500;
-}
-
-.stat-value {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.stat-desc {
-  font-size: 0.8125rem;
-  color: hsl(var(--muted-foreground));
-}
-
-/* --- Alerts --- */
-
-.alert {
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-lg);
-  padding: 1rem 1.25rem;
-}
-
-.alert-info {
-  background: hsl(var(--info) / 0.08);
-  border-color: hsl(var(--info) / 0.2);
-  color: hsl(var(--info));
-}
-
-.alert-success {
-  background: hsl(var(--success) / 0.08);
-  border-color: hsl(var(--success) / 0.2);
-  color: hsl(var(--success));
-}
-
-.alert-warning {
-  background: hsl(var(--warning) / 0.08);
-  border-color: hsl(var(--warning) / 0.2);
-  color: hsl(var(--warning));
-}
-
-.alert-error {
-  background: hsl(var(--er) / 0.08);
-  border-color: hsl(var(--er) / 0.2);
-  color: hsl(var(--er));
-}
-
-/* --- Modal/Dialog --- */
+/* --- Modal/Dialog (kept — used by the native <dialog> modal component) --- */
 
 .modal-box {
   box-shadow: var(--shadow-xl);
@@ -788,6 +545,13 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   background: hsl(var(--foreground) / 0.5);
   backdrop-filter: blur(4px);
 }
+
+/* Legacy DaisyUI shim classes removed in v0.56.0:
+   .badge, .badge-primary, .badge-success, .badge-warning, .badge-error,
+   .badge-info, .badge-ghost, .stats, .stat, .stat-title, .stat-value,
+   .stat-desc, .alert, .alert-info, .alert-success, .alert-warning,
+   .alert-error — all replaced by inline Tailwind with design-system
+   tokens. See macros/status_badge.html and the component contracts. */
 
 /* --- Page Header --- */
 
@@ -918,22 +682,8 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
    7. Responsive Refinements
    ============================================================================= */
 
-@media (max-width: 768px) {
-  .card-body {
-    padding: 1rem;
-  }
-
-  .table thead th,
-  .table tbody td {
-    padding-block: 0.5rem;
-    padding-inline: 0.75rem;
-    font-size: 0.875rem;
-  }
-
-  .stat {
-    padding: 1rem;
-  }
-}
+/* Responsive refinements for DaisyUI .card-body / .table / .stat removed
+   in v0.56.0 — components now use inline Tailwind with responsive prefixes. */
 
 /* =============================================================================
    8. Container Queries
