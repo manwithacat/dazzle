@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.16] - 2026-04-17
+
+### Fixed
+- Auto-generated `feedback_admin` list surface now ships with a sensible `ux` block (sort by `created_at` desc, filter by category/severity/status, search description/reported_by, empty message). The lint warning "Surface 'feedback_admin' has no ux block" no longer fires on feedback-enabled apps — improve-loop cycle.
+
 ## [0.57.15] - 2026-04-16
 
 ### Fixed

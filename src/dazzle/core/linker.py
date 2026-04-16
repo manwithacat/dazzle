@@ -432,6 +432,14 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
             ("created_at", "Created"),
         ]
     ]
+    # Sensible defaults so apps don't see "surface has no ux block" lint
+    # warnings on every feedback-enabled project.
+    ux = ir.UXSpec(
+        sort=[ir.SortSpec(field="created_at", direction="desc")],
+        filter=["category", "severity", "status"],
+        search=["description", "reported_by"],
+        empty_message="No feedback yet.",
+    )
     return ir.SurfaceSpec(
         name="feedback_admin",
         title="Feedback Reports",
@@ -442,6 +450,7 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
             require_auth=True,
             allow_personas=["admin", "super_admin"],
         ),
+        ux=ux,
     )
 
 
