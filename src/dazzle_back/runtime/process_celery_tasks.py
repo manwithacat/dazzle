@@ -266,8 +266,7 @@ def _execute_builtin_entity_op(
     try:
         conn = _get_db_connection()
     except Exception as e:
-        logger.error("DB connection failed for %s.%s: %s", entity_name, operation, e)
-        return {}
+        raise RuntimeError(f"DB connection failed for {entity_name}.{operation}: {e}") from e
 
     try:
         if operation == "create":
@@ -553,8 +552,7 @@ def _execute_query_step(
     try:
         conn = _get_db_connection()
     except Exception as e:
-        logger.error("DB connection failed for query on %s: %s", entity_name, e)
-        return {}
+        raise RuntimeError(f"DB connection failed for query on {entity_name}: {e}") from e
 
     try:
         with conn.cursor() as cur:
@@ -638,6 +636,10 @@ def _execute_foreach_step(
     run.context.pop("item_index", None)
 
     logger.info("Foreach step processed %s items (%s errors)", processed, errors)
+
+    if items and errors == len(items):
+        raise RuntimeError(f"Foreach step failed: all {errors} items produced errors")
+
     return {"output": {"processed": processed, "errors": errors, "results": results}}
 
 
