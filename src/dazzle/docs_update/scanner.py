@@ -11,7 +11,7 @@ from dazzle.docs_update.models import ClosedIssue
 logger = logging.getLogger(__name__)
 
 # Labels that indicate non-actionable closures
-SKIP_LABELS = {"wontfix", "duplicate", "invalid"}
+SKIP_LABELS = frozenset({"wontfix", "duplicate", "invalid"})
 
 # Max body length sent to the LLM
 BODY_TRUNCATE = 2000

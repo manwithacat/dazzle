@@ -15,16 +15,14 @@ from pathlib import Path
 _STATIC_CSS_DIR = Path(__file__).parent / "static" / "css"
 
 # Canonical CSS source order — must match dazzle-framework.css and build_dist.py.
-CSS_SOURCE_FILES = [
+CSS_SOURCE_FILES = (
     "dazzle-layer.css",
     "design-system.css",
     "site-sections.css",
-]
+)
 
 # Files loaded unlayered (after framework layer) so they can override DaisyUI.
-CSS_UNLAYERED_FILES = [
-    "dz.css",
-]
+CSS_UNLAYERED_FILES = ("dz.css",)
 
 
 def _load_css_file(filename: str) -> str:

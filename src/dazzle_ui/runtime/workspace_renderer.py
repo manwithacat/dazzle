@@ -404,7 +404,7 @@ def build_workspace_context(
     )
 
 
-_VALID_COL_SPANS = {3, 4, 6, 8, 12}
+_VALID_COL_SPANS = frozenset({3, 4, 6, 8, 12})
 
 
 def migrate_v1_to_v2(

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 # Source file patterns to watch
-SOURCE_PATTERNS = ["*.py", "*.css", "*.js"]
+SOURCE_PATTERNS = ("*.py", "*.css", "*.js")
 
 
 class FileWatcher:

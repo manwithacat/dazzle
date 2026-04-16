@@ -88,7 +88,7 @@ _KEYWORDS: dict[str, TokenKind] = {
     "else": TokenKind.ELSE,
 }
 
-_DURATION_UNITS = {"d", "h", "m", "y", "w", "min"}
+_DURATION_UNITS = frozenset({"d", "h", "m", "y", "w", "min"})
 
 # Number pattern: int or float
 _NUMBER_RE = re.compile(r"\d+(\.\d+)?")

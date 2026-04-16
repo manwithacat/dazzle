@@ -572,47 +572,49 @@ class TokenType(Enum):
 
 
 # Token types that are NOT keywords (literals, operators, special tokens)
-_NON_KEYWORD_TOKENS = {
-    # Literals
-    TokenType.IDENTIFIER,
-    TokenType.STRING,
-    TokenType.NUMBER,
-    TokenType.DURATION_LITERAL,
-    # Operators and punctuation
-    TokenType.DOUBLE_EQUALS,
-    TokenType.NOT_EQUALS,
-    TokenType.GREATER_THAN,
-    TokenType.LESS_THAN,
-    TokenType.GREATER_EQUAL,
-    TokenType.LESS_EQUAL,
-    TokenType.COLON,
-    TokenType.ARROW,
-    TokenType.LARROW,
-    TokenType.BIARROW,
-    TokenType.COMMA,
-    TokenType.LPAREN,
-    TokenType.RPAREN,
-    TokenType.LBRACKET,
-    TokenType.RBRACKET,
-    TokenType.EQUALS,
-    TokenType.DOT,
-    TokenType.SLASH,
-    TokenType.QUESTION,
-    TokenType.DOLLAR,
-    TokenType.PLUS,
-    TokenType.MINUS,
-    TokenType.STAR,
-    TokenType.PERCENT,
-    # Special tokens
-    TokenType.NEWLINE,
-    TokenType.INDENT,
-    TokenType.DEDENT,
-    TokenType.EOF,
-}
+_NON_KEYWORD_TOKENS = frozenset(
+    {
+        # Literals
+        TokenType.IDENTIFIER,
+        TokenType.STRING,
+        TokenType.NUMBER,
+        TokenType.DURATION_LITERAL,
+        # Operators and punctuation
+        TokenType.DOUBLE_EQUALS,
+        TokenType.NOT_EQUALS,
+        TokenType.GREATER_THAN,
+        TokenType.LESS_THAN,
+        TokenType.GREATER_EQUAL,
+        TokenType.LESS_EQUAL,
+        TokenType.COLON,
+        TokenType.ARROW,
+        TokenType.LARROW,
+        TokenType.BIARROW,
+        TokenType.COMMA,
+        TokenType.LPAREN,
+        TokenType.RPAREN,
+        TokenType.LBRACKET,
+        TokenType.RBRACKET,
+        TokenType.EQUALS,
+        TokenType.DOT,
+        TokenType.SLASH,
+        TokenType.QUESTION,
+        TokenType.DOLLAR,
+        TokenType.PLUS,
+        TokenType.MINUS,
+        TokenType.STAR,
+        TokenType.PERCENT,
+        # Special tokens
+        TokenType.NEWLINE,
+        TokenType.INDENT,
+        TokenType.DEDENT,
+        TokenType.EOF,
+    }
+)
 
 # Auto-generate KEYWORDS from TokenType enum
 # Keywords are all token types except literals, operators, and special tokens
-KEYWORDS = {token.value for token in TokenType if token not in _NON_KEYWORD_TOKENS}
+KEYWORDS = frozenset({token.value for token in TokenType if token not in _NON_KEYWORD_TOKENS})
 
 
 @dataclass

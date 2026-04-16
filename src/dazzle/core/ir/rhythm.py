@@ -46,7 +46,7 @@ ACTION_VOCABULARY: dict[str, dict[str, str]] = {
     "approve": {"archetype": "decide", "meaning": "Authorize a state transition"},
 }
 
-ARCHETYPES = {"observe", "act", "decide"}
+ARCHETYPES = frozenset({"observe", "act", "decide"})
 
 
 def classify_action(action: str) -> str:

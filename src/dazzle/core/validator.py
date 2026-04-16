@@ -1516,20 +1516,22 @@ def _lint_list_surface_ux(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
-_INTEGRATION_KEYWORDS = {
-    "api",
-    "hmrc",
-    "xero",
-    "sync",
-    "webhook",
-    "stripe",
-    "twilio",
-    "sendgrid",
-    "mailgun",
-    "slack",
-    "zapier",
-    "salesforce",
-}
+_INTEGRATION_KEYWORDS = frozenset(
+    {
+        "api",
+        "hmrc",
+        "xero",
+        "sync",
+        "webhook",
+        "stripe",
+        "twilio",
+        "sendgrid",
+        "mailgun",
+        "slack",
+        "zapier",
+        "salesforce",
+    }
+)
 
 
 def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:

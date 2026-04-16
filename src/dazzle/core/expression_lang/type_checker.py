@@ -95,12 +95,14 @@ def _infer_literal(expr: Literal) -> ExprType:
     return ExprType.ANY
 
 
-_ARITHMETIC_OPS = {BinaryOp.ADD, BinaryOp.SUB, BinaryOp.MUL, BinaryOp.DIV, BinaryOp.MOD}
-_COMPARISON_OPS = {BinaryOp.EQ, BinaryOp.NE, BinaryOp.LT, BinaryOp.GT, BinaryOp.LE, BinaryOp.GE}
-_LOGICAL_OPS = {BinaryOp.AND, BinaryOp.OR}
+_ARITHMETIC_OPS = frozenset({BinaryOp.ADD, BinaryOp.SUB, BinaryOp.MUL, BinaryOp.DIV, BinaryOp.MOD})
+_COMPARISON_OPS = frozenset(
+    {BinaryOp.EQ, BinaryOp.NE, BinaryOp.LT, BinaryOp.GT, BinaryOp.LE, BinaryOp.GE}
+)
+_LOGICAL_OPS = frozenset({BinaryOp.AND, BinaryOp.OR})
 
 # Which types support arithmetic
-_NUMERIC_TYPES = {ExprType.INT, ExprType.FLOAT, ExprType.MONEY}
+_NUMERIC_TYPES = frozenset({ExprType.INT, ExprType.FLOAT, ExprType.MONEY})
 
 
 def _infer_binary(expr: BinaryExpr, ctx: FieldTypeContext) -> ExprType:

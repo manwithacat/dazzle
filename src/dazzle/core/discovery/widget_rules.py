@@ -14,7 +14,7 @@ from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from .models import Relevance
 
 # Modes where widget suggestions are meaningful
-_EDIT_MODES = {SurfaceMode.CREATE, SurfaceMode.EDIT}
+_EDIT_MODES = frozenset({SurfaceMode.CREATE, SurfaceMode.EDIT})
 
 # Name patterns for widget heuristics (compiled once)
 _TAGS_RE = re.compile(r"tag|label|keyword", re.IGNORECASE)

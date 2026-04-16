@@ -16,8 +16,8 @@ STATIC_CSS = (
 
 # Canonical order — must match dazzle-framework.css, css_loader.py, build_dist.py
 # Layered files go into @layer framework; unlayered files are appended after.
-LAYERED_ORDER = ["dazzle-layer.css", "design-system.css", "site-sections.css"]
-UNLAYERED_FILES = ["dz.css"]
+LAYERED_ORDER = ("dazzle-layer.css", "design-system.css", "site-sections.css")
+UNLAYERED_FILES = ("dz.css",)
 ALL_CSS_FILES = LAYERED_ORDER + UNLAYERED_FILES
 
 

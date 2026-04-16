@@ -18,7 +18,7 @@ MAX_RETRIES = 3
 BACKOFF_SECONDS = (1.0, 2.0, 4.0)
 
 # HTTP status codes that indicate a transient server error worth retrying.
-_TRANSIENT_STATUS_CODES = {502, 503, 504}
+_TRANSIENT_STATUS_CODES = frozenset({502, 503, 504})
 
 # Exception types (besides TimeoutException) that warrant a retry.
 _TRANSIENT_EXCEPTIONS = (

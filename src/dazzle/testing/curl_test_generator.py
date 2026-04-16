@@ -24,7 +24,7 @@ from dazzle.testing.field_value_gen import generate_field_value
 
 logger = logging.getLogger(__name__)
 
-ALL_SUITES = ["smoke", "auth", "crud", "validation", "state", "security", "persona"]
+ALL_SUITES = ("smoke", "auth", "crud", "validation", "state", "security", "persona")
 
 
 class CurlTestGenerator:

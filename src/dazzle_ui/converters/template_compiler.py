@@ -73,7 +73,7 @@ CURRENCY_SYMBOLS: dict[str, str] = {
 }
 
 # Default currencies shown in unpinned money dropdowns
-_DEFAULT_CURRENCY_OPTIONS = [
+_DEFAULT_CURRENCY_OPTIONS = (
     "GBP",
     "USD",
     "EUR",
@@ -89,7 +89,7 @@ _DEFAULT_CURRENCY_OPTIONS = [
     "NOK",
     "DKK",
     "NZD",
-]
+)
 
 
 def _build_currency_options(

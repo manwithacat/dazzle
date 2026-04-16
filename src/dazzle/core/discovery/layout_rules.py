@@ -12,10 +12,10 @@ from dazzle.core.ir.workspaces import DisplayMode, WorkspaceSpec
 from .models import Relevance
 
 # Field type kinds that indicate temporal data
-_DATE_KINDS = {FieldTypeKind.DATE, FieldTypeKind.DATETIME}
+_DATE_KINDS = frozenset({FieldTypeKind.DATE, FieldTypeKind.DATETIME})
 
 # Surface modes that represent create/edit forms
-_FORM_MODES = {SurfaceMode.CREATE, SurfaceMode.EDIT}
+_FORM_MODES = frozenset({SurfaceMode.CREATE, SurfaceMode.EDIT})
 
 
 def check_layout_relevance(

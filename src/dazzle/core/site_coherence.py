@@ -168,7 +168,7 @@ class CoherenceReport:
 # Placeholder Detection
 # =============================================================================
 
-PLACEHOLDER_PATTERNS = [
+PLACEHOLDER_PATTERNS = (
     r"\bYour\s+(?:Tagline|App|Product|Company)\s+Here\b",
     r"\bLorem\s+ipsum\b",
     r"\bTODO\b",
@@ -186,7 +186,7 @@ PLACEHOLDER_PATTERNS = [
     r"Feature\s+\d+",  # Generic "Feature 1", "Feature 2"
     r"Benefit\s+\d+",
     r"Step\s+\d+:\s*$",  # "Step 1:" with nothing after
-]
+)
 
 PLACEHOLDER_REGEX = re.compile("|".join(PLACEHOLDER_PATTERNS), re.IGNORECASE)
 

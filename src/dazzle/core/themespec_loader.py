@@ -269,17 +269,19 @@ _VALID_FIELD_PATHS: set[str] = {
 }
 
 # Valid attention signal levels and kinds for validation
-_VALID_SIGNAL_LEVELS = {"critical", "warning", "notice", "info"}
-_VALID_SIGNAL_KINDS = {
-    "deadline",
-    "overdue",
-    "threshold",
-    "status_change",
-    "anomaly",
-    "approval",
-    "mention",
-    "assignment",
-}
+_VALID_SIGNAL_LEVELS = frozenset({"critical", "warning", "notice", "info"})
+_VALID_SIGNAL_KINDS = frozenset(
+    {
+        "deadline",
+        "overdue",
+        "threshold",
+        "status_change",
+        "anomaly",
+        "approval",
+        "mention",
+        "assignment",
+    }
+)
 
 
 def validate_themespec(

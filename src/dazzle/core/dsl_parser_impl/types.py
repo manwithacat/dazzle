@@ -29,33 +29,37 @@ DURATION_SUFFIX_MAP = {
 }
 
 # Operator tokens that indicate an invalid default value
-_INVALID_DEFAULT_OPERATOR_TOKENS = {
-    TokenType.SLASH,
-    TokenType.STAR,
-    TokenType.PLUS,
-    TokenType.MINUS,
-    TokenType.COLON,
-    TokenType.COMMA,
-    TokenType.DOT,
-    TokenType.ARROW,
-}
+_INVALID_DEFAULT_OPERATOR_TOKENS = frozenset(
+    {
+        TokenType.SLASH,
+        TokenType.STAR,
+        TokenType.PLUS,
+        TokenType.MINUS,
+        TokenType.COLON,
+        TokenType.COMMA,
+        TokenType.DOT,
+        TokenType.ARROW,
+    }
+)
 
 # Tokens that indicate an expression default (after an identifier)
-_EXPR_OPERATORS = {
-    TokenType.PLUS,
-    TokenType.MINUS,
-    TokenType.STAR,
-    TokenType.SLASH,
-    TokenType.PERCENT,
-    TokenType.DOUBLE_EQUALS,
-    TokenType.NOT_EQUALS,
-    TokenType.GREATER_THAN,
-    TokenType.LESS_THAN,
-    TokenType.GREATER_EQUAL,
-    TokenType.LESS_EQUAL,
-    TokenType.DOT,
-    TokenType.ARROW,
-}
+_EXPR_OPERATORS = frozenset(
+    {
+        TokenType.PLUS,
+        TokenType.MINUS,
+        TokenType.STAR,
+        TokenType.SLASH,
+        TokenType.PERCENT,
+        TokenType.DOUBLE_EQUALS,
+        TokenType.NOT_EQUALS,
+        TokenType.GREATER_THAN,
+        TokenType.LESS_THAN,
+        TokenType.GREATER_EQUAL,
+        TokenType.LESS_EQUAL,
+        TokenType.DOT,
+        TokenType.ARROW,
+    }
+)
 
 
 class TypeParserMixin:

@@ -51,7 +51,7 @@ _MIXIN_SECTIONS: list[tuple[str, str, str]] = [
 ]
 
 # Categories in presentation order.
-_CATEGORY_ORDER = [
+_CATEGORY_ORDER = (
     "Core",
     "Surface",
     "Workflow",
@@ -61,7 +61,7 @@ _CATEGORY_ORDER = [
     "Financial",
     "Governance",
     "LLM",
-]
+)
 
 
 # ---------------------------------------------------------------------------

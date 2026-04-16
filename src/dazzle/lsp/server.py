@@ -637,7 +637,7 @@ def _detect_completion_context(text: str, line: int, character: int) -> str:
     return "global"
 
 
-_FIELD_TYPES = [
+_FIELD_TYPES = (
     "uuid",
     "str",
     "int",
@@ -655,9 +655,9 @@ _FIELD_TYPES = [
     "email",
     "decimal",
     "computed",
-]
+)
 
-_FIELD_MODIFIERS = [
+_FIELD_MODIFIERS = (
     "required",
     "unique",
     "pk",
@@ -666,9 +666,9 @@ _FIELD_MODIFIERS = [
     "auto_update",
     "readonly",
     "index",
-]
+)
 
-_CONSTRUCT_KEYWORDS = [
+_CONSTRUCT_KEYWORDS = (
     "entity",
     "surface",
     "workspace",
@@ -693,11 +693,11 @@ _CONSTRUCT_KEYWORDS = [
     "channel",
     "archetype",
     "flow",
-]
+)
 
-_MODE_VALUES = ["list", "view", "create", "edit", "delete", "custom"]
+_MODE_VALUES = ("list", "view", "create", "edit", "delete", "custom")
 
-_SURFACE_SUBKEYWORDS = [
+_SURFACE_SUBKEYWORDS = (
     "section",
     "action",
     "field",
@@ -709,9 +709,9 @@ _SURFACE_SUBKEYWORDS = [
     "display",
     "search",
     "empty",
-]
+)
 
-_PROCESS_SUBKEYWORDS = [
+_PROCESS_SUBKEYWORDS = (
     "state",
     "transition",
     "step",
@@ -723,7 +723,7 @@ _PROCESS_SUBKEYWORDS = [
     "compensate",
     "on_success",
     "on_failure",
-]
+)
 
 
 NameIndex = dict[str, tuple[str, Any]]
@@ -1037,7 +1037,7 @@ def _try_match_entity_field(line: str, line_no: int, current_construct: Document
 
 
 # Ordered list of child matchers to try within a construct block.
-_CHILD_MATCHERS = [_try_match_child, _try_match_entity_field]
+_CHILD_MATCHERS = (_try_match_child, _try_match_entity_field)
 
 
 def _scan_document_symbols(text: str) -> list[DocumentSymbol]:

@@ -13,7 +13,7 @@ from ..errors import make_parse_error
 from ..lexer import TokenType
 
 # HTTP method identifiers mapped to enum
-_HTTP_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH"}
+_HTTP_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH"})
 
 # Auth type identifiers mapped to enum
 _AUTH_TYPES = {

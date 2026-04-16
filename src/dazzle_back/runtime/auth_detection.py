@@ -17,10 +17,10 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-USER_ENTITY_NAMES = {"user", "users", "account", "accounts", "member", "members"}
-EMAIL_FIELD_NAMES = {"email", "email_address", "mail"}
-PASSWORD_FIELD_NAMES = {"password", "password_hash", "hashed_password", "pwd"}
-USERNAME_FIELD_NAMES = {"username", "user_name", "name", "login"}
+USER_ENTITY_NAMES = frozenset({"user", "users", "account", "accounts", "member", "members"})
+EMAIL_FIELD_NAMES = frozenset({"email", "email_address", "mail"})
+PASSWORD_FIELD_NAMES = frozenset({"password", "password_hash", "hashed_password", "pwd"})
+USERNAME_FIELD_NAMES = frozenset({"username", "user_name", "name", "login"})
 
 
 def find_user_entity(spec: BackendSpec) -> EntitySpec | None:

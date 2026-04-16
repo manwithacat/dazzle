@@ -11,7 +11,7 @@ from .validation import InitError
 
 # Directories that should be generated, not copied from templates
 # These are auto-generated from DSL and should use canonical templates
-GENERATED_DIRECTORIES = {"dnr-ui", "build"}
+GENERATED_DIRECTORIES = frozenset({"dnr-ui", "build"})
 
 
 def substitute_template_vars(content: str, variables: dict[str, str]) -> str:

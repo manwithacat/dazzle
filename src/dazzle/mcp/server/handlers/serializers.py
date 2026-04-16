@@ -22,21 +22,23 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-_STORY_SUMMARY_FIELDS = {"story_id", "title", "actor", "status", "scope"}
+_STORY_SUMMARY_FIELDS = frozenset({"story_id", "title", "actor", "status", "scope"})
 
-_STORY_FULL_FIELDS = {
-    "story_id",
-    "title",
-    "description",
-    "actor",
-    "trigger",
-    "scope",
-    "given",
-    "when",
-    "then",
-    "unless",
-    "status",
-}
+_STORY_FULL_FIELDS = frozenset(
+    {
+        "story_id",
+        "title",
+        "description",
+        "actor",
+        "trigger",
+        "scope",
+        "given",
+        "when",
+        "then",
+        "unless",
+        "status",
+    }
+)
 
 
 def serialize_story_summary(story: StorySpec) -> dict[str, Any]:
@@ -57,24 +59,26 @@ def serialize_story(story: StorySpec) -> dict[str, Any]:
 # =============================================================================
 
 
-_TD_SUMMARY_FIELDS = {"test_id", "title", "persona", "status"}
+_TD_SUMMARY_FIELDS = frozenset({"test_id", "title", "persona", "status"})
 
-_TD_FULL_FIELDS = {
-    "test_id",
-    "title",
-    "description",
-    "persona",
-    "scenario",
-    "trigger",
-    "steps",
-    "expected_outcomes",
-    "entities",
-    "surfaces",
-    "tags",
-    "status",
-    "implementation_path",
-    "notes",
-}
+_TD_FULL_FIELDS = frozenset(
+    {
+        "test_id",
+        "title",
+        "description",
+        "persona",
+        "scenario",
+        "trigger",
+        "steps",
+        "expected_outcomes",
+        "entities",
+        "surfaces",
+        "tags",
+        "status",
+        "implementation_path",
+        "notes",
+    }
+)
 
 
 def serialize_test_design_summary(td: Any) -> dict[str, Any]:

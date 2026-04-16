@@ -12,7 +12,7 @@ from .models import ConformanceCase, ScopeOutcome
 
 _HEADER = "# AUTO-GENERATED — do not edit. Regenerate with: dazzle conformance generate\n"
 
-_SCOPE_TYPE_KEYS = [o.value for o in ScopeOutcome]
+_SCOPE_TYPE_KEYS = tuple(o.value for o in ScopeOutcome)
 
 
 def _escape_toml_string(value: str) -> str:

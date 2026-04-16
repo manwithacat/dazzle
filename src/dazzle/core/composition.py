@@ -39,25 +39,27 @@ KNOWN_FONT_SIZES: dict[str, float] = {
     "blockquote": 1.125,
 }
 
-_LARGE_AREA = {"hero_image", "split_image", "pricing_price"}
-_MEDIUM_AREA = {"h1", "h2", "primary_cta", "blockquote"}
-_SMALL_AREA = {"h3", "h4", "subhead", "secondary_cta", "step_number"}
+_LARGE_AREA = frozenset({"hero_image", "split_image", "pricing_price"})
+_MEDIUM_AREA = frozenset({"h1", "h2", "primary_cta", "blockquote"})
+_SMALL_AREA = frozenset({"h3", "h4", "subhead", "secondary_cta", "step_number"})
 
-_HIGH_CONTRAST = {"h1", "h2", "pricing_price", "primary_cta", "step_number"}
-_MEDIUM_CONTRAST = {"h3", "h4", "secondary_cta", "blockquote", "hero_image"}
+_HIGH_CONTRAST = frozenset({"h1", "h2", "pricing_price", "primary_cta", "step_number"})
+_MEDIUM_CONTRAST = frozenset({"h3", "h4", "secondary_cta", "blockquote", "hero_image"})
 
-_DISTINCT = {
-    "primary_cta",
-    "secondary_cta",
-    "card_cta",
-    "pricing_price",
-    "step_number",
-    "card_icon",
-    "hero_image",
-    "split_image",
-}
+_DISTINCT = frozenset(
+    {
+        "primary_cta",
+        "secondary_cta",
+        "card_cta",
+        "pricing_price",
+        "step_number",
+        "card_icon",
+        "hero_image",
+        "split_image",
+    }
+)
 
-_INTERACTIVE = {"primary_cta", "secondary_cta", "card_cta"}
+_INTERACTIVE = frozenset({"primary_cta", "secondary_cta", "card_cta"})
 
 # Section-specific weight overrides (CSS differs per section context)
 SECTION_WEIGHT_OVERRIDES: dict[str, dict[str, float]] = {

@@ -525,7 +525,7 @@ def _extract_keywords(text: str) -> set[str]:
 
 
 # Standard actions that are passive (don't require a matching surface action)
-_PASSIVE_ACTIONS = {"browse", "review", "monitor", "decide"}
+_PASSIVE_ACTIONS = frozenset({"browse", "review", "monitor", "decide"})
 
 
 def _action_matches(verb: str, surface_action_names: set[str], surface_actions: list[Any]) -> bool:

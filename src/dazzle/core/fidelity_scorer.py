@@ -935,20 +935,22 @@ def score_appspec_fidelity(
     )
 
 
-_INTEGRATION_KEYWORDS = {
-    "api",
-    "hmrc",
-    "xero",
-    "sync",
-    "webhook",
-    "stripe",
-    "twilio",
-    "sendgrid",
-    "mailgun",
-    "slack",
-    "zapier",
-    "salesforce",
-}
+_INTEGRATION_KEYWORDS = frozenset(
+    {
+        "api",
+        "hmrc",
+        "xero",
+        "sync",
+        "webhook",
+        "stripe",
+        "twilio",
+        "sendgrid",
+        "mailgun",
+        "slack",
+        "zapier",
+        "salesforce",
+    }
+)
 
 
 def _compute_integration_fidelity(appspec: AppSpec, stories: list[StorySpec] | None) -> float:

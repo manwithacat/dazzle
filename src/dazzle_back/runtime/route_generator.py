@@ -2335,7 +2335,7 @@ async def _materialize_graph(
     return materializer.build(str_nodes, str_edges), str_nodes, str_edges
 
 
-_VALID_GRAPH_FORMATS = {"cytoscape", "d3", "raw"}
+_VALID_GRAPH_FORMATS = frozenset({"cytoscape", "d3", "raw"})
 
 
 async def _neighborhood_handler_body(

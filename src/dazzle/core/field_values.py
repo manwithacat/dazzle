@@ -27,8 +27,8 @@ from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
 # Sample-data pools (used when index-based realistic values are requested)
 # ---------------------------------------------------------------------------
 
-_NAMES = ["Alice Johnson", "Bob Smith", "Carol Williams", "David Brown", "Eve Davis"]
-_TITLES = [
+_NAMES = ("Alice Johnson", "Bob Smith", "Carol Williams", "David Brown", "Eve Davis")
+_TITLES = (
     "Fix login page CSS",
     "Add unit tests",
     "Deploy to staging",
@@ -37,14 +37,14 @@ _TITLES = [
     "Refactor auth module",
     "Add search feature",
     "Fix memory leak",
-]
-_DESCRIPTIONS = [
+)
+_DESCRIPTIONS = (
     "This needs to be done before the next release.",
     "High priority item from the last sprint review.",
     "Follow up from customer feedback.",
     "",
     "Blocked by upstream dependency.",
-]
+)
 
 
 # ---------------------------------------------------------------------------

@@ -73,7 +73,7 @@ DIMENSION_PREPROCESSING: dict[str, str | None] = {
 }
 
 # Dimensions that only apply to mobile viewport
-MOBILE_ONLY_DIMENSIONS = {"responsive_fidelity"}
+MOBILE_ONLY_DIMENSIONS = frozenset({"responsive_fidelity"})
 
 # Default token budget per page
 DEFAULT_PAGE_TOKEN_BUDGET = 10_000

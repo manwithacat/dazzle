@@ -218,7 +218,7 @@ def _generate_dsl(analyzer: Any, results: dict[str, Any], output_path: Path) -> 
 # in cli/__init__.py. They're top-level commands, not sub-commands.
 
 
-_APP_SUBDIRS = [
+_APP_SUBDIRS = (
     ("app", "Custom application code"),
     ("app/db", "Database operations (snapshots, migrations, fixups)"),
     ("app/sync", "External data integration (API clients, importers)"),
@@ -226,7 +226,7 @@ _APP_SUBDIRS = [
     ("app/qa", "Quality assurance tooling"),
     ("app/demo", "Demo data generation and management"),
     ("scripts", "One-shot scripts (fixups, experiments)"),
-]
+)
 
 
 def _scaffold_app_directory(

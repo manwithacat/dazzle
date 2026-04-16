@@ -8,7 +8,7 @@ from typing import Any
 
 from .models import ConformanceCase, ScopeOutcome
 
-OPERATIONS = ["list", "create", "read", "update", "delete"]
+OPERATIONS = ("list", "create", "read", "update", "delete")
 
 # Sentinel values for expected_rows:
 #   -1  → all rows (no filter applied)

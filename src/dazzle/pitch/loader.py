@@ -388,7 +388,7 @@ def merge_pitchspec(project_root: Path, patch: dict[str, Any]) -> PitchSpec:
 
 
 PITCH_ASSETS_DIR = "pitch_assets"
-PITCH_ASSETS_SUBDIRS = ["team", "research", "charts", "media"]
+PITCH_ASSETS_SUBDIRS = ("team", "research", "charts", "media")
 MANIFEST_FILE = "manifest.yaml"
 
 
