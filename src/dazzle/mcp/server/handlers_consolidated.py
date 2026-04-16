@@ -1261,6 +1261,22 @@ handle_compliance: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Agent Commands Handler
+# =============================================================================
+
+_MOD_AGENT_CMDS = "dazzle.mcp.server.handlers.agent_commands"
+
+handle_agent_commands: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "agent_commands",
+    {
+        "list": f"{_MOD_AGENT_CMDS}:handle_list",
+        "get": f"{_MOD_AGENT_CMDS}:handle_get",
+        "check_updates": f"{_MOD_AGENT_CMDS}:handle_check_updates",
+    },
+)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1297,6 +1313,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "param": handle_param,
     "conformance": handle_conformance,
     "compliance": handle_compliance,
+    "agent_commands": handle_agent_commands,
 }
 
 

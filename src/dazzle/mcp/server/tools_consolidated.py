@@ -1507,6 +1507,37 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Agent Commands (autonomous development skill management)
+        # =====================================================================
+        Tool(
+            name="agent_commands",
+            description=(
+                "Agent development commands: list (available commands with maturity status), "
+                "get (rendered skill content for a command), "
+                "check_updates (version comparison for sync)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    **PROJECT_PATH_SCHEMA,
+                    "operation": {
+                        "type": "string",
+                        "enum": ["list", "get", "check_updates"],
+                        "description": "Operation to perform",
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "Command name (for 'get' operation)",
+                    },
+                    "commands_version": {
+                        "type": "string",
+                        "description": "Local commands_version from .manifest.json (for 'check_updates')",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

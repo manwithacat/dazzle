@@ -222,6 +222,7 @@ app.command(name="dbshell")(dbshell_command)
 # =============================================================================
 # Sub-apps
 # =============================================================================
+from dazzle.cli.agent_commands import agent_app  # noqa: E402
 from dazzle.cli.api_pack import api_pack_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.backup import backup_app  # noqa: E402
@@ -264,6 +265,7 @@ from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.ux import ux_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
+app.add_typer(agent_app, name="agent")
 app.add_typer(api_pack_app, name="api-pack")
 app.add_typer(auth_app, name="auth")
 app.add_typer(compliance_app, name="compliance")
