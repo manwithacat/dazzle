@@ -55,7 +55,14 @@ else:
     RouteGenerator = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
-    pass
+    from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
+    from dazzle.core.manifest import TenantConfig
+    from dazzle.core.process.adapter import ProcessAdapter
+    from dazzle_back.events.framework import EventFramework
+    from dazzle_back.runtime.auth_detection import AuthConfig
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+    from dazzle_back.runtime.process_manager import ProcessManager
+    from dazzle_back.runtime.sla_manager import SLAManager
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +85,7 @@ class ServerConfig:
 
     # Authentication settings
     enable_auth: bool = False
-    auth_config: Any = None  # AuthConfig from manifest (for OAuth providers)
+    auth_config: "AuthConfig | None" = None  # from manifest (for OAuth providers)
 
     # File upload settings
     enable_files: bool = False
@@ -107,12 +114,12 @@ class ServerConfig:
     # Process/workflow support (v0.24.0)
     enable_processes: bool = True  # Enable process workflow execution
     process_adapter_class: type | None = None  # Custom ProcessAdapter class
-    process_specs: list[Any] = field(default_factory=list)  # ProcessSpec list from AppSpec
-    schedule_specs: list[Any] = field(default_factory=list)  # ScheduleSpec list from AppSpec
+    process_specs: "list[ProcessSpec]" = field(default_factory=list)
+    schedule_specs: "list[ScheduleSpec]" = field(default_factory=list)
     entity_status_fields: dict[str, str] = field(default_factory=dict)  # entity_name → status field
 
     # Tenant isolation (v0.43.0)
-    tenant_config: Any = None  # TenantConfig from manifest
+    tenant_config: "TenantConfig | None" = None
 
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -148,7 +155,7 @@ class DazzleBackendApp:
         *,
         database_url: str | None = None,
         enable_auth: bool | None = None,
-        auth_config: Any = None,  # AuthConfig from manifest (for OAuth providers)
+        auth_config: "AuthConfig | None" = None,
         enable_files: bool | None = None,
         files_path: str | Path | None = None,
         enable_test_mode: bool | None = None,
@@ -223,7 +230,7 @@ class DazzleBackendApp:
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
         self._repositories: dict[str, Any] = {}
-        self._db_manager: Any = None
+        self._db_manager: PostgresBackend | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
         self._file_service: FileService | None = None
@@ -239,18 +246,18 @@ class DazzleBackendApp:
         self._security_profile = config.security_profile
         self._cors_origins = config.cors_origins
         # Event system (v0.18.0)
-        self._event_framework: Any | None = None  # EventFramework type
+        self._event_framework: EventFramework | None = None
         # NOTE: _sitespec_data and _project_root are already set above (lines 201-203)
         # with proper parameter precedence over config defaults
         # Process/workflow support (v0.24.0)
         self._enable_processes = config.enable_processes
         self._process_adapter_class = config.process_adapter_class  # Custom adapter class
-        self._process_specs: list[Any] = config.process_specs  # ProcessSpec list from AppSpec
-        self._schedule_specs: list[Any] = config.schedule_specs  # ScheduleSpec list from AppSpec
+        self._process_specs: list[ProcessSpec] = config.process_specs
+        self._schedule_specs: list[ScheduleSpec] = config.schedule_specs
         self._entity_status_fields: dict[str, str] = config.entity_status_fields
-        self._process_manager: Any | None = None  # ProcessManager type
-        self._process_adapter: Any | None = None  # ProcessAdapter type
-        self._sla_manager: Any | None = None  # SLAManager type
+        self._process_manager: ProcessManager | None = None
+        self._process_adapter: ProcessAdapter | None = None
+        self._sla_manager: SLAManager | None = None
         # Tenant isolation (v0.43.0)
         self._tenant_config = config.tenant_config
         # Fragment sources from DSL source= annotations (v0.25.1)

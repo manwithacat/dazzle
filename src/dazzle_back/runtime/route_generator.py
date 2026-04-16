@@ -33,6 +33,7 @@ else:
     AuthContext = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
+    from dazzle.core.ir.fk_graph import FKGraph
     from dazzle_back.runtime.audit_log import AuditLogger
     from dazzle_back.runtime.service_generator import BaseService
     from dazzle_back.specs.auth import EntityAccessSpec
@@ -154,9 +155,9 @@ async def _parse_request_body(request: Any) -> dict[str, Any]:
 
 
 def _extract_cedar_row_filters(
-    cedar_access_spec: Any,
+    cedar_access_spec: "EntityAccessSpec",
     user_id: str,
-    auth_context: Any | None = None,
+    auth_context: "AuthContext | None" = None,
 ) -> dict[str, Any]:
     """Extract SQL-compatible row filters from Cedar permission rules.
 
@@ -287,7 +288,7 @@ def _build_via_subquery(
     junction_entity: str,
     bindings: list[dict[str, str]],
     user_id: str,
-    auth_context: Any = None,
+    auth_context: "AuthContext | None" = None,
 ) -> tuple[str, str, list[Any]]:
     """Build a SQL subquery for a via-check scope condition.
 
@@ -349,7 +350,7 @@ def _build_via_subquery(
     return entity_field, subquery_sql, params
 
 
-def _resolve_user_attribute(attr_name: str, auth_context: Any) -> Any:
+def _resolve_user_attribute(attr_name: str, auth_context: "AuthContext | None") -> Any:
     """Resolve a ``current_user.<attr_name>`` dotted reference to a concrete value.
 
     Resolution order:
@@ -399,7 +400,7 @@ def _extract_condition_filters(
     user_id: str,
     filters: dict[str, Any],
     _logger: Any,
-    auth_context: Any = None,
+    auth_context: "AuthContext | None" = None,
     ref_targets: dict[str, str] | None = None,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
@@ -611,7 +612,7 @@ def _normalize_role(role: str) -> str:
     return role.removeprefix("role_")
 
 
-def _build_access_context(auth_context: Any) -> tuple[Any, Any]:
+def _build_access_context(auth_context: "AuthContext") -> tuple[Any, Any]:
     """Build (user, AccessRuntimeContext) from an AuthContext.
 
     Returns (user_or_none, runtime_context) for Cedar policy evaluation.
@@ -670,7 +671,7 @@ def _json_safe(val: Any) -> Any:
 
 
 async def _log_audit_decision(
-    audit_logger: Any,
+    audit_logger: "AuditLogger",
     request: Any,
     *,
     operation: str,
@@ -692,8 +693,8 @@ async def _log_audit_decision(
         entity_name=entity_name,
         entity_id=entity_id,
         decision=decision,
-        matched_policy=matched_policy,
-        policy_effect=policy_effect,
+        matched_policy=matched_policy or "",
+        policy_effect=policy_effect or "",
         user_id=str(user.id) if user else None,
         user_email=getattr(user, "email", None) if user else None,
         user_roles=list(getattr(user, "roles", [])) if user else None,
@@ -797,7 +798,7 @@ def _build_cedar_handler(
     async def _cedar_impl(
         id: UUID | None,
         request: Request,
-        auth_context: Any,
+        auth_context: AuthContext,
     ) -> Any:
         from dazzle.core.access import AccessDecision
         from dazzle_back.runtime.access_evaluator import evaluate_permission
@@ -924,7 +925,7 @@ def _build_auth_handler(
     async def _auth_impl(
         id: UUID | None,
         request: Request,
-        auth_context: Any,
+        auth_context: AuthContext,
     ) -> Any:
         user = auth_context.user
         current_user = str(user.id) if user else None
@@ -1025,7 +1026,7 @@ def create_list_handler(
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
-    fk_graph: Any | None = None,
+    fk_graph: "FKGraph | None" = None,
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
 ) -> Callable[..., Any]:
@@ -1177,15 +1178,15 @@ def create_list_handler(
 
 
 def _resolve_scope_filters(
-    cedar_access_spec: Any,
+    cedar_access_spec: "EntityAccessSpec",
     operation: str,
     user_roles: set[str],
     user_id: str,
-    auth_context: Any | None = None,
+    auth_context: "AuthContext | None" = None,
     ref_targets: dict[str, str] | None = None,
     *,
     entity_name: str = "",
-    fk_graph: Any | None = None,
+    fk_graph: "FKGraph | None" = None,
 ) -> dict[str, Any] | None:
     """Resolve scope rules to SQL filters for the user's matched role.
 
@@ -1293,9 +1294,9 @@ def _resolve_scope_filters(
 def _resolve_predicate_filters(
     predicate: Any,
     entity_name: str,
-    fk_graph: Any,
+    fk_graph: "FKGraph",
     user_id: str,
-    auth_context: Any | None,
+    auth_context: "AuthContext | None",
 ) -> dict[str, Any]:
     """Compile a ScopePredicate to SQL and resolve runtime markers.
 
@@ -1370,15 +1371,15 @@ async def _list_handler_body(
     select_fields: list[str] | None = None,
     json_projection: list[str] | None = None,
     auto_include: list[str] | None = None,
-    cedar_access_spec: Any | None = None,
-    auth_context: Any | None = None,
-    audit_logger: Any | None = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
+    auth_context: "AuthContext | None" = None,
+    audit_logger: "AuditLogger | None" = None,
     entity_name: str = "Item",
     user: Any | None = None,
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
-    fk_graph: Any | None = None,
+    fk_graph: "FKGraph | None" = None,
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
 ) -> Any:
@@ -2434,8 +2435,8 @@ def create_neighborhood_handler(
     db_manager: Any,
     node_service: Any,
     optional_auth_dep: Callable[..., Any] | None = None,
-    cedar_access_spec: Any | None = None,
-    fk_graph: Any | None = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
+    fk_graph: "FKGraph | None" = None,
     ref_targets: dict[str, str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for graph neighborhood traversal (#619 Phase 3).
@@ -2654,8 +2655,8 @@ class RouteGenerator:
         optional_auth_dep: Callable[..., Any] | None = None,
         require_auth_by_default: bool = False,
         auth_store: Any | None = None,
-        audit_logger: Any | None = None,
-        cedar_access_specs: dict[str, Any] | None = None,
+        audit_logger: "AuditLogger | None" = None,
+        cedar_access_specs: "dict[str, EntityAccessSpec] | None" = None,
         entity_list_projections: dict[str, list[str]] | None = None,
         entity_search_fields: dict[str, list[str]] | None = None,
         entity_filter_fields: dict[str, list[str]] | None = None,
@@ -2663,7 +2664,7 @@ class RouteGenerator:
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
         entity_audit_configs: dict[str, Any] | None = None,
         entity_ref_targets: dict[str, dict[str, str]] | None = None,
-        fk_graph: Any | None = None,
+        fk_graph: "FKGraph | None" = None,
         entity_graph_specs: dict[str, tuple[Any, Any | None]] | None = None,
         node_graph_specs: dict[str, dict[str, Any]] | None = None,
         db_manager: Any | None = None,
