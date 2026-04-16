@@ -20,6 +20,7 @@ from dazzle.core.ir.surfaces import (
     SurfaceSection,
     SurfaceSpec,
 )
+from dazzle.core.ir.ux import SortSpec, UXSpec
 from dazzle.core.ir.workspaces import (
     DisplayMode,
     NavGroupSpec,
@@ -315,6 +316,47 @@ _ADMIN_SURFACE_DEFS: list[tuple[str, str, str, list[tuple[str, str]], str | None
 ]
 
 
+_STATUS_FIELD_NAMES: frozenset[str] = frozenset({"status", "level", "state"})
+_TIMESTAMP_SUFFIXES: tuple[str, ...] = ("_at", "_on", "time", "timestamp")
+_NON_SEARCHABLE_FIELDS: frozenset[str] = frozenset(
+    {"id", "status", "level", "state", "value", "unit"}
+)
+
+
+def _looks_like_timestamp(field_name: str) -> bool:
+    lower = field_name.lower()
+    return any(lower.endswith(suffix) for suffix in _TIMESTAMP_SUFFIXES)
+
+
+def _default_admin_ux(field_defs: list[tuple[str, str]]) -> UXSpec:
+    """Build a sensible default UXSpec for a framework-generated admin surface.
+
+    The admin surfaces live outside the DSL so they can't carry author-
+    chosen ux blocks. This helper derives plausible defaults (status
+    filter, text-field search, timestamp sort desc, empty message) so
+    the lint rule recognises the surface as intentional (closes an
+    improve-loop lint warning on every framework app, v0.57.14).
+    """
+    field_names = [name for name, _ in field_defs]
+    filter_fields = [name for name in field_names if name in _STATUS_FIELD_NAMES]
+    search_fields = [
+        name
+        for name in field_names
+        if name not in _NON_SEARCHABLE_FIELDS and not _looks_like_timestamp(name)
+    ]
+    sort_specs: list[SortSpec] = []
+    for name in field_names:
+        if _looks_like_timestamp(name):
+            sort_specs = [SortSpec(field=name, direction="desc")]
+            break
+    return UXSpec(
+        sort=sort_specs,
+        filter=filter_fields,
+        search=search_fields,
+        empty_message="No records yet.",
+    )
+
+
 def _build_admin_surfaces(security: SecurityConfig) -> list[SurfaceSpec]:
     """Build admin LIST surfaces for platform entities.
 
@@ -351,6 +393,7 @@ def _build_admin_surfaces(security: SecurityConfig) -> list[SurfaceSpec]:
                 mode=SurfaceMode.LIST,
                 sections=[section],
                 access=access,
+                ux=_default_admin_ux(field_defs),
             )
         )
 

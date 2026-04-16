@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.14] - 2026-04-16
+
+### Fixed
+- Framework-generated admin surfaces (`_admin_health`, `_admin_deploys`, `_admin_metrics`, etc.) now ship with a sensible default `ux` block (status filter, text-field search, timestamp sort desc, empty message). The per-app lint warning "Surface '_admin_*' has no ux block" no longer fires on every Dazzle app — improve-loop cycle.
+
 ## [0.57.13] - 2026-04-16
 
 ### Fixed
