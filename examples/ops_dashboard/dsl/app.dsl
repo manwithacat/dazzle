@@ -316,6 +316,8 @@ service datadog "Datadog Monitoring API":
 # =============================================================================
 
 integration pager_duty "PagerDuty":
+  uses service datadog
+
   base_url: "https://events.pagerduty.com/v2"
   auth: api_key from env("PAGERDUTY_API_KEY")
 

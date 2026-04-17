@@ -1113,12 +1113,14 @@ workspace tester_dashboard "Tester Dashboard":
 # =============================================================================
 
 ledger DeviceCost "Device Cost Account":
+  intent: "Accrue repair and replacement expenses against the fleet of field devices"
   account_code: 5100
   ledger_id: 1
   account_type: expense
   currency: GBP
 
 ledger OperationsBudget "Operations Budget":
+  intent: "Draw down the field-test programme's allocated operations budget"
   account_code: 1100
   ledger_id: 1
   account_type: asset
@@ -1129,6 +1131,7 @@ ledger OperationsBudget "Operations Budget":
 # =============================================================================
 
 transaction RecordRepair "Record Repair Cost":
+  intent: "Charge a device repair to the cost account and draw it from operations budget"
   transfer repair_expense:
     debit: DeviceCost
     credit: OperationsBudget
