@@ -435,6 +435,14 @@ surface user_detail "Team Member Detail":
     field is_active "Active"
     field created_at "Joined"
 
+  related tasks "Tasks":
+    display: table
+    show: Task
+
+  related comments "Comments":
+    display: table
+    show: TaskComment
+
   ux:
     purpose: "Inspect a team member's profile, role, and activity status"
 
