@@ -201,6 +201,29 @@ document.addEventListener("alpine:init", () => {
       this.$el.addEventListener("htmx:responseError", () => {
         this.loading = false;
       });
+
+      // Resize-drag listeners live on window so they survive mouse excursions
+      // outside the table. We own the lifecycle explicitly (rather than using
+      // Alpine's @pointermove.window declarative bindings) because HTMX morph
+      // navigation tears the component down without reliably firing Alpine's
+      // destroy path, leaving the listener pointing at a stale scope and
+      // throwing ReferenceError on the next mousemove (issue #795).
+      this._onResizeMove = (e) => this.onResizeMove(e);
+      this._onEndResize = (e) => this.endResize(e);
+      window.addEventListener("pointermove", this._onResizeMove);
+      window.addEventListener("pointerup", this._onEndResize);
+    },
+
+    destroy() {
+      // Clean up window-level pointer listeners on component teardown.
+      if (this._onResizeMove) {
+        window.removeEventListener("pointermove", this._onResizeMove);
+        this._onResizeMove = null;
+      }
+      if (this._onEndResize) {
+        window.removeEventListener("pointerup", this._onEndResize);
+        this._onEndResize = null;
+      }
     },
 
     // ── Screen reader announce ────────────────────────────────────────────

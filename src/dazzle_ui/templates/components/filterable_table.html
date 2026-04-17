@@ -10,8 +10,6 @@
 <div id="{{ table.table_id }}"
      data-dazzle-table="{{ table.entity_name }}"
      x-data="dzTable('{{ table.table_id }}', '{{ table.api_endpoint }}', {{ config_json }})"
-     @pointermove.window="onResizeMove($event)"
-     @pointerup.window="endResize($event)"
      :aria-busy="loading"
      class="flex flex-col gap-3">
 
