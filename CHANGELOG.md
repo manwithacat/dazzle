@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.45] - 2026-04-18
+
+### Added
+- **DOM snapshot baselines for the dashboard-slot + region composite.** New `tests/unit/test_dom_snapshots.py` uses pytest-syrupy to capture a byte-level baseline for each of the 13 region composites (grid, list, timeline, kanban, bar_chart, funnel_chart, queue, metrics, heatmap, progress, tree, diagram, tabbed_list). Any byte change to the rendered output fails the test — complements the shape-nesting and duplicate-title gates which only catch specific known-bad patterns. Baselines in `tests/unit/__snapshots__/test_dom_snapshots.ambr`. Regenerate on intentional change with `pytest tests/unit/test_dom_snapshots.py --snapshot-update`.
+
+### Agent Guidance
+- **When editing a region template**, expect the snapshot test for that region to fail and update the baseline in the same commit. Review the diff in `tests/unit/__snapshots__/test_dom_snapshots.ambr` before committing — if you didn't intend the structural change, fix the template instead of the baseline.
+- **New region?** Add it to `_REGION_CASES` in `test_template_html.py` (the matrix is shared with the shape gates) and run `pytest tests/unit/test_dom_snapshots.py --snapshot-update` once to seed the baseline.
+
+### Note on #94
+- This partially closes backlog item #94 ("deterministic pixel/DOM snapshot gate"). The full Playwright/pixel variant remains deferred — it needs headless-browser CI infra that doesn't fit an autonomous cycle. The DOM baselines here catch most visual regressions we care about (card-in-card, removed buttons, tag changes, class changes) at the cost of missing pure CSS-only regressions. Most regressions that matter go through structural changes and show up in the DOM.
+
 ## [0.57.44] - 2026-04-18
 
 ### Added
