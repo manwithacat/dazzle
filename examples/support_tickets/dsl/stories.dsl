@@ -180,3 +180,126 @@ story ST-018 "User creates a new Comment":
   then:
     - "New Comment is saved to database"
     - "User sees confirmation message"
+
+story ST-019 "Support Agent views all open tickets in a filterable list":
+  actor: agent
+  trigger: user_click
+  scope: [Ticket]
+  given:
+    - "Support Agent is on the ticket_queue workspace"
+  then:
+    - "Support Agent sees all Tickets where status != closed"
+    - "Agent can filter by priority, category, and assigned_to"
+
+story ST-020 "Support Agent picks up a ticket":
+  actor: agent
+  trigger: form_submitted
+  scope: [Ticket]
+  given:
+    - "Ticket.assigned_to is null"
+    - "Ticket.status is 'open'"
+  then:
+    - "Ticket.assigned_to becomes the current agent"
+    - "Ticket.status transitions to 'in_progress'"
+
+story ST-021 "Support Agent views full ticket detail with comment history":
+  actor: agent
+  trigger: user_click
+  scope: [Ticket, Comment]
+  given:
+    - "Ticket exists"
+  then:
+    - "Support Agent sees the Ticket detail with all Comments"
+    - "Internal comments are visually distinguished from customer-visible comments"
+
+story ST-022 "Support Agent adds an internal note":
+  actor: agent
+  trigger: form_submitted
+  scope: [Comment]
+  given:
+    - "Support Agent is viewing a Ticket"
+  then:
+    - "Comment is created with is_internal=true"
+    - "Comment is visible only to agents and managers"
+
+story ST-023 "Support Agent resolves a ticket":
+  actor: agent
+  trigger: status_changed
+  scope: [Ticket]
+  given:
+    - "Ticket.status is 'in_progress'"
+    - "Resolution is provided"
+  then:
+    - "Ticket.status becomes 'resolved'"
+    - "Customer is notified"
+
+story ST-024 "Customer creates a support ticket":
+  actor: customer
+  trigger: form_submitted
+  scope: [Ticket]
+  given:
+    - "Customer is on the my_tickets workspace"
+  then:
+    - "New Ticket is saved with created_by = current customer"
+    - "Ticket.status starts as 'open'"
+
+story ST-025 "Customer views their submitted tickets":
+  actor: customer
+  trigger: user_click
+  scope: [Ticket]
+  given:
+    - "Customer has submitted at least one Ticket"
+  then:
+    - "Customer sees only Tickets where created_by = self"
+    - "Customer cannot see Tickets from other customers"
+
+story ST-026 "Customer follows up on an existing ticket":
+  actor: customer
+  trigger: form_submitted
+  scope: [Comment]
+  given:
+    - "Ticket exists created by the customer"
+  then:
+    - "Comment is created with is_internal=false"
+    - "Support Agent is notified of the new comment"
+
+story ST-027 "Support Manager reviews team performance":
+  actor: manager
+  trigger: user_click
+  scope: [Ticket, User]
+  given:
+    - "Support Manager is on the agent_dashboard"
+  then:
+    - "Manager sees counts of resolved vs open tickets per Agent"
+    - "Manager sees average resolution time across the team"
+
+story ST-028 "Support Manager reassigns a ticket":
+  actor: manager
+  trigger: form_submitted
+  scope: [Ticket]
+  given:
+    - "Ticket.assigned_to is set"
+    - "Support Manager is viewing the Ticket"
+  then:
+    - "Ticket.assigned_to is updated to the chosen Agent"
+    - "Previous assignee is notified of the reassignment"
+
+story ST-029 "Support Manager escalates a critical ticket":
+  actor: manager
+  trigger: status_changed
+  scope: [Ticket]
+  given:
+    - "Ticket.priority is 'critical'"
+  then:
+    - "Ticket is flagged for immediate attention"
+    - "All online agents are notified"
+
+story ST-030 "Administrator triages the full ticket queue":
+  actor: admin
+  trigger: user_click
+  scope: [Ticket]
+  given:
+    - "Administrator is on the _platform_admin workspace"
+  then:
+    - "Administrator sees every Ticket regardless of customer, agent, or status"
+    - "Administrator can bulk-update status on selected Tickets"
