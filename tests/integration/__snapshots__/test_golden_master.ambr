@@ -908,6 +908,7 @@
         'actions': list([
         ]),
         'entity_ref': 'Task',
+        'headless': False,
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -954,6 +955,7 @@
         'actions': list([
         ]),
         'entity_ref': 'Task',
+        'headless': False,
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1008,6 +1010,7 @@
         'actions': list([
         ]),
         'entity_ref': 'Task',
+        'headless': False,
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1054,6 +1057,7 @@
         'actions': list([
         ]),
         'entity_ref': 'Task',
+        'headless': False,
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1117,6 +1121,7 @@
         'actions': list([
         ]),
         'entity_ref': 'SystemHealth',
+        'headless': False,
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_health',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1167,7 +1172,32 @@
         ]),
         'source': None,
         'title': 'System Health',
-        'ux': None,
+        'ux': dict({
+          'attention_signals': list([
+          ]),
+          'bulk_actions': list([
+          ]),
+          'empty_message': 'No records yet.',
+          'filter': list([
+            'status',
+          ]),
+          'persona_variants': list([
+          ]),
+          'purpose': None,
+          'search': list([
+            'component',
+            'message',
+          ]),
+          'search_first': False,
+          'show': list([
+          ]),
+          'sort': list([
+            dict({
+              'direction': 'desc',
+              'field': 'checked_at',
+            }),
+          ]),
+        }),
         'view_ref': None,
       }),
       dict({
@@ -1184,6 +1214,7 @@
         'actions': list([
         ]),
         'entity_ref': 'DeployHistory',
+        'headless': False,
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_deploys',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1234,7 +1265,32 @@
         ]),
         'source': None,
         'title': 'Deploy History',
-        'ux': None,
+        'ux': dict({
+          'attention_signals': list([
+          ]),
+          'bulk_actions': list([
+          ]),
+          'empty_message': 'No records yet.',
+          'filter': list([
+            'status',
+          ]),
+          'persona_variants': list([
+          ]),
+          'purpose': None,
+          'search': list([
+            'version',
+            'deployed_by',
+          ]),
+          'search_first': False,
+          'show': list([
+          ]),
+          'sort': list([
+            dict({
+              'direction': 'desc',
+              'field': 'deployed_at',
+            }),
+          ]),
+        }),
         'view_ref': None,
       }),
     ]),

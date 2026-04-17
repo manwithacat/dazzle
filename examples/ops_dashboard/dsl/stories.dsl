@@ -91,9 +91,9 @@ story ST-009 "Operations Engineer drills into a degraded system":
 story ST-010 "Operations Engineer reviews recent deploy history":
   actor: ops_engineer
   trigger: user_click
-  scope: [DeployHistory]
+  scope: [System, Alert]
   given:
-    - "DeployHistory records exist"
+    - "System has transitioned through degraded / critical / offline states"
   then:
-    - "Operations Engineer sees deploys sorted by deployed_at desc"
-    - "Operations Engineer can correlate failed deploys with system status changes"
+    - "Operations Engineer sees status-change timestamps per System"
+    - "Operations Engineer can correlate each status change with its triggering Alerts"
