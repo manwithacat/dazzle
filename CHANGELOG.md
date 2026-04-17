@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.41] - 2026-04-17
+
+### Added
+- **Docs-vs-parser drift gate.** New `tests/unit/test_docs_drift.py` asserts every DSL construct named in `.claude/CLAUDE.md`'s `**Constructs**:` line actually exists in the parser's top-level dispatch table (`src/dazzle/core/dsl_parser_impl/__init__.py`). A companion test does the same for `dazzle.cli.coverage._DSL_CONSTRUCTS`. One-way gate — the parser can dispatch on more constructs than the quick-ref mentions, but anything the docs claim must be real. Directly addresses the blind spot the coverage-list curation cycle surfaced: `CLAUDE.md` had been naming `view`, `graph_edge`, and `graph_node` as top-level constructs when they're actually sub-keywords.
+
+### Fixed
+- **CLAUDE.md DSL construct list.** Removed stale `view` (it's a sub-keyword inside `flow`, not a top-level construct). Added an explanatory parenthetical enumerating the additional parser-dispatchable keywords (`app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `project`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `grant_schema`, `param`, `question`) so readers know the quick-ref is curated, not exhaustive.
+
+### Agent Guidance
+- **When adding to CLAUDE.md's Constructs line**, verify the name exists in the parser's dispatch table before committing. The drift test will fail CI otherwise. Parser authoritative source: `src/dazzle/core/dsl_parser_impl/__init__.py` lines 579–625.
+
 ## [0.57.40] - 2026-04-17
 
 ### Changed
