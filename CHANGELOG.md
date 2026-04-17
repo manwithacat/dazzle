@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.32] - 2026-04-17
+
+### Added
+- **`dazzle version` subcommand.** Mirrors the `--version` flag, with an additional `--full` option that appends machine-readable feature flags (`python_available: true`, `lsp_available: …`, `llm_available: …`). The subcommand shape is what most CLI conventions use (`npm version`, `docker version`, `git version`) and is what the homebrew-tap `validate-formula` workflow invokes (`dazzle version` and `dazzle version --full | grep -q "python_available"`). The existing `--version` flag still works. Regression tests in `tests/unit/test_cli_version.py` (7 cases).
+- Refactored the version-printing logic into a shared `print_version_info(full=)` helper in `dazzle.cli.utils`; `version_callback` now delegates to it.
+
+### Fixed
+- Tap's `validate-formula` workflow (on `manwithacat/homebrew-tap`) now has a working `dazzle version` target — both the subcommand call and the `--full` grep will succeed.
+
 ## [0.57.31] - 2026-04-17
 
 ### Fixed

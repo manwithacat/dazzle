@@ -94,6 +94,29 @@ from dazzle.cli.doctor import doctor_command  # noqa: E402
 
 app.command(name="doctor")(doctor_command)
 
+
+# Version command — mirrors `dazzle --version`. The subcommand form is
+# what `brew test dazzle` (in the homebrew-tap validate-formula
+# workflow) invokes, and what most CLI conventions (`npm version`,
+# `docker version`) use. Adding this as a proper subcommand also lets
+# tab-completion discover it.
+@app.command(name="version")
+def version_command(
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help=(
+            "Include feature-availability flags (python_available, "
+            "lsp_available, llm_available) for automation consumers."
+        ),
+    ),
+) -> None:
+    """Show version and environment information."""
+    from dazzle.cli.utils import print_version_info
+
+    print_version_info(full=full)
+
+
 # Workshop command
 from dazzle.cli.workshop import workshop_command  # noqa: E402
 
