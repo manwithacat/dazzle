@@ -3,13 +3,13 @@
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(None) %}
-  {# Header: title + total count badge #}
-  <div class="flex items-center justify-between mb-2">
-    <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))]">{{ title }}</h3>
-    {% if total > 0 %}
+  {# Count badge row — dashboard slot owns the title (#794 second
+     follow-up), we just surface the total item count here. #}
+  {% if total > 0 %}
+  <div class="flex items-center justify-end mb-2">
     <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">{{ total }}</span>
-    {% endif %}
   </div>
+  {% endif %}
 
   {# Metrics summary #}
   {% if metrics %}

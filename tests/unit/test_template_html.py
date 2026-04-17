@@ -580,6 +580,51 @@ class TestDashboardRegionCompositeShapes:
             f"Pairs: {nested}"
         )
 
+    @pytest.mark.parametrize(
+        "template_name,card_title,context",
+        _REGION_CASES,
+        ids=lambda v: (
+            v.replace("workspace/regions/", "").removesuffix(".html")
+            if isinstance(v, str) and v.startswith("workspace/")
+            else None
+        ),
+    )
+    def test_composite_has_no_duplicate_titles(self, jinja_env, template_name, card_title, context):
+        """Dashboard slot + rendered region must not repeat the card title.
+
+        AegisMark's #794 follow-up flagged "Grade Distribution" appearing
+        3× in the DOM — once from the dashboard header, again from the
+        region_card macro. Post-fix the macro is bare; this gate locks
+        that against regression across every region template.
+        """
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        try:
+            template = jinja_env.get_template(template_name)
+        except Exception:
+            pytest.skip(f"Template {template_name} not found")
+
+        ctx = {**_MOCK_CONTEXT, "title": card_title, **context}
+        try:
+            region_html = template.render(**ctx)
+        except Exception as e:
+            pytest.skip(f"Template {template_name} requires different context: {e}")
+
+        composite = _DASHBOARD_SLOT_WITH_REGION.format(
+            card_title=card_title,
+            region_name=context["region_name"],
+            region_html=region_html,
+        )
+
+        dupes = find_duplicate_titles_in_cards(composite)
+        assert not dupes, (
+            f"Composite (dashboard slot + {template_name}) contains a "
+            f"duplicated heading inside a card — the dashboard renders "
+            f"{card_title!r} in its header and the region emitted it "
+            f"again. Regions must not render their own title. "
+            f"Pairs (card_tag, duplicated_text): {dupes}"
+        )
+
     def test_dashboard_slot_fingerprint(self, jinja_env):
         """The composite harness hardcodes the dashboard-slot chrome
         shell. If workspace/_content.html drifts (e.g. class changes,

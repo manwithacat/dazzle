@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.38] - 2026-04-17
+
+### Added
+- **Duplicate-title gate on the HTMX-loaded dashboard composite.** New `find_duplicate_titles_in_cards(html)` in `src/dazzle/testing/ux/contract_checker.py` walks the DOM and, for each card container (elements with `data-card-id` or card chrome), flags any heading text (`<h1>..<h6>`) that appears more than once. Directly addresses AegisMark's second #794 counter — `page.get_by_text("Grade Distribution").count() == 3`. Wired into `TestDashboardRegionCompositeShapes.test_composite_has_no_duplicate_titles` which parametrises across the same 14 region cases as the chrome gate. 7 scanner-level regression tests in `test_ux_contract_checker.py`.
+
+### Fixed
+- **Three more title duplications caught by the new gate.** On first run the composite + duplicate-title gate surfaced three regions still emitting `<h3>{{ title }}</h3>` themselves, creating duplicates in the dashboard slot:
+  - `workspace/regions/list.html`: header row had `<h3>{{ title }}</h3>` + CSV/region-actions. Stripped the title; actions float right.
+  - `workspace/regions/queue.html`: header row had `<h3>{{ title }}</h3>` + total badge. Stripped the title; total badge floats right when > 0.
+  - `workspace/regions/funnel_chart.html`: also still wrapped itself in `<div class="card bg-[hsl(var(--card))] shadow-sm">` (pre-region-card pattern) AND emitted `<h3>{{ title }}</h3>`. Converted to `{% call region_card(None) %}` and dropped the title — now consistent with every other region.
+
+### Agent Guidance
+- **Regions must not render their own title.** The dashboard slot owns it. Adding a `<h3>{{ title }}</h3>` to a region template triggers the composite duplicate-title gate. If a region needs secondary structure (action row, count badge, filter bar), render those without a `<h3>` containing the region's title.
+
 ## [0.57.37] - 2026-04-17
 
 ### Added

@@ -150,6 +150,109 @@ def find_nested_chromes(html: str) -> list[tuple[str, str]]:
     return scanner.nested
 
 
+class _DuplicateTitleScanner(HTMLParser):
+    """Walk each card chrome container and collect every ``<h1>``..``<h4>``
+    text it contains. Exposed via :func:`find_duplicate_titles_in_cards`.
+
+    A card with multiple heading descendants bearing the same text means
+    the card header is printed twice — the exact counter AegisMark
+    reported for #794 (``page.get_by_text("Grade Distribution") == 3``).
+    The #794 second follow-up stripped the duplicate from ``region_card``,
+    but nothing was gating against re-introduction.
+
+    The scanner treats a "card" as either:
+      - any element carrying ``data-card-id`` (the dashboard slot's
+        canonical identifier), OR
+      - any chrome-bearing container (rounded + full border) — same
+        heuristic the nested-chrome gate uses for consistency.
+
+    Heading text is normalised by stripping and collapsing whitespace
+    so that ``<h3>\\n  Grade Distribution  </h3>`` matches
+    ``<h3>Grade Distribution</h3>``.
+    """
+
+    _HEADING_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Stack of (tag, is_card, titles_seen_within_card).
+        # titles_seen_within_card is a list[str] when the element is a
+        # card; None otherwise.
+        self._stack: list[tuple[str, bool, list[str] | None]] = []
+        # Stack of currently-open heading tags and their accumulating text.
+        self._open_headings: list[list[str]] = []
+        # (card_tag, duplicated_title_text) pairs collected at card close.
+        self.duplicates: list[tuple[str, str]] = []
+
+    @staticmethod
+    def _is_card(tag: str, attrs_map: dict[str, str | None]) -> bool:
+        # Dashboard slots are marked with data-card-id.
+        if "data-card-id" in attrs_map:
+            return True
+        # Or any chrome container (rounded + full border).
+        if tag in _NestedChromeScanner._CARD_CANDIDATE_TAGS and _has_card_chrome(
+            attrs_map.get("class")
+        ):
+            return True
+        return False
+
+    @staticmethod
+    def _normalise(text: str) -> str:
+        return " ".join(text.split())
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _NestedChromeScanner._VOID:
+            return
+        attrs_map = dict(attrs)
+        if self._is_card(tag, attrs_map):
+            self._stack.append((tag, True, []))
+        else:
+            self._stack.append((tag, False, None))
+        if tag in self._HEADING_TAGS:
+            self._open_headings.append([])
+
+    def handle_data(self, data: str) -> None:
+        if self._open_headings:
+            self._open_headings[-1].append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._HEADING_TAGS and self._open_headings:
+            text = self._normalise("".join(self._open_headings.pop()))
+            if text:
+                # Attach to every enclosing card that's still open.
+                for _t, is_card, titles in self._stack:
+                    if is_card and titles is not None:
+                        titles.append(text)
+        # Pop the tag stack, resilient to unbalanced close tags.
+        while self._stack and self._stack[-1][0] != tag:
+            self._stack.pop()
+        if not self._stack:
+            return
+        popped_tag, is_card, titles = self._stack.pop()
+        if is_card and titles:
+            seen: set[str] = set()
+            for title in titles:
+                if title in seen:
+                    self.duplicates.append((popped_tag, title))
+                seen.add(title)
+
+
+def find_duplicate_titles_in_cards(html: str) -> list[tuple[str, str]]:
+    """Return ``(card_tag, duplicated_title_text)`` for every card that
+    contains the same heading text more than once.
+
+    A result of ``[]`` means every card in the page has at most one
+    copy of any given heading. Regression gate for #794's duplicate-
+    title finding (``page.get_by_text("Grade Distribution") == 3``):
+    the dashboard slot printed the title in its header, the region
+    partial printed it again in ``region_card``, so the same heading
+    appeared twice inside the outer card.
+    """
+    scanner = _DuplicateTitleScanner()
+    scanner.feed(html)
+    return scanner.duplicates
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

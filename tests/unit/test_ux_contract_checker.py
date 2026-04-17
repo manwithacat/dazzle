@@ -356,3 +356,118 @@ class TestFindNestedChromes:
             "</div></div>"
         )
         assert find_nested_chromes(html) == []
+
+
+class TestFindDuplicateTitlesInCards:
+    """Gate on AegisMark's #794 second counter:
+    ``page.get_by_text("Grade Distribution").count() → 3``.
+
+    A card with the same heading text more than once = the header
+    is printed twice (once from the dashboard slot, again from the
+    region partial). Scanner catches the pair before the composite
+    shape gate even looks at chrome.
+    """
+
+    def test_detects_duplicate_title_in_nested_cards(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        html = (
+            '<div data-card-id="card-0">'
+            '<article class="rounded-md border bg-white">'
+            "<h3>Grade Distribution</h3>"
+            '<div class="rounded-md border bg-white">'
+            "<h3>Grade Distribution</h3>"
+            "</div></article></div>"
+        )
+        dupes = find_duplicate_titles_in_cards(html)
+        assert dupes, "scanner missed the duplicate title"
+        assert all(t == "Grade Distribution" for _, t in dupes)
+
+    def test_single_title_per_card_is_clean(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        html = (
+            '<div data-card-id="card-0">'
+            '<article class="rounded-md border bg-white">'
+            "<h3>Grade Distribution</h3>"
+            "<p>content</p>"
+            "</article></div>"
+        )
+        assert find_duplicate_titles_in_cards(html) == []
+
+    def test_sibling_cards_with_same_title_are_independent(self) -> None:
+        # Two distinct cards each naming themselves "Alerts" is valid
+        # (a dashboard with multiple alert regions). Only duplicates
+        # *within* the same card should flag.
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        html = (
+            '<article class="rounded-md border bg-white"><h3>Alerts</h3></article>'
+            '<article class="rounded-md border bg-white"><h3>Alerts</h3></article>'
+        )
+        assert find_duplicate_titles_in_cards(html) == []
+
+    def test_whitespace_and_casing_normalised(self) -> None:
+        # `<h3>\n  Grade Distribution  </h3>` must match
+        # `<h3>Grade Distribution</h3>` — the AegisMark counter is
+        # page.get_by_text which already normalises whitespace.
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        html = (
+            '<article class="rounded-md border bg-white">'
+            "<h3>Grade Distribution</h3>"
+            "<h3>\n  Grade Distribution  </h3>"
+            "</article>"
+        )
+        dupes = find_duplicate_titles_in_cards(html)
+        assert dupes == [("article", "Grade Distribution")]
+
+    def test_different_titles_in_same_card_are_fine(self) -> None:
+        # A card might legitimately contain multiple headings (section
+        # labels, sub-group names). Only *repeated* text should flag.
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        html = (
+            '<article class="rounded-md border bg-white">'
+            "<h3>Summary</h3>"
+            "<h4>Details</h4>"
+            "<h4>Metrics</h4>"
+            "</article>"
+        )
+        assert find_duplicate_titles_in_cards(html) == []
+
+    def test_dashboard_slot_plus_region_with_duplicate_title(self) -> None:
+        # Exact shape AegisMark reported — dashboard card header
+        # renders the title and the region partial (pre-#794-followup
+        # region_card macro) renders it again inside.
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        before_fix_html = (
+            '<div data-card-id="card-0">'
+            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<h3 id="card-title-card-0">Grade Distribution</h3>'
+            "<div>"
+            '<div data-dz-region class="bg-[hsl(var(--card))] border '
+            'border-[hsl(var(--border))] rounded-[6px]">'
+            "<h3>Grade Distribution</h3><p>chart</p>"
+            "</div></div></article></div>"
+        )
+        dupes = find_duplicate_titles_in_cards(before_fix_html)
+        assert dupes, "must catch the dashboard + region title duplicate"
+        assert any(t == "Grade Distribution" for _, t in dupes)
+
+    def test_bare_region_card_does_not_duplicate(self) -> None:
+        # Post-#794-followup: region_card emits no heading, so the
+        # dashboard slot's title is the only one in the composite.
+        from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
+
+        after_fix_html = (
+            '<div data-card-id="card-0">'
+            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<h3 id="card-title-card-0">Grade Distribution</h3>'
+            "<div>"
+            '<div data-dz-region id="region-grade_distribution">'
+            "<p>chart body</p>"
+            "</div></div></article></div>"
+        )
+        assert find_duplicate_titles_in_cards(after_fix_html) == []

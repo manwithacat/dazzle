@@ -1,53 +1,61 @@
-<div class="card bg-[hsl(var(--card))] shadow-sm">
-  <div class="p-4 p-3">
-    <h3 class="text-lg font-semibold text-[13px]">{{ title }}</h3>
-    {% if kanban_columns and items and group_by %}
-    {# Funnel uses kanban_columns for ordered stages #}
-    {% set stage_counts = {} %}
-    {% for item in items %}
-    {% set key = item[group_by] | default("Unknown") %}
-    {% if key in stage_counts %}
-    {% set _ = stage_counts.update({key: stage_counts[key] + 1}) %}
-    {% else %}
-    {% set _ = stage_counts.update({key: 1}) %}
-    {% endif %}
+{# Funnel chart region.
+
+   Contract: workspace/regions/funnel_chart.html renders `kanban_columns`
+   (ordered stages) sized proportionally to each stage's item count, or
+   falls back to `metrics` when no grouped items are available.
+
+   Previously this template wrapped its own chrome (`card bg-card shadow`)
+   and emitted its own title. Converted to the shared region_card pattern
+   per #794 second follow-up: dashboard slot owns chrome + title.
+#}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(None) %}
+  {% if kanban_columns and items and group_by %}
+  {# Funnel uses kanban_columns for ordered stages #}
+  {% set stage_counts = {} %}
+  {% for item in items %}
+  {% set key = item[group_by] | default("Unknown") %}
+  {% if key in stage_counts %}
+  {% set _ = stage_counts.update({key: stage_counts[key] + 1}) %}
+  {% else %}
+  {% set _ = stage_counts.update({key: 1}) %}
+  {% endif %}
+  {% endfor %}
+  {% set first_count = stage_counts.get(kanban_columns[0], 0) if kanban_columns else 1 %}
+  {% set base = first_count if first_count > 0 else 1 %}
+  <div class="space-y-1 mt-2">
+    {% for stage in kanban_columns %}
+    {% set count = stage_counts.get(stage, 0) %}
+    {% set pct = (count / base * 100) | int %}
+    {% set width = pct if pct >= 20 else 20 %}
+    <div class="flex flex-col items-center">
+      <div class="rounded px-3 py-1.5 text-center transition-all bg-[hsl(var(--primary)/{{ (90 - loop.index0 * 10) / 100 if loop.index0 < 8 else 0.2 }})] text-[hsl(var(--primary-foreground))]"
+           style="width: {{ width }}%; min-width: 120px;">
+        <span class="text-[12px] font-medium">{{ stage }}</span>
+        <span class="text-[12px] opacity-80 ml-1">({{ count }})</span>
+      </div>
+    </div>
     {% endfor %}
-    {% set first_count = stage_counts.get(kanban_columns[0], 0) if kanban_columns else 1 %}
-    {% set base = first_count if first_count > 0 else 1 %}
-    <div class="space-y-1 mt-2">
-      {% for stage in kanban_columns %}
-      {% set count = stage_counts.get(stage, 0) %}
-      {% set pct = (count / base * 100) | int %}
-      {% set width = pct if pct >= 20 else 20 %}
-      <div class="flex flex-col items-center">
-        <div class="rounded px-3 py-1.5 text-center transition-all bg-primary/{{ 90 - loop.index0 * 10 if loop.index0 < 8 else 20 }}"
-             style="width: {{ width }}%; min-width: 120px;">
-          <span class="text-[12px] font-medium">{{ stage }}</span>
-          <span class="text-[12px] opacity-80 ml-1">({{ count }})</span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    <p class="text-[12px] opacity-50 mt-2">{{ total }} total</p>
-    {% elif metrics %}
-    {# Fallback: render metrics as funnel stages #}
-    {% set first_val = metrics[0].value if metrics else 1 %}
-    {% set base = first_val if first_val > 0 else 1 %}
-    <div class="space-y-1 mt-2">
-      {% for metric in metrics %}
-      {% set pct = (metric.value / base * 100) | int %}
-      {% set width = pct if pct >= 20 else 20 %}
-      <div class="flex flex-col items-center">
-        <div class="rounded px-3 py-1.5 text-center transition-all bg-primary/{{ 90 - loop.index0 * 10 if loop.index0 < 8 else 20 }}"
-             style="width: {{ width }}%; min-width: 120px;">
-          <span class="text-[12px] font-medium">{{ metric.label }}</span>
-          <span class="text-[12px] opacity-80 ml-1">({{ metric.value }})</span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
-    {% endif %}
   </div>
-</div>
+  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ total }} total</p>
+  {% elif metrics %}
+  {# Fallback: render metrics as funnel stages #}
+  {% set first_val = metrics[0].value if metrics else 1 %}
+  {% set base = first_val if first_val > 0 else 1 %}
+  <div class="space-y-1 mt-2">
+    {% for metric in metrics %}
+    {% set pct = (metric.value / base * 100) | int %}
+    {% set width = pct if pct >= 20 else 20 %}
+    <div class="flex flex-col items-center">
+      <div class="rounded px-3 py-1.5 text-center transition-all bg-[hsl(var(--primary)/{{ (90 - loop.index0 * 10) / 100 if loop.index0 < 8 else 0.2 }})] text-[hsl(var(--primary-foreground))]"
+           style="width: {{ width }}%; min-width: 120px;">
+        <span class="text-[12px] font-medium">{{ metric.label }}</span>
+        <span class="text-[12px] opacity-80 ml-1">({{ metric.value }})</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+{% endcall %}

@@ -2,9 +2,11 @@
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(None) %}
-  {# Header row: title + region actions + CSV export #}
-  <div class="flex items-center justify-between mb-3">
-    <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))]">{{ title }}</h3>
+  {# Action row: region actions + CSV export. The dashboard slot
+     owns the title (#794 second follow-up) — rendering it here would
+     duplicate. Actions float right; the row stays full-width so the
+     spacing above the table remains consistent. #}
+  <div class="flex items-center justify-end mb-3">
     <div class="flex items-center gap-1">
       {% if region_actions %}
       {% for act in region_actions %}
