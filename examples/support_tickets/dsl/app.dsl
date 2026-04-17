@@ -32,6 +32,7 @@ archetype Auditable:
 
 # User entity with role-based access
 entity User "User":
+  display_field: name
   intent: "Authenticate users and define their access level for ticket operations"
   domain: identity
   patterns: authentication, authorization
@@ -48,6 +49,7 @@ entity User "User":
 
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":
+  display_field: title
   # Note: extends archetype field merging is planned but not yet implemented
   # extends: Timestamped
   intent: "Track customer issues through resolution with SLA awareness"
@@ -340,6 +342,14 @@ workspace ticket_queue "Ticket Queue":
 workspace agent_dashboard "Agent Dashboard":
   purpose: "Personal dashboard for support agents"
   stage: "dual_pane_flow"
+
+  recent_comments:
+    source: Comment
+    sort: created_at desc
+    limit: 10
+    display: list
+    action: comment_detail
+    empty: "No recent comments"
 
   my_assigned:
     source: Ticket
