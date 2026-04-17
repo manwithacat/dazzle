@@ -178,10 +178,10 @@ brew install manwithacat/tap/dazzle
 
 # PyPI: Register manually
 pip install dazzle-dsl
-dazzle mcp-setup
+dazzle mcp setup
 
 # Verify
-dazzle mcp-check
+dazzle mcp check
 ```
 
 ### Autonomous development harness
