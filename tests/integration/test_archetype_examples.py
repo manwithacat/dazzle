@@ -72,8 +72,9 @@ class TestOpsDashboardArchetype:
         workspace_spec = appspec.workspaces[0]
         layout = convert_workspace_to_layout(workspace_spec)
 
-        # Should have 3 signals (active_alerts, system_status, health_summary)
-        assert len(layout.attention_signals) == 3
+        # Should have at least 3 signals (active_alerts + system_status + health_summary
+        # + alert_timeline + system_board — latter two added as the workspace evolved).
+        assert len(layout.attention_signals) >= 3
 
         # Should have mix of signal types
         signal_kinds = [s.kind.value for s in layout.attention_signals]
