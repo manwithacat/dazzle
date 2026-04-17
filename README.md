@@ -184,6 +184,38 @@ dazzle mcp-setup
 dazzle mcp-check
 ```
 
+### Autonomous development harness
+
+Dazzle ships a set of Claude Code slash commands that, together, form an
+autonomous harness: point Claude Code at the repo, invoke a command
+(often inside a `/loop`), and it iterates until there's nothing left to
+do. Most cycles take ~15 minutes; a weekend-long run produces a tree of
+small, reviewable commits rather than one giant patch.
+
+The common entry points:
+
+| Command | What it does | Typical invocation |
+|---------|-------------|--------------------|
+| `/improve` | Fix the next lint/validate/fidelity/conformance gap in an example app. Falls through to `/issues` when the backlog is clean. | `/loop 15m /improve` |
+| `/issues` | Triage, investigate, implement, ship, and close open GitHub issues. Parallel subagents per issue. | `/issues` |
+| `/ux-cycle` | One UX component per cycle through ux-architect governance + agent QA. | `/loop 30m /ux-cycle` |
+| `/ux-converge` | Drive DSL-driven UX contract failures to zero against a running app. | `/ux-converge` |
+| `/check` | Parallel lint + mypy + tests on modified files. Read-only quality gate. | `/check` |
+| `/smells` | Parallel code-smell analysis across four categories. Writes `agent/smells-report.md`. | `/smells` |
+| `/xproject` | Cross-project quality scan across every sibling app that uses Dazzle. | `/xproject` |
+| `/cimonitor` | CI badge watchdog. Fetches logs for failed jobs and categorises the failure. | `/cimonitor` |
+| `/bump [major/minor/patch]` | Semantic version bump, CHANGELOG roll, no tag yet. | `/bump patch` |
+| `/ship` | Commit + push gate: ruff, mypy, tag-if-version-bumped, push. | `/ship` |
+| `/docs-update [since]` | Scan recently-closed issues and propose doc edits. | `/docs-update v0.57.0` |
+
+Productive loops persist state in `dev_docs/` (gitignored). `/improve` and
+`/ux-cycle` commit every green cycle but never push — pushes are always
+explicit via `/ship` or `/issues`, which keeps long autonomous runs
+recoverable with a single `git reset`.
+
+For the methodology, termination conditions, and state-file conventions
+behind these commands, see [**docs/autonomous-harness.md**](docs/autonomous-harness.md).
+
 ---
 
 ## Architecture
@@ -239,6 +271,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
+- **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications
