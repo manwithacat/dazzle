@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.23] - 2026-04-17
+
+### Fixed
+- Capability-discovery rules (`layout_rules.check_layout_relevance`, `component_rules.check_component_relevance`, `completeness_rules.check_completeness_relevance`) now skip framework-synthetic platform entities (`domain == "platform"` — SystemHealth, SystemMetric, DeployHistory, FeedbackReport, AIJob). These entities are code-generated and their workspaces (`_platform_admin`) are framework-owned, so the previous "has date/datetime fields but no timeline workspace region" / "has permissions but no surfaces" / "consider toggle group" suggestions fired on every Dazzle app regardless of what the app author declared. Workspaces whose name starts with `_platform_` are likewise excluded from the toggle-group suggestion.
+
 ## [0.57.22] - 2026-04-17
 
 ### Fixed

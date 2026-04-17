@@ -64,6 +64,8 @@ def check_layout_relevance(
 
     # --- Rule 1: Kanban for entities with state machines ---
     for entity in entities:
+        if getattr(entity, "domain", None) == "platform":
+            continue
         if entity.state_machine is not None:
             modes = entity_display_modes.get(entity.name, set())
             if DisplayMode.KANBAN not in modes:
@@ -82,6 +84,8 @@ def check_layout_relevance(
 
     # --- Rule 2: Timeline for entities with date/datetime fields ---
     for entity in entities:
+        if getattr(entity, "domain", None) == "platform":
+            continue
         has_date_field = any(f.type.kind in _DATE_KINDS for f in entity.fields)
         if has_date_field:
             modes = entity_display_modes.get(entity.name, set())

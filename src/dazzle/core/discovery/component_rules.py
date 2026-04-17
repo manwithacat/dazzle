@@ -63,8 +63,12 @@ def check_component_relevance(
 
     # --- Rule 2: Toggle group for grid views with enum status fields ---
     # Build a lookup from entity name → set of enum field names containing "status"
+    # Framework-synthetic platform entities are skipped — they live in
+    # framework-generated workspaces the app author cannot modify.
     entity_status_enum_fields: dict[str, list[str]] = {}
     for entity in entities:
+        if getattr(entity, "domain", None) == "platform":
+            continue
         status_enums = [
             f.name
             for f in entity.fields
@@ -74,6 +78,8 @@ def check_component_relevance(
             entity_status_enum_fields[entity.name] = status_enums
 
     for workspace in workspaces:
+        if workspace.name.startswith("_platform_"):
+            continue
         for region in workspace.regions:
             if region.display != DisplayMode.GRID:
                 continue

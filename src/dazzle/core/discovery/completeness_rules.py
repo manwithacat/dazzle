@@ -64,6 +64,8 @@ def check_completeness_relevance(
     for entity_spec in entities:
         if entity_spec.access is None or not entity_spec.access.permissions:
             continue
+        if getattr(entity_spec, "domain", None) == "platform":
+            continue
 
         permitted_ops = {rule.operation for rule in entity_spec.access.permissions}
         if not permitted_ops:
