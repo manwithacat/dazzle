@@ -237,6 +237,10 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **Bump on every fix**: Run `/bump patch` after bug fixes before pushing. Every push gets a unique version for deployment traceability.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
 
+## UI Invariants
+
+- **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them and `tests/unit/test_card_safety_invariants.py` pins each invariant to a named test. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
+
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
@@ -245,4 +249,4 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.57.42 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.57.43 | **Python**: 3.12+ | **Status**: Production Ready

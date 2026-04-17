@@ -82,7 +82,17 @@ class ServiceParserMixin:
                 self.expect(TokenType.COLON)
 
                 auth_kind_token = self.expect(TokenType.IDENTIFIER)
-                auth_kind = ir.AuthKind(auth_kind_token.value)
+                try:
+                    auth_kind = ir.AuthKind(auth_kind_token.value)
+                except ValueError as exc:
+                    valid = ", ".join(k.value for k in ir.AuthKind)
+                    raise make_parse_error(
+                        f"Unknown auth_profile kind '{auth_kind_token.value}'. "
+                        f"Valid kinds: {valid}.",
+                        self.file,
+                        auth_kind_token.line,
+                        auth_kind_token.column,
+                    ) from exc
 
                 # Parse options (key=value pairs)
                 options = {}

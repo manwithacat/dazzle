@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.43] - 2026-04-18
+
+### Added
+- **Canonical card-safety invariants spec.** New `docs/reference/card-safety-invariants.md` enumerates the 8 invariants that define "a card" in Dazzle templates and the regressions each one prevents:
+  - INV-1: No nested card chrome
+  - INV-2: No duplicate title within a card
+  - INV-3: Side borders are accents, not card edges
+  - INV-4: Bg-only rounded is not chrome
+  - INV-5: Inline tags are never cards
+  - INV-6: Region templates emit zero chrome
+  - INV-7: Region templates emit zero title
+  - INV-8: Tests must run on the composite, not the layers
+- **Drift-proof spec-to-test mapping.** New `tests/unit/test_card_safety_invariants.py` pins each invariant to at least one named enforcing test (e.g., INV-1 → `TestFindNestedChromes::test_detects_rounded_plus_border_nested` + `TestDashboardRegionCompositeShapes::test_composite_has_no_nested_chrome`). If a referenced test is renamed, the meta-test fails with a pointer at the stale name. File-grep based — no dynamic imports, no user-input paths.
+- **CLAUDE.md UI Invariants section.** New top-level pointer under Ship Discipline so agents touching templates, regions, or scanners know the spec exists before they start.
+
+### Fixed
+- **Parser: `auth_profile` with unknown kind now raises ParseError instead of crashing.** Pre-existing bug surfaced by the `test_swap_adjacent_mutation` fuzz test (`seed=2755`): `auth_profile: header` would raise `ValueError: 'header' is not a valid AuthKind` from deep inside `AuthKind(value)`. Wrapped the conversion with `try/except ValueError` and raise a clear `ParseError` naming the invalid kind and listing the valid options.
+
+### Agent Guidance
+- **When touching region templates, the `region_card` macro, or the shape scanners**, read `docs/reference/card-safety-invariants.md` first. Each of the 8 invariants lists the test that enforces it; if you're tempted to change one of the invariants, update the spec and the test in the same commit.
+- **Adding a new card-safety invariant**: name it (INV-N), add a section to the spec, register at least one enforcing test in `INVARIANT_ENFORCERS` inside `test_card_safety_invariants.py`. Ship with the spec, test, and scanner tightening together.
+
 ## [0.57.42] - 2026-04-18
 
 ### Added
