@@ -1,6 +1,6 @@
 story ST-006 "Administrator creates a new Team Member":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: form_submitted
   scope: [User]
   given:
@@ -11,7 +11,7 @@ story ST-006 "Administrator creates a new Team Member":
 
 story ST-007 "Administrator creates a new Task":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: form_submitted
   scope: [Task]
   given:
@@ -22,7 +22,7 @@ story ST-007 "Administrator creates a new Task":
 
 story ST-008 "Administrator changes Task from todo to in_progress":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: status_changed
   scope: [Task]
   given:
@@ -33,7 +33,7 @@ story ST-008 "Administrator changes Task from todo to in_progress":
 
 story ST-009 "Administrator changes Task from in_progress to review":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: status_changed
   scope: [Task]
   given:
@@ -44,7 +44,7 @@ story ST-009 "Administrator changes Task from in_progress to review":
 
 story ST-010 "Administrator changes Task from in_progress to todo":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: status_changed
   scope: [Task]
   given:
@@ -55,7 +55,7 @@ story ST-010 "Administrator changes Task from in_progress to todo":
 
 story ST-011 "Administrator creates a new Task Comment":
   status: accepted
-  actor: Administrator
+  actor: admin
   trigger: form_submitted
   scope: [TaskComment]
   given:
@@ -65,7 +65,7 @@ story ST-011 "Administrator creates a new Task Comment":
     - "Administrator sees confirmation message"
 
 story ST-012 "Administrator views all tasks across organization":
-  actor: Administrator
+  actor: admin
   trigger: user_click
   scope: [Task]
   given:
@@ -75,7 +75,7 @@ story ST-012 "Administrator views all tasks across organization":
     - "Task list is sortable by priority, status, due_date"
 
 story ST-013 "Administrator configures team settings":
-  actor: Administrator
+  actor: admin
   trigger: user_click
   scope: [User]
   given:
@@ -85,7 +85,7 @@ story ST-013 "Administrator configures team settings":
     - "Administrator can change a Team Member's role or department"
 
 story ST-014 "Administrator views system-wide analytics":
-  actor: Administrator
+  actor: admin
   trigger: user_click
   scope: [Task, User]
   given:

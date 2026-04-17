@@ -1,5 +1,5 @@
 story ST-001 "Engineer creates a new Device":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Device]
   given:
@@ -9,7 +9,7 @@ story ST-001 "Engineer creates a new Device":
     - "Engineer sees confirmation message"
 
 story ST-002 "Engineer changes Device from prototype to active":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -19,7 +19,7 @@ story ST-002 "Engineer changes Device from prototype to active":
     - "Timestamp is recorded"
 
 story ST-003 "Engineer changes Device from active to recalled":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -29,7 +29,7 @@ story ST-003 "Engineer changes Device from active to recalled":
     - "Timestamp is recorded"
 
 story ST-004 "Engineer changes Device from active to retired":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -39,7 +39,7 @@ story ST-004 "Engineer changes Device from active to retired":
     - "Timestamp is recorded"
 
 story ST-005 "Engineer creates a new Tester":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Tester]
   given:
@@ -49,7 +49,7 @@ story ST-005 "Engineer creates a new Tester":
     - "Engineer sees confirmation message"
 
 story ST-006 "Engineer creates a new Issue Report":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [IssueReport]
   given:
@@ -59,7 +59,7 @@ story ST-006 "Engineer creates a new Issue Report":
     - "Engineer sees confirmation message"
 
 story ST-007 "Engineer changes IssueReport from open to triaged":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -69,7 +69,7 @@ story ST-007 "Engineer changes IssueReport from open to triaged":
     - "Timestamp is recorded"
 
 story ST-008 "Engineer changes IssueReport from triaged to in_progress":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -79,7 +79,7 @@ story ST-008 "Engineer changes IssueReport from triaged to in_progress":
     - "Timestamp is recorded"
 
 story ST-009 "Engineer changes IssueReport from in_progress to fixed":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -89,7 +89,7 @@ story ST-009 "Engineer changes IssueReport from in_progress to fixed":
     - "Timestamp is recorded"
 
 story ST-010 "Engineer creates a new Test Session":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [TestSession]
   given:
@@ -99,7 +99,7 @@ story ST-010 "Engineer creates a new Test Session":
     - "Engineer sees confirmation message"
 
 story ST-011 "Engineer creates a new Firmware Release":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [FirmwareRelease]
   given:
@@ -109,7 +109,7 @@ story ST-011 "Engineer creates a new Firmware Release":
     - "Engineer sees confirmation message"
 
 story ST-012 "Engineer changes FirmwareRelease from draft to released":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -119,7 +119,7 @@ story ST-012 "Engineer changes FirmwareRelease from draft to released":
     - "Timestamp is recorded"
 
 story ST-013 "Engineer changes FirmwareRelease from released to deprecated":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -129,7 +129,7 @@ story ST-013 "Engineer changes FirmwareRelease from released to deprecated":
     - "Timestamp is recorded"
 
 story ST-014 "Engineer changes FirmwareRelease from deprecated to draft":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -139,7 +139,7 @@ story ST-014 "Engineer changes FirmwareRelease from deprecated to draft":
     - "Timestamp is recorded"
 
 story ST-015 "Engineer creates a new Task":
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Task]
   given:
@@ -149,7 +149,7 @@ story ST-015 "Engineer creates a new Task":
     - "Engineer sees confirmation message"
 
 story ST-016 "Engineer changes Task from open to in_progress":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
@@ -159,7 +159,7 @@ story ST-016 "Engineer changes Task from open to in_progress":
     - "Timestamp is recorded"
 
 story ST-017 "Engineer changes Task from in_progress to completed":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
@@ -169,7 +169,7 @@ story ST-017 "Engineer changes Task from in_progress to completed":
     - "Timestamp is recorded"
 
 story ST-018 "Engineer changes Task from in_progress to open":
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
@@ -180,7 +180,7 @@ story ST-018 "Engineer changes Task from in_progress to open":
 
 story ST-019 "Engineer creates a new Device":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Device]
   given:
@@ -191,7 +191,7 @@ story ST-019 "Engineer creates a new Device":
 
 story ST-020 "Engineer changes Device from prototype to active":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -201,7 +201,7 @@ story ST-020 "Engineer changes Device from prototype to active":
 
 story ST-021 "Engineer changes Device from active to recalled":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -211,7 +211,7 @@ story ST-021 "Engineer changes Device from active to recalled":
 
 story ST-022 "Engineer changes Device from active to retired":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Device]
   given:
@@ -221,7 +221,7 @@ story ST-022 "Engineer changes Device from active to retired":
 
 story ST-023 "Engineer creates a new Tester":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Tester]
   given:
@@ -232,7 +232,7 @@ story ST-023 "Engineer creates a new Tester":
 
 story ST-024 "Engineer creates a new Issue Report":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [IssueReport]
   given:
@@ -243,7 +243,7 @@ story ST-024 "Engineer creates a new Issue Report":
 
 story ST-025 "Engineer changes IssueReport from open to triaged":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -253,7 +253,7 @@ story ST-025 "Engineer changes IssueReport from open to triaged":
 
 story ST-026 "Engineer changes IssueReport from triaged to in_progress":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -263,7 +263,7 @@ story ST-026 "Engineer changes IssueReport from triaged to in_progress":
 
 story ST-027 "Engineer changes IssueReport from in_progress to fixed":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [IssueReport]
   given:
@@ -273,7 +273,7 @@ story ST-027 "Engineer changes IssueReport from in_progress to fixed":
 
 story ST-028 "Engineer creates a new Test Session":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [TestSession]
   given:
@@ -284,7 +284,7 @@ story ST-028 "Engineer creates a new Test Session":
 
 story ST-029 "Engineer creates a new Firmware Release":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [FirmwareRelease]
   given:
@@ -295,7 +295,7 @@ story ST-029 "Engineer creates a new Firmware Release":
 
 story ST-030 "Engineer changes FirmwareRelease from draft to released":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -305,7 +305,7 @@ story ST-030 "Engineer changes FirmwareRelease from draft to released":
 
 story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -315,7 +315,7 @@ story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
 
 story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [FirmwareRelease]
   given:
@@ -325,7 +325,7 @@ story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
 
 story ST-033 "Engineer creates a new Task":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: form_submitted
   scope: [Task]
   given:
@@ -336,7 +336,7 @@ story ST-033 "Engineer creates a new Task":
 
 story ST-034 "Engineer changes Task from open to in_progress":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
@@ -346,7 +346,7 @@ story ST-034 "Engineer changes Task from open to in_progress":
 
 story ST-035 "Engineer changes Task from in_progress to completed":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
@@ -356,7 +356,7 @@ story ST-035 "Engineer changes Task from in_progress to completed":
 
 story ST-036 "Engineer changes Task from in_progress to open":
   status: accepted
-  actor: Engineer
+  actor: engineer
   trigger: status_changed
   scope: [Task]
   given:
