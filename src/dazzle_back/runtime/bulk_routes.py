@@ -116,8 +116,17 @@ def _register_bulk_route(
                 results.append({"id": item_id, "ok": True})
                 ok_count += 1
             except Exception as e:
-                logger.warning("Bulk %s.%s failed for %s: %s", entity_name, action_name, item_id, e)
-                results.append({"id": item_id, "ok": False, "error": str(e)})
+                # Log the full exception server-side, but expose only a
+                # generic error code to the caller so stack-trace details
+                # don't leak (CodeQL py/stack-trace-exposure, alert #61).
+                logger.warning(
+                    "Bulk %s.%s failed for %s: %s",
+                    entity_name,
+                    action_name,
+                    item_id,
+                    e,
+                )
+                results.append({"id": item_id, "ok": False, "error": "internal_error"})
 
         return JSONResponse(
             content={

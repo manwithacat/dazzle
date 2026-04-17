@@ -1,10 +1,12 @@
 """Maturity gate evaluator, template renderer, and project sync for agent commands."""
 
+import configparser
 import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -87,6 +89,41 @@ def _probe_running_app(project_root: Path) -> bool:
     return False
 
 
+def _has_github_remote(git_config_path: Path) -> bool:
+    """Return True if any remote in ``.git/config`` points at github.com.
+
+    Parses the file with ``configparser`` and inspects each remote's
+    ``url`` value via ``urlparse``, comparing the hostname exactly
+    (``github.com`` or any ``*.github.com`` subdomain). This avoids the
+    substring-containment bypass that the previous naive check was
+    vulnerable to — an adversarial ``.git/config`` with a URL like
+    ``https://evil.example/?github.com`` would have matched before.
+    """
+    if not git_config_path.is_file():
+        return False
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(str(git_config_path), encoding="utf-8")
+    except (configparser.Error, OSError, UnicodeDecodeError):
+        return False
+    for section in parser.sections():
+        if not section.startswith("remote "):
+            continue
+        url = parser.get(section, "url", fallback=None)
+        if not url:
+            continue
+        # Git supports both `https://github.com/...` and scp-like
+        # `git@github.com:owner/repo.git` URLs. Normalise both.
+        host: str | None = None
+        if "://" in url:
+            host = urlparse(url).hostname
+        elif "@" in url and ":" in url.split("@", 1)[1]:
+            host = url.split("@", 1)[1].split(":", 1)[0]
+        if host and (host == "github.com" or host.endswith(".github.com")):
+            return True
+    return False
+
+
 def build_project_context(project_root: Path) -> dict[str, Any]:
     """Introspect a Dazzle project directory and return context for rendering."""
     ctx: dict[str, Any] = {
@@ -106,14 +143,12 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
     # Check for SPEC.md
     ctx["has_spec_md"] = (project_root / "SPEC.md").exists() or (project_root / "spec.md").exists()
 
-    # Check for GitHub remote
-    git_config = project_root / ".git" / "config"
-    if git_config.exists():
-        try:
-            content = git_config.read_text(encoding="utf-8")
-            ctx["has_github_remote"] = "github.com" in content
-        except Exception:
-            pass
+    # Check for a GitHub remote by parsing `.git/config` as an INI file
+    # and inspecting the hostname of each remote's `url = ...` entry.
+    # Previously used a naive `"github.com" in content` substring check
+    # (CodeQL py/incomplete-url-substring-sanitization, alert #62) —
+    # low-risk (the flag is informational only) but worth doing right.
+    ctx["has_github_remote"] = _has_github_remote(project_root / ".git" / "config")
 
     # Probe for a running app — populates requires_running_app gates (#788)
     ctx["app_running"] = _probe_running_app(project_root)
