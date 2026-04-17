@@ -221,9 +221,12 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
     cat = CategoryCoverage(
         name="fragment_templates",
         description=(
-            "Standalone fragment templates in src/dazzle_ui/templates/fragments/. "
-            "A fragment with no include site in any template or Python renderer "
-            "is dead code that ships with the framework and cannot be tested."
+            "Standalone fragment templates in src/dazzle_ui/templates/fragments/ "
+            "that the framework actively renders. A fragment with no include "
+            "site in any template or Python renderer is dead code. Parking-lot "
+            "primitives (see fragment_registry.PARKING_LOT_FRAGMENTS) are "
+            "excluded — they're registered for downstream opt-in but have no "
+            "runtime caller, so they're not counted against the gate."
         ),
     )
     frag_dir = repo_root / "src" / "dazzle_ui" / "templates" / "fragments"
@@ -238,7 +241,21 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
         repo_root / "src" / "dazzle_back",
         repo_root / "src" / "dazzle",
     ]
-    fragments = sorted(p.stem for p in frag_dir.glob("*.html"))
+    # The registry file enumerates fragments — it lists them but doesn't
+    # render them, so its mention is not evidence of coverage. Exclude
+    # it from the scan so only real template includes and real Python
+    # render calls count.
+    registry_path = repo_root / "src" / "dazzle_ui" / "runtime" / "fragment_registry.py"
+    # Parking-lot primitives (see fragment_registry.PARKING_LOT_FRAGMENTS)
+    # are framework-shipped but intentionally opt-in — no runtime caller
+    # by default. Skip them from the coverage denominator so the metric
+    # reflects only fragments the framework actually renders.
+    try:
+        from dazzle_ui.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
+    except ImportError:
+        PARKING_LOT_FRAGMENTS = frozenset()
+    all_fragments = sorted(p.stem for p in frag_dir.glob("*.html"))
+    fragments = [f for f in all_fragments if f not in PARKING_LOT_FRAGMENTS]
     cat.coverage = {f: [] for f in fragments}
     for frag in fragments:
         include_pattern = re.compile(rf"fragments/{re.escape(frag)}(?:\.html)?\b")
@@ -252,6 +269,10 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
                 if path.suffix not in (".html", ".py"):
                     continue
                 if path == frag_dir / f"{frag}.html":
+                    continue
+                # Skip the fragment registry — its mention is enumeration,
+                # not rendering.
+                if path == registry_path:
                     continue
                 try:
                     if include_pattern.search(path.read_text()):

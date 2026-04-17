@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.40] - 2026-04-17
+
+### Changed
+- **Honest fragment coverage: 19/19 (not the misleading 31/31).** Audit of the 15 parking-lot fragments registered in `FRAGMENT_REGISTRY` in v0.57.35 revealed that 12 had zero runtime call sites — they were counted as "covered" purely because the scanner was matching their names inside `fragment_registry.py` itself. Only `detail_fields`, `select_result`, and `table_sentinel` had real Python renderers. Two fixes restored honesty:
+  1. The coverage scanner now excludes `fragment_registry.py` from the search — enumeration is not rendering.
+  2. A new `PARKING_LOT_FRAGMENTS` frozenset in `src/dazzle_ui/runtime/fragment_registry.py` lists the 12 opt-in primitives (accordion, alert_banner, breadcrumbs, command_palette, context_menu, popover, skeleton_patterns, slide_over, steps_indicator, toast, toggle_group, tooltip_rich). The coverage tool excludes these from the denominator so the metric reflects only fragments the framework actually renders.
+- Overall coverage moves from 71/71 (partially gamed) to **59/59 (honest)**. Category breakdown: display_modes 17/17, dsl_constructs 23/23, fragment_templates 19/19. The CI gate established in v0.57.39 continues to pass because nothing falsely counted has landed between then and now.
+
+### Added
+- 3 regression tests in `tests/unit/test_cli_coverage.py`:
+  - `test_parking_lot_fragments_are_excluded_from_coverage` — pins that parking-lot names never appear in the coverage map.
+  - `test_every_counted_fragment_has_a_real_caller` — pins that everything counted has a real include/render site.
+  - `test_registry_enumerates_parking_lot_fragments` — pins that PARKING_LOT_FRAGMENTS and FRAGMENT_REGISTRY stay in sync.
+
+### Agent Guidance
+- **Adding a new fragment**: if it has a real include site or Python `render_fragment()` call, just add it to `FRAGMENT_REGISTRY` and CI counts it. If it's a parking-lot primitive (canonical renderer for downstream consumers to opt into, no default call site), add it to `FRAGMENT_REGISTRY` AND to `PARKING_LOT_FRAGMENTS`. When a parking-lot fragment gains a real include site, remove it from `PARKING_LOT_FRAGMENTS` — the coverage gate will then enforce that it stays rendered.
+
 ## [0.57.39] - 2026-04-17
 
 ### Added

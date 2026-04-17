@@ -2,6 +2,22 @@
 
 Provides a static registry of available fragment types so that agents
 and tooling can discover fragments without reading template files.
+
+Fragments fall into two categories:
+
+1. **Active** — wired into a real runtime call site (template include
+   or Python ``render_fragment()`` call). These are exercised whenever
+   the framework renders a page and their coverage is asserted by
+   ``dazzle coverage --fail-on-uncovered`` in CI.
+
+2. **Parking-lot primitives** — shipped as canonical renderers for
+   downstream consumers to opt into via surface config. They have a
+   registry entry so tooling can discover them, but nothing in the
+   framework runtime includes them by default. Listed in the
+   ``PARKING_LOT_FRAGMENTS`` set below and excluded from the coverage
+   requirement so the metric stays honest. A parking-lot fragment
+   graduates to "active" when a real include/render site lands — at
+   that point, remove it from ``PARKING_LOT_FRAGMENTS``.
 """
 
 from typing import Any
@@ -226,3 +242,29 @@ def get_template_for_source(source: Any) -> str:
     # Fields with an external data source always render as search_select
     result: str = FRAGMENT_REGISTRY["search_select"]["template"]
     return result
+
+
+# The 12 canonical UI primitives shipped by the framework for downstream
+# consumers to opt into — they have a template + registry entry but no
+# runtime caller wires them in by default. Kept explicit so the coverage
+# tool can exclude them from the "every artefact must have a live
+# consumer" gate without re-hunting include sites. Audit source:
+# grep for ``fragments/<name>`` excluding fragment_registry.py + the
+# fragment's own file. Re-run after any template edit and drop names
+# from this set as real call sites land. See #794 post-mortem item #91.
+PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset(
+    {
+        "accordion",
+        "alert_banner",
+        "breadcrumbs",
+        "command_palette",
+        "context_menu",
+        "popover",
+        "skeleton_patterns",
+        "slide_over",
+        "steps_indicator",
+        "toast",
+        "toggle_group",
+        "tooltip_rich",
+    }
+)

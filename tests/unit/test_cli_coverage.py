@@ -128,3 +128,60 @@ class TestCoverageCommand:
         # Exit 1 means uncovered items exist (expected today); exit 0
         # means the matrix is full. Either is "working correctly."
         assert result.exit_code in (0, 1)
+
+
+class TestParkingLotFragmentExclusion:
+    """Pin the honest-metric invariant for fragment coverage.
+
+    Before the #91 fix, the 12 parking-lot fragments registered in
+    ``FRAGMENT_REGISTRY`` were counted as "covered" because the scanner
+    matched their names inside ``fragment_registry.py``. Three changes
+    restored honesty:
+
+    1. The scanner excludes ``fragment_registry.py`` itself.
+    2. Parking-lot fragments (opt-in, no runtime caller) are excluded
+       via ``PARKING_LOT_FRAGMENTS``.
+    3. The remaining fragments (19 out of 31 templates) must each have
+       a real include/render site.
+    """
+
+    def test_parking_lot_fragments_are_excluded_from_coverage(self) -> None:
+        from dazzle.cli.coverage import _find_repo_root, _fragment_template_coverage
+        from dazzle_ui.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
+
+        cat = _fragment_template_coverage(_find_repo_root())
+        # None of the parking-lot names should appear in the coverage map.
+        for name in PARKING_LOT_FRAGMENTS:
+            assert name not in cat.coverage, (
+                f"Parking-lot fragment {name!r} was counted in coverage — "
+                f"its presence in fragment_registry.py alone must not count "
+                f"as a real runtime caller. See #91 post-mortem."
+            )
+
+    def test_every_counted_fragment_has_a_real_caller(self) -> None:
+        from dazzle.cli.coverage import _find_repo_root, _fragment_template_coverage
+
+        cat = _fragment_template_coverage(_find_repo_root())
+        # Every fragment that IS counted must have at least one call site
+        # outside the registry (we excluded the registry from the scan).
+        uncovered = cat.uncovered
+        assert not uncovered, (
+            f"Fragments counted in coverage without a real runtime caller: "
+            f"{uncovered}. Either wire an include site or add them to "
+            f"PARKING_LOT_FRAGMENTS in fragment_registry.py."
+        )
+
+    def test_registry_enumerates_parking_lot_fragments(self) -> None:
+        # Sanity: every name in PARKING_LOT_FRAGMENTS must also be in
+        # FRAGMENT_REGISTRY. A name in one but not the other is a drift bug.
+        from dazzle_ui.runtime.fragment_registry import (
+            FRAGMENT_REGISTRY,
+            PARKING_LOT_FRAGMENTS,
+        )
+
+        missing = PARKING_LOT_FRAGMENTS - set(FRAGMENT_REGISTRY.keys())
+        assert not missing, (
+            f"PARKING_LOT_FRAGMENTS names not present in FRAGMENT_REGISTRY: "
+            f"{missing}. Every parking-lot fragment must also have a "
+            f"discoverable registry entry."
+        )
