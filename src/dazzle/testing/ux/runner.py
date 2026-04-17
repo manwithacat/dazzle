@@ -211,7 +211,7 @@ class InteractionRunner:
             return interaction
 
         # Check that region containers exist
-        regions = page.locator("[data-region-name]")
+        regions = page.locator("[data-dz-region-name]")
         count = await regions.count()
         if count == 0:
             interaction.status = "failed"
@@ -232,7 +232,7 @@ class InteractionRunner:
         await page.wait_for_timeout(2000)
 
         # Find the target region
-        region = page.locator(f"[data-region-name='{interaction.action}']")
+        region = page.locator(f"[data-dz-region-name='{interaction.action}']")
         if await region.count() == 0:
             interaction.status = "skipped"
             interaction.error = f"Region {interaction.action} not found"

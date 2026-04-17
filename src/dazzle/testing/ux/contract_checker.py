@@ -163,17 +163,20 @@ def _check_detail_view(contract: DetailViewContract, tags: Tags) -> list[str]:
 def _check_workspace(contract: WorkspaceContract, tags: Tags) -> list[str]:
     errors: list[str] = []
 
-    # Check each expected region
+    # Check each expected region.
+    # Framework templates emit the namespaced `data-dz-region-name` attribute
+    # (matches the `dz` prefix convention used across all runtime data-*).
     found_regions: set[str] = set()
     for _tag_name, attrs in tags:
-        region = attrs.get("data-region-name")
+        region = attrs.get("data-dz-region-name")
         if region:
             found_regions.add(region)
 
     for region in contract.regions:
         if region not in found_regions:
             errors.append(
-                f"Missing region '{region}' (expected element with data-region-name=\"{region}\")"
+                f"Missing region '{region}' "
+                f'(expected element with data-dz-region-name="{region}")'
             )
 
     return errors

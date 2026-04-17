@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.19] - 2026-04-17
+
+### Fixed
+- UX contract checker + runner looked for `data-region-name` but framework templates emit the namespaced `data-dz-region-name`. Every workspace surface on every downstream app was reporting `WORKSPACE_REGION_MISSING` regardless of whether regions were actually rendered. Updated `contract_checker.py` + `runner.py` (and matching unit-test fixtures) to the namespaced attribute, matching the `dz` prefix convention used across all runtime `data-*` attributes. AegisMark baseline goes from 12/972 workspace contract failures to 0 (#792).
+
 ## [0.57.18] - 2026-04-17
 
 ### Fixed

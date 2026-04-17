@@ -46,8 +46,8 @@ SAMPLE_DETAIL_HTML = """
 """
 
 SAMPLE_WORKSPACE_HTML = """
-<div data-region-name="tasks" hx-get="/api/workspaces/task_board/regions/tasks" hx-trigger="load"></div>
-<div data-region-name="comments" hx-get="/api/workspaces/task_board/regions/comments" hx-trigger="intersect once"></div>
+<div data-dz-region-name="tasks" hx-get="/api/workspaces/task_board/regions/tasks" hx-trigger="load"></div>
+<div data-dz-region-name="comments" hx-get="/api/workspaces/task_board/regions/comments" hx-trigger="intersect once"></div>
 <aside id="dz-detail-drawer"></aside>
 """
 
