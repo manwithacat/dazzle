@@ -326,9 +326,11 @@ surface task_create "Create Task":
   uses entity Task
   mode: create
 
-  section main "New Task":
+  section details "Task Details":
     field title "Title"
     field description "Description"
+
+  section scheduling "Scheduling & Ownership":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assign To"
@@ -351,10 +353,14 @@ surface task_edit "Edit Task":
   uses entity Task
   mode: edit
 
-  section main "Edit Task":
+  section details "Task Details":
     field title "Title"
     field description "Description"
+
+  section status_section "Status":
     field status "Status"
+
+  section scheduling "Scheduling & Ownership":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
@@ -416,11 +422,15 @@ surface user_edit "Edit Team Member":
 
   access: persona(admin)
 
-  section main "Edit Team Member":
+  section identity "Identity":
     field name "Name"
     field email "Email"
+
+  section organisation "Organisation":
     field role "Role"
     field department "Department"
+
+  section account "Account Status":
     field is_active "Active"
 
   ux:

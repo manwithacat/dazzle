@@ -87,13 +87,19 @@ surface contact_create "Create Contact":
   uses entity Contact
   mode: create
 
-  section main "New Contact":
+  section identity "Identity":
     field first_name "First Name"
     field last_name "Last Name"
+
+  section contact_details "Contact Details":
     field email "Email"
     field phone "Phone"
+
+  section employment "Employment":
     field company "Company"
     field job_title "Job Title"
+
+  section extras "Additional Info":
     field notes "Notes"
 
   ux:
@@ -104,13 +110,19 @@ surface contact_edit "Edit Contact":
   uses entity Contact
   mode: edit
 
-  section main "Edit Contact":
+  section identity "Identity":
     field first_name "First Name"
     field last_name "Last Name"
+
+  section contact_details "Contact Details":
     field email "Email"
     field phone "Phone"
+
+  section employment "Employment":
     field company "Company"
     field job_title "Job Title"
+
+  section extras "Additional Info":
     field notes "Notes"
     field is_favorite "Favorite"
 
