@@ -94,6 +94,11 @@ from dazzle.cli.doctor import doctor_command  # noqa: E402
 
 app.command(name="doctor")(doctor_command)
 
+# Coverage command — framework-artefact coverage audit across example apps
+from dazzle.cli.coverage import coverage_command  # noqa: E402
+
+app.command(name="coverage")(coverage_command)
+
 
 # Version command — mirrors `dazzle --version`. The subcommand form is
 # what `brew test dazzle` (in the homebrew-tap validate-formula

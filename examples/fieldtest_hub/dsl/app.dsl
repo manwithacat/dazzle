@@ -1016,6 +1016,34 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: tester_detail
     empty: "No active testers"
 
+  # Device deployment tree — hierarchy by batch_number
+  device_tree:
+    source: Device
+    display: tree
+    group_by: batch_number
+    action: device_detail
+    empty: "No devices registered"
+
+  # Entity diagram — relationships between Device, Tester, IssueReport
+  fleet_diagram:
+    source: Device
+    display: diagram
+    empty: "No devices to diagram"
+
+  # Issue categories — tabbed list over IssueReport by status
+  issue_tabs:
+    source: IssueReport
+    display: tabbed_list
+    group_by: status
+    sort: reported_at desc
+    action: issue_report_detail
+    empty: "No issues reported"
+
+  # NOTE: display: map would go here but `map` is reserved as an
+  # aggregate keyword in the parser — blocks DisplayMode.MAP from
+  # being exercised in DSL. Tracked as a framework gap; coverage
+  # command will keep flagging `map` until the parser is adjusted.
+
   ux:
     for engineer:
       purpose: "Monitor field testing quality and issues"

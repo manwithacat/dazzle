@@ -419,6 +419,30 @@ workspace agent_dashboard "Agent Dashboard":
     action: ticket_detail
     empty: "No tickets pending closure"
 
+  # Comment activity feed — live-updating stream
+  comment_activity:
+    source: Comment
+    display: activity_feed
+    sort: created_at desc
+    limit: 20
+    empty: "No recent comments"
+
+  # Resolution progress — funnel of tickets through lifecycle stages
+  resolution_funnel:
+    source: Ticket
+    display: funnel_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No tickets"
+
+  # Stage progress for the current ticket backlog
+  backlog_progress:
+    source: Ticket
+    display: progress
+    group_by: status
+    empty: "No backlog"
+
 workspace my_tickets "My Tickets":
   purpose: "Customer view of their submitted tickets"
   stage: "simple_list"

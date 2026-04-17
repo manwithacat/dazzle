@@ -152,14 +152,42 @@ workspace command_center "Command Center":
     action: system_detail
     empty: "No systems registered"
 
-  # Health Summary
+  # Health Summary — metrics tile region
   health_summary:
     source: System
+    display: metrics
     aggregate:
       total_systems: count(System)
       healthy_count: count(System WHERE status = 'healthy')
       critical_count: count(System WHERE status = 'critical')
       avg_response_time: avg(response_time_ms)
+
+  # Alert Volume — bar-chart distribution by severity
+  alert_severity_breakdown:
+    source: Alert
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts"
+
+  # Alert Heatmap — density of alerts by severity
+  alert_heatmap:
+    source: Alert
+    display: heatmap
+    group_by: severity
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts"
+
+  # Acknowledgement Queue — review queue for unacked alerts
+  ack_queue:
+    source: Alert
+    filter: acknowledged = false
+    display: queue
+    sort: severity desc, triggered_at desc
+    action: alert_ack
+    empty: "All alerts acknowledged"
 
   ux:
     for ops_engineer:

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.34] - 2026-04-17
+
+### Added
+- **`dazzle coverage` command.** Auditing tool that enumerates framework-provided artefacts (DisplayMode values, top-level DSL constructs, fragment templates) and reports which ones are exercised by at least one example app in `examples/*`. An uncovered artefact is one the framework ships but no example renders — which means no QA run hits its code path, and any regression stays hidden until a downstream consumer lands on it. Supports `--json` for machine consumption and `--fail-on-uncovered` as a CI gate. Regression tests in `tests/unit/test_cli_coverage.py` (10 cases). Starting coverage: **43/74 (58%)**; prior to this cycle: 33/74 (45%).
+- **Coverage fill-in across three example apps.** Addresses the class of risk identified by the #794 follow-up (grid template shipped with no example consumer, card-in-card hidden from QA):
+  - `ops_dashboard`: new `alert_severity_breakdown` (bar_chart), `alert_heatmap` (heatmap), `ack_queue` (queue), and `health_summary` now `display: metrics`.
+  - `support_tickets/agent_dashboard`: new `comment_activity` (activity_feed), `resolution_funnel` (funnel_chart), `backlog_progress` (progress).
+  - `fieldtest_hub/engineering_dashboard`: new `device_tree` (tree), `fleet_diagram` (diagram), `issue_tabs` (tabbed_list).
+  - Net: **16 of 17 DisplayMode values now have a consuming example.** Only `map` remains — blocked because `map` is a reserved keyword in the DSL parser (collides with the `map()` aggregate). Tracked for a framework-level fix.
+
+### Changed
+- `dazzle coverage` strips DSL comments before artefact matching so a commented-out `display: <mode>` doesn't falsely count as covered.
+
 ## [0.57.33] - 2026-04-17
 
 ### Fixed
