@@ -368,13 +368,17 @@ surface device_create "Register Device":
   uses entity Device
   mode: create
 
-  section main "New Device":
+  section identity "Identity":
     field name "Device Name"
     field model "Model"
     field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
+
+  section production "Production":
     field batch_number "Batch Number"
     field serial_number "Serial Number"
     field firmware_version "Firmware Version"
+
+  section assignment "Status & Assignment":
     field status "Status"
     field assigned_tester_id "Assign to Tester"
 
@@ -390,12 +394,16 @@ surface device_edit "Edit Device":
   uses entity Device
   mode: edit
 
-  section main "Edit Device":
+  section identity "Identity":
     field name "Device Name"
     field model "Model"
     field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
+
+  section production "Production":
     field batch_number "Batch Number"
     field firmware_version "Firmware Version"
+
+  section assignment "Status & Assignment":
     field status "Status"
     field assigned_tester_id "Assign to Tester"
 
@@ -459,11 +467,15 @@ surface tester_create "Register Tester":
   uses entity Tester
   mode: create
 
-  section main "New Tester":
+  section identity "Identity":
     field name "Name"
     field email "Email"
+
+  section profile "Profile":
     field location "Location"
     field skill_level "Skill Level"
+
+  section account "Account Status":
     field active "Active"
 
   ux:
@@ -478,11 +490,15 @@ surface tester_edit "Edit Tester":
   uses entity Tester
   mode: edit
 
-  section main "Edit Tester":
+  section identity "Identity":
     field name "Name"
     field email "Email"
+
+  section profile "Profile":
     field location "Location"
     field skill_level "Skill Level"
+
+  section account "Account Status":
     field active "Active"
 
   ux:
@@ -565,14 +581,18 @@ surface issue_report_create "Report Issue":
   uses entity IssueReport
   mode: create
 
-  section main "New Issue Report":
+  section target "Affected Device":
     field device_id "Device"
+    field firmware_version "Firmware Version"
+
+  section classification "Classification":
     field category "Category"
     field severity "Severity"
+
+  section evidence "Evidence":
     field description "Description"
     field steps_to_reproduce "Steps to Reproduce"
     field photo_url "Photo/Video URL"
-    field firmware_version "Firmware Version"
 
   ux:
     purpose: "Fast capture of field problems with evidence"
@@ -587,12 +607,16 @@ surface issue_report_edit "Update Issue":
   uses entity IssueReport
   mode: edit
 
-  section main "Edit Issue":
+  section classification "Classification":
     field category "Category"
     field severity "Severity"
+
+  section evidence "Evidence":
     field description "Description"
     field steps_to_reproduce "Steps to Reproduce"
     field photo_url "Photo/Video URL"
+
+  section resolution_section "Status & Resolution":
     field status "Status"
     field resolution "Resolution"
 
@@ -638,12 +662,16 @@ surface test_session_create "Log Test Session":
   uses entity TestSession
   mode: create
 
-  section main "New Test Session":
+  section participants "Participants":
     field device_id "Device"
     field tester_id "Tester"
-    field duration_minutes "Duration (minutes)"
+
+  section conditions "Conditions":
     field environment "Environment"
     field temperature "Temperature"
+
+  section measurements "Measurements":
+    field duration_minutes "Duration (minutes)"
     field notes "Notes"
 
   ux:
@@ -718,10 +746,14 @@ surface firmware_release_create "Create Firmware Release":
   uses entity FirmwareRelease
   mode: create
 
-  section main "New Firmware Release":
+  section identity "Release":
     field version "Version"
-    field release_notes "Release Notes"
     field release_date "Release Date"
+
+  section notes "Release Notes":
+    field release_notes "Release Notes"
+
+  section rollout "Rollout":
     field status "Status"
     field applies_to_batch "Applies to Batch"
 
@@ -737,10 +769,14 @@ surface firmware_release_edit "Edit Firmware Release":
   uses entity FirmwareRelease
   mode: edit
 
-  section main "Edit Firmware Release":
+  section identity "Release":
     field version "Version"
-    field release_notes "Release Notes"
     field release_date "Release Date"
+
+  section notes "Release Notes":
+    field release_notes "Release Notes"
+
+  section rollout "Rollout":
     field status "Status"
     field applies_to_batch "Applies to Batch"
 

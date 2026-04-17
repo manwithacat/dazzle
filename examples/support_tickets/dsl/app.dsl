@@ -256,9 +256,11 @@ surface ticket_create "Create Ticket":
   uses entity Ticket
   mode: create
 
-  section main "New Ticket":
+  section summary "Summary":
     field title "Title"
     field description "Description"
+
+  section triage "Triage":
     field priority "Priority"
     field category "Category"
     field assigned_to "Assigned To"
@@ -267,13 +269,17 @@ surface ticket_edit "Edit Ticket":
   uses entity Ticket
   mode: edit
 
-  section main "Edit Ticket":
+  section summary "Summary":
     field title "Title"
     field description "Description"
-    field status "Status"
+
+  section triage "Triage":
     field priority "Priority"
     field category "Category"
     field assigned_to "Assigned To"
+
+  section status_section "Status & Resolution":
+    field status "Status"
     field resolution "Resolution"
 
 # ============================================================================
