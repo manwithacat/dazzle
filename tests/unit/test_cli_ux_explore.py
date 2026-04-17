@@ -56,7 +56,8 @@ class TestExploreCommand:
         assert "Prepared 1 explore run" in result.output
         assert "persona=user" in result.output
         # State dir lives under tmp_path because dazzle.toml anchors it there
-        assert "dev_docs/ux_cycle_runs" in result.output
+        # Strip whitespace because rich console may wrap the path across lines
+        assert "dev_docs/ux_cycle_runs" in result.output.replace("\n", "")
 
     def test_cycles_parameter_creates_multiple_runs(self, tmp_path: Path) -> None:
         _write_min_manifest(tmp_path)
