@@ -363,3 +363,84 @@ story ST-036 "Engineer changes Task from in_progress to open":
     - "Task.status is 'in_progress'"
   then:
     - "Task.status becomes 'open'"
+
+story ST-037 "Engineer triages recent issue reports":
+  actor: engineer
+  trigger: user_click
+  scope: [IssueReport]
+  given:
+    - "IssueReports exist with status 'open'"
+  then:
+    - "Engineer sees all open reports sorted by severity desc"
+    - "Engineer can transition a report from 'open' to 'triaged'"
+
+story ST-038 "Engineer links firmware release to a device batch":
+  actor: engineer
+  trigger: form_submitted
+  scope: [FirmwareRelease, Device]
+  given:
+    - "FirmwareRelease exists with status 'draft'"
+  then:
+    - "FirmwareRelease.applies_to_batch is set"
+    - "Devices matching the batch_number show the new firmware version"
+
+story ST-039 "Engineer marks a device as recalled":
+  actor: engineer
+  trigger: status_changed
+  scope: [Device]
+  given:
+    - "Device.status is 'active'"
+    - "A critical IssueReport references the device batch"
+  then:
+    - "Device.status becomes 'recalled'"
+    - "Associated testers are notified"
+
+story ST-040 "Manager reviews team workload":
+  actor: manager
+  trigger: user_click
+  scope: [Task, Tester]
+  given:
+    - "Manager is on the engineering dashboard"
+  then:
+    - "Manager sees open Tasks grouped by assigned_to"
+    - "Manager can reassign a Task from one Engineer to another"
+
+story ST-041 "Manager tracks release progress":
+  actor: manager
+  trigger: user_click
+  scope: [FirmwareRelease]
+  given:
+    - "FirmwareReleases exist in various statuses"
+  then:
+    - "Manager sees releases sorted by release_date desc"
+    - "Manager can see counts of drafted vs released vs deprecated"
+
+story ST-042 "Field Tester reports a device issue":
+  actor: tester
+  trigger: form_submitted
+  scope: [IssueReport, Device]
+  given:
+    - "Field Tester is assigned to a Device with an issue"
+  then:
+    - "IssueReport is created with the Device reference and their id"
+    - "IssueReport.status starts as 'open'"
+
+story ST-043 "Field Tester logs a test session":
+  actor: tester
+  trigger: form_submitted
+  scope: [TestSession, Device]
+  given:
+    - "Field Tester has completed a hands-on test"
+  then:
+    - "TestSession records the device, tester, environment, duration"
+    - "Session appears in the tester's dashboard"
+
+story ST-044 "Field Tester views devices assigned to them":
+  actor: tester
+  trigger: user_click
+  scope: [Device]
+  given:
+    - "Field Tester is on their tester_dashboard"
+  then:
+    - "Field Tester sees only Devices where assigned_tester_id = self"
+    - "Field Tester can click through to log a session or report an issue"
