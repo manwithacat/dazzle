@@ -363,3 +363,51 @@ class TestFkTargetMissingDisplayField:
 
         warnings = extended_lint(_make_appspec([team, player, team_player, match_entity]))
         assert not any("TeamPlayer" in w and "display_field" in w for w in warnings)
+
+
+class TestNavGroupIconConsistency:
+    """Each nav_group must be icon-consistent — either all items declare
+    `icon:` or none do. Mixed groups render as a blank icon gutter
+    alongside iconed siblings (issue #796)."""
+
+    def _make_appspec_with_group(self, items: list[ir.NavItemIR]) -> ir.AppSpec:
+        group = ir.NavGroupSpec(label="Ops", items=items)
+        workspace = ir.WorkspaceSpec(name="ops_workspace", nav_groups=[group])
+        appspec = _make_appspec([])
+        return appspec.model_copy(update={"workspaces": [workspace]})
+
+    def test_warns_when_mixed_icons(self) -> None:
+        from dazzle.core.validator import extended_lint
+
+        mixed = [
+            ir.NavItemIR(entity="System", icon="activity"),
+            ir.NavItemIR(entity="Alert"),  # no icon
+        ]
+        warnings = extended_lint(self._make_appspec_with_group(mixed))
+        assert any("nav_group 'Ops'" in w and "mixes iconed and iconless" in w for w in warnings)
+
+    def test_passes_when_all_iconed(self) -> None:
+        from dazzle.core.validator import extended_lint
+
+        all_iconed = [
+            ir.NavItemIR(entity="System", icon="activity"),
+            ir.NavItemIR(entity="Alert", icon="bell"),
+        ]
+        warnings = extended_lint(self._make_appspec_with_group(all_iconed))
+        assert not any("mixes iconed" in w for w in warnings)
+
+    def test_passes_when_all_iconless(self) -> None:
+        from dazzle.core.validator import extended_lint
+
+        all_iconless = [
+            ir.NavItemIR(entity="System"),
+            ir.NavItemIR(entity="Alert"),
+        ]
+        warnings = extended_lint(self._make_appspec_with_group(all_iconless))
+        assert not any("mixes iconed" in w for w in warnings)
+
+    def test_empty_group_does_not_warn(self) -> None:
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(self._make_appspec_with_group([]))
+        assert not any("mixes iconed" in w for w in warnings)

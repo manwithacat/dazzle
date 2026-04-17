@@ -53,11 +53,37 @@ document.addEventListener("alpine:init", () => {
       // Keyboard shortcuts
       this._onKeydown = this._handleKeydown.bind(this);
       document.addEventListener("keydown", this._onKeydown);
+
+      // Pointer drag/resize listeners live on window so they survive
+      // mouse excursions outside the grid. We own the lifecycle
+      // explicitly — using Alpine's @pointermove.window in the template
+      // leaked the listener across HTMX morph navigations and threw
+      // ReferenceError on the next move (same pattern as dzTable
+      // issue #795).
+      this._onPointerMove = (e) => {
+        this.onPointerMoveDrag(e);
+        this.onPointerMoveResize(e);
+      };
+      this._onPointerUp = (e) => {
+        this.endDrag(e);
+        this.endResize(e);
+      };
+      window.addEventListener("pointermove", this._onPointerMove);
+      window.addEventListener("pointerup", this._onPointerUp);
     },
 
     destroy() {
       if (this._onKeydown) {
         document.removeEventListener("keydown", this._onKeydown);
+        this._onKeydown = null;
+      }
+      if (this._onPointerMove) {
+        window.removeEventListener("pointermove", this._onPointerMove);
+        this._onPointerMove = null;
+      }
+      if (this._onPointerUp) {
+        window.removeEventListener("pointerup", this._onPointerUp);
+        this._onPointerUp = null;
       }
     },
 

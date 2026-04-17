@@ -7,6 +7,8 @@ and *error* fields and returns it.
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
+
 from dazzle.testing.ux.contracts import (
     Contract,
     CreateFormContract,
@@ -17,6 +19,90 @@ from dazzle.testing.ux.contracts import (
     WorkspaceContract,
 )
 from dazzle.testing.ux.htmx_client import parse_html
+
+# ---------------------------------------------------------------------------
+# Shape-nesting gate (issue #794)
+# ---------------------------------------------------------------------------
+
+# A "card chrome" is a visual card layer — has rounded corners AND a
+# border or background. Two nested chrome layers read as "card within a
+# card," which is the regression we want to catch.
+_ROUNDED_CLASSES = (
+    "rounded",
+    "rounded-sm",
+    "rounded-md",
+    "rounded-lg",
+    "rounded-xl",
+    "rounded-2xl",
+    "rounded-3xl",
+    "rounded-full",
+)
+
+
+def _has_card_chrome(class_attr: str | None) -> bool:
+    """Return True if a class string represents a visible card layer —
+    a rounded element that also has a border or background colour.
+    """
+    if not class_attr:
+        return False
+    classes = class_attr.split()
+    has_rounded = any(c in _ROUNDED_CLASSES for c in classes)
+    if not has_rounded:
+        return False
+    has_surface = any(
+        c == "border" or c.startswith("border-") or c.startswith("bg-") for c in classes
+    )
+    return has_surface
+
+
+class _NestedChromeScanner(HTMLParser):
+    """Track a tag stack and flag any chrome layer whose ancestors
+    include another chrome layer.
+
+    Reports tuples of ``(outer_tag, inner_tag)`` for each nested pair
+    found. Self-closing/void tags are ignored as ancestors since they
+    cannot contain other elements.
+    """
+
+    _VOID = frozenset(
+        {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source"}
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._stack: list[tuple[str, bool]] = []  # (tag, is_chrome)
+        self.nested: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self._VOID:
+            return
+        attr_map = dict(attrs)
+        is_chrome = _has_card_chrome(attr_map.get("class"))
+        if is_chrome:
+            for ancestor_tag, ancestor_chrome in self._stack:
+                if ancestor_chrome:
+                    self.nested.append((ancestor_tag, tag))
+                    break
+        self._stack.append((tag, is_chrome))
+
+    def handle_endtag(self, tag: str) -> None:
+        # Close tags in a resilient way — browsers don't always balance.
+        while self._stack and self._stack[-1][0] != tag:
+            self._stack.pop()
+        if self._stack:
+            self._stack.pop()
+
+
+def find_nested_chromes(html: str) -> list[tuple[str, str]]:
+    """Return a list of (outer_tag, inner_tag) for each nested chrome
+    pair found. A return of [] means the page has no card-within-a-card
+    structures. Exposed for use by workspace and detail contract
+    checkers.
+    """
+    scanner = _NestedChromeScanner()
+    scanner.feed(html)
+    return scanner.nested
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -257,6 +343,11 @@ def check_contract(contract: Contract, html: str) -> Contract:
 
     Mutates ``contract.status`` and ``contract.error`` in place and returns
     the contract for convenience.
+
+    Workspace and detail-view contracts additionally get a shape-nesting
+    pass that flags "card within a card" — a chrome layer (rounded +
+    border/background) whose ancestor is also a chrome layer. This
+    catches regressions like issue #794.
     """
     tags = parse_html(html)
     checker = _CHECKERS.get(type(contract))
@@ -265,7 +356,23 @@ def check_contract(contract: Contract, html: str) -> Contract:
         contract.error = f"No checker registered for {type(contract).__name__}"
         return contract
 
-    errors = checker(contract, tags)  # type: ignore[arg-type]
+    errors = checker(contract, tags)  # type: ignore[operator]
+
+    # Shape-nesting gate — applies to contracts that render a page with
+    # visible card layers. List pages show cards too, but the list itself
+    # is a table, so we focus on workspaces and detail views where the
+    # nested-chrome regression was observed (#794).
+    if isinstance(contract, WorkspaceContract | DetailViewContract):
+        nested = find_nested_chromes(html)
+        if nested:
+            pairs = ", ".join(f"{outer}>{inner}" for outer, inner in nested[:3])
+            more = f" (+ {len(nested) - 3} more)" if len(nested) > 3 else ""
+            errors.append(
+                f"Nested card chrome detected — a rounded+bordered/background "
+                f"element has an ancestor with the same chrome: {pairs}{more}. "
+                f"Card chrome must live on exactly one layer."
+            )
+
     if errors:
         contract.status = "failed"
         contract.error = "; ".join(errors)

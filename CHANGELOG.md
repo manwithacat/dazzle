@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.29] - 2026-04-17
+
+### Added
+- **Shape-nesting gate in `dazzle ux verify --contracts`.** `WorkspaceContract` and `DetailViewContract` now additionally fail if the rendered HTML has a "card within a card" — a chrome layer (rounded + border/background) whose ancestor is another chrome layer. Exposes `find_nested_chromes(html)` helper in `dazzle.testing.ux.contract_checker`. Catches regressions like issue #794 automatically. Regression tests in `tests/unit/test_ux_contract_checker.py::TestNestedCardChrome` and `TestFindNestedChromes` (6 cases).
+- **Console-error gate in `InteractionRunner._run_page_load`.** Any JS console error surfaced during page load or post-navigation settling now fails the interaction. Previously the listener was registered *after* `page.goto` (missing every load-time error) and its collected errors were never asserted — which is how issue #795 (Alpine scope ReferenceError on HTMX morph navigation) escaped QA. Regression tests in `tests/unit/test_ux_runner.py` (3 cases: pass / fail-on-error / ignore warnings+info).
+- **Lint rule: nav-group icon consistency.** `dazzle lint` / `_lint_nav_group_icon_consistency` warns when a `nav_group` mixes items with and without `icon:`. Asked for in issue #796 as a follow-on. Regression tests in `tests/unit/test_lint_anti_patterns.py::TestNavGroupIconConsistency` (4 cases).
+- **`/smells` check 1.8.** New regression check in `.claude/commands/smells.md` for declarative Alpine `@<event>.window` bindings in templates — each hit is a latent HTMX-morph lifecycle bug waiting to surface (root cause of issue #795).
+
+### Fixed
+- **Preventive fix: workspace dashboard drag/resize listeners.** `src/dazzle_ui/templates/workspace/_content.html` + `src/dazzle_ui/runtime/static/js/dashboard-builder.js`. Same `@pointermove.window`/`@pointerup.window` pattern as issue #795 (fixed in 007f779e for dzTable). Moved to imperative `addEventListener`/`removeEventListener` pairs in the dashboard component's `init()`/`destroy()`.
+
 ## [0.57.28] - 2026-04-17
 
 ### Fixed

@@ -1936,6 +1936,34 @@ def _lint_fk_targets_missing_display_field(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_nav_group_icon_consistency(appspec: ir.AppSpec) -> list[str]:
+    """Warn when a nav_group mixes items with and without `icon:`.
+
+    A nav_group with some items that declare `icon:` and some that don't
+    renders as a visually inconsistent list — iconed items have a flush
+    icon + label, iconless items have a blank gutter where the icon
+    would be. Pick one: either every item in the group carries an
+    icon, or none do. Asked for in issue #796.
+    """
+    warnings: list[str] = []
+    for workspace in appspec.workspaces:
+        for group in workspace.nav_groups:
+            if not group.items:
+                continue
+            iconed = [it for it in group.items if it.icon]
+            iconless = [it for it in group.items if not it.icon]
+            if iconed and iconless:
+                iconless_names = ", ".join(it.entity for it in iconless)
+                warnings.append(
+                    f"Workspace '{workspace.name}' nav_group '{group.label}' "
+                    f"mixes iconed and iconless items — {iconless_names} "
+                    f"have no icon while siblings do. Add `icon:` to all items "
+                    f"in the group, or remove it from all, for consistent "
+                    f"sidebar alignment."
+                )
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 
@@ -1952,6 +1980,7 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_workspace_routing(appspec))
     warnings.extend(_lint_workspace_access_declarations(appspec))
     warnings.extend(_lint_list_surface_ux(appspec))
+    warnings.extend(_lint_nav_group_icon_consistency(appspec))
     warnings.extend(_lint_integration_bindings(appspec))
     warnings.extend(_lint_process_effects(appspec))
     warnings.extend(_lint_modeling_anti_patterns(appspec))

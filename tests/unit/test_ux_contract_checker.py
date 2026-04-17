@@ -158,3 +158,97 @@ class TestCheckRBAC:
         )
         result = check_contract(contract, SAMPLE_DETAIL_HTML)
         assert result.status == "failed"
+
+
+# ---------------------------------------------------------------------------
+# Shape-nesting gate (issue #794)
+# ---------------------------------------------------------------------------
+
+
+class TestNestedCardChrome:
+    """The shape-nesting gate flags card-within-a-card layouts on workspace
+    and detail contracts — a chrome layer (rounded + border/bg) nested
+    inside another chrome layer."""
+
+    _NESTED_CARD_HTML = """
+    <div data-dz-region-name="tasks" class="rounded-md border bg-white">
+      <article class="rounded-md border bg-gray-50">
+        <h3>Card</h3>
+      </article>
+    </div>
+    """
+
+    _FLAT_CARD_HTML = """
+    <div data-dz-region-name="tasks">
+      <article class="rounded-md border bg-white">
+        <h3>Card</h3>
+      </article>
+    </div>
+    """
+
+    def test_workspace_contract_fails_on_nested_chrome(self) -> None:
+        contract = WorkspaceContract(workspace="task_board", regions=["tasks"])
+        result = check_contract(contract, self._NESTED_CARD_HTML)
+        assert result.status == "failed"
+        assert result.error is not None
+        assert "Nested card chrome" in result.error
+
+    def test_workspace_contract_passes_on_flat_chrome(self) -> None:
+        contract = WorkspaceContract(workspace="task_board", regions=["tasks"])
+        result = check_contract(contract, self._FLAT_CARD_HTML)
+        assert result.status == "passed", result.error
+
+    def test_list_contract_does_not_run_nesting_check(self) -> None:
+        # List contracts show tables, not cards — the nesting gate is
+        # scoped to Workspace/DetailView contracts.
+        contract = ListPageContract(entity="Task", surface="task_list", fields=["title"])
+        nested_list_html = (
+            SAMPLE_LIST_HTML
+            + '<div class="rounded-md border"><div class="rounded-md bg-white">nested</div></div>'
+        )
+        result = check_contract(contract, nested_list_html)
+        # List contract is still satisfied even with a stray nested-chrome
+        # pattern below it — the gate doesn't apply to this contract type.
+        assert result.status == "passed", result.error
+
+
+class TestFindNestedChromes:
+    """Direct tests of the nested-chrome scanner helper."""
+
+    def test_detects_rounded_plus_border_nested(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = '<div class="rounded-md border"><article class="rounded-lg bg-blue-50">inner</article></div>'
+        assert find_nested_chromes(html) == [("div", "article")]
+
+    def test_ignores_rounded_without_surface(self) -> None:
+        # rounded-md alone is not "chrome" — must also have border or bg.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<div class="rounded-md"><article class="rounded-md border bg-white">x</article></div>'
+        )
+        assert find_nested_chromes(html) == []
+
+    def test_ignores_siblings(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<section class="rounded-md border"><p>a</p></section>'
+            '<section class="rounded-md bg-white"><p>b</p></section>'
+        )
+        assert find_nested_chromes(html) == []
+
+    def test_reports_one_pair_per_inner_chrome(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<section class="rounded-md border">'
+            '<div class="rounded-md bg-white">a</div>'
+            '<div class="rounded-md border">b</div>'
+            "</section>"
+        )
+        # Two inner chromes under one outer chrome = 2 pairs.
+        result = find_nested_chromes(html)
+        assert len(result) == 2
+        assert all(outer == "section" for outer, _ in result)

@@ -90,13 +90,16 @@
   </div>
 
   {# ── Card Grid ── #}
+  {# Pointer drag/resize listeners are registered imperatively in the
+     dashboard Alpine component's init()/destroy() (same lifecycle
+     pattern used by dzTable for issue #795) — using @<event>.window
+     here leaks the listener across HTMX morph navigations and throws
+     ReferenceError on the next pointer event. #}
   <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
        data-grid-container
        role="application"
        aria-label="Dashboard card grid"
-       {% if workspace.sse_url %}hx-ext="sse" sse-connect="{{ workspace.sse_url }}"{% endif %}
-       @pointermove.window="onPointerMoveDrag($event); onPointerMoveResize($event)"
-       @pointerup.window="endDrag($event); endResize($event)">
+       {% if workspace.sse_url %}hx-ext="sse" sse-connect="{{ workspace.sse_url }}"{% endif %}>
 
     <template x-for="card in cards" :key="card.id">
       {# Outer wrapper is a layout/positioning element only. The visible

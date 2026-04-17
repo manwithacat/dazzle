@@ -124,6 +124,17 @@ class InteractionRunner:
 
     async def _run_page_load(self, page: Any, interaction: Interaction) -> Interaction:
         url = _build_page_url(interaction.surface, interaction.entity, "list", self.site_url)
+
+        # Register the console-error listener BEFORE navigation so we
+        # capture errors fired during page load (the previous placement
+        # after page.goto missed every load-time error, which is how
+        # issue #795 escaped testing).
+        console_errors: list[str] = []
+        page.on(
+            "console",
+            lambda msg: console_errors.append(msg.text) if msg.type == "error" else None,
+        )
+
         response = await page.goto(url, wait_until="networkidle")
 
         # A 403/401 means the persona doesn't actually have access — this
@@ -140,15 +151,22 @@ class InteractionRunner:
             await self._capture_screenshot(page, interaction)
             return interaction
 
-        # Check for JS console errors
-        errors = []
-        page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-
         # Check expected content is present
         content = await page.content()
         if not content or len(content) < 100:
             interaction.status = "failed"
             interaction.error = "Page content is empty or too short"
+            await self._capture_screenshot(page, interaction)
+            return interaction
+
+        # Fail on any JS console error surfaced during the page lifecycle —
+        # these are almost always real regressions (Alpine scope misses,
+        # unhandled promise rejections, HTMX swap failures, etc.).
+        if console_errors:
+            sample = "; ".join(console_errors[:3])
+            more = f" (+ {len(console_errors) - 3} more)" if len(console_errors) > 3 else ""
+            interaction.status = "failed"
+            interaction.error = f"JS console errors on {url}: {sample}{more}"
             await self._capture_screenshot(page, interaction)
             return interaction
 

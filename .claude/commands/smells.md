@@ -61,6 +61,12 @@ Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle. Report PASS
 1.7 Class length (aspirational):
   Count classes >800 lines in src/. Report count and any offenders.
 
+1.8 Declarative Alpine @<event>.window bindings leak across HTMX morph nav
+  (issue #795 — fixed component must own listener lifecycle):
+  grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\.window' src/dazzle_ui/templates/ --include="*.html"
+  PASS = 0 results. Each hit is a latent lifecycle bug: move the listener
+  to the component's init()/destroy() via addEventListener/removeEventListener.
+
 Return results as:
 REGRESSION_RESULTS:
 | # | Check | Status | Details |
