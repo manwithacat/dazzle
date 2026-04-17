@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.30] - 2026-04-17
+
+### Fixed
+- Homebrew formula post-install step now calls `dazzle mcp setup` (subcommand) instead of the non-existent `dazzle mcp-setup` (hyphenated). Every `Validate Formula` run on `manwithacat/homebrew-tap` since the CLI restructure had been failing with `No such command 'mcp-setup'`. README updated to match.
+
 ## [0.57.29] - 2026-04-17
 
 ### Added
