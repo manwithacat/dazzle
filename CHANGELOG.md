@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.25] - 2026-04-17
+
+### Fixed
+- Timeline layout suggestion in `layout_rules.check_layout_relevance` now requires the entity to have at least one *event-bearing* date/datetime field — i.e. a date field without the `auto_add` or `auto_update` modifier. Previously every entity with a `created_at: datetime auto_add` (every Dazzle entity) triggered the "has date/datetime fields but no timeline workspace region" suggestion. Now the rule only fires for entities with domain-meaningful temporal fields (`due_date`, `triggered_at`, `logged_at`, `release_date`, etc.), dropping ~9 noise suggestions across the 5 example apps.
+
 ## [0.57.24] - 2026-04-17
 
 ### Fixed

@@ -5,7 +5,7 @@ layout capabilities would improve the user experience.
 """
 
 from dazzle.core.ir.domain import EntitySpec
-from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldTypeKind
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.workspaces import DisplayMode, WorkspaceSpec
 
@@ -14,8 +14,21 @@ from .models import Relevance
 # Field type kinds that indicate temporal data
 _DATE_KINDS = frozenset({FieldTypeKind.DATE, FieldTypeKind.DATETIME})
 
+# Modifiers that mark a date field as audit metadata (not event-bearing content)
+_AUDIT_MODIFIERS = frozenset({FieldModifier.AUTO_ADD, FieldModifier.AUTO_UPDATE})
+
 # Surface modes that represent create/edit forms
 _FORM_MODES = frozenset({SurfaceMode.CREATE, SurfaceMode.EDIT})
+
+
+def _is_event_bearing_date_field(field: FieldSpec) -> bool:
+    """Return True if a date/datetime field represents domain-meaningful time
+    (e.g. triggered_at, logged_at, due_date) rather than audit metadata
+    (created_at auto_add, updated_at auto_update).
+    """
+    if field.type.kind not in _DATE_KINDS:
+        return False
+    return not any(m in _AUDIT_MODIFIERS for m in field.modifiers)
 
 
 def check_layout_relevance(
@@ -82,12 +95,15 @@ def check_layout_relevance(
                     )
                 )
 
-    # --- Rule 2: Timeline for entities with date/datetime fields ---
+    # --- Rule 2: Timeline for entities with event-bearing date fields ---
+    # Only fire when the entity has at least one date/datetime field that
+    # *isn't* auto_add/auto_update audit metadata. `created_at` / `updated_at`
+    # alone aren't a strong enough signal — every entity has them.
     for entity in entities:
         if getattr(entity, "domain", None) == "platform":
             continue
-        has_date_field = any(f.type.kind in _DATE_KINDS for f in entity.fields)
-        if has_date_field:
+        has_event_field = any(_is_event_bearing_date_field(f) for f in entity.fields)
+        if has_event_field:
             modes = entity_display_modes.get(entity.name, set())
             if DisplayMode.TIMELINE not in modes:
                 results.append(
