@@ -82,6 +82,12 @@ class SubsystemContext:
     security_profile: str = "basic"
     project_root: Any | None = None
 
+    # Extra static directories to prepend to the framework's /static mount.
+    # Consumer apps that mount their own /static AFTER .build() used to be
+    # silently shadowed by the framework's /static mount (issue #793).
+    # Pass these here and they'll be checked before framework static files.
+    extra_static_dirs: list[Any] | None = None
+
 
 @runtime_checkable
 class SubsystemPlugin(Protocol):

@@ -167,6 +167,10 @@ class DazzleBackendApp:
         # SiteSpec (v0.16.0)
         sitespec_data: dict[str, Any] | None = None,
         project_root: str | Path | None = None,
+        # Extra static directories to prepend to the framework's /static mount.
+        # Consumer apps that mount their own /static AFTER .build() used to be
+        # silently shadowed (issue #793); pass paths here to have them served first.
+        extra_static_dirs: list[str | Path] | None = None,
     ):
         """
         Initialize the backend application.
@@ -225,6 +229,9 @@ class DazzleBackendApp:
         # SiteSpec (v0.16.0)
         self._sitespec_data = sitespec_data if sitespec_data is not None else config.sitespec_data
         self._project_root = Path(project_root) if project_root else config.project_root
+        self._extra_static_dirs: list[Path] = (
+            [Path(d) for d in extra_static_dirs] if extra_static_dirs else []
+        )
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -330,6 +337,7 @@ class DazzleBackendApp:
             database_url=self._database_url or "",
             security_profile=self._security_profile,
             project_root=self._project_root,
+            extra_static_dirs=list(self._extra_static_dirs),
             last_migration=self._last_migration,
             # Resolved instance vars (may differ from config when passed as constructor kwargs)
             sitespec_data=self._sitespec_data,

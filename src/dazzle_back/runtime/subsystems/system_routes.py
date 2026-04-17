@@ -598,6 +598,10 @@ class SystemRoutesSubsystem:
             framework_static = Path(dazzle_ui.__file__).parent / "runtime" / "static"
             if framework_static.is_dir():
                 dirs: list[Path] = []
+                # Consumer-supplied static dirs win (issue #793). Keeps consumer
+                # assets from being shadowed by framework assets of the same name.
+                if ctx.extra_static_dirs:
+                    dirs.extend(Path(d) for d in ctx.extra_static_dirs)
                 if ctx.project_root:
                     dirs.append(ctx.project_root / "static")
                 dirs.append(framework_static)

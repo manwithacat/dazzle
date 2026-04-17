@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.26] - 2026-04-17
+
+### Fixed
+- `DazzleBackendApp` now accepts an `extra_static_dirs: list[str | Path]` parameter. Paths passed here are prepended to the `/static` CombinedStaticFiles mount so consumer-owned static assets take priority over framework defaults. Resolves issue #793 (Penny Dreadful): consumer apps that mounted their own `/static` AFTER `.build()` were silently shadowed by DAZZLE's internal `/static` mount, and had to reach into `app.routes.insert(0, ...)` as a workaround. Consumers should now pass `extra_static_dirs=[PROJECT_ROOT / "static"]` instead of mounting manually.
+
+### Agent Guidance
+- When a consumer project has its own `static/` directory and embeds DAZZLE via `DazzleBackendApp`, pass it as `extra_static_dirs=[...]` — don't mount via `app.mount("/static", ...)` after `.build()` (that silently shadows DAZZLE's framework assets and vice versa depending on insertion order).
+
 ## [0.57.25] - 2026-04-17
 
 ### Fixed

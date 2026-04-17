@@ -114,3 +114,38 @@ class TestCombinedStaticFilesLookup:
 
         assert stat is not None
         assert "project" in full_path
+
+
+class TestExtraStaticDirsPriority:
+    """Regression for issue #793 — consumer static dirs must shadow framework."""
+
+    def test_extra_dir_shadows_framework(self, tmp_path: Path, framework_dir: Path) -> None:
+        """A consumer-supplied static dir should win over framework files."""
+        from dazzle_back.runtime.static_files import CombinedStaticFiles
+
+        consumer = tmp_path / "consumer" / "static"
+        consumer.mkdir(parents=True)
+        (consumer / "override.css").write_text("/* consumer override */")
+
+        combined = CombinedStaticFiles(directories=[consumer, framework_dir])
+        full_path, stat = combined.lookup_path("override.css")
+
+        assert stat is not None
+        assert Path(full_path).read_text() == "/* consumer override */"
+
+    def test_extra_dir_before_project_and_framework(
+        self, tmp_path: Path, project_dir: Path, framework_dir: Path
+    ) -> None:
+        """Priority order: extra_static_dirs > project > framework (issue #793)."""
+        from dazzle_back.runtime.static_files import CombinedStaticFiles
+
+        consumer = tmp_path / "consumer" / "static"
+        consumer.mkdir(parents=True)
+        (consumer / "override.css").write_text("/* consumer wins */")
+
+        # Order matches the mount: consumer first, then project, then framework.
+        combined = CombinedStaticFiles(directories=[consumer, project_dir, framework_dir])
+        full_path, stat = combined.lookup_path("override.css")
+
+        assert stat is not None
+        assert Path(full_path).read_text() == "/* consumer wins */"
