@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.31] - 2026-04-17
+
+### Fixed
+- Release CLI workflow's `update-homebrew` job now writes `dazzle mcp setup` (subcommand) into the generated formula's post-install step. The previous heredoc in `.github/workflows/release-cli.yml` still referenced the old hyphenated `dazzle mcp-setup`, which is what the tap repo was actually installing — `homebrew/dazzle.rb` in this repo is shadowed by that heredoc each release. Fixing the workflow is what actually propagates the command-shape correction to `manwithacat/homebrew-tap`.
+
 ## [0.57.30] - 2026-04-17
 
 ### Fixed
