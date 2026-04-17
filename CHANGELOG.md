@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.39] - 2026-04-17
+
+### Added
+- **CI gate on framework-artefact coverage.** New step in `.github/workflows/ci.yml` (lint job) runs `python -m dazzle coverage --fail-on-uncovered` on every push and PR. Locks the 71/71 (100%) invariant established in v0.57.35 — any new DSL construct, DisplayMode value, or fragment template landing without at least one example-app consumer fails the build. Negative path already pinned by `test_fail_on_uncovered_returns_nonzero_when_gaps_exist` in `tests/unit/test_cli_coverage.py`.
+
+### Agent Guidance
+- **Adding a new DSL construct / DisplayMode / fragment template is a two-step commit.** Ship the framework change AND a consuming DSL block in an example app in the same PR. Otherwise the coverage gate blocks merge. Curated construct list lives at `src/dazzle/cli/coverage.py::_DSL_CONSTRUCTS`.
+
 ## [0.57.38] - 2026-04-17
 
 ### Added

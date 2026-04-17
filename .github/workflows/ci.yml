@@ -152,6 +152,14 @@ jobs:
           fi
         done
 
+    - name: Framework artefact coverage gate
+      run: |
+        # Locks the "every shipped artefact has a live consumer" invariant
+        # established in v0.57.35. Any new DSL construct, DisplayMode,
+        # or fragment template landing without at least one example app
+        # exercising it fails CI here. See src/dazzle/cli/coverage.py.
+        python -m dazzle coverage --fail-on-uncovered
+
     - name: Generate and validate AsyncAPI specs
       run: |
         # Install AsyncAPI CLI for validation
