@@ -113,3 +113,33 @@ story ST-011 "Administrator creates a new Task Comment":
   then:
     - "New TaskComment is saved to database"
     - "Administrator sees confirmation message"
+
+story ST-012 "Administrator views all tasks across organization":
+  actor: Administrator
+  trigger: user_click
+  scope: [Task]
+  given:
+    - "Administrator has list permission on Task"
+  then:
+    - "Administrator sees every Task regardless of assignee"
+    - "Task list is sortable by priority, status, due_date"
+
+story ST-013 "Administrator configures team settings":
+  actor: Administrator
+  trigger: user_click
+  scope: [User]
+  given:
+    - "Administrator has list+update permission on User"
+  then:
+    - "Administrator sees the full team roster"
+    - "Administrator can change a Team Member's role or department"
+
+story ST-014 "Administrator views system-wide analytics":
+  actor: Administrator
+  trigger: user_click
+  scope: [Task, User]
+  given:
+    - "Administrator is on the admin dashboard workspace"
+  then:
+    - "Administrator sees aggregate counts of Tasks by status"
+    - "Administrator sees team velocity metrics"
