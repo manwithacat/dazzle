@@ -26,6 +26,7 @@ feedback_widget: enabled
 # =============================================================================
 
 entity User "Team Member":
+  intent: "A person with an account who can create and be assigned tasks within an organisation"
   display_field: name
   id: uuid pk
   email: str(200) unique required
@@ -55,6 +56,7 @@ entity User "Team Member":
 # =============================================================================
 
 entity Task "Task":
+  intent: "A unit of work assigned to a Team Member with a lifecycle from todo through review to done"
   display_field: title
   id: uuid pk
   title: str(200) required
@@ -110,6 +112,7 @@ entity Task "Task":
 # =============================================================================
 
 entity TaskComment "Task Comment":
+  intent: "A discussion note attached to a Task by a Team Member to capture context or decisions"
   id: uuid pk
   task: ref Task required
   author: ref User required

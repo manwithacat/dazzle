@@ -15,6 +15,7 @@ app ops_dashboard "Operations Dashboard":
 # =============================================================================
 
 entity System "System":
+  intent: "Monitor operational health and response characteristics of a backend service"
   display_field: name
   id: uuid pk
   name: str(200) required
@@ -59,6 +60,7 @@ entity System "System":
     repr_fields: [name, service_type, status, response_time_ms, error_rate]
 
 entity Alert "Alert":
+  intent: "Record a time-bound operational incident on a monitored System until acknowledged"
   id: uuid pk
   system: ref System required
   severity: enum[low,medium,high,critical]=low

@@ -50,6 +50,7 @@ persona manager "Manager":
 
 # Entity: Device
 entity Device "Device":
+  intent: "A physical hardware unit produced in a batch, assigned to a Tester, and tracked through prototype/active/recalled/retired states"
   display_field: name
   id: uuid pk
   name: str(200) required
@@ -93,6 +94,7 @@ entity Device "Device":
 
 # Entity: Tester
 entity Tester "Tester":
+  intent: "A field-testing volunteer or employee who is assigned Devices, logs TestSessions, and reports IssueReports"
   display_field: name
   id: uuid pk
   name: str(200) required
@@ -125,6 +127,7 @@ entity Tester "Tester":
 
 # Entity: IssueReport
 entity IssueReport "Issue Report":
+  intent: "A problem observed on a Device during field testing, categorised by severity and tracked from open through triage to fixed/verified/closed"
   id: uuid pk
   device_id: ref Device required
   reported_by_id: ref Tester required
@@ -180,6 +183,7 @@ entity IssueReport "Issue Report":
 
 # Entity: TestSession
 entity TestSession "Test Session":
+  intent: "A logged episode of hands-on testing on a specific Device by a Tester, capturing duration, conditions, and observations"
   id: uuid pk
   device_id: ref Device required
   tester_id: ref Tester required
@@ -215,6 +219,7 @@ entity TestSession "Test Session":
 
 # Entity: FirmwareRelease
 entity FirmwareRelease "Firmware Release":
+  intent: "A versioned firmware build that can be rolled out to a Device batch and transitions from draft to released to deprecated"
   id: uuid pk
   version: str(50) required unique
   release_notes: text
@@ -251,6 +256,7 @@ entity FirmwareRelease "Firmware Release":
 
 # Entity: Task
 entity Task "Task":
+  intent: "A remediation or investigation task spawned from field testing, assigned between engineers and testers with a lifecycle from open to completed"
   id: uuid pk
   type: enum[debugging,hardware_replacement,firmware_update,recall_request]=debugging
   created_by_id: ref Tester required
