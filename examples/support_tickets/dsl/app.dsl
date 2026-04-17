@@ -192,6 +192,14 @@ surface user_detail "User Detail":
     field is_active "Active"
     field created_at "Created"
 
+  related tickets "Tickets":
+    display: table
+    show: Ticket
+
+  related comments "Comments":
+    display: table
+    show: Comment
+
 surface user_create "Create User":
   uses entity User
   mode: create

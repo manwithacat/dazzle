@@ -455,6 +455,14 @@ surface tester_detail "Tester Detail":
     field active "Active"
     field joined_at "Joined At"
 
+  related activity "Testing Activity":
+    display: table
+    show: TestSession, IssueReport
+
+  related assignments "Assignments":
+    display: table
+    show: Device, Task
+
   ux:
     purpose: "View tester details and activity"
 
