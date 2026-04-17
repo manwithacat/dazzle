@@ -374,6 +374,22 @@ workspace agent_dashboard "Agent Dashboard":
   purpose: "Personal dashboard for support agents"
   stage: "dual_pane_flow"
 
+  activity_timeline:
+    source: Comment
+    sort: created_at desc
+    limit: 30
+    display: timeline
+    action: comment_detail
+    empty: "No activity yet"
+
+  ticket_history:
+    source: Ticket
+    sort: updated_at desc
+    limit: 20
+    display: timeline
+    action: ticket_detail
+    empty: "No tickets logged yet"
+
   recent_comments:
     source: Comment
     sort: created_at desc

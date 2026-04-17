@@ -119,6 +119,14 @@ workspace command_center "Command Center":
     sort: severity desc, triggered_at desc
     limit: 20
 
+  # Alert Timeline — chronological event stream across all systems
+  alert_timeline:
+    source: Alert
+    sort: triggered_at desc
+    limit: 50
+    display: timeline
+    empty: "No alerts yet"
+
   # System Status Kanban — systems grouped by health state
   system_board:
     source: System
