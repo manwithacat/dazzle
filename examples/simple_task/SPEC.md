@@ -192,6 +192,40 @@ A discrete unit of work to be completed by a team member.
 
 ---
 
+## Workflows
+
+Each workflow below corresponds to a user story in `dsl/stories.dsl`. The
+clauses are written at the intention level — the DSL stories carry the
+specific given/then conditions.
+
+### Administrator workflows
+- Administrator creates a new Team Member via the user_create surface
+- Administrator creates a new Task on behalf of any Team Member
+- Administrator changes Task status across every transition in the
+  lifecycle (todo → in_progress → review → done, plus the admin-only
+  done → todo rollback)
+- Administrator creates a new TaskComment on any Task
+- Administrator views all tasks across the organization regardless of
+  assignee
+- Administrator configures team settings by updating any Team Member's
+  role or department
+- Administrator views system-wide analytics via the admin dashboard
+  workspace
+
+### Team Manager workflows
+- Team Manager views all tasks for their team via the team_overview
+  workspace
+- Team Manager views unassigned tasks and assigns them to a Team Member
+- Team Manager reviews completed tasks in the review queue and approves
+  or sends back
+
+### Team Member workflows
+- Team Member views only their own tasks (assigned or created) in the
+  my_work workspace
+- Team Member updates own task status through the declared state machine
+
+---
+
 ## Technical Notes
 
 ### DSL Features Demonstrated
