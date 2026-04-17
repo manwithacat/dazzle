@@ -281,22 +281,61 @@ class TestFindNestedChromes:
         )
         assert find_nested_chromes(html) == []
 
+    def test_dashboard_slot_plus_region_card_is_card_in_card(self) -> None:
+        # Regression: the exact shape AegisMark reported in the #794
+        # follow-up. The dashboard slot (workspace/_content.html) owns
+        # an <article> with rounded-md + border + bg-card. Before the
+        # region_card-is-bare fix, the macro also emitted its own
+        # rounded-[6px] + border + bg-card wrapper inside that article
+        # — two card layers, one visible card-in-card. Scanner must
+        # catch this.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        before_fix_html = (
+            '<div data-card-id="card-0" class="relative group outline-none">'
+            '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
+            "<h3>Grade Distribution</h3>"
+            "<div>"
+            '<div data-dz-region class="bg-[hsl(var(--card))] border '
+            'border-[hsl(var(--border))] rounded-[6px]">'
+            '<div class="p-3"><h3>Grade Distribution</h3><p>chart</p></div>'
+            "</div></div></article></div>"
+        )
+        assert find_nested_chromes(before_fix_html) == [("article", "div")]
+
+    def test_dashboard_slot_with_bare_region_card_is_clean(self) -> None:
+        # The shape after #794-followup: dashboard slot owns chrome
+        # + title, region_card is a contentless instrumentation hook
+        # (just data-dz-region), region body is bare content. No
+        # card-in-card, no duplicate title.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        after_fix_html = (
+            '<div data-card-id="card-0" class="relative group outline-none">'
+            '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
+            '<h3 id="card-title-card-0">Grade Distribution</h3>'
+            '<div class="px-4 pb-4">'
+            '<div data-dz-region data-dz-region-name="grade_distribution" '
+            'id="region-grade_distribution">'
+            "<p>chart body goes here</p>"
+            "</div></div></article></div>"
+        )
+        assert find_nested_chromes(after_fix_html) == []
+
     def test_fixed_grid_region_shape(self) -> None:
-        # The shape that grid.html renders AFTER the #794-followup fix:
-        # region_card outer is chrome, inner items are plain pads. No
-        # nesting. This is the reference model that QA should validate.
+        # Grid region content after #794-followup: bare data-dz-region
+        # hook, items are plain pads, no chrome anywhere. The enclosing
+        # dashboard slot (asserted separately above) owns all chrome.
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
         html = (
             '<div data-dz-region data-dz-region-name="system_status" '
-            'class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
-            '<div class="p-3">'
-            "<h3>System Status</h3>"
+            'id="region-system_status">'
             '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'
             '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
             "<h4>api-gateway</h4></div>"
             '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
             "<h4>auth-service</h4></div>"
-            "</div></div></div>"
+            "</div></div>"
         )
         assert find_nested_chromes(html) == []

@@ -1,19 +1,25 @@
-{# Region wrapper macro — shared card shell for all workspace/regions/* templates #}
-{# Contract: ~/.claude/skills/ux-architect/components/region-wrapper.md (UX-035) #}
-{#                                                                                #}
-{# Usage:                                                                          #}
-{#   {% from 'macros/region_wrapper.html' import region_card %}                    #}
-{#   {% call region_card(title) %}                                                 #}
-{#     ... region-specific content here ...                                        #}
-{#   {% endcall %}                                                                 #}
+{# Region wrapper macro — contentless instrumentation hook.                        #}
+{# Contract: ~/.claude/skills/ux-architect/components/region-wrapper.md (UX-035)   #}
+{#                                                                                 #}
+{# Regions are always rendered into a dashboard card slot (see                     #}
+{# workspace/_content.html), which already owns card chrome — border, rounded      #}
+{# corners, card background, shadow — AND renders the region title in its own      #}
+{# header. Prior to #794-followup this macro emitted its own chrome + title too,   #}
+{# producing a visible card-within-a-card and a duplicate title on every dashboard #}
+{# region on every Dazzle app.                                                     #}
+{#                                                                                 #}
+{# This macro now emits only the <div data-dz-region …> hook (so harness/QA and    #}
+{# SSE/HTMX targeting still work) and delegates all visual output to the caller.   #}
+{# The `title` parameter is kept for caller-compatibility but deliberately unused. #}
+{#                                                                                 #}
+{# Usage:                                                                           #}
+{#   {% from 'macros/region_wrapper.html' import region_card %}                     #}
+{#   {% call region_card(title) %}                                                  #}
+{#     ... region-specific content here ...                                         #}
+{#   {% endcall %}                                                                  #}
 
 {% macro region_card(title, name=None) %}
-<div data-dz-region{% if name or region_name is defined %} data-dz-region-name="{{ name or region_name }}"{% endif %} class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]" id="{% if name or region_name is defined %}region-{{ name or region_name }}{% endif %}">
-  <div class="p-3">
-    {% if title %}
-    <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-3">{{ title }}</h3>
-    {% endif %}
-    {{ caller() }}
-  </div>
+<div data-dz-region{% if name or region_name is defined %} data-dz-region-name="{{ name or region_name }}"{% endif %}{% if name or region_name is defined %} id="region-{{ name or region_name }}"{% endif %}>
+  {{ caller() }}
 </div>
 {% endmacro %}

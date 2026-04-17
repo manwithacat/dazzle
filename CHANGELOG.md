@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.36] - 2026-04-17
+
+### Fixed
+- **Root-cause fix for card-within-a-card (#794 second follow-up).** AegisMark's follow-up showed that the two prior fixes (2e9ca0cc outer wrapper + b5e3ef85 grid-item nesting) both missed the original reported shape: the dashboard card slot in `workspace/_content.html` emits its own chrome (`rounded-md border bg-[hsl(var(--card))]`) AND header title, while the `region_card` macro in `macros/region_wrapper.html` was also emitting chrome (`rounded-[6px] border bg-card shadow`) AND its own `<h3>` title. Every Dazzle dashboard region rendered with two card layers stacked and the same title printed twice. Since regions are only ever rendered into the dashboard slot (verified: single render site at `workspace_rendering.py:880`), the fix strips all chrome and title from `region_card` — it now emits only a bare `<div data-dz-region …>` as an instrumentation hook and delegates content to its caller. The dashboard slot continues to own chrome + title, as it always did.
+
+### Changed
+- `region_card(title, name)` signature preserved for caller compatibility, but `title` is now deliberately unused. All 16 region templates (grid, list, timeline, kanban, bar_chart, funnel_chart, queue, tabbed_list, heatmap, progress, activity_feed, tree, diagram, metrics, detail, map) inherit the fix without individual edits.
+
+### Added
+- Regression tests in `tests/unit/test_ux_contract_checker.py`: `test_dashboard_slot_plus_region_card_is_card_in_card` pins the AegisMark-reported shape as a known bad pattern; `test_dashboard_slot_with_bare_region_card_is_clean` pins the fixed shape. The shape-nesting scanner already detected this pair correctly — the gap was that Dazzle's own QA loop wasn't rendering the dashboard-slot + region-card composite, only individual region output.
+
+### Agent Guidance
+- **Regions are always dashboard-slot content.** Never add chrome (border, bg, rounded, shadow) or a `<h3>` title to a region template or `region_card`. The enclosing dashboard slot in `workspace/_content.html` owns all card surface. If a future surface type renders regions standalone (not in a dashboard), it should introduce its own wrapper — don't re-add chrome to the shared macro.
+
 ## [0.57.35] - 2026-04-17
 
 ### Added

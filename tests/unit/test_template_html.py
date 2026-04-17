@@ -255,13 +255,13 @@ class TestRenderedHtmlValidation:
         assert not errors, "HTML balance errors in layouts/app_shell.html:\n" + "\n".join(errors)
 
     def test_grid_region_does_not_nest_card_chrome(self, jinja_env):
-        """grid.html + region_card must render only one chrome layer.
+        """grid.html must render zero chrome layers of its own.
 
-        Reference model for issue #794 and its follow-up. If this test
-        fails, a template edit has reintroduced nested card chrome —
-        the visible ancestor is the region_card; grid item cells must
-        be plain pads (no border + no bg + rounded is fine, or plain
-        rounded alone).
+        Reference model for #794 + its two follow-ups. Regions are
+        always rendered into a dashboard card slot that already owns
+        chrome (border + rounded + bg) and title, so both region_card
+        and the grid items must be chrome-free. A chrome layer inside
+        the region output = a visible card-within-a-card.
         """
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
