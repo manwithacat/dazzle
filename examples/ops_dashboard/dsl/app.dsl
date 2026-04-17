@@ -55,6 +55,9 @@ entity System "System":
     list: all
       for: operator, admin
 
+  fitness:
+    repr_fields: [name, service_type, status, response_time_ms, error_rate]
+
 entity Alert "Alert":
   id: uuid pk
   system: ref System required
@@ -81,6 +84,9 @@ entity Alert "Alert":
   scope:
     list: all
       for: operator, admin
+
+  fitness:
+    repr_fields: [system, severity, message, acknowledged, triggered_at]
 
 # =============================================================================
 # Persona

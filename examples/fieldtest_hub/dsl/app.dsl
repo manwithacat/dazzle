@@ -88,6 +88,9 @@ entity Device "Device":
   index status
   index assigned_tester_id
 
+  fitness:
+    repr_fields: [name, model, status, firmware_version, assigned_tester_id]
+
 # Entity: Tester
 entity Tester "Tester":
   display_field: name
@@ -116,6 +119,9 @@ entity Tester "Tester":
 
   index email
   index location
+
+  fitness:
+    repr_fields: [name, email, location, skill_level, active]
 
 # Entity: IssueReport
 entity IssueReport "Issue Report":
@@ -169,6 +175,9 @@ entity IssueReport "Issue Report":
   index severity, status
   index reported_by_id
 
+  fitness:
+    repr_fields: [device_id, category, severity, status, reported_by_id]
+
 # Entity: TestSession
 entity TestSession "Test Session":
   id: uuid pk
@@ -200,6 +209,9 @@ entity TestSession "Test Session":
   index device_id
   index tester_id
   index logged_at
+
+  fitness:
+    repr_fields: [device_id, tester_id, environment, duration_minutes, logged_at]
 
 # Entity: FirmwareRelease
 entity FirmwareRelease "Firmware Release":
@@ -233,6 +245,9 @@ entity FirmwareRelease "Firmware Release":
 
   index status
   index version
+
+  fitness:
+    repr_fields: [version, status, release_date, applies_to_batch]
 
 # Entity: Task
 entity Task "Task":
@@ -274,6 +289,9 @@ entity Task "Task":
   index status
   index assigned_to_id
   index created_by_id
+
+  fitness:
+    repr_fields: [type, status, assigned_to_id, created_by_id]
 
 # =============================================================================
 # SURFACES

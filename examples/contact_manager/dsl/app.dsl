@@ -40,6 +40,9 @@ entity Contact "Contact":
   index email
   index last_name,first_name
 
+  fitness:
+    repr_fields: [first_name, last_name, email, company, is_favorite]
+
 # List view - browsable contact directory
 surface contact_list "Contact List":
   uses entity Contact

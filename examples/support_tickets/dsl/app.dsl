@@ -47,6 +47,9 @@ entity User "User":
   # Invariant: users must have valid role
   invariant: role != null
 
+  fitness:
+    repr_fields: [name, email, role, is_active]
+
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":
   display_field: title
@@ -122,6 +125,9 @@ entity Ticket "Support Ticket":
     list: all
       for: agent, manager
 
+  fitness:
+    repr_fields: [title, status, priority, category, assigned_to]
+
   index status, priority
   index created_by
   index assigned_to
@@ -150,6 +156,9 @@ entity Comment "Comment":
   scope:
     list: all
       for: agent, manager, customer
+
+  fitness:
+    repr_fields: [ticket, author, content, is_internal]
 
 # ============================================================================
 # USER SURFACES
