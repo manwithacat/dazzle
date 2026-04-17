@@ -39,18 +39,50 @@ _ROUNDED_CLASSES = (
 )
 
 
+def _is_rounded_class(cls: str) -> bool:
+    """Return True if a class represents a rounded-corner utility.
+
+    Accepts both Tailwind's fixed-scale forms (``rounded``, ``rounded-md``,
+    ``rounded-full``) and arbitrary-value forms (``rounded-[4px]``,
+    ``rounded-[12px]``) which Dazzle's own templates use via
+    ``rounded-[6px]`` in the ``region_card`` macro. Side-scoped rounded
+    classes (``rounded-t-md``, ``rounded-l-[4px]``) also count.
+    """
+    if cls in _ROUNDED_CLASSES:
+        return True
+    # rounded-[...] or rounded-t-[...] / rounded-t-md etc.
+    return cls.startswith("rounded-")
+
+
+def _is_side_border_class(cls: str) -> bool:
+    """Return True for side-scoped border classes (e.g. ``border-l-4``,
+    ``border-t-[hsl(var(--primary))]``). These are accent lines, not
+    a card edge, and should not count as card-chrome surface.
+    """
+    for side in ("border-l-", "border-r-", "border-t-", "border-b-", "border-x-", "border-y-"):
+        if cls.startswith(side):
+            return True
+    return False
+
+
 def _has_card_chrome(class_attr: str | None) -> bool:
     """Return True if a class string represents a visible card layer —
-    a rounded element that also has a border or background colour.
+    a rounded element that also has a full border or a background colour.
+
+    Side-scoped borders (``border-l-4``, ``border-t-red-500``) are
+    treated as accents, not chrome.
     """
     if not class_attr:
         return False
     classes = class_attr.split()
-    has_rounded = any(c in _ROUNDED_CLASSES for c in classes)
+    has_rounded = any(_is_rounded_class(c) for c in classes)
     if not has_rounded:
         return False
     has_surface = any(
-        c == "border" or c.startswith("border-") or c.startswith("bg-") for c in classes
+        c == "border"
+        or (c.startswith("border-") and not _is_side_border_class(c))
+        or c.startswith("bg-")
+        for c in classes
     )
     return has_surface
 
@@ -68,6 +100,16 @@ class _NestedChromeScanner(HTMLParser):
         {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source"}
     )
 
+    # Only block-level container tags can visually read as a "card".
+    # Status badges (span), buttons, links, form inputs, and table cells
+    # are not cards — they're inline / form / tabular elements. Scoping
+    # the gate to block containers avoids false positives like a
+    # status-badge span inside a region_card (span has bg + rounded,
+    # but is visually a pill label, not a card layer).
+    _CARD_CANDIDATE_TAGS = frozenset(
+        {"div", "article", "section", "aside", "nav", "main", "header", "footer", "li"}
+    )
+
     def __init__(self) -> None:
         super().__init__()
         self._stack: list[tuple[str, bool]] = []  # (tag, is_chrome)
@@ -77,7 +119,7 @@ class _NestedChromeScanner(HTMLParser):
         if tag in self._VOID:
             return
         attr_map = dict(attrs)
-        is_chrome = _has_card_chrome(attr_map.get("class"))
+        is_chrome = tag in self._CARD_CANDIDATE_TAGS and _has_card_chrome(attr_map.get("class"))
         if is_chrome:
             for ancestor_tag, ancestor_chrome in self._stack:
                 if ancestor_chrome:

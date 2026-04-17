@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.33] - 2026-04-17
+
+### Fixed
+- **Root-cause fix for card-within-a-card (#794 follow-up).** The prior fix removed `rounded-md` from the dashboard-grid outer wrapper but missed the deeper source: `workspace/regions/grid.html` wrapped each inner item in `bg-[hsl(var(--card))] border rounded-[4px]` while the enclosing `region_card` macro already provided `bg-[hsl(var(--card))] border rounded-[6px]`. Two nested chrome layers on every grid region on every Dazzle dashboard. Item cells are now plain pads (rounded + padding + hover muted-bg, no border/card-bg). The attention-state left-border accent is preserved.
+
+### Changed
+- **Shape-nesting contract gate now catches the real patterns.** Three refinements in `dazzle.testing.ux.contract_checker`:
+  - `_is_rounded_class` recognises arbitrary-value classes (`rounded-[4px]`, `rounded-t-[8px]`) and side-scoped forms in addition to Tailwind's fixed scale. The framework templates use `rounded-[6px]` / `rounded-[4px]`; the old gate silently passed them.
+  - `_is_side_border_class` treats side-only borders (`border-l-4`, `border-t-[color]`) as accent lines rather than card surface. Attention-state stripes don't trigger the gate against their enclosing region card.
+  - `_NestedChromeScanner` only flags block-level container tags (`div`, `article`, `section`, `aside`, `nav`, `main`, `header`, `footer`, `li`) as card candidates. Status-badge spans, form buttons, and table cells can legitimately carry rounded + bg without being "cards."
+
+### Added
+- **`ops_dashboard/command_center` now exercises `display: grid`.** None of the five example apps previously used the grid region, which is why the nested-chrome regression escaped QA. `system_status` is now a canonical grid region — the contract-checker + QA path now has a real target.
+- **Template-level regression test.** `tests/unit/test_template_html.py::test_grid_region_does_not_nest_card_chrome` renders `workspace/regions/grid.html` with `region_card` and asserts zero nested chrome. Guards the root-cause fix from being unwound by future template edits.
+- **Three new contract-checker cases** in `tests/unit/test_ux_contract_checker.py`: arbitrary-value rounded acceptance, side-border-as-accent exemption, and the fixed grid region's reference shape.
+
 ## [0.57.32] - 2026-04-17
 
 ### Added

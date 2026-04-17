@@ -254,6 +254,45 @@ class TestRenderedHtmlValidation:
         errors = validate_html_balance(html)
         assert not errors, "HTML balance errors in layouts/app_shell.html:\n" + "\n".join(errors)
 
+    def test_grid_region_does_not_nest_card_chrome(self, jinja_env):
+        """grid.html + region_card must render only one chrome layer.
+
+        Reference model for issue #794 and its follow-up. If this test
+        fails, a template edit has reintroduced nested card chrome —
+        the visible ancestor is the region_card; grid item cells must
+        be plain pads (no border + no bg + rounded is fine, or plain
+        rounded alone).
+        """
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        template = jinja_env.get_template("workspace/regions/grid.html")
+        context = {
+            **_MOCK_CONTEXT,
+            "title": "System Status",
+            "region_name": "system_status",
+            "items": [
+                {"id": "1", "name": "api-gateway", "status": "healthy"},
+                {"id": "2", "name": "auth-service", "status": "degraded"},
+            ],
+            "columns": [
+                {"key": "name", "label": "Name", "type": "text"},
+                {"key": "status", "label": "Status", "type": "badge"},
+            ],
+            "display_key": "name",
+            "entity_name": "System",
+            "action_url": "/app/system/{id}",
+            "action_id_field": "id",
+        }
+        html = template.render(**context)
+
+        nested = find_nested_chromes(html)
+        assert not nested, (
+            "grid.html renders nested card chrome — a chrome ancestor "
+            "contains a chrome descendant. The canonical shape is: "
+            "region_card (outer chrome) with plain item pads inside. "
+            f"Pairs: {nested}"
+        )
+
 
 # ===================================================================
 # Unit tests for the balance checker itself

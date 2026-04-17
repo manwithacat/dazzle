@@ -252,3 +252,51 @@ class TestFindNestedChromes:
         result = find_nested_chromes(html)
         assert len(result) == 2
         assert all(outer == "section" for outer, _ in result)
+
+    def test_accepts_arbitrary_value_rounded(self) -> None:
+        # Regression for the #794 follow-up: Dazzle's own templates use
+        # arbitrary-value rounded classes like `rounded-[4px]` and
+        # `rounded-[6px]` (region_card macro + grid.html). The initial
+        # fix missed this because it only recognised fixed-scale
+        # `rounded-md` / `rounded-lg` / etc.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
+            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px]">'
+            "item</div></div>"
+        )
+        assert find_nested_chromes(html) == [("div", "div")]
+
+    def test_side_border_is_not_chrome(self) -> None:
+        # A left-side accent border (used for attention states) is an
+        # accent stripe, not a card edge — must not trigger nesting
+        # detection against an outer chrome.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
+            '<div class="rounded-[4px] p-3 border-l-4 border-l-[hsl(var(--primary))]">'
+            "item</div></div>"
+        )
+        assert find_nested_chromes(html) == []
+
+    def test_fixed_grid_region_shape(self) -> None:
+        # The shape that grid.html renders AFTER the #794-followup fix:
+        # region_card outer is chrome, inner items are plain pads. No
+        # nesting. This is the reference model that QA should validate.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<div data-dz-region data-dz-region-name="system_status" '
+            'class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
+            '<div class="p-3">'
+            "<h3>System Status</h3>"
+            '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'
+            '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
+            "<h4>api-gateway</h4></div>"
+            '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
+            "<h4>auth-service</h4></div>"
+            "</div></div></div>"
+        )
+        assert find_nested_chromes(html) == []

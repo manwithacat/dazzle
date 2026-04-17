@@ -141,10 +141,16 @@ workspace command_center "Command Center":
     action: system_edit
     empty: "No systems registered"
 
-  # System Status Grid
+  # System Status Grid — canonical card-grid region. Kept explicit
+  # (`display: grid`) so this workspace exercises the grid region
+  # template in QA: previously no example app hit that path, which
+  # hid the region_card + grid-item card-in-card regression.
   system_status:
     source: System
+    display: grid
     sort: status asc, name asc
+    action: system_detail
+    empty: "No systems registered"
 
   # Health Summary
   health_summary:
