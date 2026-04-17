@@ -119,6 +119,14 @@ workspace command_center "Command Center":
     sort: severity desc, triggered_at desc
     limit: 20
 
+  # System Status Kanban — systems grouped by health state
+  system_board:
+    source: System
+    display: kanban
+    group_by: status
+    action: system_edit
+    empty: "No systems registered"
+
   # System Status Grid
   system_status:
     source: System

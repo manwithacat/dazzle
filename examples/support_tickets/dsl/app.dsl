@@ -340,6 +340,14 @@ workspace ticket_queue "Ticket Queue":
       in_progress: count(Ticket where status = in_progress)
       critical: count(Ticket where priority = critical and status != closed)
 
+  ticket_board:
+    source: Ticket
+    filter: status != closed
+    display: kanban
+    group_by: status
+    action: ticket_edit
+    empty: "No open tickets"
+
   ticket_table:
     source: Ticket
     filter: status != closed
