@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.28] - 2026-04-17
+
+### Fixed
+- `LLMAPIClient` now sets `self.run_id: str` (UUID hex) in `__init__`. The `LlmClient` Protocol consumed by `dazzle.fitness.investigator.runner.run_investigation` declared `run_id` as required, but the concrete class never set it — any `dazzle fitness investigate --cluster CL-...` invocation crashed with `AttributeError: 'LLMAPIClient' object has no attribute 'run_id'` before reaching the LLM. Now it runs. Regression test in `tests/unit/test_llm_api_client.py::TestLLMAPIClientRunId`.
+
 ## [0.57.27] - 2026-04-17
 
 ### Changed

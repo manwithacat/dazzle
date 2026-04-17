@@ -12,6 +12,7 @@ import logging
 import os
 import shutil
 import subprocess
+import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
@@ -101,6 +102,11 @@ class LLMAPIClient:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.use_prompt_caching = use_prompt_caching
+        # Unique identifier for this client instance — correlates LLM
+        # invocations with telemetry/proposals. Consumed by the fitness
+        # investigator runner (see LlmClient Protocol). Generated once per
+        # client so multiple invocations from the same run share the ID.
+        self.run_id: str = uuid.uuid4().hex
 
         # Get API key
         self.api_key: str | None = None
