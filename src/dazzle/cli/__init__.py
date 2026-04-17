@@ -99,6 +99,15 @@ from dazzle.cli.coverage import coverage_command  # noqa: E402
 
 app.command(name="coverage")(coverage_command)
 
+# Sweep command group — unified health check across every example app.
+# `dazzle sweep examples` runs validate + lint + framework coverage snapshot
+# and emits a single report suitable for weekly scheduled runs.
+from dazzle.cli.sweep import sweep_examples_command  # noqa: E402
+
+_sweep_app = typer.Typer(help="Run unified health checks across example apps.")
+_sweep_app.command(name="examples")(sweep_examples_command)
+app.add_typer(_sweep_app, name="sweep")
+
 
 # Version command — mirrors `dazzle --version`. The subcommand form is
 # what `brew test dazzle` (in the homebrew-tap validate-formula

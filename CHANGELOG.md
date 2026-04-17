@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.44] - 2026-04-18
+
+### Added
+- **`dazzle sweep examples` CLI.** Unified health check across every project under `examples/*/` that has a `dazzle.toml`. Runs `dazzle validate` and `dazzle lint` per app, snapshots framework-artefact coverage for the repo as a whole, and emits a single report. Supports `--json` for machine consumption and `--strict` to treat lint warnings as failures. Exit codes: 0 clean, 1 validate/lint error (or any warning under `--strict`), 2 fatal setup problem. Intended cadence: weekly, or after a parser/runtime change that might regress example health. 8 unit tests in `tests/unit/test_cli_sweep.py` cover lint parsing, human/JSON renderers, and end-to-end runs against the real `examples/` tree.
+
+### Agent Guidance
+- **`sweep examples` is the single invocation** for "is every example app still healthy?". Prefer it over scripting `for app in examples/*/; do dazzle validate && dazzle lint; done` — the sweep command has stable output for diffing between runs, includes the coverage snapshot, and returns a single exit code you can gate CI on.
+
 ## [0.57.43] - 2026-04-18
 
 ### Added
