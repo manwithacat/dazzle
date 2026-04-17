@@ -99,12 +99,18 @@
        @pointerup.window="endDrag($event); endResize($event)">
 
     <template x-for="card in cards" :key="card.id">
+      {# Outer wrapper is a layout/positioning element only. The visible
+         card chrome lives on the inner <article>. Keeping `rounded-md`
+         here (in addition to the article's own) made the layers read
+         as a card-within-a-card — the wrapper is kept square so the
+         focus ring traces a simple offset rectangle around the card
+         (issue #794). #}
       <div :data-card-id="card.id"
            :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
            :class="{ 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]': !isDragging(card.id) && !drag }"
            tabindex="0"
            @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
-           class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2 rounded-md">
+           class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2">
 
         {# Card chrome #}
         <article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden
