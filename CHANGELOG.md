@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.42] - 2026-04-18
+
+### Added
+- **Workspace composite fetch for `dazzle ux verify --contracts`.** New `HtmxClient.get_workspace_composite(path)` follows the HTMX boot sequence: fetches the initial workspace page, parses the embedded `#dz-workspace-layout` JSON for the card/region list, issues a per-region GET against `/api/workspaces/{ws}/regions/{region}`, and stitches the region HTML back into each card body slot. Returns the DOM a user actually sees post-hydration — the correct input for the shape-nesting + duplicate-title gates that already run inside `check_contract`. Wired in `src/dazzle/cli/ux.py` so `WorkspaceContract` instances route through the composite path; list/detail/RBAC contracts continue to use `get_full_page` (they don't have HTMX follow-ups).
+- **Pure-function assembler for unit tests.** `assemble_workspace_composite(initial_html, region_htmls)` in `src/dazzle/testing/ux/htmx_client.py` is a string-substitution helper that can run without a live server. 8 tests in `tests/unit/test_htmx_workspace_composite.py` pin: layout JSON extraction, card-slot substitution, HTMX wrapper-attribute preservation, missing-region graceful skeleton retention, and end-to-end that the scanner flags a bad composite but passes a clean one.
+
+### Changed
+- `src/dazzle/testing/ux/htmx_client.py` module docstring now explicitly documents the distinction between `get_full_page` (initial HTML, skeleton-only for workspaces) and `get_workspace_composite` (post-hydration DOM). Before v0.57.42 this was undocumented, and the contract checker's use of the former was why the #794 card-in-card survived three fix attempts.
+
+### Agent Guidance
+- **Workspace-level contracts need the composite.** When writing a new `WorkspaceContract` or extending the workspace checker, always drive it from `get_workspace_composite`, not `get_full_page`. The initial page contains an empty skeleton where the region will land; without fetching the HTMX follow-up, any assertion about the card's rendered content tests nothing.
+- **Non-workspace contracts stay on `get_full_page`.** List pages, detail views, and create/edit forms render fully server-side (they don't boot a dashboard or HTMX-swap the main content slot). Using the composite path for them wastes a round-trip and doesn't change the result.
+
 ## [0.57.41] - 2026-04-17
 
 ### Added

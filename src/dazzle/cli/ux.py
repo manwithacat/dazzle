@@ -237,7 +237,18 @@ def _run_contracts(
                 path = path.replace("{id}", eid)
 
             try:
-                page_resp = await active_client.get_full_page(path)
+                # Workspace contracts must be checked against the composite
+                # DOM (initial page + HTMX-loaded region content), not the
+                # skeleton — otherwise the shape-nesting gate stares at an
+                # empty card body and misses card-in-card regressions.
+                # See #794 second follow-up (v0.57.36) + htmx_client.py
+                # get_workspace_composite docs.
+                from dazzle.testing.ux.contracts import WorkspaceContract
+
+                if isinstance(contract, WorkspaceContract):
+                    page_resp = await active_client.get_workspace_composite(path)
+                else:
+                    page_resp = await active_client.get_full_page(path)
                 if page_resp.status == 403:
                     contract.status = "failed"
                     contract.error = f"HTTP 403 as {persona}"
