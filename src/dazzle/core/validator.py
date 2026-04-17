@@ -1184,6 +1184,16 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     # --- Collect all defined constructs ---
     all_entities = {e.name for e in appspec.domain.entities}
     entity_locs = {e.name: e.source for e in appspec.domain.entities}
+    # Framework-synthetic platform entities (SystemMetric, SystemHealth,
+    # AIJob, FeedbackReport, etc. — `domain == "platform"`) are injected by
+    # the framework and may be gated off in MINIMAL security profile,
+    # leaving them unreferenced by app code. They aren't dead code — they
+    # come back the moment security.profile flips to STANDARD. They remain
+    # in `all_entities` so surface-reachability cascades still see them,
+    # but they're excluded from the dead-entity warning below.
+    platform_entities = {
+        e.name for e in appspec.domain.entities if getattr(e, "domain", None) == "platform"
+    }
     all_surfaces = {s.name for s in appspec.surfaces}
     surface_locs = {s.name: s.source for s in appspec.surfaces}
     # --- Collect all entity references ---
@@ -1217,7 +1227,7 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             if mapping.entity_ref:
                 used_entities.add(mapping.entity_ref)
 
-    unused_entities = all_entities - used_entities
+    unused_entities = all_entities - used_entities - platform_entities
     if unused_entities:
         for name in sorted(unused_entities):
             loc = entity_locs.get(name)

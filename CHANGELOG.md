@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.21] - 2026-04-17
+
+### Fixed
+- `_detect_dead_constructs` no longer flags framework-synthetic platform entities (`domain == "platform"` — SystemMetric, SystemHealth, AIJob, FeedbackReport, etc.) as dead code when they're gated off in MINIMAL security profile. These entities come back the moment security.profile flips to STANDARD, so reporting them as dead on every Dazzle app was noise. The entities stay in the reachability cascade so admin surfaces still resolve correctly — only the final dead-entity warning skips them.
+
 ## [0.57.20] - 2026-04-17
 
 ### Fixed
