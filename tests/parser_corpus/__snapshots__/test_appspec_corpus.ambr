@@ -270,6 +270,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Task',
+          'headless': False,
           'mode': 'list',
           'name': 'task_kanban',
           'priority': 'medium',
@@ -305,6 +306,7 @@
         }),
         dict({
           'entity_ref': 'Task',
+          'headless': False,
           'mode': 'create',
           'name': 'task_create',
           'priority': 'medium',
@@ -340,6 +342,7 @@
         }),
         dict({
           'entity_ref': 'Report',
+          'headless': False,
           'mode': 'list',
           'name': 'report_list',
           'priority': 'medium',
@@ -491,6 +494,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Task',
+          'headless': False,
           'mode': 'list',
           'name': 'task_list',
           'priority': 'medium',
@@ -530,6 +534,7 @@
             }),
           ]),
           'entity_ref': 'Task',
+          'headless': False,
           'mode': 'create',
           'name': 'task_create',
           'priority': 'medium',
@@ -613,6 +618,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Item',
+          'headless': False,
           'mode': 'list',
           'name': 'item_list',
           'priority': 'medium',
@@ -824,6 +830,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Task',
+          'headless': False,
           'mode': 'list',
           'name': 'task_list',
           'priority': 'medium',
@@ -1112,6 +1119,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Ticket',
+          'headless': False,
           'mode': 'list',
           'name': 'ticket_list',
           'priority': 'medium',
@@ -1143,6 +1151,7 @@
         }),
         dict({
           'entity_ref': 'Order',
+          'headless': False,
           'mode': 'list',
           'name': 'order_list',
           'priority': 'medium',
@@ -1267,6 +1276,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Contact',
+          'headless': False,
           'mode': 'list',
           'name': 'contact_list',
           'priority': 'medium',
@@ -1298,6 +1308,7 @@
         }),
         dict({
           'entity_ref': 'Contact',
+          'headless': False,
           'mode': 'view',
           'name': 'contact_detail',
           'priority': 'medium',
@@ -1349,6 +1360,7 @@
             }),
           ]),
           'entity_ref': 'Contact',
+          'headless': False,
           'mode': 'create',
           'name': 'contact_create',
           'priority': 'medium',
@@ -1392,6 +1404,7 @@
             }),
           ]),
           'entity_ref': 'Contact',
+          'headless': False,
           'mode': 'edit',
           'name': 'contact_edit',
           'priority': 'medium',
@@ -1661,6 +1674,7 @@
       'surfaces': list([
         dict({
           'entity_ref': 'Company',
+          'headless': False,
           'mode': 'list',
           'name': 'company_list',
           'priority': 'medium',
@@ -1688,6 +1702,7 @@
         }),
         dict({
           'entity_ref': 'Person',
+          'headless': False,
           'mode': 'list',
           'name': 'person_list',
           'priority': 'medium',
@@ -1727,6 +1742,7 @@
         }),
         dict({
           'entity_ref': 'Project',
+          'headless': False,
           'mode': 'list',
           'name': 'project_list',
           'priority': 'medium',
