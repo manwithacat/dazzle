@@ -1697,6 +1697,11 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
     entity_map = {e.name: e for e in appspec.domain.entities}
 
     for entity in appspec.domain.entities:
+        # Framework-synthetic platform entities (FeedbackReport, AIJob, etc.)
+        # are code-generated and cannot be decomposed by the app author.
+        # Skip modeling anti-pattern warnings on them.
+        if getattr(entity, "domain", None) == "platform":
+            continue
         field_map = {f.name: f for f in entity.fields}
 
         # 1. Polymorphic key pairs: *_type (enum) + *_id (uuid)
@@ -1781,21 +1786,57 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+_GRAPH_EDGE_FIELD_NAMES: frozenset[str] = frozenset(
+    {
+        "source",
+        "target",
+        "from",
+        "to",
+        "parent",
+        "child",
+        "start",
+        "end",
+        "predecessor",
+        "successor",
+    }
+)
+
+
 def _lint_graph_edge_suggestions(appspec: ir.AppSpec) -> list[str]:
-    """Suggest graph_edge: for entities with 2+ ref fields to the same entity."""
+    """Suggest graph_edge: for entities that pair two graph-edge-shaped refs
+    to the same target entity.
+
+    Entities with creator + assignee / requester + approver / parent + owner
+    are NOT graph edges — those are domain fields that happen to share a
+    ref target. Only flag when the field names match the graph-edge
+    vocabulary (source/target, from/to, parent/child, ...).
+    """
     warnings: list[str] = []
     for entity in appspec.domain.entities:
         if entity.graph_edge is not None:
             continue
-        ref_targets: dict[str, int] = {}
+        # Group ref fields by target entity, and remember which fields
+        # landed under each target.
+        ref_fields_by_target: dict[str, list[str]] = {}
         for field in entity.fields:
             if field.type.kind == ir.FieldTypeKind.REF and field.type.ref_entity:
-                ref_targets[field.type.ref_entity] = ref_targets.get(field.type.ref_entity, 0) + 1
-        for target, count in ref_targets.items():
-            if count >= 2:
+                ref_fields_by_target.setdefault(field.type.ref_entity, []).append(field.name)
+        for target, field_names in ref_fields_by_target.items():
+            if len(field_names) < 2:
+                continue
+
+            # A field matches the graph-edge vocabulary if any of its
+            # underscore-delimited tokens is a recognised edge term
+            # (source_node, target_id, from_station, parent_node, ...).
+            def _is_edge_field(name: str) -> bool:
+                return any(token in _GRAPH_EDGE_FIELD_NAMES for token in name.lower().split("_"))
+
+            matches = [n for n in field_names if _is_edge_field(n)]
+            if len(matches) >= 2:
                 warnings.append(
                     f"Entity '{entity.name}' looks like a graph edge — "
-                    f"has {count} ref fields to '{target}'. "
+                    f"has {len(field_names)} ref fields to '{target}' "
+                    f"({', '.join(sorted(field_names))}). "
                     f"Consider adding graph_edge:"
                 )
                 break

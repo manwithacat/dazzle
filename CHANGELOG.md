@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.22] - 2026-04-17
+
+### Fixed
+- Modeling anti-pattern lints (god entity, polymorphic key, soft-delete) now skip platform-domain entities. The framework-generated `FeedbackReport` with its 24 audit / triage / screenshot fields no longer warns "consider decomposing" on every feedback-enabled app — apps can't decompose a code-generated entity anyway.
+- `_lint_graph_edge_suggestions` now requires the two (or more) ref fields to the same target to use graph-edge-shaped names (`source`, `target`, `from`, `to`, `parent`, `child`, `start`, `end`, `predecessor`, `successor` — matched per-token, underscore-delimited). Creator/assignee, requester/approver, owner/watcher patterns no longer trigger false "looks like a graph edge" suggestions on every Task / Ticket / IssueReport entity.
+
+Combined: all 5 example apps now report 0 lint warnings.
+
 ## [0.57.21] - 2026-04-17
 
 ### Fixed
