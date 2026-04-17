@@ -245,6 +245,21 @@ surface alert_list "Alerts":
     search: message, acknowledged_by
     empty: "No alerts. All systems operational."
 
+surface alert_detail "Alert Detail":
+  uses entity Alert
+  mode: view
+
+  section main "Alert":
+    field system "System"
+    field severity "Severity"
+    field message "Message"
+    field triggered_at "Triggered"
+    field acknowledged "Acknowledged"
+    field acknowledged_by "Acknowledged By"
+
+  ux:
+    purpose: "Inspect the full context of an alert and its acknowledgement status"
+
 surface alert_ack "Acknowledge Alert":
   uses entity Alert
   mode: edit

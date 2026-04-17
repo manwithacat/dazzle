@@ -307,6 +307,19 @@ surface task_comments "Task Comments":
     empty: "No comments yet. Start the discussion!"
 
 # Comment Create - inline comment form on task detail
+surface comment_detail "Comment Detail":
+  uses entity TaskComment
+  mode: view
+
+  section main "Comment":
+    field task "Task"
+    field author "Author"
+    field content "Comment"
+    field created_at "Created"
+
+  ux:
+    purpose: "Review a single task comment in full detail with its task and author context"
+
 surface comment_create "Add Comment":
   uses entity TaskComment
   mode: create
@@ -407,6 +420,23 @@ surface user_list "Team Members":
       scope: all
       purpose: "View team members"
       read_only: true
+
+surface user_detail "Team Member Detail":
+  uses entity User
+  mode: view
+
+  access: persona(admin, manager)
+
+  section main "Team Member":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
+    field created_at "Joined"
+
+  ux:
+    purpose: "Inspect a team member's profile, role, and activity status"
 
 # User Create (admin only)
 surface user_create "Add Team Member":

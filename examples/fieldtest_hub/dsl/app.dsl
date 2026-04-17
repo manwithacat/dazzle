@@ -708,6 +708,22 @@ surface test_session_create "Log Test Session":
         tester_id: current_user
         environment: indoor
 
+surface test_session_detail "Test Session Detail":
+  uses entity TestSession
+  mode: view
+
+  section main "Session":
+    field device_id "Device"
+    field tester_id "Tester"
+    field duration_minutes "Duration (min)"
+    field environment "Environment"
+    field temperature "Temperature"
+    field notes "Notes"
+    field logged_at "Logged At"
+
+  ux:
+    purpose: "Review a logged field-testing session in full detail"
+
 surface test_session_edit "Edit Test Session":
   uses entity TestSession
   mode: edit
