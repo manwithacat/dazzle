@@ -898,6 +898,13 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_detail
     empty: "No recent reports"
 
+  issues_board:
+    source: IssueReport
+    display: kanban
+    group_by: status
+    action: issue_report_edit
+    empty: "No issues to triage"
+
   active_devices:
     source: Device
     filter: status = active
@@ -929,6 +936,43 @@ workspace engineering_dashboard "Engineering Dashboard":
     display: list
     action: task_detail
     empty: "No tasks"
+
+  task_board:
+    source: Task
+    display: kanban
+    group_by: status
+    action: task_detail
+    empty: "No tasks"
+
+  firmware_board:
+    source: FirmwareRelease
+    display: kanban
+    group_by: status
+    action: firmware_release_edit
+    empty: "No firmware releases"
+
+  device_board:
+    source: Device
+    display: kanban
+    group_by: status
+    action: device_edit
+    empty: "No devices"
+
+  firmware_timeline:
+    source: FirmwareRelease
+    sort: release_date desc
+    limit: 30
+    display: timeline
+    action: firmware_release_detail
+    empty: "No firmware releases yet"
+
+  device_registry_timeline:
+    source: Device
+    sort: deployed_at desc
+    limit: 30
+    display: timeline
+    action: device_detail
+    empty: "No devices yet"
 
   all_testers:
     source: Tester
