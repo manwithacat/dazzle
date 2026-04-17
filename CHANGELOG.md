@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.24] - 2026-04-17
+
+### Fixed
+- `_build_feedback_edit_surface` (linker) now emits the auto-generated FeedbackReport EDIT surface with three logical sections (`status`, `triage`, `relations`) instead of one 6-field section. This clears the multi-section-form lint warning on every feedback-enabled Dazzle app — the last remaining framework-generated multi-section-form noise.
+
 ## [0.57.23] - 2026-04-17
 
 ### Fixed

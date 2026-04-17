@@ -459,25 +459,41 @@ def _build_feedback_edit_surface() -> ir.SurfaceSpec:
     """Build a headless EDIT surface for FeedbackReport (triage/resolve).
 
     Admin-only. Exposes status transitions + agent triage fields via
-    PUT /feedbackreports/{id}.
+    PUT /feedbackreports/{id}. Fields are grouped into three logical
+    sections so the form passes the multi-section-form layout rule.
     """
-    elements = [
-        ir.SurfaceElement(field_name=name, label=label)
-        for name, label in [
-            ("status", "Status"),
-            ("assigned_to", "Assigned To"),
-            ("agent_notes", "Agent Notes"),
-            ("agent_classification", "Classification"),
-            ("related_entity", "Related Entity"),
-            ("related_story", "Related Story"),
-        ]
-    ]
+
+    def _mk(name: str, label: str) -> ir.SurfaceElement:
+        return ir.SurfaceElement(field_name=name, label=label)
+
+    status_section = ir.SurfaceSection(
+        name="status",
+        title="Status",
+        elements=[_mk("status", "Status"), _mk("assigned_to", "Assigned To")],
+    )
+    triage_section = ir.SurfaceSection(
+        name="triage",
+        title="Triage Notes",
+        elements=[
+            _mk("agent_notes", "Agent Notes"),
+            _mk("agent_classification", "Classification"),
+        ],
+    )
+    relations_section = ir.SurfaceSection(
+        name="relations",
+        title="Related Context",
+        elements=[
+            _mk("related_entity", "Related Entity"),
+            _mk("related_story", "Related Story"),
+        ],
+    )
+
     return ir.SurfaceSpec(
         name="feedback_edit",
         title="Edit Feedback Report",
         entity_ref="FeedbackReport",
         mode=ir.SurfaceMode.EDIT,
-        sections=[ir.SurfaceSection(name="main", title="Triage", elements=elements)],
+        sections=[status_section, triage_section, relations_section],
         access=ir.SurfaceAccessSpec(
             require_auth=True,
             allow_personas=["admin", "super_admin"],

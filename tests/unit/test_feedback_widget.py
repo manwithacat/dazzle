@@ -539,11 +539,11 @@ class TestFeedbackWidgetSurfaces:
         assert edit.entity_ref == "FeedbackReport"
 
     def test_edit_surface_has_editable_fields(self) -> None:
-        """feedback_edit surface has triage/resolution fields."""
+        """feedback_edit surface has triage/resolution fields across three sections."""
         app = self._link(self._DSL_ENABLED)
         edit = next(s for s in app.surfaces if s.name == "feedback_edit")
-        assert len(edit.sections) == 1
-        field_names = {e.field_name for e in edit.sections[0].elements}
+        assert len(edit.sections) == 3
+        field_names = {e.field_name for section in edit.sections for e in section.elements}
         assert "status" in field_names
         assert "assigned_to" in field_names
         assert "agent_notes" in field_names
