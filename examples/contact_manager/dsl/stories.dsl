@@ -43,7 +43,7 @@ story ST-006 "User views full contact details":
 
 story ST-007 "User favourites a contact":
   actor: user
-  trigger: status_changed
+  trigger: user_click
   scope: [Contact]
   given:
     - "Contact.is_favorite = false"
