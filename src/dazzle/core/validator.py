@@ -1389,6 +1389,15 @@ def _lint_workspace_personas(appspec: ir.AppSpec) -> list[str]:
                     workspaces_with_personas.add(workspace.name)
                     break
 
+        # `access: persona(admin, manager)` is a first-class persona
+        # binding — no need to also require a default_workspace entry
+        # or ux.persona_variants block to silence this lint.
+        access = getattr(workspace, "access", None)
+        allow_personas = getattr(access, "allow_personas", None) if access else None
+        if allow_personas:
+            if any(p in persona_ids for p in allow_personas):
+                workspaces_with_personas.add(workspace.name)
+
     for persona in appspec.personas:
         if persona.default_workspace:
             for ws in appspec.workspaces:

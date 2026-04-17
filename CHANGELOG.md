@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.20] - 2026-04-17
+
+### Fixed
+- `_lint_workspace_personas` now treats `workspace.access.allow_personas` as a first-class persona binding. Previously the rule only looked at `persona.default_workspace` and `ux.persona_variants`, so workspaces that declared `access: persona(admin, manager)` (but didn't have a matching `default_workspace`) would fire "Workspace 'X' has no associated persona" even though they clearly did. simple_task `task_board` is the canonical case.
+
 ## [0.57.19] - 2026-04-17
 
 ### Fixed
