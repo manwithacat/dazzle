@@ -146,7 +146,7 @@
                  hx-swap="morph:innerHTML transition:true"
                  hx-push-url="true"
                  preload="mousedown"
-                 class="flex items-center gap-2 px-3 py-1.5 rounded-[4px] text-[13px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                 class="flex items-center {% if child.icon %}gap-2 {% endif %}px-3 py-1.5 rounded-[4px] text-[13px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
                    {% if current_route == child.route %}
                      bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] font-medium
                    {% else %}
