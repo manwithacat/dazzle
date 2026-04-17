@@ -47,6 +47,9 @@ entity User "Team Member":
     list: all
       for: admin, manager, member
 
+  fitness:
+    repr_fields: [name, email, role, department, is_active]
+
 # =============================================================================
 # Task Entity - with proper user relationships
 # =============================================================================
@@ -93,6 +96,9 @@ entity Task "Task":
     list: all
       for: admin, manager
 
+  fitness:
+    repr_fields: [title, status, priority, assigned_to, due_date]
+
   # Event publishing (see events.dsl for event definitions)
   # TODO: Enable when publish syntax is implemented in parser
   # publish TaskCreated when created
@@ -125,6 +131,9 @@ entity TaskComment "Task Comment":
   scope:
     list: all
       for: admin, manager, member
+
+  fitness:
+    repr_fields: [task, author, content]
 
 # =============================================================================
 # Personas - role-based variants for the UI
