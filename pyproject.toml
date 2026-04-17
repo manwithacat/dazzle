@@ -232,6 +232,12 @@ markers = [
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    # Harmless: DSLLever.construct is a domain term (DSL construct path)
+    # that coincidentally shadows a deprecated BaseModel.construct method.
+    # See src/dazzle/testing/ux/reconciler.py docstring.
+    "ignore:Field name \"construct\" in \"DSLLever\" shadows an attribute in parent \"BaseModel\":UserWarning",
+]
 # Coverage is opt-in for faster local runs. Use: pytest --cov=src/dazzle --cov-report=term-missing
 # Fast local run: pytest -m "not slow and not e2e"
 # CI runs with coverage enabled via command line
