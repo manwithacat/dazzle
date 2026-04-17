@@ -92,6 +92,115 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "listens": [],
         "description": "Validation error alert with single or multiple error messages.",
     },
+    # --- Parking-lot primitives ------------------------------------------
+    # Canonical renderers for cross-cutting UI primitives. Consumers
+    # include these by name via the registry; include sites in base
+    # layouts and region templates opt them into specific surfaces.
+    "accordion": {
+        "template": "fragments/accordion.html",
+        "params": ["sections"],
+        "emits": [],
+        "listens": [],
+        "description": "Collapsible sections — expand/collapse groups of content.",
+    },
+    "alert_banner": {
+        "template": "fragments/alert_banner.html",
+        "params": ["message", "level"],
+        "emits": [],
+        "listens": [],
+        "description": "Full-width alert banner for app-level flash messages.",
+    },
+    "breadcrumbs": {
+        "template": "fragments/breadcrumbs.html",
+        "params": ["crumbs"],
+        "emits": [],
+        "listens": [],
+        "description": "Breadcrumb navigation trail for multi-level pages.",
+    },
+    "command_palette": {
+        "template": "fragments/command_palette.html",
+        "params": ["actions"],
+        "emits": [],
+        "listens": [],
+        "description": "Cmd+K spotlight-style search and action launcher.",
+    },
+    "context_menu": {
+        "template": "fragments/context_menu.html",
+        "params": ["menu_id", "items"],
+        "emits": [],
+        "listens": [],
+        "description": "Right-click triggered menu for row/field-level actions.",
+    },
+    "detail_fields": {
+        "template": "fragments/detail_fields.html",
+        "params": ["item", "fields"],
+        "emits": [],
+        "listens": [],
+        "description": "Definition-list renderer for detail/view surfaces.",
+    },
+    "popover": {
+        "template": "fragments/popover.html",
+        "params": ["trigger_text", "position"],
+        "emits": [],
+        "listens": [],
+        "description": "Anchored floating content panel (click-triggered).",
+    },
+    "select_result": {
+        "template": "fragments/select_result.html",
+        "params": ["display_val", "value"],
+        "emits": [],
+        "listens": [],
+        "description": "OOB swap fragment for autofill after search selection.",
+    },
+    "skeleton_patterns": {
+        "template": "fragments/skeleton_patterns.html",
+        "params": ["variant"],
+        "emits": [],
+        "listens": [],
+        "description": "Loading-state skeleton shapes for HTMX in-flight requests.",
+    },
+    "slide_over": {
+        "template": "fragments/slide_over.html",
+        "params": ["panel_id", "width", "title"],
+        "emits": [],
+        "listens": [],
+        "description": "Right-edge slide-out panel with focus trap for deep edits.",
+    },
+    "steps_indicator": {
+        "template": "fragments/steps_indicator.html",
+        "params": ["steps", "current_step"],
+        "emits": [],
+        "listens": [],
+        "description": "Visual progress indicator for multi-step experience flows.",
+    },
+    "table_sentinel": {
+        "template": "fragments/table_sentinel.html",
+        "params": ["table"],
+        "emits": [],
+        "listens": [],
+        "description": "Infinite-scroll trigger row for paginated tables.",
+    },
+    "toast": {
+        "template": "fragments/toast.html",
+        "params": ["message", "level"],
+        "emits": [],
+        "listens": [],
+        "description": "Auto-dismissing notification emitted via with_toast() helper.",
+    },
+    "toggle_group": {
+        "template": "fragments/toggle_group.html",
+        "params": ["name", "options", "value", "multiple"],
+        "emits": [],
+        "listens": [],
+        "description": "Segmented button group — exclusive or multi-select radiogroup.",
+    },
+    "tooltip_rich": {
+        "template": "fragments/tooltip_rich.html",
+        "params": ["trigger_text", "content"],
+        "emits": [],
+        "listens": [],
+        "description": "HTML-content tooltip with configurable show/hide delays.",
+    },
 }
 
 

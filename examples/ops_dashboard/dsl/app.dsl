@@ -301,3 +301,60 @@ surface alert_ack "Acknowledge Alert":
   section main "Acknowledge":
     field acknowledged "Acknowledged"
     field acknowledged_by "Acknowledged By"
+
+# =============================================================================
+# SERVICE — upstream monitoring API registration
+# =============================================================================
+
+service datadog "Datadog Monitoring API":
+  spec: url "https://api.datadoghq.com/api/v1/openapi.json"
+  auth_profile: api_key_header header="DD-API-KEY"
+  owner: "ops@example.com"
+
+# =============================================================================
+# INTEGRATION — external pager service for alert forwarding
+# =============================================================================
+
+integration pager_duty "PagerDuty":
+  base_url: "https://events.pagerduty.com/v2"
+  auth: api_key from env("PAGERDUTY_API_KEY")
+
+  mapping forward_alert on Alert:
+    trigger: on_create when severity = critical
+    request: POST "/enqueue"
+    map_response:
+      dedup_key <- response.dedup_key
+
+# =============================================================================
+# FOREIGN_MODEL — Datadog monitor as source-of-truth
+# =============================================================================
+
+foreign_model DatadogMonitor from datadog "Datadog Monitor":
+  key: monitor_id
+
+  monitor_id: str(50) required
+  name: str(200)
+  query: str(500)
+  threshold: decimal(10,2)
+  last_triggered: datetime
+
+# =============================================================================
+# EXPERIENCE — guided incident response wizard
+# =============================================================================
+
+experience incident_response "Incident Response":
+  start at step triage
+
+  step triage:
+    kind: surface
+    surface alert_list
+    on success -> step investigate
+
+  step investigate:
+    kind: surface
+    surface alert_detail
+    on success -> step acknowledge
+
+  step acknowledge:
+    kind: surface
+    surface alert_ack

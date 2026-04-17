@@ -12,6 +12,23 @@ EXPECTED_FRAGMENTS = [
     "bulk_actions",
     "status_badge",
     "form_errors",
+    # Parking-lot primitives registered in v0.57.35 so every fragment
+    # under templates/fragments/ has a discoverable entry here.
+    "accordion",
+    "alert_banner",
+    "breadcrumbs",
+    "command_palette",
+    "context_menu",
+    "detail_fields",
+    "popover",
+    "select_result",
+    "skeleton_patterns",
+    "slide_over",
+    "steps_indicator",
+    "table_sentinel",
+    "toast",
+    "toggle_group",
+    "tooltip_rich",
 ]
 
 

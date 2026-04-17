@@ -521,6 +521,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.GRID,
     TokenType.TIMELINE,
     TokenType.DETAIL,
+    TokenType.MAP,
     TokenType.ASC,
     TokenType.DESC,
     TokenType.IN,

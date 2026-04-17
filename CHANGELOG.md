@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.35] - 2026-04-17
+
+### Added
+- **Full framework-artefact coverage (71/71, 100%).** Second-pass fill-in on top of 0.57.34 — every DisplayMode value, top-level DSL construct, and fragment template now has at least one live consumer. Closing the long tail drove several targeted changes:
+  - `support_tickets`: new top-level `enum Severity`, `sla TicketResponseTime`, `approval CriticalClose`, `webhook TicketNotify`, `rhythm agent_daily`, `island ticket_composer`, and `feedback_widget: enabled`.
+  - `ops_dashboard`: new `service datadog`, `integration pager_duty`, `foreign_model DatadogMonitor`, and guided `experience incident_response` wizard across `alert_list → alert_detail → alert_ack`.
+  - `fieldtest_hub`: new `ledger DeviceCost`/`OperationsBudget`, `transaction RecordRepair`, plus a `device_map` region that exercises the previously-blocked `display: map`.
+- **15 parking-lot fragments registered.** Every canonical renderer under `templates/fragments/` (accordion, alert_banner, breadcrumbs, command_palette, context_menu, detail_fields, popover, select_result, skeleton_patterns, slide_over, steps_indicator, table_sentinel, toast, toggle_group, tooltip_rich) now has a `FRAGMENT_REGISTRY` entry so it's discoverable via `get_fragment_info()` and counted as live.
+
+### Changed
+- **`dazzle coverage` scanner broadened.** Now walks `src/dazzle_ui/`, `src/dazzle_back/`, and `src/dazzle/` — fragments rendered by backend routes (e.g. `select_result.html` from `fragment_routes.py`) are no longer falsely flagged as orphan. Header match now accepts `keyword:` as well as `keyword ` so config-style blocks like `feedback_widget: enabled` register. The curated construct list drops `view`, `graph_edge`, and `graph_node` — those are sub-keywords nested inside other constructs, not top-level dispatchable keywords, and were inflating the denominator with un-closable gaps.
+
+### Fixed
+- **Parser: `display: map` no longer rejected.** `TokenType.MAP` is now in `KEYWORD_AS_IDENTIFIER_TYPES`, so `map` is accepted as an identifier in value position (same treatment as `list`, `grid`, `timeline`, `detail`). The `map()` aggregate continues to parse as before — aggregate detection uses a separate path. This unblocks `DisplayMode.MAP` from being exercised in example DSL.
+
+### Agent Guidance
+- **Closing coverage gaps means wiring, not just documenting.** When a fragment is orphan, register it in `FRAGMENT_REGISTRY` (`src/dazzle_ui/runtime/fragment_registry.py`) so it's discoverable; that's a real integration point, not a cosmetic fix. When a DSL construct has zero example coverage, add it to the most natural example app — not a fixture under `fixtures/` — so it rides the live QA loop.
+- **`dazzle coverage --fail-on-uncovered`** is ready as a CI gate. Once wired, it locks the "every shipped artefact has a live consumer" invariant — any new framework primitive must land with an example using it, or the build fails.
+
 ## [0.57.34] - 2026-04-17
 
 ### Added

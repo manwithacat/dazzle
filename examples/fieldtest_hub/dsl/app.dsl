@@ -1039,10 +1039,14 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_detail
     empty: "No issues reported"
 
-  # NOTE: display: map would go here but `map` is reserved as an
-  # aggregate keyword in the parser — blocks DisplayMode.MAP from
-  # being exercised in DSL. Tracked as a framework gap; coverage
-  # command will keep flagging `map` until the parser is adjusted.
+  # Device geographic distribution — geo-pinned on the device location.
+  # Exercises DisplayMode.MAP (unlocked in 0.57.35 — the parser now
+  # accepts `map` as an identifier in display-value position).
+  device_map:
+    source: Device
+    display: map
+    action: device_detail
+    empty: "No devices registered"
 
   ux:
     for engineer:
@@ -1103,3 +1107,32 @@ workspace tester_dashboard "Tester Dashboard":
     for tester:
       purpose: "Your field testing activity"
       focus: my_devices, my_tasks, my_issues
+
+# =============================================================================
+# LEDGER — device-repair cost accrual accounts
+# =============================================================================
+
+ledger DeviceCost "Device Cost Account":
+  account_code: 5100
+  ledger_id: 1
+  account_type: expense
+  currency: GBP
+
+ledger OperationsBudget "Operations Budget":
+  account_code: 1100
+  ledger_id: 1
+  account_type: asset
+  currency: GBP
+
+# =============================================================================
+# TRANSACTION — record a repair cost against the budget
+# =============================================================================
+
+transaction RecordRepair "Record Repair Cost":
+  transfer repair_expense:
+    debit: DeviceCost
+    credit: OperationsBudget
+    amount: event.amount
+    code: 1
+
+  idempotency_key: event.id

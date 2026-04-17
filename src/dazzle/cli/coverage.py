@@ -44,6 +44,10 @@ from dazzle.core.ir.workspaces import DisplayMode
 # Top-level DSL constructs. Kept explicit so the command stays stable
 # under parser refactors. If a new construct is added to the DSL, add
 # it here — CI will then fail until at least one example uses it.
+# Note: includes only top-level, column-0 dispatchable keywords. Sub-
+# keywords (``view``, ``graph_edge``, ``graph_node``) are deliberately
+# excluded — they appear nested inside other constructs and are covered
+# transitively when their parent is exercised.
 _DSL_CONSTRUCTS: tuple[str, ...] = (
     "app",
     "entity",
@@ -51,7 +55,6 @@ _DSL_CONSTRUCTS: tuple[str, ...] = (
     "workspace",
     "persona",
     "enum",
-    "view",
     "webhook",
     "approval",
     "sla",
@@ -69,8 +72,6 @@ _DSL_CONSTRUCTS: tuple[str, ...] = (
     "feedback_widget",
     "island",
     "experience",
-    "graph_edge",
-    "graph_node",
 )
 
 
@@ -203,9 +204,10 @@ def _dsl_construct_coverage(repo_root: Path) -> CategoryCoverage:
     for app in _example_app_dirs(repo_root):
         text = _read_all_dsl(app)
         for construct in _DSL_CONSTRUCTS:
-            # Top-level: keyword at column 0, space after. Matches both
-            # ``entity Task "Task":`` and ``enum Status:``.
-            if re.search(rf"(?m)^{re.escape(construct)} ", text):
+            # Top-level: keyword at column 0, followed by space or colon.
+            # Matches ``entity Task "Task":``, ``enum Status:``, and
+            # config-style blocks like ``feedback_widget: enabled``.
+            if re.search(rf"(?m)^{re.escape(construct)}[ :]", text):
                 cat.coverage[construct].append(app.name)
     return cat
 
@@ -227,24 +229,39 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
     frag_dir = repo_root / "src" / "dazzle_ui" / "templates" / "fragments"
     if not frag_dir.is_dir():
         return cat
-    ui_root = repo_root / "src" / "dazzle_ui"
+    # Fragments can be included by any template (dazzle_ui) or rendered
+    # directly by any Python handler (dazzle_ui, dazzle_back, dazzle).
+    # Scan all three roots — a fragment rendered by a route is every bit
+    # as "covered" as one included in a template.
+    search_roots = [
+        repo_root / "src" / "dazzle_ui",
+        repo_root / "src" / "dazzle_back",
+        repo_root / "src" / "dazzle",
+    ]
     fragments = sorted(p.stem for p in frag_dir.glob("*.html"))
     cat.coverage = {f: [] for f in fragments}
     for frag in fragments:
         include_pattern = re.compile(rf"fragments/{re.escape(frag)}(?:\.html)?\b")
-        for path in ui_root.rglob("*"):
-            if not path.is_file():
+        for root in search_roots:
+            if not root.is_dir():
                 continue
-            if path.suffix not in (".html", ".py"):
-                continue
-            if path == frag_dir / f"{frag}.html":
-                continue
-            try:
-                if include_pattern.search(path.read_text()):
-                    cat.coverage[frag].append(path.relative_to(ui_root).as_posix())
-                    break
-            except (OSError, UnicodeDecodeError):
-                continue
+            found = False
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.suffix not in (".html", ".py"):
+                    continue
+                if path == frag_dir / f"{frag}.html":
+                    continue
+                try:
+                    if include_pattern.search(path.read_text()):
+                        cat.coverage[frag].append(path.relative_to(repo_root).as_posix())
+                        found = True
+                        break
+                except (OSError, UnicodeDecodeError):
+                    continue
+            if found:
+                break
     return cat
 
 
