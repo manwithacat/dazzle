@@ -169,6 +169,7 @@ surface user_list "User List":
   mode: list
 
   ux:
+    purpose: "Browse and manage team members across the support organisation"
     sort: name asc
     filter: role, is_active
     search: email, name
@@ -228,6 +229,7 @@ surface ticket_list "Ticket List":
   mode: list
 
   ux:
+    purpose: "Triage and resolve incoming support tickets across the queue"
     sort: created_at desc
     filter: status, priority, category
     search: ticket_number, title
@@ -299,6 +301,7 @@ surface comment_list "Comment List":
   mode: list
 
   ux:
+    purpose: "Scan recent comment activity across all tickets for context and follow-up"
     sort: created_at desc
     filter: is_internal
     search: content

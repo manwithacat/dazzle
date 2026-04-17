@@ -176,6 +176,7 @@ surface system_list "Systems":
     field error_rate "Error Rate"
 
   ux:
+    purpose: "Review all monitored systems and spot degraded or critical ones at a glance"
     sort: name asc
     filter: service_type, status
     search: name
@@ -238,6 +239,7 @@ surface alert_list "Alerts":
     field acknowledged "Acknowledged"
 
   ux:
+    purpose: "Review active alerts sorted by severity and acknowledge them as they're handled"
     sort: triggered_at desc
     filter: severity, acknowledged
     search: message, acknowledged_by
