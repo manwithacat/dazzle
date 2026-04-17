@@ -448,6 +448,15 @@ workspace task_board "Task Board":
     display: kanban
     group_by: status
 
+  due_timeline:
+    source: Task
+    filter: due_date != null and status != done
+    sort: due_date asc
+    limit: 30
+    display: timeline
+    action: task_edit
+    empty: "No upcoming due dates"
+
   recent_comments:
     source: TaskComment
     display: list

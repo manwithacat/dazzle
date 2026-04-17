@@ -12,8 +12,9 @@ from dazzle.core.ir.workspaces import DisplayMode, WorkspaceSpec
 
 from .models import Relevance
 
-# Minimum number of surfaces before suggesting a command palette
-_COMMAND_PALETTE_SURFACE_THRESHOLD = 5
+# Minimum number of surfaces before suggesting a command palette.
+# Only very large apps see the suggestion — smaller apps would just be noise.
+_COMMAND_PALETTE_SURFACE_THRESHOLD = 20
 
 
 def check_component_relevance(
@@ -27,8 +28,12 @@ def check_component_relevance(
 
     Applies two rules:
 
-    1. **Command palette**: App with 5+ surfaces and no existing command
-       palette fragment → suggest dzCommandPalette.
+    1. **Command palette**: App with 20+ surfaces and no existing command
+       palette fragment → suggest dzCommandPalette. Threshold is
+       deliberately high — the suggestion fires on every rebuild and
+       there is currently no DSL-level way to register a fragment, so we
+       only surface it for genuinely large apps where the payoff is
+       undeniable.
     2. **Toggle group**: Workspace region using GRID display whose source
        entity has an enum field with "status" in the name → suggest toggle
        group for view filtering.
@@ -46,7 +51,7 @@ def check_component_relevance(
     active_fragments = set(fragments or [])
     results: list[Relevance] = []
 
-    # --- Rule 1: Command palette for large apps ---
+    # --- Rule 1: Command palette for very large apps ---
     if (
         len(surfaces) >= _COMMAND_PALETTE_SURFACE_THRESHOLD
         and "command_palette" not in active_fragments

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.27] - 2026-04-17
+
+### Changed
+- Raised `_COMMAND_PALETTE_SURFACE_THRESHOLD` in `component_rules.check_component_relevance` from 5 to 20. There is no DSL-level way today to register a `command_palette` fragment, so the suggestion fired indefinitely on every app with ≥5 surfaces. At 20 the suggestion only appears for genuinely large apps (fieldtest_hub, 25 surfaces) where the payoff is undeniable; smaller apps get clean lint output instead. When fragment registration is designed, this threshold can drop back.
+
 ## [0.57.26] - 2026-04-17
 
 ### Fixed

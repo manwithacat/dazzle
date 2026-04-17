@@ -40,13 +40,13 @@ def _make_grid_workspace(name: str, source: str) -> WorkspaceSpec:
 
 
 # ---------------------------------------------------------------------------
-# Rule 1: dzCommandPalette — app with 5+ surfaces, no command_palette fragment
+# Rule 1: dzCommandPalette — app with 20+ surfaces, no command_palette fragment
 # ---------------------------------------------------------------------------
 
 
-def test_command_palette_triggered_with_six_surfaces() -> None:
-    """6 surfaces with no command_palette fragment → dzCommandPalette relevance."""
-    surfaces = [_make_surface(f"s{i}") for i in range(6)]
+def test_command_palette_triggered_with_many_surfaces() -> None:
+    """25 surfaces with no command_palette fragment → dzCommandPalette relevance."""
+    surfaces = [_make_surface(f"s{i}") for i in range(25)]
     results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
     kg_entities = [r.kg_entity for r in results]
     assert "capability:component_command_palette" in kg_entities
@@ -56,17 +56,17 @@ def test_command_palette_triggered_with_six_surfaces() -> None:
     assert "dzCommandPalette" in match.capability
 
 
-def test_command_palette_not_triggered_with_three_surfaces() -> None:
-    """3 surfaces → no command palette relevance (below threshold of 5)."""
-    surfaces = [_make_surface(f"s{i}") for i in range(3)]
+def test_command_palette_not_triggered_with_medium_app() -> None:
+    """15 surfaces → no command palette relevance (below threshold of 20)."""
+    surfaces = [_make_surface(f"s{i}") for i in range(15)]
     results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
     kg_entities = [r.kg_entity for r in results]
     assert "capability:component_command_palette" not in kg_entities
 
 
 def test_command_palette_not_triggered_when_fragment_present() -> None:
-    """6 surfaces WITH command_palette fragment → no relevance."""
-    surfaces = [_make_surface(f"s{i}") for i in range(6)]
+    """25 surfaces WITH command_palette fragment → no relevance."""
+    surfaces = [_make_surface(f"s{i}") for i in range(25)]
     results = check_component_relevance(
         entities=[],
         surfaces=surfaces,
@@ -77,9 +77,9 @@ def test_command_palette_not_triggered_when_fragment_present() -> None:
     assert "capability:component_command_palette" not in kg_entities
 
 
-def test_command_palette_exactly_five_surfaces() -> None:
-    """Exactly 5 surfaces (boundary) → command palette relevance triggered."""
-    surfaces = [_make_surface(f"s{i}") for i in range(5)]
+def test_command_palette_exactly_at_threshold() -> None:
+    """Exactly 20 surfaces (boundary) → command palette relevance triggered."""
+    surfaces = [_make_surface(f"s{i}") for i in range(20)]
     results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
     kg_entities = [r.kg_entity for r in results]
     assert "capability:component_command_palette" in kg_entities
@@ -182,7 +182,7 @@ def test_empty_inputs_return_empty_list() -> None:
 
 def test_fragments_none_default_does_not_suppress_palette() -> None:
     """When fragments is None (default), command palette rule still fires."""
-    surfaces = [_make_surface(f"s{i}") for i in range(5)]
+    surfaces = [_make_surface(f"s{i}") for i in range(20)]
     results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
     kg_entities = [r.kg_entity for r in results]
     assert "capability:component_command_palette" in kg_entities

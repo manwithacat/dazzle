@@ -910,7 +910,7 @@ workspace engineering_dashboard "Engineering Dashboard":
     filter: status = active
     sort: batch_number asc
     limit: 50
-    display: grid
+    display: list
     action: device_detail
     empty: "No active devices"
 
