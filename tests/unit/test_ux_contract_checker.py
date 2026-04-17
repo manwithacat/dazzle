@@ -218,15 +218,32 @@ class TestFindNestedChromes:
     def test_detects_rounded_plus_border_nested(self) -> None:
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
-        html = '<div class="rounded-md border"><article class="rounded-lg bg-blue-50">inner</article></div>'
+        html = '<div class="rounded-md border"><article class="rounded-lg border bg-blue-50">inner</article></div>'
         assert find_nested_chromes(html) == [("div", "article")]
 
     def test_ignores_rounded_without_surface(self) -> None:
-        # rounded-md alone is not "chrome" — must also have border or bg.
+        # rounded-md alone is not chrome — must also have a full border.
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
         html = (
             '<div class="rounded-md"><article class="rounded-md border bg-white">x</article></div>'
+        )
+        assert find_nested_chromes(html) == []
+
+    def test_ignores_bg_only_rounded(self) -> None:
+        # A rounded element with bg- but no border is not chrome — it's
+        # a progress-bar track, tile backdrop, or pill. Regression for
+        # the #794 second-follow-up composite tightening: without this
+        # constraint, the scanner flagged kanban column backdrops
+        # (``bg-muted/0.4 rounded-[6px]``) and bar-chart bar tracks
+        # (``bg-muted rounded-full``) as card chrome.
+        from dazzle.testing.ux.contract_checker import find_nested_chromes
+
+        html = (
+            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<div class="rounded-full bg-[hsl(var(--muted))] h-5">'  # progress track
+            '<div class="rounded-full bg-[hsl(var(--primary))] h-5" style="width: 60%"></div>'
+            "</div></article>"
         )
         assert find_nested_chromes(html) == []
 
@@ -235,7 +252,7 @@ class TestFindNestedChromes:
 
         html = (
             '<section class="rounded-md border"><p>a</p></section>'
-            '<section class="rounded-md bg-white"><p>b</p></section>'
+            '<section class="rounded-md border"><p>b</p></section>'
         )
         assert find_nested_chromes(html) == []
 
@@ -244,7 +261,7 @@ class TestFindNestedChromes:
 
         html = (
             '<section class="rounded-md border">'
-            '<div class="rounded-md bg-white">a</div>'
+            '<div class="rounded-md border">a</div>'
             '<div class="rounded-md border">b</div>'
             "</section>"
         )

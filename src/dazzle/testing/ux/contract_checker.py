@@ -67,10 +67,17 @@ def _is_side_border_class(cls: str) -> bool:
 
 def _has_card_chrome(class_attr: str | None) -> bool:
     """Return True if a class string represents a visible card layer —
-    a rounded element that also has a full border or a background colour.
+    a rounded element with a **full border** (the defining edge of a
+    card surface).
+
+    A bg-only rounded element is not chrome: it could be a progress
+    bar track (``rounded-full bg-muted``), a kanban column backdrop
+    (``rounded-[6px] bg-muted/0.4``), or a decorative tile. A card
+    reads as a card because of its edge, not its fill. So we require
+    a non-side border to flag the element as card chrome.
 
     Side-scoped borders (``border-l-4``, ``border-t-red-500``) are
-    treated as accents, not chrome.
+    accents, not a card edge, and explicitly excluded.
     """
     if not class_attr:
         return False
@@ -78,13 +85,10 @@ def _has_card_chrome(class_attr: str | None) -> bool:
     has_rounded = any(_is_rounded_class(c) for c in classes)
     if not has_rounded:
         return False
-    has_surface = any(
-        c == "border"
-        or (c.startswith("border-") and not _is_side_border_class(c))
-        or c.startswith("bg-")
-        for c in classes
+    has_full_border = any(
+        c == "border" or (c.startswith("border-") and not _is_side_border_class(c)) for c in classes
     )
-    return has_surface
+    return has_full_border
 
 
 class _NestedChromeScanner(HTMLParser):

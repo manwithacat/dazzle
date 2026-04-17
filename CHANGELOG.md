@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.37] - 2026-04-17
+
+### Added
+- **Composite shape gate for the HTMX-loaded dashboard.** New `TestDashboardRegionCompositeShapes` class in `tests/unit/test_template_html.py` simulates what a user actually sees: the dashboard card slot (from `workspace/_content.html`) concatenated with each rendered region template. Runs `find_nested_chromes` on the composite across 14 region cases (grid, list, timeline, kanban, bar_chart, metrics, queue, activity_feed, heatmap, progress, tree, diagram, tabbed_list, funnel_chart). Every prior test ran on each layer alone, which is why the #794 card-in-card was invisible for three fix attempts. Companion `test_dashboard_slot_fingerprint` ensures the hardcoded slot shell in the test stays in sync with `workspace/_content.html` — if it drifts, the fingerprint test fails and signals the test needs updating. Companion `test_bare_region_card_macro_stays_bare` locks #794's macro fix so a future edit can't silently re-introduce chrome.
+
+### Fixed
+- **Five more card-in-card regressions caught by the new composite gate.** Rolling the composite test against every region template surfaced the following still-latent stacking issues, which the isolated-template scanner never saw:
+  - `workspace/regions/timeline.html`: timeline events had `rounded-[4px] border bg-[hsl(var(--background))]` — each event read as a small card inside the dashboard card. Stripped to `rounded-[4px]` with hover bg only.
+  - `workspace/regions/metrics.html`: metric tiles had `rounded-[4px] bg-[hsl(var(--muted)/0.4)] border` — each tile read as a card. Stripped to tile with soft bg only, no border.
+  - `workspace/regions/queue.html`: queue rows had a full `border border-[hsl(var(--border))]` — each row read as a card. Stripped to padded row; attention-state left-border accent preserved.
+  - `workspace/regions/kanban.html` / `bar_chart.html`: scanner false positives — progress-bar tracks (`rounded-full bg-muted`) and kanban column backdrops (`rounded-[6px] bg-muted/0.4`) were being flagged as chrome. See scanner tightening below.
+
+### Changed
+- **Scanner: card chrome now requires a full border.** `_has_card_chrome` in `src/dazzle/testing/ux/contract_checker.py` previously flagged `rounded + (border OR bg-)` as chrome, which over-matched on decorative fills (progress tracks, kanban backdrops, filled pills). A card reads as a card because of its **edge**, not its fill. Tightened to `rounded + full border` (bg alone is no longer sufficient). Side-scoped borders (`border-l-*` accent stripes) are still excluded. Regression test `test_ignores_bg_only_rounded` pins the tightening.
+
+### Agent Guidance
+- **Region templates must not emit chrome.** The dashboard slot in `workspace/_content.html` owns card chrome and title. Any region template (or individual items within it — rows, tiles, events) that adds `border + rounded + bg` will read as a nested card. This is now CI-enforced by the composite shape gate. When adding a new region type: drop into `workspace/regions/<name>.html`, wrap the content in `{% call region_card(title) %}`, and render items as bare pads (rounded + padding + hover bg is fine; add a full border and the composite test fails).
+- **When the composite gate flags a new failure**, the answer is almost always to strip the inner border/bg. A narrow exception: if the design genuinely calls for a card-inside-a-card (e.g., a surfaced alert within a dashboard region), make it explicit — add a `data-nested-card-intentional` attribute and tell the scanner to skip it.
+
 ## [0.57.36] - 2026-04-17
 
 ### Fixed

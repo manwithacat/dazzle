@@ -44,7 +44,11 @@
   <div class="space-y-2">
     {% for item in items %}
     {% set attn = item.get("_attention") if item.get is defined else none %}
-    <div class="flex items-center gap-3 p-3 rounded-[4px] border border-[hsl(var(--border))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+    {# Queue row — plain pad only, no full border. Dashboard slot owns
+       card chrome; full border here reads as a card-in-card (issue
+       #794 second follow-up). Attention states keep their left-border
+       accent since side borders are accents, not chrome. #}
+    <div class="flex items-center gap-3 p-3 rounded-[4px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
       {% if attn %}
         border-l-4
         {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.04)]
