@@ -405,6 +405,24 @@ def qa_trial(
     verdict_entries = transcript_sink.get("verdict", [])
     verdict = verdict_entries[0]["text"] if verdict_entries else ""
 
+    # Fallback verdict synthesis — trials can run out of max_steps
+    # before the LLM calls submit_verdict. The verdict is the most
+    # important output, so we guarantee one via a single follow-up
+    # LLM call that reads the friction observations and writes a
+    # 1-paragraph verdict in the user's voice.
+    if not verdict and friction:
+        from dazzle.qa.trial_verdict_fallback import synthesize_verdict
+
+        typer.echo("No verdict captured — synthesizing one from recorded friction…")
+        verdict = synthesize_verdict(
+            user_identity=chosen.get("user_identity", ""),
+            business_context=chosen.get("business_context", ""),
+            friction=friction,
+            model=model,
+        )
+        if verdict:
+            verdict = f"(synthesized from recorded friction — agent ran out of steps)\n\n{verdict}"
+
     report = build_trial_report(
         scenario_name=scenario_name,
         user_identity=chosen.get("user_identity", ""),

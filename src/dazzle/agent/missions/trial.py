@@ -69,8 +69,10 @@ You have a budget of **{max_steps} steps total**. Pace yourself — when
 you've used ~75% of your steps (that is, step {wrap_up_at} of
 {max_steps}), start wrapping up, whether or not you've finished all the
 tasks. A short-but-honest verdict is far more useful than running out
-of budget with nothing recorded. Call the `done` tool with a
-one-paragraph verdict before your budget runs out.
+of budget with nothing recorded. Call the `submit_verdict` tool with
+a one-paragraph verdict before your budget runs out. (Note: use
+`submit_verdict`, not the builtin `done` action — the builtin
+doesn't capture your verdict.)
 
 --- Important grounding ---
 - Stay in character. If the DOM shows placeholder text like "Lorem
@@ -80,8 +82,8 @@ one-paragraph verdict before your budget runs out.
   that's itself the signal. Record it as friction.
 - **Don't record the same friction twice.** If you've already flagged
   that /dashboard 404s, don't re-record it on a retry — move on to a
-  different task or call `done`. A real user wouldn't file the same
-  complaint four times.
+  different task or call `submit_verdict`. A real user wouldn't file
+  the same complaint four times.
 - Evidence matters. Every friction record should have a URL and enough
   detail that a human could reproduce what you saw. Vague complaints
   get filtered out at triage time.
@@ -125,7 +127,7 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
         return {
             "recorded": True,
             "count_so_far": len(transcript_sink["friction"]),
-            "note": "Keep exploring. Call `done` when ready to wrap up.",
+            "note": "Keep exploring. Call `submit_verdict` when ready to wrap up.",
         }
 
     return AgentTool(
@@ -174,28 +176,30 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
     )
 
 
-def _make_done_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
-    """Tool: ``done`` — wrap up the trial with a verdict.
+def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
+    """Tool: ``submit_verdict`` — wrap up the trial with a verdict.
 
-    The agent calls this when it has formed an opinion. The verdict
-    string is stashed in the transcript sink so the report renderer
-    can surface it as the headline quote.
-
-    We use a mission tool rather than the builtin ``done`` action
-    because we want the verdict to be a mandatory argument — a plain
-    ``done`` action has none.
+    Named ``submit_verdict`` (not ``done``) specifically to avoid
+    colliding with the builtin ``done`` page action. During the first
+    two trials the agent called ``done`` expecting our handler, but
+    the SDK routed the tool_use to the builtin page action (which
+    takes no verdict arg), so our handler never fired and the verdict
+    was never captured. The core framework does warn about the
+    collision — we now heed that warning by picking a unique name.
     """
 
-    def done(verdict: str = "") -> dict[str, Any]:
+    def submit_verdict(verdict: str = "") -> dict[str, Any]:
         transcript_sink["verdict"] = [{"text": verdict}]
         return {"ended": True}
 
     return AgentTool(
-        name="done",
+        name="submit_verdict",
         description=(
-            "End the trial. Provide a one-paragraph verdict from your "
-            "business user's perspective: would you recommend this software "
-            "to a colleague? What would need to change?"
+            "End the trial by submitting your verdict. Provide a one-paragraph "
+            "verdict from your business user's perspective: would you recommend "
+            "this software to a colleague? What would need to change? This is "
+            "how you end the trial — do NOT use the `done` page action, which "
+            "won't capture your verdict."
         ),
         schema={
             "type": "object",
@@ -207,7 +211,7 @@ def _make_done_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTo
             },
             "required": ["verdict"],
         },
-        handler=done,
+        handler=submit_verdict,
     )
 
 
@@ -226,11 +230,10 @@ def _trial_completion(action: AgentAction, history: list[Step]) -> bool:
     """
     if action.type == ActionType.DONE:
         return True
-    # The `done` mission tool shows up as a tool action; the handler
-    # has already stashed the verdict, and the framework records this
-    # as a mission-tool call. Treat any tool call named `done` as a
-    # stop signal.
-    if action.type == ActionType.TOOL and getattr(action, "tool_name", "") == "done":
+    # The `submit_verdict` mission tool shows up as a tool action;
+    # the handler has already stashed the verdict, and the framework
+    # records this as a mission-tool call. Treat it as a stop signal.
+    if action.type == ActionType.TOOL and getattr(action, "tool_name", "") == "submit_verdict":
         return True
     return False
 
@@ -277,11 +280,16 @@ def build_trial_mission(
     business_context = scenario.get("business_context", "").strip()
     tasks = scenario.get("tasks", [])
     stop_when = scenario.get("stop_when", "").strip() or (
-        "When you feel you've explored enough to form an opinion, call `done` with a verdict."
+        "When you feel you've explored enough to form an opinion, call "
+        "`submit_verdict` with a verdict."
     )
 
     effective_max_steps = max_steps or int(scenario.get("max_steps", 35))
-    wrap_up_at = max(1, int(effective_max_steps * 0.75))
+    # Wrap-up at 60% — trials 1-3 all ran out of budget at 75% wrap-up
+    # because exploration + recording takes more steps than the LLM
+    # estimates. Budget safety matters more than full coverage; the
+    # fallback verdict synthesiser picks up the slack either way.
+    wrap_up_at = max(1, int(effective_max_steps * 0.60))
 
     system_prompt = _TRIAL_SYSTEM_PROMPT.format(
         user_identity=user_identity or "(not specified)",
@@ -297,7 +305,7 @@ def build_trial_mission(
         system_prompt=system_prompt,
         tools=[
             _make_record_friction_tool(transcript_sink),
-            _make_done_tool(transcript_sink),
+            _make_submit_verdict_tool(transcript_sink),
         ],
         completion_criteria=_trial_completion,
         max_steps=effective_max_steps,

@@ -18,6 +18,7 @@ from dazzle.qa.trial_report import (
     build_trial_report,
     render_trial_report,
 )
+from dazzle.qa.trial_verdict_fallback import _format_friction_for_synthesis
 
 # ---------------------------------------------------------------------------
 # Mission builder
@@ -56,11 +57,17 @@ class TestBuildTrialMission:
         assert "Close Y" in m.system_prompt
         assert "Stop when ready" in m.system_prompt
 
-    def test_tools_include_record_friction_and_done(self, scenario: dict) -> None:
+    def test_tools_include_record_friction_and_submit_verdict(self, scenario: dict) -> None:
+        """submit_verdict (not done) — named unique to avoid colliding
+        with the builtin done page action, which was eating our tool
+        call during trial runs 1 and 2 and leaving the verdict empty."""
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         names = {t.name for t in m.tools}
-        assert names == {"record_friction", "done"}
+        assert names == {"record_friction", "submit_verdict"}
+        assert "done" not in names, (
+            "'done' collides with the builtin page action — see trial-2 post-mortem"
+        )
 
     def test_record_friction_writes_to_sink(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
@@ -86,10 +93,10 @@ class TestBuildTrialMission:
         tool.handler(category="not-a-category", description="hmm")
         assert sink["friction"][0]["category"] == "other"
 
-    def test_done_records_verdict_in_sink(self, scenario: dict) -> None:
+    def test_submit_verdict_records_verdict_in_sink(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        tool = next(t for t in m.tools if t.name == "done")
+        tool = next(t for t in m.tools if t.name == "submit_verdict")
         tool.handler(verdict="Would not switch — missing filters.")
         assert sink["verdict"][0]["text"] == "Would not switch — missing filters."
 
@@ -106,18 +113,18 @@ class TestBuildTrialMission:
         assert m.max_steps == 20
 
     def test_system_prompt_mentions_step_budget_and_wrap_up(self, scenario: dict) -> None:
-        """After the post-trial-1 tweak: the prompt tells the agent
+        """After the post-trial-1/2/3 tweaks: the prompt tells the agent
         its total step count AND the specific step number to start
-        wrapping up at (75% of budget). Verified against the 'budget
-        ran out, no verdict' failure mode from the v0.57.71 trial."""
+        wrapping up at (60% of budget — lowered from 75% after trials
+        1-3 all ran out of budget before calling submit_verdict)."""
         sink: dict = {"friction": []}
         m = build_trial_mission(
             scenario, base_url="http://host:1234", transcript_sink=sink, max_steps=20
         )
         # Total budget surfaces in the prompt
         assert "20 steps total" in m.system_prompt
-        # Wrap-up trigger point surfaces (75% of 20 = 15)
-        assert "step 15" in m.system_prompt
+        # Wrap-up trigger point surfaces (60% of 20 = 12)
+        assert "step 12" in m.system_prompt
 
     def test_system_prompt_forbids_duplicate_friction(self, scenario: dict) -> None:
         """The agent kept re-recording the same /dashboard 404 four
@@ -221,3 +228,34 @@ class TestReportRendering:
         )
         out = render_trial_report(report)
         assert "/app/tickets/123" in out
+
+
+# ---------------------------------------------------------------------------
+# Verdict fallback formatter (the LLM call itself is integration-only)
+# ---------------------------------------------------------------------------
+
+
+class TestVerdictFallbackFormatter:
+    def test_empty_friction_tombstones(self) -> None:
+        assert _format_friction_for_synthesis([]) == "(no friction recorded)"
+
+    def test_formats_per_entry_with_category_severity_url(self) -> None:
+        out = _format_friction_for_synthesis(
+            [
+                {
+                    "category": "bug",
+                    "severity": "high",
+                    "description": "Filter broke.",
+                    "url": "/app/ticket",
+                }
+            ]
+        )
+        assert "[bug/high]" in out
+        assert "/app/ticket" in out
+        assert "Filter broke." in out
+
+    def test_omits_url_when_missing(self) -> None:
+        out = _format_friction_for_synthesis([{"category": "praise", "description": "Nice."}])
+        # Default severity "medium" applied
+        assert "[praise/medium]" in out
+        assert "@ " not in out

@@ -40,6 +40,6 @@ tasks = [
 stop_when = """
 Stop when you've formed a rounded opinion on whether this software would
 work for Sarah's business. Don't feel obliged to try every feature — the
-aim is honest friction reporting, not exhaustive coverage. Call `done`
-with a one-paragraph verdict when you're ready.
+aim is honest friction reporting, not exhaustive coverage. Call
+`submit_verdict` with a one-paragraph verdict when you're ready.
 """

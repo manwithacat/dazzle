@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.73] - 2026-04-18
+
+### Fixed
+- **Trials 1-3 all ended with no verdict — two root causes.**
+  - **Tool-name collision.** Our mission tool was named `done`, which collides with the builtin `done` page action. The SDK routed the LLM's `done` tool call to the builtin, which doesn't take a verdict argument, so our handler never fired. The framework does warn about this collision — we now heed it. Renamed the mission tool to `submit_verdict`. All prompt references, the completion criterion, and the scenario stop_when text updated consistently.
+  - **Wrap-up trigger was too late.** The previous 75%-of-budget wrap-up nudge still let the agent run out of steps because exploration + recording costs more per step than the LLM estimates. Lowered to 60%.
+
+### Added
+- **Fallback verdict synthesizer.** When a trial exits without a captured verdict but has recorded friction, `dazzle qa trial` now issues one follow-up LLM call that reads the friction observations and writes a one-paragraph verdict in the user's voice. The synthesized verdict is prefixed with a transparent disclosure (`synthesized from recorded friction — agent ran out of steps`) so triagers know it wasn't written in-situ. Guarantees 100% verdict coverage regardless of whether the agent manages its own step budget. Cost: ~2-3k tokens per fallback. Safe to fail — an empty verdict is still better than a crash at the end of a 3-minute trial.
+- `src/dazzle/qa/trial_verdict_fallback.py` — `synthesize_verdict()` and `_format_friction_for_synthesis()`, plus 3 unit tests for the formatter (the LLM call itself is integration-only).
+
+### Observed (from trial 3 — retained for the record)
+- Multiple real findings beyond the `/dashboard` 404: broken filter dropdowns on `/app/ticket` (`closest [data-dz-table]` returns no matches), undefined Alpine expressions (`loading`, `colMenuOpen`, `isColumnVisible`), page title/heading mismatch on `agent_dashboard`, missing team-overview UI (the task Sarah was asked to do). These are Dazzle framework issues, not support_tickets-specific. Filing separately for triage.
+
 ## [0.57.72] - 2026-04-17
 
 ### Fixed
