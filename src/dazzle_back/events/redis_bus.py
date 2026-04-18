@@ -147,16 +147,39 @@ class RedisBus(BaseEventBus):
         return f"{OFFSET_PREFIX}{topic}:{group_id}"
 
     async def connect(self) -> None:
-        """Connect to Redis."""
+        """Connect to Redis.
+
+        Uses bounded socket/connect timeouts so a missing or slow Redis
+        fails loudly instead of hanging the FastAPI ``lifespan`` startup
+        indefinitely. Without these, ``ping()`` could block forever on
+        a stuck socket — observed during local agent-driven harness
+        runs where the whole ``dazzle serve --local`` boot appeared to
+        freeze at "Waiting for application startup".
+        """
         kwargs: dict[str, Any] = {
             "decode_responses": False,  # We handle encoding ourselves
+            # Connect/read timeouts — tight enough to fail a dev/test
+            # server fast (<5s) but loose enough to tolerate transient
+            # slowness on production-grade Redis.
+            "socket_connect_timeout": 3.0,
+            "socket_timeout": 5.0,
         }
         # Heroku Redis uses self-signed certs — skip verification for rediss:// URLs
         if self._config.url.startswith("rediss://"):
             kwargs["ssl_cert_reqs"] = None
         self._redis = aioredis.from_url(self._config.url, **kwargs)
-        # Test connection
-        await self._redis.ping()  # type: ignore[misc,unused-ignore]
+        # Test connection — wrap in asyncio.wait_for to cap total boot
+        # time even if the client-level socket_timeout is ignored by a
+        # version of redis-py that computes it differently.
+        try:
+            ping_coro = self._redis.ping()  # type: ignore[misc,unused-ignore]
+            await asyncio.wait_for(ping_coro, timeout=5.0)  # type: ignore[arg-type]
+        except TimeoutError as exc:
+            raise RuntimeError(
+                f"Redis ping timed out after 5s against {self._config.url}. "
+                "Verify REDIS_URL is correct and the server is reachable. "
+                "For local dev, run `redis-server` or `brew services start redis`."
+            ) from exc
 
     async def close(self) -> None:
         """Close the Redis connection and stop consumers."""

@@ -516,6 +516,17 @@ def verify_command(
     update_baseline: bool = typer.Option(
         False, "--update-baseline", help="Update baseline after run"
     ),
+    managed: bool = typer.Option(
+        False,
+        "--managed",
+        help=(
+            "Self-manage the local server: spawn `dazzle serve --local`, wait "
+            "for readiness, run the check, then tear down. Use when calling "
+            "from an agent/CI where no server is already running. Only "
+            "applies to --contracts (the --interactions path already manages "
+            "its own server)."
+        ),
+    ),
     persona: str = typer.Option("", "--persona", help="Filter to specific persona"),
     entity: str = typer.Option("", "--entity", help="Filter to specific entity"),
     keep_db: bool = typer.Option(False, "--keep-db", help="Keep test database after verification"),
@@ -565,6 +576,25 @@ def verify_command(
 
     # Route: --contracts only
     if contracts and not browser:
+        if managed:
+            from dazzle.testing.ux.interactions.server_fixture import (
+                launch_interaction_server,
+            )
+
+            # Reuse the same proven server-launch fixture the
+            # --interactions route uses. Ensures runtime.json exists,
+            # the TCP port is accepting traffic, AND the test secret
+            # is pinned before we hand off to the contracts check.
+            with launch_interaction_server(project_root):
+                raise typer.Exit(
+                    _run_contracts(
+                        project_root,
+                        strict=strict,
+                        update_baseline=update_baseline,
+                        persona_filter=persona,
+                        entity_filter=entity,
+                    )
+                )
         raise typer.Exit(
             _run_contracts(
                 project_root,

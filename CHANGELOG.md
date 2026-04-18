@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.68] - 2026-04-17
+
+### Fixed
+- **Agent-driven `dazzle serve --local` could hang indefinitely on Redis connect.** `RedisBus.connect()` called `redis.ping()` with no socket/connect timeout — if REDIS_URL pointed at an unreachable host, the FastAPI `lifespan` startup blocked forever (the UI/API ports were allocated but nothing ever began accepting traffic, and the only visible log was `INFO: Waiting for application startup.`). Observed during agent harness runs where the server appeared to boot but `/__test__/authenticate` returned connection-refused indefinitely. Added `socket_connect_timeout=3.0`, `socket_timeout=5.0`, and an outer `asyncio.wait_for(..., timeout=5.0)` with a descriptive error message telling the caller to check REDIS_URL — so a missing Redis fails fast and loudly instead of hanging.
+
+### Added
+- **`dazzle ux verify --contracts --managed`.** Self-manages the local server lifecycle: spawns `dazzle serve --local` via the proven `launch_interaction_server` fixture (same one the `--interactions` flow uses), waits for readiness via TCP health-probe, runs the contract check, then tears down cleanly. Makes `--contracts` safely callable from agents and CI pipelines where no server is already running. Back-to-back invocations verified idempotent: no stray processes, clean port teardown, deterministic output.
+
+### Agent Guidance
+- When running `dazzle ux verify --contracts` from an autonomous harness, prefer `--managed` over pre-starting a server — it eliminates the port/state coordination overhead and guarantees teardown. The existing `--interactions` walk already uses this same fixture, so the two checks are now symmetric in their server-lifecycle handling.
+
 ## [0.57.67] - 2026-04-17
 
 ### Fixed
