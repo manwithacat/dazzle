@@ -502,6 +502,16 @@ def verify_command(
         False, "--contracts", help="Run contract verification (no browser)"
     ),
     browser: bool = typer.Option(False, "--browser", help="Run Playwright browser tests only"),
+    interactions: bool = typer.Option(
+        False,
+        "--interactions",
+        help=(
+            "Run INTERACTION_WALK (Playwright gestures + state diffs). "
+            "Spawns a dedicated dazzle serve, exercises drag/add/remove "
+            "gestures, asserts state changes. Exit 2 on setup failure, "
+            "1 on any interaction regression."
+        ),
+    ),
     strict: bool = typer.Option(False, "--strict", help="Exit 1 on any contract failure"),
     update_baseline: bool = typer.Option(
         False, "--update-baseline", help="Update baseline after run"
@@ -527,6 +537,7 @@ def verify_command(
         dazzle ux verify                    # Full verification (contracts + browser)
         dazzle ux verify --contracts        # Contract checks only (fast, no browser)
         dazzle ux verify --browser          # Playwright browser tests only
+        dazzle ux verify --interactions     # Scripted gestures + state diffs
         dazzle ux verify --structural       # HTML checks only (fast)
         dazzle ux verify --persona teacher  # Filter by persona
         dazzle ux verify --headed           # Watch the browser
@@ -535,6 +546,22 @@ def verify_command(
         raise typer.Exit(_run_structural_only())
 
     project_root = Path.cwd().resolve()
+
+    # Route: --interactions only. Runs independently of contracts /
+    # browser so callers can gate on interaction regressions without
+    # running the whole suite. See docs/proposals/interaction-walk-
+    # harness.md for the design.
+    if interactions and not (contracts or browser):
+        from dazzle.cli.ux_interactions import run_interaction_walk
+
+        raise typer.Exit(
+            run_interaction_walk(
+                project_root,
+                headless=headless,
+                json_output=format_ == "json",
+                persona=persona,
+            )
+        )
 
     # Route: --contracts only
     if contracts and not browser:

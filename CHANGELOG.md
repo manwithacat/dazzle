@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.51] - 2026-04-18
+
+### Added
+- **`dazzle ux verify --interactions` CLI flag (step 5 of #800).** New peer flag alongside `--contracts` and `--browser` that runs the INTERACTION_WALK harness against the current project. Spawns a dedicated `dazzle serve --local` via the session fixture from v0.57.49, opens a sync Playwright browser, navigates to `/app`, extracts the workspace layout from the embedded `#dz-workspace-layout` JSON, builds a default walk (`CardRemoveReachableInteraction` + `CardDragInteraction` + `CardAddInteraction` targeting the first available card/region), runs via `run_walk`, and emits a human or JSON report. Exit codes: 0 pass / 1 interaction regression / 2 setup failure (Playwright missing, server won't start, empty layout), as specified in the design doc.
+- Plumbing lives in `src/dazzle/cli/ux_interactions.py` — extracted from `ux.py` so pure functions (`_build_default_walk`, `_render_human_report`, `_render_json_report`) are independently testable. 10 unit tests in `tests/unit/test_cli_ux_interactions.py` cover walk assembly under all layout permutations (cards + catalog, cards only, catalog only, empty), report rendering for pass/fail/mixed, and the exit-code constants.
+
+### Agent Guidance
+- **Running the harness**: `cd examples/support_tickets && dazzle ux verify --interactions` from a machine with Postgres + Redis running (the `--local` flag on `dazzle serve` still requires those). The CLI handles server spawn + teardown; don't pre-start the server.
+- **Interaction exit codes are gate-stable**: CI workflows should branch on `rc == 2` (setup failure → retry) vs `rc == 1` (real regression → fail the build) separately. The constants live in `dazzle.cli.ux_interactions` (`EXIT_PASS`, `EXIT_REGRESSION`, `EXIT_SETUP_FAILURE`).
+
 ## [0.57.50] - 2026-04-18
 
 ### Added
