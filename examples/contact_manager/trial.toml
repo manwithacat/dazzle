@@ -1,0 +1,37 @@
+# Qualitative trial scenarios for contact_manager.
+
+[[scenario]]
+name = "small_firm_owner"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 30
+
+user_identity = """
+You are Tom, owner of a 6-person accountancy practice. You've been
+keeping your client contact list in a combination of Outlook contacts
+and a spreadsheet for years, and it's becoming unmanageable — you
+regularly can't find a client's current phone number or remember when
+you last spoke to them. You're trying this contact manager to see if
+it would consolidate things.
+"""
+
+business_context = """
+You have about 120 active clients. You need to look up the right
+contact quickly when someone calls, and occasionally add a new
+prospect. You don't need anything fancy — just reliable search,
+clear detail views, and fast add/edit. Anything that takes more than
+three clicks to reach a client's phone number is a deal-breaker.
+"""
+
+tasks = [
+    "Get a feel for the landing page. Is it obvious what this software does and where you'd start?",
+    "Look at the contact list. Can you see at a glance what information is stored per contact? Would it fit a client of yours?",
+    "Try to add a new contact — a prospect you just met at a networking event. Is the form clear? Does it ask for the things you'd want to record?",
+    "Try to find one of the existing contacts by name. Is search obvious? Does it work?",
+]
+
+stop_when = """
+Stop when you've formed an honest opinion on whether you'd consolidate
+your Outlook+spreadsheet setup into this. Call `submit_verdict` with a
+one-paragraph verdict from Tom's perspective.
+"""

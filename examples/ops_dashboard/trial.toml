@@ -1,0 +1,39 @@
+# Qualitative trial scenarios for ops_dashboard.
+
+[[scenario]]
+name = "oncall_engineer"
+login_persona = "ops_engineer"
+time_budget_seconds = 450
+max_steps = 35
+
+user_identity = """
+You are Dan, an SRE at a 20-person infrastructure team. You're on call
+this week. You've been using PagerDuty + a collection of Grafana
+dashboards, but the team lead has asked you to evaluate this
+operations dashboard as a potential consolidation layer — the pitch
+is 'one view for alerts, system health, and incident response.' You
+are sceptical. Operations tools are only useful if they work fast under
+pressure. Toy-looking admin UIs with five screens to acknowledge an
+alert will get uninstalled the first time you're woken up at 3am.
+"""
+
+business_context = """
+You monitor about 80 services, handle 5-15 alerts a day, and escalate
+maybe 2 a week. The metrics you care about on first glance: count of
+critical alerts right now, which systems are degraded, and whether
+anything is unacknowledged. Every click costs you at 3am.
+"""
+
+tasks = [
+    "Land on the app. Is this a usable at-a-glance ops view? Count how many clicks it takes to see critical alerts.",
+    "Find the current list of alerts. Are they sorted by severity? Can you tell which are unacknowledged without squinting?",
+    "Try to acknowledge an alert — walk through the flow. How many steps? Is there a keyboard shortcut or bulk-select? (As an SRE, this is the single most-used action.)",
+    "See if there's a list of all monitored systems with health status. Can you spot a degraded one at a glance?",
+]
+
+stop_when = """
+Stop once you've formed an honest opinion on whether you'd trust this
+in a real incident. Call `submit_verdict` with a one-paragraph verdict
+as Dan — would it survive first contact with a 3am page, or would you
+fall back to your existing tools?
+"""

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.74] - 2026-04-19
+
+### Added
+- **Trial scenarios for 4 more example apps.** `simple_task`, `contact_manager`, `fieldtest_hub`, `ops_dashboard` each now have a `trial.toml` with a business-user persona (Maya the agency lead, Tom the accountancy owner, Priya the hardware eng manager, Dan the SRE) and 3-4 tasks suited to the app's domain. Completes coverage across all shipping example apps.
+- **`docs/reference/qa-trial-patterns.md`** — cross-cutting analysis of the first five-app trial sweep. Catalogues seven recurring patterns (Alpine errors universal, empty-state ambiguity, demo data quality, 403 dead-ends, role/content mismatch, praised visual design, stranded empty workspaces) and ranks them by leverage. Meta-lessons about the trial loop itself (LLM self-pacing unreliable, identity framing shapes signal density, dedup leaky but acceptable) captured for future scenario-authoring.
+
+### Filed from the multi-app sweep
+- #807 — Typed empty states (empty / filtered / forbidden / loading), surfaced independently in 3 apps.
+- #808 — 403 error page should disclose role requirements, surfaced by ops_dashboard trial.
+- #809 — Demo seed data undermines qualitative evaluation, surfaced by contact_manager + simple_task.
+
 ## [0.57.73] - 2026-04-18
 
 ### Fixed
