@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.53] - 2026-04-18
+
+### Fixed
+- **INTERACTION_WALK CI job: install playwright.** The first CI run of the `interaction-walks` job in v0.57.52 failed at "Install Playwright chromium" with `No module named playwright` — the existing `.[dev,llm,mcp,mobile,postgres]` install doesn't pull playwright in. Added an explicit `pip install "playwright>=1.40"` before the chromium install. Pin at 1.40+ for the sync-API shape our harness uses. A follow-up might promote this to a proper `e2e` extra in `pyproject.toml` once the harness is blocking.
+
 ## [0.57.52] - 2026-04-18
 
 ### Added
