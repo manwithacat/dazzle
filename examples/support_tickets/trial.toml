@@ -8,8 +8,8 @@
 [[scenario]]
 name = "manager_evaluation"
 login_persona = "manager"
-time_budget_seconds = 300
-max_steps = 25
+time_budget_seconds = 400
+max_steps = 35
 
 user_identity = """
 You are Sarah, founder of a small B2B SaaS company with about 50 paying

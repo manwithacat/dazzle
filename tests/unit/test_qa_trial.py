@@ -105,6 +105,27 @@ class TestBuildTrialMission:
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert m.max_steps == 20
 
+    def test_system_prompt_mentions_step_budget_and_wrap_up(self, scenario: dict) -> None:
+        """After the post-trial-1 tweak: the prompt tells the agent
+        its total step count AND the specific step number to start
+        wrapping up at (75% of budget). Verified against the 'budget
+        ran out, no verdict' failure mode from the v0.57.71 trial."""
+        sink: dict = {"friction": []}
+        m = build_trial_mission(
+            scenario, base_url="http://host:1234", transcript_sink=sink, max_steps=20
+        )
+        # Total budget surfaces in the prompt
+        assert "20 steps total" in m.system_prompt
+        # Wrap-up trigger point surfaces (75% of 20 = 15)
+        assert "step 15" in m.system_prompt
+
+    def test_system_prompt_forbids_duplicate_friction(self, scenario: dict) -> None:
+        """The agent kept re-recording the same /dashboard 404 four
+        times in trial-1. The prompt now tells it not to."""
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert "same friction twice" in m.system_prompt.lower()
+
 
 # ---------------------------------------------------------------------------
 # Report rendering

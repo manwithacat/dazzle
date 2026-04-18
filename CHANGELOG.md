@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.72] - 2026-04-17
+
+### Fixed
+- **Three tweaks from the first live `dazzle qa trial` run** (v0.57.71 against support_tickets, 25 steps, 137s, 68k tokens):
+  - **Trial ended at `max_steps` with no verdict** because the agent didn't know its step budget and got surprised by it. System prompt now surfaces both the total budget and a specific wrap-up step (75% of total), with an explicit instruction to call `done` before running out. A short honest verdict beats an unfinished run.
+  - **Agent re-recorded the same /dashboard 404 four times** — no deduplication guidance. Added a ground-rule bullet: *"Don't record the same friction twice. A real user wouldn't file the same complaint four times."*
+  - **25 steps was too tight** for a 4-task scenario with a verdict. Bumped support_tickets's `max_steps` to 35 and `time_budget_seconds` to 400. The system prompt now reads the actual configured budget, so the numbers it quotes stay accurate across scenarios.
+- Two new regression tests pin the budget-awareness and deduplication prompt language.
+
+### Observed (from trial 1 — worth keeping in mind)
+- The `/dashboard` URL 404 in support_tickets IS a real piece of friction — a business-user mental model says "dashboards live at /dashboard." Either add a redirect or teach the 404 page to suggest the workspace URL. Not urgent for the harness, but a genuine finding the tool surfaced that rule-based gates wouldn't catch.
+
 ## [0.57.71] - 2026-04-17
 
 ### Added

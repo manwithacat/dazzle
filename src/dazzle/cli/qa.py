@@ -265,7 +265,6 @@ def qa_trial(
     from dazzle.agent.missions.trial import build_trial_mission
     from dazzle.agent.observer import PlaywrightObserver
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
-    from dazzle.cli.ux_interactions import _authenticate_persona_on_context
     from dazzle.qa.trial_report import build_trial_report, render_trial_report
     from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
 
@@ -319,7 +318,7 @@ def qa_trial(
     started_at = time.monotonic()
 
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.async_api import async_playwright
     except ImportError as exc:
         typer.echo(
             "Playwright is not installed. Install with: pip install 'dazzle-dsl[e2e]' "
@@ -331,43 +330,74 @@ def qa_trial(
     with launch_interaction_server(project_dir) as conn:
         site_url = conn.site_url
         try:
-            test_secret = read_runtime_test_secret(project_dir)
+            test_secret_val = read_runtime_test_secret(project_dir) or ""
         except Exception:
-            test_secret = ""
+            test_secret_val = ""
 
-        # Playwright lives in a sync context; the agent run itself is
-        # async, so we bridge via asyncio.run inside the sync block.
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=headless)
-            context = browser.new_context()
-            _authenticate_persona_on_context(context, site_url, login_persona, test_secret or "")
-            page = context.new_page()
+        async def _run_trial() -> tuple[Any, Any]:
+            """Full async path: start browser, authenticate via POST +
+            add_cookies, run the agent, tear down. PlaywrightObserver
+            expects an async page, so this all has to live under the
+            same event loop."""
+            import httpx
 
-            observer = PlaywrightObserver(
-                page,
-                include_screenshots=False,
-                capture_console=True,
-            )
-            executor = PlaywrightExecutor(page)
-            agent = DazzleAgent(
-                observer=observer,
-                executor=executor,
-                model=model,
-                use_tool_calls=True,
-            )
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(headless=headless)
+                context = await browser.new_context()
 
-            mission = build_trial_mission(
-                chosen,
-                base_url=site_url,
-                transcript_sink=transcript_sink,
-            )
+                # Authenticate via the /__test__/ endpoint (same
+                # protocol _authenticate_persona_on_context uses,
+                # but awaitable).
+                headers = {"X-Test-Secret": test_secret_val} if test_secret_val else {}
+                async with httpx.AsyncClient() as http:
+                    resp = await http.post(
+                        f"{site_url}/__test__/authenticate",
+                        json={"role": login_persona, "username": login_persona},
+                        headers=headers,
+                        timeout=10,
+                    )
+                if resp.status_code != 200:
+                    typer.echo(
+                        f"[auth] /__test__/authenticate returned {resp.status_code} "
+                        f"(body: {resp.text[:200]!r}). Persona {login_persona!r} may "
+                        f"not be a valid role, or test-mode may be disabled.",
+                        err=True,
+                    )
+                    await browser.close()
+                    raise typer.Exit(code=2)
+                token = resp.json().get("session_token") or resp.json().get("token") or ""
+                if token:
+                    await context.add_cookies(
+                        [{"name": "dazzle_session", "value": token, "url": site_url}]
+                    )
 
-            typer.echo(
-                f"Starting trial — up to {mission.max_steps} steps, "
-                f"budget {mission.token_budget:,} tokens"
-            )
-            transcript = asyncio.run(agent.run(mission))
-            browser.close()
+                page = await context.new_page()
+                observer_inner = PlaywrightObserver(
+                    page,
+                    include_screenshots=False,
+                    capture_console=True,
+                )
+                executor_inner = PlaywrightExecutor(page)
+                agent_inner = DazzleAgent(
+                    observer=observer_inner,
+                    executor=executor_inner,
+                    model=model,
+                    use_tool_calls=True,
+                )
+                mission_inner = build_trial_mission(
+                    chosen,
+                    base_url=site_url,
+                    transcript_sink=transcript_sink,
+                )
+                typer.echo(
+                    f"Starting trial — up to {mission_inner.max_steps} steps, "
+                    f"budget {mission_inner.token_budget:,} tokens"
+                )
+                t = await agent_inner.run(mission_inner)
+                await browser.close()
+                return t, mission_inner
+
+        transcript, _mission = asyncio.run(_run_trial())
 
     duration_s = time.monotonic() - started_at
 

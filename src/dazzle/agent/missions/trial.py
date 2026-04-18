@@ -65,7 +65,12 @@ the triager to file them appropriately.
 --- Stopping ---
 {stop_when}
 
-When you're done, call the `done` tool with a one-paragraph verdict.
+You have a budget of **{max_steps} steps total**. Pace yourself — when
+you've used ~75% of your steps (that is, step {wrap_up_at} of
+{max_steps}), start wrapping up, whether or not you've finished all the
+tasks. A short-but-honest verdict is far more useful than running out
+of budget with nothing recorded. Call the `done` tool with a
+one-paragraph verdict before your budget runs out.
 
 --- Important grounding ---
 - Stay in character. If the DOM shows placeholder text like "Lorem
@@ -73,6 +78,10 @@ When you're done, call the `done` tool with a one-paragraph verdict.
   real evaluator.
 - Do NOT invent features. If you can't find a way to do something,
   that's itself the signal. Record it as friction.
+- **Don't record the same friction twice.** If you've already flagged
+  that /dashboard 404s, don't re-record it on a retry — move on to a
+  different task or call `done`. A real user wouldn't file the same
+  complaint four times.
 - Evidence matters. Every friction record should have a URL and enough
   detail that a human could reproduce what you saw. Vague complaints
   get filtered out at triage time.
@@ -271,11 +280,16 @@ def build_trial_mission(
         "When you feel you've explored enough to form an opinion, call `done` with a verdict."
     )
 
+    effective_max_steps = max_steps or int(scenario.get("max_steps", 35))
+    wrap_up_at = max(1, int(effective_max_steps * 0.75))
+
     system_prompt = _TRIAL_SYSTEM_PROMPT.format(
         user_identity=user_identity or "(not specified)",
         business_context=business_context or "(not specified)",
         task_list=_format_task_list(tasks),
         stop_when=stop_when,
+        max_steps=effective_max_steps,
+        wrap_up_at=wrap_up_at,
     )
 
     return Mission(
@@ -286,7 +300,7 @@ def build_trial_mission(
             _make_done_tool(transcript_sink),
         ],
         completion_criteria=_trial_completion,
-        max_steps=max_steps or int(scenario.get("max_steps", 25)),
+        max_steps=effective_max_steps,
         token_budget=token_budget,
         start_url=f"{base_url}/app",
         context={
