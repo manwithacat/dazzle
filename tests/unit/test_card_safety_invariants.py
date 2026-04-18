@@ -101,6 +101,23 @@ INVARIANT_ENFORCERS: dict[str, list[tuple[str, str, str]]] = {
             "test_composite_catches_nested_chrome",
         ),
     ],
+    "INV-9: primary actions reachable without pointer hover": [
+        (
+            "test_ux_contract_checker",
+            "TestFindHiddenPrimaryActions",
+            "test_opacity_zero_hover_only_is_flagged",
+        ),
+        (
+            "test_ux_contract_checker",
+            "TestFindHiddenPrimaryActions",
+            "test_focus_within_reveal_not_flagged",
+        ),
+        (
+            "test_ux_contract_checker",
+            "TestFindHiddenPrimaryActions",
+            "test_alpine_modal_not_flagged",
+        ),
+    ],
 }
 
 

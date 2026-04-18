@@ -267,6 +267,60 @@ but the gate of record is the composite.
 
 ---
 
+### INV-9: Primary actions are reachable without pointer hover
+
+**Rule**: Any button (or `<a role="button">`) whose `aria-label`
+names a destructive/state-changing action — Remove, Delete,
+Dismiss, Close, Archive, Unarchive, Disable, Deactivate, Revoke —
+must not live inside an `opacity-0 group-hover:opacity-100` (or
+equivalent hover-only reveal) ancestor without also having a
+non-hover reveal (`focus-within:opacity-*`, `focus:opacity-*`,
+`peer-focus:opacity-*`, `group-focus:opacity-*`,
+`group-focus-within:opacity-*`).
+
+**Why**: Touch devices have no hover state — a hover-only reveal
+is permanently invisible. Keyboard users must know to move the
+pointer into the card before Tab can reach the action. Issue #799
+shipped this exact shape on every dashboard card.
+
+**Enforcement**:
+- Scanner: `find_hidden_primary_actions(html)` in
+  `contract_checker.py`.
+- Applied inside `check_contract` for `WorkspaceContract` and
+  `DetailViewContract` — same dispatch point as INV-1 / INV-2.
+- Tests: `test_ux_contract_checker.py::TestFindHiddenPrimaryActions::*`
+  (10 cases covering opacity-0 detection, focus-within reveal,
+  always-visible, Alpine conditional skip, non-primary-action
+  label, link-button role, missing aria-label, button-level
+  opacity-0, post-fix shape pass, multiple hidden actions).
+
+**Bad shape** (pre-v0.57.46):
+```html
+<div class="opacity-0 group-hover:opacity-100">
+  <button aria-label="Remove card">×</button>   <!-- invisible on touch ✗ -->
+</div>
+```
+
+**Good shape** (post-v0.57.46):
+```html
+<div class="opacity-60 group-hover:opacity-100 group-focus-within:opacity-100">
+  <button aria-label="Remove card">×</button>
+</div>
+```
+
+Notes on the detection rule:
+- **Alpine conditional ancestors** (`x-show` / `x-if` / `x-cloak`)
+  are treated as orchestrated reveals and skipped. A "Close panel"
+  button inside `x-show="open"` is perfectly valid.
+- **Non-primary-action labels** (Submit, Save, Continue) are not
+  targets of this gate — hover-only reveal on those is a separate
+  design concern.
+- **Missing `aria-label`** means the button can't be classified;
+  the gate is silent (absent accessibility-label is handled by a
+  separate concern).
+
+---
+
 ## Adding a new invariant
 
 If you find a new class of card-safety regression:

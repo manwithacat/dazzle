@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.47] - 2026-04-18
+
+### Added
+- **INV-9: Primary actions must be reachable without pointer hover.** New `find_hidden_primary_actions(html)` scanner in `src/dazzle/testing/ux/contract_checker.py` flags buttons (or `<a role="button">`) whose `aria-label` matches `Remove|Delete|Dismiss|Close|Archive|Unarchive|Disable|Deactivate|Revoke` and which live inside an `opacity-0 group-hover:opacity-100` ancestor (or equivalent) without a non-hover reveal (`focus-within:opacity-*`, `focus:opacity-*`, etc.). Alpine-conditional ancestors (`x-show`/`x-if`/`x-cloak`) are treated as orchestrated reveals and skipped. Wired into `check_contract` for `WorkspaceContract` and `DetailViewContract` — same dispatch point as INV-1 and INV-2. Catches exactly the #799 pattern that reached production before v0.57.46's hand-fix.
+- 10 regression tests in `tests/unit/test_ux_contract_checker.py::TestFindHiddenPrimaryActions` covering: opacity-0 hover-only detection, focus-within reveal, always-visible, Alpine modal skip, non-primary-action labels, link-button role, missing aria-label, button-level opacity-0, post-v0.57.46 fix shape (confirms our fix passes the gate), and multiple hidden actions.
+- `docs/reference/card-safety-invariants.md` extended with INV-9 section (rule, why, enforcement, bad/good shapes, notes on Alpine skip and non-primary labels). Meta-test `test_card_safety_invariants.py` registers 3 INV-9 enforcers.
+
+### Agent Guidance
+- **When adding a destructive/state-changing button** (Remove/Delete/Dismiss/…), don't wrap it in `opacity-0 group-hover:opacity-100`. Either keep it always visible (optionally low-opacity at rest, e.g. `opacity-60`), or add a focus-within reveal alongside the hover reveal. INV-9 is now CI-enforced — the contract checker fails the build on workspace or detail-view renders with hover-only primary actions.
+
+### Closes
+- Closes proposal issue #801.
+
 ## [0.57.46] - 2026-04-18
 
 ### Fixed

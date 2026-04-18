@@ -254,6 +254,141 @@ def find_duplicate_titles_in_cards(html: str) -> list[tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------------
+# Hidden primary-action gate (issue #801 — INV-9)
+# ---------------------------------------------------------------------------
+
+# A "primary action" is a destructive/state-changing button a user may
+# need to take on a customisable surface (remove a card, delete a row,
+# dismiss a notice, close a modal-less panel, …). When these are placed
+# inside an ``opacity-0 group-hover:opacity-100`` ancestor — a common
+# "keep the toolbar out of the way until the user hovers" idiom — touch
+# users can't reach them at all and keyboard users have to know to
+# hover with the pointer first. Regression gate for #799 / #801.
+import re as _re  # noqa: E402  (kept local so the top-of-file imports stay clean)
+
+_PRIMARY_ACTION_LABEL = _re.compile(
+    r"^(remove|delete|dismiss|close|archive|unarchive|disable|deactivate|revoke)\b",
+    _re.IGNORECASE,
+)
+
+# Ancestors that carry an Alpine conditional are treated as modals/
+# menus — their opacity-0 is part of an orchestrated reveal driven by
+# ``open`` state, not a hover-only affordance. Skip the gate when any
+# ancestor has one of these attrs.
+_ALPINE_CONDITIONAL_ATTRS = ("x-show", "x-if", "x-cloak")
+
+# A non-hover reveal path means keyboard/touch users can also reach
+# the action — seeing any of these alongside an opacity-0 class is
+# enough to pass the gate.
+_NON_HOVER_REVEAL_PREFIXES = (
+    "focus-within:opacity-",
+    "focus:opacity-",
+    "peer-focus:opacity-",
+    "group-focus:opacity-",
+    "group-focus-within:opacity-",
+)
+
+_HOVER_REVEAL_PREFIXES = (
+    "group-hover:opacity-",
+    "hover:opacity-",
+    "peer-hover:opacity-",
+)
+
+
+def _classify_opacity_visibility(classes: list[str], where: str) -> str | None:
+    """Return a reason string if ``classes`` contains ``opacity-0`` and
+    no non-hover reveal, or ``None`` if the action is reachable.
+    """
+    if "opacity-0" not in classes:
+        return None
+    joined = " ".join(classes)
+    if any(p in joined for p in _NON_HOVER_REVEAL_PREFIXES):
+        return None
+    if any(p in joined for p in _HOVER_REVEAL_PREFIXES):
+        return f"{where} opacity-0 revealed only on pointer hover"
+    return f"{where} opacity-0 with no reveal — permanently invisible"
+
+
+class _HiddenPrimaryActionScanner(HTMLParser):
+    """Walk the DOM and flag primary-action buttons whose visibility
+    path is pointer-hover only.
+
+    Exposed via :func:`find_hidden_primary_actions`. Same tag-stack
+    shape as :class:`_NestedChromeScanner` — keeps the scanner family
+    consistent for future maintainers.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._stack: list[tuple[str, dict[str, str | None]]] = []
+        self.hidden: list[tuple[str, str]] = []
+
+    @staticmethod
+    def _is_primary_action(tag: str, attrs_map: dict[str, str | None]) -> bool:
+        aria = attrs_map.get("aria-label") or ""
+        if not aria or not _PRIMARY_ACTION_LABEL.match(aria.strip()):
+            return False
+        if tag == "button":
+            return True
+        return tag == "a" and attrs_map.get("role") == "button"
+
+    def _under_alpine_conditional(self) -> bool:
+        for _tag, attrs in self._stack:
+            if any(a in attrs for a in _ALPINE_CONDITIONAL_ATTRS):
+                return True
+        return False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _NestedChromeScanner._VOID:
+            return
+        attrs_map = dict(attrs)
+        if self._is_primary_action(tag, attrs_map) and not self._under_alpine_conditional():
+            reason = self._classify(attrs_map)
+            if reason:
+                label = (attrs_map.get("aria-label") or "").strip()
+                self.hidden.append((label, reason))
+        self._stack.append((tag, attrs_map))
+
+    def handle_endtag(self, tag: str) -> None:
+        while self._stack and self._stack[-1][0] != tag:
+            self._stack.pop()
+        if self._stack:
+            self._stack.pop()
+
+    def _classify(self, btn_attrs: dict[str, str | None]) -> str | None:
+        btn_classes = (btn_attrs.get("class") or "").split()
+        direct = _classify_opacity_visibility(btn_classes, "button itself")
+        if direct:
+            return direct
+        for ancestor_tag, attrs in reversed(self._stack):
+            classes = (attrs.get("class") or "").split()
+            reason = _classify_opacity_visibility(classes, f"<{ancestor_tag}> ancestor")
+            if reason:
+                return reason
+        return None
+
+
+def find_hidden_primary_actions(html: str) -> list[tuple[str, str]]:
+    """Return ``(aria_label, reason)`` for each primary-action button
+    whose only visibility path is pointer hover (or no reveal at all).
+
+    A primary action is a button (or ``<a role="button">``) whose
+    ``aria-label`` starts with Remove / Delete / Dismiss / Close /
+    Archive / Unarchive / Disable / Deactivate / Revoke. A result of
+    ``[]`` means every such action on the page is reachable by
+    keyboard or touch users. Gate for #799 / #801 (INV-9).
+
+    Alpine conditional containers (``x-show`` / ``x-if`` / ``x-cloak``)
+    are treated as orchestrated reveals and their ``opacity-0`` is not
+    flagged — the gate targets the "keep the toolbar hidden until the
+    user hovers the parent card" idiom specifically.
+    """
+    scanner = _HiddenPrimaryActionScanner()
+    scanner.feed(html)
+    return scanner.hidden
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -520,6 +655,21 @@ def check_contract(contract: Contract, html: str) -> Contract:
                 f"Nested card chrome detected — a rounded+bordered/background "
                 f"element has an ancestor with the same chrome: {pairs}{more}. "
                 f"Card chrome must live on exactly one layer."
+            )
+
+        # Hidden primary-action gate (INV-9, issue #801) — flags
+        # Remove/Delete/Dismiss/… buttons whose only visibility path
+        # is pointer hover, which locks out touch users and hurts
+        # keyboard discoverability.
+        hidden = find_hidden_primary_actions(html)
+        if hidden:
+            pairs = ", ".join(f'"{label}" ({reason[:60]})' for label, reason in hidden[:3])
+            more = f" (+ {len(hidden) - 3} more)" if len(hidden) > 3 else ""
+            errors.append(
+                f"Hover-only primary actions detected — {pairs}{more}. "
+                f"Primary actions (Remove/Delete/Dismiss/…) must be reachable "
+                f"without pointer hover — add focus-within:opacity-* or keep "
+                f"the element always visible."
             )
 
     if errors:

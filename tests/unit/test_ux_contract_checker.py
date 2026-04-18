@@ -471,3 +471,123 @@ class TestFindDuplicateTitlesInCards:
             "</div></div></article></div>"
         )
         assert find_duplicate_titles_in_cards(after_fix_html) == []
+
+
+class TestFindHiddenPrimaryActions:
+    """Gate on issue #801 / #799: primary actions (Remove/Delete/…)
+    whose only visibility path is pointer hover are inaccessible on
+    touch and hard to discover with a keyboard. Scanner flags them.
+    """
+
+    def test_opacity_zero_hover_only_is_flagged(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-0 group-hover:opacity-100">'
+            '<button aria-label="Remove card">x</button>'
+            "</div>"
+        )
+        hidden = find_hidden_primary_actions(html)
+        assert len(hidden) == 1
+        assert hidden[0][0] == "Remove card"
+        assert "hover" in hidden[0][1]
+
+    def test_focus_within_reveal_not_flagged(self) -> None:
+        # Adding `focus-within:opacity-100` means keyboard users can
+        # reveal the toolbar by tabbing into any child — acceptable.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-0 group-hover:opacity-100 focus-within:opacity-100">'
+            '<button aria-label="Remove card">x</button>'
+            "</div>"
+        )
+        assert find_hidden_primary_actions(html) == []
+
+    def test_always_visible_not_flagged(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = '<div><button aria-label="Delete item">x</button></div>'
+        assert find_hidden_primary_actions(html) == []
+
+    def test_alpine_modal_not_flagged(self) -> None:
+        # Alpine conditional ancestors (x-show/x-if/x-cloak) are
+        # orchestrated reveals, not hover-only affordances.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div x-show="open" class="opacity-0"><button aria-label="Close panel">x</button></div>'
+        )
+        assert find_hidden_primary_actions(html) == []
+
+    def test_non_primary_action_not_flagged(self) -> None:
+        # "Submit" / "Save" / "Continue" are not destructive primary
+        # actions — hover-only reveal is a separate design concern.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-0 group-hover:opacity-100">'
+            '<button aria-label="Submit form">ok</button>'
+            "</div>"
+        )
+        assert find_hidden_primary_actions(html) == []
+
+    def test_link_button_role_matches(self) -> None:
+        # An <a role="button"> that behaves as a button must be
+        # treated the same as a <button>.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-0 group-hover:opacity-100">'
+            '<a role="button" aria-label="Delete entry">x</a>'
+            "</div>"
+        )
+        hidden = find_hidden_primary_actions(html)
+        assert len(hidden) == 1
+        assert hidden[0][0] == "Delete entry"
+
+    def test_button_without_aria_label_not_flagged(self) -> None:
+        # Can't classify without aria-label. This is a separate
+        # accessibility concern (missing label) handled elsewhere.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = '<div class="opacity-0 group-hover:opacity-100"><button>x</button></div>'
+        assert find_hidden_primary_actions(html) == []
+
+    def test_opacity_zero_on_button_itself(self) -> None:
+        # The button carries opacity-0 directly — same class of problem.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<button class="opacity-0 group-hover:opacity-100" aria-label="Remove card">x</button>'
+        )
+        hidden = find_hidden_primary_actions(html)
+        assert len(hidden) == 1
+        assert "button itself" in hidden[0][1]
+
+    def test_post_799_fix_shape_passes(self) -> None:
+        # Exact shape the v0.57.46 fix landed: opacity-60 baseline +
+        # group-focus-within reveal. Must NOT be flagged.
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-60 group-hover:opacity-100 group-focus-within:opacity-100">'
+            '<button aria-label="Remove card">x</button>'
+            "</div>"
+        )
+        assert find_hidden_primary_actions(html) == []
+
+    def test_multiple_hidden_actions_all_reported(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_hidden_primary_actions
+
+        html = (
+            '<div class="opacity-0 group-hover:opacity-100">'
+            '<button aria-label="Remove one">a</button>'
+            '<button aria-label="Delete two">b</button>'
+            '<button aria-label="Archive three">c</button>'
+            "</div>"
+        )
+        hidden = find_hidden_primary_actions(html)
+        assert len(hidden) == 3
+        labels = {h[0] for h in hidden}
+        assert labels == {"Remove one", "Delete two", "Archive three"}
