@@ -154,8 +154,15 @@ def run_interaction_walk(
         )
         return EXIT_SETUP_FAILURE
 
+    # Read the shared test-mode secret from runtime.json (written by
+    # `dazzle serve` in test mode). The /__test__/authenticate
+    # endpoint requires the X-Test-Secret header match this value,
+    # otherwise it rejects with 403. See #790.
+    from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+
     try:
         with launch_interaction_server(project_root) as conn:
+            test_secret = read_runtime_test_secret(project_root) or ""
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=headless)
                 context = browser.new_context()
@@ -166,7 +173,9 @@ def run_interaction_walk(
                     # harness lands on /login, sees no layout JSON, and
                     # reports "no cards" (false setup-failure).
                     if persona:
-                        _authenticate_persona_on_context(context, conn.site_url, persona)
+                        _authenticate_persona_on_context(
+                            context, conn.site_url, persona, test_secret=test_secret
+                        )
 
                     page = context.new_page()
                     page.goto(conn.site_url + "/app", timeout=15_000)
@@ -218,7 +227,9 @@ def run_interaction_walk(
     return EXIT_PASS if all(r.passed for r in results) else EXIT_REGRESSION
 
 
-def _authenticate_persona_on_context(context: Any, site_url: str, persona: str) -> None:
+def _authenticate_persona_on_context(
+    context: Any, site_url: str, persona: str, test_secret: str = ""
+) -> None:
     """Log the Playwright browser in as ``persona`` by installing the
     session cookie on the ``BrowserContext`` BEFORE any navigation.
 
@@ -226,6 +237,12 @@ def _authenticate_persona_on_context(context: Any, site_url: str, persona: str) 
     ``HtmxClient.authenticate`` already uses for contract tests —
     reuse its protocol. Requires ``test_mode`` enabled on the server,
     which ``dazzle serve --local`` does by default.
+
+    The endpoint also requires an ``X-Test-Secret`` header matching
+    the server's generated per-run secret (#790). We read the value
+    from ``runtime.json`` via
+    :func:`dazzle.cli.runtime_impl.ports.read_runtime_test_secret`
+    and pass it here. Without the header, the endpoint returns 403.
 
     Installing the cookie at the context level means the first
     ``page.goto("/app")`` is authenticated — avoiding the redirect to
@@ -239,11 +256,16 @@ def _authenticate_persona_on_context(context: Any, site_url: str, persona: str) 
     """
     import httpx
 
+    headers: dict[str, str] = {}
+    if test_secret:
+        headers["X-Test-Secret"] = test_secret
+
     try:
         with httpx.Client() as client:
             resp = client.post(
                 f"{site_url}/__test__/authenticate",
                 json={"role": persona, "username": persona},
+                headers=headers,
                 timeout=10,
             )
     except Exception as exc:

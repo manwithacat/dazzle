@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.57] - 2026-04-18
+
+### Fixed
+- **INTERACTION_WALK: pass X-Test-Secret to /__test__/authenticate.** v0.57.56's diagnostics pinpointed the auth failure: `/__test__/authenticate returned HTTP 403 (body: '{"detail":"Invalid or missing X-Test-Secret header"}')`. The endpoint requires the per-run secret that `dazzle serve` generates in test mode (#790). `HtmxClient.authenticate` already reads `DAZZLE_TEST_SECRET` from env, but our harness was running in the same process as `launch_interaction_server` where that env var is set ONLY inside the subprocess.
+- `run_interaction_walk` now reads the secret from the server's `runtime.json` via `read_runtime_test_secret(project_root)` (the helper added in #790) and passes it as `test_secret` to `_authenticate_persona_on_context`. The helper attaches the `X-Test-Secret` header on the POST to `/__test__/authenticate`. Diagnostic messages retained so any future auth-path change surfaces with a clear signal rather than a generic "no cards" error.
+
 ## [0.57.56] - 2026-04-18
 
 ### Changed
