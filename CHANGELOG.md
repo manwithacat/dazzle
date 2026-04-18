@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.52] - 2026-04-18
+
+### Added
+- **Non-blocking CI job for INTERACTION_WALK (step 6 of #800).** New `interaction-walks` job in `.github/workflows/ci.yml` spins up a Postgres service, installs Playwright chromium, and runs `dazzle ux verify --interactions --headless` from `examples/support_tickets` with a shell-level retry loop (up to 3 attempts, 5s backoff) to absorb Playwright-over-HTMX flake. `continue-on-error: true` so early-signal noise doesn't red the build — this stays on for the signal-gathering window, then ratchets to blocking per step 7 of the design doc. Timeout: 8 minutes per attempt.
+
+### Agent Guidance
+- **Interaction-walk flakes in CI are expected early.** The `continue-on-error: true` guard is load-bearing during the signal-gathering window — don't remove it to chase a single red run. After 2–3 weeks of data (step 7), evaluate the flake rate and ratchet to blocking by flipping the flag.
+- **Adding a new walk**: the CI job drives `dazzle ux verify --interactions` which picks the first card + first catalog region (see `_build_default_walk` in `cli/ux_interactions.py`). New walks get exercised automatically as long as they register themselves via the default-walk builder. No CI edit needed for new walk types.
+
 ## [0.57.51] - 2026-04-18
 
 ### Added
