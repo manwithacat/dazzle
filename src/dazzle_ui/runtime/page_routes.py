@@ -1223,6 +1223,7 @@ async def _workspace_handler(
         nav_items=visible_nav,
         nav_groups=ws_groups,
         app_name=ws_app_name,
+        page_title=ws_title,
         current_route=effective_route,
         is_authenticated=is_authenticated,
         user_email=user_email,

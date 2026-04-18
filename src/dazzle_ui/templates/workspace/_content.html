@@ -1,9 +1,14 @@
 {# Layout JSON embedded as a data island (#635) #}
 <script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
 <div class="p-4" x-data="dzDashboardBuilder()">
-  {% if workspace.purpose %}
-  <p class="text-[13px] leading-[18px] text-[hsl(var(--muted-foreground))] mb-4">{{ workspace.purpose }}</p>
-  {% endif %}
+  {# Workspace heading — title, not purpose. `purpose:` is developer
+     intent (e.g. "Personal dashboard for support agents") and leaks
+     into user-facing copy when rendered verbatim, with no awareness
+     of who's viewing it. See #805. Title (the DSL's first positional
+     string) is the user-facing name. #}
+  <h2 class="text-[17px] font-medium leading-[24px] tracking-[-0.01em] text-[hsl(var(--foreground))] mb-4">
+    {{ workspace.title or workspace.name.replace('_', ' ').title() }}
+  </h2>
 
   {% if workspace.context_options_url %}
   <div class="mb-4 flex items-center gap-2">
@@ -148,7 +153,8 @@
                              hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
                              transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
                       aria-label="Remove card">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span class="sr-only">Remove card</span>
               </button>
             </div>
           </div>

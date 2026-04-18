@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.76] - 2026-04-19
+
+### Fixed
+- **Workspace heading drift and browser tab title (#805).** Workspaces were rendering `workspace.purpose` (an internal developer-intent string like *"Personal dashboard for support agents"*) as the user-facing heading, which read oddly when a manager landed on an agent's workspace. Replaced the purpose paragraph with a proper `<h2>` showing `workspace.title` (falling back to a humanised `workspace.name`). Also pass `page_title=ws_title` through to `workspace/workspace.html` so the browser tab title matches the visible heading instead of just the app name.
+- **Empty button labels for icon-only controls (#806).** Three icon-only buttons (remove card, expand sidebar, collapse sidebar, dark-mode toggle in top nav) had `aria-label` but no visible or `sr-only` text — making them invisible to `textContent` scrapers including agent-driven QA harnesses. Added `<span class="sr-only">` inside each, keeping the `aria-label` for redundancy. Also added `aria-hidden="true"` to the remove-card svg for consistency with the pattern used elsewhere.
+
 ## [0.57.75] - 2026-04-19
 
 ### Fixed
