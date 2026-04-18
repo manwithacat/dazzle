@@ -40,6 +40,12 @@ from dazzle.qa.server import AppConnection
 # ``AppConnection`` themselves.
 _RUNTIME_POLL_TIMEOUT_SECONDS = 45.0
 _RUNTIME_POLL_INTERVAL_SECONDS = 0.3
+# The server writes runtime.json slightly BEFORE its uvicorn worker
+# is actually accepting TCP connections. Playwright's page.goto()
+# immediately hits ERR_CONNECTION_REFUSED if we don't wait. Poll the
+# UI root until it answers 200 before yielding.
+_HEALTH_POLL_TIMEOUT_SECONDS = 30.0
+_HEALTH_POLL_INTERVAL_SECONDS = 0.3
 
 
 class InteractionServerError(RuntimeError):
@@ -65,6 +71,47 @@ def _wait_for_runtime_file(project_root: Path, timeout: float) -> Path:
     raise InteractionServerError(
         f"dazzle serve did not write {runtime_path} within {timeout:.0f}s. "
         f"Check the subprocess's stderr for crash/import errors."
+    )
+
+
+def _wait_for_server_ready(site_url: str, timeout: float) -> None:
+    """Poll ``site_url`` until it accepts HTTP connections, or timeout.
+
+    The server writes ``runtime.json`` slightly before uvicorn is
+    actually bound to the port — Playwright's ``page.goto`` hits
+    ``ERR_CONNECTION_REFUSED`` in that window. Poll here until the
+    root URL answers (any 2xx/3xx/4xx counts as "listening") so the
+    caller can safely navigate.
+
+    Raises :class:`InteractionServerError` if nothing listens after
+    ``timeout`` seconds.
+    """
+    try:
+        import httpx
+    except ImportError as exc:  # pragma: no cover — httpx is in core deps
+        raise InteractionServerError(
+            "httpx not installed — required for server readiness polling"
+        ) from exc
+
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            with httpx.Client(timeout=2.0) as client:
+                resp = client.get(site_url, follow_redirects=False)
+                # Any response (including 3xx redirect or 4xx auth
+                # gate) means the server is bound and accepting
+                # connections. That's all we need to avoid the
+                # ``ERR_CONNECTION_REFUSED`` race.
+                if resp.status_code < 500:
+                    return
+        except Exception as exc:  # ConnectError, ConnectTimeout, etc.
+            last_error = exc
+        time.sleep(_HEALTH_POLL_INTERVAL_SECONDS)
+    raise InteractionServerError(
+        f"Server at {site_url} did not accept connections within "
+        f"{timeout:.0f}s (last error: {last_error!r}). The runtime.json "
+        f"was written but uvicorn never bound to the port."
     )
 
 
@@ -131,6 +178,9 @@ def launch_interaction_server(
         # Promote the external connection to an owned one so teardown
         # terminates the subprocess via AppConnection.stop().
         conn.process = proc
+        # Wait for the TCP port to actually accept connections —
+        # runtime.json is written slightly before uvicorn binds.
+        _wait_for_server_ready(conn.site_url, timeout=_HEALTH_POLL_TIMEOUT_SECONDS)
         yield conn
     finally:
         # AppConnection.stop() handles terminate + wait + kill with

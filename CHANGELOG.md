@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.54] - 2026-04-18
+
+### Fixed
+- **INTERACTION_WALK server fixture: add TCP-ready probe.** Second CI run of `interaction-walks` (v0.57.53) got past the playwright install but hit `Page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:<port>/app` on all 3 retry attempts. Root cause: `launch_interaction_server` polled for `.dazzle/runtime.json` to appear, then yielded — but the server writes that file slightly before uvicorn finishes binding to the port. Playwright's `page.goto()` raced the uvicorn bind and lost.
+- Added `_wait_for_server_ready(site_url, timeout)` in `src/dazzle/testing/ux/interactions/server_fixture.py` that polls the site URL via `httpx.Client` until any response < 500 is received (2xx/3xx/4xx all count as "listening"; 5xx means a real server issue). Runs after `_wait_for_runtime_file` succeeds, before yielding the `AppConnection`. 30s timeout, 300ms poll interval. Raises `InteractionServerError` on timeout (exit code 2 in the CLI — distinguishable from test regressions).
+- 3 regression tests in `tests/unit/test_interaction_server_fixture.py::TestServerReadinessProbe` pin the behaviour: returns on 200, returns on 403 (auth redirect counts), raises on timeout when every connect refuses. The existing tests (which don't bind a real TCP port) autouse-stub the probe to a no-op so they don't hang.
+
 ## [0.57.53] - 2026-04-18
 
 ### Fixed

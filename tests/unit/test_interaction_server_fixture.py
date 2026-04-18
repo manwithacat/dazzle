@@ -22,6 +22,9 @@ from dazzle.testing.ux.interactions.server_fixture import (
     InteractionServerError,
     launch_interaction_server,
 )
+from dazzle.testing.ux.interactions.server_fixture import (
+    _wait_for_server_ready as _real_wait_for_server_ready,
+)
 
 
 @pytest.fixture
@@ -29,6 +32,22 @@ def fake_project(tmp_path: Path) -> Path:
     """Build a directory that looks like a Dazzle project root."""
     (tmp_path / "dazzle.toml").write_text("[app]\nname = 'test'\n")
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def stub_server_readiness(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip the real HTTP readiness probe in all tests by default.
+
+    The fixture patches ``_wait_for_server_ready`` to a no-op so the
+    existing tests (which don't actually bind a TCP port) don't hang
+    polling a non-existent server. Tests that specifically cover the
+    readiness-probe behaviour opt out by re-patching it inside their
+    own scope.
+    """
+    monkeypatch.setattr(
+        "dazzle.testing.ux.interactions.server_fixture._wait_for_server_ready",
+        lambda *args, **kwargs: None,
+    )
 
 
 def _write_runtime_json(project_root: Path, ui_url: str, api_url: str) -> None:
@@ -187,3 +206,75 @@ class TestTeardown:
         # Since the process had already exited, terminate() should NOT
         # be called — the guard on poll() covers this.
         fake_proc.terminate.assert_not_called()
+
+
+class TestServerReadinessProbe:
+    """Covers the health-check polling added to unblock the v0.57.52
+    CI failure (Playwright hit ERR_CONNECTION_REFUSED because
+    runtime.json was written before uvicorn bound its port).
+    """
+
+    def test_returns_when_http_responds(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Opt out of the autouse stub so the real function runs.
+        from dazzle.testing.ux.interactions import server_fixture as sf
+
+        monkeypatch.setattr(
+            "dazzle.testing.ux.interactions.server_fixture._wait_for_server_ready",
+            _real_wait_for_server_ready,
+        )
+
+        fake_client = MagicMock()
+        fake_response = MagicMock()
+        fake_response.status_code = 200
+        fake_client.__enter__ = MagicMock(return_value=fake_client)
+        fake_client.__exit__ = MagicMock(return_value=False)
+        fake_client.get = MagicMock(return_value=fake_response)
+
+        with patch(
+            "httpx.Client",
+            return_value=fake_client,
+        ):
+            # Should return promptly, no exception.
+            sf._wait_for_server_ready("http://localhost:9999", timeout=1.0)
+
+    def test_raises_on_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from dazzle.testing.ux.interactions import server_fixture as sf
+
+        monkeypatch.setattr(
+            "dazzle.testing.ux.interactions.server_fixture._wait_for_server_ready",
+            _real_wait_for_server_ready,
+        )
+        monkeypatch.setattr(
+            "dazzle.testing.ux.interactions.server_fixture._HEALTH_POLL_INTERVAL_SECONDS",
+            0.01,
+        )
+
+        fake_client = MagicMock()
+        fake_client.__enter__ = MagicMock(return_value=fake_client)
+        fake_client.__exit__ = MagicMock(return_value=False)
+        fake_client.get = MagicMock(side_effect=ConnectionError("refused"))
+
+        with patch("httpx.Client", return_value=fake_client):
+            with pytest.raises(InteractionServerError, match="did not accept connections"):
+                sf._wait_for_server_ready("http://localhost:9999", timeout=0.1)
+
+    def test_4xx_counts_as_listening(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A 401/403/404 means the server is bound and answering —
+        # Playwright can goto, even if the content redirects to login.
+        from dazzle.testing.ux.interactions import server_fixture as sf
+
+        monkeypatch.setattr(
+            "dazzle.testing.ux.interactions.server_fixture._wait_for_server_ready",
+            _real_wait_for_server_ready,
+        )
+
+        fake_client = MagicMock()
+        fake_response = MagicMock()
+        fake_response.status_code = 403
+        fake_client.__enter__ = MagicMock(return_value=fake_client)
+        fake_client.__exit__ = MagicMock(return_value=False)
+        fake_client.get = MagicMock(return_value=fake_response)
+
+        with patch("httpx.Client", return_value=fake_client):
+            # Returns without exception.
+            sf._wait_for_server_ready("http://localhost:9999", timeout=1.0)
