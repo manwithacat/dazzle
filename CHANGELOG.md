@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.46] - 2026-04-18
+
+### Fixed
+- **Workspace dashboard: drag-and-drop doesn't move cards (#797).** Two likely root causes addressed:
+  1. **Silent listener-install skip in `init()`.** The dashboard-builder component's `init()` used to return early if the `#dz-workspace-layout` script tag was missing or its JSON was malformed — BEFORE the keyboard and pointer listeners were registered. Any edge case in the layout payload would silently disable drag/keyboard interaction. Reordered so listeners always install; JSON parse failure now leaves listeners in place.
+  2. **Nested-property mutation may miss Alpine's effect tree.** `onPointerMoveDrag` used to mutate `this.drag.currentX`, `this.drag.currentY`, `this.drag.phase` in-place. The `:style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"` binding re-evaluates via `dragTransform`, which reads `this.drag.currentX/currentY`. In some Alpine configurations deep-proxy reactivity doesn't propagate cleanly through multiple nested reads — rewrote the handler to build a new `drag` object and assign via top-level `this.drag = nextDrag`, so the effect tree always sees the change.
+- **Workspace dashboard: 'Add Card' renders skeleton without firing region data fetch (#798).** The newly-appended card body uses `hx-trigger="intersect once"`, which only fires on viewport-entry events — a freshly-added card that's already in the viewport never triggers the fetch. `addCard` now imperatively fires the region fetch via `htmx.ajax('GET', url, {target, swap})` after `htmx.process()` has registered the hx-* attrs.
+- **Workspace dashboard: remove-card button invisible on touch + hard to reach by keyboard (#799).** Changed the action cluster from `opacity-0 group-hover:opacity-100` to `opacity-60 group-hover:opacity-100 group-focus-within:opacity-100` — the X remains discoverable at rest (touch + keyboard users can see it), fades up on hover or focus-within.
+
+### Agent Guidance
+- **Dashboard-builder listener lifecycle**: register pointer/keyboard listeners BEFORE the layout-JSON parse in `init()`. Listener installation should be lifecycle-driven, not data-driven — decoupling them avoids silent-skip bugs.
+- **Alpine reactivity**: for state objects whose nested properties drive bindings (e.g. drag/resize state driving `:style`), prefer top-level reassignment (`this.state = { ...this.state, ...patch }`) over nested mutation. It's a one-line-longer write but guarantees the effect tree sees the change.
+- **HTMX dynamically-added elements**: calling `htmx.process(el)` registers the hx-* attributes but does NOT trigger `intersect once`. If the element is already in the viewport when added, imperatively fire the fetch via `htmx.ajax()` — the intersect-once trigger is one-shot and is designed for elements that enter the viewport, not for elements that arrive already inside it.
+
 ## [0.57.45] - 2026-04-18
 
 ### Added

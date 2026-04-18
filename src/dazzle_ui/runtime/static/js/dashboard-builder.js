@@ -39,18 +39,11 @@ document.addEventListener("alpine:init", () => {
 
     // ── Init ──
     init() {
-      const el = document.getElementById("dz-workspace-layout");
-      if (!el) return;
-      try {
-        const data = JSON.parse(el.textContent);
-        this.cards = data.cards || [];
-        this.catalog = data.catalog || [];
-        this.workspaceName = data.workspace_name || "";
-      } catch {
-        return;
-      }
-
-      // Keyboard shortcuts
+      // Register keyboard + pointer listeners FIRST (issue #797): if the
+      // layout-JSON parse below failed for any reason, the early return
+      // used to skip listener installation entirely, leaving drag/resize
+      // dead. Lifecycle is driven by the Alpine component, not the data
+      // load, so decouple them.
       this._onKeydown = this._handleKeydown.bind(this);
       document.addEventListener("keydown", this._onKeydown);
 
@@ -70,6 +63,18 @@ document.addEventListener("alpine:init", () => {
       };
       window.addEventListener("pointermove", this._onPointerMove);
       window.addEventListener("pointerup", this._onPointerUp);
+
+      const el = document.getElementById("dz-workspace-layout");
+      if (!el) return;
+      try {
+        const data = JSON.parse(el.textContent);
+        this.cards = data.cards || [];
+        this.catalog = data.catalog || [];
+        this.workspaceName = data.workspace_name || "";
+      } catch {
+        // Leave listeners in place — the user can still drag / keyboard-
+        // edit a stale layout even if the JSON payload was malformed.
+      }
     },
 
     destroy() {
@@ -170,7 +175,24 @@ document.addEventListener("alpine:init", () => {
         const cardEl = this.$el.querySelector(
           '[data-card-id="' + nextId + '"]',
         );
-        if (cardEl) htmx.process(cardEl);
+        if (!cardEl) return;
+        htmx.process(cardEl);
+
+        // The region body uses hx-trigger="intersect once" which only
+        // fires on viewport-entry events. A freshly-appended card that's
+        // already inside the viewport never gets that event, so the
+        // hx-get stays pending forever and the user sees a permanent
+        // skeleton. Imperatively kick off the fetch here (issue #798).
+        const bodyEl = cardEl.querySelector("[id^='region-'][hx-get]");
+        if (bodyEl) {
+          const url = bodyEl.getAttribute("hx-get");
+          if (url) {
+            htmx.ajax("GET", url, {
+              target: "#" + bodyEl.id,
+              swap: "innerHTML",
+            });
+          }
+        }
       });
     },
 
@@ -238,19 +260,34 @@ document.addEventListener("alpine:init", () => {
 
     onPointerMoveDrag(e) {
       if (!this.drag) return;
-      this.drag.currentX = e.clientX;
-      this.drag.currentY = e.clientY;
+
+      // Update cursor position via top-level assignment so Alpine's
+      // :style binding on the card (which reads drag.currentX/Y
+      // through dragTransform) re-evaluates. Nested-property
+      // mutation (this.drag.currentX = ...) can be missed by the
+      // effect tree under certain Alpine configurations — pinning
+      // reactivity to the top-level `this.drag` write is defensive
+      // and costs one object spread per move (issue #797).
+      let nextDrag = {
+        ...this.drag,
+        currentX: e.clientX,
+        currentY: e.clientY,
+      };
 
       // Phase transition: pressed → dragging (4px threshold)
-      if (this.drag.phase === "pressed") {
-        const dx = e.clientX - this.drag.startX;
-        const dy = e.clientY - this.drag.startY;
-        if (Math.sqrt(dx * dx + dy * dy) < 4) return;
+      if (nextDrag.phase === "pressed") {
+        const dx = e.clientX - nextDrag.startX;
+        const dy = e.clientY - nextDrag.startY;
+        if (Math.sqrt(dx * dx + dy * dy) < 4) {
+          this.drag = nextDrag;
+          return;
+        }
         this._pushUndo();
-        this.drag.phase = "dragging";
+        nextDrag = { ...nextDrag, phase: "dragging" };
         document.body.classList.add("select-none");
       }
 
+      this.drag = nextDrag;
       if (this.drag.phase !== "dragging") return;
 
       // Find which card the pointer is over (by midpoint comparison)

@@ -132,7 +132,12 @@
             <h3 :id="'card-title-' + card.id"
                 class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
                 x-text="card.title"></h3>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-[80ms]">
+            {# Primary actions stay visible (issue #799): opacity-60 at rest so
+               they're discoverable on touch and via keyboard focus, fading up
+               to full on mouse hover or any focus within the card. The old
+               pattern (opacity-0 + group-hover only) made the remove button
+               invisible to touch users and anyone doing keyboard navigation. #}
+            <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[80ms]">
               <button @click.stop="removeCard(card.id)"
                       class="h-6 w-6 flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))]
                              hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
