@@ -153,11 +153,22 @@
             </div>
           </div>
 
-          {# Card body — HTMX lazy-loaded region content #}
+          {# Card body — HTMX-loaded region content.
+             hx-trigger "load" fires as soon as HTMX processes the
+             element (works for both initial page load AND dynamic
+             addCard). The original "intersect once" trigger only
+             fires on viewport-entry events and never triggers for
+             an element that's already in-viewport at observation
+             time (the #798 symptom). We keep `intersect once` as a
+             fallback for cards that scroll into view from off-
+             screen, but "load" is the primary trigger now.
+             See issues #798 and the v0.57.58/59 interaction-walk
+             diagnosis that showed the JS-level imperative kickoff
+             wasn't reliable across Alpine + x-for re-renders. #}
           <div class="px-4 pb-4"
                :id="'region-' + card.region + '-' + card.id"
                :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
-               hx-trigger="intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+               hx-trigger="load, intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
                hx-swap="innerHTML">
             {# Skeleton loading state #}
             <div class="space-y-3 py-2 animate-pulse">

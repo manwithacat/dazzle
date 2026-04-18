@@ -171,37 +171,20 @@ document.addEventListener("alpine:init", () => {
       this.showPicker = false;
       this._markDirty();
 
-      // Double $nextTick: the first tick lets Alpine expand the
-      // x-for template to produce the new <div :data-card-id> + its
-      // inner region body; the second tick guarantees :id / :hx-get
-      // bindings have been evaluated and written to the DOM.
-      // Interaction-walk run (v0.57.58) showed single $nextTick
-      // wasn't enough — bodyEl was found but the fetch still didn't
-      // fire. Also construct the URL directly from the region name
-      // (don't rely on Alpine's :hx-get binding having landed) so
-      // the kickoff is independent of Alpine's render timing
-      // entirely. See issue #798 and the v0.57.58 CI walk report.
+      // Let Alpine expand the x-for, then have HTMX register the
+      // hx-* attributes on the new card. The `hx-trigger="load, ..."`
+      // in _content.html (added v0.57.60) fires the region fetch as
+      // soon as htmx.process() scans the element — no imperative
+      // kickoff needed. The v0.57.58/59 attempts to call htmx.ajax
+      // manually from here were fragile (Alpine binding race on
+      // :id / :hx-get, silent early-return when bodyEl wasn't yet
+      // in the DOM). Declaring the trigger on the element itself
+      // moves the responsibility back to HTMX, where it belongs.
       this.$nextTick(() => {
-        this.$nextTick(() => {
-          const cardEl = this.$el.querySelector(
-            '[data-card-id="' + nextId + '"]',
-          );
-          if (!cardEl) return;
-          htmx.process(cardEl);
-
-          // Direct URL construction — same format as _content.html's
-          // :hx-get binding, but evaluated here so we don't race
-          // Alpine's binding-evaluation pass.
-          const bodyId = "region-" + regionName + "-" + nextId;
-          const bodyEl = document.getElementById(bodyId);
-          if (!bodyEl) return;
-          const url =
-            "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
-          htmx.ajax("GET", url, {
-            target: "#" + bodyId,
-            swap: "innerHTML",
-          });
-        });
+        const cardEl = this.$el.querySelector(
+          '[data-card-id="' + nextId + '"]',
+        );
+        if (cardEl) htmx.process(cardEl);
       });
     },
 

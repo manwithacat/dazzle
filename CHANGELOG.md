@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.60] - 2026-04-18
+
+### Fixed
+- **Third root-cause pass on #798 — declarative `hx-trigger="load"`.** v0.57.59's CI walk showed `sample_urls=[]` for `/api/` or `/regions/` URLs during the Add-Card window, meaning the imperative `htmx.ajax` kickoff from v0.57.58/59 wasn't firing at all (even with double `$nextTick` and direct URL construction — bodyEl was never found, or the call silently threw).
+- Structural fix: added `load` to the card body's `hx-trigger` in `workspace/_content.html`. Now the trigger reads `hx-trigger="load, intersect once, ..."`. `load` fires the moment HTMX processes the element (works for initial page load AND dynamically-added cards via addCard); `intersect once` stays as fallback for cards scrolling in from off-screen. The responsibility moved from brittle JS kickoff code back to HTMX, where it belongs.
+- Simplified `addCard` in `dashboard-builder.js` accordingly — it now just calls `htmx.process(cardEl)` in a single `$nextTick` and lets the declarative trigger do the work. Removed the double-nextTick + bodyEl lookup + direct-URL-construction code that spent three cycles failing to work correctly.
+
+### Pending
+- **#797 (card_drag) still red** — harness reports `dx=0 dy=0` under scripted gestures. Dedicated cycle needed to diagnose the Alpine proxy + pointermove dispatch path. Setting that aside as out of autonomous-cycle scope and parking it for focused investigation.
+
 ## [0.57.59] - 2026-04-18
 
 ### Fixed
