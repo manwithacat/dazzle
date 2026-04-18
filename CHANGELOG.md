@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.59] - 2026-04-18
+
+### Fixed
+- **Second root-cause pass on #798 (Add-Card region fetch).** v0.57.58's CI walk confirmed the v0.57.46 fix didn't actually land the region fetch — `body_length=13` (skeleton text) and `region_fetch_count=0` on every run. Two fixes:
+  1. **Double `$nextTick`**: the first tick lets Alpine expand the `<template x-for>` to produce the new `[data-card-id]` + its inner region body. The second tick guarantees `:id` / `:hx-get` bindings have actually been evaluated and written to the DOM. Single-tick was finding `cardEl` but not necessarily completing all attribute bindings.
+  2. **Direct URL construction**: don't read `bodyEl.getAttribute("hx-get")` (which races Alpine's binding evaluation). Construct the URL from `this.workspaceName + regionName` directly and target the body via its known id `region-{region}-{card_id}`. The kickoff is now independent of Alpine's render timing.
+- Evidence dump in `CardAddInteraction`: on a region-fetch-miss, the walk now reports up to 10 captured URLs containing `/api/` or `/regions/` in its evidence, so CI logs distinguish "fetch to wrong path" from "no fetch at all" without needing another diagnostic cycle.
+
+### Pending
+- **#797 (card_drag) remains red.** v0.57.46's defensive fixes (listener-install ordering, top-level drag-state reassignment) didn't resolve it — the harness still reports `dx=0 dy=0` under real pointer gestures. Needs deeper investigation of the Alpine proxy + pointermove dispatch path; deferred to a dedicated cycle.
+
 ## [0.57.58] - 2026-04-18
 
 ### Fixed

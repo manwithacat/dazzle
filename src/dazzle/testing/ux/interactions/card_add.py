@@ -162,6 +162,15 @@ class CardAddInteraction:
                     )
                 reason = "; ".join(parts)
 
+            # If the region fetch didn't fire, capture a filtered set
+            # of URLs we DID see (any /api/... or /regions/... path)
+            # so CI logs show what the browser actually requested.
+            # Helps distinguish "fetch to wrong path" from "no fetch
+            # at all" without adding another round-trip cycle.
+            debug_urls: list[str] = []
+            if not fetch_observed:
+                debug_urls = [u for u in captured_urls if "/api/" in u or "/regions/" in u][:10]
+
             return InteractionResult(
                 name=self.name,
                 passed=passed,
@@ -170,6 +179,7 @@ class CardAddInteraction:
                     "new_card_id": new_card_id,
                     "body_length": len(body_text.strip()),
                     "region_fetch_count": len(region_fetches),
+                    "sample_urls": debug_urls,
                 },
             )
         finally:

@@ -171,28 +171,37 @@ document.addEventListener("alpine:init", () => {
       this.showPicker = false;
       this._markDirty();
 
+      // Double $nextTick: the first tick lets Alpine expand the
+      // x-for template to produce the new <div :data-card-id> + its
+      // inner region body; the second tick guarantees :id / :hx-get
+      // bindings have been evaluated and written to the DOM.
+      // Interaction-walk run (v0.57.58) showed single $nextTick
+      // wasn't enough — bodyEl was found but the fetch still didn't
+      // fire. Also construct the URL directly from the region name
+      // (don't rely on Alpine's :hx-get binding having landed) so
+      // the kickoff is independent of Alpine's render timing
+      // entirely. See issue #798 and the v0.57.58 CI walk report.
       this.$nextTick(() => {
-        const cardEl = this.$el.querySelector(
-          '[data-card-id="' + nextId + '"]',
-        );
-        if (!cardEl) return;
-        htmx.process(cardEl);
+        this.$nextTick(() => {
+          const cardEl = this.$el.querySelector(
+            '[data-card-id="' + nextId + '"]',
+          );
+          if (!cardEl) return;
+          htmx.process(cardEl);
 
-        // The region body uses hx-trigger="intersect once" which only
-        // fires on viewport-entry events. A freshly-appended card that's
-        // already inside the viewport never gets that event, so the
-        // hx-get stays pending forever and the user sees a permanent
-        // skeleton. Imperatively kick off the fetch here (issue #798).
-        const bodyEl = cardEl.querySelector("[id^='region-'][hx-get]");
-        if (bodyEl) {
-          const url = bodyEl.getAttribute("hx-get");
-          if (url) {
-            htmx.ajax("GET", url, {
-              target: "#" + bodyEl.id,
-              swap: "innerHTML",
-            });
-          }
-        }
+          // Direct URL construction — same format as _content.html's
+          // :hx-get binding, but evaluated here so we don't race
+          // Alpine's binding-evaluation pass.
+          const bodyId = "region-" + regionName + "-" + nextId;
+          const bodyEl = document.getElementById(bodyId);
+          if (!bodyEl) return;
+          const url =
+            "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
+          htmx.ajax("GET", url, {
+            target: "#" + bodyId,
+            swap: "innerHTML",
+          });
+        });
       });
     },
 
