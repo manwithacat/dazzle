@@ -56,6 +56,14 @@ class CardAddInteraction:
                 return
             captured_urls.append(url)
 
+        # Snapshot existing card ids BEFORE the click so we can tell
+        # whether the picker actually added a new one (vs. just
+        # re-finding an existing card via max()).
+        existing_card_ids = page.evaluate(
+            "() => Array.from(document.querySelectorAll('[data-card-id]')).map(el => el.dataset.cardId)"
+        )
+        existing_set = set(existing_card_ids) if isinstance(existing_card_ids, list) else set()
+
         page.on("request", _on_request)
         try:
             try:
@@ -67,43 +75,69 @@ class CardAddInteraction:
                     reason=f"Add Card trigger not clickable: {exc}",
                 )
 
-            # Pick the entry for our target region.
-            entry = page.locator(
+            # The picker is inside an Alpine-conditional <template x-for>
+            # that's only rendered after showPicker flips to true.
+            # Alpine needs a tick to process the reactive update, then
+            # render the catalog list, then attach @click handlers.
+            # Wait for the specific entry to become visible before
+            # attempting to click it — otherwise we race Alpine and the
+            # click either no-ops or hits a stale DOM element.
+            entry_selector = (
                 f"[data-test-id='dz-card-picker-entry'][data-test-region='{self.region}']"
-            ).first
+            )
+            try:
+                page.wait_for_selector(entry_selector, state="visible", timeout=5000)
+            except Exception as exc:
+                return InteractionResult(
+                    name=self.name,
+                    passed=False,
+                    reason=(
+                        f"picker entry for region {self.region!r} never "
+                        f"became visible after clicking Add Card — is the "
+                        f"region in the workspace catalog? ({exc})"
+                    ),
+                )
+
+            entry = page.locator(entry_selector).first
             try:
                 entry.click()
             except Exception as exc:
                 return InteractionResult(
                     name=self.name,
                     passed=False,
-                    reason=(
-                        f"picker entry for region {self.region!r} not "
-                        f"clickable — is the region in the workspace "
-                        f"catalog? ({exc})"
-                    ),
+                    reason=f"picker entry click failed: {exc}",
                 )
 
             page.wait_for_timeout(self.settle_ms)
 
-            # Find the most-recently-added card: its id starts with
-            # "card-" and contains a timestamp. The dashboard builder
-            # generates ids as "card-" + Date.now(); highest Date.now()
-            # = newest.
+            # Find the card(s) that appeared AFTER our click by diffing
+            # against the pre-click snapshot. Comparing to max() over
+            # all ids was a false-positive trap — if the picker click
+            # didn't add a card, max() returned an existing (already-
+            # populated) card id and the walk silently reported a
+            # pre-existing card's state as the "new" one.
             card_ids = page.evaluate(
                 "() => Array.from(document.querySelectorAll('[data-card-id]')).map(el => el.dataset.cardId)"
             )
-            new_card_id = None
-            if isinstance(card_ids, list) and card_ids:
-                # Timestamps sort lexicographically when same width.
-                new_card_id = max(card_ids)
-
-            if not new_card_id:
+            post_set = set(card_ids) if isinstance(card_ids, list) else set()
+            added_ids = sorted(post_set - existing_set)
+            if not added_ids:
                 return InteractionResult(
                     name=self.name,
                     passed=False,
-                    reason="no card appeared after clicking picker entry",
+                    reason=(
+                        "picker click didn't add a new card — existing "
+                        "cards unchanged. The Add Card flow is broken or "
+                        "the picker entry no-op'd silently."
+                    ),
+                    evidence={
+                        "existing_cards": sorted(existing_set),
+                        "post_cards": sorted(post_set),
+                    },
                 )
+            # If more than one appeared (unlikely), pick the highest id
+            # since it has the latest Date.now() timestamp.
+            new_card_id = max(added_ids)
 
             body_text = page.locator(f"[data-card-id='{new_card_id}']").inner_text()
             body_populated = len(body_text.strip()) > _MIN_BODY_TEXT_LENGTH

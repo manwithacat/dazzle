@@ -104,6 +104,12 @@ class _StubPage:
     def wait_for_timeout(self, ms: int) -> None:
         pass
 
+    def wait_for_selector(self, selector: str, state: str = "visible", timeout: int = 0) -> Any:
+        # Real Playwright blocks until selector matches; stub just
+        # returns the registered locator (or a bare one). Tests that
+        # want to simulate "selector never visible" can override this.
+        return self.locators.get(selector, _StubLocator())
+
     def on(self, event: str, listener: Any) -> None:
         if event == "request":
             self._request_listeners.append(listener)
@@ -245,9 +251,11 @@ class TestCardAdd:
         ] = entry
         page.locators["[data-card-id='card-9999']"] = new_card
 
-        # evaluate returns: card ids list, then inner text (not used —
-        # inner_text comes from the locator), so only one eval.
-        page._eval_returns = [["card-0", "card-1", "card-9999"]]
+        # evaluate returns (in order):
+        #   1. pre-click snapshot: no existing cards (empty list)
+        #   2. post-click snapshot: three cards including the new one
+        # The walk diffs these to identify the genuinely-new card id.
+        page._eval_returns = [[], ["card-0", "card-1", "card-9999"]]
 
         walk = CardAddInteraction(region="alert_severity", settle_ms=0)
 
@@ -279,7 +287,9 @@ class TestCardAdd:
             "[data-test-id='dz-card-picker-entry'][data-test-region='alert_severity']"
         ] = _StubLocator()
         page.locators["[data-card-id='card-9999']"] = _StubLocator(_inner_text="...")
-        page._eval_returns = [["card-9999"]]
+        # pre=[] then post=["card-9999"] so the diff finds card-9999
+        # as the newly-added card.
+        page._eval_returns = [[], ["card-9999"]]
 
         result = CardAddInteraction(region="alert_severity", settle_ms=0).execute(page)
 
@@ -295,7 +305,7 @@ class TestCardAdd:
         page.locators["[data-card-id='card-9999']"] = _StubLocator(
             _inner_text="Alert Severity Breakdown\nopen: 3\nclosed: 7\nmore content"
         )
-        page._eval_returns = [["card-9999"]]
+        page._eval_returns = [[], ["card-9999"]]
         # Don't fire any requests.
 
         result = CardAddInteraction(region="alert_severity", settle_ms=0).execute(page)

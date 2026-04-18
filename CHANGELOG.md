@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.58] - 2026-04-18
+
+### Fixed
+- **`CardAddInteraction`: Alpine-race on picker entry + false-positive new-card detection.** First real interaction-walk run on CI (v0.57.57) revealed two bugs in the walk itself:
+  1. Clicking "Add Card" flips Alpine's `showPicker` flag but the picker entries are inside `<template x-for>` that Alpine needs a tick to render. The walk was clicking the entry before it existed, so the click no-op'd. Replaced the immediate click with `page.wait_for_selector(entry_selector, state="visible", timeout=5000)` followed by the click — Alpine has time to render the picker and attach @click handlers before we hit it.
+  2. The walk identified the "new" card by taking `max()` over all `[data-card-id]` attributes. If the picker click didn't actually add a card (e.g., the pre-fix Alpine race), `max()` returned an existing card's id and the walk silently reported that card's state as the "new" one — false-positive when the Add flow is actually broken. Now the walk snapshots existing card ids BEFORE the click and diffs against the post-click set. Empty diff → report "picker click didn't add a new card" with before/after card lists in evidence.
+- `test_interaction_walks.py` updated: tests now provide pre-click + post-click `evaluate()` returns so the diff logic has something to work with. `_StubPage` gains a `wait_for_selector` stub.
+
+### Known regressions surfaced by the harness
+- **#797 (card_drag) still broken**: first real walk run reported `dx=0 dy=0 requested_dy=200` against the live dashboard. The defensive fixes in v0.57.46 (listener install ordering + top-level `this.drag = nextDrag` reassignment) didn't fully resolve the drag lifecycle regression. The harness is now the authoritative signal — a follow-up cycle needs deeper investigation of why the pointermove listener isn't dispatching through the Alpine proxy.
+- **#798 (card_add) pending verification**: with v0.57.58's race fix in place, the next CI run should show whether the v0.57.46 addCard htmx.ajax kickoff fix actually worked, or whether the region-fetch gap is still real.
+
 ## [0.57.57] - 2026-04-18
 
 ### Fixed
