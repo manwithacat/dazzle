@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.49] - 2026-04-18
+
+### Added
+- **INTERACTION_WALK server fixture (step 3 of #800).** New `launch_interaction_server(project_root)` context manager in `src/dazzle/testing/ux/interactions/server_fixture.py` spawns `python -m dazzle serve --local` as a subprocess, polls for `.dazzle/runtime.json`, and yields a live `AppConnection`. Clears stale runtime.json before launch, terminates the subprocess on context exit, raises a distinct `InteractionServerError` on startup timeout so the CLI can distinguish setup failures (exit 2) from regressions (exit 1).
+- 7 unit tests in `tests/unit/test_interaction_server_fixture.py` pin the lifecycle without booting a real server: project validation, runtime-file polling + timeout, stale-file cleanup, exception-safe teardown, runtime-file cleanup on exit, already-dead-process handling.
+
+### Agent Guidance
+- **Interaction tests run against a live server** — spawn it via `launch_interaction_server(project_root)`. Don't call `subprocess.Popen` directly; the fixture handles stale-file cleanup, process-group termination, and the `.dazzle/runtime.json` protocol that `dazzle serve` writes.
+- **Don't confuse this with `ModeRunner`.** `dazzle.e2e.runner.ModeRunner` is the async, lock-file-guarded, DB-policy-aware launcher used by the fitness runs. `launch_interaction_server` is the sync, minimal variant for the browser harness. Both target the same `AppConnection` type so changes to how `dazzle serve` exposes URLs propagate to both.
+
 ## [0.57.48] - 2026-04-18
 
 ### Added
