@@ -10,10 +10,18 @@ import uuid
 from typing import Any
 
 from dazzle.core.ir.appspec import AppSpec
+from dazzle.testing.ux.seed_values import realistic_email, realistic_str
 
 
 def _generate_field_value(field_name: str, field_type: str, entity_name: str, index: int) -> Any:
-    """Generate a deterministic test value for a field."""
+    """Generate a deterministic test value for a field.
+
+    String-valued fields go through :func:`realistic_str` so seed
+    fixtures don't look obviously artificial ("Test first_name 1")
+    during qualitative evaluation — see #809. Non-string types keep
+    their deterministic shape (UUIDs, dates) so fixture ids remain
+    reproducible across runs.
+    """
     t = field_type.lower()
 
     if field_name == "id":
@@ -21,14 +29,13 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{entity_name}.{index}"))
 
     # Field-name-aware generation (overrides type-based)
-    # Use ux-verify prefix to avoid collisions with auth demo users
     if field_name == "email" or "email" in field_name:
-        return f"uxv-{index + 1}@{entity_name.lower()}.test"
+        return realistic_email(entity_name, index)
 
     if "str" in t or "text" in t:
-        return f"Test {field_name} {index + 1}"
+        return realistic_str(field_name, index)
     if t == "email":
-        return f"test{index + 1}@{entity_name.lower()}.test"
+        return realistic_email(entity_name, index)
     if "int" in t or "decimal" in t or "float" in t:
         return index + 1
     if t == "bool":
@@ -50,7 +57,7 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
     if "file" in t:
         return None
 
-    return f"test_{field_name}_{index}"
+    return realistic_str(field_name, index)
 
 
 def _get_field_type_str(field_type: Any) -> str:

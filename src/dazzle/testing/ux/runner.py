@@ -367,8 +367,6 @@ class InteractionRunner:
         return None
 
     async def _run_create_submit(self, page: Any, interaction: Interaction) -> Interaction:
-        import uuid as _uuid
-
         entity_slug = interaction.entity.lower()
         url = f"{self.site_url}/app/{entity_slug}/create"
         response = await page.goto(url, wait_until="networkidle")
@@ -431,13 +429,20 @@ class InteractionRunner:
             elif field_type == "number":
                 await field.fill("1")
             elif field_type == "email":
-                await field.fill(f"ux{_uuid.uuid4().hex[:6]}@{entity_slug}.test")
+                from dazzle.testing.ux.seed_values import realistic_email
+
+                await field.fill(realistic_email(entity_slug, i))
             elif field_type in ("color", "file", "range"):
                 continue  # Skip non-fillable types
             else:
-                import uuid as _uuid
+                # Use the field-name-aware realistic string generator
+                # so form submissions land with values a real user
+                # might type ("Acme Corp", "Alice Smith") rather than
+                # the legacy "UX {name} {uuid_hex[:6]}" placeholder
+                # that trials (#809) kept flagging as "unprofessional".
+                from dazzle.testing.ux.seed_values import realistic_str
 
-                await field.fill(f"UX {name} {_uuid.uuid4().hex[:6]}")
+                await field.fill(realistic_str(name, i))
 
         # Submit
         submit = form.locator("button[type='submit'], input[type='submit']").first
@@ -489,10 +494,15 @@ class InteractionRunner:
             interaction.error = "No edit form found"
             return interaction
 
-        # Modify the first visible text input
+        # Modify the first visible text input. Use the field-name
+        # hint to pick a realistic value (#809) rather than the
+        # legacy "UX Edited Value" placeholder.
         text_input = form.locator("input[type='text']:visible").first
         if await text_input.count() > 0:
-            await text_input.fill("UX Edited Value")
+            from dazzle.testing.ux.seed_values import realistic_str
+
+            input_name = await text_input.get_attribute("name") or "value"
+            await text_input.fill(realistic_str(input_name, 0))
 
         # Submit
         submit = form.locator("button[type='submit'], input[type='submit']").first

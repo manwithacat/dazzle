@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.77] - 2026-04-19
+
+### Fixed
+- **Demo seed data now reads as realistic business data (#809).** The UX seed-payload generator (`dazzle/testing/ux/fixtures.py`) and the Playwright form-filler (`dazzle/testing/ux/runner.py`) previously emitted obviously artificial strings — `"Test first_name 1"`, `"UX first_name 2f828c"`, `"UX Edited Value"` — which trials consistently flagged as *unprofessional*. Both now route through a new shared helper `realistic_str()` in `dazzle/testing/ux/seed_values.py` that uses `faker` with field-name hints: `first_name` → `"Alice"`, `email` → a real-shape email, `title` → a short sentence, `description` → a paragraph. A `realistic_email(entity_name, index)` helper gives emails with a plausible faker-generated local part but pins the domain to `<entity>.test` so per-entity rows remain visually distinct.
+
+### Changed
+- **`faker>=20.0` is now a required runtime dependency.** Previously conditionally imported in `dazzle_back/demo_data/generator.py`; the same library is now load-bearing for both demo data AND the UX-verify seed/form-fill paths. Treating it as core removes a whole class of "works on my machine" surprises.
+
+### Agent Guidance
+- Need realistic seed values elsewhere? Import from `dazzle.testing.ux.seed_values` — `realistic_str(field_name, index)` and `realistic_email(entity_name, index)`. Faker is now a hard dep so you can assume it's available.
+
 ## [0.57.76] - 2026-04-19
 
 ### Fixed
