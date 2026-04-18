@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.67] - 2026-04-17
+
+### Fixed
+- **`dazzle ux verify --contracts` false-positive on dashboard workspaces (#803).** Workspace region wrappers with `data-dz-region-name` are emitted client-side by Alpine's `<template x-for="card in cards">` — the SSR HTML contains only a `dz-workspace-layout` JSON data island. The contracts checker only inspected the SSR DOM, so every dashboard workspace (effectively every current Dazzle example) reported `Missing region 'X'` for every declared region.
+- Fix: `_check_workspace` now also consults the parsed layout JSON (`cards[].region`) via the existing `_extract_workspace_layout` helper. Regions declared in the data island satisfy the contract — matching the authoritative source for dashboard workspaces. Server-rendered workspaces with real `data-dz-region-name` attrs continue to work unchanged.
+- Added two regression tests in `tests/unit/test_ux_contract_checker.py`: one that passes when regions are only in the JSON, one that still fails when the contract names a region the JSON doesn't declare.
+
 ## [0.57.66] - 2026-04-17
 
 ### Changed

@@ -18,7 +18,7 @@ from dazzle.testing.ux.contracts import (
     RBACContract,
     WorkspaceContract,
 )
-from dazzle.testing.ux.htmx_client import parse_html
+from dazzle.testing.ux.htmx_client import _extract_workspace_layout, parse_html
 
 # ---------------------------------------------------------------------------
 # Shape-nesting gate (issue #794)
@@ -530,23 +530,45 @@ def _check_detail_view(contract: DetailViewContract, tags: Tags) -> list[str]:
     return errors
 
 
-def _check_workspace(contract: WorkspaceContract, tags: Tags) -> list[str]:
+def _check_workspace(
+    contract: WorkspaceContract,
+    tags: Tags,
+    html: str | None = None,
+) -> list[str]:
     errors: list[str] = []
 
-    # Check each expected region.
-    # Framework templates emit the namespaced `data-dz-region-name` attribute
-    # (matches the `dz` prefix convention used across all runtime data-*).
+    # Collect regions from two sources:
+    #   1. `data-dz-region-name` attributes in the rendered DOM (classic
+    #      server-rendered workspaces without a dashboard builder).
+    #   2. The `dz-workspace-layout` JSON data island (dashboard workspaces
+    #      using `workspace/_content.html`). The wrappers that carry
+    #      `data-dz-region-name` are client-side only — emitted by Alpine's
+    #      `<template x-for="card in cards">` — so the SSR HTML doesn't
+    #      contain them. The JSON island IS the authoritative declaration
+    #      at that point and matches cards[].region 1:1 to the region names
+    #      the contract expects. Treating the JSON as satisfying the
+    #      contract closes the false-positive reported in #803.
     found_regions: set[str] = set()
     for _tag_name, attrs in tags:
         region = attrs.get("data-dz-region-name")
         if region:
             found_regions.add(region)
 
+    if html:
+        layout = _extract_workspace_layout(html)
+        if isinstance(layout, dict):
+            for card in layout.get("cards") or []:
+                if isinstance(card, dict):
+                    region = card.get("region")
+                    if isinstance(region, str):
+                        found_regions.add(region)
+
     for region in contract.regions:
         if region not in found_regions:
             errors.append(
                 f"Missing region '{region}' "
-                f'(expected element with data-dz-region-name="{region}")'
+                f'(expected element with data-dz-region-name="{region}" '
+                f"or an entry in the dz-workspace-layout JSON cards[])"
             )
 
     return errors
@@ -640,7 +662,14 @@ def check_contract(contract: Contract, html: str) -> Contract:
         contract.error = f"No checker registered for {type(contract).__name__}"
         return contract
 
-    errors = checker(contract, tags)  # type: ignore[operator]
+    # Workspace checker needs the raw HTML so it can parse the
+    # `dz-workspace-layout` JSON data island — the regions declared
+    # there are the authoritative source for dashboard workspaces
+    # (see #803).
+    if isinstance(contract, WorkspaceContract):
+        errors = _check_workspace(contract, tags, html)
+    else:
+        errors = checker(contract, tags)  # type: ignore[operator]
 
     # Shape-nesting gate — applies to contracts that render a page with
     # visible card layers. List pages show cards too, but the list itself

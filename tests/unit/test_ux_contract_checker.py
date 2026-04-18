@@ -129,6 +129,51 @@ class TestCheckWorkspace:
         assert result.status == "failed"
         assert "missing_region" in result.error
 
+    def test_passes_dashboard_with_regions_only_in_layout_json(self) -> None:
+        """Regression test for #803: dashboard workspaces emit their
+        region wrappers client-side via Alpine's `<template x-for>`, so
+        the SSR HTML has no `data-dz-region-name` attrs — but the
+        `dz-workspace-layout` JSON data island declares them. Treat
+        that JSON as satisfying the contract."""
+        dashboard_html = """
+        <div class="p-4" x-data="dzDashboardBuilder()">
+          <script type="application/json" id="dz-workspace-layout">
+            {"cards": [
+              {"id": "card-0", "region": "grade_distribution", "col_span": 6},
+              {"id": "card-1", "region": "class_performance", "col_span": 6},
+              {"id": "card-2", "region": "marking_pipeline", "col_span": 12}
+            ], "catalog": [], "workspace_name": "teacher_workspace"}
+          </script>
+          <template x-for="card in cards"><div :data-card-id="card.id"></div></template>
+        </div>
+        """
+        contract = WorkspaceContract(
+            workspace="teacher_workspace",
+            regions=["grade_distribution", "class_performance", "marking_pipeline"],
+            fold_count=3,
+        )
+        result = check_contract(contract, dashboard_html)
+        assert result.status == "passed", result.error
+
+    def test_fails_dashboard_missing_region_in_layout_json(self) -> None:
+        """If a region is declared by the contract but the layout JSON
+        doesn't mention it (and no `data-dz-region-name` attr exists),
+        the contract must still fail — that's a real regression."""
+        dashboard_html = """
+        <div class="p-4" x-data="dzDashboardBuilder()">
+          <script type="application/json" id="dz-workspace-layout">
+            {"cards": [{"id": "card-0", "region": "only_one", "col_span": 6}],
+             "catalog": [], "workspace_name": "ws"}
+          </script>
+        </div>
+        """
+        contract = WorkspaceContract(
+            workspace="ws", regions=["only_one", "not_declared"], fold_count=2
+        )
+        result = check_contract(contract, dashboard_html)
+        assert result.status == "failed"
+        assert "not_declared" in result.error
+
 
 class TestCheckRBAC:
     def test_passes_when_expected_present_and_found(self) -> None:
