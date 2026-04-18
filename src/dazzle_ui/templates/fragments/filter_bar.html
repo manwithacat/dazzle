@@ -17,10 +17,10 @@
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
             hx-trigger="change"
-            hx-include="closest [data-dz-table]"
+            hx-include="closest [data-dazzle-table]"
             hx-headers='{"Accept": "text/html"}'
-            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading"
-            x-data="{ options: [], loading: true }"
+            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading-sr"
+            x-data="{ options: [], refLoading: true }"
             x-init="
               fetch('{{ col.filter_ref_api }}?page_size=200', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.json())
@@ -32,9 +32,9 @@
                       || item.title || item.label || item.email || item.id || '';
                   };
                   options = items.map(i => ({ value: i.id, label: display(i) }));
-                  loading = false;
+                  refLoading = false;
                 })
-                .catch(() => { loading = false; })
+                .catch(() => { refLoading = false; })
             ">
       <option value="">All</option>
       <template x-for="opt in options" :key="opt.value">
@@ -53,9 +53,9 @@
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
             hx-trigger="change"
-            hx-include="closest [data-dz-table]"
+            hx-include="closest [data-dazzle-table]"
             hx-headers='{"Accept": "text/html"}'
-            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
+            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading-sr">
       <option value="">All</option>
       {% for opt in col.filter_options %}
       <option value="{{ opt.value }}"
@@ -76,9 +76,9 @@
            hx-target="{{ tbody_target }}"
            hx-swap="innerHTML"
            hx-trigger="keyup changed delay:300ms"
-           hx-include="closest [data-dz-table]"
+           hx-include="closest [data-dazzle-table]"
            hx-headers='{"Accept": "text/html"}'
-           hx-indicator="#{{ table.table_id or 'dt-table' }}-loading" />
+           hx-indicator="#{{ table.table_id or 'dt-table' }}-loading-sr" />
     {% endif %}
 
   </div>

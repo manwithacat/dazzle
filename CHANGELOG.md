@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.75] - 2026-04-19
+
+### Fixed
+- **Alpine.js errors + broken filter dropdowns on every list surface (#804).** Three interrelated bugs surfaced by `dazzle qa trial` across four apps:
+  - `filter_bar.html` and `search_input.html` used `hx-include="closest [data-dz-table]"`, but the outer table div is stamped `data-dazzle-table` (per the documented convention in `dazzle-layer.css` and the e2e locators). The selector never matched, so filter/search submissions missed context.
+  - The same fragments used `hx-indicator="#<table_id>-loading"`, but the actual indicator element is `#<table_id>-loading-sr` (renamed when the loading overlay was refactored to Alpine control). HTMX was pointing at nothing.
+  - The ref-entity filter select opened an inline `x-data="{ options: [], loading: true }"` scope whose `loading` shadowed the parent `dzTable` component's `loading` state. HTMX handlers on the `<tbody>` bound to the outer scope, and expression errors cascaded: `selected`, `colMenuOpen`, `isColumnVisible` evaluated inside the narrow inline scope failed because those names don't exist there.
+- Fixed all three: fragment selectors now match the outer-div attribute; indicators point to `-loading-sr`; inline scope renames `loading` → `refLoading` to stop the shadow. ~10 lines across 3 templates, no Python changes.
+
 ## [0.57.74] - 2026-04-19
 
 ### Added

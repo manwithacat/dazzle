@@ -29,9 +29,9 @@
          hx-target="{{ target }}"
          hx-trigger="keyup changed delay:300ms"
          hx-swap="innerHTML"
-         hx-include="closest [data-dz-table]"
+         hx-include="closest [data-dazzle-table]"
          hx-headers='{"Accept": "text/html"}'
-         hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .dz-search-indicator{% endif %}" />
+         hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading-sr{% else %}next .dz-search-indicator{% endif %}" />
 
   {# Clear button — shown when query is non-empty #}
   <button x-show="query.length > 0"
