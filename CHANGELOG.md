@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.56] - 2026-04-18
+
+### Changed
+- **INTERACTION_WALK: actionable diagnostics on setup failure.** v0.57.55 fixed the auth-order bug but the harness still fails with the same generic "No interactions to run" on CI — and the log tells us nothing about which failure mode we're in. Added stderr output on both failure paths:
+  - `_authenticate_persona_on_context` now logs HTTP status + body snippet when `/__test__/authenticate` returns non-200, logs the exception when the request itself fails, and logs the response-body keys when 200 is returned but no `session_token` is present.
+  - The "No interactions to run" branch dumps `current URL`, `page title`, whether `#dz-workspace-layout` is present, and the actual `cards` + `catalog` lists from the layout JSON (if any). Decision tree in the message body maps each observed state to the actual root cause — /login means auth failed; no JSON means template didn't render; empty JSON means workspace has no regions or user has no default layout.
+- Pure diagnostics — no behavioural change. Next CI run will reveal which of the three failure modes the harness is actually hitting so we can fix the real cause rather than guess.
+
 ## [0.57.55] - 2026-04-18
 
 ### Fixed

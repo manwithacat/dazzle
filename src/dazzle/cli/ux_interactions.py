@@ -175,10 +175,31 @@ def run_interaction_walk(
                     card_ids, catalog = _layout_card_ids_and_catalog(page)
                     walk = _build_default_walk(card_ids, catalog)
                     if not walk:
+                        # Diagnostic dump — walk builds against the
+                        # #dz-workspace-layout JSON, so if that's not
+                        # there the harness can't do anything. Print
+                        # enough context to tell whether we're on a
+                        # login page, a workspace with an empty
+                        # layout, or somewhere unexpected.
+                        current_url = page.url
+                        has_layout = page.evaluate(
+                            "() => !!document.getElementById('dz-workspace-layout')"
+                        )
+                        title = page.title() or "(no title)"
                         print(
                             "No interactions to run — the workspace has no "
-                            "cards and no catalog entries. Check the DSL "
-                            "has a workspace with regions.",
+                            "cards and no catalog entries.\n"
+                            f"  current URL: {current_url}\n"
+                            f"  page title:  {title}\n"
+                            f"  layout JSON present: {has_layout}\n"
+                            f"  layout cards: {card_ids!r}\n"
+                            f"  layout catalog: {catalog!r}\n"
+                            "If current URL ends in /login the persona auth "
+                            "failed. If the layout JSON is absent but the URL "
+                            "is /app/..., the workspace template didn't "
+                            "render. If the JSON is present but empty, the "
+                            "workspace has no regions or the user has no "
+                            "default layout.",
                             file=sys.stderr,
                         )
                         return EXIT_SETUP_FAILURE
@@ -210,21 +231,46 @@ def _authenticate_persona_on_context(context: Any, site_url: str, persona: str) 
     ``page.goto("/app")`` is authenticated — avoiding the redirect to
     ``/login`` that leaves the harness staring at a non-workspace
     page.
+
+    Prints a diagnostic to stderr on any failure path so a CI run
+    tells us whether the endpoint returned non-200, returned 200 with
+    no token, or just couldn't be reached. Silent failure was the
+    original sin.
     """
     import httpx
 
-    with httpx.Client() as client:
-        resp = client.post(
-            f"{site_url}/__test__/authenticate",
-            json={"role": persona, "username": persona},
-            timeout=10,
+    try:
+        with httpx.Client() as client:
+            resp = client.post(
+                f"{site_url}/__test__/authenticate",
+                json={"role": persona, "username": persona},
+                timeout=10,
+            )
+    except Exception as exc:
+        print(
+            f"[auth] POST {site_url}/__test__/authenticate raised {exc!r}. "
+            "Is test-mode enabled on the server?",
+            file=sys.stderr,
         )
-        if resp.status_code != 200:
-            return
-        data = resp.json()
-        token = data.get("session_token", "") or data.get("token", "")
+        return
+
+    if resp.status_code != 200:
+        print(
+            f"[auth] /__test__/authenticate returned HTTP {resp.status_code} "
+            f"(body: {resp.text[:200]!r}). Persona {persona!r} may not be a "
+            f"valid role, or test-mode may be disabled.",
+            file=sys.stderr,
+        )
+        return
+    data = resp.json()
+    token = data.get("session_token", "") or data.get("token", "")
 
     if not token:
+        print(
+            f"[auth] /__test__/authenticate returned 200 but no session_token "
+            f"(body keys: {list(data.keys())!r}).",
+            file=sys.stderr,
+        )
         return
     context.add_cookies(
         [
