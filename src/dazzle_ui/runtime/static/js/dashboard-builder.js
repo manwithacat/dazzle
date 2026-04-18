@@ -260,10 +260,21 @@ document.addEventListener("alpine:init", () => {
 
     // ── Drag ──
     startDrag(cardId, e) {
+      console.log(
+        "[dz-drag] startDrag fired cardId=" +
+          cardId +
+          " button=" +
+          e.button +
+          " pointerType=" +
+          e.pointerType,
+      );
       if (e.button && e.button !== 0) return; // left click only
       e.preventDefault();
       const cardEl = this.$el.querySelector('[data-card-id="' + cardId + '"]');
-      if (!cardEl) return;
+      if (!cardEl) {
+        console.log("[dz-drag] startDrag: cardEl NOT FOUND for " + cardId);
+        return;
+      }
 
       const rect = cardEl.getBoundingClientRect();
       this.drag = {
@@ -281,6 +292,12 @@ document.addEventListener("alpine:init", () => {
       };
 
       this._dragPointerId = e.pointerId;
+      console.log(
+        "[dz-drag] drag state set, startY=" +
+          e.clientY +
+          " placeholderIndex=" +
+          this.drag.placeholderIndex,
+      );
       // Note: we do NOT use setPointerCapture here — it would route
       // pointermove events to the card element instead of window,
       // breaking our @pointermove.window handler on the grid container.
@@ -306,10 +323,15 @@ document.addEventListener("alpine:init", () => {
       if (nextDrag.phase === "pressed") {
         const dx = e.clientX - nextDrag.startX;
         const dy = e.clientY - nextDrag.startY;
-        if (Math.sqrt(dx * dx + dy * dy) < 4) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 4) {
           this.drag = nextDrag;
           return;
         }
+        console.log(
+          "[dz-drag] phase transition pressed→dragging, dist=" +
+            dist.toFixed(1),
+        );
         this._pushUndo();
         nextDrag = { ...nextDrag, phase: "dragging" };
         document.body.classList.add("select-none");
@@ -339,6 +361,15 @@ document.addEventListener("alpine:init", () => {
 
       // Move placeholder in array if position changed
       if (targetIndex !== this.drag.placeholderIndex) {
+        console.log(
+          "[dz-drag] reorder " +
+            this.drag.placeholderIndex +
+            " → " +
+            targetIndex +
+            " (wrappers=" +
+            wrappers.length +
+            ")",
+        );
         const card = this.cards.find((c) => c.id === this.drag.cardId);
         if (card) {
           const filtered = this.cards.filter((c) => c.id !== this.drag.cardId);
@@ -354,6 +385,12 @@ document.addEventListener("alpine:init", () => {
     endDrag(e) {
       if (!this.drag) return;
       const wasDragging = this.drag.phase === "dragging";
+      console.log(
+        "[dz-drag] endDrag wasDragging=" +
+          wasDragging +
+          " finalIndex=" +
+          this.drag.placeholderIndex,
+      );
       this.drag = null;
       this._dragPointerId = null;
       document.body.classList.remove("select-none");

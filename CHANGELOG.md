@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.64] - 2026-04-17
+
+### Changed
+- **#798 verified closed by harness; #797 reopened with harness evidence.** v0.57.63's rAF-poll fix landed cleanly: `card_add` walk now reports `body_length=51, region_fetch_count=3` across 3 retries in CI. But the same run reports `card_drag` FAIL with `dx=0, dy=0, requested_dy=200` — the defensive fixes in v0.57.46 (listener install ordering, top-level `this.drag` reassignment) did NOT resolve the drag regression. The closed #797 was based on code inspection without a live-browser gesture test; the INTERACTION_WALK harness is now the authoritative signal and it's red.
+- **Targeted JS diagnostics in drag lifecycle.** Added `console.log("[dz-drag] ...")` in `startDrag`, `onPointerMoveDrag` (phase transition branch + reorder branch), and `endDrag`. Next CI run will pinpoint the exact failure mode — is pointerdown not firing at all (listener race, wrong element hit-test), firing but failing the phase transition (threshold never crossed), firing and transitioning but not reordering (midpoint hit-test wrong), or reordering but failing to re-render (Alpine proxy reactivity)? Same diagnostic-first pattern that closed #798 in v0.57.62→63.
+
 ## [0.57.63] - 2026-04-17
 
 ### Fixed
