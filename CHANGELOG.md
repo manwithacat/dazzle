@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.61] - 2026-04-18
+
+### Changed
+- **INTERACTION_WALK: page-level XHR + console capture.** v0.57.60's declarative `hx-trigger="load"` fix still showed `sample_urls=[]` during the Add-Card window. To distinguish "HTMX doesn't fire for ANY card" from "HTMX fires for initial cards but not the dynamically-added one," attach the `request` + `console` listeners to the Page at navigation time (before the first `goto`) and log a summary after `wait_for_load_state("networkidle")`. The CLI now prints `[init]` and `[console]` lines showing how many API calls and console messages the initial page produced. If `initial_api_calls=0`, HTMX isn't firing for initial cards either — which would mean the regression is broader than the Add-Card flow.
+- Pure diagnostics; no behavioural change to any walk or the harness runtime.
+
 ## [0.57.60] - 2026-04-18
 
 ### Fixed

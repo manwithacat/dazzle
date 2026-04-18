@@ -178,8 +178,56 @@ def run_interaction_walk(
                         )
 
                     page = context.new_page()
+
+                    # Capture page-level XHR + console output from the
+                    # very first navigation so the harness diagnostics
+                    # can see what the browser does on load. Useful
+                    # when the Add-Card fetch never fires and we need
+                    # to distinguish "HTMX never triggered for any
+                    # card" from "HTMX triggered for initial cards
+                    # but not the added one". Dumped when a walk
+                    # fails — see CardAddInteraction.
+                    page_xhr: list[str] = []
+                    page_console: list[str] = []
+
+                    def _on_page_request(request: object) -> None:
+                        try:
+                            page_xhr.append(getattr(request, "url", ""))
+                        except Exception:
+                            pass
+
+                    def _on_console(msg: object) -> None:
+                        try:
+                            page_console.append(
+                                f"{getattr(msg, 'type', '?')}: {getattr(msg, 'text', '')}"
+                            )
+                        except Exception:
+                            pass
+
+                    page.on("request", _on_page_request)
+                    page.on("console", _on_console)
                     page.goto(conn.site_url + "/app", timeout=15_000)
                     page.wait_for_load_state("networkidle", timeout=15_000)
+
+                    # Summarise what the initial page fetched + logged
+                    # so CI logs tell us whether HTMX actually fires
+                    # for EXISTING cards on page load. If even those
+                    # are missing, the regression is broader than just
+                    # addCard's kickoff.
+                    initial_api_urls = [u for u in page_xhr if "/api/" in u]
+                    print(
+                        f"[init] URL={page.url} "
+                        f"initial_api_calls={len(initial_api_urls)} "
+                        f"console_messages={len(page_console)}",
+                        file=sys.stderr,
+                    )
+                    if initial_api_urls[:5]:
+                        print(
+                            f"[init] sample_api_urls={initial_api_urls[:5]}",
+                            file=sys.stderr,
+                        )
+                    for msg in page_console[:10]:
+                        print(f"[console] {msg}", file=sys.stderr)
 
                     card_ids, catalog = _layout_card_ids_and_catalog(page)
                     walk = _build_default_walk(card_ids, catalog)
