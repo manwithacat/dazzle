@@ -125,9 +125,13 @@
                  role="article"
                  :aria-labelledby="'card-title-' + card.id">
 
-          {# Card header — drag handle zone #}
+          {# Card header — drag handle zone. data-test-id targets this
+             as the stable pointer-start anchor for INTERACTION_WALK
+             (see docs/proposals/interaction-walk-harness.md). Don't
+             rename without updating the harness. #}
           <div class="flex items-center justify-between px-4 py-2 cursor-grab active:cursor-grabbing min-h-[36px]"
                :class="{ 'cursor-grabbing': isDragging(card.id) }"
+               data-test-id="dz-card-drag-handle"
                @pointerdown="startDrag(card.id, $event)">
             <h3 :id="'card-title-' + card.id"
                 class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
@@ -139,6 +143,7 @@
                invisible to touch users and anyone doing keyboard navigation. #}
             <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[80ms]">
               <button @click.stop="removeCard(card.id)"
+                      data-test-id="dz-card-remove"
                       class="h-6 w-6 flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))]
                              hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
                              transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
@@ -176,6 +181,7 @@
   {# ── Add Card ── #}
   <div class="relative flex justify-center mt-4">
     <button @click="showPicker = !showPicker"
+            data-test-id="dz-add-card-trigger"
             class="h-8 px-4 text-[13px] font-medium rounded-md
                    border-2 border-dashed border-[hsl(var(--border))]
                    text-[hsl(var(--muted-foreground))]

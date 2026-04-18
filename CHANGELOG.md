@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.48] - 2026-04-18
+
+### Added
+- **INTERACTION_WALK foundations (steps 1–2 of the design doc, #800).** Two commits of scaffolding ahead of the live-browser walks:
+  - **Stable test selectors on the workspace template.** Added `data-test-id="dz-card-drag-handle"`, `data-test-id="dz-card-remove"`, `data-test-id="dz-add-card-trigger"` to `workspace/_content.html`, plus `data-test-id="dz-card-picker-entry"` + a dynamic `:data-test-region="item.name"` on each picker entry in `_card_picker.html`. These are the stable ABI the interaction harness will target — user-facing copy (`"Add Card"`, `"Remove card"`, region titles) stays free to change.
+  - **`Interaction` protocol + `InteractionResult` + `run_walk`.** New `src/dazzle/testing/ux/interactions/` package with `base.py` exposing the runtime-checkable `Interaction` protocol, a dataclass `InteractionResult` (name, passed, reason, evidence), and a minimal `run_walk(page, walk)` executor. A walk is just `list[Interaction]` — no registry, no magic. Later walks (card_drag, card_add, card_remove_reachable) drop in as new files in the package. 8 unit tests pin the protocol semantics, composition order, failure non-short-circuit, and genuine-error propagation; none touch Playwright.
+
+### Agent Guidance
+- **Adding a new interaction walk**: create `src/dazzle/testing/ux/interactions/<name>.py` with a dataclass implementing `Interaction`. Keep all gesture + assertion logic inside `execute(page)`. Return `InteractionResult(passed=False, reason=...)` on assertion failure — never raise. Only raise when something catastrophic prevents the interaction from running at all (page closed, selector times out, etc.).
+- **Test selectors on workspace templates** (`data-test-id="dz-*"`) are the harness ABI — rename or remove only if the corresponding interaction in `src/dazzle/testing/ux/interactions/` is also updated in the same commit.
+
 ## [0.57.47] - 2026-04-18
 
 ### Added
