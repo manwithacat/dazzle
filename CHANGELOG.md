@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.69] - 2026-04-17
+
+### Fixed
+- **Workspace contracts no longer false-positive `HTTP 403 as admin`.** When a workspace had no explicit `access: persona(...)` block, the contracts checker fell back to `appspec.personas[0].id` — conventionally `admin`, whose `default_workspace` points at the framework's `_platform_admin` UI, not the app's workspaces. The access-control runtime correctly returned 403, and the checker reported a failure that was actually a bad persona choice. Real example: support_tickets had 3 such failures (`ticket_queue`, `agent_dashboard`, `my_tickets`), owned by `agent`, `manager`, `customer` respectively — all reported as broken when they were fine.
+- Fix: extracted `_pick_workspace_check_persona()` with a documented 3-step decision tree (explicit `access:` → `default_workspace` reverse-lookup → first-declared persona). The second step is new and encodes the DSL's implicit ownership signal.
+- 5 unit tests in `tests/unit/test_ux_contracts_persona_picker.py` pin each branch of the decision tree, including edge cases (empty `allow_personas` list, zero personas).
+- Verified on support_tickets: `dazzle ux verify --contracts --managed` now reports **34 passed, 0 failed** (was 31/3).
+
 ## [0.57.68] - 2026-04-17
 
 ### Fixed

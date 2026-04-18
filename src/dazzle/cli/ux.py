@@ -72,6 +72,38 @@ def _run_structural_only() -> int:
     return 0
 
 
+def _pick_workspace_check_persona(appspec: Any, workspace_name: str) -> str:
+    """Pick the persona a workspace-contract check should authenticate as.
+
+    Decision order:
+      1. An explicit ``access: persona(...)`` block on the workspace —
+         honour the first listed persona.
+      2. A persona whose ``default_workspace`` points at this workspace
+         — treat that as the DSL's implicit ownership signal (e.g.
+         ``agent.default_workspace = ticket_queue`` means agent is the
+         canonical user of ticket_queue, even without an explicit
+         access block).
+      3. First declared persona — conventionally admin.
+
+    The previous implementation skipped step 2, which produced
+    false-positive ``HTTP 403 as admin`` failures for every workspace
+    that lacked an explicit access block (the 3 support_tickets
+    workspaces surfaced by v0.57.67's contract fix).
+    """
+    ws_spec = next((w for w in appspec.workspaces if w.name == workspace_name), None)
+    if ws_spec and ws_spec.access and ws_spec.access.allow_personas:
+        return str(ws_spec.access.allow_personas[0])
+    default_owner = next(
+        (p.id for p in appspec.personas if getattr(p, "default_workspace", None) == workspace_name),
+        None,
+    )
+    if default_owner:
+        return str(default_owner)
+    if appspec.personas:
+        return str(appspec.personas[0].id)
+    return "admin"
+
+
 def _run_contracts(
     project_root: Path,
     strict: bool = False,
@@ -198,12 +230,7 @@ def _run_contracts(
                     permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.LIST)
                 persona = permitted[0] if permitted else "admin"
             elif ws_name:
-                # Find first persona with workspace access
-                ws_spec = next((w for w in appspec.workspaces if w.name == ws_name), None)
-                if ws_spec and ws_spec.access and ws_spec.access.allow_personas:
-                    persona = ws_spec.access.allow_personas[0]
-                else:
-                    persona = appspec.personas[0].id if appspec.personas else "admin"
+                persona = _pick_workspace_check_persona(appspec, ws_name)
             else:
                 persona = "admin"
 
