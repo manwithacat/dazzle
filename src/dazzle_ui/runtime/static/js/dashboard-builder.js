@@ -270,7 +270,15 @@ document.addEventListener("alpine:init", () => {
       );
       if (e.button && e.button !== 0) return; // left click only
       e.preventDefault();
-      const cardEl = this.$el.querySelector('[data-card-id="' + cardId + '"]');
+      // Query `document` not `this.$el` — when this method is called
+      // from `@pointerdown="startDrag(...)"` on the drag handle,
+      // Alpine's `$el` magic resolves to the handle element (where the
+      // directive lives), not the component root. The card wrapper is
+      // an ANCESTOR of the handle, so handle.querySelector for the
+      // wrapper always returns null. v0.57.64 CI log line
+      // "[dz-drag] startDrag: cardEl NOT FOUND for card-0" pinpointed
+      // this. Same bug class that killed addCard before #798 fix.
+      const cardEl = document.querySelector('[data-card-id="' + cardId + '"]');
       if (!cardEl) {
         console.log("[dz-drag] startDrag: cardEl NOT FOUND for " + cardId);
         return;
@@ -340,8 +348,12 @@ document.addEventListener("alpine:init", () => {
       this.drag = nextDrag;
       if (this.drag.phase !== "dragging") return;
 
-      // Find which card the pointer is over (by midpoint comparison)
-      const grid = this.$el.querySelector("[data-grid-container]");
+      // Find which card the pointer is over (by midpoint comparison).
+      // Query `document` not `this.$el` for the same Alpine `$el`
+      // scope reason documented in startDrag — this callback runs via
+      // the window `pointermove` listener installed in init, not via
+      // a directive, so `this.$el` resolution is unreliable.
+      const grid = document.querySelector("[data-grid-container]");
       if (!grid) return;
       const wrappers = grid.querySelectorAll("[data-card-id]");
       let targetIndex = this.drag.placeholderIndex;
@@ -491,7 +503,7 @@ document.addEventListener("alpine:init", () => {
 
         // Re-focus the card after Alpine re-renders
         this.$nextTick(() => {
-          const el = this.$el.querySelector('[data-card-id="' + cardId + '"]');
+          const el = document.querySelector('[data-card-id="' + cardId + '"]');
           if (el) el.focus();
         });
       }
@@ -503,7 +515,7 @@ document.addEventListener("alpine:init", () => {
       e.preventDefault();
       e.stopPropagation();
 
-      const grid = this.$el.querySelector("[data-grid-container]");
+      const grid = document.querySelector("[data-grid-container]");
       if (!grid) return;
       const card = this.cards.find((c) => c.id === cardId);
       if (!card) return;
@@ -532,7 +544,7 @@ document.addEventListener("alpine:init", () => {
       if (!card) return;
 
       // Find the card element's left edge
-      const cardEl = this.$el.querySelector(
+      const cardEl = document.querySelector(
         '[data-card-id="' + this.resize.cardId + '"]',
       );
       if (!cardEl) return;

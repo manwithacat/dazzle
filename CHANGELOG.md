@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.65] - 2026-04-17
+
+### Fixed
+- **#797 root cause identified and fixed — Alpine `$el` scope bug in drag/resize lifecycle.** v0.57.64's `[dz-drag]` diagnostics pinpointed the exact failure: `[dz-drag] startDrag: cardEl NOT FOUND for card-0`. When `startDrag(card.id, $event)` is called from `@pointerdown="..."` on the drag-handle div, Alpine's `$el` magic resolves to the HANDLE element (where the directive lives), not the component root. The card wrapper is an ANCESTOR of the handle, so `handle.querySelector('[data-card-id=...]')` always returns null — hence `this.drag` is never assigned, `onPointerMoveDrag` early-returns on the null guard, and `dx=0, dy=0`.
+- Same bug class that killed `addCard` before the #798 fix. Replaced all five live `this.$el.querySelector(...)` sites in `dashboard-builder.js` (startDrag, onPointerMoveDrag, keyboard-move refocus, startResize, onPointerMoveResize) with `document.querySelector(...)`. The component occupies the full workspace page; there's no ambiguity about which grid/card is being queried.
+- INTERACTION_WALK harness proved the diagnosis: before the fix, console showed `cardEl NOT FOUND for card-0` every drag attempt despite `pointerdown` firing correctly (`pointerType=mouse, button=0`). v0.57.65 expected to show `[dz-drag] drag state set`, `[dz-drag] phase transition pressed→dragging`, `[dz-drag] reorder X → Y`, `[dz-drag] endDrag wasDragging=true`, and the card_drag evidence dx/dy > 0.
+
 ## [0.57.64] - 2026-04-17
 
 ### Changed
