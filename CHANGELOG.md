@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.62] - 2026-04-18
+
+### Changed
+- **Targeted JS-level diagnostics in `addCard`.** v0.57.61's page-level capture proved HTMX fires fine for initial cards (`initial_api_calls=6`) but NEVER for the dynamically-added card (`sample_urls=[]`). So the bug is specifically in the addCard kickoff path. Restored the `htmx.ajax(url, target, swap)` call from v0.57.59 — but with `console.log("[dz-addcard] ...")` sprinkled through every early-return branch, so the next CI run pinpoints which guard is triggering. Suspect list: cardEl not found (Alpine hasn't rendered yet), workspaceName empty (layout JSON never populated), bodyEl not found (id binding not yet evaluated), or all three return false positive and htmx.ajax IS called but the URL is wrong.
+- **Post-walk console dump** in the CLI: after the walks run, print any console messages whose text includes `dz-` or `error` so CI surfaces the JS-level diagnostics without drowning the log in tailwind warnings etc.
+- No behavioural change to the walk runtime. Next CI run will either pinpoint the exact broken guard or show the ajax fires but the URL is malformed.
+
 ## [0.57.61] - 2026-04-18
 
 ### Changed

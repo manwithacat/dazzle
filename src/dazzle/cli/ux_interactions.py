@@ -226,7 +226,7 @@ def run_interaction_walk(
                             f"[init] sample_api_urls={initial_api_urls[:5]}",
                             file=sys.stderr,
                         )
-                    for msg in page_console[:10]:
+                    for msg in page_console[:30]:
                         print(f"[console] {msg}", file=sys.stderr)
 
                     card_ids, catalog = _layout_card_ids_and_catalog(page)
@@ -262,6 +262,15 @@ def run_interaction_walk(
                         return EXIT_SETUP_FAILURE
 
                     results = run_walk(page, walk)
+
+                    # Post-walk console dump — surfaces any console
+                    # messages (including targeted console.log output
+                    # from addCard / other walk-triggered paths) that
+                    # arrived after the initial page-load capture.
+                    post_walk_msgs = page_console[len(page_console) - 50 :]
+                    for msg in post_walk_msgs:
+                        if "dz-" in msg or "error" in msg.lower():
+                            print(f"[post-walk] {msg}", file=sys.stderr)
                 finally:
                     context.close()
                     browser.close()

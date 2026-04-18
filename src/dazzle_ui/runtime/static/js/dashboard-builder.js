@@ -171,20 +171,53 @@ document.addEventListener("alpine:init", () => {
       this.showPicker = false;
       this._markDirty();
 
-      // Let Alpine expand the x-for, then have HTMX register the
-      // hx-* attributes on the new card. The `hx-trigger="load, ..."`
-      // in _content.html (added v0.57.60) fires the region fetch as
-      // soon as htmx.process() scans the element — no imperative
-      // kickoff needed. The v0.57.58/59 attempts to call htmx.ajax
-      // manually from here were fragile (Alpine binding race on
-      // :id / :hx-get, silent early-return when bodyEl wasn't yet
-      // in the DOM). Declaring the trigger on the element itself
-      // moves the responsibility back to HTMX, where it belongs.
+      // v0.57.61's CI diagnostic confirmed HTMX fires fine on
+      // initial page load (initial_api_calls=6) but never for
+      // the dynamically-added card. Root cause: HTMX's own
+      // MutationObserver processes the new card the moment
+      // Alpine's x-for inserts it — BEFORE Alpine has evaluated
+      // :hx-get / :id bindings. HTMX registers the element with
+      // no hx-get attribute, dispatches the `load` trigger against
+      // nothing, and caches that it's already been processed. Our
+      // later htmx.process() call is a no-op because HTMX de-dupes.
+      //
+      // Fix: after the bindings land (inside $nextTick), explicitly
+      // fire the region fetch via htmx.ajax. Use the layout data
+      // that Alpine already parsed from the runtime JSON — no
+      // binding-read race, no trigger re-dispatch needed. Target
+      // the body element by its computed id (same format Alpine
+      // produced via :id="'region-' + card.region + '-' + card.id").
       this.$nextTick(() => {
+        console.log("[dz-addcard] nextTick fired, nextId=" + nextId);
         const cardEl = this.$el.querySelector(
           '[data-card-id="' + nextId + '"]',
         );
-        if (cardEl) htmx.process(cardEl);
+        if (!cardEl) {
+          console.log("[dz-addcard] cardEl NOT FOUND for " + nextId);
+          return;
+        }
+        htmx.process(cardEl);
+        console.log("[dz-addcard] htmx.process called");
+
+        if (!this.workspaceName) {
+          console.log(
+            "[dz-addcard] workspaceName empty — no layout JSON, giving up",
+          );
+          return;
+        }
+        const bodyId = "region-" + regionName + "-" + nextId;
+        const bodyEl = document.getElementById(bodyId);
+        if (!bodyEl) {
+          console.log("[dz-addcard] bodyEl NOT FOUND for id=" + bodyId);
+          return;
+        }
+        const url =
+          "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
+        console.log("[dz-addcard] firing htmx.ajax GET " + url);
+        htmx.ajax("GET", url, {
+          target: "#" + bodyId,
+          swap: "innerHTML",
+        });
       });
     },
 
