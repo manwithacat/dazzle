@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.55] - 2026-04-18
+
+### Fixed
+- **INTERACTION_WALK: authenticate on the browser context BEFORE first navigation.** Third CI pass of `interaction-walks` (v0.57.54) got past the TCP race but reported "No interactions to run — the workspace has no cards and no catalog entries." on all 3 attempts. Root cause: the harness navigated to `/app` first, got redirected to `/login` (auth gate), authenticated AFTER that, then called `page.reload()` — but the reload happened on `/login`, not on `/app`. So when the layout-JSON extractor ran, it was looking at the login page, not a workspace.
+- Renamed `_authenticate_persona(page, ...)` to `_authenticate_persona_on_context(context, ...)` and moved the call to BEFORE `page.goto("/app")`. The session cookie is now installed on the `BrowserContext` before any navigation, so the first `goto` lands on the authenticated dashboard with the cards JSON already in the DOM.
+- CI workflow now passes `--persona agent` — `support_tickets`'s agent persona lands on `ticket_queue`, which is the canonical cards-populated workspace for the harness.
+
 ## [0.57.54] - 2026-04-18
 
 ### Fixed

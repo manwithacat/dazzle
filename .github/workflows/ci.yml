@@ -476,12 +476,18 @@ jobs:
       # absorb Playwright-over-HTMX flake during the non-blocking
       # window. Exit 2 (setup failure) retries the same way so a
       # transient server boot issue doesn't create a false signal.
+      #
+      # --persona agent: support_tickets's agent persona lands on
+      # the ticket_queue workspace, which is populated by default
+      # with cards (the catalog + initial layout the harness needs).
+      # Without auth, /app redirects to login and the harness sees
+      # no cards.
       run: |
         cd examples/support_tickets
         set +e
         for attempt in 1 2 3; do
           echo "=== Attempt $attempt / 3 ==="
-          python -m dazzle ux verify --interactions --headless
+          python -m dazzle ux verify --interactions --headless --persona agent
           rc=$?
           echo "rc=$rc"
           if [ $rc -eq 0 ]; then exit 0; fi

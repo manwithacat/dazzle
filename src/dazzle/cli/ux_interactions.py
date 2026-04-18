@@ -159,15 +159,18 @@ def run_interaction_walk(
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=headless)
                 context = browser.new_context()
-                page = context.new_page()
                 try:
+                    # Authenticate BEFORE the first goto so /app doesn't
+                    # redirect us to /login. Most Dazzle apps gate the
+                    # workspace dashboard behind auth; without this the
+                    # harness lands on /login, sees no layout JSON, and
+                    # reports "no cards" (false setup-failure).
+                    if persona:
+                        _authenticate_persona_on_context(context, conn.site_url, persona)
+
+                    page = context.new_page()
                     page.goto(conn.site_url + "/app", timeout=15_000)
                     page.wait_for_load_state("networkidle", timeout=15_000)
-
-                    # If persona was requested, log in via the test
-                    # endpoint. Reuse the same protocol HtmxClient uses.
-                    if persona:
-                        _authenticate_persona(page, conn.site_url, persona)
 
                     card_ids, catalog = _layout_card_ids_and_catalog(page)
                     walk = _build_default_walk(card_ids, catalog)
@@ -194,13 +197,19 @@ def run_interaction_walk(
     return EXIT_PASS if all(r.passed for r in results) else EXIT_REGRESSION
 
 
-def _authenticate_persona(page: Page, site_url: str, persona: str) -> None:
-    """Log the Playwright browser in as ``persona`` via the test endpoint.
+def _authenticate_persona_on_context(context: Any, site_url: str, persona: str) -> None:
+    """Log the Playwright browser in as ``persona`` by installing the
+    session cookie on the ``BrowserContext`` BEFORE any navigation.
 
     The test endpoint (``/__test__/authenticate``) is what
     ``HtmxClient.authenticate`` already uses for contract tests —
     reuse its protocol. Requires ``test_mode`` enabled on the server,
     which ``dazzle serve --local`` does by default.
+
+    Installing the cookie at the context level means the first
+    ``page.goto("/app")`` is authenticated — avoiding the redirect to
+    ``/login`` that leaves the harness staring at a non-workspace
+    page.
     """
     import httpx
 
@@ -217,7 +226,7 @@ def _authenticate_persona(page: Page, site_url: str, persona: str) -> None:
 
     if not token:
         return
-    page.context.add_cookies(
+    context.add_cookies(
         [
             {
                 "name": "dazzle_session",
@@ -226,5 +235,3 @@ def _authenticate_persona(page: Page, site_url: str, persona: str) -> None:
             }
         ]
     )
-    # Refresh so HTMX/Alpine bootstraps with the authenticated session.
-    page.reload(wait_until="networkidle")
