@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.50] - 2026-04-18
+
+### Added
+- **Three v1 INTERACTION_WALK walks (step 4 of #800).** Each closes a specific regression class at the interaction level, targeting the bugs AegisMark reported in #797/#798/#799:
+  - **`CardRemoveReachableInteraction`** (`card_remove_reachable.py`) — focuses a card, Tabs forward up to 15 times looking for `[data-test-id="dz-card-remove"]`, asserts the focused button's computed opacity is ≥ 0.2. Complements the static INV-9 gate (`find_hidden_primary_actions`) by verifying the invariant survives to runtime.
+  - **`CardDragInteraction`** (`card_drag.py`) — pointerdown on `[data-test-id="dz-card-drag-handle"]`, move `dy` pixels in configurable steps, pointerup. Asserts the card's bounding-box delta is ≥ 5px. Catches #797's silent "drag gesture completes but card doesn't move" regression.
+  - **`CardAddInteraction`** (`card_add.py`) — click `[data-test-id="dz-add-card-trigger"]`, click the picker entry `[data-test-region="<region>"]`, watch network requests, assert the new card's body has substantive text (≥40 chars) AND a GET against `/regions/<region>` fired. Catches #798's "skeleton but no fetch" regression which wouldn't show up in any static gate.
+- 11 unit tests in `tests/unit/test_interaction_walks.py` verify each walk's logic against a minimal `_StubPage` without booting Playwright: opacity thresholds, never-reachable edge case, bbox-delta pass/fail, missing card, body-populated + fetch-observed pass, skeleton-only fail, no-fetch fail, unclickable trigger, missing picker entry. Real-browser integration comes next via the e2e mark + the server fixture from v0.57.49.
+
+### Agent Guidance
+- **Writing a new walk**: drop a new file in `src/dazzle/testing/ux/interactions/` with a dataclass that implements the `Interaction` protocol. Return `InteractionResult(passed=False, reason=...)` on assertion failure; raise only on catastrophic setup problems (page closed, timeouts). Prefer `[data-test-id="dz-<thing>"]` selectors — they're the test ABI.
+- **Evidence dict in `InteractionResult`** is where you pin the observed state so a failing run is diagnosable without reproducing locally. The three v1 walks pin `opacity`, `tab_steps`, `dx`/`dy`, `new_card_id`, `body_length`, `region_fetch_count`. Keep evidence focused — don't dump the whole DOM.
+
 ## [0.57.49] - 2026-04-18
 
 ### Added

@@ -16,5 +16,17 @@ from dazzle.testing.ux.interactions.base import (
     InteractionResult,
     run_walk,
 )
+from dazzle.testing.ux.interactions.card_add import CardAddInteraction
+from dazzle.testing.ux.interactions.card_drag import CardDragInteraction
+from dazzle.testing.ux.interactions.card_remove_reachable import (
+    CardRemoveReachableInteraction,
+)
 
-__all__ = ["Interaction", "InteractionResult", "run_walk"]
+__all__ = [
+    "CardAddInteraction",
+    "CardDragInteraction",
+    "CardRemoveReachableInteraction",
+    "Interaction",
+    "InteractionResult",
+    "run_walk",
+]
