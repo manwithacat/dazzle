@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -218,3 +219,184 @@ def qa_capture(
     # Print paths of captured screenshots
     for screen in screens:
         typer.echo(str(screen.screenshot))
+
+
+@qa_app.command("trial")
+def qa_trial(
+    app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
+    scenario: str | None = typer.Option(
+        None, "--scenario", "-s", help="Scenario name from trial.toml (defaults to first)"
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Report output path (default: dev_docs/qa-trial-*.md)"
+    ),
+    headless: bool = typer.Option(
+        True, "--headless/--headed", help="Run browser headless (default) or visible"
+    ),
+    model: str | None = typer.Option(
+        None, "--model", help="Override LLM model (default: Claude Sonnet)"
+    ),
+) -> None:
+    """Run a qualitative business-user trial of a Dazzle app.
+
+    Puts an LLM in the shoes of a real business user evaluating this
+    software. The LLM attempts meaningful tasks and records friction —
+    things that would make a real user hesitate to recommend the
+    software. Output is a markdown report for human triage, NOT a
+    pass/fail CI gate.
+
+    Requires ``trial.toml`` in the app directory declaring at least
+    one scenario. See ``examples/support_tickets/trial.toml`` for
+    format.
+
+    Example:
+
+        cd examples/support_tickets
+        dazzle qa trial
+        # → dev_docs/qa-trial-<scenario>-<timestamp>.md
+
+    """
+    import sys
+    import time
+    import tomllib
+
+    from dazzle.agent.core import DazzleAgent
+    from dazzle.agent.executor import PlaywrightExecutor
+    from dazzle.agent.missions.trial import build_trial_mission
+    from dazzle.agent.observer import PlaywrightObserver
+    from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+    from dazzle.cli.ux_interactions import _authenticate_persona_on_context
+    from dazzle.qa.trial_report import build_trial_report, render_trial_report
+    from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
+
+    project_dir = _resolve_project_dir(app)
+    trial_path = project_dir / "trial.toml"
+
+    if not trial_path.exists():
+        typer.echo(
+            f"No trial.toml at {trial_path}. Create one to declare scenarios — "
+            "see examples/support_tickets/trial.toml for format.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        trial_cfg = tomllib.loads(trial_path.read_text())
+    except tomllib.TOMLDecodeError as exc:
+        typer.echo(f"trial.toml parse failed: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    scenarios = trial_cfg.get("scenario", [])
+    if not scenarios:
+        typer.echo(f"No [[scenario]] entries in {trial_path}", err=True)
+        raise typer.Exit(code=2)
+
+    if scenario:
+        chosen = next((s for s in scenarios if s.get("name") == scenario), None)
+        if chosen is None:
+            names = [s.get("name", "?") for s in scenarios]
+            typer.echo(
+                f"Scenario '{scenario}' not found. Available: {', '.join(names)}",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+    else:
+        chosen = scenarios[0]
+
+    scenario_name = chosen.get("name", "unnamed")
+    login_persona = chosen.get("login_persona", "")
+    if not login_persona:
+        typer.echo(
+            f"Scenario '{scenario_name}' has no login_persona. "
+            "Set login_persona to the DSL persona ID to trial as.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
+
+    transcript_sink: dict[str, list[dict[str, Any]]] = {"friction": [], "verdict": []}
+    started_at = time.monotonic()
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        typer.echo(
+            "Playwright is not installed. Install with: pip install 'dazzle-dsl[e2e]' "
+            "or pip install 'playwright>=1.40'",
+            err=True,
+        )
+        raise typer.Exit(code=2) from exc
+
+    with launch_interaction_server(project_dir) as conn:
+        site_url = conn.site_url
+        try:
+            test_secret = read_runtime_test_secret(project_dir)
+        except Exception:
+            test_secret = ""
+
+        # Playwright lives in a sync context; the agent run itself is
+        # async, so we bridge via asyncio.run inside the sync block.
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=headless)
+            context = browser.new_context()
+            _authenticate_persona_on_context(context, site_url, login_persona, test_secret or "")
+            page = context.new_page()
+
+            observer = PlaywrightObserver(
+                page,
+                include_screenshots=False,
+                capture_console=True,
+            )
+            executor = PlaywrightExecutor(page)
+            agent = DazzleAgent(
+                observer=observer,
+                executor=executor,
+                model=model,
+                use_tool_calls=True,
+            )
+
+            mission = build_trial_mission(
+                chosen,
+                base_url=site_url,
+                transcript_sink=transcript_sink,
+            )
+
+            typer.echo(
+                f"Starting trial — up to {mission.max_steps} steps, "
+                f"budget {mission.token_budget:,} tokens"
+            )
+            transcript = asyncio.run(agent.run(mission))
+            browser.close()
+
+    duration_s = time.monotonic() - started_at
+
+    friction = transcript_sink.get("friction", [])
+    verdict_entries = transcript_sink.get("verdict", [])
+    verdict = verdict_entries[0]["text"] if verdict_entries else ""
+
+    report = build_trial_report(
+        scenario_name=scenario_name,
+        user_identity=chosen.get("user_identity", ""),
+        friction=friction,
+        verdict=verdict,
+        step_count=len(transcript.steps),
+        duration_seconds=duration_s,
+        tokens_used=transcript.tokens_used,
+        outcome=transcript.outcome,
+    )
+    rendered = render_trial_report(report)
+
+    if output is None:
+        dev_docs = project_dir / "dev_docs"
+        dev_docs.mkdir(exist_ok=True)
+        stamp = report.generated_at.strftime("%Y%m%d-%H%M%S")
+        output = dev_docs / f"qa-trial-{scenario_name}-{stamp}.md"
+    else:
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+    output.write_text(rendered)
+    typer.echo(
+        f"\nTrial complete. {len(friction)} friction observation(s) recorded. Report: {output}",
+        file=sys.stdout,
+    )

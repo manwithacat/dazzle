@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.71] - 2026-04-17
+
+### Added
+- **`dazzle qa trial` — qualitative business-user trial harness.** A new class of test that asks "does this software actually let me do my job?" rather than "does this component match the DSL?" Puts an LLM in the shoes of a real business user (Sarah, founder of a small B2B SaaS, evaluating whether to switch from Gmail+Notion) and lets it attempt meaningful work. Records friction — bugs, confusions, missing features, aesthetic notes — into a markdown report intended for human triage, **not** a pass/fail CI gate.
+- Per-app scenarios declared in `trial.toml` with persona identity, business context, tasks, stopping criteria. Shipped one for `examples/support_tickets` (Sarah / manager persona, 4 tasks).
+- Mission type `build_trial_mission` in `src/dazzle/agent/missions/trial.py` reuses the existing DazzleAgent observe→decide→act→record loop. Two mission tools: `record_friction(category, description, url, evidence, severity)` and `done(verdict)`. Uses `launch_interaction_server` for managed server lifecycle (same fixture `--interactions` and `--contracts --managed` use).
+- Markdown report renderer in `src/dazzle/qa/trial_report.py`. Verdict-first, then friction grouped by category (bug > missing > confusion > aesthetic > praise) and severity. Code-fenced evidence blocks. Output lands at `<app>/dev_docs/qa-trial-<scenario>-<timestamp>.md`.
+- 18 unit tests pinning scenario parsing, tool handlers, report rendering, and sort ordering.
+
+### Agent Guidance
+- `dazzle qa trial` is **not** CI-safe. It is non-deterministic, LLM-driven, and costs real tokens per run. Invoke manually to surface fresh qualitative findings, triage the report, and feed the best signals into `/issues`. Different runs will surface different things — that's the point.
+- When something in a trial report is "actionable" (bug, clear missing feature), file it as an issue. When it's "user perception" (aesthetic, confusion), decide whether to file, docs-note, or drop.
+- Expected cost per trial: ~50-150k tokens, 5-15 minutes wall-clock depending on app complexity and agent verbosity.
+
 ## [0.57.70] - 2026-04-17
 
 ### Added
