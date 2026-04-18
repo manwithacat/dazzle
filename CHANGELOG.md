@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.70] - 2026-04-17
+
+### Added
+- **`contracts-gate` CI job** in `.github/workflows/ci.yml`. Runs `dazzle ux verify --contracts --managed` against `examples/support_tickets` on every push and asserts `failed == 0` (pending allowed — varies with seed data). Baseline on v0.57.70: 34 passed, 0 failed, 30 pending. Any future regression that reintroduces a false-positive workspace failure (bad persona picker, missing region, broken access rule) will break CI immediately instead of shipping to AegisMark's converge pipeline. Follows the same "proven gate becomes blocking" trajectory as INTERACTION_WALK (#800 step 7).
+- **`docs/reference/implicitness-audit.md`** — working doc capturing the three implicit conventions surfaced in the v0.57.67→69 post-mortem (`personas[0]` ≡ admin, `default_workspace` only walked one way, `access:` absence inferred from runtime) and proposing four heuristics for finding more: grep for positional IR indexing, agent-readable DSL property tests, dual-layer invariant enforcement, and per-post-mortem reflection. Status line on heuristic 1: 25 `[0]` hits across 15 files today, awaiting a dedicated audit pass.
+
+### Agent Guidance
+- **Before assuming `personas[0]` is the admin-equivalent**, check `appspec.admin_persona` once that lands (proposed, not yet shipped) or fall through to `default_workspace` reverse-lookup using `_pick_workspace_check_persona()` as the reference. Positional indexing into IR lists is a code smell — see `docs/reference/implicitness-audit.md` heuristic 1.
+- **Before adding a new implicit convention**, ask whether an agent reading only the DSL could derive the behavior. If not, name it. See `docs/reference/implicitness-audit.md` for the four heuristics we now use to catch these.
+
 ## [0.57.69] - 2026-04-17
 
 ### Fixed
