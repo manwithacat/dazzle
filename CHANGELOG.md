@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.66] - 2026-04-17
+
+### Changed
+- **INTERACTION_WALK CI job ratcheted to BLOCKING (step 7 of #800).** Removed `continue-on-error: true` from the `interaction-walks` job in `.github/workflows/ci.yml`. Rationale: the harness caught two real regressions during its signal-gathering window — #797 (drag `$el` scope bug causing `dx=0, dy=0`) and #798 (addCard x-for DOM-insertion race causing `body_length=13, region_fetch_count=0`). Both fixed cleanly, all three walks now green across 3 CI retries in v0.57.65. Signal-gathering served its purpose: we know the harness is stable AND catches real regressions.
+- Shell retry loop (3 attempts per walk) preserved — it covers transient infra races (server boot, db provisioning). Only a genuinely-red walk after 3 tries breaks the build. If flakes appear post-ratchet, re-add `continue-on-error: true` and file a tracking issue rather than silently tolerating red.
+
+### Agent Guidance
+- **INTERACTION_WALK is now a blocking CI gate.** Changes that break the workspace dashboard drag/add/remove flows will fail CI. The diagnostic `[dz-drag]` and `[dz-addcard]` console logs in `dashboard-builder.js` surface the exact failure mode (which selector was missing, which guard returned early) — inspect `gh run view <id> --log --job <interaction-walks-job-id>` and grep for those prefixes to triage.
+
 ## [0.57.65] - 2026-04-17
 
 ### Fixed

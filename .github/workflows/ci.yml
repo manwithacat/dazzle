@@ -419,15 +419,20 @@ jobs:
   # remove-button-reachable regressions that the static shape + HTMX
   # gates can't see.
   #
-  # Non-blocking during the initial signal-gathering window
-  # (continue-on-error: true). Flip to blocking once we have 2-3
-  # weeks of flake data. See docs/proposals/interaction-walk-harness.md
-  # step 6 / step 7 for the ratchet plan.
+  # Ratcheted to BLOCKING in v0.57.66 — the harness caught two real
+  # regressions during its signal-gathering window (#797 drag $el
+  # scope bug, #798 addCard x-for DOM-insertion race), both fixed
+  # cleanly. All three walks green across 3 CI retries in v0.57.65.
+  # If flakes appear post-ratchet, re-add `continue-on-error: true`
+  # here and file a tracking issue rather than quietly tolerating red.
+  # The shell retry loop in the "Run INTERACTION_WALK" step still
+  # gives each walk 3 attempts for transient infra races (server
+  # boot, db provisioning) — only a genuinely-red walk after 3 tries
+  # breaks the build.
   interaction-walks:
     name: INTERACTION_WALK (workspace gestures)
     runs-on: ubuntu-latest
     needs: [python-tests, lint]
-    continue-on-error: true  # non-blocking; will ratchet to blocking per design doc
 
     services:
       postgres:
