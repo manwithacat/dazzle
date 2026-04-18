@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.63] - 2026-04-17
+
+### Fixed
+- **Fourth and definitive root-cause fix on #798 — Alpine x-for DOM insertion race.** v0.57.62's targeted console.log diagnostics proved the exact failure: `[dz-addcard] cardEl NOT FOUND for card-<id>` fires inside the `$nextTick` callback. A single `$nextTick` (or even double — see v0.57.59) is not enough to wait for Alpine's `<template x-for>` to actually append the new wrapper + its inner body to the DOM. `this.$el.querySelector(...)` returns null, so `htmx.process()` never runs and `htmx.ajax()` is never called — explaining `sample_urls=[]` across every prior cycle.
+- Replaced `$nextTick` with a `requestAnimationFrame`-based polling retry that tries up to 30 frames (~500ms at 60fps) for BOTH the card wrapper (`[data-card-id=...]`) AND the body slot (`#region-<region>-<card-id>`) to appear in the DOM. Once both exist, `htmx.process` + `htmx.ajax` fire the region fetch explicitly. Queries against `document` (not `this.$el`) in case Alpine's x-for template scope boundary is the root cause instead. If both elements haven't landed after 30 frames, the harness logs how many frames were attempted and which of the two selectors was still missing — so if this fix ALSO fails, the next CI output will say so precisely rather than silently returning.
+
 ## [0.57.62] - 2026-04-18
 
 ### Changed

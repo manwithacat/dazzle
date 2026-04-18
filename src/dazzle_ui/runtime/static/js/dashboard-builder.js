@@ -171,54 +171,57 @@ document.addEventListener("alpine:init", () => {
       this.showPicker = false;
       this._markDirty();
 
-      // v0.57.61's CI diagnostic confirmed HTMX fires fine on
-      // initial page load (initial_api_calls=6) but never for
-      // the dynamically-added card. Root cause: HTMX's own
-      // MutationObserver processes the new card the moment
-      // Alpine's x-for inserts it — BEFORE Alpine has evaluated
-      // :hx-get / :id bindings. HTMX registers the element with
-      // no hx-get attribute, dispatches the `load` trigger against
-      // nothing, and caches that it's already been processed. Our
-      // later htmx.process() call is a no-op because HTMX de-dupes.
+      // v0.57.62's CI diagnostic proved the cause of the region-
+      // fetch silence: inside a single $nextTick the x-for template
+      // has NOT yet inserted the new card — `this.$el.querySelector`
+      // returns null, so htmx.process + htmx.ajax never run. Alpine
+      // needs multiple frames before x-for finishes DOM insertion
+      // and :hx-get / :id bindings have been evaluated.
       //
-      // Fix: after the bindings land (inside $nextTick), explicitly
-      // fire the region fetch via htmx.ajax. Use the layout data
-      // that Alpine already parsed from the runtime JSON — no
-      // binding-read race, no trigger re-dispatch needed. Target
-      // the body element by its computed id (same format Alpine
-      // produced via :id="'region-' + card.region + '-' + card.id").
-      this.$nextTick(() => {
-        console.log("[dz-addcard] nextTick fired, nextId=" + nextId);
-        const cardEl = this.$el.querySelector(
+      // Fix: poll via requestAnimationFrame up to ~500ms for both
+      // the wrapper (data-card-id) AND the body slot (computed id
+      // matches Alpine's :id="'region-' + card.region + '-' + card.id").
+      // Once both exist, htmx.process registers the new subtree and
+      // htmx.ajax fires the region fetch explicitly (not relying on
+      // hx-trigger="load" which the de-duping MutationObserver may
+      // have already consumed before bindings were live).
+      if (!this.workspaceName) return;
+      const bodyId = "region-" + regionName + "-" + nextId;
+      const url =
+        "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
+
+      let attempts = 0;
+      const maxAttempts = 30; // ~500ms at 60fps
+      const tryFetch = () => {
+        attempts += 1;
+        const cardEl = document.querySelector(
           '[data-card-id="' + nextId + '"]',
         );
-        if (!cardEl) {
-          console.log("[dz-addcard] cardEl NOT FOUND for " + nextId);
-          return;
-        }
-        htmx.process(cardEl);
-        console.log("[dz-addcard] htmx.process called");
-
-        if (!this.workspaceName) {
-          console.log(
-            "[dz-addcard] workspaceName empty — no layout JSON, giving up",
-          );
-          return;
-        }
-        const bodyId = "region-" + regionName + "-" + nextId;
         const bodyEl = document.getElementById(bodyId);
-        if (!bodyEl) {
-          console.log("[dz-addcard] bodyEl NOT FOUND for id=" + bodyId);
+        if (!cardEl || !bodyEl) {
+          if (attempts < maxAttempts) {
+            requestAnimationFrame(tryFetch);
+          } else {
+            console.log(
+              "[dz-addcard] giving up after " +
+                attempts +
+                " frames, cardEl=" +
+                !!cardEl +
+                " bodyEl=" +
+                !!bodyEl,
+            );
+          }
           return;
         }
-        const url =
-          "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
-        console.log("[dz-addcard] firing htmx.ajax GET " + url);
-        htmx.ajax("GET", url, {
-          target: "#" + bodyId,
-          swap: "innerHTML",
-        });
-      });
+        if (typeof htmx !== "undefined") {
+          htmx.process(cardEl);
+          htmx.ajax("GET", url, {
+            target: "#" + bodyId,
+            swap: "innerHTML",
+          });
+        }
+      };
+      requestAnimationFrame(tryFetch);
     },
 
     removeCard(cardId) {
