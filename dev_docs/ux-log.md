@@ -4,6 +4,45 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 271 — 2026-04-19 — framework_gap_analysis: DaisyUI residuals in uncontracted templates
+
+**Strategy:** `framework_gap_analysis` — 8+ cycles since last synthesis and cycles 268-270 produced a clear cross-cycle signal (5 DaisyUI-class drift items closed during 3 consecutive `contract_audit` cycles). Pure reasoning cycle, no infra.
+
+**Candidate strategies considered:**
+- `framework_gap_analysis` (chosen) — clear cross-cycle theme, 7+ cycles of synthesis debt, pattern visible enough to name.
+- `missing_contracts` — too soon (cycle 267), no known additional families.
+- `contract_audit` — no pending PROPs (267 pipeline closed 3/3 in cycle 270).
+- `finding_investigation` — no OPEN EX rows with 3+ cross-cycle evidence.
+- `edge_cases` — needs subagent browser substrate; not this cycle.
+
+**Work:**
+
+1. Surveyed cycles 265-270 closure notes. Cumulative DaisyUI drift identified + fixed across 5 items in 5 templates (tab_data ×3, testimonials, island).
+2. Ran a systematic DaisyUI sweep across all `src/dazzle_ui/templates/` with a filtered `grep -rEn 'class="[^"]*\b(card|menu|btn|hero|skeleton|alert|badge|divider)\b[^"]*"'` pattern. After excluding `hsl(var(--card))` noise, `dz-<word>` canonical markers, report-only templates, and `:class=` Alpine bindings: **3 remaining open leaks** surfaced.
+   - `experience/_content.html:138` — `class="card bg-[hsl(var(--muted))]"` on non-surface step placeholder.
+   - `fragments/detail_fields.html:4` — `class="card bg-[hsl(var(--card))] shadow-sm"` on detail fragment.
+   - `components/alpine/dropdown.html:13` — `class="... menu p-1 ..."` on generic dropdown.
+3. Wrote gap doc at `dev_docs/framework-gaps/2026-04-19-daisyui-residuals-in-uncontracted-templates.md`:
+   - Problem statement (contracting is the only mechanism systematically enforcing design-token compliance).
+   - Evidence table (5 fixed, 3 open — 8 observations total across 6 templates).
+   - Root cause hypothesis (contract-authorship ordering is the gap; lint would close it).
+   - Fix sketch (Mechanism A: tactical cleanup of 3 open; Mechanism B: durable pytest lint rule).
+   - Blast radius (confirmed affected, confirmed clean, likely clean, unknown — reports explicitly exempted).
+   - 5 open questions (reports-template policy, `<details>` collapse remnants, DaisyUI CDN removal ordering, build-time vs runtime, DSL-author class strings).
+   - Next steps (cycle 272 tactical cleanup, subsequent lint rule, deferred reports decision, one-cycle re-sweep after lint).
+
+**Heuristic compliance:**
+- Heuristic 1 — raw-layer reproduction. Verified each of the 3 open leaks by grep + direct template inspection; no speculation about symptom without confirmed class-token presence in the template source.
+- Heuristic 2 — N/A (no helper function at the centre).
+- Heuristic 3 — N/A (no framework code modified this cycle; pure reasoning).
+- Heuristic 4 — N/A (no intent declaration at the centre).
+
+**Outcome:** `Gap doc written — 2 mechanisms proposed (tactical + durable lint). 3 open leaks identified with exact line numbers and fix sketches. Ready for cycle 272 to execute Mechanism A.`
+
+**Budget:** explore 41/100.
+
+---
+
 ## Cycle 270 — 2026-04-19 — contract_audit: PROP-057 → UX-059 (island, paired server+client) — closes cycle-267 pipeline 3/3
 
 **Strategy:** `contract_audit` — third consecutive PROP promotion from the cycle 267 `missing_contracts` scan. Target was PROP-057 island — originally tagged "multi-cycle scope" in cycles 267/268/269 logs because the hydration protocol needed client-side archaeology. This cycle the archaeology turned out to be cheap (58-line JS), so single-cycle audit was tractable.
