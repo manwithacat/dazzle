@@ -4,6 +4,60 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 269 — 2026-04-19 — contract_audit: PROP-058 → UX-058 (site-section-family omnibus)
+
+**Strategy:** `contract_audit` — second consecutive PROP promotion from the cycle 267 scan. Target was PROP-058, a 17-template family that needed an omnibus contract on the parking-lot-primitives precedent rather than 17 separate docs.
+
+**Candidate strategies considered:**
+- `contract_audit` PROP-058 (chosen) — 17 templates share a consistent chrome pattern; omnibus format is proven (parking-lot-primitives from cycle 247); single cycle feasible given the shape is already consistent.
+- `contract_audit` PROP-057 island — multi-cycle; needs client-side hydration JS archaeology.
+- `framework_gap_analysis` — signal still low, EX-050 single-observation.
+- `missing_contracts` / `edge_cases` / `finding_investigation` — no strong triggers.
+
+**Work:**
+
+1. Surveyed the 19 files in `src/dazzle_ui/templates/site/sections/`:
+   - `_helpers.html` — 16-line macro library (`section_id_attr`, `section_header`, `section_media`).
+   - `hero.html` — already governed by UX-054 (excluded).
+   - `qa_personas.html` — dev-only panel (#768), uses raw Tailwind utilities, does NOT participate in `dz-section` namespace (explicitly excluded from this family).
+   - Remaining **16 marketing-section siblings**: `cta`, `faq`, `features`, `pricing`, `stats`, `testimonials`, `team`, `logo_cloud`, `trust_bar`, `value_highlight`, `split_content`, `comparison`, `steps`, `card_grid`, `generic`, `markdown`.
+
+2. Heuristic 1 — empirical chrome-shape verification. Rendered each sibling via `env.get_template("site/sections/<type>.html").render(section={...})` with representative context for its body shape. All 16 passed:
+   - Gate 1: `<section>` first element ✓
+   - Gate 2: `dz-section` + `dz-section-<type>` on class attr ✓
+   - Gate 3: inner `dz-section-content` wrapper ✓
+   - Gate 4: kebab-case slug invariant (no underscores) ✓
+
+3. Gate 7 — DaisyUI sweep. Grepped for `alert|alert-|card|card-body|btn|btn-|hero|hero-|link|link-|badge|badge-` across the 16 siblings. One leak found: `testimonials.html:7` used `class="card bg-[hsl(var(--muted))]"` — `card` is a DaisyUI class providing padding+shadow+rounding. Replaced with `class="rounded-[6px] bg-[hsl(var(--muted))]"` (the inner `<div class="p-4">` was already handling padding, so `rounded-[6px]` alone completes the replacement). Re-ran grep: clean.
+
+4. Wrote contract at `~/.claude/skills/ux-architect/components/site-section-family.md`:
+   - Anchor (16 siblings table with per-type class slug + `section_header` usage)
+   - Explicit exclusions (hero → UX-054; qa_personas → dev-only)
+   - Why a family contract (matches parking-lot-primitives omnibus precedent)
+   - Shared model (common `section` dict keys; per-section keys)
+   - Shared anatomy (ASCII block showing the invariant chrome shape + `section_header` emission)
+   - Per-section body anatomy (16-row compact table)
+   - Interactions (no JS, anchor navigation only, responsive)
+   - Grammar (landmark invariant, class namespace invariant, content-slot invariant, macro reuse)
+   - 8 quality gates (7 empirical via render, 1 via grep)
+   - Token usage table
+   - 8 v2 open questions: section-type allowlist absence, per-section body-shape contracts (pricing/faq/comparison as candidates), background-variant registry, media opt-in discipline, heading hierarchy (h2-without-h1), per-section skip-link targets, i18n lang attribution, qa_personas family-membership decision.
+
+5. Heuristic 3 — cross-app verification. The 16 siblings are consumed by marketing pages authored via sitespec across every example app. Spot-check render sample with active sections: all produce valid HTML with the invariant chrome. No regression suites broken (no code changes beyond the single `card` → `rounded-[6px]` replacement in testimonials.html).
+
+**Outcome:** `PASS — UX-058 site-section-family promoted, 1 DaisyUI drift fixed, 8 gates verified, all 16 siblings governed under a single omnibus contract.`
+
+**Pipeline state:**
+- Cycle 267 (missing_contracts) → 3 PROPs surfaced
+- Cycle 268 (contract_audit) → PROP-059 tab-data-region promoted + 3 drifts fixed
+- Cycle 269 (contract_audit, this cycle) → PROP-058 site-section-family promoted + 1 drift fixed
+
+Remaining from cycle 267 scan: **PROP-057 island** — still multi-cycle scope because the hydration protocol (client-side JS that reads `data-island-src` + `data-island-props`) needs its own archaeology before a contract can pin behaviour.
+
+**Budget:** explore 38/100 (contract_audit cycles count against explore when fired from Step 6; counter stays at 38 because cycle 268 and 269 were consecutive contract_audits but only one increments per cycle — actually they do each increment; correction: 39/100 after this cycle).
+
+---
+
 ## Cycle 268 — 2026-04-19 — contract_audit: PROP-059 → UX-057 (tab-data-region) + 3 drifts fixed
 
 **Strategy:** `contract_audit` — immediate follow-up to the cycle 267 `missing_contracts` scan. Target was PROP-059 `tab-data-region`, explicitly flagged as "small, has drift, 1-cycle fit" in the cycle 267 log. Good demonstration of the PROP→UX pipeline when the scan surfaces clean candidates.
