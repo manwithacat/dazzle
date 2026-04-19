@@ -4,6 +4,56 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 270 — 2026-04-19 — contract_audit: PROP-057 → UX-059 (island, paired server+client) — closes cycle-267 pipeline 3/3
+
+**Strategy:** `contract_audit` — third consecutive PROP promotion from the cycle 267 `missing_contracts` scan. Target was PROP-057 island — originally tagged "multi-cycle scope" in cycles 267/268/269 logs because the hydration protocol needed client-side archaeology. This cycle the archaeology turned out to be cheap (58-line JS), so single-cycle audit was tractable.
+
+**Candidate strategies considered:**
+- `contract_audit` PROP-057 (chosen) — only remaining PROP from the 267 pipeline; closing at 3/3 is satisfying and the hydration file turned out short.
+- `framework_gap_analysis` — still a legitimate next choice once the 267 pipeline is closed; synthesis debt remains.
+- `missing_contracts` — too soon after cycle 267.
+- `finding_investigation` / `edge_cases` — no strong triggers.
+
+**Work:**
+
+1. Scoped the island contract: `components/island.html` (11 lines, server shell) + `runtime/static/js/dz-islands.js` (58 lines, client hydrator). Loaded via `base.html:56` with `<script defer>`.
+2. Read `dz-islands.js` end-to-end. The hydration protocol is cleanly documented in its own JSDoc header:
+   - Mount points: `[data-island]` with four `data-island-*` attrs.
+   - Module contract: `export mount({ el, props, apiBase })` → optional cleanup function.
+   - Lifecycle: `DOMContentLoaded` + `htmx:afterSettle` mount; `htmx:beforeSwap` unmount.
+   - Idempotency: `MOUNTED` `WeakSet` prevents double-mount; GC-safe.
+   - Error surface: console.error only; fallback stays visible on failure.
+3. Heuristic 1 — empirical shell gates. Rendered `components/island.html` with minimal + fallback + no-fallback contexts. All 5 server gates passed + identified one DaisyUI drift at line 9.
+4. **Drift fix:** Line 9 default placeholder used `class="skeleton h-32 w-full"` (DaisyUI `skeleton` class). Replaced with canonical `class="dz-skeleton h-32 w-full rounded-[4px] bg-[hsl(var(--muted))] animate-pulse"` matching `fragments/skeleton_patterns.html` pattern. Also added contract pointer in template header comment. Re-rendered: no DaisyUI leak remaining.
+5. Wrote contract at `~/.claude/skills/ux-architect/components/island.md`:
+   - Paired anchor (both files governed).
+   - Model split across server vs client sides.
+   - Anatomy with ASCII mount-shell + client-module code skeleton (using safe DOM APIs — `replaceChildren`, `appendChild`, `textContent`).
+   - Interactions (idempotency, HTMX lifecycle, no SSR/CSR reconciliation).
+   - 9 quality gates — 5 empirically verified on the shell, 4 verified via `dz-islands.js` + `base.html:56` inspection.
+   - **Security Considerations section** — explicitly documenting fallback-HTML injection hazard (`{{ island.fallback }}` is not autoescaped in context), island-module trust model, and safe-DOM-API guidance inside `mount()` (never `innerHTML` with user content; use DOMPurify for untrusted HTML).
+   - 9 v2 open questions: props-size ceiling, fallback HTML injection hazard, module resolution strategy, `apiBase` normalisation, `mount()` return-type tolerance (Promise drops cleanup), no `onError` slot, mount-order isolation, full-page-nav teardown (no `pagehide` handler), DSL props-serialisation rules.
+6. Security hook triggered on a first draft that included a raw `innerHTML` example — rewrote the client-module example to use `el.replaceChildren(...)` and added explicit "prefer safe DOM APIs" guidance. Contract now reads as a secure-by-default reference.
+
+**Outcome:** `PASS — UX-059 island promoted, 1 DaisyUI drift fixed, 9 gates verified, paired server+client contract at ~/.claude/skills/ux-architect/components/island.md.`
+
+**Cycle 267 pipeline closed at 3/3 over 4 cycles:**
+- Cycle 267 (missing_contracts) → PROP-057, PROP-058, PROP-059 surfaced
+- Cycle 268 (contract_audit) → PROP-059 tab-data-region promoted + 3 drifts fixed
+- Cycle 269 (contract_audit) → PROP-058 site-section-family promoted + 1 drift fixed
+- Cycle 270 (this cycle)    → PROP-057 island promoted + 1 drift fixed
+
+**Cumulative DaisyUI leaks found + fixed during this pipeline:** 5 drift items closed (3 in tab_data, 1 in testimonials, 1 in island). Each surfaced by systematic contract gates rather than by incidental observation.
+
+**Next cycles — possible directions:**
+- `framework_gap_analysis` — 8+ cycles since last synthesis; EX-050 + prior closures could cluster into themes.
+- `missing_contracts` — breadth scan against a new template family (e.g. `fragments/*` gaps discovered in detail during parking-lot review).
+- `edge_cases` via subagent browser — coverage of newly-contracted components against live personas.
+
+**Budget:** explore 40/100.
+
+---
+
 ## Cycle 269 — 2026-04-19 — contract_audit: PROP-058 → UX-058 (site-section-family omnibus)
 
 **Strategy:** `contract_audit` — second consecutive PROP promotion from the cycle 267 scan. Target was PROP-058, a 17-template family that needed an omnibus contract on the parking-lot-primitives precedent rather than 17 separate docs.
