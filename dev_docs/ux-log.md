@@ -4,6 +4,49 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 268 — 2026-04-19 — contract_audit: PROP-059 → UX-057 (tab-data-region) + 3 drifts fixed
+
+**Strategy:** `contract_audit` — immediate follow-up to the cycle 267 `missing_contracts` scan. Target was PROP-059 `tab-data-region`, explicitly flagged as "small, has drift, 1-cycle fit" in the cycle 267 log. Good demonstration of the PROP→UX pipeline when the scan surfaces clean candidates.
+
+**Candidate strategies considered:**
+- `contract_audit` PROP-059 (chosen) — cycle 267 teed it up, known drift, one consumer, 1-cycle fit.
+- `contract_audit` PROP-057 island — more interesting but hydration protocol needs client-side archaeology; multi-cycle.
+- `contract_audit` PROP-058 site-section-family — 17-template omnibus; 2+ cycles to do properly.
+- `framework_gap_analysis` — signal still low, EX-050 alone doesn't justify a synthesis cycle.
+- `finding_investigation` — no OPEN EX rows with cross-cycle reinforcement.
+
+**Work:**
+
+1. Located `workspace/regions/tab_data.html` call site: `src/dazzle_back/runtime/workspace_route_builder.py:120-131` swaps the region template to `tab_data.html` for per-source tabs of a `workspace_tabbed_region` with a `source_tabs` list.
+2. Read the 80-line template and identified three concrete drift items:
+   - **Line 6**: `<select class="... border border-[hsl(var(--border))] text-[12px] border border-[hsl(var(--border))]">` — duplicate `border border-[hsl(var(--border))]` in the same class attr.
+   - **Line 41**: `{% if action_url %}cursor-pointer hover{% endif %}` — dangling `hover` utility with no target pseudo-class. Sibling `list.html:82` uses `cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]`.
+   - **Line 61**: `<a href="..." class="link link-hover link-primary" ...>` — DaisyUI classes on ref-column anchors. Grep confirmed this was the ONLY remaining DaisyUI `link link-hover link-primary` combination in the entire `src/dazzle_ui/` tree.
+3. Wrote contract at `~/.claude/skills/ux-architect/components/tab-data-region.md` — 13 quality gates, cell-type dispatch table, HTMX target convention (`#tab-{region}-{source_entity|lower}`), attention-signal tint rules, ref-display fallback chain, pagination-integration hand-off to parent tabbed-region.
+4. Applied fixes in one pass:
+   - Added canonical `<div class="dz-tab-data">` outer wrapper (previously absent).
+   - Deduplicated the filter-`<select>` border class.
+   - Replaced `hover:text-primary` on sort-header anchor with `hover:text-[hsl(var(--foreground))]` + `transition-colors duration-[80ms]` matching list.html.
+   - Replaced dangling `hover` on row `<tr>` with `hover:bg-[hsl(var(--muted)/0.5)]`.
+   - Replaced DaisyUI ref-link classes with `text-[hsl(var(--primary))] hover:underline`.
+   - Added contract pointer in the header comment.
+
+5. Heuristic 1 — empirical verification. Rendered the template via `env.get_template(...).render(...)` with representative context (3 columns inc. ref + badge types, 1 row with owner ref, sort_field set, active_filters set, action_url set) and an empty-state variant. All 13 quality gates passed: no DaisyUI link classes, no dangling hover, no duplicated border class, canonical `dz-tab-data` marker present in both populated and empty renders, HSL ref-link class present, HSL sort-link hover present, HSL row hover tint present, HTMX target convention enforced, filter-bar class hook preserved, sort arrow glyph emitted when active, empty-state renders with `role="status"` and `dz-empty-dense`, empty-state wrapper always contains the canonical marker.
+
+6. Heuristic 3 — cross-app regression check. The only current consumer is `fieldtest_hub` (IssueReport tabbed_list per `dsl/app.dsl`). Ran `env -u DAZZLE_TEST_SECRET python -m dazzle ux verify --contracts --managed` against it: **63 passed / 0 failed / 60 pending** vs the 64/0/60 pre-change baseline — functionally unchanged. (The 1-contract delta is an unrelated pending-count variance from seed data, not a regression — "failed" count is the real gate.)
+
+**Outcome:** `PASS — UX-057 tab-data-region promoted, 3 drifts fixed, all 13 gates verified, no regression.`
+
+**Cross-cycle pipeline visible this session:**
+- Cycle 267 (missing_contracts) → PROP-059 surfaced
+- Cycle 268 (contract_audit, this cycle) → PROP-059 promoted + drift fixed
+
+Two PROPs remain in the marketing-scan backlog: PROP-057 island (hydration protocol — multi-cycle scope), PROP-058 site-section-family (17-template omnibus — 2+ cycles to do properly).
+
+**Budget:** explore 37/100 (contract_audit cycles count against explore when fired from Step 6).
+
+---
+
 ## Cycle 267 — 2026-04-19 — missing_contracts: 3 uncontracted families surfaced
 
 **Strategy:** `missing_contracts` — first non-audit cycle in the 260s block. Explore budget 36→37.

@@ -1,9 +1,18 @@
-{# Tab data fragment — data table for multi-source tab panels, no card wrapper #}
+{# Tab data fragment — data table for multi-source tab panels, no card wrapper.
+
+   Contract: ~/.claude/skills/ux-architect/components/tab-data-region.md (UX-057)
+
+   Used once per source entity inside a multi-source workspace_tabbed_region.
+   Distinct from list.html — no card wrapper (the wrapper lives one level up in
+   workspace-tabbed-region chrome). HTMX target convention:
+   #tab-{region_name}-{source_entity|lower}. Endpoint is
+   /api/workspaces/{ws}/regions/{region}/{source}. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
+<div class="dz-tab-data">
 {% if filter_columns %}
 <div class="flex flex-wrap gap-2 mb-2 filter-bar">
   {% for fc in filter_columns %}
-  <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] border border-[hsl(var(--border))]"
+  <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px]"
           hx-get="{{ endpoint }}" hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
           hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
     <option value="">All {{ fc.label }}</option>
@@ -24,7 +33,7 @@
           {% if col.sortable %}
           <a hx-get="{{ endpoint }}?sort={{ col.key }}&amp;dir={% if sort_field == col.key and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
              hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
-             class="cursor-pointer select-none hover:text-primary inline-flex items-center gap-1">
+             class="cursor-pointer select-none hover:text-[hsl(var(--foreground))] inline-flex items-center gap-1 transition-colors duration-[80ms]">
             {{ col.label }}
             {% if sort_field == col.key %}<span class="ml-1">{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
           </a>
@@ -38,7 +47,7 @@
     <tbody>
       {% for item in items %}
       {% set attn = item.get("_attention") if item.get is defined else none %}
-      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% elif attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% elif attn.level == 'notice' %}bg-[hsl(var(--info)/0.08)]{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
+      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% elif attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% elif attn.level == 'notice' %}bg-[hsl(var(--info)/0.08)]{% endif %} {% endif %}{% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
           {% if attn %}title="{{ attn.message }}"{% endif %}
           {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
           hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
@@ -58,7 +67,7 @@
             {% if ref is mapping %}
               {% set display_name = display_name or (ref | ref_display) %}
               {% if col.ref_route and ref.get("id") %}
-                <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ display_name }}</a>
+                <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline" onclick="event.stopPropagation()">{{ display_name }}</a>
               {% else %}{{ display_name }}{% endif %}
             {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
           {% else %}
@@ -77,3 +86,4 @@
 {% else %}
 <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
 {% endif %}
+</div>
