@@ -12,7 +12,7 @@
       <a href="{{ section.primary_cta.href | default('#') }}" class="inline-flex items-center h-9 px-4 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[14px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">{{ section.primary_cta.label | default("Get Started") }}</a>
       {% endif %}
       {% if section.secondary_cta %}
-      <a href="{{ section.secondary_cta.href | default('#') }}" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]">{{ section.secondary_cta.label | default("Learn More") }}</a>
+      <a href="{{ section.secondary_cta.href | default('#') }}" class="inline-flex items-center h-9 px-4 rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-[14px] font-medium hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms]">{{ section.secondary_cta.label | default("Learn More") }}</a>
       {% endif %}
     </div>
     {% endif %}
