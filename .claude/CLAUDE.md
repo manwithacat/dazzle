@@ -113,6 +113,12 @@ Dazzle has an autonomous UX improvement loop at `/ux-cycle`. It iterates over th
 - `/loop 30m /ux-cycle` — recurring with 30-min intervals
 - `/loop /ux-cycle` — self-paced
 
+## Qualitative Trial Loop
+
+Sibling to `/ux-cycle` — where ux-cycle checks *shape* (contracts, DOM, card safety) deterministically, `/trial-cycle` checks *substance* (did the user achieve the task, was the RBAC sensible, did the error page help) qualitatively. Each cycle picks an `(example_app, trial.toml scenario)` pair, runs `dazzle qa trial --fresh-db`, and triages findings into `dev_docs/trial-backlog.md` or GitHub issues. ~5 min/cycle; burns tokens — prefer `/loop 60m /trial-cycle` or manual.
+
+Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.claude/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
+
 ## Extending
 
 ### Adding DSL Constructs
@@ -249,4 +255,4 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.57.85 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.57.86 | **Python**: 3.12+ | **Status**: Production Ready

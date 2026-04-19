@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.86] - 2026-04-19
+
+### Added
+- **`/trial-cycle` loop command (`.claude/commands/trial-cycle.md`).** Sibling to `/ux-cycle`. Rotates through every `(example_app, trial.toml scenario)` pair, runs `dazzle qa trial --fresh-db`, and triages findings into `dev_docs/trial-backlog.md` or files GitHub issues for high-severity / cross-cycle-reinforced friction. Where `/ux-cycle` checks shape (contracts, DOM, card safety) deterministically, `/trial-cycle` checks substance (did the user achieve the task, was the RBAC sensible, did the error page help) qualitatively. ~5 min/cycle — default cadence `/loop 60m /trial-cycle`.
+- **`qa-trial` skill (`.claude/skills/qa-trial/`).** User-facing skill that auto-triggers when Dazzle users author `trial.toml` or ask to set up qualitative trials. `SKILL.md` covers authoring rules (specific identity, grounded business context, goals not click-paths, stop-when protection); `templates/trial-toml-template.toml` is a blank form to fill in; `references/authoring-guide.md` has domain-specific patterns (SaaS, finserv, healthcare, logistics, edtech, multi-tenant, graph-heavy). Every user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
+
+### Agent Guidance
+- **When qa trial output is thin**, the scenario is almost always the root cause, not the harness. Invoke the `qa-trial` skill to audit `user_identity` / `business_context` / `tasks` specificity before blaming the framework or the LLM.
+- **`/trial-cycle` is the upstream signal generator for framework issues.** It files issues that `/issues` then picks up and resolves. Don't run both concurrently — `/issues` should run on a different cadence (or on-demand after trial-cycle pauses).
+
 ## [0.57.85] - 2026-04-19
 
 ### Added

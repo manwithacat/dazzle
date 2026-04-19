@@ -1,0 +1,65 @@
+# trial.toml — qualitative user trial scenarios for `dazzle qa trial`.
+#
+# Replace every <PLACEHOLDER> with something specific to your domain.
+# Run: dazzle qa trial --fresh-db
+#
+# Read .claude/skills/qa-trial/SKILL.md before editing — the scenario
+# shape matters more than its length. Specific identities produce
+# specific friction.
+
+[[scenario]]
+# Internal handle for this scenario; pass via --scenario to select it.
+name = "<SCENARIO_NAME>"
+
+# The DSL persona ID to authenticate as. Must exist in your dazzle.toml
+# or personas DSL. Not a display name — the ID.
+login_persona = "<PERSONA_ID>"
+
+# Hard cap on agent work. 300–500s + 25–40 steps is a reasonable range
+# for most SaaS apps. Longer means more drift + more tokens; shorter
+# means shallow evaluation.
+time_budget_seconds = 400
+max_steps = 30
+
+# First-person narrative. The agent reads this as "who am I today".
+# Include: name, role, company size/context, the tool they currently
+# use, and the decision at stake right now. Specific > generic.
+user_identity = """
+You are <NAME>, <ROLE> at <COMPANY_DESCRIPTION>. You <CURRENT_WORKFLOW>
+but it's <WHAT_HURTS>. You're trialling this software today to decide
+whether <DECISION_AT_STAKE>.
+
+You're logged in as the "<PERSONA_ID>" account — the same role you'd
+use in production.
+"""
+
+# Numbers and pressures that anchor task prioritisation. What volume of
+# work, what percentage is high-stakes, what external actors care.
+business_context = """
+You <VOLUME_METRIC>. About <PERCENTAGE> are <HIGH_STAKES_CATEGORY>,
+<PERCENTAGE> are <MEDIUM>, and the rest are <LOW>. You care about
+<WHAT_BREAKS_TRUST_IF_MISSED>.
+"""
+
+# Goals, not click-paths. Phrase each as a real business need the user
+# is trying to satisfy, not a UI interaction you want probed.
+tasks = [
+    "<GOAL_ONE_AS_A_QUESTION_THE_USER_IS_ASKING_THE_SOFTWARE>",
+    "<GOAL_TWO_PROBABLY_A_FILTER_OR_SORT_NEED>",
+    "<GOAL_THREE_MAYBE_A_CROSS_ENTITY_QUESTION>",
+]
+
+# When the agent should call submit_verdict. Emphasise rounded opinion
+# over exhaustive coverage — exhaustive coverage burns tokens and
+# produces noise.
+stop_when = """
+Stop when you've formed a rounded opinion on whether this software
+would work for <NAME>'s business. Don't feel obliged to try every
+feature — the aim is honest friction reporting, not exhaustive
+coverage. Call submit_verdict with a one-paragraph verdict when ready.
+"""
+
+# Optional: add a second scenario for a different persona or decision.
+# [[scenario]]
+# name = "<SECOND_SCENARIO_NAME>"
+# ...
