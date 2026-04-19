@@ -461,6 +461,77 @@ def save_command(
     typer.echo(format_output(result, as_json=json_output))
 
 
+@demo_app.command(name="verify")
+def verify_command(
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        help="Project root directory",
+    ),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit non-zero on warnings as well as errors",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Statically check the project's demo blueprint against the AppSpec (#821).
+
+    Finds strategy/type mismatches, unknown fields, invalid enum
+    values, length-cap violations, and required fields without
+    patterns — all the blueprint authoring drift that currently
+    only surfaces at seed time.
+
+    Exit codes:
+      0 — no errors (warnings allowed unless --strict)
+      1 — errors found (or --strict with warnings)
+      2 — couldn't load blueprint or appspec
+    """
+    import json as _json
+
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.core.demo_blueprint_persistence import load_blueprint
+    from dazzle.demo_data.verify import verify_blueprint
+
+    project_root = project_root.resolve()
+
+    blueprint = load_blueprint(project_root)
+    if blueprint is None:
+        typer.echo("No blueprint found. Run `dazzle demo propose` first.", err=True)
+        raise typer.Exit(code=2)
+
+    try:
+        appspec = load_project_appspec(project_root)
+    except Exception as exc:
+        typer.echo(f"Failed to load AppSpec: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    report = verify_blueprint(blueprint, appspec)
+
+    if json_output:
+        typer.echo(
+            _json.dumps(
+                {
+                    "errors": [v.__dict__ for v in report.errors()],
+                    "warnings": [v.__dict__ for v in report.warnings()],
+                },
+                indent=2,
+            )
+        )
+    else:
+        for v in report.errors():
+            typer.echo(f"[error] {v.entity}.{v.field or '(entity)'}: {v.rule} — {v.message}")
+        for v in report.warnings():
+            typer.echo(f"[warning] {v.entity}.{v.field or '(entity)'}: {v.rule} — {v.message}")
+        if not report.violations:
+            typer.echo("Blueprint looks healthy — no violations.")
+        else:
+            typer.echo(f"\n{len(report.errors())} error(s), {len(report.warnings())} warning(s).")
+
+    if report.has_errors or (strict and report.warnings()):
+        raise typer.Exit(code=1)
+
+
 @demo_app.command(name="generate")
 def generate_command(
     output_format: str = typer.Option(

@@ -84,6 +84,27 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
         typer.echo(f"Seed skipped: could not load appspec ({exc})", err=True)
         return
 
+    # Soft-gate: run the blueprint verifier and surface any drift, but
+    # continue with the seed either way — some imperfect data in the
+    # app is usually better for the trial than none. Violations show
+    # up as a compact summary to keep the trial log readable.
+    if blueprint.exists():
+        try:
+            from dazzle.core.demo_blueprint_persistence import load_blueprint
+            from dazzle.demo_data.verify import verify_blueprint
+
+            loaded = load_blueprint(project_dir)
+            if loaded is not None:
+                report = verify_blueprint(loaded, appspec)
+                if report.errors():
+                    typer.echo(
+                        f"Blueprint verify: {len(report.errors())} error(s) — "
+                        f"seed may have reduced coverage. "
+                        f"Run `dazzle demo verify` for details."
+                    )
+        except Exception:
+            pass  # verifier failure must never block a trial
+
     if existing_data is None or not any(existing_data.glob("*.jsonl")):
         tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-seed-"))
         try:

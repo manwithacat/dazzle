@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.94] - 2026-04-19
+
+### Added
+- **`dazzle demo verify` command.** Static analysis of a project's demo blueprint against its AppSpec. Flags strategy/type mismatches (e.g. `date_relative` on a `ref` field, `free_text_lorem` on a `decimal` field), unknown entity/field references, invalid enum values, string-length violations, and required fields without patterns. Exit code 0 clean, 1 on errors, 2 on load failure. `--strict` escalates warnings to exit 1; `--json` emits a structured report. Sits alongside `dazzle validate` and `dazzle lint` in the static-analysis family — NOT a looping cycle (blueprints don't drift continuously).
+- **`STRATEGY_COMPATIBILITY` table** in `dazzle.demo_data.verify` maps each `FieldStrategy` to the `FieldTypeKind` values it can legitimately fill. Single source of truth; stays in sync with `FieldStrategy` when new strategies are added. 13 unit tests pin every rule.
+- **Integrated into `dazzle qa trial --fresh-db`** as a soft-gate pre-flight: logs violations but continues seeding (some imperfect data is usually better than none for a trial). The narrow runtime heuristic guard from v0.57.93 stays in place as a safety net.
+- Real-world validation: `dazzle demo verify` against the five example-app blueprints correctly catches every drift pattern that was biting `/trial-cycle` runs (dates on ref fields, lorem on ref fields, etc.) — static analysis now surfaces them BEFORE data is generated rather than as mysterious 400s during seed.
+
+### Agent Guidance
+- **Run `dazzle demo verify` after editing a blueprint.** Same rhythm as `dazzle validate` after editing DSL: author → verify → fix → commit. Catches the common authoring-drift classes before they hit generation or seed-time failures.
+- **`STRATEGY_COMPATIBILITY` is the source of truth** for which strategies work on which field types. Update the table (and tests) when adding new field strategies.
+
 ## [0.57.93] - 2026-04-19
 
 ### Fixed
