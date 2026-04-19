@@ -173,7 +173,7 @@ class RedisBus(BaseEventBus):
         # version of redis-py that computes it differently.
         try:
             ping_coro = self._redis.ping()  # type: ignore[misc,unused-ignore]
-            await asyncio.wait_for(ping_coro, timeout=5.0)  # type: ignore[arg-type]
+            await asyncio.wait_for(ping_coro, timeout=5.0)  # type: ignore[arg-type, unused-ignore]
         except TimeoutError as exc:
             raise RuntimeError(
                 f"Redis ping timed out after 5s against {self._config.url}. "

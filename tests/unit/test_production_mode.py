@@ -18,7 +18,9 @@ class TestValidateProductionEnv:
     """Tests for production environment validation."""
 
     def test_returns_database_url_when_set(self) -> None:
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://localhost/db"}):
+        # clear=True so a CI runner with REDIS_URL already exported
+        # (from a service-container step) doesn't leak into this test.
+        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://localhost/db"}, clear=True):
             db_url, redis_url = validate_production_env()
             assert db_url == "postgresql://localhost/db"
             assert redis_url is None
