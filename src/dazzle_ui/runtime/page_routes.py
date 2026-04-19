@@ -1431,6 +1431,37 @@ def create_page_routes(
         )
         router.get(reg_path, response_class=HTMLResponse)(handler)
 
+    # #815: users type plural URLs (/app/tickets, /app/contacts) even when
+    # Dazzle's canonical slug is singular (/app/ticket, /app/contact).
+    # Register a 301 redirect from the plural form to the singular canonical
+    # path for each entity so external links, bookmarks, and typed-URL
+    # navigation all land somewhere sensible. Workspaces live under
+    # /app/workspaces/<name> which never collides with /app/<plural>, so no
+    # guard is needed beyond skipping entities whose singular and plural
+    # slugs are identical (rare — e.g. "Series").
+    from dazzle.core.strings import to_api_plural as _to_api_plural
+
+    _registered_reg_paths = {
+        (app_prefix and route_path[len(app_prefix) :]) or route_path
+        for route_path, _ in sorted_routes
+    }
+    for _entity in appspec.domain.entities:
+        singular_slug = _entity.name.lower().replace("_", "-")
+        plural_slug = _to_api_plural(_entity.name).replace("_", "-")
+        if singular_slug == plural_slug:
+            continue
+        plural_reg_path = f"/{plural_slug}"
+        if plural_reg_path in _registered_reg_paths:
+            # Something real already lives here — don't shadow it.
+            continue
+
+        redirect_target = f"{app_prefix}/{singular_slug}"
+
+        def _plural_redirect(target: str = redirect_target) -> RedirectResponse:
+            return RedirectResponse(url=target, status_code=301)
+
+        router.get(plural_reg_path)(_plural_redirect)
+
     # Register workspace routes — workspaces use their own template, not the
     # surface page template, so they get separate handlers.
     workspaces = getattr(appspec, "workspaces", []) or []

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.88] - 2026-04-19
+
+### Added
+- **Plural entity URLs redirect to canonical singular (#815).** Business users type `/app/tickets`, `/app/contacts`, `/app/alerts` — Dazzle's convention is singular (`/app/ticket`, `/app/contact`, `/app/alert`). Every example app trialled with `/trial-cycle` produced at least one "feature seems broken" 404 from this mismatch. `create_page_routes` now registers a 301 redirect from the plural form to the singular canonical path for each entity. Workspaces live under `/app/workspaces/<name>` so no collision; entities whose singular and plural slugs are identical are skipped; plural paths already registered by a real surface are not shadowed. Verified end-to-end: `curl /app/tasks` → 301 to `/app/task`; `curl /app/users` → 301 to `/app/user`.
+- Supersedes the #811 suggestion panel for the plural-URL case — the redirect lands users on the right page directly, no click required. The suggestion panel still handles typos and fuzzy matches.
+
+### Agent Guidance
+- **Entity URLs are always singular canonical.** Internal links and nav items should use `/app/<entity>` (singular). Plural paths redirect but cost a 301 round-trip.
+
 ## [0.57.87] - 2026-04-19
 
 ### Fixed
