@@ -149,6 +149,48 @@ class BulkActionSpec(BaseModel):
         return f"{self.name}: {self.field} -> {self.target_value}"
 
 
+class EmptyMessages(BaseModel):
+    """Typed empty-state messages for a list surface (#807).
+
+    The framework has always had a single ``empty_message`` string —
+    shown whenever the list query returned zero rows. But *why* the
+    list is empty is a signal users need: a brand-new collection
+    warrants *"No X yet. [Create one](create)"*; a filter that matched
+    nothing warrants *"No X match the current filters. [Clear](clear)"*;
+    a permission denial warrants a different message still.
+
+    This type carries the per-case copy. Each field is optional — if
+    unset, the framework falls back to a sensible default from
+    ``fragments/empty_state.html``. Authors who want to customise pick
+    the cases they care about:
+
+    .. code-block:: dsl
+
+        surface device_list "Devices":
+          mode: list
+          ...
+          empty:
+            collection: "No devices registered. Register one to begin."
+            filtered: "No devices match the current filters."
+
+    Attributes:
+        collection: Copy when the underlying query has zero rows
+            *unfiltered* — the collection is genuinely empty.
+        filtered: Copy when filters are active and reduced the result
+            to zero. Shown alongside a "Clear filters" affordance.
+        forbidden: Copy when the user's row-scope predicate zeroed
+            the result. Reserved for future use — the API envelope
+            needs to carry an ``unscoped_total`` counter for the
+            framework to detect this case; not wired yet.
+    """
+
+    collection: str | None = None
+    filtered: str | None = None
+    forbidden: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class UXSpec(BaseModel):
     """
     Complete UX specification for a surface.
@@ -161,7 +203,10 @@ class UXSpec(BaseModel):
         sort: Default sort order
         filter: Fields available for filtering
         search: Fields available for full-text search
-        empty_message: Message shown when no data
+        empty_message: Message shown when no data. Two shapes supported
+            (#807): a single ``str`` (legacy — used for every empty
+            case) or an ``EmptyMessages`` struct with per-case copy
+            (``collection``, ``filtered``, ``forbidden``).
         attention_signals: Data-driven priority indicators
         persona_variants: Role-specific adaptations
         bulk_actions: Named field transitions exposed as
@@ -173,13 +218,37 @@ class UXSpec(BaseModel):
     sort: list[SortSpec] = Field(default_factory=list)
     filter: list[str] = Field(default_factory=list)
     search: list[str] = Field(default_factory=list)
-    empty_message: str | None = None
+    empty_message: str | EmptyMessages | None = None
     search_first: bool = False
     attention_signals: list[AttentionSignal] = Field(default_factory=list)
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
     bulk_actions: list[BulkActionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
+
+    def empty_for(self, kind: str) -> str | None:
+        """Resolve the empty-state message for a given ``kind``.
+
+        Args:
+            kind: One of ``"collection"``, ``"filtered"``,
+                ``"forbidden"``. Anything else falls back to the
+                legacy single-string behaviour.
+
+        Returns:
+            The typed message if present, otherwise the legacy string
+            if ``empty_message`` is a plain ``str``, otherwise ``None``
+            (the template then picks a framework default).
+        """
+        em = self.empty_message
+        if isinstance(em, EmptyMessages):
+            case = getattr(em, kind, None)
+            if case is not None:
+                return case
+            # Fall through to None — template default.
+            return None
+        if isinstance(em, str):
+            return em
+        return None
 
     def get_persona_variant(self, user_context: dict[str, Any]) -> PersonaVariant | None:
         """Get applicable persona variant for user context."""

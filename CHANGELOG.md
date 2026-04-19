@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.80] - 2026-04-19
+
+### Added
+- **Typed empty states for list surfaces (#807).** The DSL's `empty:` directive now accepts either the legacy single-string form (unchanged) or a new block form with per-case copy:
+
+  ```dsl
+  empty:
+    collection: "No tickets yet. Create one to begin."
+    filtered: "No tickets match the current filters."
+    forbidden: "You can't see any tickets with your current role."
+  ```
+
+  The runtime picks the right case at render time by inspecting whether filters/search are active and whether the fetch errored, producing a distinct UX for:
+
+  - **collection** (genuinely empty) — default copy + "Add one" link to the create surface
+  - **filtered** (filters reduced to zero) — copy + "Clear filters" link
+  - **loading** (fetch errored) — "Couldn't load X. Try reloading."
+  - **forbidden** (reserved; needs follow-on API envelope change to detect reliably)
+
+  Templates receive `table.empty_kind` as a render-time discriminator. Unknown sub-keys in the block form raise a parse error so typos don't silently drop. 8 unit tests pin the behaviour.
+
+  Addresses the recurring "No items found" ambiguity flagged in qualitative trials against `fieldtest_hub`, `simple_task`, and `ops_dashboard` — the single-message shape couldn't distinguish "no data yet" from "filters hiding everything" from "fetch errored", leaving users unable to tell why the page was empty.
+
+### Agent Guidance
+- **Prefer the block form of `empty:`** for new list surfaces. It generates better UX for free — the framework now adds an "Add one" link on empty collections and a "Clear filters" affordance on filtered-empty states automatically, derived from surface metadata already in the DSL.
+
 ## [0.57.79] - 2026-04-19
 
 ### Fixed

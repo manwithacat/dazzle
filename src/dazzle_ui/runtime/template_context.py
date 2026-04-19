@@ -108,6 +108,19 @@ class TableContext(BaseModel):
     default_sort_dir: str = "asc"
     search_fields: list[str] = Field(default_factory=list)
     empty_message: str = "No items found."
+    # Typed empty-state messages (#807). When a case is non-empty, the
+    # template picks it over ``empty_message`` at render time based on
+    # ``empty_kind``. Filled by the template_compiler from the DSL's
+    # ``empty:`` block form; empty strings mean "fall through to the
+    # framework default".
+    empty_collection: str = ""
+    empty_filtered: str = ""
+    empty_forbidden: str = ""
+    # Render-time kind selector: "collection" | "filtered" | "forbidden"
+    # | "loading". Set by page_routes.py based on whether filters were
+    # active and whether the fetch returned a signal. Template uses this
+    # to pick the right message + affordance.
+    empty_kind: str = "collection"
     # Per-persona empty_message overrides, keyed by persona id.
     # Compiled from `for <persona>: empty: "..."` DSL blocks (cycle 240,
     # closes EX-046). Resolved at request time in page_routes.py — when

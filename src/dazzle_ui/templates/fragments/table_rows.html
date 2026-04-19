@@ -173,8 +173,54 @@
 {% else %}
 <tr>
   <td colspan="{{ (table.columns | length) + (2 if table.bulk_actions else 1) if table else 1 }}"
-      class="text-center py-8 text-[13px] text-[hsl(var(--muted-foreground))]">
-    {{ table.empty_message | default("No " + (table.entity_name|default("items"))|lower + " found.") if table else "No items found." }}
+      class="text-center py-8 text-[13px] text-[hsl(var(--muted-foreground))]"
+      data-dz-empty-kind="{{ table.empty_kind | default('collection') if table else 'collection' }}">
+    {#
+      Typed empty-state picker (#807).
+
+      Pick the most specific per-case message, then fall back to the
+      legacy `empty_message` (which was already populated with a
+      reasonable default at compile time). Each case carries a
+      different default + affordance:
+
+        collection → "No X yet." + link to the create surface
+        filtered   → "No X match the current filters." + clear-filters link
+        forbidden  → "You can't see any X with your current role."
+        loading    → "Couldn't load X. Try again." (fetch errored)
+    #}
+    {% set _kind = table.empty_kind | default('collection') if table else 'collection' %}
+    {% if _kind == 'filtered' %}
+      {{ (table.empty_filtered if table and table.empty_filtered else
+           "No " + (table.entity_name|default('items'))|lower + " match the current filters.") }}
+      {% set _has_params = table and table.filter_values %}
+      {% if _has_params and request is defined %}
+        <a href="{{ request.url.path }}"
+           hx-get="{{ table.api_endpoint }}"
+           hx-target="#{{ table.table_id }}-body"
+           hx-swap="innerHTML"
+           hx-push-url="{{ request.url.path }}"
+           class="ml-2 text-[hsl(var(--primary))] hover:underline">
+          Clear filters
+        </a>
+      {% endif %}
+    {% elif _kind == 'loading' %}
+      {{ "Couldn't load " + (table.entity_name|default('items'))|lower + ". Try reloading." if table
+         else "Couldn't load items. Try reloading." }}
+    {% elif _kind == 'forbidden' and table and table.empty_forbidden %}
+      {{ table.empty_forbidden }}
+    {% else %}
+      {# 'collection' case OR any unknown kind — use per-case copy if
+         available, otherwise the long-standing default. #}
+      {{ (table.empty_collection if table and table.empty_collection else
+           (table.empty_message if table and table.empty_message else
+              "No " + (table.entity_name|default('items'))|lower + " found.")) }}
+      {% if table and table.create_url %}
+        <a href="{{ table.create_url }}"
+           class="ml-2 text-[hsl(var(--primary))] hover:underline">
+          Add one
+        </a>
+      {% endif %}
+    {% endif %}
   </td>
 </tr>
 {% endif %}

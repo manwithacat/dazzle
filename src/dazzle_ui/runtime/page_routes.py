@@ -957,6 +957,17 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     _has_filter = any(k.startswith("filter[") for k in api_params)
     _skip_fetch = req_table.search_first and not _has_search and not _has_filter
 
+    # Track fetch outcome for typed empty-state selection (#807):
+    # - "loading" when the fetch itself errored (user sees the error
+    #   stub + a retry affordance rather than a misleading "empty")
+    # - "filtered" when the result is empty AND filters/search are
+    #   active (offer a clear-filters hint)
+    # - "collection" when the result is empty AND no filters are
+    #   active (offer the create affordance)
+    # The "forbidden" case needs a separate API envelope change (the
+    # server must tell us unscoped_total > 0 before we can claim the
+    # empty is due to scope) — tracked as a follow-on to #807.
+    _fetch_errored = False
     if _skip_fetch:
         req_table.rows = []
         req_table.total = 0
@@ -974,6 +985,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
             logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
             req_table.rows = []
             req_table.total = 0
+            _fetch_errored = True
 
     # Update table context with current sort/filter state from request
     req_table.sort_field = prc.request.query_params.get("sort", req_table.default_sort_field)
@@ -983,6 +995,19 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         for k, v in prc.request.query_params.items()
         if k.startswith("filter[") and k.endswith("]") and v
     }
+
+    # Typed empty-state kind selection (#807). The template uses this
+    # to pick the right copy + affordance. Only runs when the list is
+    # actually empty (rows empty); a populated table doesn't show the
+    # empty state at all.
+    if not getattr(req_table, "rows", None):
+        if _fetch_errored:
+            req_table.empty_kind = "loading"
+        elif _has_filter or _has_search:
+            req_table.empty_kind = "filtered"
+        else:
+            req_table.empty_kind = "collection"
+
     prc.ctx_overrides["table"] = req_table
 
 

@@ -59,7 +59,7 @@ class UXParserMixin:
         sort: list[ir.SortSpec] = []
         filter_fields: list[str] = []
         search_fields: list[str] = []
-        empty_message = None
+        empty_message: str | ir.EmptyMessages | None = None
         search_first = False
         attention_signals: list[ir.AttentionSignal] = []
         persona_variants: list[ir.PersonaVariant] = []
@@ -105,12 +105,20 @@ class UXParserMixin:
                 search_fields = self.parse_field_list()
                 self.skip_newlines()
 
-            # empty: "..."
+            # empty: "..."     (legacy form — single string)
+            # empty:            (block form, #807 — typed per-case)
+            #   collection: "..."
+            #   filtered: "..."
+            #   forbidden: "..."
             elif self.match(TokenType.EMPTY):
                 self.advance()
                 self.expect(TokenType.COLON)
-                empty_message = self.expect(TokenType.STRING).value
-                self.skip_newlines()
+                # Peek: STRING → legacy; NEWLINE → block form.
+                if self.match(TokenType.STRING):
+                    empty_message = self.expect(TokenType.STRING).value
+                    self.skip_newlines()
+                else:
+                    empty_message = self.parse_empty_messages_block()
 
             # search_first: true|false
             elif self.match(TokenType.SEARCH_FIRST):
@@ -163,6 +171,55 @@ class UXParserMixin:
             persona_variants=persona_variants,
             bulk_actions=bulk_actions,
         )
+
+    def parse_empty_messages_block(self) -> ir.EmptyMessages:
+        """Parse the block form of the ``empty:`` directive (#807).
+
+        Syntax::
+
+            empty:
+              collection: "No X yet."
+              filtered: "No X match the current filters."
+              forbidden: "You can't see any X with your current role."
+
+        Any sub-key may be omitted; omitted cases fall back to the
+        framework default in ``fragments/empty_state.html``. Unknown
+        sub-keys raise a parse error so typos don't silently drop.
+        """
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        collection: str | None = None
+        filtered: str | None = None
+        forbidden: str | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.expect_identifier_or_keyword()
+            key = key_tok.value
+            self.expect(TokenType.COLON)
+            value = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            if key == "collection":
+                collection = value
+            elif key == "filtered":
+                filtered = value
+            elif key == "forbidden":
+                forbidden = value
+            else:
+                raise make_parse_error(
+                    f"Unknown empty: sub-key {key!r}. Valid keys: collection, filtered, forbidden.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        self.expect(TokenType.DEDENT)
+        return ir.EmptyMessages(collection=collection, filtered=filtered, forbidden=forbidden)
 
     def parse_bulk_actions_block(self) -> list[ir.BulkActionSpec]:
         """Parse the ``bulk_actions:`` sub-block of a ux: block (#785).

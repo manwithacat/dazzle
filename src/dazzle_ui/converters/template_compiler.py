@@ -784,11 +784,29 @@ def _compile_list_surface(
     default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
     search_fields = list(ux.search) if ux and ux.search else []
     search_first = bool(ux and ux.search_first)
-    empty_message = (
-        ux.empty_message
-        if ux and ux.empty_message
-        else ("Use search or filters to find results." if search_first else "No items found.")
-    )
+    # Handle both empty_message shapes (#807): legacy single-string or
+    # the typed EmptyMessages struct. The single-string fallback preserves
+    # existing behaviour; the struct fills per-case fields, and the
+    # `empty_message` default is still computed for templates that don't
+    # yet pick up `empty_kind`.
+    _raw_empty = ux.empty_message if ux else None
+    empty_collection = ""
+    empty_filtered = ""
+    empty_forbidden = ""
+    if isinstance(_raw_empty, ir.EmptyMessages):
+        empty_collection = _raw_empty.collection or ""
+        empty_filtered = _raw_empty.filtered or ""
+        empty_forbidden = _raw_empty.forbidden or ""
+        # Legacy field: use the collection copy as the canonical fallback.
+        empty_message = empty_collection or (
+            "Use search or filters to find results." if search_first else "No items found."
+        )
+    elif isinstance(_raw_empty, str):
+        empty_message = _raw_empty
+    else:
+        empty_message = (
+            "Use search or filters to find results." if search_first else "No items found."
+        )
 
     # Per-persona PersonaVariant overrides (cycle 240 pilot + cycle 243
     # extension). Collect both `empty_message` and `hide` from every
@@ -842,6 +860,9 @@ def _compile_list_surface(
             sort_dir=default_sort_dir,
             search_fields=search_fields,
             empty_message=empty_message,
+            empty_collection=empty_collection,
+            empty_filtered=empty_filtered,
+            empty_forbidden=empty_forbidden,
             persona_empty_messages=persona_empty_messages,
             persona_hide=persona_hide,
             persona_read_only=persona_read_only,
