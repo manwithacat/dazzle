@@ -230,6 +230,86 @@ class TestReportRendering:
         assert "/app/tickets/123" in out
 
 
+class TestFrictionClustering:
+    """Near-duplicate friction clustering (#812).
+
+    Trial agents re-record the same finding multiple times despite the
+    'don't record duplicates' system prompt. Clustering post-processes
+    the report so one canonical entry represents a group of
+    near-duplicates, annotated with the cluster size.
+    """
+
+    def test_identical_entries_collapse_to_one(self) -> None:
+        friction = [
+            {
+                "category": "bug",
+                "description": "Alert list 403s.",
+                "url": "/app/alert",
+                "severity": "high",
+            }
+        ] * 4
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (1 · 3 near-duplicates clustered)" in out
+        assert "*reported:* ×4" in out
+
+    def test_different_urls_do_not_cluster(self) -> None:
+        friction = [
+            {"category": "bug", "description": "403.", "url": "/app/alert"},
+            {"category": "bug", "description": "403.", "url": "/app/user"},
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        # Two distinct entries, no clustering annotation.
+        assert "near-duplicates clustered" not in out
+        assert "Friction observations (2)" in out
+
+    def test_different_categories_do_not_cluster(self) -> None:
+        friction = [
+            {"category": "bug", "description": "Same words.", "url": "/x"},
+            {"category": "praise", "description": "Same words.", "url": "/x"},
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (2)" in out
+
+    def test_near_duplicate_descriptions_cluster(self) -> None:
+        friction = [
+            {
+                "category": "praise",
+                "description": "The Issue Board is exactly what I need as a manager.",
+                "url": "/app/issue",
+            },
+            {
+                "category": "praise",
+                "description": "Issue Board is exactly what I need as a manager.",
+                "url": "/app/issue",
+            },
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (1 · 1 near-duplicates clustered)" in out
+
+    def test_dissimilar_descriptions_on_same_url_do_not_cluster(self) -> None:
+        friction = [
+            {"category": "bug", "description": "Filter broken.", "url": "/x"},
+            {"category": "bug", "description": "Button misaligned.", "url": "/x"},
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (2)" in out
+
+
 # ---------------------------------------------------------------------------
 # Verdict fallback formatter (the LLM call itself is integration-only)
 # ---------------------------------------------------------------------------

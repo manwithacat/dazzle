@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.83] - 2026-04-19
+
+### Changed
+- **Trial reports cluster near-duplicate friction (#812).** `dazzle qa trial` agents routinely re-record the same finding 4-8 times despite the "don't flag duplicates" system prompt — 8 praise entries all about the Issue Board, 6 separate bugs for one 403, and so on. `trial_report._cluster_friction()` now groups entries with the same `(category, url)` and a `difflib.SequenceMatcher` ratio ≥ 0.8 on the description, annotating the canonical entry with `reported: ×N` and surfacing `N near-duplicates clustered` in the section heading. Non-destructive — raw JSON transcripts still include every observation.
+
+### Agent Guidance
+- **Trial report friction counts are now deduplicated.** When quoting friction counts from trial reports in issue bodies, use the rendered count; the raw JSON transcript is still available for harness-level debugging when the dedup itself is in question.
+
 ## [0.57.82] - 2026-04-19
 
 ### Fixed

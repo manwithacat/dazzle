@@ -30,10 +30,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from difflib import SequenceMatcher
 from typing import Any
 
 _CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+_CLUSTER_SIMILARITY_THRESHOLD = 0.8
 
 
 @dataclass
@@ -73,6 +75,40 @@ def _title_from_description(desc: str, max_chars: int = 80) -> str:
     if len(head) > max_chars:
         head = head[: max_chars - 1].rstrip() + "…"
     return head
+
+
+def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse near-duplicate friction entries.
+
+    Groups entries with the same ``category`` and ``url`` whose
+    descriptions have a ``SequenceMatcher`` ratio above the threshold.
+    The first entry in each group becomes canonical and gets a
+    ``similar_count`` field; the rest are dropped from the rendered
+    report. Raw JSON transcripts still include every entry.
+    """
+    clusters: list[dict[str, Any]] = []
+    for entry in items:
+        category = entry.get("category", "other")
+        url = (entry.get("url") or "").strip()
+        description = (entry.get("description") or "").strip().lower()
+
+        matched = False
+        for canonical in clusters:
+            if canonical.get("category") != category:
+                continue
+            if (canonical.get("url") or "").strip() != url:
+                continue
+            canonical_desc = (canonical.get("description") or "").strip().lower()
+            ratio = SequenceMatcher(None, canonical_desc, description).ratio()
+            if ratio >= _CLUSTER_SIMILARITY_THRESHOLD:
+                canonical["similar_count"] = canonical.get("similar_count", 1) + 1
+                matched = True
+                break
+
+        if not matched:
+            clusters.append(dict(entry))
+
+    return clusters
 
 
 def _sort_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -127,8 +163,14 @@ def render_trial_report(report: TrialReport) -> str:
         lines.append("")
 
     # Friction observations.
-    friction = _sort_friction(list(report.friction))
-    lines.append(f"## Friction observations ({len(friction)})")
+    raw_count = len(report.friction)
+    friction = _sort_friction(_cluster_friction(list(report.friction)))
+    dedup_suffix = (
+        f" · {raw_count - len(friction)} near-duplicates clustered"
+        if len(friction) < raw_count
+        else ""
+    )
+    lines.append(f"## Friction observations ({len(friction)}{dedup_suffix})")
     lines.append("")
 
     if not friction:
@@ -161,6 +203,9 @@ def render_trial_report(report: TrialReport) -> str:
         meta: list[str] = [f"*severity:* {severity}"]
         if url:
             meta.append(f"*where:* `{url}`")
+        similar = entry.get("similar_count", 1)
+        if similar > 1:
+            meta.append(f"*reported:* ×{similar}")
         lines.append(" · ".join(meta))
         lines.append("")
         if evidence:
