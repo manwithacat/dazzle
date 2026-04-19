@@ -8,9 +8,50 @@
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[60vh] px-4">
   <h1 class="text-[48px] font-semibold leading-none text-[hsl(var(--foreground))] mb-4">403</h1>
-  <p class="text-[15px] text-[hsl(var(--muted-foreground))] mb-6 text-center max-w-[480px]">
+  <p class="text-[15px] text-[hsl(var(--muted-foreground))] mb-4 text-center max-w-[480px]">
     {{ message | default("You don't have permission to access this page.") }}
   </p>
+
+  {# Role-disclosure panel — #808. Rendered when the raise site
+     emitted a structured detail dict (_forbidden_detail). Tells the
+     user which personas are permitted and which they actually have,
+     so the page is a signpost rather than a dead-end. #}
+  {% if forbidden_detail %}
+  <div class="w-full max-w-[480px] mb-6 p-4 rounded-[6px] border border-[hsl(var(--border))]
+              bg-[hsl(var(--muted)/0.3)] text-[13px] text-[hsl(var(--foreground))]">
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+      {% if forbidden_detail.entity %}
+      <dt class="text-[hsl(var(--muted-foreground))]">Entity:</dt>
+      <dd><code class="text-[12px]">{{ forbidden_detail.entity }}</code></dd>
+      {% endif %}
+      {% if forbidden_detail.operation %}
+      <dt class="text-[hsl(var(--muted-foreground))]">Operation:</dt>
+      <dd><code class="text-[12px]">{{ forbidden_detail.operation }}</code></dd>
+      {% endif %}
+      {% if forbidden_detail.permitted_personas %}
+      <dt class="text-[hsl(var(--muted-foreground))]">Allowed for:</dt>
+      <dd>
+        {% for p in forbidden_detail.permitted_personas %}
+        <code class="text-[12px] inline-block mr-1 px-1 py-0.5 rounded
+                     bg-[hsl(var(--background))] border border-[hsl(var(--border))]">{{ p }}</code>
+        {% endfor %}
+      </dd>
+      {% endif %}
+      {% if forbidden_detail.current_roles %}
+      <dt class="text-[hsl(var(--muted-foreground))]">Your roles:</dt>
+      <dd>
+        {% for r in forbidden_detail.current_roles %}
+        <code class="text-[12px] inline-block mr-1 px-1 py-0.5 rounded
+                     bg-[hsl(var(--background))] border border-[hsl(var(--border))]">{{ r }}</code>
+        {% else %}
+        <span class="text-[hsl(var(--muted-foreground))]">(none)</span>
+        {% endfor %}
+      </dd>
+      {% endif %}
+    </dl>
+  </div>
+  {% endif %}
+
   <div class="flex items-center gap-2">
     {% if back_url %}
     <a href="{{ back_url }}"

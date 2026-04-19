@@ -620,9 +620,23 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
         entity_name=_entity_name or "",
     )
     if not _decision.allowed:
-        return JSONResponse(
+        # Raise an HTTPException with a structured detail so the
+        # global exception handler renders the enhanced HTML 403
+        # page with role disclosure (#808). Previously this path
+        # returned a bare JSONResponse, stranding browser users
+        # with a raw JSON body on what should be an HTML route.
+        from fastapi import HTTPException
+
+        from dazzle_back.runtime.route_generator import _forbidden_detail
+
+        raise HTTPException(
             status_code=403,
-            content={"detail": "Forbidden"},
+            detail=_forbidden_detail(
+                entity_name=_entity_name or "",
+                operation=_op,
+                cedar_access_spec=_cedar_spec,
+                current_roles=list(_runtime_ctx.roles),
+            ),
         )
     return None
 

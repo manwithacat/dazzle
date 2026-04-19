@@ -154,6 +154,7 @@ def _render_app_shell_error(
     message: str,
     request: Any,
     app_name: str,
+    forbidden_detail: dict[str, Any] | None = None,
 ) -> Any:
     """Render an in-app error page inside the authenticated app shell.
 
@@ -163,6 +164,12 @@ def _render_app_shell_error(
     so a missing email is also fine. The page looks like an authenticated
     surface (sidebar present, persona chrome visible) even though the
     error handler doesn't have access to the full ``PageRouteContext``.
+
+    When ``forbidden_detail`` is provided (see ``#808``), the 403
+    template receives the structured disclosure — which roles are
+    permitted, which roles the user actually has — so the page can
+    tell the user "signed in as X; this page requires Y" rather than
+    leaving them stranded with a bare "Forbidden".
     """
     from fastapi.responses import HTMLResponse
 
@@ -191,6 +198,9 @@ def _render_app_shell_error(
     }
     if back:
         ctx["back_url"], ctx["back_label"] = back
+
+    if forbidden_detail:
+        ctx["forbidden_detail"] = forbidden_detail
 
     html = render_fragment(template_name, **ctx)
     return HTMLResponse(content=html, status_code=status_code)
@@ -238,15 +248,41 @@ def register_site_error_handlers(
         is_browser = "text/html" in accept
 
         if exc.status_code == 403 and is_browser:
-            message = exc.detail if isinstance(exc.detail, str) else "Access denied"
+            # #808: detail may arrive as a structured dict carrying the
+            # role disclosure (from route_generator._forbidden_detail).
+            # Unpack it so the template can render "signed in as X;
+            # requires Y" affordances.
+            forbidden_detail: dict[str, Any] | None = None
+            if isinstance(exc.detail, dict):
+                forbidden_detail = exc.detail
+                message = exc.detail.get("message") or "Access denied"
+            elif isinstance(exc.detail, str):
+                message = exc.detail
+            else:
+                message = "Access denied"
+
+            is_htmx = request.headers.get("hx-request", "").lower() == "true"
+
             if _is_app_path(str(request.url.path)):
-                return _render_app_shell_error(
+                resp = _render_app_shell_error(
                     template_name="app/403.html",
                     status_code=403,
                     message=message,
                     request=request,
                     app_name=app_name,
+                    forbidden_detail=forbidden_detail,
                 )
+                # For HTMX fragment fetches, set HX-Retarget + HX-Reswap
+                # so the error page renders into the main content area
+                # rather than being silently swallowed as a non-2xx
+                # response (HTMX default behaviour).
+                if is_htmx:
+                    resp.headers["HX-Retarget"] = "#main-content"
+                    resp.headers["HX-Reswap"] = "innerHTML"
+                    # Restore the URL so the user sees where they were
+                    # denied, rather than the bare page they were on.
+                    resp.headers["HX-Push-Url"] = str(request.url.path)
+                return resp
             ctx = build_site_error_context(
                 sitespec_data, message=message, custom_css=has_custom_css
             )

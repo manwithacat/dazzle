@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.79] - 2026-04-19
+
+### Fixed
+- **403 responses now disclose role requirements (#808).** Previously the framework raised `HTTPException(status_code=403, detail="Forbidden")` and rendered a dead-end 403 page with no actionable information. Dan (SRE persona) in `dazzle qa trial` repeatedly reported this as his worst UX moment — *"I can't recommend a tool where the core alert management functionality simply doesn't work"*, when the real problem was an RBAC-scope mismatch he had no way to diagnose.
+- New helper `_forbidden_detail()` in `dazzle_back.runtime.route_generator` builds a structured detail dict with `entity`, `operation`, `permitted_personas`, and `current_roles` — reading them from the `cedar_access_spec` that's already in scope at each raise site. Three raise sites updated: the per-entity API gate (route_generator.py:910), the list-gate (route_generator.py:1479), and the page-level entity Cedar check (page_routes.py:622 — previously bypassed the exception handler entirely by returning a plain JSONResponse).
+- The exception handler unpacks the dict and passes it to `app/403.html`, which now renders a disclosure panel: *"Entity: Alert · Operation: list · Allowed for: admin, ops_engineer · Your roles: customer"*. A page that was a dead-end is now a signpost.
+- HTMX-triggered 403s get `HX-Retarget: #main-content` + `HX-Reswap: innerHTML` + `HX-Push-Url`, so a 403 from an inline fragment fetch now renders the error page at the page level rather than silently being swallowed (HTMX's default non-2xx handling).
+- 9 unit tests in `test_forbidden_detail.py` pin the helper's behaviour including edge cases (string vs enum operation, dedup across rules, defensive handling of malformed specs).
+
+### Agent Guidance
+- Don't raise `HTTPException(detail="Forbidden")` from new code. Use `_forbidden_detail()` to emit a structured dict the error page can render usefully. The bare string form still works but produces the dead-end experience users reported against.
+
 ## [0.57.78] - 2026-04-19
 
 ### Fixed
