@@ -4,6 +4,48 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 267 — 2026-04-19 — missing_contracts: 3 uncontracted families surfaced
+
+**Strategy:** `missing_contracts` — first non-audit cycle in the 260s block. Explore budget 36→37.
+
+**Candidate strategies considered:**
+- `missing_contracts` (chosen) — no `missing_contracts` scan since cycle 260; UX-056 Q8 teed up "auth-page body-shape" as a candidate (turned out already covered by auth-page.md, cycle 17-ish); worth a broader sweep before committing to another contract_audit.
+- `framework_gap_analysis` — low signal right now. Most recent EX rows (045-049) are already FIXED; EX-050 was just added but single-observation, no cross-cycle reinforcement; no theme to consolidate.
+- `contract_audit` — five in a row (261-265 + the shell in 266); varying strategy is prudent.
+- `finding_investigation` — no OPEN EX rows with 3+ cross-cycle evidence right now.
+- `edge_cases` — needs the browser subagent substrate; contract_audit + missing_contracts are pure read-only passes.
+
+**Work — inventory pass:**
+
+1. Listed all 59 contracts in `~/.claude/skills/ux-architect/components/`.
+2. Walked the template tree layer by layer (`fragments/`, `components/`, `workspace/regions/`, `site/auth/`, `site/sections/`, `site/includes/`, `experience/`, `reports/`, `app/`, `macros/`).
+3. For each template, confirmed whether its header comment references a contract, an existing contract mentions its filename, or an existing family contract (parking-lot-primitives, related-displays, region-wrapper, form-chrome) absorbs it.
+
+**Coverage summary (68 templates examined):**
+
+- `fragments/*` (26 files) — all covered: parking-lot-primitives (6), related-displays (3), form-chrome + form-validation (2), detail-view (detail_fields), pagination (table_pagination + table_sentinel), widget-search-select (select_result + search_results + search_select), tooltip (tooltip_rich), form-wizard (steps_indicator), UX-046 bulk-action-bar (bulk_actions), UX-043 inline-edit (inline_edit), etc.
+- `workspace/regions/*` (17 files) — 16 under UX-035 region-wrapper umbrella + UX-039 activity-feed + UX-036 kanban-board + UX-033 metrics-region. One gap: `tab_data.html` — the "no card wrapper" tab-body variant. (→ PROP-059)
+- `site/auth/*` (7 pages + 3 scripts) — auth-page.md covers the shared macro + all 7 pages.
+- `site/sections/*` (19 files) — hero has UX-054; 17 siblings share the `dz-section` + `_helpers.html` shape and deserve a family contract. (→ PROP-058)
+- `site/includes/*` (4 files) — nav (UX-055), theme-toggle (UX-048), og_meta + footer (under UX-056 site-shell).
+- `components/*` (6 files + alpine/) — island.html is uncontracted. (→ PROP-057)
+- `app/*` (2 files) — 403 (UX-051), 404 (UX-050).
+- `experience/*` (2 files), `reports/*` (1 file), `macros/*` (5 files), `layouts/*` (2 files) — all governed.
+
+**Three PROPs added:**
+
+- **PROP-057 island** — `components/island.html`, 11 lines, the DSL `island` construct's render shell. Four data-* hooks for client hydration; no contract on the attribute protocol, props shape, or failure modes. High-leverage because islands will multiply as the framework gains traction.
+- **PROP-058 site-section-family** — 17 sibling marketing sections sharing `dz-section` / `dz-section-content` / `_helpers.html` patterns. UX-054 hero is the canonical; this captures the remaining 17. Matches the parking-lot-primitives omnibus precedent (one family doc rather than 17 mini-contracts).
+- **PROP-059 tab-data-region** — `workspace/regions/tab_data.html`, the "no card wrapper" tab-body variant. Drift present (duplicate `border border-[hsl(var(--border))]` at line 7). Good contract_audit target for next cycle.
+
+**Outcome:** `3 proposals added to backlog. No code changes. Next cycle candidates: contract_audit PROP-059 (small, has drift, 1-cycle fit) or PROP-057 (more interesting, hydration protocol worth pinning).`
+
+**Heuristic compliance:** Heuristic 1 not applicable (no fix hypothesis to prove — pure inventory work). Heuristic 2/3/4 not applicable (no framework code touched). Read-only cycle.
+
+**Budget:** explore 37/100.
+
+---
+
 ## Cycle 266 — 2026-04-19 — contract_audit: PROP-052 → UX-056 (site-shell) — closes marketing-shell mini-roadmap at 5/5
 
 **Strategy:** `contract_audit` — fifth and final promotion from the cycle 260 marketing-shell mini-roadmap. Target was PROP-052 `site-shell`, explicitly deferred in cycle 260 as "a bigger layout contract" distinct from the section-scope contracts (hero/nav/404/403) that landed cycles 261-264.
