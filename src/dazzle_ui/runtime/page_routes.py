@@ -1052,8 +1052,19 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # Any HTMX request can receive body-only HTML -- the client
     # extracts <body> content anyway.  History-restore is the one
     # exception: the browser needs a full document for cache misses.
-    html = render_page(render_ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
-    return HTMLResponse(content=html)  # nosemgrep
+    is_partial = htmx.is_htmx and not htmx.is_history_restore
+    html = render_page(render_ctx, partial=is_partial)
+    response_headers: dict[str, str] = {}
+    # hx-boost strips <head> from the response, so the browser's
+    # <title> never updates from server content. Fire the dz:titleUpdate
+    # event used by dz-a11y.js on every HTMX-boosted page render so the
+    # tab title tracks the destination (#816). History-restore uses a
+    # full document, where the <title> element updates natively.
+    if is_partial and getattr(render_ctx, "page_title", None):
+        response_headers["HX-Trigger-After-Swap"] = json.dumps(
+            {"dz:titleUpdate": render_ctx.page_title}
+        )
+    return HTMLResponse(content=html, headers=response_headers or None)  # nosemgrep
 
 
 # =============================================================================

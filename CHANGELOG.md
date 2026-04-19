@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.89] - 2026-04-19
+
+### Fixed
+- **Browser tab title stuck after hx-boost navigation (#816).** The `_page_handler` fall-through path only returned the partial HTML body — no `HX-Trigger-After-Swap` event for the title update. The infra to update the title via `dz:titleUpdate` already existed (fired for `wants_fragment` and `wants_drawer` paths; dz-a11y.js listener updates `document.title`), but the most common case — `hx-boost` navigation between regular pages — never emitted the trigger. Result: users landing on `/app/tester` via a click from `/app/testers` (404) saw the working tester directory with "Page Not Found - Dazzle" in the tab title.
+- Fix: the fall-through now builds a `HX-Trigger-After-Swap: {"dz:titleUpdate": page_title}` header whenever the response is a partial and `page_title` is set. Symmetric with the existing `wants_drawer` path. Full-document responses (history-restore) still update the title natively via the `<title>` element.
+
+### Agent Guidance
+- **The partial-response path sets `HX-Trigger-After-Swap`.** When adding new HTMX page flows, pattern-match the existing `wants_fragment` / `wants_drawer` / fall-through branches in `src/dazzle_ui/runtime/page_routes.py:_page_handler` — all three now emit `dz:titleUpdate` so the browser tab title tracks navigation.
+
 ## [0.57.88] - 2026-04-19
 
 ### Added
