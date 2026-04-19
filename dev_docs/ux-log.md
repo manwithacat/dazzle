@@ -4,6 +4,56 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 266 — 2026-04-19 — contract_audit: PROP-052 → UX-056 (site-shell) — closes marketing-shell mini-roadmap at 5/5
+
+**Strategy:** `contract_audit` — fifth and final promotion from the cycle 260 marketing-shell mini-roadmap. Target was PROP-052 `site-shell`, explicitly deferred in cycle 260 as "a bigger layout contract" distinct from the section-scope contracts (hero/nav/404/403) that landed cycles 261-264.
+
+**Candidate strategies considered:**
+- `contract_audit` (chosen) — PROP-052 is ready, has clear analogues (UX-031 app-shell), and closing the mini-roadmap delivers a satisfying 5/5 milestone.
+- `framework_gap_analysis` — 7+ cycles since the last consolidation and cycle 265 just surfaced EX-050; synthesis debt is real. Still a legitimate next-cycle choice.
+- `finding_investigation` — just done cycle 265, no OPEN EX rows with cross-cycle reinforcement pressure right now.
+- `edge_cases` / `missing_contracts` — not high-leverage; marketing shell was just scanned cycle 260.
+
+**Work:**
+
+1. Mapped the two-file layout: `src/dazzle_ui/templates/site/site_base.html` (47 lines — `<html>`/`<head>`/`<body>` skeleton, asset stack, block grammar) and `src/dazzle_ui/templates/site/page.html` (32 lines — standard body composition: nav + sections + QA-personas + footer). 10 downstream extenders confirmed: page.html, 403.html, 404.html, and 7 auth/* variants.
+2. Heuristic 1 — empirical verification before writing any contract text. Rendered both templates via `env.get_template(...).render(...)` with minimal and boundary contexts:
+   - `site_base.html` with only `product_name` → correct baseline shape
+   - `page_title` precedence over `product_name` in `<title>` → ✓
+   - `_tailwind_bundled=True` swaps to `dazzle-bundle.css` AND suppresses both CDN URLs → ✓
+   - `_use_cdn=True` + `_dazzle_version="X.Y.Z"` produces `cdn.jsdelivr.net/gh/manwithacat/dazzle@vX.Y.Z/dist/dazzle.min.css` + `dazzle-icons.min.js` → ✓
+   - `custom_css=True` loads `/static/css/custom.css` → ✓
+   - Every render contains the `@layer base, framework, app, overrides;` cascade declaration, Inter preconnects, and a lucide source → ✓
+   - `page.html` with `og_meta={title,description,og_type}` emits all three OG tags + `name="description"` → ✓
+   - `page.html` minimal render always contains nav + `<main id="dz-site-main">` + footer in that order → ✓
+   - All 15 empirical checks passed before a single line of contract prose.
+3. Wrote contract at `~/.claude/skills/ux-architect/components/site-shell.md`:
+   - Anchor (two-file layout, distinct from app-shell/single_column)
+   - Model (11 context vars: `product_name`, `page_title`, `_favicon`, `_tailwind_bundled`, `_use_cdn`, `_dazzle_version`, `custom_css`, `og_meta`, `sections`, `footer_columns`+`copyright_text`, `qa_personas`)
+   - Anatomy (ASCII diagram + block grammar table with 7 extension points)
+   - Interactions (no JS state; `data-theme` baseline; no HTMX boost; a11y landmarks)
+   - Grammar (title precedence, cascade layer order invariant, asset loading order, body-class composition)
+   - 10 quality gates (all empirically verified)
+   - Token usage table
+   - 8 v2 open questions: data-theme flash-of-light, production-bundle enforcement, CSP header, i18n lang plumbing, favicon manifest, /site.js content contract, QA-persona drop-in markup, auth-page body-shape
+
+4. Updated backlog: UX-056 added as DONE/DONE/DONE/PASS; PROP-052 flipped to PROMOTED→UX-056. Marketing-shell roadmap now 5 of 5 delivered (UX-052/053/054/055/056).
+
+**No code changes required.** The site-shell templates match the contract as written — the audit is a documentation/governance step, not a refactor. `/site.js`, `/static/css/custom.css`, and the CDN swap logic all behaved exactly as the contract now specifies.
+
+**Outcome:** `PASS — contract promoted, no drift fixes needed.`
+
+**Marketing-shell mini-roadmap (cycles 260-266) — 5 of 5 delivered:**
+- UX-052 site-404-marketing (cycle 261)
+- UX-053 site-403-marketing (cycle 262)
+- UX-054 site-hero + 15-sibling section template (cycle 263)
+- UX-055 site-nav with auth-aware CTA (cycle 264)
+- UX-056 site-shell two-file layout (cycle 266)
+
+**Budget:** explore 36/100.
+
+---
+
 ## Cycle 265 — 2026-04-19 — finding_investigation: CI `UX Contracts (support_tickets)` regression
 
 **Strategy:** `finding_investigation`. CI badge was red; the only failing job was `UX Contracts (support_tickets)` — `auth failed for <persona>` across every persona → 56 contract failures. Pre-existing since 2026-04-18T16:32 on commit `454a7ffd` ("bounded Redis connect timeout + `ux verify --managed` server mode"). Non-triaged backlog rows were all DONE/VERIFIED so this was the only high-leverage work in scope.
