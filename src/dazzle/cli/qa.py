@@ -43,6 +43,132 @@ def _resolve_project_dir(app: str | None) -> Path:
     raise typer.Exit(code=1)
 
 
+def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str) -> None:
+    """Seed demo data after the trial server is up (#817).
+
+    ``--fresh-db`` truncates the DB, which left every trial running
+    against an empty app — and the agent correctly flagged "no data,
+    can't evaluate" every time, swamping real framework feedback.
+    This helper runs after :func:`_reset_db_for_trial` and after
+    ``launch_interaction_server`` has the app listening, and:
+
+    1. Finds the project's blueprint (``dsl/seeds/demo_data/blueprint.json``
+       is the default). If none exists, silently return — trials run
+       empty, same as before.
+    2. Generates CSV/JSONL data files from the blueprint into a temp
+       directory, unless the data directory already contains them.
+    3. Authenticates against the running server via the test endpoint
+       to get an admin session cookie.
+    4. POSTs each entity's rows to the runtime via DemoDataLoader.
+    """
+    import tempfile
+
+    import httpx
+
+    from dazzle.cli.demo import _find_data_dir
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.demo_data.loader import DemoDataLoader, topological_sort_entities
+    from dazzle.mcp.server.handlers.demo_data import demo_generate_impl
+
+    blueprint = project_dir / "dsl" / "seeds" / "demo_data" / "blueprint.json"
+    existing_data = _find_data_dir(project_dir)
+
+    if not blueprint.exists() and existing_data is None:
+        return  # nothing to seed
+
+    try:
+        appspec = load_project_appspec(project_dir)
+    except Exception as exc:
+        typer.echo(f"Seed skipped: could not load appspec ({exc})", err=True)
+        return
+
+    # If no pre-generated data exists, generate it into a tempdir so
+    # we don't litter the project with gitignored JSONL files.
+    if existing_data is None or not any(existing_data.glob("*.jsonl")):
+        tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-seed-"))
+        try:
+            result = demo_generate_impl(
+                project_dir, output_format="jsonl", output_dir=str(tmp_root)
+            )
+            if result.get("status") != "generated":
+                typer.echo(
+                    f"Seed skipped: demo_generate_impl returned {result.get('status')}",
+                    err=True,
+                )
+                return
+            data_dir = Path(result["output_dir"])
+        except Exception as exc:
+            typer.echo(f"Seed skipped: demo data generation failed ({exc})", err=True)
+            return
+    else:
+        data_dir = existing_data
+
+    # Authenticate as admin via the test endpoint so we can POST as a
+    # privileged user. /__test__/authenticate yields a session token.
+    headers = {"X-Test-Secret": test_secret} if test_secret else {}
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.post(
+                f"{site_url}/__test__/authenticate",
+                json={"role": "admin", "username": "admin"},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                typer.echo(
+                    f"Seed skipped: admin auth returned {resp.status_code}",
+                    err=True,
+                )
+                return
+            token = resp.json().get("session_token") or ""
+    except Exception as exc:
+        typer.echo(f"Seed skipped: admin auth failed ({exc})", err=True)
+        return
+
+    entity_order = topological_sort_entities(appspec.domain.entities)
+    with DemoDataLoader(base_url=site_url) as loader:
+        client = loader._get_client()
+        if token:
+            client.cookies.set("dazzle_session", token)
+        # Prime the CSRF cookie by making a GET, then sync it onto the
+        # X-CSRF-Token header for every subsequent request via an httpx
+        # event hook. The CSRF middleware rotates the cookie on POST,
+        # so a static header would stop working after the first
+        # successful write.
+        try:
+            client.get("/")
+        except Exception:
+            pass
+
+        def _sync_csrf(request: httpx.Request) -> None:
+            csrf = client.cookies.get("dazzle_csrf")
+            if csrf:
+                request.headers["X-CSRF-Token"] = csrf
+
+        client.event_hooks = {"request": [_sync_csrf]}
+        loader._token = None  # don't use bearer-auth path; cookies are enough
+
+        try:
+            report = loader.load_all(data_dir, entity_order)
+        except Exception as exc:
+            typer.echo(f"Seed skipped: load_all raised {exc}", err=True)
+            return
+
+    first_line = report.summary().splitlines()[0]
+    typer.echo(f"Seeded demo data: {first_line}")
+    # Surface a couple of error examples whenever anything failed —
+    # makes infrastructure bugs (auth, CSRF, schema mismatch) visible
+    # without spamming the trial log with hundreds of identical
+    # validation errors.
+    if report.total_failed:
+        sample_errors: list[str] = []
+        for r in report.results:
+            sample_errors.extend(r.errors[:2])
+            if len(sample_errors) >= 3:
+                break
+        for err in sample_errors[:3]:
+            typer.echo(f"  seed error: {err[:240]}", err=True)
+
+
 def _reset_db_for_trial(project_dir: Path) -> None:
     """Truncate entity tables before a trial run (#810).
 
@@ -381,6 +507,9 @@ def qa_trial(
             test_secret_val = read_runtime_test_secret(project_dir) or ""
         except Exception:
             test_secret_val = ""
+
+        if fresh_db:
+            _seed_demo_data_for_trial(project_dir, site_url, test_secret_val)
 
         async def _run_trial() -> tuple[Any, Any]:
             """Full async path: start browser, authenticate via POST +

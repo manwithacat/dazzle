@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.91] - 2026-04-19
+
+### Fixed
+- **`qa trial --fresh-db` now seeds demo data after truncating (#817).** #810 introduced `--fresh-db`, #814 made truncation actually work — and those fixes then exposed the opposite problem: every trial ran against a totally empty app, so every verdict became "can't evaluate, nothing here". 7 of 9 cycles in the post-#814 sweep had this framing as the dominant signal.
+- Fix: extended `dazzle.cli.demo._find_data_dir` to also look in `dsl/seeds/demo_data/` (where `dazzle init` and every example app puts their blueprint). Added `dazzle.cli.qa._seed_demo_data_for_trial` that runs post-server-launch: finds the blueprint, generates JSONL rows into a tempdir (when pre-generated files don't exist), authenticates as admin via `/__test__/authenticate`, primes the CSRF cookie with a GET, then POSTs rows via `DemoDataLoader`. An `httpx` request hook keeps `X-CSRF-Token` synced to the (rotating) `dazzle_csrf` cookie so CSRF stays valid across every POST.
+- Verified: contact_manager trial seeded partial data (1/30 rows; rest failed on blueprint data-quality issues — phone-field lorem ipsum, duplicate emails — which is a separate issue) and produced 20 friction observations vs the 4-or-fewer typical of empty-app runs. Agent also called `submit_verdict` (`outcome=completed`) for the first time in 10+ cycles, confirming #818's step-N-5 nudge works end-to-end on real data.
+
+### Agent Guidance
+- **Blueprint quality matters now that seed is live.** `--fresh-db` exercising the blueprint-generated data is the fastest way to surface pattern bugs (fields that exceed their type's length, non-unique values for `unique` columns, etc.). When a trial reports bulk `seed error:` lines for a given entity, fix the blueprint's `field_patterns` before blaming the framework.
+
 ## [0.57.90] - 2026-04-19
 
 ### Fixed

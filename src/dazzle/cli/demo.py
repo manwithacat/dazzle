@@ -72,10 +72,18 @@ def _generate_test_personas_toml(
 
 
 def _find_data_dir(project_root: Path) -> Path | None:
-    """Find the demo data directory, checking demo_data/ then .dazzle/demo_data/."""
+    """Find the demo data directory.
+
+    Order of precedence:
+    1. ``demo_data/`` at the project root (explicit, user-curated)
+    2. ``.dazzle/demo_data/`` (generated via ``dazzle demo generate``)
+    3. ``dsl/seeds/demo_data/`` (blueprint-only — the default location
+       used by ``dazzle init`` and by the example apps; #817)
+    """
     for candidate in [
         project_root / "demo_data",
         project_root / ".dazzle" / "demo_data",
+        project_root / "dsl" / "seeds" / "demo_data",
     ]:
         if candidate.is_dir():
             return candidate
