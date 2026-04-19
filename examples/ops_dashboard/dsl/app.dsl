@@ -2,7 +2,7 @@
 # Demonstrates v0.7.0 Business Logic Features:
 # - State machine for system status lifecycle
 # - Invariants for metric validation
-# - Access rules for operator roles
+# - Access rules for ops_engineer roles
 # - COMMAND_CENTER stage for dense expert interface
 
 module ops_dashboard.core
@@ -48,15 +48,15 @@ entity System "System":
 
   # Access control
   permit:
-    list: role(operator) or role(admin)
-    read: role(operator) or role(admin)
+    list: role(ops_engineer) or role(admin)
+    read: role(ops_engineer) or role(admin)
     create: role(admin)
     update: role(admin)
     delete: role(admin)
 
   scope:
     list: all
-      for: operator, admin
+      for: ops_engineer, admin
 
   fitness:
     repr_fields: [name, service_type, status, response_time_ms, error_rate]
@@ -81,15 +81,15 @@ entity Alert "Alert":
 
   # Access control
   permit:
-    list: role(operator) or role(admin)
-    read: role(operator) or role(admin)
-    create: role(operator) or role(admin)
-    update: role(operator) or role(admin)
+    list: role(ops_engineer) or role(admin)
+    read: role(ops_engineer) or role(admin)
+    create: role(ops_engineer) or role(admin)
+    update: role(ops_engineer) or role(admin)
     delete: role(admin)
 
   scope:
     list: all
-      for: operator, admin
+      for: ops_engineer, admin
 
   fitness:
     repr_fields: [system, severity, message, acknowledged, triggered_at]

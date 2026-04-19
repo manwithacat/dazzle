@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.81] - 2026-04-19
+
+### Fixed
+- **ops_dashboard example: `Alert` permit rules referenced undeclared `operator` role.** `examples/ops_dashboard/dsl/app.dsl` declared personas `admin` and `ops_engineer`, but the `Alert` entity's `permit: list/read/create/update` rules and `scope: for:` directives all referenced `operator` — a role that doesn't exist in the app. The access-control runtime correctly rejected every ops_engineer request for Alert data with 403. Dan (SRE persona) in qa trials consistently hit this as his central blocker.
+- Found via the qa-trial loop itself: #808's disclosure panel (shipped v0.57.79) rendered *"Entity: Alert · Operation: list · Your roles: ops_engineer"* — which made the mismatch obvious for the first time. A clean demonstration of how improving error UX surfaces DSL misconfigurations that were previously silent.
+- Scenario-level fix (three `role(operator)` → `role(ops_engineer)` + two `for: operator, admin` → `for: ops_engineer, admin` replacements). Not a framework change.
+
 ## [0.57.80] - 2026-04-19
 
 ### Added
