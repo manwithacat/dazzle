@@ -14,7 +14,8 @@ from typing import Any
 
 import pytest
 
-from dazzle.agent.missions.trial import build_trial_mission
+from dazzle.agent.missions.trial import _trial_completion, build_trial_mission
+from dazzle.agent.models import ActionType, AgentAction
 from dazzle.qa.trial_report import (
     _first_line,
     _title_from_description,
@@ -135,6 +136,45 @@ class TestBuildTrialMission:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert "same friction twice" in m.system_prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# Completion criterion — #822: submit_verdict must terminate the loop
+# ---------------------------------------------------------------------------
+
+
+class TestTrialCompletion:
+    """_trial_completion returns True iff submit_verdict is called.
+
+    Regression guard for #822: the function previously checked
+    ``action.tool_name`` which doesn't exist on AgentAction — the field
+    is ``action.target``. As a result the loop never exited early and
+    every trial reported outcome=max_steps even after the verdict was
+    written.
+    """
+
+    def _make_action(self, action_type: ActionType, target: str | None = None) -> AgentAction:
+        return AgentAction(type=action_type, target=target)
+
+    def test_submit_verdict_tool_action_returns_true(self) -> None:
+        action = self._make_action(ActionType.TOOL, "submit_verdict")
+        assert _trial_completion(action, []) is True
+
+    def test_done_action_returns_true(self) -> None:
+        action = self._make_action(ActionType.DONE)
+        assert _trial_completion(action, []) is True
+
+    def test_record_friction_tool_does_not_terminate(self) -> None:
+        action = self._make_action(ActionType.TOOL, "record_friction")
+        assert _trial_completion(action, []) is False
+
+    def test_navigate_action_does_not_terminate(self) -> None:
+        action = self._make_action(ActionType.NAVIGATE, "/app/tickets")
+        assert _trial_completion(action, []) is False
+
+    def test_click_action_does_not_terminate(self) -> None:
+        action = self._make_action(ActionType.CLICK, "#btn-save")
+        assert _trial_completion(action, []) is False
 
 
 # ---------------------------------------------------------------------------

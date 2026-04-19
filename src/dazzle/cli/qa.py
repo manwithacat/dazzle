@@ -44,30 +44,32 @@ def _resolve_project_dir(app: str | None) -> Path:
 
 
 def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str) -> None:
-    """Seed demo data after the trial server is up (#817).
+    """Seed demo data after the trial server is up (#817, #820).
 
     ``--fresh-db`` truncates the DB, which left every trial running
-    against an empty app — and the agent correctly flagged "no data,
-    can't evaluate" every time, swamping real framework feedback.
-    This helper runs after :func:`_reset_db_for_trial` and after
-    ``launch_interaction_server`` has the app listening, and:
+    against an empty app. This helper runs after the reset and after
+    ``launch_interaction_server`` has the app listening:
 
-    1. Finds the project's blueprint (``dsl/seeds/demo_data/blueprint.json``
-       is the default). If none exists, silently return — trials run
-       empty, same as before.
-    2. Generates CSV/JSONL data files from the blueprint into a temp
-       directory, unless the data directory already contains them.
-    3. Authenticates against the running server via the test endpoint
-       to get an admin session cookie.
-    4. POSTs each entity's rows to the runtime via DemoDataLoader.
+    1. Finds the blueprint (default location
+       ``dsl/seeds/demo_data/blueprint.json``). If none, return silently.
+    2. Generates JSONL data files from the blueprint into a tempdir
+       (unless pre-generated files already exist).
+    3. POSTs each entity's rows as a fixture batch to
+       ``/__test__/seed`` — this endpoint bypasses Cedar entirely (it
+       calls the repository layer directly) so seed succeeds regardless
+       of which persona can ``create`` a given entity (#820).
+
+    The test-secret gate keeps the seed endpoint safe; non-dev servers
+    don't enable test routes.
     """
+    import json as _json
     import tempfile
 
     import httpx
 
     from dazzle.cli.demo import _find_data_dir
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.demo_data.loader import DemoDataLoader, topological_sort_entities
+    from dazzle.demo_data.loader import topological_sort_entities
     from dazzle.mcp.server.handlers.demo_data import demo_generate_impl
 
     blueprint = project_dir / "dsl" / "seeds" / "demo_data" / "blueprint.json"
@@ -82,8 +84,6 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
         typer.echo(f"Seed skipped: could not load appspec ({exc})", err=True)
         return
 
-    # If no pre-generated data exists, generate it into a tempdir so
-    # we don't litter the project with gitignored JSONL files.
     if existing_data is None or not any(existing_data.glob("*.jsonl")):
         tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-seed-"))
         try:
@@ -103,70 +103,70 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     else:
         data_dir = existing_data
 
-    # Authenticate as admin via the test endpoint so we can POST as a
-    # privileged user. /__test__/authenticate yields a session token.
-    headers = {"X-Test-Secret": test_secret} if test_secret else {}
-    try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.post(
-                f"{site_url}/__test__/authenticate",
-                json={"role": "admin", "username": "admin"},
-                headers=headers,
-            )
-            if resp.status_code != 200:
-                typer.echo(
-                    f"Seed skipped: admin auth returned {resp.status_code}",
-                    err=True,
+    # Build the fixture batch by walking files in topological order.
+    entity_order = topological_sort_entities(appspec.domain.entities)
+    fixtures: list[dict[str, Any]] = []
+    for entity_name in entity_order:
+        entity_file = data_dir / f"{entity_name}.jsonl"
+        if not entity_file.exists():
+            continue
+        with entity_file.open() as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = _json.loads(line)
+                except _json.JSONDecodeError:
+                    continue
+                fixtures.append(
+                    {
+                        "id": str(row.get("id", "")),
+                        "entity": entity_name,
+                        "data": row,
+                    }
                 )
-                return
-            token = resp.json().get("session_token") or ""
-    except Exception as exc:
-        typer.echo(f"Seed skipped: admin auth failed ({exc})", err=True)
+
+    if not fixtures:
+        typer.echo("Seed skipped: no rows to seed", err=True)
         return
 
-    entity_order = topological_sort_entities(appspec.domain.entities)
-    with DemoDataLoader(base_url=site_url) as loader:
-        client = loader._get_client()
-        if token:
-            client.cookies.set("dazzle_session", token)
-        # Prime the CSRF cookie by making a GET, then sync it onto the
-        # X-CSRF-Token header for every subsequent request via an httpx
-        # event hook. The CSRF middleware rotates the cookie on POST,
-        # so a static header would stop working after the first
-        # successful write.
-        try:
-            client.get("/")
-        except Exception:
-            pass
+    headers = {"Content-Type": "application/json"}
+    if test_secret:
+        headers["X-Test-Secret"] = test_secret
 
-        def _sync_csrf(request: httpx.Request) -> None:
-            csrf = client.cookies.get("dazzle_csrf")
-            if csrf:
-                request.headers["X-CSRF-Token"] = csrf
+    # /__test__/seed is atomic — a single failure rolls back every
+    # fixture in the batch. Blueprint-generated data has #821 quality
+    # issues that make partial failure common, so POST per-fixture:
+    # bad rows fail individually and good ones persist. ~40 rows per
+    # app × a few apps keeps total requests well under any real budget.
+    created_count = 0
+    sample_errors: list[str] = []
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            for fixture in fixtures:
+                resp = client.post(
+                    f"{site_url}/__test__/seed",
+                    json={"fixtures": [fixture]},
+                    headers=headers,
+                )
+                if resp.status_code == 200:
+                    created_count += len(resp.json().get("created") or {})
+                elif len(sample_errors) < 3:
+                    err_text = resp.text[:240]
+                    sample_errors.append(
+                        f"{fixture['entity']}/{fixture['id']}: HTTP {resp.status_code} {err_text}"
+                    )
+    except Exception as exc:
+        typer.echo(f"Seed skipped: POST /__test__/seed raised {exc}", err=True)
+        return
 
-        client.event_hooks = {"request": [_sync_csrf]}
-        loader._token = None  # don't use bearer-auth path; cookies are enough
-
-        try:
-            report = loader.load_all(data_dir, entity_order)
-        except Exception as exc:
-            typer.echo(f"Seed skipped: load_all raised {exc}", err=True)
-            return
-
-    first_line = report.summary().splitlines()[0]
-    typer.echo(f"Seeded demo data: {first_line}")
-    # Surface a couple of error examples whenever anything failed —
-    # makes infrastructure bugs (auth, CSRF, schema mismatch) visible
-    # without spamming the trial log with hundreds of identical
-    # validation errors.
-    if report.total_failed:
-        sample_errors: list[str] = []
-        for r in report.results:
-            sample_errors.extend(r.errors[:2])
-            if len(sample_errors) >= 3:
-                break
-        for err in sample_errors[:3]:
-            typer.echo(f"  seed error: {err[:240]}", err=True)
+    typer.echo(
+        f"Seeded demo data: {created_count} of {len(fixtures)} fixture(s) "
+        f"created via /__test__/seed (bypasses Cedar)."
+    )
+    for err in sample_errors:
+        typer.echo(f"  seed error: {err}", err=True)
 
 
 def _reset_db_for_trial(project_dir: Path) -> None:

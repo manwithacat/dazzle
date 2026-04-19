@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.92] - 2026-04-19
+
+### Fixed
+- **qa trial seed bypasses Cedar via `/__test__/seed` (#820).** #817 made `--fresh-db` seed data via the regular entity API, but that API enforces Cedar `permit.create` — and most example apps scope business-entity creation to business personas (customer/agent/manager), not admin. Result: 3 of 5 example apps had 100% seed-row failure rate with empty `permitted_personas` 403s. Fix: replaced the HTTP-POST + CSRF-juggling path with direct POSTs to the existing `/__test__/seed` endpoint, which calls the repository layer directly and bypasses Cedar entirely. Gated by `X-Test-Secret` like the rest of `/__test__/*`. POSTs fixtures one-at-a-time (the endpoint is atomic per batch) so blueprint data-quality failures on some rows don't roll back the good ones. Verified end-to-end on support_tickets — no more auth errors, all remaining failures are legitimate DB integrity violations (tracked as #821).
+- **`submit_verdict` now terminates the trial loop (#822).** `_trial_completion` used `getattr(action, "tool_name", "")` but `AgentAction` has no `tool_name` field — tool names live on `action.target`. Result: every trial reported `outcome=max_steps` even after the agent had written a verdict, wasting 20-40% of step budget. Fixed to `action.target == "submit_verdict"`; 5 new unit tests pin every relevant action-type case.
+
+### Changed
+- **`_seed_demo_data_for_trial` no longer uses `DemoDataLoader`.** The CSRF-sync request hook + admin auth scaffolding is gone; the helper now speaks directly to `/__test__/seed`. Cleaner and shorter (~40 LOC removed) and no longer depends on the DSL choosing a CRUD-permit list that includes admin.
+
 ## [0.57.91] - 2026-04-19
 
 ### Fixed

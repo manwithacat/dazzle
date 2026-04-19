@@ -233,7 +233,7 @@ def _trial_completion(action: AgentAction, history: list[Step]) -> bool:
     # The `submit_verdict` mission tool shows up as a tool action;
     # the handler has already stashed the verdict, and the framework
     # records this as a mission-tool call. Treat it as a stop signal.
-    if action.type == ActionType.TOOL and getattr(action, "tool_name", "") == "submit_verdict":
+    if action.type == ActionType.TOOL and action.target == "submit_verdict":
         return True
     return False
 
