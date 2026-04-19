@@ -459,3 +459,163 @@ class TestVerdictFallbackFormatter:
         # Default severity "medium" applied
         assert "[praise/medium]" in out
         assert "@ " not in out
+
+
+# ---------------------------------------------------------------------------
+# Seed pre-flight / circuit breaker (#826)
+# ---------------------------------------------------------------------------
+
+
+class TestSeedPreflightAndCircuitBreaker:
+    """When a blueprint has drifted, the trial harness should fail
+    fast with actionable errors instead of firing hundreds of failing
+    /__test__/seed POSTs. Covers #826."""
+
+    def test_pre_flight_aborts_on_blueprint_errors(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Blueprint with validation errors → seed aborts before any
+        /__test__/seed POST; the first few errors are printed."""
+        from dazzle.cli import qa as qa_cli
+
+        # Fake a project dir with a blueprint file at the real path
+        # the seed code looks for.
+        blueprint_dir = tmp_path / "dsl" / "seeds" / "demo_data"
+        blueprint_dir.mkdir(parents=True)
+        (blueprint_dir / "blueprint.json").write_text('{"version": "1.0", "blueprint": {}}')
+
+        # Stub load_blueprint + verify_blueprint to return a report
+        # with errors. The test exercises the abort branch only — we
+        # don't care about the exact Violation shape, just that the
+        # report surfaces errors() as a non-empty list.
+        class _FakeViolation:
+            def __init__(self, entity: str, field: str, rule: str, message: str) -> None:
+                self.entity = entity
+                self.field = field
+                self.rule = rule
+                self.message = message
+
+        class _FakeReport:
+            def errors(self) -> list[_FakeViolation]:
+                return [
+                    _FakeViolation(
+                        "Manuscript",
+                        "id",
+                        "strategy_type_mismatch",
+                        "Strategy 'free_text_lorem' invalid for type 'uuid'.",
+                    ),
+                    _FakeViolation(
+                        "Manuscript", "author_id", "unknown_entity", "Target 'Author' not found."
+                    ),
+                ]
+
+        monkeypatch.setattr(
+            "dazzle.core.demo_blueprint_persistence.load_blueprint",
+            lambda _p: object(),
+        )
+        monkeypatch.setattr(
+            "dazzle.demo_data.verify.verify_blueprint",
+            lambda _bp, _spec: _FakeReport(),
+        )
+
+        # Stub AppSpec loader to return something truthy. The abort
+        # happens before any field of the AppSpec is consulted.
+        monkeypatch.setattr(
+            "dazzle.cli.utils.load_project_appspec",
+            lambda _p: object(),
+        )
+
+        # Stub demo_generate_impl and httpx.Client so that IF the
+        # abort fails to fire we'd see a test failure elsewhere.
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise AssertionError("seed attempt should not reach demo_generate")
+
+        monkeypatch.setattr("dazzle.mcp.server.handlers.demo_data.demo_generate_impl", _boom)
+
+        qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        out = capsys.readouterr()
+        err = out.err
+        assert "Seed aborted" in err
+        assert "2 validation error(s)" in err
+        assert "Manuscript.id" in err
+        assert "strategy_type_mismatch" in err
+
+    def test_circuit_breaker_trips_after_consecutive_failures(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When /__test__/seed returns 400 repeatedly, seed loop
+        aborts after 10 consecutive failures and prints a
+        circuit-breaker message pointing at `dazzle demo verify`."""
+        from dazzle.cli import qa as qa_cli
+
+        # No blueprint — skip the pre-flight branch. We need
+        # existing_data to force the data-dir path.
+        data_dir = tmp_path / "demo_jsonl"
+        data_dir.mkdir()
+        # Seed 20 fixtures so the circuit breaker can trip at 10.
+        (data_dir / "Manuscript.jsonl").write_text(
+            "\n".join('{"id": "' + f"row-{i}" + '"}' for i in range(20)) + "\n"
+        )
+
+        # Stub AppSpec loader + entity topological sort + data-dir
+        # discovery. The source-module patches propagate into
+        # `from ... import X` statements inside the target function.
+        class _FakeEntity:
+            def __init__(self, name: str) -> None:
+                self.name = name
+                self.fields = []
+
+        class _FakeDomain:
+            entities = [_FakeEntity("Manuscript")]
+
+        class _FakeAppSpec:
+            domain = _FakeDomain()
+
+        monkeypatch.setattr(
+            "dazzle.cli.utils.load_project_appspec",
+            lambda _p: _FakeAppSpec(),
+        )
+        monkeypatch.setattr(
+            "dazzle.demo_data.loader.topological_sort_entities",
+            lambda _entities: ["Manuscript"],
+        )
+        monkeypatch.setattr(
+            "dazzle.cli.demo._find_data_dir",
+            lambda _p: data_dir,
+        )
+
+        # Stub httpx.Client so every POST returns 400. Record how
+        # many attempts happened before the circuit broke.
+        post_count = {"n": 0}
+
+        class _FakeResp:
+            status_code = 400
+            text = 'invalid input syntax for type uuid: "row-0"'
+
+            def json(self) -> dict[str, Any]:
+                return {"created": {}}
+
+        class _FakeClient:
+            def __init__(self, *_a: Any, **_k: Any) -> None:
+                pass
+
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_a: Any) -> None:
+                return None
+
+            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
+                post_count["n"] += 1
+                return _FakeResp()
+
+        monkeypatch.setattr("httpx.Client", _FakeClient)
+
+        qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        out = capsys.readouterr()
+        # Should have stopped at 10 consecutive failures, not iterated
+        # through all 20 fixtures.
+        assert post_count["n"] == 10, f"expected circuit at 10, got {post_count['n']}"
+        assert "Seed aborted" in out.err
+        assert "10 consecutive failures" in out.err
+        assert "dazzle demo verify" in out.err

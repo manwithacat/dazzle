@@ -84,10 +84,18 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
         typer.echo(f"Seed skipped: could not load appspec ({exc})", err=True)
         return
 
-    # Soft-gate: run the blueprint verifier and surface any drift, but
-    # continue with the seed either way — some imperfect data in the
-    # app is usually better for the trial than none. Violations show
-    # up as a compact summary to keep the trial log readable.
+    # Hard-gate (#826): verify the blueprint up front and abort the
+    # trial when there are errors. Previously this was a soft-gate —
+    # errors were reported as a count and the seed loop ran anyway,
+    # producing 213 × 400 responses on a stale blueprint plus an
+    # opaque "timed out" failure at the end. Aborting here saves the
+    # server from the 400 storm (which empirically destabilises the
+    # subsequent /__test__/authenticate call) and gives adopters an
+    # actionable "run `dazzle demo verify` for details" path.
+    #
+    # Verifier-internal exceptions (bug in the verifier, not the
+    # blueprint) still fall through to the seed attempt so a broken
+    # verifier doesn't block qa-trial adoption.
     if blueprint.exists():
         try:
             from dazzle.core.demo_blueprint_persistence import load_blueprint
@@ -96,12 +104,23 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
             loaded = load_blueprint(project_dir)
             if loaded is not None:
                 report = verify_blueprint(loaded, appspec)
-                if report.errors():
+                errors = report.errors()
+                if errors:
                     typer.echo(
-                        f"Blueprint verify: {len(report.errors())} error(s) — "
-                        f"seed may have reduced coverage. "
-                        f"Run `dazzle demo verify` for details."
+                        f"Seed aborted: blueprint has {len(errors)} validation "
+                        f"error(s). Run `dazzle demo verify` for the full list.",
+                        err=True,
                     )
+                    for violation in errors[:5]:
+                        typer.echo(
+                            f"  - {violation.entity}"
+                            f"{'.' + violation.field if violation.field else ''}"
+                            f": {violation.rule} — {violation.message}",
+                            err=True,
+                        )
+                    if len(errors) > 5:
+                        typer.echo(f"  ... and {len(errors) - 5} more.", err=True)
+                    return
         except Exception:
             pass  # verifier failure must never block a trial
 
@@ -161,8 +180,20 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     # issues that make partial failure common, so POST per-fixture:
     # bad rows fail individually and good ones persist. ~40 rows per
     # app × a few apps keeps total requests well under any real budget.
+    # Circuit breaker (#826): abort after N consecutive non-200
+    # responses. Without this, a stale blueprint produces 200+ × 400
+    # responses that empirically destabilise the server enough that
+    # the downstream /__test__/authenticate call times out. 10 is
+    # enough to surface recurring drift patterns (topological order
+    # means early failures are usually consistent across the batch)
+    # without wasting requests.
+    _FAIL_STREAK_ABORT = 10
+
     created_count = 0
     sample_errors: list[str] = []
+    fail_streak = 0
+    fail_total = 0
+    aborted_by_circuit = False
     try:
         with httpx.Client(timeout=60.0) as client:
             for fixture in fixtures:
@@ -173,11 +204,19 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                 )
                 if resp.status_code == 200:
                     created_count += len(resp.json().get("created") or {})
-                elif len(sample_errors) < 3:
-                    err_text = resp.text[:240]
-                    sample_errors.append(
-                        f"{fixture['entity']}/{fixture['id']}: HTTP {resp.status_code} {err_text}"
-                    )
+                    fail_streak = 0
+                else:
+                    fail_streak += 1
+                    fail_total += 1
+                    if len(sample_errors) < 3:
+                        err_text = resp.text[:240]
+                        sample_errors.append(
+                            f"{fixture['entity']}/{fixture['id']}: "
+                            f"HTTP {resp.status_code} {err_text}"
+                        )
+                    if fail_streak >= _FAIL_STREAK_ABORT:
+                        aborted_by_circuit = True
+                        break
     except Exception as exc:
         typer.echo(f"Seed skipped: POST /__test__/seed raised {exc}", err=True)
         return
@@ -188,6 +227,13 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     )
     for err in sample_errors:
         typer.echo(f"  seed error: {err}", err=True)
+    if aborted_by_circuit:
+        typer.echo(
+            f"Seed aborted after {fail_streak} consecutive failures "
+            f"(total {fail_total} so far). Blueprint drift is the most "
+            f"likely cause — run `dazzle demo verify` to see full details.",
+            err=True,
+        )
 
 
 def _reset_db_for_trial(project_dir: Path) -> None:
