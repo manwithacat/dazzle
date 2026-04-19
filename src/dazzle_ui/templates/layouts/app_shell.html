@@ -8,7 +8,14 @@
        sidebarOpen: $persist(true).as('dz-sidebar'),
        dark: $persist(false).as('dz-dark-mode'),
        toggleDark() { this.dark = !this.dark; this.applyDark() },
-       applyDark() { document.documentElement.setAttribute('data-theme', this.dark ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', this.dark) },
+       applyDark() {
+         const v = this.dark ? 'dark' : 'light';
+         document.documentElement.setAttribute('data-theme', v);
+         document.documentElement.classList.toggle('dark', this.dark);
+         // Mirror into the dz_theme cookie so the marketing shell and
+         // the server's first-paint render stay in sync (UX-048 Q1).
+         document.cookie = 'dz_theme=' + v + '; path=/; max-age=31536000; SameSite=Lax';
+       },
        toggleSidebar(action) {
          if (action === 'open') this.sidebarOpen = true;
          else if (action === 'close') this.sidebarOpen = false;

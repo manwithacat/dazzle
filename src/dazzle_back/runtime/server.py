@@ -410,6 +410,15 @@ class DazzleBackendApp:
 
         self._app.add_middleware(GZipMiddleware, minimum_size=500)
 
+        # Theme-variant middleware (UX-048 / UX-056 Q1) — reads the
+        # `dz_theme` cookie and publishes it into a ContextVar so the
+        # Jinja `theme_variant()` global can emit `<html data-theme>`
+        # correctly on first paint (prevents the flash-of-light for
+        # returning dark-mode users).
+        from dazzle_ui.runtime.theme import install_theme_middleware
+
+        install_theme_middleware(self._app)
+
         # Metrics middleware (v0.27.0)
         try:
             from dazzle_back.runtime.metrics import add_metrics_middleware

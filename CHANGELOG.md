@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.97] - 2026-04-19
+
+### Fixed
+- **Eliminated theme flash-of-light on first paint for returning dark-mode users (UX-056 Q1).** `<html data-theme="light">` was hardcoded in both `site/site_base.html` and `base.html`; `site.js` ran `initTheme()` before `DOMContentLoaded` but the browser had already committed at least one paint with the wrong attribute. Returning dark-mode users saw a brief white flash on every page load. Fix threads theme through the server: `ThemeVariantMiddleware` in `src/dazzle_ui/runtime/theme.py` reads a validated `dz_theme` cookie into a `ContextVar`; `template_renderer.create_jinja_env` registers the reader as the `theme_variant` Jinja global; both layout templates now emit `<html data-theme="{{ theme_variant() }}">`. Unknown/malformed cookie values fall back to `"light"` so a bad cookie can never inject arbitrary attribute strings.
+- **Cross-shell theme sync (UX-048 Q1).** Marketing shell (`site.js` `localStorage.dz-theme-variant`) and in-app shell (Alpine `$persist` `localStorage.dz-dark-mode`) stored theme state in separate keys, so toggling dark on `/` and signing in reverted to light. Both shells now write the shared `dz_theme` cookie on every toggle (marketing: `storePreference()`; in-app: `app_shell.html` Alpine `applyDark()`), and both read the cookie server-side on the next request. Legacy `localStorage` keys remain for backward compatibility but no longer drive cross-shell inconsistency — the cookie is the cross-shell source of truth.
+
+### Added
+- **`src/dazzle_ui/runtime/theme.py`** — `ThemeVariantMiddleware`, `theme_variant_ctxvar`, `get_theme_variant()`, `install_theme_middleware()`. The cookie name is `dz_theme`; accepted values are `{"light", "dark"}` only; unknown values fall back to `"light"`; the ctxvar resets between requests via `reset(token)` in the middleware's `finally` block so values don't leak across nested Starlette test clients.
+- **`tests/unit/test_theme_variant_middleware.py`** — 13 tests covering ContextVar defaults, middleware behaviour over HTTP (default without cookie, `dark`/`light` cookie reads, malformed-cookie rejection, unknown-variant rejection, ctxvar-reset-between-requests), Jinja global registration, site_base.html + base.html template integration, and the `_htmx_partial` branch that skips the `<html>` wrapper entirely.
+
+### Agent Guidance
+- **Add `<html data-theme="{{ theme_variant() }}">` to any new layout template.** The `theme_variant` Jinja global is registered in `template_renderer.create_jinja_env` and resolves to the per-request variant from `ThemeVariantMiddleware`. Never hardcode `data-theme="light"` — it produces a flash-of-light regression for returning dark-mode users.
+- **JS toggles MUST write the `dz_theme` cookie** alongside any `localStorage` writes. Pattern: `document.cookie = 'dz_theme=<variant>; path=/; max-age=31536000; SameSite=Lax'`. See `src/dazzle_ui/static/js/site.js::storePreference` (marketing) and `src/dazzle_ui/templates/layouts/app_shell.html` Alpine `applyDark()` (in-app) for the canonical shapes.
+
 ## [0.57.96] - 2026-04-19
 
 ### Fixed

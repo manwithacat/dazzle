@@ -387,6 +387,16 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.globals["_dazzle_version"] = _dz_version
     env.globals["_use_cdn"] = False  # local-first; opt-in via [ui] cdn = true
 
+    # Theme variant — resolved per-request by ThemeVariantMiddleware
+    # (src/dazzle_ui/runtime/theme.py). Templates call `{{
+    # theme_variant() }}` in `<html data-theme="…">` so the correct
+    # attribute renders on first paint and returning dark-mode users
+    # don't see a flash-of-light. Falls back to "light" when called
+    # outside a request context (e.g. unit-test rendering).
+    from dazzle_ui.runtime.theme import get_theme_variant
+
+    env.globals["theme_variant"] = get_theme_variant
+
     # Global: detect if compiled Tailwind CSS bundle exists
     static_dir = Path(__file__).parent / "static"
     bundled = (static_dir / "css" / "dazzle-bundle.css").exists()
