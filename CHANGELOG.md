@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.90] - 2026-04-19
+
+### Fixed
+- **Step-budget nudge for mission terminal tools (#818).** Across nine `/trial-cycle` runs, the trial agent never once called `submit_verdict` — 100% of cycles ended `outcome=max_steps` and relied on `trial_verdict_fallback.synthesize_verdict`. The nudge to submit lived only in the static system prompt at construction time; as the step budget drained, nothing reminded the agent. `DazzleAgent._build_messages` now takes `steps_remaining` + `mission` kwargs, and when `1 ≤ steps_remaining ≤ 5` it injects a hard-stop user message pointing at the first entry in `mission.terminal_tools` (or `done` if none). Trial mission declares `terminal_tools=["submit_verdict"]`.
+- Also added a `logger.info("agent tool call: %s", tool.name)` line to `_execute_tool` so future runs can audit tool-use patterns and distinguish "agent never tried" from "agent tried but SDK rejected".
+- **Dedup threshold tuned down (#819).** `_CLUSTER_SIMILARITY_THRESHOLD` in `trial_report.py` was 0.8 — too strict for LLM paraphrase variance, so cycle 3 (20 raw) and cycle 8 (17 raw) both collapsed 0 entries despite obvious near-duplicates. Lowered to 0.65. Existing dissimilar-description test pair scores 0.25 (safely below), near-duplicate "No items found" variants score 0.72–0.89 (above). 1 new test pins this behaviour.
+
+### Changed
+- **Mission.terminal_tools field.** New `list[str]` field on `dazzle.agent.core.Mission`. Missions that complete via a domain-specific tool (e.g. `submit_verdict` for qa trials) should list that tool here so the step-budget nudge targets the right tool name. Default empty list → falls back to `done`.
+
+### Agent Guidance
+- **Missions that produce a final artefact should declare `terminal_tools`.** Example: the trial mission's wrap-up tool is `submit_verdict`; the step-N-5 nudge references that name specifically so the agent stops exploring and commits a verdict. Missions without a final artefact (pure exploration) can leave `terminal_tools` empty and rely on the generic `done` action.
+
 ## [0.57.89] - 2026-04-19
 
 ### Fixed

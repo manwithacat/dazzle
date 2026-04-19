@@ -349,6 +349,11 @@ class Mission:
     token_budget: int = 100_000
     context: dict[str, Any] = field(default_factory=dict)
     start_url: str | None = None
+    # Tools that terminate a mission cleanly. When the step budget is
+    # nearly exhausted the agent is nudged to call the first one (#818).
+    # Missions without a domain-specific terminal tool leave this empty
+    # and rely on the generic `done` action.
+    terminal_tools: list[str] = field(default_factory=list)
 
 
 # =============================================================================
@@ -465,8 +470,9 @@ class DazzleAgent:
 
             # 2. Decide
             try:
+                steps_remaining = mission.max_steps - step_num
                 action, prompt_text, response_text, step_tokens = await self._decide(
-                    mission, state, tool_registry
+                    mission, state, tool_registry, steps_remaining=steps_remaining
                 )
                 self._tokens_used += step_tokens
             except Exception as e:
@@ -527,6 +533,7 @@ class DazzleAgent:
         mission: Mission,
         state: PageState,
         tool_registry: dict[str, AgentTool],
+        steps_remaining: int | None = None,
     ) -> tuple[AgentAction, str, str, int]:
         """
         Get the next action from the LLM.
@@ -545,7 +552,7 @@ class DazzleAgent:
             (action, prompt_text, response_text, tokens_used)
         """
         system_prompt = self._build_system_prompt(mission, tool_registry)
-        messages = self._build_messages(state)
+        messages = self._build_messages(state, steps_remaining=steps_remaining, mission=mission)
 
         # Build prompt text for transcript (without image data)
         prompt_text = f"## System\n{system_prompt[:500]}...\n\n{state.to_prompt()}"
@@ -817,7 +824,12 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
 
         return "\n".join(parts)
 
-    def _build_messages(self, state: PageState) -> list[dict[str, Any]]:
+    def _build_messages(
+        self,
+        state: PageState,
+        steps_remaining: int | None = None,
+        mission: "Mission | None" = None,
+    ) -> list[dict[str, Any]]:
         """Build conversation messages from history + current state."""
         messages: list[dict[str, Any]] = []
 
@@ -841,6 +853,24 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
                     "different section)\n"
                     "- if you cannot find any new way to make progress, call "
                     "the `done` tool so we can stop wasting steps\n"
+                )
+
+            # #818: step-N-5 budget nudge. 100% of trial runs ended at
+            # max_steps without the agent calling its wrap-up tool, so the
+            # synthesis fallback had to run. Inject a hard reminder when
+            # the budget is nearly gone. The terminal tool name is the
+            # first entry in mission.terminal_tools (when set), else the
+            # mission's builtin `done`.
+            if steps_remaining is not None and 1 <= steps_remaining <= 5 and mission is not None:
+                terminal_names = list(getattr(mission, "terminal_tools", []) or ["done"])
+                tool_hint = terminal_names[0] if terminal_names else "done"
+                history_text += (
+                    f"\n## ⏳ {steps_remaining} step(s) left — wrap up NOW\n"
+                    f"You have {steps_remaining} step(s) remaining before the "
+                    f"step budget is exhausted. STOP exploring. Call "
+                    f"`{tool_hint}` on the next step with whatever summary "
+                    f"you have. It is better to submit an imperfect wrap-up "
+                    f"now than to run out of budget silently.\n"
                 )
 
             messages.append({"role": "user", "content": history_text})
@@ -1000,6 +1030,9 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
         value: str | None,
     ) -> ActionResult:
         """Execute a mission-specific tool."""
+        # #818: log every tool invocation so we can audit tool-use patterns
+        # after-the-fact (e.g. spot 0% submit_verdict call rates).
+        logger.info("agent tool call: %s", tool.name)
         try:
             args = json.loads(value) if value else {}
             result = tool.handler(**args)

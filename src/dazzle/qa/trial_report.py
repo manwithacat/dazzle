@@ -35,7 +35,7 @@ from typing import Any
 
 _CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
-_CLUSTER_SIMILARITY_THRESHOLD = 0.8
+_CLUSTER_SIMILARITY_THRESHOLD = 0.65
 
 
 @dataclass

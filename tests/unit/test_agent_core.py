@@ -38,6 +38,97 @@ def _simple_mission() -> Mission:
     )
 
 
+class TestStepBudgetNudge:
+    """#818: when the step budget is nearly exhausted, `_build_messages`
+    injects a hard reminder pointing at the mission's terminal tool.
+
+    Before this, trial runs ended at ``max_steps`` 100% of the time
+    without the agent ever calling ``submit_verdict`` — the synthesis
+    fallback had to generate every verdict."""
+
+    def _agent(self) -> DazzleAgent:
+        return DazzleAgent(observer=_mock_observer(), executor=_mock_executor())
+
+    def _state(self) -> PageState:
+        return PageState(url="u", title="t", visible_text="")
+
+    def _mission_with_terminal(self) -> Mission:
+        return Mission(
+            name="trial:x",
+            system_prompt="p",
+            max_steps=30,
+            terminal_tools=["submit_verdict"],
+        )
+
+    def test_no_nudge_mid_run(self) -> None:
+        """At 20 steps remaining, no wrap-up pressure applied."""
+        from dazzle.agent.models import ActionType, AgentAction, Step
+
+        agent = self._agent()
+        agent._history = [
+            Step(
+                state=self._state(),
+                action=AgentAction(type=ActionType.NAVIGATE, target="/"),
+                result=MagicMock(state_changed=True),
+                step_number=i,
+                duration_ms=1.0,
+            )
+            for i in range(1, 11)
+        ]
+        msgs = agent._build_messages(
+            self._state(), steps_remaining=20, mission=self._mission_with_terminal()
+        )
+        rendered = str(msgs)
+        assert "step(s) left" not in rendered
+        assert "submit_verdict" not in rendered
+
+    def test_nudge_at_five_steps_remaining(self) -> None:
+        from dazzle.agent.models import ActionType, AgentAction, Step
+
+        agent = self._agent()
+        agent._history = [
+            Step(
+                state=self._state(),
+                action=AgentAction(type=ActionType.NAVIGATE, target="/"),
+                result=MagicMock(state_changed=True),
+                step_number=i,
+                duration_ms=1.0,
+            )
+            for i in range(1, 26)
+        ]
+        msgs = agent._build_messages(
+            self._state(), steps_remaining=5, mission=self._mission_with_terminal()
+        )
+        rendered = str(msgs)
+        assert "5 step(s) left" in rendered
+        assert "submit_verdict" in rendered
+
+    def test_nudge_uses_done_when_no_terminal_tool(self) -> None:
+        from dazzle.agent.models import ActionType, AgentAction, Step
+
+        agent = self._agent()
+        agent._history = [
+            Step(
+                state=self._state(),
+                action=AgentAction(type=ActionType.NAVIGATE, target="/"),
+                result=MagicMock(state_changed=True),
+                step_number=i,
+                duration_ms=1.0,
+            )
+            for i in range(1, 26)
+        ]
+        mission = Mission(name="x", system_prompt="p", max_steps=30)
+        msgs = agent._build_messages(self._state(), steps_remaining=3, mission=mission)
+        rendered = str(msgs)
+        assert "3 step(s) left" in rendered
+        assert "`done`" in rendered
+
+
+# =============================================================================
+# Backend selection (continued below)
+# =============================================================================
+
+
 # =============================================================================
 # Backend selection
 # =============================================================================

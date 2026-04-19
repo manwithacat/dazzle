@@ -311,6 +311,7 @@ def build_trial_mission(
         max_steps=effective_max_steps,
         token_budget=token_budget,
         start_url=f"{base_url}/app",
+        terminal_tools=["submit_verdict"],
         context={
             "mode": "trial",
             "persona": scenario.get("login_persona", ""),

@@ -364,6 +364,31 @@ class TestFrictionClustering:
         out = render_trial_report(report)
         assert "Friction observations (2)" in out
 
+    def test_lenient_threshold_catches_llm_variance(self) -> None:
+        """#819: LLM-generated friction varies enough that 0.8 missed obvious
+        duplicates. 0.65 catches paraphrased near-duplicates while leaving
+        genuinely distinct findings separate (see
+        ``test_dissimilar_descriptions_on_same_url_do_not_cluster``)."""
+        friction = [
+            {
+                "category": "missing",
+                "description": "The Systems page shows 'No items found' - there are no monitored systems visible.",
+                "url": "/app/system",
+                "severity": "high",
+            },
+            {
+                "category": "missing",
+                "description": "The Systems page shows 'No items found' with no monitored systems visible.",
+                "url": "/app/system",
+                "severity": "high",
+            },
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (1 · 1 near-duplicates clustered)" in out
+
 
 # ---------------------------------------------------------------------------
 # Verdict fallback formatter (the LLM call itself is integration-only)
