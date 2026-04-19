@@ -9,7 +9,21 @@
     } | tojson -%}
 <div id="{{ table.table_id }}"
      data-dazzle-table="{{ table.entity_name }}"
-     x-data="dzTable('{{ table.table_id }}', '{{ table.api_endpoint }}', {{ config_json }})"
+     {#
+        x-data MUST be single-quoted because `config_json` (via `tojson`)
+        contains unescaped `"` characters — Jinja's `tojson` escapes
+        HTML-sensitive chars like `<`, `>`, `&`, `'` but NOT `"` since
+        they are the JSON string delimiter. With a double-quoted
+        attribute the first `"` inside the JSON prematurely terminates
+        the attribute, leaving Alpine to parse the malformed
+        `dzTable(..., {` expression — which cascades into every
+        dzTable state name (loading, colMenuOpen, isColumnVisible,
+        selected, bulkCount, columnWidths) reading as "undefined".
+        That was the actual root cause of issue #804. Keeping this
+        comment as a load-bearing reminder for anyone tempted to
+        "tidy up" the quoting here.
+     #}
+     x-data='dzTable("{{ table.table_id }}", "{{ table.api_endpoint }}", {{ config_json }})'
      :aria-busy="loading"
      class="flex flex-col gap-3">
 

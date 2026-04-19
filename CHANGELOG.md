@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.78] - 2026-04-19
+
+### Fixed
+- **#804 actual root cause**: Alpine `x-data` attribute on list-surface tables was double-quoted while its JSON config payload (via `| tojson`) also used double quotes — the browser's HTML parser truncated the attribute value at the first `"` inside the JSON, leaving Alpine to evaluate the malformed expression `dzTable('dt-ticket_list', '/tickets', {`. The `dzTable` component never initialised, and every name it exposes (`loading`, `colMenuOpen`, `isColumnVisible`, `selected`, `bulkCount`, `columnWidths`) cascaded into *"expression error: not defined"* across the entire table surface. Users saw broken filter dropdowns, no column controls, and empty table bodies.
+- Fix: single-quoted the `x-data` attribute so JSON's double quotes are valid inside. Swapped the two embedded string literals (`'dt-ticket_list'`, `'/tickets'`) to double quotes consistently. One-character change (`"` → `'`), fully resolves the error cascade.
+- Verified empirically via Playwright console-capture: pre-fix, 14+ distinct Alpine expression errors per page load; post-fix, zero. The v0.57.75 fix addressed real tangential issues (`hx-include` selector mismatch, `hx-indicator` target typo, inline scope shadowing) but missed this. Left a load-bearing template comment so no one "tidies up" the quoting and reintroduces the bug.
+
+### Agent Guidance
+- **Never use `| tojson` inside a double-quoted HTML attribute.** Jinja's `tojson` escapes `<`, `>`, `&`, `'` — but NOT `"`, because those are JSON's string delimiters. Always single-quote the outer attribute when the value includes `tojson` output, OR route through a `data-*` attribute + JS parse.
+
 ## [0.57.77] - 2026-04-19
 
 ### Fixed
