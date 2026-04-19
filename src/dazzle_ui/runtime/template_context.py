@@ -316,6 +316,16 @@ class PageContext(BaseModel):
     """Top-level page context passed to templates."""
 
     page_title: str
+    # Surface-level ``ux.purpose`` string, rendered as a muted subtitle
+    # below the page title. Closes the UX-048 "purpose unwired" gap —
+    # DSL authors have been writing this copy for cycles but it was
+    # silently dropped before v0.57.98. Per-persona override (from
+    # ``for <persona>: purpose:`` blocks) arrives via ``persona_purposes``
+    # and is resolved per-request in ``page_routes.py`` using the
+    # compile-dict-then-resolve-per-request pattern already proven for
+    # ``persona_empty_messages`` (cycle 240) and ``persona_hide`` (243).
+    page_purpose: str = ""
+    persona_purposes: dict[str, str] = Field(default_factory=dict)
     app_name: str = "Dazzle"
     layout: str = "app_shell"  # app_shell or single_column
     template: str = "components/filterable_table.html"

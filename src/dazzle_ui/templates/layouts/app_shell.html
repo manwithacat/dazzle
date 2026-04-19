@@ -78,6 +78,13 @@
     {# Page content #}
     <main id="main-content" class="flex-1 p-4 lg:p-6" tabindex="-1"
           data-dazzle-view="{{ view_name | default('') }}">
+      {# Surface-level purpose subtitle (UX-048). Rendered above the
+         content block as a muted intro line. Per-persona override
+         resolved in page_routes._render_response. #}
+      {% if page_purpose %}
+      <p class="dz-page-purpose text-[13px] text-[hsl(var(--muted-foreground))] mb-3 mt-1"
+         data-dazzle-purpose>{{ page_purpose }}</p>
+      {% endif %}
       {% block content %}{% endblock %}
     </main>
   </div>

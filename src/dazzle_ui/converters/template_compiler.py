@@ -768,6 +768,28 @@ def _build_form_sections(
     return sections
 
 
+def _extract_surface_purpose(ux: ir.UXSpec | None) -> tuple[str, dict[str, str]]:
+    """Extract surface-level purpose + per-persona overrides.
+
+    The surface-level ``ux.purpose`` is the default subtitle for every
+    persona. Persona-variant ``purpose`` (from ``for <persona>:`` blocks)
+    overrides it at request time via the compile-dict-then-resolve
+    pattern proven for ``empty_message`` (cycle 240).
+
+    Closes the UX-048 "purpose unwired" gap. 14+ DSL declarations across
+    contact_manager + fieldtest_hub are invisible at render time before
+    this wiring lands.
+    """
+    if ux is None:
+        return "", {}
+    purpose = ux.purpose or ""
+    persona_purposes: dict[str, str] = {}
+    for variant in ux.persona_variants or []:
+        if variant.purpose:
+            persona_purposes[variant.persona] = variant.purpose
+    return purpose, persona_purposes
+
+
 def _compile_list_surface(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -843,8 +865,11 @@ def _compile_list_surface(
         and not col.key.endswith("_id")
     ]
 
+    page_purpose, persona_purposes = _extract_surface_purpose(ux)
     return PageContext(
         page_title=surface.title or f"{entity_name} List",
+        page_purpose=page_purpose,
+        persona_purposes=persona_purposes,
         template="components/filterable_table.html",
         table=TableContext(
             entity_name=entity_name,
@@ -900,9 +925,12 @@ def _compile_form_surface(
             if _variant.read_only:
                 persona_read_only.add(_variant.persona)
 
+    page_purpose, persona_purposes = _extract_surface_purpose(ux)
     if surface.mode == SurfaceMode.CREATE:
         return PageContext(
             page_title=surface.title or f"Create {entity_name}",
+            page_purpose=page_purpose,
+            persona_purposes=persona_purposes,
             template="components/form.html",
             form=FormContext(
                 entity_name=entity_name,
@@ -920,6 +948,8 @@ def _compile_form_surface(
     else:
         return PageContext(
             page_title=surface.title or f"Edit {entity_name}",
+            page_purpose=page_purpose,
+            persona_purposes=persona_purposes,
             template="components/form.html",
             form=FormContext(
                 entity_name=entity_name,
@@ -1116,8 +1146,11 @@ def _compile_view_surface(
                 )
             )
 
+    page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
+        page_purpose=page_purpose,
+        persona_purposes=persona_purposes,
         template="components/detail_view.html",
         detail=DetailContext(
             entity_name=entity_name,
@@ -1192,8 +1225,11 @@ def _compile_review_surface(
 
     review_base = f"{app_prefix}/{entity_slug}/review"
 
+    page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
     return PageContext(
         page_title=surface.title or f"Review {entity_name}",
+        page_purpose=page_purpose,
+        persona_purposes=persona_purposes,
         template="components/review_queue.html",
         review=ReviewContext(
             entity_name=entity_name,
@@ -1212,8 +1248,11 @@ def _compile_custom_surface(
     surface: ir.SurfaceSpec,
 ) -> PageContext:
     """Compile a CUSTOM mode surface to a minimal PageContext."""
+    page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
     return PageContext(
         page_title=surface.title or surface.name,
+        page_purpose=page_purpose,
+        persona_purposes=persona_purposes,
         template="components/detail_view.html",
     )
 

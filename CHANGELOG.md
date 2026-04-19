@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.98] - 2026-04-19
+
+### Added
+- **Surface `purpose` + per-persona override wiring (EX-048 partial closure).** DSL authors have been writing `ux.purpose: "..."` on surfaces (and `for <persona>: purpose:` inside persona-variant blocks) for many cycles, but the field was silently dropped at compile time — 14+ declarations across contact_manager + fieldtest_hub were invisible at render. This release closes the gap:
+  - `PageContext.page_purpose: str` + `PageContext.persona_purposes: dict[str, str]` added to `src/dazzle_ui/runtime/template_context.py`.
+  - New `_extract_surface_purpose()` helper in `template_compiler.py` threaded through all six `return PageContext(...)` sites (list / create / edit / view / review / custom).
+  - Request-time persona override resolved in `page_routes._render_response` using the same compile-dict-then-resolve pattern proven for `empty_message` (cycle 240) and `persona_hide` (243) — walks `user_roles` in order, first match wins.
+  - `app_shell.html` renders `<p class="dz-page-purpose text-[13px] text-[hsl(var(--muted-foreground))] ..." data-dazzle-purpose>{{ page_purpose }}</p>` as a muted subtitle above the content block when `page_purpose` is truthy; emits nothing when empty.
+- **`tests/unit/test_page_purpose_wiring.py`** — 12 tests covering the extractor (None/empty/surface-only/persona-variants), compile-branch threading for all 5 non-custom modes, and three render gates (non-empty, empty, persona override via `model_copy(update=...)`).
+
+### Changed
+- **EX-048 status updated to MOSTLY_FIXED.** `purpose` now wired. `show` + `show_aggregate` classified YAGNI (zero DSL consumers across all 5 example apps — Heuristic 1 verified via grep before work). `action_primary`, `defaults`, `focus` remain deferred — each has real fieldtest_hub DSL consumers but needs a dedicated renderer (surface-header CTA, form pre-fill, workspace emphasis respectively); each is a standalone mini-feature not worth shipping speculatively.
+
+### Agent Guidance
+- **New layout invariant: `page_purpose`.** Any new layout template OR any new surface-compile branch MUST thread `page_purpose` + `persona_purposes` from `surface.ux` via `_extract_surface_purpose(surface.ux)` into the `PageContext(...)` constructor. Otherwise DSL authors' `ux.purpose` declarations will silently drop. Pattern:
+  ```python
+  page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
+  return PageContext(
+      page_title=...,
+      page_purpose=page_purpose,
+      persona_purposes=persona_purposes,
+      ...
+  )
+  ```
+- **`app_shell.html` renders the subtitle once.** Content templates (filterable_table.html, form.html, detail_view.html, etc.) MUST NOT render `page_purpose` themselves — the shell owns the slot so there's exactly one subtitle per page, immediately above the content block.
+
 ## [0.57.97] - 2026-04-19
 
 ### Fixed

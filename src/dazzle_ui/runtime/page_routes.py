@@ -1024,6 +1024,22 @@ def _render_response(prc: _PageRequestContext) -> Response:
 
         prc.ctx.current_route = urlparse(htmx.current_url).path
 
+    # Page-level persona purpose override (UX-048 purpose wiring).
+    # Mirrors the cycle 240 `empty_message` pattern at the PageContext
+    # layer. The compiler populated `ctx.persona_purposes` from DSL
+    # `for <persona>: purpose: "..."` blocks; at render time, if the
+    # user's persona matches a key, swap `page_purpose`. First
+    # matching role wins — matches the persona_variants precedence
+    # rule in `_apply_persona_overrides`.
+    persona_purposes = getattr(prc.ctx, "persona_purposes", None) or {}
+    _user_roles = getattr(prc.ctx, "user_roles", None) or []
+    if persona_purposes and _user_roles:
+        for _role in _user_roles:
+            _normalised = _role.removeprefix("role_")
+            if _normalised in persona_purposes:
+                prc.ctx_overrides["page_purpose"] = persona_purposes[_normalised]
+                break
+
     # Build per-request context with table/detail/form overrides.
     # All three use deep copies to prevent cross-request mutation
     # of the shared compiled ctx (#291, #587).
