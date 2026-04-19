@@ -1,9 +1,32 @@
 # Framework Gap — Error-Page Navigation Dead-End (v0.55.31 #776 Regression)
 
-**Status:** Open
+**Status:** RESOLVED (cycle 225 + cycle 258 retrospective confirmation)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
-**Contributing cycles:** 223
-**Evidence weight:** 1 observation, but the observation points at a **regression of a shipped framework fix** (v0.55.31 #776), making it high-priority despite the single data point.
+**Contributing cycles:** 223 (observation), 225 (fix shipped), 258 (retrospective)
+**Evidence weight:** 1 observation that pointed at a shipped-fix regression. The hypothesised mechanism (HTMX boost intercept) turned out to be wrong — the actual cause was a DSL parser bug. This is exactly the class of wrong-hypothesis rescue Heuristic 1 was promoted to mandatory over in cycles 228-234.
+
+## Retrospective verdict (cycle 258 review)
+
+- **Hypothesis 1 (HTMX boost intercept)** — ruled out. Cycle 225 found the raw cause was elsewhere.
+- **Hypothesis 2 (server-side redirect loop)** — close but not quite. Cycle 225 found the loop existed but its root was upstream of route resolution.
+- **Hypothesis 3 (Alpine handler)** — ruled out.
+- **Real root cause** — DSL parser bug at `scenario.py:407`. `_parse_string_list` only handled inline comma-separated form; multi-line indented form silently returned empty list AND left MINUS tokens unconsumed. The cascade: tester's `goals` list parsed as empty → the unknown-field loop in `parse_persona` consumed `default_workspace` as if it were another goal entry → tester's `default_workspace` declaration was silently dropped → `_root_redirect` fell back to `workspaces[0]` = engineering_dashboard (engineer's workspace) → 403 for tester → "Go to Dashboard" retriggered the same fallback → dead-end loop.
+- **Cycle 225 fix**: rewrote `_parse_string_list` to handle both inline and multi-line indented forms. 2 new regression tests pin the parser.
+
+The gap doc's hypothesis framing was a teaching moment. Every candidate was "too close to the observed symptom" — all three looked for a template/template-consumer mechanism. The actual defect lived two layers up, in the parser that produced the AppSpec that the template/templates read from. This is why Heuristic 1 (reproduce at the lowest layer that can exhibit the defect) exists. Without cycle 225's raw-layer reproduction, we'd have shipped template changes that didn't address the real bug.
+
+## Subsequent work (not part of the original observation but worth noting)
+
+The 404 and 403 templates have been substantively evolved since cycle 225:
+- **v0.57.79 (#808)** — 403 page renders a role-disclosure panel (entity, operation, allowed-for, current-roles) instead of a bare "Forbidden".
+- **v0.57.85 (#811)** — 404 page renders a "Did you mean:" suggestion card for plural/singular/typo/dashboard-alias drift.
+- **v0.57.88 (#815)** — `/app/<plural>` 301-redirects to `/app/<singular>` so plural URLs never produce a 404 in the first place.
+- **v0.57.89 (#816)** — `_page_handler` emits `HX-Trigger-After-Swap: dz:titleUpdate` on every hx-boost partial so the browser tab title tracks the destination page.
+- **Cycle 257 (UX-050)** — formalised the 404 page as a governed component contract at `~/.claude/skills/ux-architect/components/app-404.md`.
+
+None of these invalidate the cycle 225 fix; they build on it. The navigation-dead-end gap is fully resolved. The error-page UX surface continues to evolve but no new defect class has emerged in 33 cycles.
+
+## Original problem statement (preserved for reference)
 
 ---
 

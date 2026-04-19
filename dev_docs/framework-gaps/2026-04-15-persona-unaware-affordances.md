@@ -1,8 +1,8 @@
 # Framework Gap — Persona-Unaware Affordances
 
-**Status:** Nearly Fixed (3 of 4 axes closed — workspace nav in 226, bulk-action bars in 228, empty-state CTAs verified-false-positive in 234)
+**Status:** RESOLVED (4 of 4 axes closed as of cycle 256 — workspace nav in 226, bulk-action bars in 228, empty-state CTAs verified-false-positive in 234, create-form field visibility in 256)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
-**Refreshed:** Cycle 230 (framework_gap_analysis v2), Cycle 235 (framework_gap_analysis v3)
+**Refreshed:** Cycle 230 (v2), Cycle 235 (v3), Cycle 258 (v4 — final close)
 **Contributing cycles:** 201, 216, 221, 223, 234
 **Evidence weight:** 8 observations across 4 apps (3 of 8 now false-positive after cycle 234)
 
@@ -27,11 +27,13 @@ Cycles 226 and 228 closed 2 of the 4 axes this gap doc originally identified. Th
 
 3. **Empty-state CTAs — closed in cycle 234 as VERIFIED_FALSE_POSITIVE.** Applied Heuristic 1 at the HTTP layer. Fetched rendered region HTML for all three observations (EX-011 ops_dashboard/ops_engineer, EX-030 support_tickets/customer, EX-037 fieldtest_hub/tester). **Framework is already correct.** `src/dazzle_ui/templates/fragments/empty_state.html:7-9` gates the Create-first CTA button on `create_url` being set, and for unauthorised personas `create_url` is None — so the button is correctly withheld in every case. Zero `btn-primary` links observed in any of the three rendered regions. The original subagent reports conflated "action-oriented words in the DSL-authored empty copy" with "a clickable affordance". The copy is DSL-authored (e.g. fieldtest_hub's Device surface declares `empty: "Add your first device..."` at `app.dsl:298`) and the framework renders it verbatim. **The residual defect is at the DSL layer** — per-persona override for `empty:` copy doesn't exist. Filed as **EX-046** with a DSL schema evolution proposal (add `empty:` inside the existing `for <persona>:` block). EX-011, EX-030, EX-037 are all marked VERIFIED_FALSE_POSITIVE against the framework-bug framing.
 
-### Still-open axes
+### Closed axes (continued — cycle 258 retrospective)
 
-4. **Create-form field visibility** — still open. Rows: EX-029 (support_tickets/customer — Create Ticket form exposes 'Assigned To' ref User to customer). Related but distinct: the widget-selection gap doc from cycle 230 covers WHY ref fields render as plain inputs; this axis covers whether they should be shown to the current persona at all. Fix direction: field-level access rules OR inferred defaults (omit `ref <Entity>` fields if the current persona cannot list `<Entity>`).
+4. **Create-form field visibility — closed in cycle 256 (EX-029 FIXED).** The framework infrastructure landed in cycle 245 (EX-048) when `hide` and `read_only` directives in `for <persona>:` blocks were wired through both `TableContext` and `FormContext`. The DSL surface `ux: for <persona>: hide: <field>` now correctly removes the field from both create and edit forms for that persona. Cycle 256 applied this to `support_tickets/ticket_create` for the `customer` persona hiding `assigned_to`; verified empirically via curl (customer: 0 `assigned_to` fields, manager: 1 field). EX-029 moves PARTIALLY_FIXED → FIXED. The widget-rendering half closed separately via EX-044 structural template work in cycle 236.
 
-5. **Workspace-access fallback case** — cycle 226 partially addressed this via the `page_routes.py:1115` fix, but the fallback `rule 4` in `workspace_allowed_personas` (return `None` = "no filter") is still permissive by default. The gap doc's proposed `default_access: permissive | strict` DSL flag migration is still the right long-term fix. Low priority — cross-app evidence shows the existing resolution works correctly when workspaces declare explicit access OR when `default_workspace` is set on a persona, which covers all 5 example apps.
+### Deferred axes
+
+5. **Workspace-access fallback case** — still open as a deferred item, not a gap. Cycle 226 partially addressed this via the `page_routes.py:1115` fix. The fallback `rule 4` in `workspace_allowed_personas` (return `None` = "no filter") is permissive by default. The gap doc's proposed `default_access: permissive | strict` DSL flag migration remains the right long-term fix, but cross-app evidence (all 5 example apps) shows the existing resolution works correctly when workspaces declare explicit access OR when `default_workspace` is set on a persona. No behavioural problem surfaces at this layer; the concern is prospective (a future app that omits both mechanisms could silently broadcast workspaces to all personas). Deferred indefinitely — may be worth revisiting if a user reports the permissive default as surprising, or if a new example app hits the "no access declaration + no default_workspace" case.
 
 ### Remaining fix scope
 

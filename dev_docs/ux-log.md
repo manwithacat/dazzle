@@ -4,6 +4,215 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 265 — 2026-04-19 — finding_investigation: CI `UX Contracts (support_tickets)` regression
+
+**Strategy:** `finding_investigation`. CI badge was red; the only failing job was `UX Contracts (support_tickets)` — `auth failed for <persona>` across every persona → 56 contract failures. Pre-existing since 2026-04-18T16:32 on commit `454a7ffd` ("bounded Redis connect timeout + `ux verify --managed` server mode"). Non-triaged backlog rows were all DONE/VERIFIED so this was the only high-leverage work in scope.
+
+**Hypothesis → reproduction → root cause:**
+
+Local reproduction with `env -u DAZZLE_TEST_SECRET`: confirmed `auth failed` across all personas. With `DAZZLE_TEST_SECRET` present: 34 passed / 0 failed / 30 pending (the CI baseline).
+
+Root cause: `dazzle serve --local` in managed mode generates a random `DAZZLE_TEST_SECRET` when none is pre-set (see `src/dazzle/cli/runtime_impl/serve.py:310-317`), sets it in the **subprocess's own** `os.environ`, and writes it into `.dazzle/runtime.json`. But the parent process running `ux verify --contracts --managed` never picks it up — `HtmxClient.authenticate()` reads `DAZZLE_TEST_SECRET` from `os.environ` only. So the parent sends `POST /__test__/authenticate` with no `X-Test-Secret` header; the subprocess enforces the header because it has the secret set; result is 401 → `HtmxClient.authenticate()` returns `False` → the outer contracts loop prints `auth failed for <persona>` and every persona's contracts fail.
+
+Why this shipped: my local dev shell has `DAZZLE_TEST_SECRET` pre-exported, so the parent inherits it and everything works. On CI the env is clean.
+
+**Fix:** `src/dazzle/testing/ux/interactions/server_fixture.py` — after the subprocess writes `runtime.json`, read the generated `test_secret` via `read_runtime_test_secret()` and propagate it into the parent process's `os.environ`. Restore the prior value on teardown so the fixture doesn't leak secrets between tests. The new behaviour matches the symmetric pattern already used for `dazzle test create-sessions` via `SessionManager._resolve_test_secret()`.
+
+**Verification:**
+- CI-simulating reproduction: `env -u DAZZLE_TEST_SECRET python -m dazzle ux verify --contracts --managed` → `Contracts: 34 passed, 0 failed, 30 pending` (matches baseline).
+- 54 tests passed under the managed/fixture/secret keyword filter.
+- `ruff` + `mypy` clean on the changed file.
+
+**Outcome:** `CI fix shipped`. Expect the contracts-gate job to go green on the next push. Marked as cross-cutting framework regression — affected ALL managed-mode `ux verify` runs on clean-env CI since `454a7ffd` landed.
+
+**Budget:** explore 35/100.
+
+---
+
+## Cycle 264 — 2026-04-19 — contract_audit: PROP-056 → UX-055 (site-nav)
+
+**Strategy:** `contract_audit` — fourth promotion from the cycle 260 marketing-shell mini-roadmap. Target: `src/dazzle_ui/templates/site/includes/nav.html`, a small 16-line template included unconditionally by every marketing page.
+
+**Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-nav.md`. Core model: auth-aware CTA (Dashboard when authenticated, nav_cta when anonymous, omitted when neither). Data-driven nav_items give each app its own middle-link set. The theme-toggle include is the last item in the right-anchored group.
+
+**Empirical verification** via direct `env.get_template().render()`:
+- Gate 1: empty nav_items → logo present, no middle links ✓
+- Gate 2: populated nav_items → correct count + declaration order preserved ✓
+- Gate 3: authed path → Dashboard CTA to dashboard_url ✓
+- Gate 4: anonymous path → nav_cta rendered ✓
+- Gate 5: both-empty → no inline primary anchor (CTA omitted) ✓
+
+No drift to fix — template uses dz-* classes + inline Tailwind only on the CTA, no hex colours, no DaisyUI.
+
+**Row status:** PROP-056 → UX-055 (DONE/DONE/DONE/PASS).
+
+**Marketing-shell mini-roadmap status (cycles 260-264):**
+- ✓ PROP-053 → UX-054 site-hero (also template for 15 sibling sections)
+- ✓ PROP-054 → UX-052 site-404-marketing
+- ✓ PROP-055 → UX-053 site-403-marketing
+- ✓ PROP-056 → UX-055 site-nav
+- ○ PROP-052 site-shell — deferred (bigger layout contract; not naturally bounded the way the other 4 are)
+
+4 of 5 PROPs promoted across 4 cycles (257, 261, 262, 263, 264 — the earlier 257 contracted the in-app app-404 which paired into the marketing-shell roadmap retroactively). Explore budget: 33 → 34.
+
+---
+
+## Cycle 263 — 2026-04-19 — contract_audit: PROP-053 → UX-054 (site-hero + 15-sibling template)
+
+**Strategy:** `contract_audit` on the highest-leverage remaining PROP: site-hero is a single component but also the **template** for the 15 sibling section fragments (features, pricing, testimonials, faq, …). Contracting it once pays off 16×.
+
+**Target:** `src/dazzle_ui/templates/site/sections/hero.html`
+
+**Drift fixed this cycle:** the secondary-CTA anchor had duplicate `border border-... text-... hover:bg-...` classes (shipped that way pre-263). Deduplicated in the same commit as the contract write-up. Pinned by new quality gate 5 (no duplicate Tailwind classes).
+
+**Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-hero.md`. Core model: server-owned, pure-presentation, additive grammar (headline mandatory, everything else optional with graceful degradation). Two layout variants (centred vs two-column with media). Closing "Template for sibling section contracts" section spells out the 5 shared gates every sibling should clone: minimal render, all-fields render, slot-suppression, token usage, no-duplicate-class.
+
+**Empirical verification** via `env.get_template('site/sections/hero.html').render()`:
+- Gate 1: minimal `{headline: "Test"}` → no empty `<p>`, no empty cta-group, no media block ✓
+- Gate 2: all-fields render → `dz-hero-with-media` + `dz-hero-media` + both CTAs in correct order + img src/alt ✓
+- Gate 3: empty CTAs suppress the group ✓
+- Gate 4: no hex colours, no DaisyUI classes ✓
+- Gate 5: no duplicate Tailwind classes on either anchor ✓
+
+**Row status:** PROP-053 → UX-054 (DONE/DONE/DONE/PASS). **2 PROPs remaining** from the cycle 260 roadmap: PROP-052 (site-shell) and PROP-056 (site-nav).
+
+**Explore budget:** 32 → 33.
+
+---
+
+## Cycle 262 — 2026-04-19 — contract_audit: PROP-055 → UX-053 (site-403-marketing)
+
+**Strategy:** `contract_audit` (second marketing-shell promotion; completes the marketing-chrome error-page pair, symmetric with cycle 259 app-403 + cycle 261 site-404).
+
+**Target:** `src/dazzle_ui/templates/site/403.html` — marketing-chrome 403 sibling. Uses the site-sections.css dz-* class library.
+
+**Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-403-marketing.md`. Key differentiator from UX-052: two-CTA layout (Dashboard primary + Home ghost) rather than the single Go-Home of the 404 — the 403 assumes the user may be authenticated elsewhere. No role-disclosure panel (Cedar enforcement only inside /app/, so all marketing 403s are generic).
+
+**Empirical verification** via `render_site_page('site/403.html', build_site_error_context(...))`:
+- Gate 1: `<h1 class="dz-404-headline">403</h1>` ✓
+- Gate 2: nav + footer chrome ✓
+- Gate 3: both Dashboard (`href="/app"`) and Home (`href="/"`) CTAs ✓
+- Gate 4: zero role-disclosure labels (no Entity:/Operation:/Allowed for:/Your roles:) ✓
+- Gate 5: custom message override respected ✓
+
+**Known legacy (in contract's v2 questions):** both site/404.html and site/403.html reuse `dz-404-*` class names. Cosmetic inconsistency — rename to `dz-error-*` in a future CSS refactor.
+
+**Row status:** PROP-055 → UX-053 (DONE/DONE/DONE/PASS). Marketing-shell error-page pair (404+403) complete; 3 PROPs remaining from the cycle 260 roadmap (052 site-shell, 053 site-hero, 056 site-nav).
+
+**Explore budget:** 31 → 32.
+
+---
+
+## Cycle 261 — 2026-04-19 — contract_audit: PROP-054 → UX-052 (site-404-marketing)
+
+**Strategy:** `contract_audit` on a PROP row I just filed in cycle 260 — promotes a proposal rather than creating another bookkeeping artefact. Delivers actual value (a new governed component) from the new roadmap.
+
+**Target:** `src/dazzle_ui/templates/site/404.html` — marketing-chrome 404, sibling to UX-050 app-404. Template uses the `site-sections.css` `dz-*` class library (not DaisyUI drift — these are legit design-system-provided marketing classes).
+
+**Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-404-marketing.md`. Differentiates from app-404 on two axes: (a) marketing chrome replaces app shell; CTA is `Go Home → /` rather than `Go to Dashboard → /app`, (b) no context vars for persona/auth — marketing pages are public/anonymous.
+
+**Empirical verification** (simple_task via `curl -H "Accept: text/html" /nonexistent-path`):
+- Gate 1: `<h1 class="dz-404-headline">404</h1>` ✓
+- Gate 2: 2 nav/footer markers (`<nav`, `<footer`) ✓
+- Gate 3: single `href="/"[...]Go Home` anchor ✓
+- Gate 5: `/app/<fake>` routes to app-404 (0 `dz-404-headline` matches) ✓
+
+Gate 4 (no auth-adjacent affordances) covered by absence check — no `Sign Out`/`Logout`/`persona-badge` markers in rendered output.
+
+**Row status:** PROP-054 → UX-052 (DONE/DONE/DONE/PASS). First promotion from cycle 260's marketing-shell mini-roadmap.
+
+**Explore budget:** 30 → 31.
+
+---
+
+## Cycle 260 — 2026-04-19 — missing_contracts (marketing-shell mini-roadmap)
+
+**Strategy:** `missing_contracts` (not run in 5+ cycles — overdue per the "rotation for breadth" default). Diversifying from cycles 256-259 (investigation → audit → gap analysis → audit).
+
+**Scan scope:** `src/dazzle_ui/templates/site/` and `src/dazzle_ui/templates/layouts/`. The error-page work (UX-050 404, UX-051 403) contracted the app-shell variants but not the marketing-shell variants. More broadly, the entire marketing-chrome family has ZERO contracts in `~/.claude/skills/ux-architect/components/`:
+
+- `layouts/site_base.html` — marketing wrapper layout (separate from app_shell.html which has UX-031)
+- `site/sections/*.html` — 16 marketing section fragments (hero, features, pricing, testimonials, faq, cta, trust_bar, stats, steps, team, logo_cloud, split_content, comparison, qa_personas, value_highlight, markdown)
+- `site/404.html`, `site/403.html` — marketing-chrome errors
+- `site/includes/{nav,footer,og_meta,theme_toggle}.html` — site chrome includes
+
+**Proposed 5 rows this cycle** (not 20 — kept tight, picked the most distinct + highest-leverage):
+
+- **PROP-052 site-shell** — root of the family, pairs with UX-031 app-shell
+- **PROP-053 site-hero** — representative of the 16 section fragments; the widest-variance one and a natural template for sibling sections
+- **PROP-054 site-404-marketing** — pair of UX-050
+- **PROP-055 site-403-marketing** — pair of UX-051
+- **PROP-056 site-nav** — cross-references PROP-052 for the marketing theme-toggle
+
+**Explicit deferrals:** the remaining 15 section fragments (features, pricing, etc.) are NOT proposed as separate rows this cycle — they're structurally similar to site-hero (hero is the template of the family). A single contract at PROP-053 will govern them all once written, similarly to how parking-lot-primitives covers a batch. If PROP-053 promotes and the hero contract is written, the sibling sections either fold under it or get promoted individually as separate PROPs only if they diverge in grammar.
+
+**Explore budget:** 29 → 30.
+
+---
+
+## Cycle 259 — 2026-04-19 — contract_audit: app-403
+
+**Strategy:** `contract_audit` (diversifying from cycle 258's `framework_gap_analysis`; natural pair to UX-050 app-404 contracted in cycle 257).
+
+**Target:** in-app 403 page (`src/dazzle_ui/templates/app/403.html`) — shipped in #776, substantially evolved via #808's role-disclosure panel, but no formal contract. Template is pure Tailwind + design-system HSL tokens; no drift to repair.
+
+**Artefact:** new contract at `~/.claude/skills/ux-architect/components/app-403.md`. Differentiates from app-404 on two axes: (a) the role-disclosure panel replaces the suggestion card, (b) the HTMX handler emits HX-Retarget/HX-Reswap/HX-Push-Url specifically for 403s on HTMX requests so denials land in-content with correct URL. 5 quality gates (403 renders, panel renders when Cedar-origin, panel omitted when legacy, back affordance, dashboard always present). 8 v2 open questions focused on the panel (chip interactivity, operation glossary, long-list overflow, screen-reader announcement, i18n grammar for message template) plus two shared with 404 (telemetry, back treatment).
+
+**Empirical verification:** booted ops_dashboard, auth'd as customer (no permission on Alert), curled `/app/alert`:
+1. `<h1>403</h1>` rendered ✓
+2. Disclosure panel labels `Entity:`, `Operation:`, `Your roles:` all present ✓
+5. `Go to Dashboard` button present ✓
+
+Gate 3 (panel omitted when no structured detail) and gate 4 (back affordance) covered by existing `test_exception_handlers.py` tests.
+
+**Row status:** new UX-051 → DONE. Error-page suite now fully contracted (404 + 403).
+
+**Explore budget:** 28 → 29.
+
+---
+
+## Cycle 258 — 2026-04-19 — framework_gap_analysis (retrospective + new synthesis)
+
+**Strategy:** `framework_gap_analysis` (diversifying from cycles 256/257; 4 days since last synthesis and substantial framework work landed in that window).
+
+**Three artefacts produced:**
+
+1. **Retrospective close of `error-page-navigation-dead-end.md`.** Status was "Open" but EX-035 was resolved in cycle 225 via a DSL parser fix (not the hypothesised HTMX boost intercept — Heuristic 1 lesson preserved as part of the doc update). Added a retrospective section listing the subsequent UX evolution (v0.57.79 role disclosure, v0.57.85 suggestion panel, v0.57.88 plural redirect, v0.57.89 title update, v0.57.94 UX-050 contract). Gap marked RESOLVED.
+
+2. **Retrospective close of `persona-unaware-affordances.md`.** Status was "Nearly Fixed (3 of 4 axes)" — the remaining create-form-field-visibility axis (EX-029) was closed yesterday in cycle 256 via DSL persona-hide directive. All 4 axes now closed. Gap marked RESOLVED with the deferred fallback-default-access note kept as "not a gap; deferred observation".
+
+3. **New gap doc: `2026-04-19-trial-harness-maturation.md`.** Consolidates the trial-harness work from this session: 14 GitHub issues (#810–#822 + a meta), 13 closed, 1 deferred (per-blueprint ref-field authoring). Ships-to-root-cause table across 7 layers (env config, SQL schema, Cedar, agent wrap-up, completion signal, reporting, data quality). Cross-gap signal with the two just-closed docs — all three gaps were of the form "shipped feature had invariant X false when tested end-to-end by a different consumer". Status: Nearly Fixed.
+
+**No code changes this cycle — pure synthesis.**
+
+**Explore budget:** 27 → 28.
+
+---
+
+## Cycle 257 — 2026-04-19 — contract_audit: app-404
+
+**Strategy:** `contract_audit` (diversifying from cycle 256's `finding_investigation`). Last `missing_contracts` was >3 cycles ago; rotating onto a concrete new contract instead of another finding.
+
+**Target:** in-app 404 page (`src/dazzle_ui/templates/app/404.html`) — shipped incrementally via #776 (app-shell routing) + #811 (suggestion panel) + #816 (title update), but never given a formal contract. Template is pure Tailwind with design-system HSL tokens; no drift to repair.
+
+**Work done:**
+- New contract at `~/.claude/skills/ux-architect/components/app-404.md` — anatomy (headline / message / suggestion card / action row), model (server-owned, pure presentation, four context vars: `message`, `back_url`/`back_label`, `suggestions`), interactions (no JS; hx-boost inherited from shell + #816's dz:titleUpdate on destination), grammar (Title Case suggestions, em-dash separator, concrete back labels), 5 quality gates, token-mapping table, 7 v2 open questions (telemetry, ranking, stale-link distinction, Back button treatment, keyboard on suggestions, icon, i18n).
+- New backlog row UX-050: DONE/DONE/DONE/PASS.
+
+**Empirical verification (Heuristic 1):** booted simple_task, auth'd as manager, curled 4 quality gates:
+1. `/app/fake` → `<h1 ...>404</h1>` ✓
+2. `/app/task/fake-id` → `Back to List` ✓
+4. `/app/fake` → 0 marketing-chrome markers ✓
+5. `/app/fake` → 1 `Go to Dashboard` button ✓
+
+Gate 3 (suggestion card) not forced on `/app/fake`; logic tested separately in `test_exception_handlers.py`.
+
+**Row status:** new UX-050 → DONE.
+
+**Explore budget:** 26 → 27.
+
+---
+
 ## Cycle 256 — 2026-04-19 — finding_investigation: EX-029 closed
 
 **Strategy:** `finding_investigation` (chosen over `framework_gap_analysis` and `contract_audit` — 4 OPEN/PARTIALLY_FIXED EX rows present, one of them specifically called out as closeable by a DSL override once framework support existed).

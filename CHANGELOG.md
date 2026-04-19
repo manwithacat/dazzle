@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.95] - 2026-04-19
+
+### Fixed
+- **`ux verify --contracts --managed` auth failure on CI (EX-050).** When `DAZZLE_TEST_SECRET` is not pre-exported, `dazzle serve --local` generates a random secret in the subprocess and writes it to `.dazzle/runtime.json`, but the parent process driving the contracts check never picked it up — `HtmxClient.authenticate()` reads `DAZZLE_TEST_SECRET` from env only, so every `POST /__test__/authenticate` went out with no `X-Test-Secret` header and was 401-rejected. Symptom on CI: `auth failed for <persona>` across every persona → 56/64 contract failures on support_tickets, blocking the `contracts-gate` badge since commit `454a7ffd` (2026-04-18). Masked on local dev by the shell having `DAZZLE_TEST_SECRET` pre-exported. Fix in `src/dazzle/testing/ux/interactions/server_fixture.py`: after waiting for `runtime.json`, the fixture reads the generated secret via `read_runtime_test_secret()` and propagates it into the parent's `os.environ`; restores the prior value on teardown. Verified with `env -u DAZZLE_TEST_SECRET python -m dazzle ux verify --contracts --managed` on support_tickets — `Contracts: 34 passed, 0 failed, 30 pending` (matches baseline).
+
+### Agent Guidance
+- **`launch_interaction_server` now exports the subprocess's `DAZZLE_TEST_SECRET` into the parent env.** Any code running in the same process as the fixture (HtmxClient, SessionManager, direct httpx calls to `/__test__/*`) can now use the env var without any fallback to reading `runtime.json`. Teardown restores the prior value so fixtures don't leak secrets between tests.
+
 ## [0.57.94] - 2026-04-19
 
 ### Added

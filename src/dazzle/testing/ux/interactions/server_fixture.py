@@ -172,6 +172,7 @@ def launch_interaction_server(
         start_new_session=True,
     )
 
+    prior_test_secret = os.environ.get("DAZZLE_TEST_SECRET")
     try:
         _wait_for_runtime_file(project_root, timeout=timeout)
         conn = AppConnection.from_runtime_file(project_root)
@@ -181,6 +182,20 @@ def launch_interaction_server(
         # Wait for the TCP port to actually accept connections —
         # runtime.json is written slightly before uvicorn binds.
         _wait_for_server_ready(conn.site_url, timeout=_HEALTH_POLL_TIMEOUT_SECONDS)
+        # The subprocess may have generated its own DAZZLE_TEST_SECRET
+        # (see serve.py:311-317) and written it to runtime.json. Clients
+        # that run in *this* parent process — HtmxClient, SessionManager,
+        # anything driving the managed server — read the secret via
+        # os.environ, so we need to propagate the subprocess's secret
+        # into our own env. Without this the parent sends no X-Test-
+        # Secret header and every /__test__/authenticate call fails 401,
+        # which is what broke the contracts-gate CI job on managed runs
+        # where DAZZLE_TEST_SECRET isn't pre-exported.
+        from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+
+        subprocess_secret = read_runtime_test_secret(project_root)
+        if subprocess_secret:
+            os.environ["DAZZLE_TEST_SECRET"] = subprocess_secret
         yield conn
     finally:
         # AppConnection.stop() handles terminate + wait + kill with
@@ -193,6 +208,12 @@ def launch_interaction_server(
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
+        # Restore DAZZLE_TEST_SECRET so we don't leak the subprocess's
+        # value into whatever the parent does next.
+        if prior_test_secret is None:
+            os.environ.pop("DAZZLE_TEST_SECRET", None)
+        else:
+            os.environ["DAZZLE_TEST_SECRET"] = prior_test_secret
         # Clean up runtime.json so the next run can't see stale data.
         if runtime_path.exists():
             try:
