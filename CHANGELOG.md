@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.93] - 2026-04-19
+
+### Fixed
+- **Blueprint generator rescues seed from common authoring drift (#821).** `BlueprintDataGenerator._generate_users_from_blueprint` hardcoded `"full_name"` as the key in generated User rows even when the entity's blueprint declared `name` — support_tickets and simple_task User entities failed every seed row on `name: Field required`. Fix emits BOTH `"name"` and `"full_name"` so either schema works; the `/__test__/seed` endpoint filters by known fields so the unused alias drops out harmlessly.
+- **New heuristic guard in `_generate_row`** catches two common blueprint authoring mismatches and drops the offending field from the row (NULL'd instead of crashing the POST):
+  1. `date_relative` strategy on a field whose name doesn't contain date-like tokens (e.g. `created_by`, `error_rate`, `avatar_url`).
+  2. Any strategy emitting a non-UUID string on a field whose name looks like a ref (`assigned_to`, `created_by`, `*_id`, etc.).
+- Narrow by design — NOT a full IR-aware validator. The aim is to rescue seed runs from the common case without over-constraining blueprint authoring. 11 new unit tests.
+- **Per-app blueprint corrections** for 9 enum fields that used `date_relative` instead of `enum_weighted` (support_tickets/Ticket.status, simple_task/Task.status, ops_dashboard/System.status, and 6 more in fieldtest_hub). Plus contact_manager Contact.phone flipped from 2-5-word lorem (which exceeded the `str(20)` cap) to a static list of realistic phone numbers.
+- Net result across a full sweep: simple_task now seeds **23/23** fixtures (100%) — trial runs there will now evaluate against real data. contact_manager 1/30, ops_dashboard 0/40, support_tickets 3/43 — remaining failures are per-blueprint ref-field tuning (fields needing `foreign_key` strategy that currently use `free_text_lorem`), tracked as follow-up authoring work.
+
+### Agent Guidance
+- **Blueprint strategies must match field intent.** `date_relative` belongs on `*_at` / `*_date` / `deadline` / `expires` fields. Enum fields need `enum_weighted` with `enum_values` in params. Ref fields need `foreign_key` pointing at the parent entity. The heuristic guard from this release rescues runs from the most common drift, but accurate blueprints are still the way to get full seed coverage.
+- **Emit both `name` and `full_name` for User entities.** Keep this dual-emit in `_generate_users_from_blueprint` when modifying it — projects that clone User schemas split between the two field names and the alias is the cheapest way to support both.
+
 ## [0.57.92] - 2026-04-19
 
 ### Fixed

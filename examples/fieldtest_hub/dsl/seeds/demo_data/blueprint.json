@@ -90,7 +90,7 @@
           },
           {
             "field_name": "status",
-            "strategy": "date_relative",
+            "strategy": "enum_weighted",
             "params": {
               "anchor": "today",
               "min_offset_days": -365,
@@ -255,7 +255,7 @@
           },
           {
             "field_name": "category",
-            "strategy": "date_relative",
+            "strategy": "enum_weighted",
             "params": {
               "anchor": "today",
               "min_offset_days": -365,
@@ -331,7 +331,7 @@
           },
           {
             "field_name": "status",
-            "strategy": "date_relative",
+            "strategy": "enum_weighted",
             "params": {
               "anchor": "today",
               "min_offset_days": -365,
@@ -524,7 +524,7 @@
           },
           {
             "field_name": "status",
-            "strategy": "date_relative",
+            "strategy": "enum_weighted",
             "params": {
               "anchor": "today",
               "min_offset_days": -365,
@@ -611,7 +611,7 @@
           },
           {
             "field_name": "status",
-            "strategy": "date_relative",
+            "strategy": "enum_weighted",
             "params": {
               "anchor": "today",
               "min_offset_days": -365,

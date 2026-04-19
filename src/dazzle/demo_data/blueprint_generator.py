@@ -32,6 +32,64 @@ except ImportError:
     Faker = None
 
 
+_DATE_LIKE_TOKENS = ("date", "time", "_at", "deadline", "due", "expires", "starts", "ends")
+_REF_LIKE_SUFFIXES = ("_id", "_by", "_to")
+_REF_LIKE_NAMES = ("created_by", "updated_by", "assigned_to", "assignee", "owner", "author", "user")
+
+
+def _looks_like_ref_field(field_name: str) -> bool:
+    lower = field_name.lower()
+    if lower in _REF_LIKE_NAMES:
+        return True
+    return any(lower.endswith(suf) for suf in _REF_LIKE_SUFFIXES)
+
+
+def _looks_like_uuid(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 36:
+        return False
+    # 8-4-4-4-12 hex format
+    parts = value.split("-")
+    return len(parts) == 5 and all(
+        all(c in "0123456789abcdefABCDEF" for c in part) for part in parts
+    )
+
+
+def _strategy_value_obviously_wrong(pattern: FieldPattern, value: Any) -> bool:
+    """Return True iff the generated value is clearly wrong for the field.
+
+    #821 heuristic: blueprint authoring drift regularly produces
+    mismatches between a field's name/intent and the value a strategy
+    emits (``date_relative`` on a ref field → ISO date string in a
+    UUID column; ``free_text_lorem`` on a ref field → lorem in a UUID
+    column). This helper catches the common cases so the row gets a
+    NULL for the bad field instead of failing the whole POST on a
+    type-cast error.
+
+    Kept deliberately narrow — it is NOT a full IR-aware validator
+    (that is a larger follow-up). Two cases handled:
+
+    1. ``date_relative`` produces a YYYY-MM-DD string on a field whose
+       name doesn't look date-like.
+    2. Any strategy emits a non-UUID string on a field whose name
+       looks like a ref (\"created_by\", \"assigned_to\", etc.).
+    """
+    from dazzle.core.ir.demo_blueprint import FieldStrategy
+
+    field_name_lower = pattern.field_name.lower()
+
+    if pattern.strategy == FieldStrategy.DATE_RELATIVE and not any(
+        token in field_name_lower for token in _DATE_LIKE_TOKENS
+    ):
+        if isinstance(value, str) and len(value) == 10 and value.count("-") == 2:
+            return True
+
+    if _looks_like_ref_field(field_name_lower):
+        if isinstance(value, str) and not _looks_like_uuid(value):
+            return True
+
+    return False
+
+
 class BlueprintDataGenerator:
     """Generate demo data from a DemoDataBlueprint.
 
@@ -142,12 +200,23 @@ class BlueprintDataGenerator:
         return rows
 
     def _generate_row(self, entity: EntityBlueprint) -> dict[str, Any]:
-        """Generate a single row for an entity."""
+        """Generate a single row for an entity.
+
+        #821: when a field's strategy produces a value that clearly
+        doesn't match the field's intent (e.g. ``date_relative`` on a
+        ref/uuid field), drop that key from the row so the seed
+        endpoint writes NULL rather than choking on a type mismatch.
+        Heuristic, not a full IR validator — it catches the common
+        authoring drift where a blueprint was duplicated and strategy
+        names weren't updated for the new field semantics.
+        """
         row: dict[str, Any] = {}
         context: dict[str, Any] = {}
 
         for pattern in entity.field_patterns:
             value = self.generate_field_value(pattern, context)
+            if _strategy_value_obviously_wrong(pattern, value):
+                continue
             row[pattern.field_name] = value
             context[pattern.field_name] = value
 
@@ -349,8 +418,13 @@ class BlueprintDataGenerator:
                         counter += 1
                     used_emails.add(email)
 
+                    # Emit both ``name`` and ``full_name`` so entities
+                    # that declare either will find their column (#821).
+                    # The seed endpoint filters by known_fields so the
+                    # unused alias drops out harmlessly.
                     row: dict[str, Any] = {
                         "id": str(uuid.uuid4()),
+                        "name": full_name,
                         "full_name": full_name,
                         "email": email,
                         "username": email_base.replace(".", "_"),
