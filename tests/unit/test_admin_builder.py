@@ -518,3 +518,151 @@ class TestBuildAdminInfrastructure:
         )
         platform = next(w for w in workspaces if w.name == "_platform_admin")
         assert "feedback" in {r.name for r in platform.regions}
+
+
+class TestAdminDefaultUX:
+    """Default-UX helper for admin surfaces (#824).
+
+    Ensures that framework-generated admin surfaces (`_admin_metrics`,
+    `_admin_sessions`, `_admin_events`, `_admin_logs`) get sensible
+    sort/filter defaults so their tables are usable AND the
+    `_lint_list_surface_ux` rule stops flagging them on every adopter.
+    """
+
+    def test_admin_metrics_gets_bucket_start_sort(self) -> None:
+        """SystemMetric.bucket_start must match the timestamp suffix
+        set so _admin_metrics gets a newest-first default sort.
+        Regression guard for #824 — `_start` suffix added."""
+        from dazzle.core.admin_builder import _default_admin_ux
+
+        ux = _default_admin_ux(
+            [
+                ("name", "Metric"),
+                ("value", "Value"),
+                ("unit", "Unit"),
+                ("bucket_start", "Time"),
+            ]
+        )
+        assert ux.sort, "expected bucket_start to produce a sort default"
+        assert ux.sort[0].field == "bucket_start"
+        assert ux.sort[0].direction == "desc"
+
+    def test_admin_events_gets_event_type_filter(self) -> None:
+        """EventTrace.event_type must be recognised as a categorical
+        filter candidate so _admin_events gets a filter default.
+        Regression guard for #824 — `event_type` added to
+        `_CATEGORICAL_FIELD_NAMES`."""
+        from dazzle.core.admin_builder import _default_admin_ux
+
+        ux = _default_admin_ux(
+            [
+                ("topic", "Topic"),
+                ("event_type", "Type"),
+                ("key", "Key"),
+                ("timestamp", "Time"),
+            ]
+        )
+        assert "event_type" in ux.filter
+        assert ux.sort[0].field == "timestamp"
+
+    def test_admin_logs_gets_component_filter(self) -> None:
+        """LogEntry.component becomes a categorical filter alongside
+        the existing `level` field. Regression guard for #824."""
+        from dazzle.core.admin_builder import _default_admin_ux
+
+        ux = _default_admin_ux(
+            [
+                ("timestamp", "Time"),
+                ("level", "Level"),
+                ("component", "Component"),
+                ("message", "Message"),
+            ]
+        )
+        assert "level" in ux.filter
+        assert "component" in ux.filter
+        assert ux.sort[0].field == "timestamp"
+
+
+class TestSyntheticLintSkips:
+    """Lint rules must skip framework-synthesised `_`-prefixed names
+    (#824). Adopters can't fix lint warnings about workspaces and
+    surfaces they don't declare."""
+
+    def test_platform_admin_workspace_skipped_by_persona_lint(self) -> None:
+        from dazzle.core import ir
+        from dazzle.core.validator import _lint_workspace_personas
+
+        synthetic_ws = ir.WorkspaceSpec(name="_platform_admin", title="Admin")
+        user_ws = ir.WorkspaceSpec(
+            name="user_ws",
+            title="User",
+            access=ir.WorkspaceAccessSpec(allow_personas=["admin"]),
+        )
+        spec = ir.AppSpec(
+            name="t",
+            app_name="t",
+            app_title="T",
+            domain=ir.DomainSpec(entities=[]),
+            workspaces=[synthetic_ws, user_ws],
+            personas=[ir.PersonaSpec(id="admin", label="A")],
+        )
+        warnings = _lint_workspace_personas(spec)
+        assert not any("_platform_admin" in w for w in warnings)
+
+    def test_platform_admin_workspace_skipped_by_access_lint(self) -> None:
+        from dazzle.core import ir
+        from dazzle.core.validator import _lint_workspace_access_declarations
+
+        synthetic_ws = ir.WorkspaceSpec(name="_platform_admin", title="Admin")
+        spec = ir.AppSpec(
+            name="t",
+            app_name="t",
+            app_title="T",
+            domain=ir.DomainSpec(entities=[]),
+            workspaces=[synthetic_ws],
+            personas=[ir.PersonaSpec(id="admin", label="A")],
+        )
+        warnings = _lint_workspace_access_declarations(spec)
+        assert not any("_platform_admin" in w for w in warnings)
+
+    def test_admin_surfaces_skipped_by_ux_lint(self) -> None:
+        from dazzle.core import ir
+        from dazzle.core.validator import _lint_list_surface_ux
+
+        for name in ("_admin_metrics", "_admin_sessions", "_admin_events"):
+            synthetic = ir.SurfaceSpec(
+                name=name,
+                title=name,
+                mode=ir.SurfaceMode.LIST,
+                target="Entity",
+                entity_ref="Entity",
+            )
+            spec = ir.AppSpec(
+                name="t",
+                app_name="t",
+                app_title="T",
+                domain=ir.DomainSpec(entities=[]),
+                surfaces=[synthetic],
+            )
+            warnings = _lint_list_surface_ux(spec)
+            assert not any(name in w for w in warnings), (
+                f"synthetic surface {name} should not produce lint warnings"
+            )
+
+    def test_user_workspace_still_triggers_persona_lint(self) -> None:
+        """Guard that the `_` skip rule doesn't over-correct — real
+        adopter workspaces without personas must still be flagged."""
+        from dazzle.core import ir
+        from dazzle.core.validator import _lint_workspace_personas
+
+        unclaimed_ws = ir.WorkspaceSpec(name="orphan_workspace", title="Orphan")
+        spec = ir.AppSpec(
+            name="t",
+            app_name="t",
+            app_title="T",
+            domain=ir.DomainSpec(entities=[]),
+            workspaces=[unclaimed_ws],
+            personas=[ir.PersonaSpec(id="admin", label="A")],
+        )
+        warnings = _lint_workspace_personas(spec)
+        assert any("orphan_workspace" in w for w in warnings)

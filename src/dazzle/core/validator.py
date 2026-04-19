@@ -1383,8 +1383,21 @@ def _validate_persona_backed_by(appspec: ir.AppSpec) -> list[str]:
     return errors
 
 
+def _is_framework_synthetic_name(name: str) -> bool:
+    """Reserved-name convention (#824): entries whose name begins with
+    an underscore are framework-synthesised (admin workspace and its
+    surfaces, internal platform constructs). Adopters can't fix lint
+    warnings about them from their own DSL, so every workspace/surface
+    lint rule skips these names."""
+    return name.startswith("_")
+
+
 def _lint_workspace_personas(appspec: ir.AppSpec) -> list[str]:
-    """Check for workspaces without associated personas."""
+    """Check for workspaces without associated personas.
+
+    Skips framework-synthesised workspaces (names starting with `_`)
+    which are auto-generated with correct access specs; see #824.
+    """
     if not appspec.workspaces:
         return []
 
@@ -1415,6 +1428,8 @@ def _lint_workspace_personas(appspec: ir.AppSpec) -> list[str]:
                     workspaces_with_personas.add(ws.name)
 
     for workspace in appspec.workspaces:
+        if _is_framework_synthetic_name(workspace.name):
+            continue
         if workspace.name not in workspaces_with_personas:
             warnings.append(
                 f"Workspace '{workspace.name}' has no associated persona. "
@@ -1468,6 +1483,11 @@ def _lint_workspace_access_declarations(appspec: ir.AppSpec) -> list[str]:
 
     warnings: list[str] = []
     for workspace in appspec.workspaces:
+        if _is_framework_synthetic_name(workspace.name):
+            # Framework-synthesised workspace (#824) — auto-generated
+            # with correct access spec. Adopters can't add `access:` to
+            # something they don't declare, so skip this lint.
+            continue
         ws_access = getattr(workspace, "access", None)
         has_explicit_access = bool(ws_access and ws_access.allow_personas)
         if not has_explicit_access and workspace.name not in claimed_by_default:
@@ -1481,10 +1501,17 @@ def _lint_workspace_access_declarations(appspec: ir.AppSpec) -> list[str]:
 
 
 def _lint_list_surface_ux(appspec: ir.AppSpec) -> list[str]:
-    """Check list surfaces for sort/filter/search/empty completeness."""
+    """Check list surfaces for sort/filter/search/empty completeness.
+
+    Skips framework-synthesised surfaces (names starting with `_`) —
+    adopters can't fix missing-ux warnings on surfaces they don't
+    declare. See #824.
+    """
     warnings: list[str] = []
     for surface in appspec.surfaces:
         if surface.mode != ir.SurfaceMode.LIST:
+            continue
+        if _is_framework_synthetic_name(surface.name):
             continue
         if not surface.ux:
             hints: list[str] = []

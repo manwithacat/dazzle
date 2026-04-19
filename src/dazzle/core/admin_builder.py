@@ -317,7 +317,23 @@ _ADMIN_SURFACE_DEFS: list[tuple[str, str, str, list[tuple[str, str]], str | None
 
 
 _STATUS_FIELD_NAMES: frozenset[str] = frozenset({"status", "level", "state"})
-_TIMESTAMP_SUFFIXES: tuple[str, ...] = ("_at", "_on", "time", "timestamp")
+# Categorical fields that aren't status-named but are legitimate filter
+# candidates on admin tables. `event_type` on EventTrace and
+# `component` on LogEntry are the canonical cases (#824).
+_CATEGORICAL_FIELD_NAMES: frozenset[str] = frozenset(
+    {"event_type", "component", "topic", "process_name"}
+)
+# Timestamp-like suffixes. `_start` / `_end` added in #824 so fields
+# like SystemMetric.bucket_start / bucket_end get sensible
+# newest-first sort defaults on admin tables.
+_TIMESTAMP_SUFFIXES: tuple[str, ...] = (
+    "_at",
+    "_on",
+    "time",
+    "timestamp",
+    "_start",
+    "_end",
+)
 _NON_SEARCHABLE_FIELDS: frozenset[str] = frozenset(
     {"id", "status", "level", "state", "value", "unit"}
 )
@@ -332,13 +348,27 @@ def _default_admin_ux(field_defs: list[tuple[str, str]]) -> UXSpec:
     """Build a sensible default UXSpec for a framework-generated admin surface.
 
     The admin surfaces live outside the DSL so they can't carry author-
-    chosen ux blocks. This helper derives plausible defaults (status
-    filter, text-field search, timestamp sort desc, empty message) so
-    the lint rule recognises the surface as intentional (closes an
-    improve-loop lint warning on every framework app, v0.57.14).
+    chosen ux blocks. This helper derives plausible defaults (status /
+    categorical filter, text-field search, timestamp sort desc, empty
+    message) so the admin UI itself has proper UX affordances and the
+    lint rule recognises the surface as intentional.
+
+    Closes the improve-loop lint warnings originally surfaced on every
+    framework app (v0.57.14), plus the #824 extension:
+
+    - `_admin_metrics` (SystemMetric: bucket_start) — `_start`
+      suffix added to `_TIMESTAMP_SUFFIXES` so it sorts.
+    - `_admin_events` (EventTrace: event_type) — `event_type` added
+      to `_CATEGORICAL_FIELD_NAMES` so it filters.
+    - `_admin_logs` (LogEntry: level + component) — `component`
+      added as a categorical filter alongside the existing `level`.
     """
     field_names = [name for name, _ in field_defs]
-    filter_fields = [name for name in field_names if name in _STATUS_FIELD_NAMES]
+    filter_fields = [
+        name
+        for name in field_names
+        if name in _STATUS_FIELD_NAMES or name in _CATEGORICAL_FIELD_NAMES
+    ]
     search_fields = [
         name
         for name in field_names
