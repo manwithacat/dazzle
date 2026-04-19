@@ -62,3 +62,28 @@ class TestDbResetImpl:
         assert result["dry_run"] is True
         assert result["would_truncate"] == 1
         conn.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_skips_virtual_entities(self, make_entity) -> None:
+        """Virtual entities (#814) have no Postgres table — must not be truncated.
+
+        Before the fix, db_reset_impl tried to ``TRUNCATE TABLE "SystemHealth"``
+        and similar, causing every reset to log "relation does not exist" for
+        each virtual entity and making ``dazzle qa trial --fresh-db`` look
+        broken.
+        """
+        real = make_entity("Task")
+        system_health = make_entity("SystemHealth")
+        system_metric = make_entity("SystemMetric")
+
+        conn = AsyncMock()
+        conn.execute = AsyncMock(return_value=None)
+        conn.fetchval = AsyncMock(return_value=5)
+
+        result = await db_reset_impl(entities=[real, system_health, system_metric], conn=conn)
+        # Only the real entity should be truncated; virtual ones skipped.
+        assert result["truncated"] == 1
+        truncate_calls = [c for c in conn.execute.call_args_list if "TRUNCATE" in str(c)]
+        assert len(truncate_calls) == 1
+        assert "Task" in str(truncate_calls[0])
+        assert "SystemHealth" not in str(truncate_calls[0])

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.87] - 2026-04-19
+
+### Fixed
+- **`dazzle db reset` and `dazzle qa trial --fresh-db` connect to the wrong database (#814).** CLI commands outside of `dazzle serve` never loaded `<project_root>/.env`, so DB URL resolution fell back to the default `postgresql://localhost:5432/dazzle` instead of the per-project database. Every `TRUNCATE` then raised "relation does not exist" because the default DB doesn't have the app's tables — and those errors were swallowed, producing the misleading "Fresh DB: truncated N tables (0 rows removed)" banner observed across all three `/trial-cycle` runs on 2026-04-19. Second latent bug: `db_reset_impl` also tried to truncate synthetic platform entities (`SystemHealth`, `SystemMetric`, `ProcessRun`, `LogEntry`, `EventTrace`) whose data lives in Redis/in-memory, not Postgres.
+- Fix (1): promoted `_load_dotenv` from `cli/runtime_impl/serve.py` into a shared `cli/dotenv.load_project_dotenv` helper, now called from `cli/db._resolve_url`. Every DB-touching CLI command now picks up `.env` the same way `serve` does. Shell exports still win.
+- Fix (2): moved the virtual-entity name set into `dazzle.db.virtual.VIRTUAL_ENTITY_NAMES` (so `dazzle.db.reset` can import it without a cross-package dep) and filter it out at the top of `db_reset_impl`. `sa_schema.build_metadata` now imports the same source of truth.
+- 11 new unit tests (`test_cli_dotenv.py`, `test_db_reset.py::test_skips_virtual_entities`).
+
+### Agent Guidance
+- **DB CLI commands need `.env` now** — `dazzle db status`, `dazzle db reset`, `dazzle db verify`, `dazzle qa trial --fresh-db` etc. automatically load `<cwd>/.env` before resolving DATABASE_URL. This matches `dazzle serve` behaviour and removes a whole class of "why is this connecting to the wrong DB" footguns.
+- **`VIRTUAL_ENTITY_NAMES` is the source of truth** for "this entity has no Postgres table". Import from `dazzle.db.virtual` whenever you need to filter synthetic entities; don't duplicate the list.
+
 ## [0.57.86] - 2026-04-19
 
 ### Added

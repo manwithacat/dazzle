@@ -21,6 +21,7 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.dotenv import load_project_dotenv as _load_dotenv
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.environment import (
     get_dazzle_env,
@@ -38,46 +39,6 @@ from .ports import (
     write_runtime_file,
 )
 from .production import configure_production_logging, validate_production_env
-
-
-def _load_dotenv(project_root: Path) -> list[str]:
-    """Load environment variables from ``<project_root>/.env`` if it exists.
-
-    Uses a stdlib-only parser to avoid adding a python-dotenv dependency.
-    Only sets variables that are not already in ``os.environ`` (existing
-    shell exports take precedence over .env values).
-
-    Returns the list of variable names loaded (for logging).
-    """
-    env_file = project_root / ".env"
-    if not env_file.exists():
-        return []
-
-    loaded: list[str] = []
-    try:
-        content = env_file.read_text()
-    except OSError:
-        return []
-
-    for raw_line in content.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        # Strip optional `export ` prefix
-        if line.startswith("export "):
-            line = line[len("export ") :].strip()
-        if "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip()
-        # Strip surrounding quotes if present
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-            value = value[1:-1]
-        if key and key not in os.environ:
-            os.environ[key] = value
-            loaded.append(key)
-    return loaded
 
 
 def _validate_infrastructure() -> tuple[str, str]:

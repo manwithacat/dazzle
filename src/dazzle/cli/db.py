@@ -426,13 +426,23 @@ def _resolve_tenant_schema(tenant: str) -> str:
 
 
 def _resolve_url(database_url: str) -> str:
-    """Resolve database URL from flag, env, or manifest."""
+    """Resolve database URL from flag, env, or manifest.
+
+    Loads ``<cwd>/.env`` before resolution so per-project DATABASE_URL
+    values take effect without the user having to export them in their
+    shell (#814). Shell exports still win because ``load_project_dotenv``
+    only sets variables that aren't already set.
+    """
+    from dazzle.cli.dotenv import load_project_dotenv
     from dazzle.cli.env import get_active_env
     from dazzle.db.connection import resolve_db_url
 
+    project_root = Path.cwd().resolve()
+    load_project_dotenv(project_root)
+
     return resolve_db_url(
         explicit_url=database_url,
-        project_root=Path.cwd().resolve(),
+        project_root=project_root,
         env_name=get_active_env(),
     )
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES as _VIRTUAL_ENTITY_NAMES
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 if TYPE_CHECKING:
@@ -189,22 +190,6 @@ def _field_to_column(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-
-
-_VIRTUAL_ENTITY_NAMES: frozenset[str] = frozenset(
-    {
-        "SystemHealth",
-        "SystemMetric",
-        "ProcessRun",
-        "LogEntry",
-        "EventTrace",
-    }
-)
-"""Entities backed by non-PostgreSQL stores (Redis, in-memory).
-
-These must be excluded from SA metadata so ``create_all()`` and Alembic
-autogenerate do not create or diff PostgreSQL tables for them.
-"""
 
 
 def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:

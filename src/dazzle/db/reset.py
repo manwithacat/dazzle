@@ -5,6 +5,7 @@ from typing import Any
 
 from .graph import leaves_first
 from .sql import quote_id
+from .virtual import VIRTUAL_ENTITY_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,12 @@ async def db_reset_impl(
     preserve_names: set[str] = set()
     if preserve:
         preserve_names |= preserve
+
+    # Virtual entities (SystemHealth, SystemMetric, …) are synthetic —
+    # their data lives in Redis / in-memory, not Postgres. Attempting
+    # to TRUNCATE them produces a spurious "relation does not exist"
+    # error per entity (#814).
+    entities = [e for e in entities if e.name not in VIRTUAL_ENTITY_NAMES]
 
     order = leaves_first(entities)
     truncated: list[dict[str, Any]] = []
