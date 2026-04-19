@@ -9,6 +9,9 @@ rendering.
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import pytest
 
 from dazzle.agent.missions.trial import build_trial_mission
@@ -228,6 +231,58 @@ class TestReportRendering:
         )
         out = render_trial_report(report)
         assert "/app/tickets/123" in out
+
+
+class TestFreshDbReset:
+    """The ``--fresh-db`` flag (#810) calls ``_reset_db_for_trial``
+    which chdirs into the project, runs ``db_reset_impl`` via
+    ``_run_with_connection``, then restores cwd. These tests pin the
+    plumbing without requiring a live database — ``_run_with_connection``
+    is patched to return a canned result."""
+
+    def test_reset_restores_cwd_on_success(self, tmp_path, monkeypatch) -> None:
+        from dazzle.cli import qa as qa_mod
+
+        before = Path.cwd()
+        calls: dict[str, Any] = {}
+
+        class FakeAppSpec:
+            class domain:  # noqa: N801 — mimicking real attr nesting
+                entities: list[Any] = []
+
+        def fake_load(root: Path) -> Any:
+            calls["load_root"] = root
+            return FakeAppSpec()
+
+        def fake_run_with_conn(*args: Any, **kwargs: Any) -> Any:
+            return {"truncated": 2, "total_rows": 7, "tables": []}
+
+        monkeypatch.setattr("dazzle.cli.utils.load_project_appspec", fake_load)
+        monkeypatch.setattr("dazzle.cli.db._run_with_connection", lambda *a, **k: None)
+        monkeypatch.setattr("asyncio.run", fake_run_with_conn)
+
+        project = tmp_path / "project"
+        project.mkdir()
+        qa_mod._reset_db_for_trial(project)
+
+        assert Path.cwd() == before
+
+    def test_reset_restores_cwd_on_error(self, tmp_path, monkeypatch) -> None:
+        from dazzle.cli import qa as qa_mod
+
+        before = Path.cwd()
+
+        def boom(root: Path) -> Any:
+            raise RuntimeError("load failed")
+
+        monkeypatch.setattr("dazzle.cli.utils.load_project_appspec", boom)
+
+        project = tmp_path / "project"
+        project.mkdir()
+        with pytest.raises(RuntimeError, match="load failed"):
+            qa_mod._reset_db_for_trial(project)
+
+        assert Path.cwd() == before
 
 
 class TestFrictionClustering:

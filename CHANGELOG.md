@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.84] - 2026-04-19
+
+### Added
+- **`dazzle qa trial --fresh-db` flag (#810).** Opt-in pre-trial DB reset that truncates entity tables (preserving auth) before the server boots. Closes a gap uncovered during post-#809 verification: trials run against apps whose databases persisted placeholder rows (\`Test name 1\`, \`UX Edited Value\`) from earlier runs were re-flagging the stale data as bugs. Calls \`db_reset_impl\` directly (no subprocess, no interactive confirmation), chdirs into the project for correct \`DATABASE_URL\` resolution, and restores cwd even on error. 2 unit tests pin the cwd invariant.
+
+### Agent Guidance
+- **Prefer \`dazzle qa trial --fresh-db\`** when validating a fix that touched seed or fixture code. Stale rows from prior runs will otherwise surface as "bugs" in the trial report even after the code fix is correct.
+
 ## [0.57.83] - 2026-04-19
 
 ### Changed

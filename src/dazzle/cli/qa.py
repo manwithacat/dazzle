@@ -43,6 +43,42 @@ def _resolve_project_dir(app: str | None) -> Path:
     raise typer.Exit(code=1)
 
 
+def _reset_db_for_trial(project_dir: Path) -> None:
+    """Truncate entity tables before a trial run (#810).
+
+    Prior ``dazzle qa trial`` runs can leave placeholder rows
+    (``Test name 1``, ``UX Edited Value``) in the app's database that
+    subsequent trials observe and flag as bugs. This truncates those
+    rows while preserving auth — the same behaviour as
+    ``dazzle db reset --yes`` but invoked programmatically so we skip
+    the interactive confirmation and work against the correct project
+    root without requiring a cwd change.
+    """
+    import os
+
+    from dazzle.cli.db import _resolve_url, _run_with_connection
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.db.reset import db_reset_impl
+
+    old_cwd = Path.cwd()
+    try:
+        os.chdir(project_dir)
+        appspec = load_project_appspec(project_dir)
+        entities = appspec.domain.entities
+        url = _resolve_url("")
+
+        async def _run(conn: Any) -> Any:
+            return await db_reset_impl(entities=entities, conn=conn)
+
+        result = asyncio.run(_run_with_connection(project_dir, url, _run, schema=""))
+        typer.echo(
+            f"Fresh DB: truncated {result['truncated']} tables "
+            f"({result['total_rows']:,} rows removed). Auth preserved."
+        )
+    finally:
+        os.chdir(old_cwd)
+
+
 @qa_app.command("visual")
 def qa_visual(
     url: str | None = typer.Option(None, "--url", "-u", help="URL of a running app"),
@@ -236,6 +272,15 @@ def qa_trial(
     model: str | None = typer.Option(
         None, "--model", help="Override LLM model (default: Claude Sonnet)"
     ),
+    fresh_db: bool = typer.Option(
+        False,
+        "--fresh-db",
+        help=(
+            "Truncate entity tables before starting the server. Prevents the "
+            "trial from observing stale rows left behind by prior runs "
+            "(placeholder values, old fixture data, etc.). Auth is preserved."
+        ),
+    ),
 ) -> None:
     """Run a qualitative business-user trial of a Dazzle app.
 
@@ -313,6 +358,9 @@ def qa_trial(
         raise typer.Exit(code=2)
 
     typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
+
+    if fresh_db:
+        _reset_db_for_trial(project_dir)
 
     transcript_sink: dict[str, list[dict[str, Any]]] = {"friction": [], "verdict": []}
     started_at = time.monotonic()
