@@ -159,6 +159,108 @@ class TestComputeBackAffordance:
         assert result == ("/app", "Back to Dashboard")
 
 
+class TestLevenshtein:
+    """Pure helper — shaves off a dependency on python-Levenshtein."""
+
+    def test_equal_strings_distance_zero(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _levenshtein
+
+        assert _levenshtein("task", "task") == 0
+
+    def test_empty_strings_return_length(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _levenshtein
+
+        assert _levenshtein("", "task") == 4
+        assert _levenshtein("task", "") == 4
+
+    def test_single_edit(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _levenshtein
+
+        assert _levenshtein("task", "tasks") == 1
+        assert _levenshtein("task", "tosk") == 1
+        assert _levenshtein("task", "ta") == 2
+
+    def test_transposition_is_two_edits(self) -> None:
+        """Pure Levenshtein treats a transposition as 2 ops (del + insert)."""
+        from dazzle_back.runtime.exception_handlers import _levenshtein
+
+        assert _levenshtein("contact", "conatct") == 2
+
+
+class TestCompute404Suggestions:
+    """_compute_404_suggestions powers the friendly 404 (#811)."""
+
+    def test_plural_flip_suggests_singular(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        out = _compute_404_suggestions(
+            "/app/tickets", entity_slugs=["ticket", "contact"], workspace_slugs=[]
+        )
+        assert out == [{"url": "/app/ticket", "label": "Ticket"}]
+
+    def test_plural_flip_noop_when_singular_unknown(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        out = _compute_404_suggestions("/app/horses", entity_slugs=["cow"], workspace_slugs=[])
+        # "hors" is 4 edits from "cow" → beyond fuzzy threshold
+        assert out == []
+
+    def test_dashboard_alias_redirects_to_app_root(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        assert _compute_404_suggestions("/dashboard", [], []) == [
+            {"url": "/app", "label": "Dashboard"}
+        ]
+        assert _compute_404_suggestions("/app/dashboard", [], []) == [
+            {"url": "/app", "label": "Dashboard"}
+        ]
+
+    def test_fuzzy_match_catches_typo(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        out = _compute_404_suggestions(
+            "/app/conatct", entity_slugs=["contact", "task"], workspace_slugs=[]
+        )
+        assert {"url": "/app/contact", "label": "Contact"} in out
+
+    def test_workspace_fuzzy_match(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        out = _compute_404_suggestions(
+            "/app/workspaces/command_cnter",
+            entity_slugs=[],
+            workspace_slugs=["command_center", "ops_hub"],
+        )
+        assert any(s["url"] == "/app/workspaces/command_center" for s in out)
+
+    def test_unrelated_path_returns_empty(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        assert (
+            _compute_404_suggestions(
+                "/app/xyzabc", entity_slugs=["task", "contact"], workspace_slugs=[]
+            )
+            == []
+        )
+
+    def test_results_are_capped_at_three(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        # Five entity slugs all within edit distance 2 of "tas"
+        out = _compute_404_suggestions(
+            "/app/tas",
+            entity_slugs=["task", "tast", "taxi", "tan", "tag"],
+            workspace_slugs=[],
+        )
+        assert len(out) <= 3
+
+    def test_trailing_slash_is_normalised(self) -> None:
+        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
+
+        out = _compute_404_suggestions("/app/tickets/", entity_slugs=["ticket"], workspace_slugs=[])
+        assert out == [{"url": "/app/ticket", "label": "Ticket"}]
+
+
 class TestErrorHandlerDispatch:
     """The registered 404/403 handler chooses templates by URL prefix."""
 

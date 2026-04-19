@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.85] - 2026-04-19
+
+### Added
+- **Friendly 404: in-app 404 page now suggests plausible alternatives (#811).** When a path inside `/app/*` 404s, `_compute_404_suggestions` proposes up to three links using: (1) plural→singular flip (`/app/tickets` → `/app/ticket` when `ticket` is a known entity slug), (2) dashboard alias (`/dashboard` or `/app/dashboard` → `/app`), and (3) Levenshtein ≤ 2 fuzzy match against entity slugs and workspace names (`/app/conatct` → `/app/contact`). Pure function so the scoring is deterministic; the rendered 404 shows a "Did you mean:" card above the existing Back/Dashboard buttons. 12 unit tests cover each heuristic plus the capping behaviour.
+- Sarah's qa-trial hit `/app/tickets` (plural) and got a bare 404 that she read as "tickets feature broken". Same class of friction bit Dan on `/dashboard` vs. `/app/workspaces/command_center`. The 403 disclosure panel (#808) is the precedent: a page that was a dead-end becomes a signpost.
+
+### Agent Guidance
+- **404 handler now receives the AppSpec.** `register_site_error_handlers(app, sitespec_data, project_root, appspec=...)` — the new optional `appspec` parameter lets the handler compute suggestions from entity/workspace metadata. Callers still work without it (empty suggestion list, same behaviour as before); pass it whenever possible to surface the friendly 404.
+
 ## [0.57.84] - 2026-04-19
 
 ### Added

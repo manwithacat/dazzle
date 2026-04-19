@@ -126,6 +126,91 @@ def _is_app_path(path: str) -> bool:
     return path == "/app" or path.startswith("/app/")
 
 
+def _levenshtein(a: str, b: str) -> int:
+    """Minimal Levenshtein distance between two strings. Used for
+    fuzzy-matching failed URL segments against known entity slugs.
+    We roll our own to avoid pulling ``python-Levenshtein`` for a
+    handful of length-≤20 inputs hit only on 404 paths.
+    """
+    if len(a) < len(b):
+        return _levenshtein(b, a)
+    if not b:
+        return len(a)
+    prev: list[int] = list(range(len(b) + 1))
+    for i, ca in enumerate(a):
+        curr: list[int] = [i + 1]
+        for j, cb in enumerate(b):
+            insert = curr[j] + 1
+            delete = prev[j + 1] + 1
+            subst = prev[j] + (0 if ca == cb else 1)
+            curr.append(min(insert, delete, subst))
+        prev = curr
+    return prev[-1]
+
+
+def _compute_404_suggestions(
+    path: str,
+    entity_slugs: list[str],
+    workspace_slugs: list[str],
+) -> list[dict[str, str]]:
+    """Return up to 3 plausible URL suggestions for a failed ``path``.
+
+    Three heuristics, in order of precedence:
+
+    1. **Plural/singular flip** — ``/app/tickets`` when ``ticket`` is
+       a known entity slug yields ``/app/ticket``.
+    2. **'Dashboard' alias** — bare ``/dashboard`` or ``/app/dashboard``
+       yields ``/app`` (the default workspace entry point).
+    3. **Fuzzy match** — Levenshtein ≤ 2 against entity or workspace
+       slugs; e.g. ``/app/conatct`` → ``/app/contact``.
+
+    Output is a list of ``{"url": ..., "label": ...}`` dicts for the
+    404 template to render as links. Empty list if nothing plausible.
+    """
+    suggestions: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+
+    def _push(url: str, label: str) -> None:
+        if url in seen_urls:
+            return
+        seen_urls.add(url)
+        suggestions.append({"url": url, "label": label})
+
+    normalised = path.rstrip("/") or "/"
+    segments = [s for s in normalised.split("/") if s]
+
+    # "Dashboard" alias: /dashboard or /app/dashboard
+    if segments in (["dashboard"], ["app", "dashboard"]):
+        _push("/app", "Dashboard")
+        return suggestions
+
+    # /app/{slug}[/...] — try plural/singular flip, then fuzzy match
+    if len(segments) >= 2 and segments[0] == "app" and segments[1] != "workspaces":
+        candidate = segments[1]
+
+        if candidate.endswith("s") and candidate[:-1] in entity_slugs:
+            _push(f"/app/{candidate[:-1]}", candidate[:-1].replace("-", " ").title())
+
+        for slug in entity_slugs:
+            if slug == candidate or slug in seen_urls:
+                continue
+            if _levenshtein(slug, candidate) <= 2:
+                _push(f"/app/{slug}", slug.replace("-", " ").title())
+                if len(suggestions) >= 3:
+                    break
+
+    # /app/workspaces/{name} — fuzzy match against known workspace slugs
+    if len(segments) >= 3 and segments[0] == "app" and segments[1] == "workspaces":
+        candidate = segments[2]
+        for ws in workspace_slugs:
+            if _levenshtein(ws, candidate) <= 2:
+                _push(f"/app/workspaces/{ws}", ws.replace("_", " ").title())
+                if len(suggestions) >= 3:
+                    break
+
+    return suggestions[:3]
+
+
 def _compute_back_affordance(path: str) -> tuple[str, str] | None:
     """Compute a 'Back to {parent}' affordance for an in-app error page.
 
@@ -155,6 +240,7 @@ def _render_app_shell_error(
     request: Any,
     app_name: str,
     forbidden_detail: dict[str, Any] | None = None,
+    suggestions: list[dict[str, str]] | None = None,
 ) -> Any:
     """Render an in-app error page inside the authenticated app shell.
 
@@ -202,6 +288,9 @@ def _render_app_shell_error(
     if forbidden_detail:
         ctx["forbidden_detail"] = forbidden_detail
 
+    if suggestions:
+        ctx["suggestions"] = suggestions
+
     html = render_fragment(template_name, **ctx)
     return HTMLResponse(content=html, status_code=status_code)
 
@@ -210,6 +299,7 @@ def register_site_error_handlers(
     app: FastAPI,
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
+    appspec: Any = None,
 ) -> None:
     """
     Register custom HTTP error handlers for site pages.
@@ -238,6 +328,17 @@ def register_site_error_handlers(
         project_root and (project_root / "static" / "css" / "custom.css").is_file()
     )
     app_name = sitespec_data.get("product_name") or sitespec_data.get("name") or "Dazzle"
+
+    # Precompute known slugs once; the 404 handler closes over these
+    # to suggest plausible alternatives when a path misses (#811).
+    entity_slugs: list[str] = []
+    workspace_slugs: list[str] = []
+    if appspec is not None:
+        try:
+            entity_slugs = [e.name.lower().replace("_", "-") for e in appspec.domain.entities]
+            workspace_slugs = [w.name for w in getattr(appspec, "workspaces", []) or []]
+        except AttributeError:
+            pass
 
     @app.exception_handler(StarletteHTTPException)
     async def custom_http_error_handler(request: Any, exc: StarletteHTTPException) -> Any:
@@ -293,12 +394,16 @@ def register_site_error_handlers(
 
         if exc.status_code == 404 and is_browser:
             if _is_app_path(str(request.url.path)):
+                path_suggestions = _compute_404_suggestions(
+                    str(request.url.path), entity_slugs, workspace_slugs
+                )
                 return _render_app_shell_error(
                     template_name="app/404.html",
                     status_code=404,
                     message="The page you're looking for doesn't exist.",
                     request=request,
                     app_name=app_name,
+                    suggestions=path_suggestions or None,
                 )
             ctx_404 = build_site_404_context(sitespec_data, custom_css=has_custom_css)
             return HTMLResponse(

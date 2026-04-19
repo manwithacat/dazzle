@@ -13,6 +13,26 @@
   <p class="text-[15px] text-[hsl(var(--muted-foreground))] mb-6 text-center max-w-[480px]">
     {{ message | default("The page you're looking for doesn't exist.") }}
   </p>
+  {% if suggestions %}
+  <div class="mb-6 w-full max-w-[480px] rounded-[6px] border border-[hsl(var(--border))]
+              bg-[hsl(var(--card))] p-4">
+    <p class="text-[13px] font-medium text-[hsl(var(--foreground))] mb-2">
+      Did you mean:
+    </p>
+    <ul class="flex flex-col gap-1">
+      {% for sug in suggestions %}
+      <li>
+        <a href="{{ sug.url }}"
+           class="inline-flex items-center gap-2 text-[13px]
+                  text-[hsl(var(--primary))] hover:underline">
+          <code class="font-mono text-[12px] text-[hsl(var(--muted-foreground))]">{{ sug.url }}</code>
+          <span>— {{ sug.label }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
   <div class="flex items-center gap-2">
     {% if back_url %}
     <a href="{{ back_url }}"

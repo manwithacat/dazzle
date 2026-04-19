@@ -613,7 +613,9 @@ def assemble_post_build_routes(
         try:
             from dazzle_back.runtime.exception_handlers import register_site_404_handler
 
-            register_site_404_handler(app, sitespec_data, project_root=project_root)
+            register_site_404_handler(
+                app, sitespec_data, project_root=project_root, appspec=appspec
+            )
         except ImportError:
             pass
 
