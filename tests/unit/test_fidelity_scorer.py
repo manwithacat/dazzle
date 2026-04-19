@@ -533,6 +533,34 @@ class TestMoneyFieldExpansion:
         ]
         assert type_gaps == []
 
+    def test_float_field_renders_as_number(self) -> None:
+        """FLOAT fields render as <input type="number"> (same mapping as
+        INT/DECIMAL/MONEY). Regression guard for #825: before the fix,
+        FLOAT was absent from FIELD_TYPE_TO_INPUT and fell through to
+        DEFAULT_INPUT_TYPE="text", producing a spurious
+        INCORRECT_INPUT_TYPE gap on every float surface."""
+        surface = _make_surface(
+            name="reading_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["temperature"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(name="temperature", type=FieldType(kind=FieldTypeKind.FLOAT)),
+            ]
+        )
+        html = """
+        <form hx-post="/readings">
+            <input type="number" name="temperature">
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == [], f"Unexpected input-type gaps: {type_gaps}"
+
     def test_file_field_input_type_no_false_positive(self) -> None:
         """File fields with type='file' should not be flagged as incorrect."""
         surface = _make_surface(

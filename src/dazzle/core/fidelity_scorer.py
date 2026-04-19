@@ -33,6 +33,7 @@ FIELD_TYPE_TO_INPUT: dict[FieldTypeKind, str] = {
     FieldTypeKind.DATE: "date",
     FieldTypeKind.DATETIME: "datetime-local",
     FieldTypeKind.INT: "number",
+    FieldTypeKind.FLOAT: "number",
     FieldTypeKind.DECIMAL: "number",
     FieldTypeKind.MONEY: "number",
     FieldTypeKind.TEXT: "textarea",
