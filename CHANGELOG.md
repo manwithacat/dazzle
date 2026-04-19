@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.96] - 2026-04-19
+
+### Fixed
+- **Eliminated all DaisyUI class residuals from user-facing templates.** The v0.51 design-system regime replaced DaisyUI utility tokens with `.dz-*` canonical markers + HSL-variable Tailwind, but 8 leaks survived in uncontracted or loosely-governed templates (synthesised in `dev_docs/framework-gaps/2026-04-19-daisyui-residuals-in-uncontracted-templates.md`). This release closes all 8:
+  - `workspace/regions/tab_data.html` — 3 leaks fixed in cycle 268 (duplicate border class, dangling `hover`, `link link-hover link-primary`).
+  - `site/sections/testimonials.html:7` — `card` → `rounded-[6px]` (cycle 269).
+  - `components/island.html:9` — `skeleton` → `dz-skeleton` + HSL bg + animate-pulse (cycle 270).
+  - `experience/_content.html:138` — `card` → `rounded-[6px]`.
+  - `fragments/detail_fields.html:4` — `card ... shadow-sm` → canonical detail-view chrome.
+  - `components/alpine/dropdown.html:13` — `menu p-1` → `p-1 space-y-0.5`.
+  - `layouts/single_column.html:6` — `navbar` → explicit flex+padding chrome.
+  - `site/sections/features.html:8` — `card ... shadow-sm` → canonical card chrome.
+
+### Added
+- **`tests/unit/test_no_daisyui_residuals.py`** — durable CI lint rule scanning every non-exempt `.html` under `src/dazzle_ui/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Bans the canonical DaisyUI vocabulary (`card`, `menu`, `btn`, `hero`, `skeleton`, `alert`, `badge`, `collapse`, `input`, `link`, `navbar`, `rounded-box`, `bg-base-*`, `text-base-content`) plus their variant prefixes. Explicit exemption for `templates/reports/` (internal dev artefact). 6 tests — 1 scanner + 5 sanity checks (dir exists, ban list self-consistent, `dz-*` always allowed, detector fires on known inputs, exempt paths exist). Runs in ~0.25s. Any future DaisyUI reintroduction fails CI at PR time.
+
+### Agent Guidance
+- **No new DaisyUI classes in `src/dazzle_ui/templates/*.html`.** The new lint rule at `tests/unit/test_no_daisyui_residuals.py` enforces this. Use `.dz-*` canonical markers + HSL-variable Tailwind arbitrary values (e.g. `bg-[hsl(var(--card))]`) instead. The ban list is the source of truth in that file — update it (with tests) when adding new tokens to the regime.
+
 ## [0.57.95] - 2026-04-19
 
 ### Fixed

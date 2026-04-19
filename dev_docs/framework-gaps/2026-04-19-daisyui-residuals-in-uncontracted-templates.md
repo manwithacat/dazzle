@@ -3,6 +3,19 @@
 **Date:** 2026-04-19
 **Synthesis cycle:** ux-cycle 271
 **Theme slug:** `daisyui-residuals-in-uncontracted-templates`
+**Status:** RESOLVED (2026-04-19, same day) — both mechanisms landed.
+
+## Resolution summary
+
+- **Mechanism A (tactical)** — 5 DaisyUI leaks fixed:
+  - `experience/_content.html:138` — `card` → `rounded-[6px]`
+  - `fragments/detail_fields.html:4` — `card ... shadow-sm` → canonical detail-view chrome
+  - `components/alpine/dropdown.html:13` — `menu p-1` → `p-1 space-y-0.5`
+  - `layouts/single_column.html:6` (surfaced by the new lint) — `navbar` → explicit flex+padding chrome
+  - `site/sections/features.html:8` (surfaced by the new lint) — `card ... shadow-sm` → canonical card chrome
+- **Mechanism B (durable)** — `tests/unit/test_no_daisyui_residuals.py` added
+  with 6 tests. The detection test (`test_no_daisyui_classes_in_user_facing_templates`) scans every non-exempt `.html` under `src/dazzle_ui/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Sanity tests confirm the ban list is self-consistent, `dz-*` tokens are always allowed, the detector actually fires on known-banned inputs, and no exempt-path fragment has gone stale. Runs in ~0.25s; now part of CI via the normal pytest sweep.
+- **Net:** 8 observations across 6 templates are now zero. Any future DaisyUI reintroduction fails CI at PR time.
 
 ## Problem statement
 

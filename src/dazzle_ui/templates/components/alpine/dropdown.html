@@ -10,7 +10,7 @@
     </svg>
   </button>
   <ul x-show="open" x-transition
-      class="absolute right-0 mt-1 menu p-1 shadow-md bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] w-40 z-50">
+      class="absolute right-0 mt-1 p-1 space-y-0.5 shadow-md bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] w-40 z-50">
     {% for item in dropdown_items | default([]) %}
     <li>
       {% if item.href %}
