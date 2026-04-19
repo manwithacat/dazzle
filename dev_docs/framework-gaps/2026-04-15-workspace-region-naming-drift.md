@@ -1,9 +1,26 @@
 # Framework Gap — Workspace Region Naming Drift
 
-**Status:** Open
+**Status:** SUBSTANTIALLY RESOLVED (2026-04-19 re-verification)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
 **Contributing cycles:** 217, 220, 222
 **Evidence weight:** 3 observations + 3 proposals across 3 apps, all converging on the same subsystem
+
+## Resolution summary (2026-04-19)
+
+Heuristic 1 re-reproduction against the current framework:
+
+| Row | Original observation | Status | Mechanism |
+|-----|---------------------|--------|-----------|
+| **EX-013** | fieldtest_hub "Issue Board" sidebar href 404s | **RESOLVED** | Nav generator now emits `/app/issuereport` (matches route-generator's snake_case-collapsed slug). `curl -b cookie /app/issuereport` → 200 with title "Issue Board — FieldTest Hub". |
+| **EX-025** | 4 `workspace:*` Phase A contracts FAIL because rendered HTML lacks `data-dz-region-name` attrs | **RESOLVED** | Issue #803 extended `contract_checker._check_workspace` to accept EITHER `data-dz-region-name` attrs OR the `dz-workspace-layout` JSON island. Dashboard workspaces use the JSON path; classic workspaces use the attr path. Both satisfy the contract. Verified: Phase A on simple_task now passes 27/2 with zero `workspace:*` failures. |
+| **EX-033** | ops_dashboard Platform Admin nav 404s (Health → /app/health but surface is `/app/systemhealth`) | **DSL AUTHORING** | Marked `DEFERRED_APP_QUALITY` in the backlog — the ops_dashboard DSL declares surfaces the nav can't route to. Framework slugging is internally consistent; the example app's surface definitions are wrong. |
+| **PROP-049** workspace-metrics-region | No contract | **PROMOTED** | `~/.claude/skills/ux-architect/components/metrics-region.md` exists. |
+| **PROP-050** workspace-tree-region | No contract | Still PROPOSED | Routine `missing_contracts` → `contract_audit` path. |
+| **PROP-051** workspace-diagram-region | No contract | Still PROPOSED | Routine `missing_contracts` → `contract_audit` path. |
+
+The "three-way string drift" framing in the original problem statement is now obsolete. The route/nav/contract paths converge on the same slug rules; the remaining two uncontracted region templates are normal governance backlog, not a framework drift defect.
+
+**Remaining action:** promote PROP-050 + PROP-051 in a future `contract_audit` cycle. That's it.
 
 ---
 
