@@ -241,7 +241,7 @@ class UXSpec(BaseModel):
         """
         em = self.empty_message
         if isinstance(em, EmptyMessages):
-            case = getattr(em, kind, None)
+            case: str | None = getattr(em, kind, None)
             if case is not None:
                 return case
             # Fall through to None — template default.

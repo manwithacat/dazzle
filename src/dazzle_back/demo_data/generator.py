@@ -22,7 +22,7 @@ try:
     FAKER_AVAILABLE = True
 except ImportError:
     FAKER_AVAILABLE = False
-    Faker = None
+    Faker = None  # type: ignore[assignment,misc]
 
 
 class DemoDataGenerator:
@@ -44,7 +44,7 @@ class DemoDataGenerator:
             random.seed(seed)
 
         if FAKER_AVAILABLE:
-            self.faker = Faker()
+            self.faker: Faker | None = Faker()
             if seed is not None:
                 Faker.seed(seed)
         else:

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.82] - 2026-04-19
+
+### Fixed
+- **Ref-entity filter dropdowns silently empty (#813).** `filter_bar.html` fetched `/{entity}?page_size=200` to populate ref-entity filter options (e.g. `assigned_to` on the simple_task list), but the backend caps `page_size` at 100 via `Query(..., le=100)`. Every such fetch returned 422, the Alpine `x-init` `.catch(() => { refLoading = false; })` silently swallowed the error, and the dropdown rendered with only the "All" option. To users the select looked unresponsive: clicks opened a menu with nothing to pick.
+- Fix: align template with backend cap (`?page_size=100`, matching `macros/form_field.html` which already did this) and surface fetch errors via `console.warn` plus a new `refError` scope variable so future failures stop being invisible. Two surfaces affected out-of-the-box (simple_task `assigned_to`, any `ref`-typed filter in other apps).
+- Found via `dazzle qa trial` (agency_lead scenario on simple_task). The contact_manager half of the same issue — "second input unresponsive" — turned out not to be a framework bug but a trial-agent selector quirk (`input:nth-of-type(2)` matched a hidden column-visibility checkbox in a collapsed menu).
+
 ## [0.57.81] - 2026-04-19
 
 ### Fixed

@@ -20,10 +20,13 @@
             hx-include="closest [data-dazzle-table]"
             hx-headers='{"Accept": "text/html"}'
             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading-sr"
-            x-data="{ options: [], refLoading: true }"
+            x-data="{ options: [], refLoading: true, refError: '' }"
             x-init="
-              fetch('{{ col.filter_ref_api }}?page_size=200', { headers: { 'Accept': 'application/json' } })
-                .then(r => r.json())
+              fetch('{{ col.filter_ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
+                .then(r => {
+                  if (!r.ok) throw new Error('HTTP ' + r.status);
+                  return r.json();
+                })
                 .then(data => {
                   const items = data.items || [];
                   const display = (item) => {
@@ -34,7 +37,11 @@
                   options = items.map(i => ({ value: i.id, label: display(i) }));
                   refLoading = false;
                 })
-                .catch(() => { refLoading = false; })
+                .catch(err => {
+                  console.warn('Filter ref-entity load failed for {{ col.filter_ref_api }}:', err);
+                  refError = err.message || 'load failed';
+                  refLoading = false;
+                })
             ">
       <option value="">All</option>
       <template x-for="opt in options" :key="opt.value">
