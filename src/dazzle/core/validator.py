@@ -1801,6 +1801,36 @@ _GRAPH_EDGE_FIELD_NAMES: frozenset[str] = frozenset(
     }
 )
 
+# Audit-metadata token vocabulary (#823). A field that contains any of
+# these tokens is almost always a who-did-what audit record — NOT a
+# graph-edge endpoint. Fields with BOTH an edge token AND an audit token
+# (e.g. `assigned_to`, `reported_from`) are resolved as audit fields and
+# excluded from edge candidacy. This catches the false-positive class
+# observed by AegisMark where mixed-vocabulary field names — and in
+# particular `assigned_to`, `sent_to`, `returned_from` — were flagged as
+# graph edges despite being workflow/routing metadata.
+_AUDIT_METADATA_FIELD_NAMES: frozenset[str] = frozenset(
+    {
+        "created",
+        "updated",
+        "deleted",
+        "modified",
+        "reviewed",
+        "reported",
+        "approved",
+        "rejected",
+        "closed",
+        "assigned",
+        "reopened",
+        "sent",
+        "returned",
+        "archived",
+        "published",
+        "signed",
+        "acknowledged",
+    }
+)
+
 
 def _lint_graph_edge_suggestions(appspec: ir.AppSpec) -> list[str]:
     """Suggest graph_edge: for entities that pair two graph-edge-shaped refs
@@ -1809,7 +1839,10 @@ def _lint_graph_edge_suggestions(appspec: ir.AppSpec) -> list[str]:
     Entities with creator + assignee / requester + approver / parent + owner
     are NOT graph edges — those are domain fields that happen to share a
     ref target. Only flag when the field names match the graph-edge
-    vocabulary (source/target, from/to, parent/child, ...).
+    vocabulary (source/target, from/to, parent/child, ...) AND do not
+    overlap with the audit-metadata vocabulary (created, updated, assigned,
+    reported, ...) — fields like `assigned_to` that have both an edge token
+    and an audit token resolve as audit metadata and are excluded (#823).
     """
     warnings: list[str] = []
     for entity in appspec.domain.entities:
@@ -1827,9 +1860,15 @@ def _lint_graph_edge_suggestions(appspec: ir.AppSpec) -> list[str]:
 
             # A field matches the graph-edge vocabulary if any of its
             # underscore-delimited tokens is a recognised edge term
-            # (source_node, target_id, from_station, parent_node, ...).
+            # (source_node, target_id, from_station, parent_node, ...)
+            # AND none of its tokens is an audit-metadata term (#823:
+            # `assigned_to`, `sent_to`, `reported_from` all resolve as
+            # audit fields despite carrying an edge token).
             def _is_edge_field(name: str) -> bool:
-                return any(token in _GRAPH_EDGE_FIELD_NAMES for token in name.lower().split("_"))
+                tokens = name.lower().split("_")
+                has_edge = any(tok in _GRAPH_EDGE_FIELD_NAMES for tok in tokens)
+                has_audit = any(tok in _AUDIT_METADATA_FIELD_NAMES for tok in tokens)
+                return has_edge and not has_audit
 
             matches = [n for n in field_names if _is_edge_field(n)]
             if len(matches) >= 2:

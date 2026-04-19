@@ -570,6 +570,112 @@ class TestGraphLintHints:
         warnings = extended_lint(appspec)
         assert any("looks like a graph edge" in w for w in warnings)
 
+    def test_audit_metadata_fields_do_not_fire_edge_hint(self) -> None:
+        """Regression guard for #823. Entities with multiple `ref User`
+        fields used purely as audit metadata (`created_by`, `updated_by`,
+        `reviewed_by`, `closed_by`, `assigned_by`, `reported_by`,
+        `approved_by`) are domain *nodes*, not graph edges. The lint
+        must produce zero suggestions for these."""
+        from dazzle.core.validator import extended_lint
+
+        user = _make_entity("User")
+        # AegisMark-style entities from #823.
+        manuscript = _make_entity(
+            "Manuscript",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="student",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+                ir.FieldSpec(
+                    name="created_by",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+                ir.FieldSpec(
+                    name="updated_by",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        safeguarding = _make_entity(
+            "SafeguardingConcern",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="reported_by",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+                ir.FieldSpec(
+                    name="closed_by",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        appspec = _make_appspec([user, manuscript, safeguarding])
+        warnings = extended_lint(appspec)
+        assert not any("looks like a graph edge" in w for w in warnings), (
+            f"Unexpected edge-suggestion warnings: {[w for w in warnings if 'graph edge' in w]}"
+        )
+
+    def test_mixed_audit_and_edge_token_fields_do_not_fire(self) -> None:
+        """Regression guard for #823. Fields with BOTH an edge token
+        AND an audit token (e.g. `assigned_to`, `sent_to`,
+        `reported_from`) are workflow/routing metadata, not graph
+        endpoints. They must NOT count toward the edge-candidate
+        threshold even though `to`/`from` are edge vocabulary."""
+        from dazzle.core.validator import extended_lint
+
+        user = _make_entity("User")
+        workflow = _make_entity(
+            "TaskAssignment",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                # Both field names carry an edge token ("to" / "from")
+                # AND an audit token ("assigned" / "returned"). Under
+                # the updated heuristic (#823) the audit token wins
+                # and neither field counts toward the edge-candidate
+                # threshold.
+                ir.FieldSpec(
+                    name="assigned_to",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+                ir.FieldSpec(
+                    name="returned_from",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        appspec = _make_appspec([user, workflow])
+        warnings = extended_lint(appspec)
+        assert not any("looks like a graph edge" in w for w in warnings)
+
+    def test_pure_edge_fields_still_fire(self) -> None:
+        """Regression guard that the #823 fix didn't over-correct —
+        genuine graph-edge-shaped entities (source_node/target_node,
+        parent/child, from_station/to_station WITHOUT audit tokens)
+        must still trigger the suggestion."""
+        from dazzle.core.validator import extended_lint
+
+        node = _make_entity("Station")
+        edge = _make_entity(
+            "Route",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="from_station",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Station"),
+                ),
+                ir.FieldSpec(
+                    name="to_station",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Station"),
+                ),
+            ],
+        )
+        appspec = _make_appspec([node, edge])
+        warnings = extended_lint(appspec)
+        assert any("looks like a graph edge" in w for w in warnings)
+
     def test_no_hint_when_graph_edge_present(self) -> None:
         """No suggestion if entity already has graph_edge:."""
         from dazzle.core.validator import extended_lint
