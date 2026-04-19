@@ -275,6 +275,10 @@ surface ticket_create "Create Ticket":
     field category "Category"
     field assigned_to "Assigned To"
 
+  ux:
+    for customer:
+      hide: assigned_to
+
 surface ticket_edit "Edit Ticket":
   uses entity Ticket
   mode: edit

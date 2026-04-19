@@ -4,6 +4,24 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## Cycle 256 — 2026-04-19 — finding_investigation: EX-029 closed
+
+**Strategy:** `finding_investigation` (chosen over `framework_gap_analysis` and `contract_audit` — 4 OPEN/PARTIALLY_FIXED EX rows present, one of them specifically called out as closeable by a DSL override once framework support existed).
+
+**Target:** EX-029 — support_tickets customer sees `assigned_to` on `/app/ticket/create`.
+
+**Investigation (Heuristic 1):** raw-layer reproduction. Booted `support_tickets`, auth'd as customer via `/__test__/authenticate`, curled `/app/ticket/create` and grepped for `field-assigned_to`. Customer view had the field; EX-048 (cycle 245) confirmed FormContext already honours `hide` directives. Fix is pure DSL.
+
+**Fix:** added `ux: for customer: hide: assigned_to` to `ticket_create` surface in `examples/support_tickets/dsl/app.dsl`.
+
+**Verification:** restarted server, re-ran the grep as both customer (0 fields) and manager (1 field). Behaviour matches intent.
+
+**Row status:** EX-029 PARTIALLY_FIXED → FIXED. Widget half (cycle 236) + persona-affordance half (this cycle) both resolved.
+
+**Explore budget:** 25 → 26.
+
+---
+
 ## 2026-04-16T03:30Z — Cycles 244 + 245 + 246 — **autonomous batch: PersonaVariant wiring completed + EX-047 aggregate display inference**
 
 **Strategy:** autonomous-directive batch. User invoked "continue autonomously until backlog clear. includes new issues identified during work". Proceeded through three cycles in one session.
