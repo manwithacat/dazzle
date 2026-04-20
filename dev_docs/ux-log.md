@@ -10626,3 +10626,9 @@ Cycles 336-339 increasingly acknowledged diminishing returns but kept producing 
 Preflight green. 0 signals, 0 backlog changes, 0 closures of #829-835. Step 6 skipped. Budget 95.
 
 ---
+
+## Cycle 343 — 2026-04-20 — short-circuit continues (idle tick)
+
+Preflight green. 0 signals, 0 backlog changes, #829-835 all still OPEN. Step 6 skipped. Budget 95.
+
+---
