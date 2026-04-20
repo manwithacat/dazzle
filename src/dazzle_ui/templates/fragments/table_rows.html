@@ -97,7 +97,8 @@
     {% elif col.type == "ref" %}
       {{ item.get(col.key ~ "_display", "") or (item[col.key] | ref_display) }}
     {% elif col.type == "percentage" %}
-      {{ item[col.key] | default("") }}%
+      {% set _pct_val = item[col.key] %}
+      {% if _pct_val is none %}—{% else %}{{ _pct_val }}%{% endif %}
     {% else %}
       <span class="truncate block max-w-[240px]">{{ item[col.key] | default("") | truncate_text }}</span>
     {% endif %}

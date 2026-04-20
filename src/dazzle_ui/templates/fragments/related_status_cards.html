@@ -31,10 +31,11 @@
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
           {% for col in tab.columns[:3] %}
+          {% set _val = item[col.key] %}
           {% if loop.first %}
-          <p class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate">{{ item[col.key] | default("—") }}</p>
+          <p class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate">{% if _val is none %}—{% else %}{{ _val }}{% endif %}</p>
           {% else %}
-          <p class="text-[12px] text-[hsl(var(--muted-foreground))] truncate">{{ item[col.key] | default("—") }}</p>
+          <p class="text-[12px] text-[hsl(var(--muted-foreground))] truncate">{% if _val is none %}—{% else %}{{ _val }}{% endif %}</p>
           {% endif %}
           {% endfor %}
         </div>

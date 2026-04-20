@@ -4957,3 +4957,156 @@ class TestWorkspacePrimaryActionCandidates:
         )
         # PascalCase lower().replace("_","-") → "projectmember"
         assert actions[0]["route"] == "/app/projectmember/create"
+
+
+# ---------------------------------------------------------------------------
+# Cycle 280 — EX-051 cross-cutting None-vs-default sweep
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestNoneVsDefaultDriftSweep:
+    """Regression guards for EX-051 — None-vs-undefined rendering drift.
+
+    Jinja's ``| default(X)`` filter only fires on *undefined*, not on None.
+    Templates that used ``{{ item[col.key] | default("—") }}`` rendered the
+    literal Python string "None" when the field was defined but null.
+    Cycle 272 caught this in detail-region via Heuristic 1; cycle 280 swept
+    the cross-cutting cases:
+
+    - ``fragments/related_file_list.html`` (2 lines)
+    - ``fragments/related_status_cards.html`` (2 lines)
+    - ``fragments/table_rows.html`` (1 line — percentage column)
+
+    Each site was converted to ``{% if val is none %}<fallback>{% else %}{{ val }}{% endif %}``
+    which correctly handles None while preserving numeric 0 / False rendering.
+    """
+
+    def _make_group(self, *, columns, rows):
+        """Build a group/tabs structure matching related-displays template shape."""
+        tab = SimpleNamespace(
+            label="Attachments",
+            entity_name="Attachment",
+            visible=True,
+            columns=columns,
+            rows=rows,
+            create_url=None,
+            detail_url_template=None,
+            filter_field="parent_id",
+        )
+        return SimpleNamespace(tabs=[tab])
+
+    def test_related_file_list_none_renders_emdash_not_literal_none(self) -> None:
+        """Primary label: None → — (not literal "None")."""
+        group = self._make_group(
+            columns=[
+                {"key": "name", "label": "Name", "type": "text"},
+                {"key": "size", "label": "Size", "type": "text"},
+            ],
+            rows=[{"id": "1", "name": None, "size": "1KB"}],
+        )
+        detail = SimpleNamespace(item={"id": "parent-1"})
+        html = render_fragment(
+            "fragments/related_file_list.html",
+            group=group,
+            detail=detail,
+        )
+        assert "—" in html
+        assert ">None<" not in html
+        assert "None</p>" not in html
+
+    def test_related_file_list_none_secondary_renders_empty_not_literal_none(
+        self,
+    ) -> None:
+        """Secondary label: None → "" (empty, not literal "None")."""
+        group = self._make_group(
+            columns=[
+                {"key": "name", "label": "Name", "type": "text"},
+                {"key": "caption", "label": "Caption", "type": "text"},
+            ],
+            rows=[{"id": "1", "name": "file.pdf", "caption": None}],
+        )
+        detail = SimpleNamespace(item={"id": "parent-1"})
+        html = render_fragment(
+            "fragments/related_file_list.html",
+            group=group,
+            detail=detail,
+        )
+        assert "file.pdf" in html
+        assert ">None<" not in html
+        assert "None</p>" not in html
+
+    def test_related_status_cards_none_renders_emdash(self) -> None:
+        """All lines in related_status_cards use emdash fallback."""
+        group = self._make_group(
+            columns=[
+                {"key": "title", "label": "Title", "type": "text"},
+                {"key": "priority", "label": "Priority", "type": "text"},
+                {"key": "owner_name", "label": "Owner", "type": "text"},
+            ],
+            rows=[
+                {"id": "1", "title": None, "priority": None, "owner_name": None},
+            ],
+        )
+        detail = SimpleNamespace(item={"id": "parent-1"})
+        html = render_fragment(
+            "fragments/related_status_cards.html",
+            group=group,
+            detail=detail,
+        )
+        assert "—" in html
+        assert ">None<" not in html
+        assert "None</p>" not in html
+
+    def test_related_status_cards_real_value_renders_correctly(self) -> None:
+        """Sanity check: real (non-None) values still render normally."""
+        group = self._make_group(
+            columns=[
+                {"key": "title", "label": "Title", "type": "text"},
+                {"key": "priority", "label": "Priority", "type": "text"},
+            ],
+            rows=[{"id": "1", "title": "Login broken", "priority": "high"}],
+        )
+        detail = SimpleNamespace(item={"id": "parent-1"})
+        html = render_fragment(
+            "fragments/related_status_cards.html",
+            group=group,
+            detail=detail,
+        )
+        assert "Login broken" in html
+        assert "high" in html
+
+    def _pct_table(self, *, rate_value):
+        """Build a minimal table struct with one percentage column."""
+        return {
+            "rows": [{"id": "1", "rate": rate_value}],
+            "columns": [
+                {"key": "rate", "label": "Rate", "type": "percentage"},
+            ],
+            "entity_name": "Metric",
+        }
+
+    def test_table_rows_percentage_none_renders_emdash_not_none_percent(self) -> None:
+        """Percentage column: None → — (not literal "None%")."""
+        html = render_fragment(
+            "fragments/table_rows.html",
+            table=self._pct_table(rate_value=None),
+        )
+        assert "None%" not in html
+        assert "—" in html
+
+    def test_table_rows_percentage_zero_renders_zero_percent(self) -> None:
+        """Percentage column: 0 renders as "0%" (not "—") — zero is meaningful data."""
+        html = render_fragment(
+            "fragments/table_rows.html",
+            table=self._pct_table(rate_value=0),
+        )
+        assert "0%" in html
+
+    def test_table_rows_percentage_real_value(self) -> None:
+        """Percentage column: real value (e.g. 42) → "42%"."""
+        html = render_fragment(
+            "fragments/table_rows.html",
+            table=self._pct_table(rate_value=42),
+        )
+        assert "42%" in html
