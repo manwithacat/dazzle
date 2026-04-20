@@ -7834,3 +7834,50 @@ OPEN EX rows: 0 (EX-053 now FIXED_LOCALLY).
 - **NEW: `trial-cycle probe for experience transitions`** — verify the fix end-to-end on `ops_dashboard.incident_response` flow. Not a ux-cycle concern, but worth flagging to the `/trial-cycle` companion loop.
 
 ---
+
+## Cycle 293 — 2026-04-20 — contract_audit: workspace-context-selector (UX-073)
+
+**Strategy:** `contract_audit` — promotion of cycle 290's workspace-shell v2 Q2
+**Outcome:** 74 → 75 contracts. Deeper pattern discovery: the selector is the only built-in widget that writes to dzPrefs AND rebinds sibling HTMX attrs — a distinct pattern worth its own governance surface.
+
+**Chosen this cycle.** Queue was narrow after cycle 292's EX-053 fix. Workspace-shell (UX-071) had flagged `workspace-context-selector` and `workspace-heading` as v2 promotion candidates. Chose context-selector over heading for three reasons: (a) richer pattern (client-side state + sibling mutation) that deserves dedicated governance, (b) more open design questions (multi-select, debounce, default seeding, error states), (c) single-purpose widget with clear boundaries.
+
+**Pattern novelty.** The context-selector is the only widget in the Dazzle UI catalog with this exact shape:
+- Server provides just an endpoint URL + a label
+- Client fetches options on DOM load, populates the `<select>`, restores user preference from dzPrefs, dispatches a synthetic `change` to trigger the initial bind
+- On user change, persists to dzPrefs AND walks every `#region-*[hx-get]` element to rebind + refetch
+
+This cross-scope sibling-mutation pattern is unusual — Alpine components normally stay within their own scope; HTMX components normally respond to their own triggers. The selector deliberately bridges both without belonging to either. Getting this pattern into a contract locks in the design invariants (key format, empty-value semantics, Alpine-free) so future iterations don't accidentally drift into an Alpine-reactive equivalent that would lose the scope-bridging ability.
+
+**Contract at** `~/.claude/skills/ux-architect/components/workspace-context-selector.md` — 12 quality gates + 10 v2 open questions. Notable gates:
+
+- Gate 3: all 4 design tokens on the select (`--border`, `--background`, `--foreground`, `--ring`) — verified by regex-extracting the `<select>` opening tag.
+- Gate 5: canonical dzPrefs key format `'workspace.' + wsName + '.context'` — NOT `ws:name:context` or any other shape. Downstream analytics depend on this.
+- Gate 9: empty-value selection STRIPS `context_id` from the query string via `params.delete('context_id')`. Setting to empty string would be a semantic hazard because backends that coerce `""` to a default would silently filter.
+- Gate 11: Alpine-free widget block. The selector deliberately uses vanilla JS — adding Alpine would trap the widget inside its component's scope and prevent the sibling-HTMX-rebind pattern.
+
+**No drift to fix.** The template's context-selector block was already clean (tokens correct, no DaisyUI leaks, dzPrefs key format canonical). This contract codifies what's already there + documents the 10 v2 questions that would warrant future cycles.
+
+**No pointer header added to `_content.html`.** The selector lives INLINE inside the parent workspace-shell template. Parent contract (workspace-shell UX-071) already owns the file's pointer header; adding a second would be confusing. Instead, the workspace-shell contract's Cross-references now mentions workspace-context-selector.
+
+**14 regression tests** in `TestWorkspaceContextSelector` — one per quality gate, plus 2 extra for the label-fallback two-branch test (explicit vs. entity-underscore-replacement) and widget-absent-vs-present conditional. Tests use a minimal `WorkspaceContext` constructor with only the context-selector-relevant fields set. Alpine-free gate uses regex-extracted widget block to avoid false positives from the parent shell's `x-data`.
+
+**Cross-app verification** (Heuristic 3): 355/355 workspace + lint + ASVS session tests pass (up from 341). No regressions.
+
+**Updated workspace-shell.md** v2 Q2 from "needs promotion" to "✅ Promoted cycle 293" — closes the loop on the parent contract's outstanding question.
+
+**Explore budget used** (contract_audit counts): 48 → 49.
+
+### Running UX-governance total: 75 contracts
+
+### Next candidate cycles
+
+- **`workspace-heading` sub-component contract** — cycle 290 v2 Q1 still open. Could pair with experience-shell title (diverges — workspace uses 17px font-medium, experience uses text-2xl font-bold) for a parity audit.
+- **`trial-cycle probe for experience transitions`** — verify cycle 292 EX-053 fix end-to-end
+- **Execute `row-click-keyboard-affordance-gap`** — still parked, needs browser verification
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`framework_gap_analysis`** — last was cycle 287 (6 cycles ago). Synthesis debt accumulating.
+
+---

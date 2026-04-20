@@ -5937,6 +5937,164 @@ class TestWorkspaceShellComposition:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 293 — Workspace context selector contract (UX-073)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceContextSelector:
+    """workspace-context-selector.md — promoted from workspace-shell v2 Q2 (cycle 293).
+
+    The selector is a conditional widget inside `workspace/_content.html`:
+    label + <select> shell + vanilla-JS bootstrap script. Server provides
+    `context_options_url`; client fetches options, persists choice via
+    `window.dzPrefs`, rebinds every `#region-*[hx-get]` on change.
+
+    Tests pin all 12 quality gates from the contract. A separate contract
+    gives the pattern room to grow (multi-select, default-value seeding,
+    error state, debounce) without bloating the parent workspace-shell.
+    """
+
+    def _render(
+        self,
+        *,
+        context_options_url: str = "/api/contexts",
+        context_selector_entity: str = "project",
+        context_selector_label: str = "",
+        workspace_name: str = "my_dashboard",
+    ) -> str:
+        from dazzle_ui.runtime.workspace_renderer import WorkspaceContext
+
+        ws = WorkspaceContext(
+            name=workspace_name,
+            title="My Dashboard",
+            context_options_url=context_options_url,
+            context_selector_entity=context_selector_entity,
+            context_selector_label=context_selector_label,
+        )
+        return render_fragment(
+            "workspace/_content.html",
+            workspace=ws,
+            layout_json="[]",
+            primary_actions=[],
+        )
+
+    # Gate 1: conditional on context_options_url
+    def test_widget_absent_when_url_empty(self) -> None:
+        html = self._render(context_options_url="", context_selector_entity="project")
+        assert 'id="dz-context-selector"' not in html
+        assert "fetch(" not in html or "context_options_url" not in html  # no bootstrap either
+        assert "dzPrefs" not in html
+
+    def test_widget_present_when_url_set(self) -> None:
+        html = self._render()
+        assert 'id="dz-context-selector"' in html
+        assert 'for="dz-context-selector"' in html
+        # Bootstrap script present
+        assert "fetch(" in html
+        assert "dzPrefs" in html
+
+    # Gate 2: label fallback
+    def test_label_uses_explicit_label_when_set(self) -> None:
+        html = self._render(
+            context_selector_label="Client",
+            context_selector_entity="customer",
+        )
+        assert "Client:" in html
+        # The entity fallback should NOT appear
+        assert "customer:" not in html  # sanity: no fallback when explicit label present
+
+    def test_label_falls_back_to_entity_with_underscore_replacement(self) -> None:
+        html = self._render(
+            context_selector_label="",
+            context_selector_entity="project_code",
+        )
+        assert "project code:" in html
+
+    # Gate 3: select uses all 4 design tokens
+    def test_select_uses_full_token_set(self) -> None:
+        html = self._render()
+        # Extract the select tag and verify the 4 tokens
+        import re
+
+        select_match = re.search(r'<select[^>]*id="dz-context-selector"[^>]*>', html)
+        assert select_match is not None
+        tag = select_match.group(0)
+        assert "border-[hsl(var(--border))]" in tag
+        assert "bg-[hsl(var(--background))]" in tag
+        assert "text-[hsl(var(--foreground))]" in tag
+        assert "focus:ring-[hsl(var(--ring))]" in tag
+
+    # Gate 4: default "All" option first
+    def test_default_all_option_present(self) -> None:
+        html = self._render()
+        assert '<option value="">All</option>' in html
+
+    # Gate 5: canonical prefs key format
+    def test_canonical_prefs_key_format(self) -> None:
+        html = self._render(workspace_name="ops_board")
+        assert "'workspace.' + wsName + '.context'" in html
+        # The workspace name is tojson-serialised in the script
+        assert '"ops_board"' in html
+
+    # Gate 6: fetch uses context_options_url
+    def test_bootstrap_fetch_uses_options_url(self) -> None:
+        url = "/api/workspaces/my_dashboard/context_options"
+        html = self._render(context_options_url=url)
+        # The URL is tojson-serialised, so it appears as a JSON string literal
+        assert f"fetch({url!r})".replace("'", '"') in html
+
+    # Gate 7: saved value restored via synthetic change event
+    def test_saved_value_restored_with_synthetic_change(self) -> None:
+        html = self._render()
+        assert "sel.value = saved" in html
+        assert "new Event('change')" in html
+
+    # Gate 8: change handler walks region-* elements
+    def test_change_handler_walks_region_elements(self) -> None:
+        html = self._render()
+        assert "querySelectorAll('[id^=\"region-\"][hx-get]')" in html
+
+    # Gate 9: change handler strips context_id when empty
+    def test_change_handler_strips_context_id_when_empty(self) -> None:
+        html = self._render()
+        # Both set and delete paths must be present
+        assert "params.set('context_id', val)" in html
+        assert "params.delete('context_id')" in html
+        # The two paths are gated by a truthy check on val
+        assert "if (val)" in html
+
+    # Gate 10: change handler invokes both htmx.process and htmx.ajax
+    def test_change_handler_uses_htmx_process_and_ajax(self) -> None:
+        html = self._render()
+        assert "htmx.process(el)" in html
+        assert "htmx.ajax('GET'" in html
+
+    # Gate 11: no Alpine directives on the widget
+    def test_no_alpine_directives_on_selector(self) -> None:
+        html = self._render()
+        import re
+
+        # Extract the div wrapping the label+select (lines 39-45 in the template)
+        # The div starts with class="mb-4 flex items-center gap-2"
+        widget_match = re.search(
+            r'<div class="mb-4 flex items-center gap-2">.*?</div>\s*<script>',
+            html,
+            re.DOTALL,
+        )
+        assert widget_match is not None, "context-selector widget block not found"
+        block = widget_match.group(0)
+        for banned in ("x-data", "x-show", "x-transition", "@click", "@change", "@keydown"):
+            assert banned not in block, f"Alpine directive leaked onto selector widget: {banned}"
+
+    # Gate 12: label for= matches select id=
+    def test_label_for_matches_select_id(self) -> None:
+        html = self._render()
+        assert 'for="dz-context-selector"' in html
+        assert 'id="dz-context-selector"' in html
+
+
+# ---------------------------------------------------------------------------
 # Cycle 291 — Experience shell composition contract (experience-shell.md, UX-072)
 # ---------------------------------------------------------------------------
 
