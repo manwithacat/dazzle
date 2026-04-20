@@ -7777,3 +7777,60 @@ Queue is now extremely narrow:
 - **`orphan_lint_rule`** — automatic orphan detection
 
 ---
+
+## Cycle 292 — 2026-04-20 — finding_investigation: EX-053 CSRF fix + v2 Q2 closed
+
+**Strategy:** `finding_investigation` — raw-layer repro + structural fix for EX-053
+**Outcome:** EX-053 → FIXED_LOCALLY. Experience-shell v2 Q2 (transition-button quadruplication) closed as a side effect. 14 new regression tests.
+
+**Chosen this cycle.** Cycle 291 filed EX-053 (plain `<form method="post">` CSRF vulnerability in `experience/_content.html`) with an OPEN status and "mandatory Heuristic 1 raw-layer repro" explicit gate. Exactly the playbook for a `finding_investigation` cycle.
+
+**Heuristic 1 applied — defect confirmed real.** Before touching any code, built a minimal FastAPI TestClient repro:
+
+```python
+app.post('/app/experiences/onboarding/step_one')(handler)
+apply_csrf_protection(app, 'standard')
+client = TestClient(app)
+r1 = client.get(...)                                          # establishes CSRF cookie
+r2 = client.post(...)                                         # plain POST
+r3 = client.post(..., headers={'X-CSRF-Token': r1.cookies['dazzle_csrf']})  # with header
+```
+
+Result: `r2 → 403 "CSRF token missing or invalid"`, `r3 → 200 OK`. The defect is real, not a false positive. Plain `<form method="post">` can't carry custom headers, so all 4 non-form-step transition blocks would have been rejected by CSRF middleware. Heuristic 1 continues paying for its mandatory status — this cycle didn't save unnecessary framework work (the fix IS needed) but it produced the exact mechanism needed to write a durable regression test.
+
+**How nobody noticed.** Only `ops_dashboard.incident_response` experience exists in example apps, and it has 2 non-form steps (`triage`→`investigate` via `alert_list` mode=list, `investigate`→`acknowledge` via `alert_detail` mode=view). These transitions would have been 403'd. The most likely explanation: QA trials and manual testing never actually clicked the non-form transition buttons end-to-end, OR the 403 was silently absorbed by the agent without being reported. Worth a follow-up trial-cycle probe once the fix is deployed.
+
+**The fix: consolidation + CSRF hardening in one commit.**
+
+1. **New macro** at `src/dazzle_ui/templates/macros/experience_transition.html` — `experience_transition_button(tr)` emits a `<button type="button" hx-post="{{ tr.url }}" hx-target="body" hx-swap="innerHTML">` with the 3-style class logic. Single source of truth.
+2. **5 transition-button blocks collapsed to macro calls** in `experience/_content.html` (form-step embedded + detail + table + ready-state + non-surface branches). Before: ~52 lines of near-duplicate template code across 5 locations. After: 5 single-line macro calls.
+3. **CSRF mechanism**: `base.html:63-68`'s global `htmx:configRequest` listener auto-injects `X-CSRF-Token` from the `dazzle_csrf` cookie on every HTMX request. `<button hx-post>` picks this up for free; `<form method="post">` cannot. The fix shifts all 5 branches onto the CSRF-safe path.
+
+**Cross-app verification** (Heuristic 3): 341/341 workspace + lint + ASVS session tests pass (up from 327). 3/3 integration tests exercising experience/ops_dashboard also pass. No regressions.
+
+**14 regression tests added** across three classes:
+
+- **`TestExperienceShellComposition`** (updated): Gate 14 now asserts `hx-post="/url"` on transitions (was: `<form method="post" action="/url">`). New gate 15.5 `test_no_plain_form_post_in_template_source` is a source-level regression guard — reads the template and asserts `<form method="post"` is absent. A future edit that reintroduces a plain form would fail this test immediately, with an error message citing EX-053.
+
+- **`TestExperienceTransitionCSRF`** (3 tests): direct FastAPI TestClient tests pinning the CSRF middleware's enforcement behaviour. These tests encode the Heuristic 1 raw-layer repro so that if the middleware itself ever weakens (e.g. someone exempts `/app/experiences/*`), the guard fails loudly: `test_plain_post_is_rejected_without_csrf_header`, `test_hx_post_style_request_succeeds_with_matching_header`, `test_experiences_path_not_in_csrf_exempt_list`.
+
+- **`TestExperienceTransitionMacro`** (2 tests): pins the macro's output shape — `button`-not-`form`, 3-style class sets, hx-post URL propagation. This protects the consolidation invariant.
+
+**Contract updates.** `experience-shell.md` "Drift forbidden" rule 4 rewritten: previously stated "non-form transitions must use `<form method="post">`" (wrong, CSRF-vulnerable), now states "ALL transitions must use `<button hx-post>` via the `experience_transition_button` macro". Interaction grammar + Anatomy sections updated to reflect the new single-rendering-path reality. Cycle 291's v2 Q2 (quadruplication) is implicitly closed.
+
+**Explore budget used (finding_investigation counts).** Counter: 47 → 48.
+
+### Running UX-governance total: 74 contracts (unchanged — contract content updated but no new UX-NN added)
+
+### Next candidate cycles
+
+OPEN EX rows: 0 (EX-053 now FIXED_LOCALLY).
+
+- **Execute `row-click-keyboard-affordance-gap`** — still parked, needs browser verification
+- **`workspace-heading` + `workspace-context-selector` promotion** — still queued
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority, requires shape taxonomy
+- **NEW: `trial-cycle probe for experience transitions`** — verify the fix end-to-end on `ops_dashboard.incident_response` flow. Not a ux-cycle concern, but worth flagging to the `/trial-cycle` companion loop.
+
+---

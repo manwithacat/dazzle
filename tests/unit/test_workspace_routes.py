@@ -6095,7 +6095,7 @@ class TestExperienceShellComposition:
         assert "bg-[hsl(var(--muted))]" in html
         assert "Step in progress" in html
 
-    # Gate 14 — transition buttons resolve 3 styles
+    # Gate 14 — transition buttons resolve 3 styles, rendered via hx-post (cycle 292: EX-053 fix)
     def test_transition_buttons_three_styles(self) -> None:
         exp = self._make_experience(
             page_context=None,
@@ -6115,9 +6115,29 @@ class TestExperienceShellComposition:
         # default style uses --border
         assert "border-[hsl(var(--border))]" in html
         assert "Skip" in html
-        # Non-surface transitions go through plain <form method="post">
-        assert '<form method="post"' in html
-        assert 'action="/next"' in html
+        # Cycle 292 EX-053 fix: transitions MUST use hx-post (not plain <form method="post">)
+        # so that base.html's htmx:configRequest listener injects the CSRF header
+        assert 'hx-post="/next"' in html
+        assert 'hx-post="/prev"' in html
+        assert 'hx-post="/skip"' in html
+
+    # Gate 15.5 — EX-053 regression guard: zero plain-form POSTs in template source
+    def test_no_plain_form_post_in_template_source(self) -> None:
+        """Plain `<form method="post">` submits can't carry X-CSRF-Token and would be 403'd.
+
+        Cycle 292 removed all 4 plain-form transition blocks in favour of the shared
+        `experience_transition_button` macro. This test pins that invariant — a future
+        edit that reintroduces `<form method="post">` anywhere in this template would
+        silently break experience transitions under CSRF middleware.
+        """
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "experience" / "_content.html").read_text()
+        assert '<form method="post"' not in src, (
+            'experience/_content.html contains a plain <form method="post"> — '
+            "this breaks CSRF (EX-053). Use experience_transition_button macro instead."
+        )
 
     # Gate 15 — no Alpine directives anywhere
     def test_no_alpine_directives(self) -> None:
@@ -6148,3 +6168,145 @@ class TestExperienceShellComposition:
         html = self._render(single)
         assert "Get Started" in html  # title still renders
         assert "data-dz-exp-step=" not in html  # no step markers
+
+
+# ---------------------------------------------------------------------------
+# Cycle 292 — EX-053 raw-layer CSRF regression (Heuristic 1 repro pinned as test)
+# ---------------------------------------------------------------------------
+
+
+class TestExperienceTransitionCSRF:
+    """Raw-layer CSRF enforcement against `/app/experiences/*` endpoints.
+
+    Cycle 292 — EX-053 investigation. Pre-cycle, the experience shell used
+    plain `<form method="post">` for 4 of its 5 transition-button branches
+    (detail / table / ready-state / non-surface). These submits can't carry
+    the `X-CSRF-Token` header, so `dazzle_back.runtime.csrf.CSRFMiddleware`
+    would have 403'd them.
+
+    Cycle 292's fix converted all 5 branches to `<button hx-post>` via the
+    new `experience_transition_button` macro. `base.html`'s global
+    `htmx:configRequest` listener auto-injects the CSRF header on every
+    HTMX request, so the flows now succeed.
+
+    These tests pin CSRF middleware behaviour directly (no templates
+    involved) so a future regression to plain-form submits OR a weakening
+    of the CSRF check itself fails loudly.
+    """
+
+    def _make_app(self):
+        from fastapi import FastAPI
+
+        from dazzle_back.runtime.csrf import apply_csrf_protection
+
+        app = FastAPI()
+
+        @app.post("/app/experiences/onboarding/step_one")
+        def step_post() -> dict[str, bool]:
+            return {"ok": True}
+
+        @app.get("/app/experiences/onboarding/step_one")
+        def step_get() -> dict[str, str]:
+            return {"step": "ok"}
+
+        apply_csrf_protection(app, "standard")
+        return app
+
+    def test_plain_post_is_rejected_without_csrf_header(self) -> None:
+        """Without X-CSRF-Token header, middleware returns 403 — proves the pre-fix bug was real."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(self._make_app())
+        # First GET to establish the CSRF cookie
+        r1 = client.get("/app/experiences/onboarding/step_one")
+        assert r1.status_code == 200
+        assert "dazzle_csrf" in r1.cookies
+        # POST without header — simulates a plain <form method="post"> submit
+        r2 = client.post("/app/experiences/onboarding/step_one")
+        assert r2.status_code == 403
+        assert "CSRF" in r2.json()["detail"]
+
+    def test_hx_post_style_request_succeeds_with_matching_header(self) -> None:
+        """With X-CSRF-Token header matching cookie, POST passes — the fix's mechanism."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(self._make_app())
+        r1 = client.get("/app/experiences/onboarding/step_one")
+        csrf = r1.cookies.get("dazzle_csrf", "")
+        assert csrf
+        r2 = client.post(
+            "/app/experiences/onboarding/step_one",
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert r2.status_code == 200
+        assert r2.json() == {"ok": True}
+
+    def test_experiences_path_not_in_csrf_exempt_list(self) -> None:
+        """Guard: `/app/experiences/*` must never be added to the CSRF exempt list.
+
+        The fix relies on CSRF middleware actively protecting these endpoints.
+        If someone later 'simplifies' by exempting them, the protection evaporates.
+        """
+        from dazzle_back.runtime.csrf import configure_csrf_for_profile
+
+        config = configure_csrf_for_profile("standard")
+        assert "/app/experiences" not in config.exempt_paths
+        for prefix in config.exempt_path_prefixes:
+            assert not "/app/experiences".startswith(prefix), (
+                f"exempt prefix {prefix!r} would leak CSRF protection on experience endpoints"
+            )
+
+
+class TestExperienceTransitionMacro:
+    """Cycle 292 — shared `experience_transition_button` macro.
+
+    The 5 transition-button branches in `experience/_content.html` all route
+    through this single macro. Tests pin the macro's output shape so a
+    future edit can't silently regress the CSRF fix OR the 3-style rendering.
+    """
+
+    def _render_with_transitions(self, transitions: list[dict]) -> str:
+        from dazzle_ui.runtime.template_context import (
+            ExperienceContext,
+            ExperienceStepContext,
+            ExperienceTransitionContext,
+        )
+
+        exp = ExperienceContext(
+            name="demo",
+            title="Demo",
+            steps=[ExperienceStepContext(name="s", title="S", is_current=True)],
+            current_step="s",
+            transitions=[ExperienceTransitionContext(**t) for t in transitions],
+            page_context=None,
+        )
+        return render_fragment("experience/_content.html", experience=exp)
+
+    def test_macro_emits_button_not_form(self) -> None:
+        html = self._render_with_transitions(
+            [{"event": "next", "label": "Next", "style": "primary", "url": "/next"}]
+        )
+        assert '<button type="button"' in html
+        assert 'hx-post="/next"' in html
+        assert 'hx-target="body"' in html
+        assert 'hx-swap="innerHTML"' in html
+        assert '<form method="post"' not in html
+
+    def test_macro_three_styles_render_distinct_class_sets(self) -> None:
+        html = self._render_with_transitions(
+            [
+                {"event": "a", "label": "A", "style": "primary", "url": "/a"},
+                {"event": "b", "label": "B", "style": "ghost", "url": "/b"},
+                {"event": "c", "label": "C", "style": "default", "url": "/c"},
+            ]
+        )
+        # Primary: --primary bg + --primary-foreground text
+        assert "bg-[hsl(var(--primary))]" in html
+        assert "hover:brightness-110" in html
+        # Ghost: muted-foreground at rest
+        assert "text-[hsl(var(--muted-foreground))]" in html
+        # Default (bordered)
+        assert "border-[hsl(var(--border))]" in html
+        # All three URLs rendered
+        for url in ("/a", "/b", "/c"):
+            assert f'hx-post="{url}"' in html

@@ -1,6 +1,7 @@
 {# Experience flow content — step progress + inner surface
    Contract: ~/.claude/skills/ux-architect/components/experience-shell.md (UX-072) #}
 {% from 'macros/form_field.html' import render_field %}
+{% from 'macros/experience_transition.html' import experience_transition_button %}
 
 <div data-dz-experience="{{ experience.name }}" class="max-w-4xl mx-auto">
   {# Title #}
@@ -80,12 +81,7 @@
               </button>
               {% for tr in experience.transitions %}
                 {% if tr.event != 'success' %}
-                <button type="button" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}"
-                        hx-post="{{ tr.url }}"
-                        hx-target="body"
-                        hx-swap="innerHTML">
-                  {{ tr.label }}
-                </button>
+                  {{ experience_transition_button(tr) }}
                 {% endif %}
               {% endfor %}
             </div>
@@ -95,13 +91,11 @@
       {# Detail/view step #}
       {% elif ctx.detail %}
         {% include 'components/detail_view.html' %}
-        {# Transition buttons #}
+        {# Transition buttons — hx-post picks up CSRF header via base.html htmx:configRequest listener. #}
         {% if experience.transitions %}
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
-          <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
-          </form>
+            {{ experience_transition_button(tr) }}
           {% endfor %}
         </div>
         {% endif %}
@@ -112,9 +106,7 @@
         {% if experience.transitions %}
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
-          <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
-          </form>
+            {{ experience_transition_button(tr) }}
           {% endfor %}
         </div>
         {% endif %}
@@ -126,9 +118,7 @@
         {% if experience.transitions %}
         <div class="flex gap-3 pt-4">
           {% for tr in experience.transitions %}
-          <form method="post" action="{{ tr.url }}">
-            <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
-          </form>
+            {{ experience_transition_button(tr) }}
           {% endfor %}
         </div>
         {% endif %}
@@ -143,9 +133,7 @@
       {% if experience.transitions %}
       <div class="flex gap-3 pt-4 justify-center">
         {% for tr in experience.transitions %}
-        <form method="post" action="{{ tr.url }}">
-          <button type="submit" class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}">{{ tr.label }}</button>
-        </form>
+          {{ experience_transition_button(tr) }}
         {% endfor %}
       </div>
       {% endif %}
