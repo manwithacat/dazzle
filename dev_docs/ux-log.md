@@ -7730,3 +7730,50 @@ Queue is now extremely narrow:
 - **NEW: `experience/_content.html` parity audit** — Shell contract references this sibling as likely a near-twin. Worth a cross-read cycle to check whether workspace-shell's invariants apply verbatim or if there are legitimate divergences.
 
 ---
+
+## Cycle 291 — 2026-04-20 — contract_audit: experience-shell (UX-072) + EX-053 filed
+
+**Strategy:** `contract_audit` — composition contract for `experience/_content.html`
+**Outcome:** 73 → 74 contracts. Heuristic 1 correction of cycle 290's cross-reference. One concerning finding surfaced + filed as EX-053.
+
+**Chosen this cycle.** Cycle 290 listed "experience/_content.html parity audit" as a follow-up candidate after shipping workspace-shell. Cycle 290's contract described experience-shell as "likely a near-twin" of workspace-shell — a claim that could only be verified by reading the real thing. Before shipping any derivative work that relied on that claim, Heuristic 1 demanded confirmation.
+
+**Heuristic 1 correction.** Read `experience/_content.html` in full. It is **not a twin** — fundamentally different composition: no Alpine controller, no 12-column grid, no detail drawer, no layout JSON island, no context selector, no primary_actions row. The two shells share only the "server-rendered Jinja composition for a top-level authenticated surface" level of similarity. Had I proceeded on cycle 290's claim, any cross-port of workspace-shell invariants (grid, drawer, Alpine scoping) would have been wrong. Cycle-290 contract's cross-reference fixed in-commit.
+
+**Contract at** `~/.claude/skills/ux-architect/components/experience-shell.md` — 15 quality gates + 11 v2 open questions. Notable structural findings:
+
+1. **4-way content dispatcher**: form / detail / table / non-surface + ready-state fallback. Each branch has its own button-row rendering, leading to transition-button block quadruplication (v2 Q2 — drift risk, worth consolidating into a macro).
+2. **Stepper semantic subtlety**: connector line colour is driven by the LEFT step's `is_completed`, not the right step's `is_current`. Using the wrong flag inverts the visual meaning. Gate 7 pins this.
+3. **Submit label branches on `ctx.form.mode == "edit"`**: "Save & Continue" vs "Submit". Non-trivial UX choice worth pinning. Gate 9 asserts it.
+4. **Form branch correctly skips `success` transition**: the submit button IS the success transition, so rendering both would produce two "Continue" buttons. Gate 10 asserts it.
+5. **Deliberately Alpine-free**: this shell is pure server-side, and adding Alpine would duplicate the cookie-backed server state. Gate 15 asserts no Alpine directives survive rendering.
+
+**EX-053 CSRF concern filed.** While writing the contract, the semgrep PostToolUse hook flagged the 4 plain `<form method="post">` transition blocks (lines 101, 114, 128, 145) as CSRF-unprotected. Dazzle's `dazzle_back/runtime/csrf.py` enforces a double-submit-cookie check on unsafe methods via the `X-CSRF-Token` header; plain form submits can't include that header. `/app/experiences/*` paths are NOT in the CSRF exempt list. Either:
+
+- (a) experience transitions are silently being rejected in production (very unlikely — they work in QA trials)
+- (b) a dev profile disables CSRF middleware
+- (c) SameSite cookies + same-origin form submission is deemed adequate
+- (d) something else I don't see
+
+**Mandatory Heuristic 1 follow-up**: reproduce via curl against a running example app before any framework fix is written. Filed as EX-053, status OPEN. This is a candidate `finding_investigation` cycle — explicit test: send an unauthenticated cross-origin POST to `/app/experiences/<name>/<step>?event=continue` and observe whether CSRF middleware rejects it with 403. If it doesn't, the gap is real and worth a fix.
+
+**No drift fixed** this cycle — cycle 291 is a *contract authoring* cycle. Transition-button consolidation (v2 Q2), title-size drift (v2 Q1), and CSRF wiring (EX-053) are all candidates for future cycles. Scope discipline protected this cycle from ballooning.
+
+**12 regression tests** in `TestExperienceShellComposition`. Tests for the form/detail/table dispatcher branches deliberately scoped to use `page_context=None` (non-surface branch) + transition buttons — testing the form/detail/table branches would require constructing full inner contexts (FormContext / DetailContext / TableContext) which is out of scope for a shell-level contract. The inner content rendering is owned by the sub-contracts (form-chrome UX-016, detail-view UX-029, data-table).
+
+**Notable test discovery**: Gate 7 (connector line colour) uses regex to extract the first connector's `bg-[hsl(var(--X))]` class and asserts it matches expectations for both branches (completed-left → --primary, pending-left → --border). Cleaner than counting occurrences since both colours appear elsewhere in the rendered HTML (on step chips, for example). This pattern is worth reusing in future stepper-style contracts.
+
+**Cross-app verification** (Heuristic 3): 327/327 workspace + lint tests pass (up from 315 pre-cycle). No regressions.
+
+### Running UX-governance total: 74 contracts
+
+### Next candidate cycles
+
+- **EX-053 `finding_investigation`** — reproduce CSRF behaviour on experience transitions. Candidate for next cycle.
+- **Transition-button macro extraction** — v2 Q2 from this cycle. Quadruplicated block, 5 places to update in lockstep. Similar consolidation pattern to cycle 282 (attention_accent) + cycle 283 (ref_cell).
+- **Execute `row-click-keyboard-affordance-gap`** — still parked, needs browser verification
+- **`workspace-heading` + `workspace-context-selector` promotion** — still queued
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+
+---

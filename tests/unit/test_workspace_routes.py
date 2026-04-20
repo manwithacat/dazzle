@@ -5934,3 +5934,217 @@ class TestWorkspaceShellComposition:
         root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
         src = (root / "workspace" / "_content.html").read_text()
         assert "Contract: ~/.claude/skills/ux-architect/components/workspace-shell.md" in src
+
+
+# ---------------------------------------------------------------------------
+# Cycle 291 — Experience shell composition contract (experience-shell.md, UX-072)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestExperienceShellComposition:
+    """experience/_content.html — composition shell pinning step progress + 4-way dispatcher.
+
+    Cycle 291 — contract at ~/.claude/skills/ux-architect/components/experience-shell.md.
+    Distinct from workspace-shell (cycle 290's "near-twin" claim was wrong —
+    different shell entirely). Tests cover: outer wrapper, title, stepper
+    conditional + coloring, 4-way dispatcher branches (non-surface easiest),
+    transition buttons, Alpine-free guarantee.
+    """
+
+    def _make_experience(
+        self,
+        *,
+        steps: list[dict] | None = None,
+        current_step: str = "step_one",
+        transitions: list[dict] | None = None,
+        page_context: object | None = None,
+    ) -> object:
+        from dazzle_ui.runtime.template_context import (
+            ExperienceContext,
+            ExperienceStepContext,
+            ExperienceTransitionContext,
+        )
+
+        default_steps = (
+            steps
+            if steps is not None
+            else [
+                {"name": "step_one", "title": "First Step", "is_current": True},
+                {"name": "step_two", "title": "Second Step"},
+            ]
+        )
+        step_ctxs = [ExperienceStepContext(**s) for s in default_steps]
+
+        tr_ctxs = [ExperienceTransitionContext(**t) for t in (transitions or [])]
+
+        return ExperienceContext(
+            name="onboarding",
+            title="Get Started",
+            steps=step_ctxs,
+            current_step=current_step,
+            transitions=tr_ctxs,
+            page_context=page_context,  # type: ignore[arg-type]
+        )
+
+    def _render(self, experience: object) -> str:
+        return render_fragment("experience/_content.html", experience=experience)
+
+    # Gate 1
+    def test_outer_wrapper_has_data_experience_and_centering(self) -> None:
+        html = self._render(self._make_experience())
+        assert 'data-dz-experience="onboarding"' in html
+        assert "max-w-4xl" in html
+        assert "mx-auto" in html
+
+    # Gate 2
+    def test_title_renders_as_h2_with_title_text(self) -> None:
+        html = self._render(self._make_experience())
+        assert "<h2" in html
+        assert "Get Started" in html
+
+    # Gate 3
+    def test_stepper_conditional_on_multi_step(self) -> None:
+        # Single step → no stepper
+        single = self._make_experience(
+            steps=[{"name": "only_step", "title": "Only", "is_current": True}],
+            current_step="only_step",
+        )
+        html_single = self._render(single)
+        assert 'class="dz-steps' not in html_single
+        # Multi step → stepper present
+        html_multi = self._render(self._make_experience())
+        assert 'class="dz-steps' in html_multi
+
+    # Gate 4
+    def test_each_step_has_data_marker(self) -> None:
+        html = self._render(self._make_experience())
+        assert 'data-dz-exp-step="step_one"' in html
+        assert 'data-dz-exp-step="step_two"' in html
+
+    # Gate 5
+    def test_current_step_has_aria_current(self) -> None:
+        html = self._render(self._make_experience())
+        # aria-current="step" must appear on the current step's <li>
+        assert 'aria-current="step"' in html
+        # exactly once (only the current step)
+        assert html.count('aria-current="step"') == 1
+
+    # Gate 6 — completed/current steps use --primary, pending use --muted
+    def test_step_coloring_uses_correct_tokens(self) -> None:
+        exp = self._make_experience(
+            steps=[
+                {"name": "step_one", "title": "One", "is_completed": True},
+                {"name": "step_two", "title": "Two", "is_current": True},
+                {"name": "step_three", "title": "Three"},  # pending
+            ],
+            current_step="step_two",
+        )
+        html = self._render(exp)
+        # Current/completed: --primary
+        assert "bg-[hsl(var(--primary))]" in html
+        assert "text-[hsl(var(--primary-foreground))]" in html
+        # Pending: --muted
+        assert "bg-[hsl(var(--muted))]" in html
+        assert "text-[hsl(var(--muted-foreground))]" in html
+
+    # Gate 7 — connector line colour reflects LEFT step's completion
+    def test_connector_line_colour_by_left_step(self) -> None:
+        # Left step completed → connector uses --primary
+        exp_completed_left = self._make_experience(
+            steps=[
+                {"name": "a", "title": "A", "is_completed": True},
+                {"name": "b", "title": "B", "is_current": True},
+            ],
+            current_step="b",
+        )
+        html = self._render(exp_completed_left)
+        # Look for the connector <div class="flex-1 mx-3 h-px ..."> with --primary
+        assert "flex-1 mx-3 h-px" in html
+        # With completed left, --primary line colour appears on the connector
+        # (and also on the left step's chip — we just verify at least one primary occurrence)
+        # Stronger assertion: search for the pattern specifically
+        import re
+
+        connectors = re.findall(
+            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
+            html,
+        )
+        assert connectors, f"no connector line matched — got: {html[:500]}"
+        assert connectors[0] == "bg-[hsl(var(--primary))]"
+
+        # Left step NOT completed → connector uses --border
+        exp_pending_left = self._make_experience(
+            steps=[
+                {"name": "a", "title": "A", "is_current": True},
+                {"name": "b", "title": "B"},
+            ],
+            current_step="a",
+        )
+        html2 = self._render(exp_pending_left)
+        connectors2 = re.findall(
+            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
+            html2,
+        )
+        assert connectors2 == ["bg-[hsl(var(--border))]"]
+
+    # Gate 13 — non-surface step renders muted placeholder
+    def test_non_surface_step_renders_muted_placeholder(self) -> None:
+        # page_context=None → non-surface branch
+        html = self._render(self._make_experience(page_context=None))
+        assert "bg-[hsl(var(--muted))]" in html
+        assert "Step in progress" in html
+
+    # Gate 14 — transition buttons resolve 3 styles
+    def test_transition_buttons_three_styles(self) -> None:
+        exp = self._make_experience(
+            page_context=None,
+            transitions=[
+                {"event": "continue", "label": "Continue", "style": "primary", "url": "/next"},
+                {"event": "back", "label": "Back", "style": "ghost", "url": "/prev"},
+                {"event": "skip", "label": "Skip", "style": "default", "url": "/skip"},
+            ],
+        )
+        html = self._render(exp)
+        # primary style uses --primary token
+        assert "bg-[hsl(var(--primary))]" in html
+        assert "Continue" in html
+        # ghost style uses --muted-foreground at rest
+        assert "text-[hsl(var(--muted-foreground))]" in html
+        assert "Back" in html
+        # default style uses --border
+        assert "border-[hsl(var(--border))]" in html
+        assert "Skip" in html
+        # Non-surface transitions go through plain <form method="post">
+        assert '<form method="post"' in html
+        assert 'action="/next"' in html
+
+    # Gate 15 — no Alpine directives anywhere
+    def test_no_alpine_directives(self) -> None:
+        exp = self._make_experience(
+            page_context=None,
+            transitions=[{"event": "continue", "label": "Continue", "style": "primary"}],
+        )
+        html = self._render(exp)
+        for banned in ("x-data", "x-show", "x-transition", "x-for", '@click"', "@keydown"):
+            assert banned not in html, f"Alpine directive leaked into experience shell: {banned}"
+
+    # Contract pointer
+    def test_contract_pointer_header_present(self) -> None:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "experience" / "_content.html").read_text()
+        assert (
+            "Contract: ~/.claude/skills/ux-architect/components/experience-shell.md (UX-072)" in src
+        )
+
+    # Stepper omission with single step — sanity check
+    def test_single_step_renders_without_stepper_but_keeps_title(self) -> None:
+        single = self._make_experience(
+            steps=[{"name": "only", "title": "Only", "is_current": True}],
+            current_step="only",
+        )
+        html = self._render(single)
+        assert "Get Started" in html  # title still renders
+        assert "data-dz-exp-step=" not in html  # no step markers
