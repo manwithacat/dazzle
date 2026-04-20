@@ -91,11 +91,12 @@
           },
           {
             "field_name": "avatar_url",
-            "strategy": "date_relative",
+            "strategy": "static_list",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "values": [
+                "https://example.com/avatar1.png",
+                "https://example.com/avatar2.png"
+              ]
             }
           },
           {
@@ -193,19 +194,16 @@
           },
           {
             "field_name": "assigned_to",
-            "strategy": "free_text_lorem",
+            "strategy": "foreign_key",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "target_entity": "User"
             }
           },
           {
             "field_name": "created_by",
-            "strategy": "date_relative",
+            "strategy": "foreign_key",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "target_entity": "User"
             }
           },
           {

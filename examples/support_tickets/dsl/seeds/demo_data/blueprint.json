@@ -100,10 +100,60 @@
           },
           {
             "field_name": "ticket_number",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "TKT-0001",
+                "TKT-0002",
+                "TKT-0003",
+                "TKT-0004",
+                "TKT-0005",
+                "TKT-0006",
+                "TKT-0007",
+                "TKT-0008",
+                "TKT-0009",
+                "TKT-0010",
+                "TKT-0011",
+                "TKT-0012",
+                "TKT-0013",
+                "TKT-0014",
+                "TKT-0015",
+                "TKT-0016",
+                "TKT-0017",
+                "TKT-0018",
+                "TKT-0019",
+                "TKT-0020",
+                "TKT-0021",
+                "TKT-0022",
+                "TKT-0023",
+                "TKT-0024",
+                "TKT-0025",
+                "TKT-0026",
+                "TKT-0027",
+                "TKT-0028",
+                "TKT-0029",
+                "TKT-0030",
+                "TKT-0031",
+                "TKT-0032",
+                "TKT-0033",
+                "TKT-0034",
+                "TKT-0035",
+                "TKT-0036",
+                "TKT-0037",
+                "TKT-0038",
+                "TKT-0039",
+                "TKT-0040",
+                "TKT-0041",
+                "TKT-0042",
+                "TKT-0043",
+                "TKT-0044",
+                "TKT-0045",
+                "TKT-0046",
+                "TKT-0047",
+                "TKT-0048",
+                "TKT-0049",
+                "TKT-0050"
+              ]
             }
           },
           {
@@ -184,19 +234,16 @@
           },
           {
             "field_name": "created_by",
-            "strategy": "date_relative",
+            "strategy": "foreign_key",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "target_entity": "User"
             }
           },
           {
             "field_name": "assigned_to",
-            "strategy": "free_text_lorem",
+            "strategy": "foreign_key",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "target_entity": "User"
             }
           },
           {
@@ -249,18 +296,16 @@
           },
           {
             "field_name": "ticket",
-            "strategy": "free_text_lorem",
+            "strategy": "foreign_key",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "target_entity": "Ticket"
             }
           },
           {
             "field_name": "author",
-            "strategy": "free_text_lorem",
+            "strategy": "foreign_key",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "target_entity": "User"
             }
           },
           {

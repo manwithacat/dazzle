@@ -65,11 +65,13 @@
           },
           {
             "field_name": "batch_number",
-            "strategy": "date_relative",
+            "strategy": "static_list",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "values": [
+                "BATCH-001",
+                "BATCH-002",
+                "BATCH-003"
+              ]
             }
           },
           {
@@ -111,8 +113,10 @@
           },
           {
             "field_name": "assigned_tester_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tester"
+            }
           },
           {
             "field_name": "deployed_at",
@@ -173,11 +177,15 @@
           },
           {
             "field_name": "location",
-            "strategy": "date_relative",
+            "strategy": "static_list",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "values": [
+                "London",
+                "Manchester",
+                "Birmingham",
+                "Edinburgh",
+                "Bristol"
+              ]
             }
           },
           {
@@ -245,13 +253,17 @@
           },
           {
             "field_name": "device_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Device"
+            }
           },
           {
             "field_name": "reported_by_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "User"
+            }
           },
           {
             "field_name": "category",
@@ -403,21 +415,25 @@
           },
           {
             "field_name": "device_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Device"
+            }
           },
           {
             "field_name": "tester_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tester"
+            }
           },
           {
             "field_name": "duration_minutes",
-            "strategy": "date_relative",
+            "strategy": "numeric_range",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "min": 0,
+              "max": 100,
+              "decimals": 0
             }
           },
           {
@@ -442,11 +458,11 @@
           },
           {
             "field_name": "temperature",
-            "strategy": "date_relative",
+            "strategy": "numeric_range",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "min": 0,
+              "max": 100,
+              "decimals": 2
             }
           },
           {
@@ -543,11 +559,13 @@
           },
           {
             "field_name": "applies_to_batch",
-            "strategy": "date_relative",
+            "strategy": "static_list",
             "params": {
-              "anchor": "today",
-              "min_offset_days": -365,
-              "max_offset_days": 0
+              "values": [
+                "BATCH-001",
+                "BATCH-002",
+                "BATCH-003"
+              ]
             }
           },
           {
@@ -601,13 +619,17 @@
           },
           {
             "field_name": "created_by_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "User"
+            }
           },
           {
             "field_name": "assigned_to_id",
-            "strategy": "uuid_generate",
-            "params": {}
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "User"
+            }
           },
           {
             "field_name": "status",
