@@ -10151,4 +10151,54 @@ Future observer upgrades should wait for Alpine hydration (poll for `Alpine.init
 
 ---
 
+## Cycle 332 — 2026-04-20 — substrate-intel catalog consolidated into /ux-cycle skill
+
+**Strategy:** housekeeping / skill-doc — the 4 observer failure modes discovered across cycles 229/234/330/331 had been ephemeral. Consolidating them into the durable `/ux-cycle` skill spec preserves the knowledge.
+**Outcome:** Added a 4-row "Catalog of observed substrate-intel failure modes" table to Heuristic 1's "Why subagent observations are unreliable" section in `.claude/commands/ux-cycle.md`. Each row captures {Mode name, Surfacing cycle, Telltale, Mitigation}. 11 lines added.
+
+**What was scattered:**
+
+- Cycle 229 — "silent form submit" framework gap turned out to be substrate statelessness
+- Cycle 234 — empty-state CTA observer reports were DSL copy misread; framework was correct
+- Cycle 330 — drawer "Open full page" `href="#"` observer report was pre-open DOM read of dynamic element
+- Cycle 331 — "Delete  items" placeholder observer report was pre-hydration textContent extraction
+
+Each cycle wrote a prose paragraph documenting the mode but **no single catalog existed**. Future investigation cycles would have had to read 100+ cycles of logs to learn the pattern. Cycle 332's catalog makes the lookup mechanical: "subagent reports X, check the catalog for telltales, decide before filing."
+
+**The format (4 rows, tabular):**
+
+| # | Mode | Surfaced | Telltale | Mitigation |
+|---|---|---|---|---|
+| 1 | Substrate statelessness | 229 | Form values evaporate between tool calls | Raw curl/httpx repro with explicit payload |
+| 2 | DSL copy misread as affordance | 234 | Empty-state "Add your first X!" triggers "dead-end" report | Grep DSL `empty:` + check template `{% if create_url %}` gate |
+| 3 | Pre-open DOM of dynamic elements | 330 | `<a hidden>` with no `href` | Check for `hidden` + missing dynamic attrs |
+| 4 | Pre-hydration textContent | 331 | `x-text` / `x-cloak` wrappers | Check ancestors for Alpine / HTMX directives |
+
+**Closure directive added:** "Add to this catalog whenever a `finding_investigation` cycle pivots from 'framework bug' → 'observer artifact'." This self-perpetuates — future cycles with 5th/6th modes extend the table, not just write log paragraphs.
+
+**Meta-pattern: knowledge consolidation is a durable cycle type.**
+
+Cycle 326 consolidated the preflight-gate description from cycle 312/314/318/319 into a single Step 0a.4. Cycle 332 consolidates observer failure modes from 4 cycles into one catalog. Both are "scattered learnings → durable skill doc" moves. This is a legitimate cycle category alongside `contract_audit`, `finding_investigation`, etc. — **skill_doc_consolidation** or similar.
+
+The cycle's value comes from:
+- Reducing future-runner lookup cost
+- Preventing rediscovery (next investigation cycle can skip the pivot)
+- Making pattern recognition mechanical (matrix format)
+
+Not every scatter justifies consolidation. The heuristic: when 3+ cycles have surfaced instances of the same pattern category with a common action template (prevent / detect / pivot), consolidating becomes worth the effort.
+
+**Cross-app verification** (Heuristic 3): N/A — doc-only change.
+
+**Explore budget used**: 87 → 88.
+
+### Running UX-governance total: 79 contracts (unchanged — skill-doc cycle)
+
+### Next candidate cycles
+
+- **Drill EX-002 or EX-026** (genuinely open framework-level rows flagged cycle 331)
+- **Drill EX-017** (ref eager-loading + demo seed, cycle 219 partial)
+- **Pick a new theme for `framework_gap_analysis`**
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
 ---
