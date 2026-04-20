@@ -10031,4 +10031,49 @@ Precedent: cycle 309's retirement of `missing_contracts` strategy — not "we'll
 
 ---
 
+## Cycle 330 — 2026-04-20 — EX-005 Heuristic-1 drill: validates existing FIXED_LOCALLY status
+
+**Strategy:** finding_investigation — a concrete raw-layer Heuristic-1 check on a still-sitting EX row (cycle 329 flagged "pick fresh themes", but before a gap-doc synthesis I wanted a concrete investigation to ground the theme-selection)
+**Outcome:** Drilled into EX-005 (drawer "Open full page" allegedly dead `href="#"`). Heuristic-1 reading of `src/dazzle_ui/templates/workspace/_content.html:251-284` confirms framework is correct: element starts `hidden` with no href; `window.dzDrawer.open(url)` assigns `expand.href = url` before showing it; `page_routes.py:1060` always sends a real URL in the `dz:drawerOpen` event. Observer's report was a pre-open-DOM reading artifact. Backlog row already shows `FIXED_LOCALLY` — this cycle is the human-sign-off validating that status.
+
+**The investigation trail:**
+
+```
+grep dz-drawer-expand src/dazzle_ui/
+→ workspace/_content.html:251: <a id="dz-drawer-expand" hidden class="...">
+→ workspace/_content.html:263: var expand = document.getElementById('dz-drawer-expand');
+
+Read lines 245-305:
+  open(url) { if (url && expand) { expand.href = url; expand.hidden = false; } ... }
+  dz:drawerOpen listener: window.dzDrawer.open(e.detail.url || '');
+
+grep dz:drawerOpen src/dazzle_ui/:
+→ page_routes.py:1060: "dz:drawerOpen": {"url": str(prc.request.url)}
+```
+
+Chain verified: `prc.request.url` (always defined) → event detail.url → `expand.href = url; expand.hidden = false`. The affordance is correct.
+
+**Observer failure mode: pre-open DOM reading.**
+
+The element DOES exist in the DOM before drawer interaction, with `hidden` and no href. A subagent doing `document.querySelector('#dz-drawer-expand').outerHTML` BEFORE the drawer opens would see a parent-less attribute-less link with "Open full page" text. Naive interpretation: "link with no destination = dead affordance". Actual behavior: "hidden template that gets populated at drawer-open time".
+
+This is another instance of Heuristic 1's "subagent observations are unreliable" failure mode — similar to cycle 229's substrate artifact, cycle 234's DSL copy misinterpreted as framework gap.
+
+**Logged for substrate-intel record:**
+
+Add to observer failure modes: "hidden elements with dynamically-assigned attributes". The `hidden` attribute + absent `href` is a tell that the element is a client-side-populated template; observer should treat such elements as "populated-at-interaction" not "statically-dead".
+
+**Explore budget used**: 85 → 86.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+- **Pick a new cross-cycle theme for `framework_gap_analysis`** — still outstanding; could start with theme "widget-selection dispatch gap" per EX-006/009 cluster (cycle 232 fixed date half, ref half is structural)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **Drill more still-OPEN concerning EX rows** — EX-016 (duplicate-data regions), EX-023 (bulk-action placeholder), EX-024 (a11y row-action labels) are concrete and small
+
+---
+
 ---
