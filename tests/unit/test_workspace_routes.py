@@ -2075,6 +2075,280 @@ class TestGridRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("GRID") == "workspace/regions/grid.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 276 — Timeline region contract (UX-067)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestTimelineRegionTemplate:
+    """Timeline region renders a vertical chronological feed with bullet markers.
+
+    Cycle 276 — contracts timeline.html. Template was already drift-clean on
+    tokens. Most-adopted uncontracted region in the PROP-032 decomposition
+    (5 DSL sites across fieldtest_hub, ops_dashboard, simple_task).
+    """
+
+    def _timeline_kwargs(self, **overrides):
+        defaults = {
+            "title": "Recent Events",
+            "items": [],
+            "columns": [
+                {"key": "title", "label": "Title", "type": "text"},
+                {"key": "occurred_at", "label": "When", "type": "date"},
+                {"key": "status", "label": "Status", "type": "badge"},
+            ],
+            "display_key": "title",
+            "action_url": "",
+            "action_id_field": "id",
+            "entity_name": "Event",
+            "total": 0,
+            "empty_message": "No events yet.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def _now(self):
+        from datetime import datetime
+
+        return datetime.utcnow()
+
+    def test_renders_canonical_wrapper_and_list(self) -> None:
+        """Gates 1 + 2: dz-timeline-region + dz-timeline-list <ul>."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "Alpha event",
+                        "occurred_at": self._now(),
+                        "status": "done",
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "dz-timeline-region" in html
+        assert "dz-timeline-list" in html
+        assert "<ul" in html
+        assert "border-l" in html
+
+    def test_item_count_matches_items_length(self) -> None:
+        """Gate 3: dz-timeline-item count equals len(items)."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "A",
+                        "occurred_at": self._now(),
+                        "status": "open",
+                    },
+                    {
+                        "id": "2",
+                        "title": "B",
+                        "occurred_at": self._now(),
+                        "status": "done",
+                    },
+                    {
+                        "id": "3",
+                        "title": "C",
+                        "occurred_at": self._now(),
+                        "status": "open",
+                    },
+                ],
+                total=3,
+            ),
+        )
+        assert html.count("dz-timeline-item") == 3
+
+    def test_bullet_marker_per_item(self) -> None:
+        """Gate 4: each item has one dz-timeline-bullet SVG."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "A",
+                        "occurred_at": self._now(),
+                        "status": "open",
+                    },
+                    {
+                        "id": "2",
+                        "title": "B",
+                        "occurred_at": self._now(),
+                        "status": "done",
+                    },
+                ],
+                total=2,
+            ),
+        )
+        assert html.count("dz-timeline-bullet") == 2
+
+    def test_bullet_colour_critical_uses_destructive_token(self) -> None:
+        """Gate 5 (critical): _attention={level:critical} → --destructive."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "Outage",
+                        "occurred_at": self._now(),
+                        "status": "down",
+                        "_attention": {"level": "critical", "message": "Service down"},
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "text-[hsl(var(--destructive))]" in html
+
+    def test_bullet_colour_warning_uses_warning_token(self) -> None:
+        """Gate 5 (warning): --warning on bullet."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "Degraded",
+                        "occurred_at": self._now(),
+                        "status": "degraded",
+                        "_attention": {"level": "warning", "message": "High latency"},
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "text-[hsl(var(--warning))]" in html
+
+    def test_bullet_colour_default_uses_primary_token(self) -> None:
+        """Gate 5 (default): no attention → --primary."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "Normal event",
+                        "occurred_at": self._now(),
+                        "status": "ok",
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "text-[hsl(var(--primary))]" in html
+
+    def test_htmx_drill_down_wired_when_action_url(self) -> None:
+        """Gate 8: content pad has hx-get iff action_url is set.
+
+        Note: drill-down is on the content pad <div>, not the list item <li>.
+        """
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        with_action = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[{"id": "abc", "title": "A", "occurred_at": now, "status": "ok"}],
+                action_url="/app/event/{id}",
+                total=1,
+            ),
+        )
+        assert 'hx-get="/app/event/abc"' in with_action
+        assert "#dz-detail-drawer-content" in with_action
+        assert "cursor-pointer" in with_action
+
+        without_action = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[{"id": "abc", "title": "A", "occurred_at": now, "status": "ok"}],
+                action_url="",
+                total=1,
+            ),
+        )
+        assert "hx-get=" not in without_action
+
+    def test_truncation_footer_conditional(self) -> None:
+        """Gate 9: 'Showing N of M' renders only when total > len(items)."""
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        truncated = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {"id": "1", "title": "A", "occurred_at": now, "status": "ok"},
+                    {"id": "2", "title": "B", "occurred_at": now, "status": "ok"},
+                ],
+                total=50,
+            ),
+        )
+        assert "Showing 2 of 50" in truncated
+
+        not_truncated = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {"id": "1", "title": "A", "occurred_at": now, "status": "ok"},
+                ],
+                total=1,
+            ),
+        )
+        assert "Showing" not in not_truncated
+
+    def test_empty_state_when_no_items(self) -> None:
+        """Gate 10: items empty → role=status empty state, no list."""
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(items=[], empty_message="Nothing happened yet."),
+        )
+        assert "<ul" not in html
+        assert "dz-timeline-item" not in html
+        assert 'role="status"' in html
+        assert "Nothing happened yet." in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 11: zero DaisyUI class references."""
+        from datetime import datetime
+
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            **self._timeline_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "title": "A",
+                        "occurred_at": datetime.utcnow(),
+                        "status": "ok",
+                    },
+                ],
+                total=1,
+            ),
+        )
+        for banned in (
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "badge-error",
+            "btn-primary",
+            "card-body",
+            "progress-primary",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_timeline_routes_to_timeline_template(self) -> None:
+        """Gate 0 (routing): TIMELINE display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("TIMELINE") == "workspace/regions/timeline.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 

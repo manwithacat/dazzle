@@ -1,15 +1,17 @@
-{# Timeline region — UX-035 adopter #7. #}
+{# Timeline region — UX-035 adopter #7.
+   Contract: ~/.claude/skills/ux-architect/components/timeline-region.md (UX-067) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
+<div class="dz-timeline-region">
   {% if items %}
-  <ul class="relative pl-4 border-l border-[hsl(var(--border))] space-y-3">
+  <ul class="dz-timeline-list relative pl-4 border-l border-[hsl(var(--border))] space-y-3">
     {% for item in items %}
     {% set attn = item.get("_attention") if item.get is defined else none %}
-    <li class="relative">
+    <li class="dz-timeline-item relative">
       {# Bullet marker on the border line #}
       <span class="absolute -left-[21px] top-1.5 flex h-3 w-3 items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="dz-timeline-bullet h-3 w-3
           {% if attn and attn.level == 'critical' %}text-[hsl(var(--destructive))]
           {% elif attn and attn.level == 'warning' %}text-[hsl(var(--warning))]
           {% else %}text-[hsl(var(--primary))]{% endif %}"
@@ -32,7 +34,7 @@
            enclosing dashboard slot owns all card chrome; adding an
            edge here reads as a card-in-card (issue #794 second
            follow-up). Hover state uses bg tint for affordance. #}
-        <div class="flex-1 py-1 px-2 rounded-[4px]
+        <div class="dz-timeline-content flex-1 py-1 px-2 rounded-[4px]
           {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}
@@ -68,4 +70,5 @@
   {% else %}
   <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No events yet.") }}</p>
   {% endif %}
+</div>
 {% endcall %}
