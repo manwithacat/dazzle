@@ -9870,4 +9870,59 @@ Cycles 311-324 surfaced 6 drift classes in code and gates; cycle 326 closes a 7t
 
 ---
 
+## Cycle 327 — 2026-04-20 — Python-module orphan investigation: hot_reload.py FILED→#834
+
+**Strategy:** finding_investigation — Heuristic-1 Python-module orphan scan to explore whether a formal lint is worth building, instead of building the lint directly
+**Outcome:** Scan found 6 candidates → narrowed to 1 real orphan (`src/dazzle_ui/runtime/hot_reload.py`, 463 LOC, zero importers). Filed as [#834](https://github.com/manwithacat/dazzle/issues/834) for delete-vs-wire-up-vs-document decision. Decision on building a formal Python orphan lint: **deferred** until more signal justifies it.
+
+**The scan:**
+
+Naive scan:
+- 54 Python modules under `src/dazzle_ui/`
+- 48 reachable via absolute-import matches (`from dazzle_ui.X import Y` or `import dazzle_ui.X`)
+- 6 potential orphans
+
+Heuristic 1 verification (relative imports + re-exports):
+- `dazzle_ui.themes.css_generator` → FALSE POSITIVE (`from .css_generator` in themes/__init__.py)
+- `dazzle_ui.themes.presets` → FALSE POSITIVE (`from .presets` in themes/__init__.py + resolver.py)
+- `dazzle_ui.tests` (3 modules) → likely NOT ORPHANED (test files discovered by pytest collection rather than imported)
+- **`dazzle_ui.runtime.hot_reload` → GENUINE ORPHAN** (463 LOC, docstring describes SSE-driven file watcher, no consumer)
+
+**False-positive rate: 83%** (5/6 candidates). This validates cycle 317's warning that Python orphan lints are "MUCH more complex than template orphan" due to relative imports, test discovery, plugin loading, entry points, etc. A naive module-orphan lint would be noisy.
+
+**Why file an issue instead of build a lint:**
+
+Cycle 324's external-resource lint was net-positive because:
+- Clear detection criterion (`https://` URLs outside Jinja comments)
+- Low false-positive rate (~0 at baseline)
+- Small allowlist (5 entries)
+
+A Python module orphan lint at cycle 327:
+- Complex detection (relative imports, test discovery, dynamic loading, entry points)
+- High false-positive rate (83% from this scan)
+- Allowlist would need ~10 entries just for src/dazzle_ui/tests + pyproject console_scripts
+- **One real finding** after hours of engineering would be a poor ratio
+
+Cheaper path: **file the one real finding as an issue**, defer the lint until signal accumulates. If 3+ similar findings surface across future cycles, revisit. Until then, `/issues` pickup of #834 is the direct path to resolution.
+
+**Pattern reinforcement: "cycle-as-surface" is complementary to "cycle-as-lint".**
+
+Cycles 302-324 built the horizontal-discipline lint stack — converting accidental discovery into systematic discovery. Cycle 327 illustrates the inverse: when signal is sparse, a focused cycle that surfaces N findings as issues is more cost-effective than lint infrastructure. The loop doesn't need every drift class to become a lint.
+
+**Cross-app verification** (Heuristic 3): N/A — investigation only, no framework runtime code touched.
+
+**Explore budget used**: 82 → 83.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+- **If #834 closes toward "delete"**, reclaim 463 LOC from dazzle_ui; if "wire up", follow-on issue for the dev-server integration
+- **Re-run Python-module orphan scan across `src/dazzle_back/` + `src/dazzle/`** — may surface more findings, increasing pressure to build the lint (raises the signal:noise ratio)
+- **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
