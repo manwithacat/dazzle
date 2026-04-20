@@ -9418,4 +9418,68 @@ Cycle 317's gap doc asked "is there a 'gate cycle' vs 'fast cycle' distinction w
 
 ---
 
+## Cycle 320 — 2026-04-20 — test-ux-deep target: Axis A1 closes broader-mypy gap
+
+**Strategy:** infrastructure extension — implements the third and final Axis A fix from cycle 317's gap doc
+**Outcome:** Added `make test-ux-deep` target — a superset of `test-ux-preflight` that also runs `mypy` across core + cli + mcp + dazzle_back (631 files). ~15s warm wall time. Complements preflight (which stays at <5s for cron cadence).
+
+**Why separate target instead of preflight extension:**
+
+Cycle 314 rejected adding dazzle_back mypy to preflight because it pushed gate cost 9s → 13s. Cycle 320's solution: two-tier gate structure.
+
+| Gate | Scope | Wall time | Invocation |
+|---|---|---|---|
+| `test-ux-preflight` | 43 tests + mypy(dazzle_ui, 54 files) + git status | ~5s | Step 0a.4 of every `/ux-cycle` |
+| `test-ux-deep` | preflight + mypy(core+cli+mcp+back, 631 files) | ~15s warm | Manual; recommended before `/ship` |
+
+This matches the cost structure: preflight is paid on every cron tick (6/hour), deep is paid at push-time (~1/hour at most).
+
+**Help-text discoverability update.**
+
+Updated `make help` to list both targets:
+
+```
+test-ux-preflight  UX cycle gate (~5s): lints + snapshots + card-safety + mypy(ui)
+test-ux-deep     Preflight + mypy across core/cli/mcp/back (~15s warm) — use before ship
+```
+
+The earlier help entry for `test-ux-preflight` mentioned "~3s" which was pre-mypy; corrected to ~5s.
+
+**Coverage completeness:**
+
+With cycles 318 (A3 DaisyUI-Python lint), 319 (A2 dist/ warn), and 320 (A1 deep mypy) all shipped, **all three Axis A items from cycle 317's gap doc are now closed**. The silent-drift gap analysis has been fully actioned — the only remaining work is:
+- Axis B (contract_audit discipline checklist) — deferred by gap doc recommendation
+- Class 4 (canonical-helper bypass) — MANUAL; no straightforward lint
+
+**Measured vs estimated:**
+
+The gap doc estimated `test-ux-deep` at ~13s. Actual measurement warm is ~15s (with 631 files mypy'd), cold is ~33s. Ballpark correct; help text reflects the warm figure as the realistic expectation.
+
+**Cross-app verification** (Heuristic 3): N/A — build-system change, no framework runtime code touched.
+
+**Explore budget used**: 75 → 76.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Silent-drift theme status (cycles 311 → 320)
+
+Started with 1 instance of drift surfacing accidentally (cycle 311's 40-cycle snapshot debt). Ends with:
+- 5 of 6 classes automatically surfaced (3 blocking, 1 soft warning, 1 gated downstream)
+- Framework-level gap doc articulating the pattern for future reference
+- Two-tier gate structure (preflight + deep) matching invocation cost structure
+- Heuristic 5 candidate surfaced: run preflight before commit on UI-touching cycles
+
+Theme has reached a reasonable steady state; future cycles can likely de-emphasise it.
+
+### Next candidate cycles
+
+- **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; contract_audit treatment. Would remove cycle 318's allowlist entry.
+- **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint candidate (separate from the DaisyUI-Python lint that's already shipped)
+- **Monitor lint allowlist drift** — opportunistic check that allowlist reasons haven't gone stale
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (cycle 300 theme)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
