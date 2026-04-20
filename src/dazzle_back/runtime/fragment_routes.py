@@ -9,7 +9,6 @@ from html import escape as html_escape
 from typing import Any
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import HTMLResponse
 from starlette.responses import Response
 
 from dazzle.core.http_client import async_retrying_request
@@ -72,14 +71,14 @@ def create_fragment_router(
         """Search an external API source and return rendered result items."""
         if len(q) < min_chars:
             # min_chars is validated as int by FastAPI; explicit int() for static analysis
-            return HTMLResponse(
+            return _html(
                 '<div class="p-3 text-sm text-base-content/50">'
                 f"Type at least {int(min_chars)} characters to search...</div>"
             )
 
         source_config = sources.get(source)
         if not source_config:
-            return HTMLResponse(
+            return _html(
                 f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
             )
 
@@ -141,7 +140,7 @@ def create_fragment_router(
 
         except Exception as e:
             logger.warning("Fragment search error for source=%s: %s", source, e)
-            return HTMLResponse('<div class="p-3 text-sm text-error">Search failed</div>')
+            return _html('<div class="p-3 text-sm text-error">Search failed</div>')
 
     @router.get("/select")
     async def fragment_select(
@@ -152,7 +151,7 @@ def create_fragment_router(
         """Fetch a full record and return OOB swap fragments for autofill fields."""
         source_config = sources.get(source)
         if not source_config:
-            return HTMLResponse(
+            return _html(
                 f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
             )
 
@@ -204,6 +203,6 @@ def create_fragment_router(
 
         except Exception as e:
             logger.warning("Fragment select error for source=%s, id=%s: %s", source, id, e)
-            return HTMLResponse('<div class="p-3 text-sm text-error">Selection failed</div>')
+            return _html('<div class="p-3 text-sm text-error">Selection failed</div>')
 
     return router
