@@ -8632,3 +8632,71 @@ A future synthesis cycle could combine them into an evergreen "structural-comple
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 306 — 2026-04-20 — page-route-coverage lint shipped (Track B FIX-not-FILE)
+
+**Strategy:** infrastructure fix — implement cycle 305's gap doc Track B recommendation directly, rather than filing as a GitHub issue
+**Outcome:** New test module `tests/unit/test_page_route_coverage.py` (6 gates). Surfaces EX-055-class bugs (page templates shipped without server routes) at test-time.
+
+**Chosen this cycle.** Cycle 305's gap doc explicitly framed Track B as a `/issues` candidate. But per cycle 301's split rule ("pure code refactor → FIX; trust/dependency/design decisions → FILE"), the Track B lint is unambiguously FIX material:
+- Pure Python test, no trust decisions
+- Mechanism is well-understood (cycle 302's orphan_lint is the parallel template)
+- Scope is tight (~30 LOC test + allowlist)
+- Clear preventive value
+
+Skipped the issue-filing middle step and wrote it directly.
+
+**Scope decision.** Cycle 305's gap doc flagged "which templates are page-like" as an open question. Resolved pragmatically by starting narrow: only `site/auth/` family for v1 (the original EX-055 site). PAGE_FAMILY_DIRS is a module-level tuple; extending to `site/`, `app/` top-level, etc. in future cycles is a one-line change.
+
+**Convention established.** A template is "page-like" if:
+1. Lives under a `PAGE_FAMILY_DIRS` prefix
+2. Filename does not start with `_` (underscore-prefixed files are partials / scripts / shared fragments — they get included, not served)
+
+This convention is narrow but well-defined. Future extensions could use frontmatter comments (`{# page: true #}`) or a dedicated `/pages/` directory, but the current structural rule works for the auth family.
+
+**Lint architecture:**
+- `_collect_page_templates()` — walks `PAGE_FAMILY_DIRS`, returns non-underscore `.html` files
+- `_collect_rendered_pages()` — regex-scans all `.py` files under `src/dazzle_back/` + `src/dazzle_ui/` for `render_site_page("<path>")` calls, captures the path
+- `_compute_unserved_pages()` — set difference
+- **6 gates**: (1) every page template served OR allowlisted, (2) stale allowlist detection, (3) allowlist templates exist, (4) allowlist entries are in page-families, (5) reasons ≥ 15 chars non-empty, (6) PAGE_FAMILY_DIRS match real directories
+
+Gate (4) is novel compared to orphan_lint: it catches the case where someone allowlists a template that doesn't belong in this lint's scope (e.g. if they allowlist `fragments/foo.html` — that's an orphan_lint concern, not a page-route concern).
+
+**Current state:**
+- 7 page templates under `site/auth/`: login.html, signup.html, forgot_password.html, reset_password.html, 2fa_challenge.html, 2fa_setup.html, 2fa_settings.html
+- 4 served via `render_site_page()` in `site_routes.py:502-520`
+- 3 unserved, all in allowlist with reason citing EX-055 → #831
+- 0 unallowed failures
+
+**Three horizontal-discipline lints now in place:**
+
+| Lint | Cycle | Surfaces |
+|------|-------|----------|
+| `test_template_none_safety.py` | 284 | Jinja `\| default` misuse on defined-but-None values |
+| `test_template_orphan_scan.py` | 302 | Templates with no production consumer |
+| `test_page_route_coverage.py` | 306 | Page templates shipped without server routes |
+
+Together they cover three distinct class-of-drift risks. Each took ~1 cycle to implement + pays off permanently. Cycle 305's gap doc called this the "horizontal-discipline" pattern; cycle 306 is the third instance.
+
+**Cross-app verification** (Heuristic 3): 420/420 tests pass (up from 414). Ruff format applied (formatter reformatted regex slightly). No regressions.
+
+**Explore budget used**: 61 → 62.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+OPEN EX rows: 0. Open gap-doc Tracks:
+- external-resource-integrity Phase 2-4
+- template-ship-without-wiring Track A (primitive policy)
+
+Candidates:
+- **`missing_contracts` scan** — 11 cycles since 295 — strongly overdue
+- **Gap doc Phase 2 (external-resource-integrity)** as GitHub issue — vendor Tailwind + Dazzle own dist
+- **Extend page-route-coverage to more directories** — once `site/auth/` pattern is validated, expand to `site/` top-level (403, 404, page.html)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+
+---
