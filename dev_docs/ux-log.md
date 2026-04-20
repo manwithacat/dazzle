@@ -8700,3 +8700,43 @@ Candidates:
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 307 — 2026-04-20 — page-route-coverage lint extended to app/
+
+**Strategy:** infrastructure extension — follow through on cycle 306's "extend PAGE_FAMILY_DIRS" candidate
+**Outcome:** Lint now covers both `site/auth/` AND `app/` families via a multi-pattern render-call scanner. 9 page templates tracked (up from 7), still 0 unallowed failures.
+
+**Chosen this cycle.** After 7 cycles of infrastructure / gap-doc / investigation work (300-306), a routine follow-through move is the right cadence — incremental improvement to cycle 306's freshly-shipped lint, validates the pattern's extensibility before scope grows larger. Considered `missing_contracts` scan but cycle-295's scan was comprehensive + only 5 templates touched since (all contracted) → low expected yield. Considered extending to `site/` top-level too but ran into structural complexity: site_base.html is a layout (extended not served), site/sections/* and site/includes/* are dynamic/partial. Wider coverage deferred to a future cycle with a clean solution for layout templates.
+
+**Two-part extension:**
+
+1. **Broaden the render-call regex.** Cycle 306 only matched `render_site_page("<path>")`. Cycle 307 adds a second pattern for `_render_app_shell_error(template_name="<path>")` (used by `exception_handlers.py:368,400` to serve `app/403.html` + `app/404.html`). Promoted the single regex `_RENDER_SITE_PAGE_RE` to a tuple `_RENDER_PATTERNS` so future render helpers can be added cleanly.
+
+2. **Extend PAGE_FAMILY_DIRS.** From `("site/auth/",)` to `("site/auth/", "app/")`. `app/` has only 2 templates (403, 404), both served by the new regex. Zero unallowed failures after extension.
+
+**Module docstring updated** explaining why `site/` top-level is NOT in PAGE_FAMILY_DIRS (would sweep in layouts + sections + includes). Reasoning documented for future reviewers.
+
+**Two architectural improvements** set up future extensibility:
+- Regex tuple (`_RENDER_PATTERNS`) — adding a 3rd, 4th render helper is a one-line append
+- Explicit comment on why certain dirs aren't included — documents the intentional boundary
+
+**Meta-pattern reinforced: infrastructure cycles compound.** Cycle 306 shipped a lint that works for 1 family. Cycle 307 extended it to 2 families + 2 render patterns at near-zero additional cost. This is the low-marginal-cost model that good infrastructure enables. Compare to `contract_audit` cycles which have fixed per-component cost regardless of accumulation.
+
+**Cross-app verification** (Heuristic 3): 420/420 tests pass. Lint report shows 9 page templates, 6 served, 3 allowlisted (2FA) — all expected. No regressions.
+
+**Explore budget used**: 62 → 63.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure extension)
+
+### Next candidate cycles
+
+- **`missing_contracts` scan** — now 12 cycles since 295 — still strongly overdue (but expected yield is low)
+- **Extend page-route-coverage to site/ top-level pages** — needs layout-template detection (e.g. "templates that are extended by others are not page-like"). Worth a cycle.
+- **Gap doc Phase 2 (external-resource-integrity) as GitHub issue** — vendor Tailwind + Dazzle own dist
+- **Apply orphan_lint pattern to Python modules** — similar horizontal-discipline move for ungoverned Python helpers
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+
+---

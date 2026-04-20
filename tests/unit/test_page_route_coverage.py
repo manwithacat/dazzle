@@ -33,9 +33,18 @@ DAZZLE_BACK_ROOT = REPO_ROOT / "src" / "dazzle_back"
 DAZZLE_UI_ROOT = REPO_ROOT / "src" / "dazzle_ui"
 
 # Directories whose non-underscore templates are expected to be served by
-# a Python page route. Starting with `site/auth/` — the family where
-# EX-055 surfaced. Extend when the lint's mechanism is established.
-PAGE_FAMILY_DIRS: tuple[str, ...] = ("site/auth/",)
+# a Python page route. Started with `site/auth/` (cycle 306) — the family
+# where EX-055 surfaced. Cycle 307 added `app/` once the regex was
+# broadened to recognise `_render_app_shell_error(template_name=)`.
+#
+# NOT including `site/` top-level because:
+# - site_base.html is a layout (extended, not served)
+# - site/sections/ and site/includes/ are dynamic-loaded fragments
+# - the top-level pages (page.html, 403, 404) ARE served but adding
+#   `site/` as a prefix would sweep in the subdirectories above
+# If we want to cover those individually, add them to a separate
+# INDIVIDUAL_REQUIRED list in a future cycle.
+PAGE_FAMILY_DIRS: tuple[str, ...] = ("site/auth/", "app/")
 
 # Page templates that genuinely should NOT be served by a page route
 # (e.g. the template is consumed by a different mechanism, or the
@@ -49,9 +58,18 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
     "site/auth/2fa_settings.html": "EX-055 → #831; 2FA UI feature half-shipped",
 }
 
-# Matches `render_site_page("<path>"...)` calls in Python, where <path>
-# is the first positional argument. Captures the quoted path.
-_RENDER_SITE_PAGE_RE = re.compile(r'render_site_page\(\s*["\']([^"\']+)["\']')
+# Render-call patterns. Each matches a known way the runtime serves a
+# page template as an HTML response. Extend when new render helpers land.
+_RENDER_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # `render_site_page("<path>", ...)` — marketing + auth pages (site_routes.py)
+    re.compile(r'render_site_page\(\s*["\']([^"\']+)["\']'),
+    # `_render_app_shell_error(template_name="<path>", ...)` — app error pages
+    # (exception_handlers.py). The regex allows arbitrary preceding kwargs
+    # by matching `template_name=` anywhere inside the call's parentheses.
+    re.compile(
+        r'_render_app_shell_error\([^)]*?template_name\s*=\s*["\']([^"\']+)["\']', re.DOTALL
+    ),
+)
 
 
 def _collect_page_templates() -> set[str]:
@@ -68,15 +86,16 @@ def _collect_page_templates() -> set[str]:
 
 
 def _collect_rendered_pages() -> set[str]:
-    """Extract every template path passed to render_site_page() in Python."""
+    """Extract every template path passed to a known render-helper in Python."""
     rendered: set[str] = set()
     for root in (DAZZLE_BACK_ROOT, DAZZLE_UI_ROOT):
         if not root.exists():
             continue
         for p in root.rglob("*.py"):
             text = p.read_text()
-            for m in _RENDER_SITE_PAGE_RE.finditer(text):
-                rendered.add(m.group(1))
+            for pattern in _RENDER_PATTERNS:
+                for m in pattern.finditer(text):
+                    rendered.add(m.group(1))
     return rendered
 
 
