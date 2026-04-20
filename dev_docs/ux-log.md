@@ -10676,3 +10676,9 @@ Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped
 **Milestone observation:** the loop has now produced 11 zero-value cycles since the short-circuit fired. The cycle 340 escalation options (slow cron cadence / pause until issues close / continue at current cost) still apply. Operator attention would be well-placed here.
 
 ---
+
+## Cycle 351 — 2026-04-20 — short-circuit continues (idle tick)
+
+Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped. Budget 95. (12 consecutive idle ticks.)
+
+---
