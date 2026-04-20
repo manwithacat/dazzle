@@ -10374,3 +10374,57 @@ Tactically: future cycles should probably bias toward `contract_audit` or `edge_
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 336 — 2026-04-20 — loop-state audit: explicit short-circuit proximity record
+
+**Strategy:** observational — cycle 335 flagged steady-state. Cycle 336 formalises it with metrics + issue-queue snapshot for future calibration.
+**Outcome:** No new findings, no new filings. Loop productivity over the last 5 non-housekeeping Step-6 cycles: **1 new finding (cycle 334 → #835), 4 validations/sign-offs.** Short-circuit not formally triggered (rule requires strict zero findings; #835 cleared the threshold), but signal is unambiguously dimming. Recommendation to the operator escalated.
+
+**Last 5 non-housekeeping Step-6 cycles:**
+
+| Cycle | Strategy | Outcome | New filing? |
+|---|---|---|---|
+| 328 | find_investigation (lint rule-out) | deferred Python orphan lint | no |
+| 330 | find_investigation (EX-005) | validated existing FIXED_LOCALLY | no |
+| 331 | find_investigation (EX-019/023) | validated existing closures | no |
+| 334 | find_investigation (EX-026) | **filed #835** | **yes** |
+| 335 | preemptive audit (gen-symmetry) | no gaps found | no |
+
+**Productivity: 1 of 5 = 20%.** The pattern before cycles 320 was materially higher — cycles 323 filed #832, 324 shipped lint, 325 filed #833 (3 of 3 = 100%). The drop-off aligns with the backlog being triaged to completion.
+
+**Issue queue snapshot (cycle 336):**
+
+7 OPEN issues filed cycles 299-334, all created 2026-04-20:
+- #829 TOTP QR secret exfiltration (cycle 299, EX-054)
+- #830 SRI hashes (cycle 301, external-resource Phase 1)
+- #831 2FA page routes (cycle 303, EX-055)
+- #832 Vendor Tailwind + own dist (cycle 323, Phase 2)
+- #833 CSP default alignment (cycle 325, Phase 3)
+- #834 hot_reload.py orphan investigation (cycle 327)
+- #835 WorkspaceContract persona asymmetry (cycle 334, EX-026)
+
+Downstream `/issues` cycles have ample material. The ux-cycle loop's upstream contribution is healthy even as new-finding rate drops.
+
+**Recommendations to operator (escalated from candidate queue):**
+
+1. **Consider `/loop` cadence slowdown.** Current 10-minute cron was calibrated to a full backlog. At 20% productivity, each cycle consumes tokens on steady-state validation. A 30-minute or 60-minute cadence would reduce token burn ~2-6× while preserving drift-catch coverage (the preflight gate runs lint every cycle regardless of cycle length).
+2. **Consider explicitly pausing** until downstream `/issues` cycles close 2-3 of the 7 OPEN issues, then resuming. Closed issues → stale FILED rows → opportunity for another cycle 333-style status sweep.
+3. **Consider explicit strategy switch** to `contract_audit` or `edge_cases` only — skip `finding_investigation` entirely when the truly-open EX rows are already filed (current state). The skill's existing strategy-selection judgment should implement this but hasn't fully — recent cycles over-indexed on finding_investigation out of habit.
+
+**Explore budget state: 91 / 100.** Running 3-5 more cycles at current cadence will hit the 100 ceiling, triggering the primary short-circuit per skill Step 6 Budget section.
+
+**Cross-app verification** (Heuristic 3): N/A — observational cycle.
+
+**Explore budget used**: 91 → 92.
+
+### Running UX-governance total: 79 contracts (unchanged — observational cycle)
+
+### Next candidate cycles
+
+- **[OPERATOR DECISION POINT]** One of: (a) slow cron cadence, (b) explicit pause until issues close, (c) continue at 20% productivity — no action required if operator is content with the current cost/value ratio.
+- **On operator action**: if #830/832/833/829/834/835 close in downstream cycles, a housekeeping `FILED→FIXED sweep` (cycle 333 pattern) would close those EX rows.
+- **Discovery strategies** remain open: `edge_cases` (browser-heavy, would need full ModeRunner flow) and `contract_audit` (spot-check an existing contract for drift)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
