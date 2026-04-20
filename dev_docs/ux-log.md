@@ -9980,4 +9980,55 @@ Cycle 324 built a lint (external-resource) because: clear detection + low FP + s
 
 ---
 
+## Cycle 329 — 2026-04-20 — dormant-primitives policy: Option A reaffirmed
+
+**Strategy:** policy cycle — the "Dormant primitives review" candidate has sat in the next-cycle queue across cycles 322/323/324/325/326/327/328 without resolution. Making an explicit policy call this cycle closes the deliberation loop.
+**Outcome:** Re-verified all 4 primitives still have zero consumers after ~40 cycles dormancy. Reaffirmed **Option A (accept + document)** as the durable policy stance. Updated cycle 287's PR #600 gap doc with a "Status as of cycle 329" section capturing the reaffirmation rationale. Candidate removed from the next-cycle queue in favor of re-visit triggers.
+
+**Heuristic 1 confirmed:**
+
+```
+components/alpine/confirm_dialog.html → 0 consumers
+components/alpine/dropdown.html       → 0 consumers
+components/modal.html                  → 0 consumers
+components/island.html                 → 0 consumers
+```
+
+State unchanged since cycle 287's original finding.
+
+**Why Option A is the durable answer:**
+
+1. **Zero user-facing impact.** Nothing breaks, nothing slows, nothing confuses users.
+2. **Minimal ongoing cost.** ~4 allowlist entries in `test_template_orphan_scan.py`. Each is ~1 line.
+3. **Contracts serve as intent-capture.** Even without adoption, the ux-architect contracts encode the design thinking for future adopters. Deletion would lose that.
+4. **Cycle 302's orphan_lint turned passive documentation into active accountability.** The primitives aren't forgotten code anymore — they're explicitly tracked-dormant. Every test run surfaces the allowlist; every cycle reviewing it reads the reason.
+5. **Low-regret default.** If a future cycle adopts one of these primitives, no decision needs to be reversed — the adoption just removes the allowlist entry. Option C (delete) would be the one-way door.
+
+**When to revisit** (these triggers remove the candidate from "settled" → "active"):
+
+- User explicitly asks about adopting/deleting/repurposing any of the 4
+- v1.0 API-stability milestone (when preserve-optionality cost goes up)
+- An example app's DSL introduces a component whose functionality matches one of the primitives
+
+**Meta-observation: "defer" as a durable answer.**
+
+The Dazzle loop's candidate queue has historically treated deferrals as temporary — a placeholder awaiting decision. But some deferrals are the answer. Option A is an explicit deferral: "decide NOT to decide, with the commitment that automated lint keeps the dormancy visible." Marking such items as "durable-deferred" (rather than "pending") frees up the candidate queue for actually-open questions.
+
+Precedent: cycle 309's retirement of `missing_contracts` strategy — not "we'll do this later," but "this doesn't need to happen; the automated lints cover it." Same pattern applied to dormant primitives here.
+
+**Cross-app verification** (Heuristic 3): N/A — policy + documentation cycle.
+
+**Explore budget used**: 84 → 85.
+
+### Running UX-governance total: 79 contracts (unchanged — policy cycle)
+
+### Next candidate cycles
+
+- **Pick a new cross-cycle theme for `framework_gap_analysis`** — silent-drift + external-resource themes settled; time to scan EX rows for fresh themes
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- ~~**Dormant primitives review**~~ — durably deferred (cycle 329, Option A); re-visit only on explicit triggers
+
+---
+
 ---
