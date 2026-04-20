@@ -10252,3 +10252,70 @@ The backlog is even healthier than cycle 331's snapshot suggested.
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 334 — 2026-04-20 — EX-026 half-2 FILED→#835 (WorkspaceContract persona gap)
+
+**Strategy:** finding_investigation — cycle 333 flagged EX-026 as the last framework-level unfiled row; this cycle drills it with Heuristic 1
+**Outcome:** Half-2 of EX-026 confirmed as a real framework gap. Filed [#835 — framework: WorkspaceContract generator ignores workspace persona access rules](https://github.com/manwithacat/dazzle/issues/835) with file:line evidence + 2 fix options + recommendation. Half-1 (RBAC) shows as possibly stale — current code in `contracts.py:319-341` handles RBAC correctly.
+
+**Heuristic 1 trail:**
+
+```
+grep "def generate_contracts" src/dazzle/testing/ux/contracts.py
+→ line 214
+
+Read lines 214-354:
+  line 319-341: RBAC loop — correctly iterates ALL personas × operations,
+                sets expected_present=pid in permitted
+  line 344-352: Workspace loop — iterates workspaces ONLY, no persona field
+
+grep "class WorkspaceContract" contracts.py
+→ line 142: dataclass with workspace/regions/fold_count, no persona field
+
+grep "allow_personas|deny_personas" src/dazzle/core/ir/workspaces.py
+→ line 43-44: WorkspaceSpec has both fields
+```
+
+Chain verified end-to-end: the IR has the persona-access data, the generator ignores it, the WorkspaceContract dataclass has no field to hold it. Real asymmetry. Two halves because `RBACContract` IS already persona-aware — the generator does it right for RBAC and wrong for workspaces.
+
+**Half-1 (RBAC) — Heuristic-1 save:**
+
+Cycle 220 observation: "rbac:User:member:list returns HTTP 403 when member persona lists User entity — the generated contract expects member to have list access." Reading current code: `expected_present = pid in permitted` — so member NOT in permitted → `expected_present=False` → test should pass when 403 is returned. Reconciler at `reconciler.py:187,196` uses `expected_present` correctly.
+
+Conclusion: either (a) the observation was on older pre-refactor code, (b) the member persona IS listed in some surface as needing List access but the entity denies, creating a real generator over-eagerness, or (c) observation was transient/wrong. Without reproducing the exact cycle-220 conditions, I can't file half-1 as a clear framework bug. Marked the backlog row as "half-1 possibly stale, half-2 filed as #835" to preserve the nuance.
+
+**Issue #835 scope (as filed):**
+
+- Option B (symmetric with RBAC) recommended
+- Touch: `contracts.py` (add `persona` + `expected_present` to WorkspaceContract, rewrite loop), `contract_checker.py` (use them in verifier), tests
+- Impact: all 5 example apps' Phase A verification, eliminates persona-scoped workspace false positives
+
+**Meta-pattern: asymmetric generators hide behind symmetric-looking tests.**
+
+The UX contract suite runs Phase A per contract; when `RBAC` passes for persona-scoped entities but `Workspace` fails for persona-scoped workspaces, it looks like a test bug because the other class of contract is already correctly persona-aware. Asymmetric generators in the same file are a distinct class of defect — harder to notice than "no one is generating contracts" because the generation looks half-complete.
+
+This could be a 5th Heuristic: `generator_symmetry_audit` — when a framework emits multiple related contract/test/artifact kinds from a shared generator, verify each kind receives equivalent treatment. Not elevating to the heuristics list yet (needs ≥2 examples), but worth noting.
+
+**Truly-open count reduced: from ~3 to ~2.**
+
+Post-cycle-334:
+- EX-054 (FILED→#829 OPEN)
+- EX-055 (FILED→#831 OPEN)
+- EX-026 (FILED→#835 OPEN — this cycle)
+
+Zero rows remaining that are "open + concerning + not filed." The backlog is in its healthiest recorded state.
+
+**Cross-app verification** (Heuristic 3): N/A — issue filing. The fix itself (when picked up in a `/issues` cycle) will require cross-app verification of all 5 example apps' workspace contract reruns.
+
+**Explore budget used**: 89 → 90.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation+filing cycle)
+
+### Next candidate cycles
+
+- **Pick a new theme for `framework_gap_analysis`** — no unfiled framework gaps remain; breadth exploration would need to discover new ones
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **Potential: generator-symmetry audit meta-check** — grep for generators that emit contract-subclasses and verify persona/operation coverage is equal across subclasses (would have caught EX-026 half-2 at code-review time)
+
+---
