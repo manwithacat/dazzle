@@ -84,17 +84,17 @@ def evaluate_simple_condition(when_expr: str, data: dict[str, Any]) -> bool:
         rval = _parse_literal(right.strip())
 
         if op == "=":
-            return resolved == rval
+            return bool(resolved == rval)
         if op == "!=":
-            return resolved != rval
+            return bool(resolved != rval)
         if op == ">":
-            return resolved > rval
+            return bool(resolved > rval)
         if op == "<":
-            return resolved < rval
+            return bool(resolved < rval)
         if op == ">=":
-            return resolved >= rval
+            return bool(resolved >= rval)
         if op == "<=":
-            return resolved <= rval
+            return bool(resolved <= rval)
         break
 
     return True

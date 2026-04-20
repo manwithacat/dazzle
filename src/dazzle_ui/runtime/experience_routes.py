@@ -377,7 +377,7 @@ async def _experience_step_get(
         headers = {
             "HX-Trigger": json.dumps({"dz:titleUpdate": exp_ctx.title}),
         }
-        response = HTMLResponse(content=html, headers=headers)  # nosemgrep
+        response = HTMLResponse(content=html, headers=headers)  # type: ignore[assignment]  # nosemgrep
     else:
         html = render_fragment(
             "experience/experience.html",
@@ -390,7 +390,7 @@ async def _experience_step_get(
             _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
             **auth_ctx,
         )
-        response = HTMLResponse(content=html)  # nosemgrep
+        response = HTMLResponse(content=html)  # type: ignore[assignment]  # nosemgrep
 
     # Set state cookie on every response
     cname = cookie_name(name)
