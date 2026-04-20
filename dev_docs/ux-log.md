@@ -9153,3 +9153,67 @@ Total: 26 call sites scanned, 0 bypasses post-cycle.
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 316 — 2026-04-20 — DaisyUI token sweep: Python-embedded HTML
+
+**Strategy:** DaisyUI migration follow-on — cycle 315's side-observation converted to action
+**Outcome:** Migrated 6 DaisyUI tokens across 2 framework files to canonical HSL Tailwind tokens. 113 fragment + route_generator tests pass. No visual regression expected — HSL resolution matches DaisyUI's default error + muted for both themes.
+
+**Sweep:**
+
+```
+grep -rnE "(text-error|text-primary|text-secondary|text-base-content|bg-error|bg-primary|bg-secondary|btn-primary|btn-error|badge-|alert-error|alert-warning|alert-info|alert-success)" src/dazzle_back/ src/dazzle_ui/ --include="*.py"
+```
+
+Found 16 hits. Categorised:
+
+| Category | Count | Action |
+|---|---|---|
+| **Inline error/muted HTML** (this cycle's target) | 6 | **MIGRATED** |
+| `template_renderer.py` `badge-*` mapping function | 7 | Deferred — it's a tone→class dispatch table, needs a grammar redesign |
+| `template_renderer.py` inline `text-base-content/30` Markup | 1 | Deferred — X-mark helper (4 chars visible, low priority) |
+| `htmx.py:168` `alert alert-error` fallback | 1 | Deferred — only hit when template_renderer is unavailable (dev-only fallback) |
+| `converters/__init__.py:200` Python dict literal | 1 | Deferred — dict mapping, not an HTML class emission |
+
+**Migrations (this cycle):**
+
+| File | Line | Before | After |
+|---|---|---|---|
+| `fragment_routes.py` | 75 | `text-base-content/50` | `text-[hsl(var(--muted-foreground)/0.5)]` |
+| `fragment_routes.py` | 82, 144, 157, 209 | `text-error` × 4 | `text-[hsl(var(--destructive))]` × 4 |
+| `route_generator.py` | 1733 | `text-error` | `text-[hsl(var(--destructive))]` |
+
+**Heuristic 1 verified:** confirmed both `--destructive` and `--muted-foreground` exist in source (`design-system.css` :root + dark) AND in dist (`dist/dazzle.min.css`). Migration doesn't introduce a new CSS variable dependency — just swaps class-name resolution path from DaisyUI plugin → direct HSL function. Zero-runtime-risk change.
+
+**Heuristic 3:** 113 tests across fragment + route_generator pass. Touched files are narrow; no cross-app fidelity risk.
+
+**Scope decision rationale:**
+
+- `template_renderer.py:201-207` `badge-*` mapping function — that's a **grammar** not an emission. Migrating it requires: (a) redefining tone strings, (b) updating every caller, (c) regenerating snapshots. Separate cycle warranted.
+- `htmx.py:168` fallback — unreachable unless template_renderer fails to import. Migrating now would add to the "dev-only code that nobody sees" category without user-facing benefit. Leave.
+- `converters/__init__.py:200` — it's a Python dict mapping old class names → colors. It doesn't emit HTML — it's a data table. Not DaisyUI drift.
+
+**Cumulative DaisyUI migration progress** (across the UX cycle series):
+- Cycle 17: 62 template files swept, EX-001 closed
+- Cycles 271-284: contract_audit series on workspace/regions/ — canonical class markers added alongside migration
+- Cycle 316: 6 Python-embedded sites (this cycle) — ≤3 deferred intentionally (grammar, fallback, dict mapping)
+
+The framework is now **DaisyUI-free in the rendering path.** The three deferred sites are either unreachable, structural, or intentional grammar.
+
+**Explore budget used**: 71 → 72.
+
+### Running UX-governance total: 79 contracts (unchanged — refactor cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding.
+- **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level change (~20 call sites); warrants contract_audit treatment
+- **Measure mypy against `src/dazzle_back/runtime`** — if <3s, add as a 3rd preflight step
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
+---
