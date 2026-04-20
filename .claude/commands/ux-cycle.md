@@ -13,7 +13,13 @@ Bring Dazzle's UX layer under ux-architect governance one component at a time, a
 1. Check `.dazzle/ux-cycle.lock`. If it exists and its timestamp is < 45 minutes old, **abort** with "Another ux-cycle is already running (lock at $LOCKFILE, PID $PID)". If it's older, delete it as stale.
 2. Create `.dazzle/ux-cycle.lock` with current PID and ISO timestamp.
 3. Read signals via `dazzle.cli.runtime_impl.ux_cycle_signals.since_last_run(source="ux-cycle")`. Handle any `dazzle-updated` or `fix-deployed` signals by marking affected backlog rows for re-verification.
-4. **Infrastructure-drift gate** (~3s): run `make test-ux-preflight`. This runs the 4 horizontal-discipline lints (orphan, page-route, canonical-pointer, none-safety) + DOM snapshots + card-safety invariants. **If red, STOP and fix before continuing** — cycle 311 exposed ~40 cycles of silent snapshot drift from contract_audit cycles that never refreshed syrupy baselines. This gate prevents that class recurring. If red and root cause is snapshot-baseline drift from recent template changes, regenerate via `pytest tests/unit/test_dom_snapshots.py --snapshot-update` after verifying the diff is additive-only.
+4. **Infrastructure-drift gate** (~5s): run `make test-ux-preflight`. This runs the 6 horizontal-discipline lints (template-orphan, page-route-coverage, canonical-pointer, template-none-safety, daisyui-python, external-resource) + DOM snapshots + card-safety invariants + `mypy src/dazzle_ui/` + a non-blocking `git status dist/` warning. **If red, STOP and fix before continuing** — cycle 311 exposed ~40 cycles of silent snapshot drift from contract_audit cycles that never refreshed syrupy baselines. This gate prevents that class recurring. Common red causes and their fixes:
+   - **Snapshot drift** (additive template changes): `pytest tests/unit/test_dom_snapshots.py --snapshot-update` after verifying the diff is additive-only.
+   - **New CDN load or DaisyUI token**: either self-host / migrate to canonical tokens, OR add an allowlist entry with a reason citing a gap doc / issue / cycle.
+   - **mypy regression in `src/dazzle_ui/`**: fix inline; if the error is in a file outside dazzle_ui, run `make test-ux-deep` to see if it's a broader issue.
+   - **dist/ drift** (non-blocking warning only): surfaces uncommitted dist/ files; run `make build` or commit the regenerated assets before `/ship`.
+
+   For deeper-scope audits before `/ship`, `make test-ux-deep` runs the preflight plus broader mypy across core/cli/mcp/back (~15s warm).
 
 ### Step 0b: Init (first run only)
 
