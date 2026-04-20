@@ -9346,4 +9346,76 @@ Two classes remain manual: dist/ drift (#3) and canonical-helper bypass (#4). Bo
 
 ---
 
+## Cycle 319 — 2026-04-20 — dist/ drift warning: Axis A2 closes silent-drift class 3
+
+**Strategy:** infrastructure extension — directly implements Axis A2 of cycle 317's gap doc
+**Outcome:** Extended `test-ux-preflight` with a non-blocking `[WARN]` if `dist/` has uncommitted changes. Cycle 319 closes Class 3 of the 6-class silent-drift matrix. 5 of 6 classes now automatically surfaced; only Class 4 (canonical-helper bypass) remains manual.
+
+**Design: non-blocking warning, not a hard gate.**
+
+The preflight gate already has 6 blocking test files. Adding dist/ as another blocking check would reject cycles that LEGITIMATELY regenerate dist/ partway through (e.g. a contract_audit cycle that invalidates CSS and rebuilds mid-flight). Non-blocking means the check runs on every cycle and SURFACES drift without halting it — the runner is nudged, not forced.
+
+**The shell check:**
+
+```makefile
+@if [ -n "$$(git status --porcelain dist/ 2>/dev/null)" ]; then \
+    echo ""; \
+    echo "[WARN] dist/ has uncommitted changes (silent-drift class 3):"; \
+    git status --short dist/ | sed 's/^/  /'; \
+    echo "  Rebuild + commit before /ship to keep the wheel fresh."; \
+fi
+```
+
+- `@` prefix suppresses command echo — output only when drift exists
+- `git status --porcelain dist/` returns empty on clean worktree, one line per file otherwise
+- `sed 's/^/  /'` indents the file list for readability
+- Exit status of the if block is 0 regardless (no `exit 1`)
+
+**Heuristic 1 verified** (real-thing test):
+
+| State | Output | Gate exit |
+|---|---|---|
+| Clean worktree | Silent | 0 |
+| Modified `dist/dazzle.min.css` | `[WARN]` + file list + nudge | 0 |
+| Revert | Silent again | 0 |
+
+No false positives, no false negatives, no gate escalation.
+
+**Silent-drift coverage matrix (post-cycle-319):**
+
+| Class | Gate | Status |
+|---|---|---|
+| 1. Syrupy baselines | GATED (312) | blocking |
+| 2. UI type errors | GATED (314) | blocking |
+| 3. dist/ drift | **GATED (319 — this cycle)** | **non-blocking warn** |
+| 4. Canonical-helper bypass | MANUAL | — |
+| 5. DaisyUI in Python HTML | GATED (318) | blocking |
+| 6. contract_audit hygiene | GATED downstream (312) | blocking |
+
+**Class 4 (canonical-helper bypass) is the last manual class.** Cycle 315's audit found 5 sites; a future lint could check for raw `HTMLResponse(...)` calls that don't route through a `_html()`-style wrapper — but the discrimination is harder than the DaisyUI lint (legitimate direct uses exist in framework internals). Deferring; the pattern may simply stay manual.
+
+**Gate cost:** unchanged — `git status` is <10ms. Total preflight 43 tests + mypy(ui) + git-status in ~4.5s wall.
+
+**Observation about blocking vs warning:**
+
+Cycle 317's gap doc asked "is there a 'gate cycle' vs 'fast cycle' distinction worth introducing?" — cycle 319 answers it with a softer compromise: the gate is a mix of blocking checks (hard) + warnings (soft). Warnings are the right posture when the drift **exists** but is not **urgent**: the cycle can complete its current work and catch dist/ later via `/ship` which runs `make build`. Blocking would disrupt the 10-minute cron cadence for a non-urgent issue.
+
+**Cross-app verification** (Heuristic 3): N/A — build-system change, no framework runtime code touched.
+
+**Explore budget used**: 74 → 75.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **Add `make test-ux-deep` target** — Axis A1. Broader mypy (dazzle_back/runtime + core + cli + mcp). Not in preflight; manual invocation for deeper audits.
+- **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; contract_audit
+- **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint candidate
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
