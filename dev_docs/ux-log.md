@@ -9276,4 +9276,74 @@ Converts the existing preflight gate (a Step 0a of the NEXT cycle) into an outbo
 
 ---
 
+## Cycle 318 — 2026-04-20 — DaisyUI-in-Python lint: 5th horizontal-discipline
+
+**Strategy:** infrastructure extension — directly implements Axis A3 of cycle 317's gap doc
+**Outcome:** Shipped `tests/unit/test_daisyui_python_lint.py`. 4 gates, 2 allowlist entries documenting cycle 316's intentional deferrals, ~200 LOC incl. docs. Added to `test-ux-preflight` gate: total now 43 tests + mypy(ui) in ~5s.
+
+**Closes:** Class 5 from cycle 317's silent-drift gap doc — "DaisyUI tokens embedded in Python HTML string literals." This is the class cycle 17's template sweep missed by scoping to `*.html` files, and cycle 316 surfaced 6 sites of.
+
+**Detection approach:**
+
+17 DaisyUI tokens scanned via word-boundary regex:
+- Typography: `text-{error,primary,secondary,base-content}`
+- Backgrounds: `bg-{error,primary}`
+- Buttons: `btn-{primary,error}`
+- Badges: `badge-{error,success,warning,info,ghost}`
+- Alerts: `alert-{error,warning,info,success}`
+
+**Key discrimination: dict-key vs emission.**
+
+The initial token-scan would flag false positives on lines like `converters/__init__.py:200 — "text-secondary": "#6c757d"` where the token is DICT KEY DATA (used for migration lookup), not HTML emission. Added a `_DICT_KEY_RE` filter that matches `"<token>":<whitespace>` and skips those match positions.
+
+Heuristic 1 verified with 4 injected cases:
+- **Emission** (`class="text-error"` in HTML string) → detected (gate fires)
+- **Dict key** (`"text-error": "hsl(...)"`) → detected but skipped by filter
+- **Mid-word** (`non-error-variant`) → not matched (word-boundary)
+- **Different prefix** (`"error-page"`) → not matched (no leading token match)
+
+**Lint stack status after cycle 318 (5 lints):**
+
+| Lint | Cycle | Prevents |
+|---|---|---|
+| `test_template_none_safety.py` | 284 | None-vs-default anti-pattern |
+| `test_template_orphan_scan.py` | 302, hardened 304 | Templates without consumers |
+| `test_page_route_coverage.py` | 306-308 | Page templates without routes |
+| `test_canonical_pointer_lint.py` | 310 | Pointer-comment drift |
+| `test_daisyui_python_lint.py` | **318** | **DaisyUI in Python-embedded HTML** |
+
+All five run in `test-ux-preflight` (<5s wall). The horizontal-discipline lint stack approach (cycle 309's endorsement) continues to compound value — cycle 318 adds 200 LOC and a 4th class of silent drift becomes automatically gated.
+
+**Silent-drift coverage matrix (post-cycle-318):**
+
+| Class | Gate |
+|---|---|
+| 1. Syrupy baselines | GATED (312) |
+| 2. UI type errors | GATED (314) |
+| 3. dist/ drift | MANUAL |
+| 4. Canonical-helper bypass | MANUAL |
+| 5. DaisyUI in Python HTML | **GATED (318 — this cycle)** |
+| 6. contract_audit hygiene | GATED downstream (312) |
+
+Two classes remain manual: dist/ drift (#3) and canonical-helper bypass (#4). Both were flagged in cycle 317's gap doc's Axis A1/A2.
+
+**Cross-app verification** (Heuristic 3): N/A — build-time lint, no framework runtime code touched. All 43 preflight tests pass.
+
+**Explore budget used**: 73 → 74.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **Add dist/ drift warning to preflight** — Axis A2 (closes Class 3). Git-status scan on `dist/` as final preflight step; non-blocking warning.
+- **Add `make test-ux-deep` target** — Axis A1. Broader mypy coverage without inflating cron-cadence preflight.
+- **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; warrants contract_audit treatment (would remove the cycle 318 allowlist entry)
+- **Apply orphan_lint pattern to Python modules** — still outstanding
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
