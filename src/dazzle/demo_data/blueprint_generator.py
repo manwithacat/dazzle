@@ -268,17 +268,47 @@ class BlueprintDataGenerator:
         elif strategy == FieldStrategy.EMAIL_FROM_NAME:
             source_field = params.get("source_field", "full_name")
             domains = params.get("domains", ["example.test"])
-            name = context.get(source_field, "user")
+            # Robust fallback chain: requested source_field → common name
+            # fields → first+last concatenation → random suffix. Without
+            # this, a missing `source_field` silently resolved to the
+            # default `"user"` and every row produced the same email,
+            # colliding on the unique-email constraint every entity
+            # with email has. (Discovered in today's tool-sweep:
+            # blueprint.json files across 4 apps had `source_field:
+            # 'full_name'` but no entity had a `full_name` field.)
+            name = context.get(source_field) or context.get("name") or context.get("full_name")
+            if not name:
+                first = context.get("first_name", "")
+                last = context.get("last_name", "")
+                name = f"{first} {last}".strip()
+            if not name:
+                name = f"user{random.randint(1000, 9999)}"
             # Convert name to email format
-            email_name = name.lower().replace(" ", ".").replace("'", "")
+            email_name = str(name).lower().replace(" ", ".").replace("'", "")
+            # Append a short suffix to guarantee uniqueness even when
+            # two rows share a name (person_name draws from a finite
+            # faker pool — collisions at row_count_default=20 are
+            # common).
+            suffix = random.randint(1000, 9999)
             domain = random.choice(domains)
-            return f"{email_name}@{domain}"
+            return f"{email_name}.{suffix}@{domain}"
 
         elif strategy == FieldStrategy.USERNAME_FROM_NAME:
             source_field = params.get("source_field", "full_name")
-            name = context.get(source_field, "user")
-            username = name.lower().replace(" ", "_").replace("'", "")
-            return username
+            # Same fallback chain as EMAIL_FROM_NAME — a missing
+            # source_field silently collapsed to "user" and produced
+            # duplicates across the batch.
+            name = context.get(source_field) or context.get("name") or context.get("full_name")
+            if not name:
+                first = context.get("first_name", "")
+                last = context.get("last_name", "")
+                name = f"{first} {last}".strip()
+            if not name:
+                name = f"user{random.randint(1000, 9999)}"
+            username = str(name).lower().replace(" ", "_").replace("'", "")
+            # Uniqueness suffix (same rationale as EMAIL_FROM_NAME).
+            suffix = random.randint(1000, 9999)
+            return f"{username}_{suffix}"
 
         elif strategy == FieldStrategy.HASHED_PASSWORD_PLACEHOLDER:
             # Return a placeholder that indicates this needs hashing

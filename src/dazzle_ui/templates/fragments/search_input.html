@@ -1,4 +1,5 @@
-{# Reusable search input — pure Tailwind, same HTMX wiring #}
+{# Reusable search input — pure Tailwind, same HTMX wiring.
+   Contract: ~/.claude/skills/ux-architect/components/search-input.md #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional), table #}
 {% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") | replace("_", " ") |lower) + '...' if table else 'Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}

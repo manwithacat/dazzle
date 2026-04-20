@@ -547,13 +547,17 @@ def _infer_field_strategy(
     if any(w in name_lower for w in ["company", "organization", "business"]):
         return "company_name", {}
 
-    # Email patterns
+    # Email patterns. `source_field` defaults to "name" — matches the
+    # `person_name` strategy default field name. Previously defaulted
+    # to "full_name" which was never produced by any auto-propose
+    # template, silently resolving to a fallback and producing
+    # duplicate emails across the batch.
     if "email" in name_lower:
-        return "email_from_name", {"source_field": "full_name", "domains": ["example.test"]}
+        return "email_from_name", {"source_field": "name", "domains": ["example.test"]}
 
-    # Username patterns
+    # Username patterns (same fix as email — default to "name").
     if "username" in name_lower:
-        return "username_from_name", {"source_field": "full_name"}
+        return "username_from_name", {"source_field": "name"}
 
     # Password patterns
     if "password" in name_lower:

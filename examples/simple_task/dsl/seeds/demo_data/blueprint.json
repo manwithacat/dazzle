@@ -52,7 +52,7 @@
             "field_name": "email",
             "strategy": "email_from_name",
             "params": {
-              "source_field": "full_name",
+              "source_field": "name",
               "domains": [
                 "example.test"
               ]

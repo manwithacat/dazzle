@@ -1,4 +1,5 @@
-{# Filter bar fragment — pure Tailwind, same HTMX wiring and filter logic #}
+{# Filter bar fragment — pure Tailwind, same HTMX wiring and filter logic.
+   Contract: ~/.claude/skills/ux-architect/components/filter-bar.md (UX-033) #}
 {% set tbody_target = '#' + (table.table_id or 'dt-table') + '-body' %}
 <div class="flex flex-wrap gap-2 items-end">
   {% for col in table.columns %}

@@ -473,7 +473,13 @@ class TestBlueprintDataGenerator:
         assert parsed_date <= date.today()
 
     def test_generate_email_from_name(self, simple_blueprint):
-        """Test email generation from name field."""
+        """Test email generation from name field.
+
+        The generator now appends a 4-digit suffix for uniqueness —
+        the previous shape ``john.smith@test.com`` collided on every
+        row across a 20-row batch because person_name draws from a
+        finite faker pool. New shape: ``john.smith.NNNN@test.com``.
+        """
         generator = BlueprintDataGenerator(simple_blueprint)
         pattern = FieldPattern(
             field_name="email",
@@ -483,7 +489,11 @@ class TestBlueprintDataGenerator:
 
         value = generator.generate_field_value(pattern, {"full_name": "John Smith"})
 
-        assert value == "john.smith@test.com"
+        # Shape: <name-slug>.<4-digit-suffix>@<domain>
+        assert value.startswith("john.smith.")
+        assert value.endswith("@test.com")
+        suffix = value.removeprefix("john.smith.").removesuffix("@test.com")
+        assert suffix.isdigit() and 1000 <= int(suffix) <= 9999
 
     def test_generate_entity(self, simple_blueprint):
         """Test generating entity rows."""

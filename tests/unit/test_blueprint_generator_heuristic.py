@@ -66,3 +66,104 @@ class TestStrategyValueWrong:
     def test_foreign_id_suffix_detected_as_ref(self) -> None:
         p = _pat("system_id", FieldStrategy.FREE_TEXT_LOREM)
         assert _strategy_value_obviously_wrong(p, "lorem") is True
+
+
+class TestEmailFromNameFallback:
+    """Regression guard for today's tool-sweep finding. The
+    ``email_from_name`` generator previously fell back to the literal
+    string ``"user"`` when ``source_field`` didn't resolve, producing
+    the same ``user@example.test`` for every row and crashing seeds
+    on the unique-email constraint. Every blueprint auto-proposed by
+    ``dazzle.mcp.server.handlers.demo_data`` used
+    ``source_field: 'full_name'`` but no auto-proposed entity had a
+    ``full_name`` field — so every seed silently produced collisions."""
+
+    def _make_generator(self):
+        from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
+        from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
+
+        # Minimal blueprint — field-level generation is blueprint-agnostic
+        # for these strategies; the constructor just needs something valid.
+        return BlueprintDataGenerator(
+            blueprint=DemoDataBlueprint(
+                project_id="test",
+                domain_description="test",
+                entities=[],
+            )
+        )
+
+    def test_email_from_name_falls_back_to_name_when_source_field_missing(self) -> None:
+        """When ``source_field`` (say 'full_name') doesn't resolve,
+        the generator MUST try 'name' as the next fallback before
+        giving up. Prior behaviour: silent 'user' default."""
+        gen = self._make_generator()
+        pattern = FieldPattern(
+            field_name="email",
+            strategy=FieldStrategy.EMAIL_FROM_NAME,
+            params={"source_field": "full_name", "domains": ["example.test"]},
+        )
+        context = {"name": "Jane Doe"}  # no `full_name`
+        result = gen.generate_field_value(pattern, context)
+        assert result.startswith("jane.doe."), f"expected name fallback, got: {result}"
+        assert result.endswith("@example.test")
+
+    def test_email_from_name_falls_back_to_first_last_concat(self) -> None:
+        """Contact-entity shape: source_field=first_name is fine, but
+        when source_field isn't resolvable the generator should still
+        concatenate first_name+last_name rather than collapse to
+        'user'."""
+        gen = self._make_generator()
+        pattern = FieldPattern(
+            field_name="email",
+            strategy=FieldStrategy.EMAIL_FROM_NAME,
+            params={"source_field": "nonexistent", "domains": ["example.test"]},
+        )
+        context = {"first_name": "Priya", "last_name": "Patel"}
+        result = gen.generate_field_value(pattern, context)
+        assert result.startswith("priya.patel."), f"expected concat fallback, got: {result}"
+
+    def test_email_from_name_uniquifies_with_random_suffix(self) -> None:
+        """Even when every row has the same name (faker pool
+        exhaustion at row_count=20 is common), every row must produce
+        a distinct email — the rare collision mode that used to crash
+        seeds at the 10th or 11th row."""
+        gen = self._make_generator()
+        pattern = FieldPattern(
+            field_name="email",
+            strategy=FieldStrategy.EMAIL_FROM_NAME,
+            params={"source_field": "name", "domains": ["example.test"]},
+        )
+        context = {"name": "Same Name"}  # same every time
+        emails = {gen.generate_field_value(pattern, context) for _ in range(50)}
+        # With 9000-value suffix space, 50 trials essentially never
+        # collide. The assertion is soft — >= 45 unique emails out
+        # of 50 would still be far better than the old behaviour
+        # (1 unique out of 50).
+        assert len(emails) >= 45, f"expected near-unique emails, got {len(emails)} unique"
+
+    def test_username_from_name_also_uniquifies(self) -> None:
+        """Same fallback + uniquify pattern on USERNAME_FROM_NAME."""
+        gen = self._make_generator()
+        pattern = FieldPattern(
+            field_name="username",
+            strategy=FieldStrategy.USERNAME_FROM_NAME,
+            params={"source_field": "name"},
+        )
+        context = {"name": "Fixed Name"}
+        usernames = {gen.generate_field_value(pattern, context) for _ in range(50)}
+        assert len(usernames) >= 45
+
+    def test_email_from_name_no_source_at_all_still_produces_email(self) -> None:
+        """Fully missing context — no name, no first_name, no last_name.
+        Must produce a valid-shape email with a random id rather than
+        crashing or returning 'user@example.test' repeatedly."""
+        gen = self._make_generator()
+        pattern = FieldPattern(
+            field_name="email",
+            strategy=FieldStrategy.EMAIL_FROM_NAME,
+            params={"source_field": "name", "domains": ["example.test"]},
+        )
+        context: dict = {}
+        result = gen.generate_field_value(pattern, context)
+        assert "@example.test" in result
+        assert "user" in result.lower()

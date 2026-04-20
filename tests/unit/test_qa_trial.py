@@ -585,10 +585,16 @@ class TestSeedPreflightAndCircuitBreaker:
 
         # Stub demo_generate_impl and httpx.Client so that IF the
         # abort fails to fire we'd see a test failure elsewhere.
+        # Import-and-patch form avoids the string-path resolution
+        # that broke when sys.modules was polluted by prior test
+        # imports (conftest.py warns about this pattern for
+        # `dazzle.mcp.*` specifically).
         def _boom(*_a: Any, **_k: Any) -> None:
             raise AssertionError("seed attempt should not reach demo_generate")
 
-        monkeypatch.setattr("dazzle.mcp.server.handlers.demo_data.demo_generate_impl", _boom)
+        import dazzle.mcp.server.handlers.demo_data as _demo_mod
+
+        monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
 
         qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
         out = capsys.readouterr()
