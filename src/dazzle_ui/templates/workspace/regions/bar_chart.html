@@ -1,7 +1,9 @@
-{# Bar chart region — UX-035 adopter #9. #}
+{# Bar chart region — UX-035 adopter #9.
+   Contract: ~/.claude/skills/ux-architect/components/bar-chart-region.md (UX-065) #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
+<div class="dz-bar-chart-region">
   {% if items and group_by %}
   {% set grouped = {} %}
   {% for item in items %}
@@ -13,9 +15,10 @@
   {% endif %}
   {% endfor %}
   {% set max_count = grouped.values() | max if grouped.values() | list else 1 %}
-  <div class="space-y-2 mt-2">
+  {% set max_count = max_count if max_count > 0 else 1 %}
+  <div class="dz-bar-chart-bars space-y-2 mt-2">
     {% for label, count in grouped.items() %}
-    <div class="flex items-center gap-2">
+    <div class="dz-bar-chart-row flex items-center gap-2">
       <span class="text-[11px] w-24 truncate text-right">
         {{ render_status_badge(value=label, size='sm') }}
       </span>
@@ -33,9 +36,9 @@
   {# Fallback: render aggregate metrics as bars #}
   {% set max_val = metrics | map(attribute='value') | max if metrics else 1 %}
   {% set max_val = max_val if max_val > 0 else 1 %}
-  <div class="space-y-2 mt-2">
+  <div class="dz-bar-chart-bars space-y-2 mt-2">
     {% for metric in metrics %}
-    <div class="flex items-center gap-2">
+    <div class="dz-bar-chart-row flex items-center gap-2">
       <span class="text-[11px] text-[hsl(var(--muted-foreground))] w-28 truncate text-right">{{ metric.label }}</span>
       <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
         <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
@@ -49,4 +52,5 @@
   {% else %}
   <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
+</div>
 {% endcall %}

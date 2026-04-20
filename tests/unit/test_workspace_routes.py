@@ -1592,6 +1592,226 @@ class TestHeatmapRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("HEATMAP") == "workspace/regions/heatmap.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 274 — Bar chart region contract (UX-065)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestBarChartRegionTemplate:
+    """Bar chart region has two modes: grouped (items + group_by) and fallback (metrics).
+
+    Cycle 274 — contracts bar_chart.html. Minor structural fix alongside:
+    grouped mode now has the same `max_count if > 0 else 1` guard that
+    fallback mode already had, preventing a theoretical divide-by-zero
+    when every bucket count is zero.
+    """
+
+    def _bar_kwargs(self, **overrides):
+        defaults = {
+            "title": "Status Breakdown",
+            "items": [],
+            "group_by": "",
+            "metrics": [],
+            "total": 0,
+            "empty_message": "No data available.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_grouped_mode(self) -> None:
+        """Gate 1: dz-bar-chart-region wrapper present in grouped mode."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[
+                    {"status": "open"},
+                    {"status": "open"},
+                    {"status": "closed"},
+                ],
+                group_by="status",
+                total=3,
+            ),
+        )
+        assert "dz-bar-chart-region" in html
+        assert "dz-bar-chart-bars" in html
+
+    def test_grouped_mode_row_per_unique_bucket(self) -> None:
+        """Gate 2: one dz-bar-chart-row per distinct bucket key."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[
+                    {"status": "open"},
+                    {"status": "open"},
+                    {"status": "open"},
+                    {"status": "in_progress"},
+                    {"status": "closed"},
+                ],
+                group_by="status",
+                total=5,
+            ),
+        )
+        # 3 unique status values → 3 rows
+        assert html.count("dz-bar-chart-row") == 3
+        assert ">open<" in html or ">Open<" in html or "open" in html
+
+    def test_fallback_metrics_mode_row_per_metric(self) -> None:
+        """Gate 3: one dz-bar-chart-row per metric (when no items/group_by)."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                metrics=[
+                    {"label": "Total", "value": 10},
+                    {"label": "Pending", "value": 4},
+                    {"label": "Done", "value": 6},
+                ],
+            ),
+        )
+        assert html.count("dz-bar-chart-row") == 3
+        assert "Total" in html
+        assert "Pending" in html
+        assert "Done" in html
+
+    def test_bar_width_inline_style_integer_percentage(self) -> None:
+        """Gate 4: each bar fill has style="width: N%" where N is 0-100 int."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                metrics=[
+                    {"label": "A", "value": 3},
+                    {"label": "B", "value": 10},
+                ],
+            ),
+        )
+        # 3 / 10 = 30%, 10/10 = 100%
+        assert "width: 30%" in html
+        assert "width: 100%" in html
+
+    def test_track_and_fill_use_design_tokens(self) -> None:
+        """Gate 5: track → --muted, fill → --primary. No hardcoded HSL."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                metrics=[{"label": "X", "value": 1}],
+            ),
+        )
+        assert "hsl(var(--muted))" in html
+        assert "hsl(var(--primary))" in html
+        # No hardcoded HSL literals in class attributes
+        import re
+
+        # Exclude the one legitimate inline style="width: N%"
+        class_hsl_leaks = re.findall(r'class="[^"]*hsl\(\d', html)
+        assert not class_hsl_leaks, f"hardcoded HSL in class attr: {class_hsl_leaks}"
+
+    def test_grouped_mode_renders_total_footer(self) -> None:
+        """Gate 6: grouped mode ends with '{total} total' paragraph."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[{"status": "open"}, {"status": "closed"}],
+                group_by="status",
+                total=2,
+            ),
+        )
+        assert "2 total" in html
+
+    def test_grouped_mode_uses_status_badge_for_label(self) -> None:
+        """Gate 7: grouped mode delegates bucket label to render_status_badge."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[{"status": "open"}, {"status": "open"}],
+                group_by="status",
+                total=2,
+            ),
+        )
+        assert "dz-status-badge" in html
+
+    def test_fallback_mode_does_not_use_status_badge(self) -> None:
+        """Gate 8: fallback mode uses plain-text label span, NOT status badge."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                metrics=[{"label": "Total", "value": 1}],
+            ),
+        )
+        # Metric labels are plain spans, not badges
+        assert "dz-status-badge" not in html
+
+    def test_empty_state_when_no_data_at_all(self) -> None:
+        """Gate 9: no items, no metrics → role=status empty state, no bars."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[],
+                group_by="",
+                metrics=[],
+                empty_message="Nothing to chart.",
+            ),
+        )
+        assert "dz-bar-chart-bars" not in html
+        assert "dz-bar-chart-row" not in html
+        assert 'role="status"' in html
+        assert "Nothing to chart." in html
+
+    def test_grouped_mode_wins_over_metrics_when_both_present(self) -> None:
+        """Gate 10: mode precedence — grouped takes priority over metrics fallback."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[{"status": "open"}, {"status": "closed"}],
+                group_by="status",
+                total=2,
+                # metrics also provided — should be IGNORED
+                metrics=[{"label": "METRIC-IGNORED", "value": 999}],
+            ),
+        )
+        # Grouped mode footer present
+        assert "2 total" in html
+        # Metrics label must NOT appear
+        assert "METRIC-IGNORED" not in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 11: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                items=[{"status": "open"}],
+                group_by="status",
+                total=1,
+            ),
+        )
+        for banned in (
+            "progress-primary",
+            "progress-success",
+            "badge-primary",
+            "btn-primary",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_all_zero_metrics_does_not_divide_by_zero(self) -> None:
+        """Safety guard: all-zero values resolve to 0% widths, no crash."""
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            **self._bar_kwargs(
+                metrics=[
+                    {"label": "A", "value": 0},
+                    {"label": "B", "value": 0},
+                ],
+            ),
+        )
+        # Rendered successfully with 0% widths
+        assert "width: 0%" in html
+
+    def test_bar_chart_routes_to_bar_chart_template(self) -> None:
+        """Gate 0 (routing): BAR_CHART display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("BAR_CHART") == "workspace/regions/bar_chart.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
