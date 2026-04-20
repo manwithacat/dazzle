@@ -1,12 +1,14 @@
-{# List region — UX-035 adopter #2 (after grid). #}
+{# List region — UX-035 adopter #2 (after grid).
+   Contract: ~/.claude/skills/ux-architect/components/list-region.md (UX-069) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(None) %}
+<div class="dz-list-region">
   {# Action row: region actions + CSV export. The dashboard slot
      owns the title (#794 second follow-up) — rendering it here would
      duplicate. Actions float right; the row stays full-width so the
      spacing above the table remains consistent. #}
-  <div class="flex items-center justify-end mb-3">
+  <div class="dz-list-actions flex items-center justify-end mb-3">
     <div class="flex items-center gap-1">
       {% if region_actions %}
       {% for act in region_actions %}
@@ -29,7 +31,7 @@
 
   {# Filter bar — per-column dropdowns #}
   {% if filter_columns %}
-  <div class="flex flex-wrap gap-2 mb-2 filter-bar">
+  <div class="dz-list-filters flex flex-wrap gap-2 mb-2 filter-bar">
     {% for fc in filter_columns %}
     <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
             hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
@@ -51,7 +53,7 @@
 
   {% if items %}
   <div class="overflow-x-auto">
-    <table class="w-full">
+    <table class="dz-list-table w-full">
       <thead>
         <tr class="bg-[hsl(var(--muted)/0.3)] border-b border-[hsl(var(--border))]">
           {% for col in columns %}
@@ -73,7 +75,7 @@
       <tbody>
         {% for item in items %}
         {% set attn = item.get("_attention") if item.get is defined else none %}
-        <tr class="border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+        <tr class="dz-list-row border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
             {% if attn %}
               {% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% endif %}
               {% if attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% endif %}
@@ -120,4 +122,5 @@
   {% else %}
   {% include "fragments/empty_state.html" %}
   {% endif %}
+</div>
 {% endcall %}

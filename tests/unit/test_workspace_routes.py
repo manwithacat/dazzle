@@ -2663,6 +2663,321 @@ class TestQueueRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("QUEUE") == "workspace/regions/queue.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 278 — List region contract (UX-069) — closes PROP-032 decomposition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestListRegionTemplate:
+    """List region is the framework default — table with sort/filter/drill-down.
+
+    Cycle 278 — contracts list.html, closing the PROP-032 decomposition at
+    8/8. LIST is the default display mode, so every region that doesn't
+    declare an explicit `display:` renders through this template. Widest
+    blast radius of any region contract.
+    """
+
+    def _list_kwargs(self, **overrides):
+        defaults = {
+            "title": None,
+            "items": [],
+            "columns": [
+                {"key": "name", "label": "Name", "type": "text", "sortable": True},
+                {"key": "status", "label": "Status", "type": "badge"},
+            ],
+            "total": 0,
+            "region_actions": [],
+            "filter_columns": [],
+            "active_filters": {},
+            "date_range": False,
+            "action_url": "",
+            "action_id_field": "id",
+            "sort_field": "",
+            "sort_dir": "",
+            "region_name": "items",
+            "endpoint": "/api/workspaces/w/regions/items",
+            "empty_message": "No items.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper(self) -> None:
+        """Gate 1: dz-list-region outer wrapper."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active"}],
+                total=1,
+            ),
+        )
+        assert "dz-list-region" in html
+
+    def test_csv_export_link_always_present(self) -> None:
+        """Gate 2: CSV export link is unconditional."""
+        # With items
+        with_items = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "ok"}],
+                total=1,
+            ),
+        )
+        assert '?format=csv" download' in with_items
+        assert 'aria-label="Export CSV"' in with_items
+
+        # Even without items (empty state)
+        without_items = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(items=[], total=0),
+        )
+        assert '?format=csv" download' in without_items
+
+    def test_region_actions_when_configured(self) -> None:
+        """Gate 3: hx-post buttons when region_actions is set."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "ok"}],
+                total=1,
+                region_actions=[
+                    {
+                        "label": "Archive closed",
+                        "endpoint": "/api/bulk/archive",
+                        "confirm": "Archive all closed items?",
+                    },
+                ],
+            ),
+        )
+        assert 'hx-post="/api/bulk/archive"' in html
+        assert 'hx-confirm="Archive all closed items?"' in html
+        assert 'hx-swap="none"' in html
+        assert "Archive closed" in html
+
+    def test_filter_bar_when_filter_columns_present(self) -> None:
+        """Gate 4: filter_columns → <select>s with HTMX live-reload."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "open"}],
+                total=1,
+                filter_columns=[
+                    {
+                        "key": "status",
+                        "label": "Status",
+                        "options": ["open", "closed"],
+                    },
+                ],
+            ),
+        )
+        assert "dz-list-filters" in html
+        assert "filter-bar" in html
+        assert 'hx-get="/api/workspaces/w/regions/items"' in html
+        assert 'hx-include="closest .filter-bar"' in html
+        assert 'name="filter_status"' in html
+
+    def test_table_and_row_count(self) -> None:
+        """Gates 5 + 6: dz-list-table + row count matches items length."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[
+                    {"id": "1", "name": "A", "status": "open"},
+                    {"id": "2", "name": "B", "status": "closed"},
+                    {"id": "3", "name": "C", "status": "open"},
+                ],
+                total=3,
+            ),
+        )
+        assert "dz-list-table" in html
+        assert html.count("dz-list-row") == 3
+
+    def test_attention_level_bg_tints(self) -> None:
+        """Gate 7: attention levels map to bg tints (critical/warning 0.08, notice 0.06)."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Urgent",
+                        "status": "critical",
+                        "_attention": {"level": "critical", "message": "!!"},
+                    },
+                    {
+                        "id": "2",
+                        "name": "Warn",
+                        "status": "warn",
+                        "_attention": {"level": "warning", "message": "!"},
+                    },
+                    {
+                        "id": "3",
+                        "name": "Info",
+                        "status": "ok",
+                        "_attention": {"level": "notice", "message": "note"},
+                    },
+                ],
+                total=3,
+            ),
+        )
+        assert "bg-[hsl(var(--destructive)/0.08)]" in html
+        assert "bg-[hsl(var(--warning)/0.08)]" in html
+        assert "bg-[hsl(var(--primary)/0.06)]" in html
+
+    def test_sortable_column_header_has_hx_get(self) -> None:
+        """Gate 8: sortable columns have <a hx-get=...?sort=...&dir=...>."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "open"}],
+                total=1,
+            ),
+        )
+        # "name" column is sortable in defaults
+        assert "sort=name" in html
+        assert 'hx-target="#region-items"' in html
+
+    def test_active_sort_indicator(self) -> None:
+        """Gate 9: active sort column has ▲ (asc) or ▼ (desc) indicator."""
+        asc = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "open"}],
+                total=1,
+                sort_field="name",
+                sort_dir="asc",
+            ),
+        )
+        assert "▲" in asc
+
+        desc = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "open"}],
+                total=1,
+                sort_field="name",
+                sort_dir="desc",
+            ),
+        )
+        assert "▼" in desc
+
+    def test_row_drill_down_when_action_url_set(self) -> None:
+        """Gate 10: rows have hx-get iff action_url is non-empty."""
+        with_action = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "abc", "name": "A", "status": "open"}],
+                total=1,
+                action_url="/app/item/{id}",
+            ),
+        )
+        assert 'hx-get="/app/item/abc"' in with_action
+        assert "#dz-detail-drawer-content" in with_action
+        assert "cursor-pointer" in with_action
+
+        without_action = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "abc", "name": "A", "status": "open"}],
+                total=1,
+                action_url="",
+            ),
+        )
+        # CSV link has href=; rows don't have hx-get for drill-down
+        # Check specifically that no row has hx-target=detail-drawer
+        assert "#dz-detail-drawer-content" not in without_action
+
+    def test_ref_column_uses_htmx_anchor_with_stop_propagation(self) -> None:
+        """Gate 11: ref columns with ref_route produce HTMX anchors + stopPropagation."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "A",
+                        "status": "ok",
+                        "owner": {"id": "u42", "name": "Bob"},
+                        "owner_display": "Bob Smith",
+                    },
+                ],
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {
+                        "key": "owner",
+                        "label": "Owner",
+                        "type": "ref",
+                        "ref_route": "/app/user/{id}",
+                    },
+                ],
+                total=1,
+                action_url="/app/item/{id}",
+            ),
+        )
+        # Ref anchor uses hx-get (HTMX loading) not href
+        assert 'hx-get="/app/user/u42"' in html
+        assert 'onclick="event.stopPropagation()"' in html
+        assert "Bob Smith" in html
+
+    def test_empty_state_when_no_items(self) -> None:
+        """Gate 12: empty items → delegates to empty_state fragment, no <table>."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(items=[], total=0),
+        )
+        assert "<table" not in html
+        assert "dz-list-row" not in html
+        # CSV link is still present; empty_state fragment handles the empty display
+
+    def test_truncation_footer_conditional(self) -> None:
+        """Gate 13: 'Showing N of M' renders iff total > items|length."""
+        truncated = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[
+                    {"id": "1", "name": "A", "status": "ok"},
+                    {"id": "2", "name": "B", "status": "ok"},
+                ],
+                total=50,
+            ),
+        )
+        assert "Showing 2 of 50" in truncated
+
+        not_truncated = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "ok"}],
+                total=1,
+            ),
+        )
+        assert "Showing" not in not_truncated
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 14: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            **self._list_kwargs(
+                items=[{"id": "1", "name": "A", "status": "ok"}],
+                total=1,
+            ),
+        )
+        for banned in (
+            "table-zebra",
+            "btn-primary",
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "alert-info",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_list_routes_to_list_template(self) -> None:
+        """Gate 0 (routing): LIST display mode resolves to this template (default)."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("LIST") == "workspace/regions/list.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
