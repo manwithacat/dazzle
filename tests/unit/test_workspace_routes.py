@@ -5488,3 +5488,188 @@ class TestAlpineDropdownComponent:
         html = self._render(dropdown_label="X", dropdown_items=[])
         assert "<ul " in html
         assert "<li>" not in html
+
+
+# ---------------------------------------------------------------------------
+# Cycle 288 — search-flow-fragments (search_results + select_result)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestSearchResultsFragment:
+    """search_results.html — HTMX response listing matching items.
+
+    Cycle 288 — uncontracted before this cycle (surfaced by cycle 285
+    missing_contracts scan). Contract at
+    ~/.claude/skills/ux-architect/components/search-flow-fragments.md.
+    """
+
+    def _render(self, **ctx):
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        defaults = {
+            "items": [],
+            "display_key": "name",
+            "secondary_key": None,
+            "value_key": "id",
+            "query": "",
+            "min_chars": 2,
+            "field_name": "owner",
+            "select_endpoint": "/api/select/owner?field=owner",
+        }
+        defaults.update(ctx)
+        return render_fragment("fragments/search_results.html", **defaults)
+
+    def test_items_rendered_with_htmx_wiring(self) -> None:
+        """Gates 1, 2, 3: each item is a clickable div with hx-get + primary label."""
+        html = self._render(
+            items=[
+                {"id": "u1", "name": "Alice"},
+                {"id": "u2", "name": "Bob"},
+            ],
+            query="a",
+        )
+        # Two items
+        assert html.count("hx-get=") == 2
+        # Each has the target wiring
+        assert 'hx-target="#search-results-owner"' in html
+        assert 'hx-swap="innerHTML"' in html
+        # IDs appended to select_endpoint
+        assert "&id=u1" in html
+        assert "&id=u2" in html
+        # Primary labels
+        assert "Alice" in html
+        assert "Bob" in html
+
+    def test_secondary_label_rendered_when_key_provided(self) -> None:
+        """Gate 4: secondary label renders when secondary_key + item value both truthy."""
+        html = self._render(
+            items=[
+                {"id": "u1", "name": "Alice", "email": "alice@example.com"},
+            ],
+            secondary_key="email",
+            query="a",
+        )
+        assert "Alice" in html
+        assert "alice@example.com" in html
+        assert "hsl(var(--muted-foreground))" in html
+
+    def test_secondary_label_omitted_when_missing_from_item(self) -> None:
+        """Gate 4 (negative): secondary_key set but item lacks the value → no secondary div."""
+        html = self._render(
+            items=[{"id": "u1", "name": "Alice"}],
+            secondary_key="email",
+            query="a",
+        )
+        assert "Alice" in html
+        # No email div rendered
+        # count of muted-foreground styling in items (the empty-state also uses it, but items don't when secondary absent)
+        # Better: verify only 1 div per item
+        result_divs = html.count("cursor-pointer")
+        assert result_divs == 1
+
+    def test_empty_state_with_query_shows_no_results_message(self) -> None:
+        """Gate 5: empty items + query → 'No results found for "..."'."""
+        html = self._render(items=[], query="xyzzy")
+        assert 'No results found for "xyzzy"' in html
+        assert "cursor-pointer" not in html
+
+    def test_empty_state_without_query_shows_prompt(self) -> None:
+        """Gate 5: empty items + no query → 'Type at least N characters...'."""
+        html = self._render(items=[], query="", min_chars=3)
+        assert "Type at least 3 characters" in html
+
+    def test_hover_uses_muted_token(self) -> None:
+        """Gate 6: items have hover:bg-[hsl(var(--muted))]."""
+        html = self._render(items=[{"id": "1", "name": "Alice"}], query="a")
+        assert "hover:bg-[hsl(var(--muted))]" in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 11: zero DaisyUI class references."""
+        html = self._render(
+            items=[{"id": "1", "name": "Alice"}],
+            query="a",
+        )
+        for banned in ("dropdown ", "menu ", "input-bordered", "btn-primary"):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestSelectResultFragment:
+    """select_result.html — OOB swap response after user picks a search result.
+
+    Cycle 288 — paired contract with search_results.html. Updates the
+    hidden form field + visible search input + any autofill mappings
+    via hx-swap-oob.
+    """
+
+    def _render(self, **ctx):
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        defaults = {
+            "display_val": "Alice Smith",
+            "selected_value": "u42",
+            "field_name": "owner",
+            "autofill_values": [],
+        }
+        defaults.update(ctx)
+        return render_fragment("fragments/select_result.html", **defaults)
+
+    def test_confirmation_flash_uses_success_token(self) -> None:
+        """Gate 7: confirmation uses --success token and shows 'Selected: X'."""
+        html = self._render(display_val="Alice Smith")
+        assert "text-[hsl(var(--success))]" in html
+        assert "Selected: Alice Smith" in html
+
+    def test_hidden_form_field_has_required_attrs(self) -> None:
+        """Gate 8: hidden input has name, id, data-dazzle-field, value, hx-swap-oob."""
+        html = self._render(selected_value="u42", field_name="owner")
+        assert 'type="hidden"' in html
+        assert 'name="owner"' in html
+        assert 'id="field-owner"' in html
+        assert 'data-dazzle-field="owner"' in html
+        assert 'value="u42"' in html
+        assert 'hx-swap-oob="true"' in html
+
+    def test_visible_search_input_has_token_classes_and_oob_swap(self) -> None:
+        """Gate 9: visible input references all 4 design tokens + hx-swap-oob."""
+        html = self._render(display_val="Alice", field_name="owner")
+        # The 4 token refs
+        assert "bg-[hsl(var(--background))]" in html
+        assert "border-[hsl(var(--border))]" in html
+        assert "text-[hsl(var(--foreground))]" in html
+        # Visible-input specific markers
+        assert 'id="search-input-owner"' in html
+        # hx-swap-oob on at least 2 inputs (hidden + visible)
+        assert html.count('hx-swap-oob="true"') >= 2
+
+    def test_autofill_values_emit_extra_oob_inputs(self) -> None:
+        """Gate 10: one <input hx-swap-oob> per autofill tuple."""
+        html = self._render(
+            display_val="Alice",
+            selected_value="u42",
+            field_name="owner",
+            autofill_values=[
+                ("email", "alice@example.com"),
+                ("department", "Engineering"),
+            ],
+        )
+        # Each autofill field creates an OOB input
+        assert 'id="field-email"' in html
+        assert 'value="alice@example.com"' in html
+        assert 'id="field-department"' in html
+        assert 'value="Engineering"' in html
+        # Total OOB inputs: 1 hidden + 1 visible + 2 autofill = 4
+        assert html.count('hx-swap-oob="true"') == 4
+
+    def test_zero_autofill_values_emits_only_core_oob_inputs(self) -> None:
+        """Edge case: no autofill → only hidden + visible OOB inputs."""
+        html = self._render(autofill_values=[])
+        # 2 OOB inputs (hidden + visible)
+        assert html.count('hx-swap-oob="true"') == 2
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 11: zero DaisyUI class references."""
+        html = self._render()
+        for banned in ("input-bordered", "dropdown ", "menu ", "btn-primary"):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
