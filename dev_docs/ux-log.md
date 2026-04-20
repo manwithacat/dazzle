@@ -9482,4 +9482,79 @@ Theme has reached a reasonable steady state; future cycles can likely de-emphasi
 
 ---
 
+## Cycle 321 — 2026-04-20 — template_renderer.py DaisyUI cleanup: dead code + HSL migration
+
+**Strategy:** contract_audit-style refactor — directly addresses cycle 320's top remaining candidate
+**Outcome:** Removed 29 lines of dead code + 18 lines of stale tests from template_renderer.py. Migrated `_bool_icon_filter` (10+ template consumers) to canonical HSL tokens. Removed one allowlist entry from the DaisyUI-Python lint. Framework is now DaisyUI-free in BOTH the rendering path (cycle 316) AND template_renderer.py filter implementations (this cycle).
+
+**Heuristic 1 decisive finding:**
+
+The `_badge_filter` function had been deprecated in cycle 238 (docstring: "Retained only for any stragglers that still emit the legacy class names"). Before assuming the migration would touch 20 call sites (cycle 320's estimate), I grepped for `badge_class` filter usage in templates:
+
+```
+grep -rn "| *badge_class\|badge_class" src/dazzle_ui/templates/
+```
+
+**Zero template consumers.** The "stragglers" rationale from cycle 238 turned out to be false — no stragglers ever materialised. The filter was dead code for ~80 cycles. Safe to delete outright rather than migrate.
+
+Cycle 320's "grammar-level, ~20 call sites" estimate was wrong in the best direction possible: the scope collapsed from "migrate N call sites to new vocabulary" to "delete N dead lines."
+
+**Changes:**
+
+| Item | Before | After |
+|---|---|---|
+| `_badge_filter()` function | 20 lines | (deleted) |
+| `tone_to_legacy` dict | 5 entries | (deleted) |
+| `env.filters["badge_class"]` | registered | (unregistered) |
+| 4 `test_badge_class_*` tests | active | (deleted) |
+| `_bool_icon_filter()` HTML | `text-success` + `text-base-content/30` | `text-[hsl(var(--success))]` + `text-[hsl(var(--muted-foreground)/0.3)]` |
+| 2 `test_bool_icon_*` asserts | substring `text-success` | substring `text-[hsl(var(--success))]` |
+| `template_renderer.py` allowlist entry | present | removed (0 DaisyUI hits) |
+
+**Heuristic 3 — cross-app verification** (mandatory for live code changes):
+
+`_bool_icon_filter` has 10+ template consumers:
+- `fragments/related_table_group.html`
+- `fragments/table_rows.html` (×2)
+- `workspace/regions/{list,grid,timeline,kanban,detail,tab_data,metrics}.html`
+
+68 template + snapshot + bool_icon tests pass. `--success` and `--muted-foreground` CSS variables verified present in `design-system.css` (:root + [data-theme="dark"]).
+
+**Heuristic 4 — defaults propagation** (minor — verified):
+
+The `bool_icon` filter is called from Jinja `|bool_icon|safe` expressions that thread `val` through to the HTML. No intermediate context object is involved — the filter's return value IS the rendered HTML. No propagation gap to worry about.
+
+**Silent-drift coverage update:**
+
+| Class 5 (DaisyUI in Python HTML) | Before cycle 321 | After cycle 321 |
+|---|---|---|
+| Allowlist entries | 2 | 1 |
+| Files with hits | 2 | 1 |
+| Total token hits | 8 | 1 |
+| Framework-layer render path | DaisyUI-free (cycle 316) | DaisyUI-free (cycle 321 extends to filters) |
+
+Only remaining DaisyUI residue: `htmx.py:168` fallback alert, which is unreachable in production (fires only when template_renderer fails to import). Legitimately deferred.
+
+**Preflight + regressions:**
+
+- `make test-ux-preflight` passes (43 tests + mypy, ~5s)
+- `pytest tests/unit/test_template_rendering.py`: 109 passed (down from 113 before — 4 badge_class tests deleted)
+- `pytest tests/unit/ -k "template_html or dom_snapshot or bool_icon"`: 68 passed, 4 skipped
+
+**Semgrep noise:** the hook flagged 4 pre-existing `direct Jinja2 use` warnings at template_renderer.py lines 356/475/513/529. This file is the Jinja environment builder — direct Jinja2 use is structurally required. Warnings are false positives for this file's role; not a cycle 321 regression.
+
+**Explore budget used**: 76 → 77.
+
+### Running UX-governance total: 79 contracts (unchanged — refactor cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint candidate. Still outstanding; could expose dead code like cycle 321's `_badge_filter`.
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (cycle 300 theme)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
