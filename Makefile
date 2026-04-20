@@ -107,6 +107,16 @@ test-ux-preflight:
 	       tests/unit/test_card_safety_invariants.py \
 	       -q
 	mypy src/dazzle_ui/ --ignore-missing-imports
+	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
+	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
+	@# surfaces it on every preflight but doesn't fail the cycle — runs
+	@# that legitimately regenerate dist/ in-flight shouldn't be blocked.
+	@if [ -n "$$(git status --porcelain dist/ 2>/dev/null)" ]; then \
+		echo ""; \
+		echo "[WARN] dist/ has uncommitted changes (silent-drift class 3):"; \
+		git status --short dist/ | sed 's/^/  /'; \
+		echo "  Rebuild + commit before /ship to keep the wheel fresh."; \
+	fi
 
 test-integration:
 	pytest tests/integration/ -v
