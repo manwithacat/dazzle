@@ -276,6 +276,17 @@ Without Heuristic 1, each of these cycles would have shipped framework code that
 
 **Why subagent observations are unreliable:** Multiple layers separate the subagent's `visible_text` from actual framework behaviour — the substrate's statelessness (form state evaporates between calls), the browser's JS event loop timing, HTMX swap scheduling, observe-time re-navigation that destroys in-place DOM changes, DSL copy that looks like an affordance but isn't. Any of these can fake a framework defect.
 
+**Catalog of observed substrate-intel failure modes** (cycles 229 → 331, consolidated cycle 332):
+
+| # | Mode | Surfaced | Telltale | Mitigation |
+|---|---|---|---|---|
+| 1 | Substrate statelessness | 229 | Form values evaporate between subagent tool calls — looks like "server lost the data" but is actually subprocess-boundary artifact | Raw curl / httpx repro with explicit payload; never trust form-state persistence claims from subagents |
+| 2 | DSL copy misread as affordance | 234 | Empty-state text says "Add your first item!" → observer reports "CTA invites unauthorised action" — but framework correctly withholds the Create button; only the COPY suggested otherwise | Grep the DSL `empty:` block for the string; check the template's `{% if create_url %}` gate |
+| 3 | Pre-open DOM of dynamic elements | 330 | `<a hidden>` element with no `href` read before JS populates it → observer reports "dead affordance"; actual element is client-side-populated at interaction time | Check for `hidden` attribute + absent `href`/`src`. If dynamic, element is populated by an event handler — raw-read is insufficient |
+| 4 | Pre-hydration DOM textContent | 331 | `<span x-text="count">0</span> items` with `x-cloak`/`x-show` wrapper → observer extracts text content (not blocked by `display:none`) before Alpine hydrates → reports "empty placeholder" or pre-substitution text | Check for Alpine directives (`x-text`, `x-show`, `x-cloak`) or HTMX `hx-*` on the element or an ancestor. Raw-read snapshots are taken BEFORE JS runtime finishes |
+
+Add to this catalog whenever a `finding_investigation` cycle pivots from "framework bug" → "observer artifact". The catalog is durable knowledge for future cycles — reading it before filing a framework issue can prevent unnecessary work.
+
 **The rule (mandatory — not optional):**
 
 In any `finding_investigation` cycle OR any implementation cycle triggered by a gap doc, the FIRST step is a raw-layer reproduction. If the raw layer shows the framework behaving correctly, the defect is in the observer, the DSL, or the substrate — pivot the cycle to that layer instead. Do not write framework code until the raw layer confirms framework behaviour is incorrect.
