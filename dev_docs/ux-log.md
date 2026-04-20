@@ -8952,3 +8952,47 @@ Cycle 310 accidentally caught this via a full-suite regression check. Cycle 311'
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 312 — 2026-04-20 — test-ux-preflight gate: systemic fix for the cycle 311 pattern
+
+**Strategy:** infrastructure / loop-hygiene — directly implements cycle 311's highest-leverage "next candidate"
+**Outcome:** Shipped `make test-ux-preflight` target + added Step 0a.4 to the `/ux-cycle` skill. A ~3-second pre-cycle gate that runs all 4 horizontal-discipline lints + DOM snapshots + card-safety invariants. Green before any downstream cycle work begins.
+
+**What goes in the gate (39 tests, 1.7s):**
+- `test_template_orphan_scan.py` (cycle 302) — template consumer gaps
+- `test_page_route_coverage.py` (cycle 306-308) — page-route wiring gaps
+- `test_canonical_pointer_lint.py` (cycle 310) — pointer-comment drift
+- `test_template_none_safety.py` (cycle 284) — None-vs-default anti-pattern
+- `test_dom_snapshots.py` — syrupy baseline drift (the cycle 311 revelation)
+- `test_card_safety_invariants.py` — chrome/title invariants on composite DOM
+
+**Why this specific set:**
+
+These are the tests most likely to go silently red when cycles edit templates without running pytest. Every other unit test either (a) exercises backend/CLI code not touched by `/ux-cycle` work, or (b) runs so slowly that adding it would break the <5s preflight budget. Cycle 311 showed the cost of NOT running them: ~40 cycles of accumulated debt, 9 red tests, 2 distinct root causes hiding in plain sight.
+
+**Pattern reinforced: convert silent drift into loud drift at the earliest cycle step.**
+
+The existing 4 lints already do this at their specific scope. The snapshot + card-safety tests do this at rendered-DOM scope. Bundling them into a Makefile target + calling it from Step 0a means every cycle sees infrastructure health before deciding what to work on. A red gate forces a cleanup cycle BEFORE starting a new component — same discipline as "don't work on dirty main."
+
+**Delta vs. cycle 311's earlier suggestion:**
+
+Cycle 311 proposed "add full-suite health check to /ux-cycle" and mused about "hard gate every N cycles OR warning-only every cycle". This cycle picks **hard gate, every cycle** — but scoped down to the ~40-file infrastructure subset that runs in <5s. Running the full 11,432-test suite every 10 minutes (cron cadence) would be wasteful; running the 39 infrastructure-critical tests costs effectively nothing.
+
+**Heuristic 1 verified retroactively:** cycle 311's 9 red tests were the raw-layer evidence that this class of gate adds value. No injected malformation needed — the 40-cycle accumulation IS the evidence. Confirmed with one run (`make test-ux-preflight` passes after cycle 311's cleanup, would have failed before).
+
+**Cross-app verification** (Heuristic 3): Not applicable — build-system change, no framework code touched. The gate itself is the verification oracle.
+
+**Explore budget used**: 67 → 68.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding.
+- **Monitor lint allowlist drift** — opportunistic check on allowlist entry ages
+- **Extend `test-ux-preflight`** — if a future cycle adds a lint or infrastructure-critical test family, append it to the Makefile target. This is the ongoing discipline — the gate grows as the lint stack grows.
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (vendor Tailwind + Dazzle own dist)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
