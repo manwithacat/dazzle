@@ -9925,4 +9925,59 @@ Cycles 302-324 built the horizontal-discipline lint stack — converting acciden
 
 ---
 
+## Cycle 328 — 2026-04-20 — expanded Python-orphan scan: lint ruled out
+
+**Strategy:** finding_investigation — continuation of cycle 327. Scan broader scope (dazzle_back + dazzle core/cli/mcp/agent) to test whether aggregate signal justifies building the formal lint deferred in cycle 327.
+**Outcome:** Scan of 979 modules found ~104 naive orphan candidates but only **3 plausibly-genuine** after Heuristic-1 relative-import + entry-point refinement. Signal:noise got WORSE with broader scope. **Lint decision: ruled out definitively.** The cycle 327 defer is now a cycle 328 permanent decision.
+
+**Scan coverage:**
+
+| Package | Modules | Naive orphans | Notes |
+|---|---|---|---|
+| `dazzle_ui` | 54 | 4 | 1 genuine (cycle 327, filed #834), 3 false positives |
+| `dazzle_back` | 248 | 36 | ~2 plausibly genuine (push_notifications, admin_api_routes), rest relative imports or plugin auto-registration |
+| `dazzle.core` | 189 | 23 | Mostly DSL parser mixins (auto-registered via introspection); 0 genuine |
+| `dazzle.cli` | 81 | 2 | Both `__main__` (CLI entry points, false positive) |
+| `dazzle.mcp` | 113 | 19 | Mostly tool handlers (auto-registered); ~0 genuine |
+| `dazzle.agent` | 26 | 1 | `playwright_helper` — used as `python -m` entry (false positive) |
+| `dazzle` (other) | 268 | 19 | Mix of example-app generated code (FP) + `__main__` (FP) + example npm junk (FP) + some plausible |
+| **Total** | **979** | **~104** | **~3 plausible genuine orphans** |
+
+**Heuristic 1 outcome:** the 0.3% signal rate (3 / 979) is an upper bound; the real genuine-orphan rate is likely lower because even "plausible" candidates may be wired up via pyproject entry points, `importlib.metadata` plugin loading, or subprocess invocation.
+
+**Spot-checks (sample of "plausible" candidates):**
+
+- `push_notifications` — grep found no imports; plausible orphan but WEAK signal (could be feature-flagged)
+- `admin_api_routes` — no imports; plausible orphan
+- `routes_2fa` — FP (`from .routes_2fa` in auth/__init__.py)
+- `eventing` — FP (imported via `.eventing` in 3 places in core/ir/)
+- `entity` DSL mixin — FP pattern (DSL parser mixins auto-registered)
+
+**Decision: skip building a Python-module orphan lint.** Three factors make it a poor investment:
+
+1. **False-positive rate ≥80%** even with Heuristic-1 refinement. A lint with that noise would need a >80-entry allowlist to remain green, which is maintenance burden without much protection.
+2. **Plugin patterns abound** (MCP handlers, DSL parser mixins, CLI entry points, pyproject console_scripts, importlib dynamic loads). Each would need bespoke recognition logic.
+3. **Alternative path is cheaper and proven**: cycle 327's pattern of "scan, surface N findings as issues" worked — #834 is a concrete, actionable issue. Future orphan-suspicions can follow the same cycle-as-surface path.
+
+**Meta-pattern for the ux-cycle stack: lint-vs-file is a conscious choice.**
+
+Cycle 324 built a lint (external-resource) because: clear detection + low FP + small allowlist + ongoing regression pressure. Cycles 327+328 declined to build a lint (Python orphan) because: noisy detection + huge allowlist + one-time discovery effort. The ux-cycle stack doesn't need to convert every drift class to infrastructure — the judgment call is on the ratio.
+
+**No more issues filed this cycle.** The 2 additional plausible orphans (push_notifications, admin_api_routes) are WEAKER signals than hot_reload (which had a clear docstring promise of a feature that's not wired up). Filing each as an individual issue would be over-investigation of low-confidence findings. If future cycles surface stronger signal, they can be filed then.
+
+**Cross-app verification** (Heuristic 3): N/A — pure scan, no code changes.
+
+**Explore budget used**: 83 → 84.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+- **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
+- **Pick a new cross-cycle theme for `framework_gap_analysis`** — silent-drift + external-resource themes are both settled; time to scan EX rows for a fresh theme
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
