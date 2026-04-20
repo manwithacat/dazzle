@@ -9759,3 +9759,66 @@ Stays under 6s after 4 additions. The lint stack compounds value at near-zero ma
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 325 — 2026-04-20 — Phase 3 external-resource-integrity filed as #833
+
+**Strategy:** finding_investigation / issue-filing — closes the external-resource-integrity gap doc's issue-filing workstream
+**Outcome:** Filed [#833 — Security: Align CSP defaults with template asset loads](https://github.com/manwithacat/dazzle/issues/833). Gap doc status tracker updated: all 4 phases now either FILED (1/2/3) or SHIPPED (4). The theme is fully triaged — further work lives downstream.
+
+**Heuristic 1 confirmed at raw layer:**
+
+- `security_middleware.py:38` — `enable_csp: bool = False` (default)
+- `security_middleware.py:157` — `basic` profile: `enable_csp=False`
+- `security_middleware.py:164` — `standard` profile: `enable_csp=False` with comment \"CSP can break many apps\"
+- `security_middleware.py:171` — `strict` profile: `enable_csp=True`
+- `server.py:107` — default `security_profile: str = \"basic\"`
+
+Gap still real — CSP is OFF by default, CSP defaults would block every external load the bundled templates make. Cycle 325's job was to formalise the triage into a PR-pickup issue, not to ship the fix (which requires #830 + #832 to land first).
+
+**Issue scope (as filed):**
+
+- Post-#830/#832 CSP defaults tightening (whitelist only surviving external origins)
+- `standard` profile graduation to CSP-on
+- `Content-Security-Policy-Report-Only` stepping-stone for `basic`
+- `docs/reference/security-profiles.md` profile-progression guide
+- Tests covering each profile × bundled template set
+
+**Dependency ordering stated explicitly:**
+
+1. #830 (SRI) — independent, any time
+2. #832 (vendor) — removes external origins
+3. #829 (TOTP server-side render) — removes api.qrserver.com
+4. **#833 (this issue)** — depends on the above being settled
+
+**External-resource-integrity theme: fully triaged.**
+
+| Phase | Status | Artifact |
+|---|---|---|
+| 1 — SRI attributes | FILED | [#830](https://github.com/manwithacat/dazzle/issues/830) (cycle 301) |
+| 2 — Vendor Tailwind + Dazzle own dist | FILED | [#832](https://github.com/manwithacat/dazzle/issues/832) (cycle 323) |
+| 3 — CSP default alignment | **FILED** | **[#833](https://github.com/manwithacat/dazzle/issues/833) (cycle 325 — this cycle)** |
+| 4 — Template lint rule | SHIPPED | cycle 324 — `tests/unit/test_external_resource_lint.py` |
+
+Sub-case #829 (TOTP QR) from cycle 299 stands.
+
+Downstream work: `/issues` cycles can pick up #830/#832/#833 in the suggested dependency order. The cycle 300 gap doc's triage → issue pipeline is complete.
+
+**Meta-pattern reinforced: gap-doc → triage → issue-series.**
+
+Cycles 300/317 produced the gap doc. Cycles 301/323/325 filed each actionable phase as a focused issue. Cycle 324 shipped the one phase cheaper to implement than to file. The cadence averaged ~one phase per 5-10 cycles — tight enough to stay current, loose enough to not swamp downstream picker-uppers.
+
+**Cross-app verification** (Heuristic 3): N/A — issue filing, no framework runtime code touched.
+
+**Explore budget used**: 80 → 81.
+
+### Running UX-governance total: 79 contracts (unchanged — issue-filing cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — still outstanding; 7th horizontal-discipline lint candidate (numbering shifts after cycle 324's external-resource lint became the 6th)
+- **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
+- **Pick a new cross-cycle theme for `framework_gap_analysis`** — cycle 317's silent-drift theme is fully-actioned; cycle 300's external-resource theme is fully-triaged. Might be time to scan the EX row table for a fresh theme.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
