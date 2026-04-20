@@ -8845,3 +8845,64 @@ Replace with two new entries in the candidate queue:
 - ~~**`missing_contracts` scan`**~~ — retired (superseded by continuous lints per cycle 309)
 
 ---
+
+## Cycle 310 — 2026-04-20 — canonical_pointer_lint: 4th horizontal-discipline lint
+
+**Strategy:** infrastructure extension — implements cycle 309's highest-leverage "next candidate" (grow the lint stack)
+**Outcome:** Shipped `tests/unit/test_canonical_pointer_lint.py` — 4 gates locking the shape of `{# Contract: ~/.claude/skills/ux-architect/components/<slug>.md (UX-NNN) #}` pointer comments. All 4 gates pass on the 19 existing pointers. Forward-looking drift prevention.
+
+**Lint stack status after cycle 310 (4 lints):**
+
+| Lint | Cycle | Prevents |
+|---|---|---|
+| `test_none_vs_default_guard.py` | 284 | None-vs-default anti-pattern at contract/IR boundaries |
+| `test_template_orphan_scan.py` | 302 (hardened 304) | Templates shipping without production consumers |
+| `test_page_route_coverage.py` | 306-308 | Page templates shipped without route wiring |
+| `test_canonical_pointer_lint.py` | **310** | Pointer-comment drift (malformed shape, slug/ID mismatch, UX-NNN collision, non-kebab slug) |
+
+**Four gates:**
+
+1. **Shape** — `{# Contract: ... #}` lines match the canonical regex. Catches typos, whitespace corruption, path drift.
+2. **Slug/UX-ID agreement** — templates pointing at same slug must agree on UX-NNN. Catches half-renames where one template updates the pointer but a sibling doesn't.
+3. **UX-NNN uniqueness** — no two distinct slugs claim the same UX-NNN. Catches accidental ID reuse during renumbering.
+4. **Kebab-case slug** — slugs are lowercase kebab-case. Matches filesystem convention under `~/.claude/skills/ux-architect/components/*.md`.
+
+**Deliberate scope decision: does NOT verify pointer target existence on filesystem.** Contract files live under `~/.claude/` (per-user, not repo-local). Existence checks would fail falsely in CI. Shape + consistency catches real drift without that dependency.
+
+**Heuristic 1 verified: each gate actually fires.** Sanity-tested with injected malformations (out-of-spec pointer line, slug/ID disagreement across templates, UX-NNN collision across slugs, underscored slug). Each malformation trips the expected gate. Not just passing vacuously.
+
+**Report at cycle 310 (baseline):**
+- 19 templates carry pointers
+- 16 distinct contract slugs cited
+- 14 distinct UX-NNN IDs (modal + toast omit IDs; UX-012 shared by 2 slide-over templates; UX-032 shared by 3 related-display templates)
+- 0 malformed, 0 collisions, 0 mismatched
+
+**Compounding pattern reinforced.** Each new lint in the stack costs <200 LOC + ~1 cycle to add. Each catches a distinct class of drift that prior lints miss. The stack now covers:
+- **Consumer gaps** (orphan_lint) — "template exists without being used"
+- **Route gaps** (page_route_coverage) — "page template exists without being served"
+- **Default-value gaps** (none_vs_default_guard) — "IR field declared but compiler produces None instead of default"
+- **Pointer gaps** (canonical_pointer_lint) — "governance declaration is malformed or inconsistent"
+
+Next-candidate targets expand the same pattern to Python modules (orphan-module scan) or cross-language flows (event catalog → consumer coverage).
+
+**Cross-app verification** (Heuristic 3): Full suite of 3 existing horizontal-discipline lints + new lint: 15/15 pass. Full unit suite has 9 pre-existing failures unrelated to cycle 310 (`test_experience_routes::test_detail_step_transitions_use_post_forms` from cycle 292's CSRF refactor + 8 `test_region_composite_snapshot` syrupy baseline drifts from cycles 297/298/308 CSS/template changes). These are cycle-311 candidates, not regressions from this cycle.
+
+**Pre-existing failures noted for triage:**
+- `test_detail_step_transitions_use_post_forms` asserts `method="post"` literal — cycle 292 replaced `<form method="post">` with `<button type="button" hx-post>` for CSRF. Test assertion is stale.
+- `test_region_composite_snapshot` × 8 — syrupy snapshot baselines drifted; likely cycle 297 footer CSS + cycle 308 layout detection side-effects.
+
+**Explore budget used**: 65 → 66.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **Fix stale test assertions** — `test_detail_step_transitions_use_post_forms` (cycle 292 follow-on) + 8 snapshot baseline updates. Small, focused, clears regressions-in-waiting.
+- **Apply orphan_lint pattern to Python modules** — fresh horizontal-discipline target. Uncovered Python helpers accumulate the same "ship-without-consumer" pattern templates do.
+- **Monitor lint allowlist drift** — check if any allowlist entries' reasons are outdated (3+ cycles old and context might have shifted).
+- **Contract audit roadmap triage** — cycle 309 confirmed no new missing_contracts; next value is auditing existing contracts for silent drift.
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (vendor Tailwind + Dazzle own dist)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
