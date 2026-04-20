@@ -9822,3 +9822,52 @@ Cycles 300/317 produced the gap doc. Cycles 301/323/325 filed each actionable ph
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 326 — 2026-04-20 — /ux-cycle skill Step 0a.4 refresh
+
+**Strategy:** housekeeping — the `/ux-cycle` skill text itself had gone stale relative to the gate it describes
+**Outcome:** Updated `.claude/commands/ux-cycle.md` Step 0a.4. Preflight description now accurately cites 6 lints + mypy + dist-warning, ~5s budget, with an explicit "common red causes and their fixes" playbook covering 4 failure modes. Doc-only change; no framework code touched.
+
+**The drift:**
+
+The cycle 312 commit shipped the preflight gate with "4 lints + DOM snapshots + card-safety, ~3s". Subsequent cycles grew the gate:
+- Cycle 314: added `mypy src/dazzle_ui/` → ~5s
+- Cycle 318: added DaisyUI-python lint (5th lint)
+- Cycle 319: added non-blocking `git status dist/` warning
+- Cycle 320: added `test-ux-deep` sibling target
+- Cycle 324: added external-resource lint (6th lint)
+
+But the skill description at Step 0a.4 kept saying "4 lints + ~3s". 14 cycles of stale documentation. Future cycle runners reading the skill would see an inaccurate picture of what the gate actually does.
+
+**The fix:**
+
+Replaced the single-sentence gate description with:
+1. Current numbers (6 lints, ~5s, mypy(dazzle_ui), dist warning)
+2. Per-failure playbook: snapshot drift / CDN-or-DaisyUI / mypy / dist, each with a specific remediation
+3. Pointer to `make test-ux-deep` for before-`/ship` audits (cycle 320 addition)
+
+**Heuristic 5 (proposed in cycle 317) implicitly reinforced:**
+
+The updated skill now has richer "what to do if red" guidance. This makes the preflight gate actionable even when it fires — runners know which remediation fits which failure, reducing the chance of sidestepping the gate out of confusion.
+
+**Meta-pattern: documentation drift is itself a silent-drift class.**
+
+Cycles 311-324 surfaced 6 drift classes in code and gates; cycle 326 closes a 7th that was implicit — documentation of the gates themselves drifting from reality as they grow. Adding a periodic skill-doc audit as a candidate cycle.
+
+**Cross-app verification** (Heuristic 3): N/A — skill-definition file, no framework runtime code touched.
+
+**Explore budget used**: 81 → 82.
+
+### Running UX-governance total: 79 contracts (unchanged — housekeeping cycle)
+
+### Next candidate cycles
+
+- **Periodic skill-doc audit** — add a ~every-10-cycles check that the `/ux-cycle` skill text matches the current gate + heuristics. Cycle 326 proved this can silently drift across cycles.
+- **Apply orphan_lint pattern to Python modules** — 7th horizontal-discipline lint candidate. Still outstanding.
+- **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
+---
