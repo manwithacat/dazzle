@@ -8906,3 +8906,49 @@ Next-candidate targets expand the same pattern to Python modules (orphan-module 
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 311 — 2026-04-20 — housekeeping: clear 9 pre-existing red tests from cycle 310's triage list
+
+**Strategy:** finding_investigation / housekeeping — cycle 310 explicitly flagged "Fix stale test assertions" as the highest-leverage small follow-up. Two distinct root causes collapsed under one headline number.
+**Outcome:** All 9 flagged tests green. Full unit suite: **11432 passed, 77 skipped, 0 failed.** First clean run in >26 cycles (snapshot debt accrued since cycle 271).
+
+**Root cause 1 — stale assertion (1 test):**
+
+`test_experience_routes.py::test_detail_step_transitions_use_post_forms` asserted the literal string `'method="post"'` in the rendered experience step page. Cycle 292's CSRF refactor (EX-053 fix) replaced plain `<form method="post">` blocks with `experience_transition_button` macro calls emitting `<button type="button" hx-post="..." hx-headers="...csrf...">` — CSRF header flows via base.html's `htmx:configRequest` listener.
+
+**Heuristic 1 verified at raw layer:** grep of `src/dazzle_ui/templates/experience/_content.html` shows zero `<form>` tags and 5 `experience_transition_button(tr)` macro invocations. The macro at `src/dazzle_ui/templates/macros/experience_transition.html:9` emits `hx-post="{{ tr.url }}"`. No framework bug — just a stale assertion.
+
+Fix: `'method="post"'` → `'hx-post="/app/experiences/onboarding/review?event='`. Preserves the test's original intent (transitions POST, not GET) while matching the new pattern.
+
+**Root cause 2 — snapshot baseline drift (8 tests):**
+
+`test_dom_snapshots.py::test_region_composite_snapshot[<region>-*]` failed for 8 region templates: grid, list, timeline, bar_chart, queue, heatmap, progress, funnel_chart. All were touched by cycles **271-284** (the contract_audit series that produced the regional contracts UX-038 through UX-042 + attention_accent + ref_cell macros).
+
+Each cycle added canonical class markers — `dz-grid-region`, `dz-grid-cell`, `dz-progress-region`, `dz-progress-header`, `dz-progress-stages`, `dz-progress-chip`, `dz-progress-summary`, etc. — without regenerating the syrupy snapshot baselines. The baselines captured pre-canonical HTML; the production HTML caught up but tests stayed red.
+
+**All 8 diffs verified additive-only.** No content changed, no structure broke — only new wrapper divs + additional class qualifiers. Regenerated in bulk with `pytest --snapshot-update`.
+
+**Meta-observation: snapshot debt is a silent-failure class.**
+
+The 8 snapshot failures had been red for ~40 cycles before cycle 310's full-suite run exposed them. Prior cycles ran narrower test sets (e.g. `pytest tests/unit/test_template_orphan_scan.py tests/unit/test_page_route_coverage.py`) and never caught the regression. This is a **process gap worth naming**:
+
+> Syrupy snapshot tests fail silently if cycles never run the full unit suite. The 26-cycle accrual implies the `/ux-cycle` Step 4 QA phase never routinely booted the full unit suite — it boots example apps for contract walks but not pytest-all.
+
+Cycle 310 accidentally caught this via a full-suite regression check. Cycle 311's cleanup is the reactive fix; the proactive fix would be adding a "baseline health check" step to `/ux-cycle` that runs `pytest tests/unit/ -m "not e2e"` once every N cycles and fails visibly if any tests are red. Candidate for follow-up.
+
+**Cross-app verification** (Heuristic 3): Not applicable — this is a test-only change, no framework code touched. Full unit suite (11432 tests) is the oracle.
+
+**Explore budget used**: 66 → 67.
+
+### Running UX-governance total: 79 contracts (unchanged — housekeeping cycle)
+
+### Next candidate cycles
+
+- **Add full-suite health check to `/ux-cycle`** — systematic fix for the "snapshot debt goes unnoticed" pattern surfaced this cycle. Could run `pytest tests/unit/ -m "not e2e" -q` as a hard gate every N cycles OR as a warning-only step every cycle. Small scope, high leverage for loop hygiene.
+- **Apply orphan_lint pattern to Python modules** — still outstanding; 5th horizontal-discipline lint candidate
+- **Monitor lint allowlist drift** — check if any allowlist entries' reasons are outdated
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (vendor Tailwind + Dazzle own dist)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
