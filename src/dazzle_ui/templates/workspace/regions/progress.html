@@ -1,15 +1,17 @@
-{# Progress region — UX-035 adopter #12. #}
+{# Progress region — UX-035 adopter #12.
+   Contract: ~/.claude/skills/ux-architect/components/progress-region.md (UX-062) #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
+<div class="dz-progress-region">
   {% if stage_counts %}
-  <div class="flex items-center gap-2 mb-2">
+  <div class="dz-progress-header flex items-center gap-2 mb-2">
     <progress data-dz-progress class="w-full h-2" value="{{ complete_pct }}" max="100"></progress>
     <span class="text-[13px] font-medium whitespace-nowrap text-[hsl(var(--foreground))]">{{ complete_pct }}%</span>
   </div>
-  <div class="flex flex-wrap gap-1">
+  <div class="dz-progress-stages flex flex-wrap gap-1">
     {% for stage in stage_counts %}
-    <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border
-      {%- if stage.complete %} bg-[hsl(142_71%_45%/0.12)] text-[hsl(142_71%_30%)] border-[hsl(142_71%_45%/0.3)]
+    <span class="dz-progress-chip inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border
+      {%- if stage.complete %} bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]
       {%- elif stage.count > 0 %} bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]
       {%- else %} bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]
       {%- endif %}">
@@ -18,9 +20,10 @@
     {% endfor %}
   </div>
   {% if progress_total > 0 %}
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
+  <p class="dz-progress-summary text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
   {% endif %}
   {% else %}
   <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
   {% endif %}
+</div>
 {% endcall %}

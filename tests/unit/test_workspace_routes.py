@@ -972,6 +972,191 @@ class TestMetricsRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("METRICS") == "workspace/regions/metrics.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 271 — Progress region contract (UX-062)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestProgressRegionTemplate:
+    """Progress region renders a native <progress> bar + coloured stage chips.
+
+    Cycle 271 — contracts the progress.html region template. Quality gates
+    encoded here mirror the ones in
+    ~/.claude/skills/ux-architect/components/progress-region.md. The prior
+    template had a hardcoded green HSL literal (`hsl(142_71%_45%)`) for the
+    complete-stage chip — the same drift class cycle 239 fixed in
+    metrics.html. Migrating it to `hsl(var(--success))` is the load-bearing
+    structural fix of this audit.
+    """
+
+    def _progress_kwargs(self, **overrides):
+        defaults = {
+            "title": "Backlog Progress",
+            "stage_counts": [],
+            "complete_pct": 0,
+            "complete_count": 0,
+            "progress_total": 0,
+            "empty_message": "No backlog",
+            "entity_name": "Ticket",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_and_progress_bar(self) -> None:
+        """Gates 1 + 2: outer `.dz-progress-region` + `<progress>` element."""
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[
+                    {"name": "Open", "count": 3, "complete": False},
+                    {"name": "Done", "count": 5, "complete": True},
+                ],
+                complete_pct=62.5,
+                complete_count=5,
+                progress_total=8,
+            ),
+        )
+        assert "dz-progress-region" in html
+        assert "dz-progress-header" in html
+        assert "<progress data-dz-progress" in html
+        assert 'value="62.5"' in html
+        assert 'max="100"' in html
+
+    def test_chip_count_matches_stage_counts(self) -> None:
+        """Gate 3: chip count equals len(stage_counts); name + count visible."""
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[
+                    {"name": "Open", "count": 3, "complete": False},
+                    {"name": "In Progress", "count": 2, "complete": False},
+                    {"name": "Done", "count": 5, "complete": True},
+                ],
+                complete_pct=50.0,
+                complete_count=5,
+                progress_total=10,
+            ),
+        )
+        assert html.count("dz-progress-chip") == 3
+        assert "Open (3)" in html
+        assert "In Progress (2)" in html
+        assert "Done (5)" in html
+
+    def test_tristate_colouring_flows_through_tokens(self) -> None:
+        """Gate 4: chips reference --success/--warning/--muted tokens.
+
+        Locks in the cycle 271 migration away from the hardcoded
+        `hsl(142_71%_45%)` green literal.
+        """
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[
+                    {"name": "Done", "count": 5, "complete": True},
+                    {"name": "Open", "count": 3, "complete": False},
+                    {"name": "Backlog", "count": 0, "complete": False},
+                ],
+                complete_pct=62.5,
+                complete_count=5,
+                progress_total=8,
+            ),
+        )
+        assert "hsl(var(--success)" in html
+        assert "hsl(var(--warning)" in html
+        assert "hsl(var(--muted)" in html
+
+    def test_no_hardcoded_hsl_literals(self) -> None:
+        """Gate 4 (negative form): pre-cycle-271 hardcoded green must not reappear."""
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[
+                    {"name": "Done", "count": 5, "complete": True},
+                    {"name": "Open", "count": 3, "complete": False},
+                ],
+                complete_pct=62.5,
+                complete_count=5,
+                progress_total=8,
+            ),
+        )
+        assert "142_71%" not in html
+        assert "142 71%" not in html
+
+    def test_empty_state_when_no_stage_counts(self) -> None:
+        """Gate 5: stage_counts empty → role=status paragraph, no <progress>."""
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[],
+                empty_message="No backlog yet.",
+            ),
+        )
+        assert "<progress" not in html
+        assert "dz-progress-chip" not in html
+        assert 'role="status"' in html
+        assert "No backlog yet." in html
+
+    def test_summary_footer_conditional_on_progress_total(self) -> None:
+        """Gate 6: summary paragraph renders iff progress_total > 0."""
+        # With total > 0: summary renders
+        html_with = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[{"name": "Open", "count": 3, "complete": False}],
+                complete_pct=0.0,
+                complete_count=0,
+                progress_total=3,
+            ),
+        )
+        assert "dz-progress-summary" in html_with
+        assert "0 of 3 complete" in html_with
+
+        # With total == 0: no summary
+        html_without = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[{"name": "Open", "count": 0, "complete": False}],
+                complete_pct=0.0,
+                complete_count=0,
+                progress_total=0,
+            ),
+        )
+        assert "dz-progress-summary" not in html_without
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 7: zero DaisyUI class references in rendered output."""
+        html = render_fragment(
+            "workspace/regions/progress.html",
+            **self._progress_kwargs(
+                stage_counts=[
+                    {"name": "Done", "count": 5, "complete": True},
+                    {"name": "Open", "count": 3, "complete": False},
+                ],
+                complete_pct=62.5,
+                complete_count=5,
+                progress_total=8,
+            ),
+        )
+        # DaisyUI progress + badge variants must not appear
+        for banned in (
+            "progress-primary",
+            "progress-success",
+            "progress-warning",
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "btn-primary",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_progress_routes_to_progress_template(self) -> None:
+        """Gate 0 (routing): PROGRESS display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("PROGRESS") == "workspace/regions/progress.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
