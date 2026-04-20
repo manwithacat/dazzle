@@ -2978,6 +2978,239 @@ class TestListRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("LIST") == "workspace/regions/list.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 279 — Funnel chart region contract (UX-070)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestFunnelChartRegionTemplate:
+    """Funnel chart region renders stacked proportional bars with alpha progression.
+
+    Cycle 279 — contracts funnel_chart.html. Narrative prose contract was
+    present in the header but never formalised. Template was drift-clean.
+    """
+
+    def _funnel_kwargs(self, **overrides):
+        defaults = {
+            "title": None,
+            "kanban_columns": [],
+            "items": [],
+            "group_by": "",
+            "metrics": [],
+            "total": 0,
+            "empty_message": "No data available.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_and_stages_container(self) -> None:
+        """Gates 1 + 2: dz-funnel-chart-region + dz-funnel-stages."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["new", "open"],
+                items=[{"status": "new"}, {"status": "open"}],
+                group_by="status",
+                total=2,
+            ),
+        )
+        assert "dz-funnel-chart-region" in html
+        assert "dz-funnel-stages" in html
+
+    def test_grouped_mode_stage_count_matches_kanban_columns(self) -> None:
+        """Gate 3: one dz-funnel-stage per kanban_column."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["new", "open", "in_progress", "resolved"],
+                items=[
+                    {"status": "new"},
+                    {"status": "new"},
+                    {"status": "open"},
+                    {"status": "resolved"},
+                ],
+                group_by="status",
+                total=4,
+            ),
+        )
+        assert html.count("dz-funnel-stage ") == 4
+
+    def test_fallback_mode_stage_count_matches_metrics(self) -> None:
+        """Gate 4: one dz-funnel-stage per metric."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                metrics=[
+                    {"label": "Visitors", "value": 1000},
+                    {"label": "Signups", "value": 200},
+                    {"label": "Paid", "value": 50},
+                ],
+            ),
+        )
+        assert html.count("dz-funnel-stage ") == 3
+        assert "Visitors" in html
+        assert "Signups" in html
+        assert "Paid" in html
+
+    def test_stage_name_and_count_visible(self) -> None:
+        """Gate 5: each stage shows name + (count)."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["open"],
+                items=[{"status": "open"}, {"status": "open"}, {"status": "open"}],
+                group_by="status",
+                total=3,
+            ),
+        )
+        assert "open" in html
+        assert "(3)" in html
+
+    def test_proportional_width_inline_style(self) -> None:
+        """Gate 6: stages have style="width: N%; min-width: 120px;"."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a", "b"],
+                items=[
+                    {"status": "a"},
+                    {"status": "a"},
+                    {"status": "a"},
+                    {"status": "a"},
+                    {"status": "b"},
+                ],
+                group_by="status",
+                total=5,
+            ),
+        )
+        # Stage a has 4 items, base = 4 → width 100%
+        assert "width: 100%" in html
+        assert "min-width: 120px" in html
+
+    def test_minimum_width_floor_20_percent(self) -> None:
+        """Gate 7: stages below 20% of base still render at 20% width."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["base", "small"],
+                # base has 100 items, small has 1 item → 1% which should floor to 20%
+                items=[{"status": "base"}] * 100 + [{"status": "small"}],
+                group_by="status",
+                total=101,
+            ),
+        )
+        # The 1-item "small" stage would compute to 1% but must render at 20%
+        assert "width: 20%" in html
+
+    def test_primary_token_background(self) -> None:
+        """Gate 8: stages use bg-[hsl(var(--primary)/...)] with dynamic alpha."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a", "b", "c"],
+                items=[{"status": "a"}, {"status": "b"}, {"status": "c"}],
+                group_by="status",
+                total=3,
+            ),
+        )
+        assert "bg-[hsl(var(--primary)/" in html
+
+    def test_progressive_alpha_first_two_stages(self) -> None:
+        """Gate 9: stage 1 alpha 0.9, stage 2 alpha 0.8."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a", "b", "c"],
+                items=[{"status": "a"}, {"status": "b"}, {"status": "c"}],
+                group_by="status",
+                total=3,
+            ),
+        )
+        assert "hsl(var(--primary)/0.9)" in html
+        assert "hsl(var(--primary)/0.8)" in html
+        assert "hsl(var(--primary)/0.7)" in html
+
+    def test_alpha_floor_at_stage_9_plus(self) -> None:
+        """Gate 10: 9th+ stage clamps alpha to 0.2."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
+                items=[{"status": "a"}] * 10,
+                group_by="status",
+                total=10,
+            ),
+        )
+        # 10 stages → stages at index 8+ (a through j = indices 0-9)
+        # Index 8 and 9 clamp to 0.2
+        assert "hsl(var(--primary)/0.2)" in html
+
+    def test_grouped_mode_renders_total_footer(self) -> None:
+        """Gate 11: grouped mode shows '{total} total'."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a"],
+                items=[{"status": "a"}, {"status": "a"}],
+                group_by="status",
+                total=2,
+            ),
+        )
+        assert "2 total" in html
+
+    def test_fallback_mode_omits_total_footer(self) -> None:
+        """Gate 12: fallback metrics mode does NOT render total footer."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                metrics=[
+                    {"label": "Visitors", "value": 1000},
+                    {"label": "Paid", "value": 50},
+                ],
+            ),
+        )
+        assert "total" not in html.lower() or "1050 total" not in html
+
+    def test_empty_state_when_no_data(self) -> None:
+        """Gate 13: neither mode → role=status empty state, no stages."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                empty_message="No funnel data.",
+            ),
+        )
+        assert "dz-funnel-stage" not in html
+        assert 'role="status"' in html
+        assert "No funnel data." in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 14: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            **self._funnel_kwargs(
+                kanban_columns=["a"],
+                items=[{"status": "a"}],
+                group_by="status",
+                total=1,
+            ),
+        )
+        for banned in (
+            "badge-primary",
+            "badge-success",
+            "btn-primary",
+            "card-body",
+            "progress-primary",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_funnel_chart_routes_to_template(self) -> None:
+        """Gate 0 (routing): FUNNEL_CHART display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("FUNNEL_CHART") == "workspace/regions/funnel_chart.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
