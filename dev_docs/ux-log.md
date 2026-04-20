@@ -9623,3 +9623,61 @@ Recommendation: run this audit every ~10 cycles OR whenever a major issue closur
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 323 — 2026-04-20 — Phase 2 of external-resource-integrity filed as #832
+
+**Strategy:** finding_investigation / issue-filing — converts a cycle-300 gap doc Phase into an actionable GitHub issue for downstream pickup
+**Outcome:** Filed [#832 — Security: Vendor Tailwind + Dazzle own dist (Phase 2 of external-resource hardening)](https://github.com/manwithacat/dazzle/issues/832). Updated cycle 300 gap doc's status table. No code changes this cycle — filing is the output.
+
+**Heuristic 1 confirmed at raw layer** before filing:
+
+```
+grep -nE "cdn\.|jsdelivr|unpkg|googleapis" src/dazzle_ui/templates/{base,site/site_base}.html
+```
+
+- `base.html:24` — `cdn.tailwindcss.com` still loaded as executable JS
+- `base.html:27` — `cdn.jsdelivr.net/gh/manwithacat/dazzle@v...` still used for own dist
+- `site_base.html:19` — `cdn.jsdelivr.net/npm/@tailwindcss/browser@4`
+- `site_base.html:21` — same jsdelivr-of-GitHub for own dist
+
+Also verified via `gh issue list --state open --search "vendor Tailwind OR dist self-host"` — zero existing issues matching the theme. Safe to file a new focused issue.
+
+**Issue scope (as filed):**
+
+- 2 template files: `base.html`, `site_base.html`
+- Existing `build_css.py` pipeline + `dist/` regeneration (already runs per `/ship`)
+- Possibly 1-2 tests asserting URL shapes
+- Removes Dazzle's supply-chain dependency on jsdelivr + GitHub-mirror uptime
+- Enables tighter default CSP (would unblock Phase 3's `script-src 'self'` goal)
+- Does NOT solve Mermaid + Google Fonts (Phase-1-SRI-protected; separate trade-offs)
+
+**Gap doc status tracking after cycle 323:**
+
+| Phase | Status | Issue |
+|---|---|---|
+| 1 — SRI attributes | FILED | [#830](https://github.com/manwithacat/dazzle/issues/830) (cycle 301) |
+| 2 — Vendor Tailwind + Dazzle own dist | **FILED** | **[#832](https://github.com/manwithacat/dazzle/issues/832) (cycle 323 — this cycle)** |
+| 3 — CSP default alignment | OPEN | Candidate for a future filing cycle |
+| 4 — Template lint rule | OPEN | Candidate — would prevent regression |
+
+Sub-case also stands: [#829](https://github.com/manwithacat/dazzle/issues/829) (cycle 299 EX-054 — QR-service TOTP exfiltration).
+
+**Meta-pattern: gap-doc → issue conversion is a natural cycle type.**
+
+Cycle 300 identified the theme; cycle 301 filed Phase 1 (#830); cycle 323 now files Phase 2 (#832). Each cycle's filing was scoped narrowly — a separate issue per phase rather than one mega-issue. This matches how Dazzle ships: small focused PRs merge faster than big omnibus ones. Future gap docs should keep using the Phase-N structure since it maps cleanly to this issue-filing cadence.
+
+**Cross-app verification** (Heuristic 3): N/A — documentation + issue filing, no framework runtime code touched.
+
+**Explore budget used**: 78 → 79.
+
+### Running UX-governance total: 79 contracts (unchanged — issue-filing cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint. Still outstanding.
+- **Phase 3/4 of external-resource-integrity** — CSP default alignment + template lint rule. Both OPEN; file when Phase 1+2 issues land or a downstream PR starts work.
+- **Dormant primitives review** — 4 entries have been dormant ~35+ cycles. Policy decision.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
