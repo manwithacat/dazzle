@@ -5337,3 +5337,154 @@ class TestRefCellMacro:
         # No anchor for unknown mode (safety default)
         assert "<a " not in out
         assert "Alice" in out
+
+
+# ---------------------------------------------------------------------------
+# Cycle 286 — alpine-dropdown contract (orphaned primitive)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestAlpineDropdownComponent:
+    """components/alpine/dropdown.html — available primitive, zero current
+    consumers.
+
+    Cycle 286 discovered via Heuristic 1 that cycle 237's coverage-map
+    claim of "42 call sites" was wrong — the template has NO `{% include %}`
+    references anywhere in the codebase today. It's a ready-to-use Alpine
+    primitive waiting for an adopter.
+
+    Contract at ~/.claude/skills/ux-architect/components/alpine-dropdown.md.
+    These tests pin the primitive's API so any future adopter inherits a
+    stable target.
+    """
+
+    def _render(self, **ctx):
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        return render_fragment("components/alpine/dropdown.html", **ctx)
+
+    def test_outer_wrapper_has_alpine_and_dismiss_handlers(self) -> None:
+        """Gate 1: dz root has x-data, @click.outside, @keydown.escape.window."""
+        html = self._render(dropdown_label="Menu", dropdown_items=[])
+        assert 'x-data="{ open: false }"' in html
+        assert '@click.outside="open = false"' in html
+        assert '@keydown.escape.window="open = false"' in html
+
+    def test_trigger_button_has_toggle_handler(self) -> None:
+        """Gate 2: trigger <button> has @click="open = !open"."""
+        html = self._render(dropdown_label="Actions", dropdown_items=[])
+        assert "<button " in html
+        assert '@click="open = !open"' in html
+
+    def test_trigger_label_rendered(self) -> None:
+        """Gate 3a: the dropdown_label text appears in the trigger."""
+        html = self._render(dropdown_label="Custom Label", dropdown_items=[])
+        assert "Custom Label" in html
+
+    def test_trigger_label_defaults_to_actions(self) -> None:
+        """Gate 3a (default): dropdown_label defaults to 'Actions'."""
+        html = self._render(dropdown_items=[])
+        assert "Actions" in html
+
+    def test_caret_rotates_on_open(self) -> None:
+        """Gate 3b: caret SVG has `:class="open && 'rotate-180'"`."""
+        html = self._render(dropdown_label="X", dropdown_items=[])
+        assert "transition-transform" in html
+        assert "'rotate-180'" in html
+
+    def test_menu_is_ul_with_x_show(self) -> None:
+        """Gate 4: menu is <ul x-show="open">."""
+        html = self._render(dropdown_label="X", dropdown_items=[])
+        assert "<ul " in html
+        assert 'x-show="open"' in html
+        assert "x-transition" in html
+
+    def test_menu_positioned_below_right(self) -> None:
+        """Gate 5: menu has absolute right-0 mt-1 z-50 positioning."""
+        html = self._render(dropdown_label="X", dropdown_items=[])
+        assert "absolute" in html
+        assert "right-0" in html
+        assert "z-50" in html
+
+    def test_menu_chrome_uses_design_tokens(self) -> None:
+        """Gate 6: menu chrome references --card, --border tokens."""
+        html = self._render(dropdown_label="X", dropdown_items=[])
+        assert "bg-[hsl(var(--card))]" in html
+        assert "border-[hsl(var(--border))]" in html
+        assert "rounded-lg" in html
+        assert "shadow-md" in html
+
+    def test_item_count_matches_dropdown_items(self) -> None:
+        """Gate 7: DOM contains len(dropdown_items) <li> elements."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[
+                {"label": "A", "href": "/a"},
+                {"label": "B", "href": "/b"},
+                {"label": "C", "href": "/c"},
+            ],
+        )
+        assert html.count("<li>") == 3
+        assert "A" in html and "B" in html and "C" in html
+
+    def test_href_branch_renders_anchor(self) -> None:
+        """Gate 8a: item with href → <a href>."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[{"label": "Go", "href": "/target"}],
+        )
+        assert '<a href="/target"' in html
+        assert ">Go</a>" in html
+
+    def test_hx_delete_branch_renders_button_with_confirm(self) -> None:
+        """Gate 8b: item with hx_delete → <button hx-delete> + hx-confirm."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[
+                {
+                    "label": "Delete",
+                    "hx_delete": "/api/item/42",
+                    "confirm": "Really delete?",
+                    "hx_target": "#item-42",
+                }
+            ],
+        )
+        assert "<button " in html
+        assert 'hx-delete="/api/item/42"' in html
+        assert 'hx-confirm="Really delete?"' in html
+        assert 'hx-target="#item-42"' in html
+
+    def test_hx_delete_confirm_defaults_to_are_you_sure(self) -> None:
+        """Gate 8b (default): hx-confirm defaults to 'Are you sure?'."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[{"label": "Delete", "hx_delete": "/x"}],
+        )
+        assert "Are you sure?" in html
+
+    def test_placeholder_branch_renders_noop_anchor(self) -> None:
+        """Gate 8c: item with neither href nor hx_delete → <a href="#">."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[{"label": "Placeholder"}],
+        )
+        assert 'href="#"' in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 9: zero DaisyUI class references."""
+        html = self._render(
+            dropdown_label="X",
+            dropdown_items=[
+                {"label": "A", "href": "/"},
+                {"label": "B", "hx_delete": "/d"},
+            ],
+        )
+        for banned in ("dropdown ", "menu ", "btn-primary", "btn-ghost"):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_empty_dropdown_items_renders_no_list_items(self) -> None:
+        """Edge case: empty dropdown_items → <ul> with zero <li>."""
+        html = self._render(dropdown_label="X", dropdown_items=[])
+        assert "<ul " in html
+        assert "<li>" not in html

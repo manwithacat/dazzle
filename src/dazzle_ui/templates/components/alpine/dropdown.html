@@ -1,6 +1,8 @@
-{# Dropdown component — Alpine x-data with click-outside dismiss #}
+{# Dropdown component — Alpine x-data with click-outside dismiss
+   Contract: ~/.claude/skills/ux-architect/components/alpine-dropdown.md
+   Status: available primitive, zero current consumers (cycle 286 audit). #}
 {# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
-{# Expects: dropdown_label (str), dropdown_items (list of {label, href?, action?}) #}
+{# Expects: dropdown_label (str), dropdown_items (list of {label, href?, hx_delete?, confirm?, hx_target?, class?}) #}
 <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
   <button @click="open = !open" class="inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] h-8 px-3 text-[13px] gap-1">
     {{ dropdown_label | default("Actions") }}
