@@ -10428,3 +10428,45 @@ Downstream `/issues` cycles have ample material. The ux-cycle loop's upstream co
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 337 — 2026-04-20 — minimal cycle: preflight green, no new findings
+
+**Strategy:** minimal — reflecting on cycle 336's steady-state audit, deliberately kept scope tight rather than forcing discovery work.
+**Outcome:** Preflight passes. No new findings. Considered adding an xfail test for #835 (WorkspaceContract persona gap) as executable-spec for downstream pickup — decided against: adding known-failing tests to a gate suite that runs every 10 minutes imports fragility into the loop's core discipline. Use a skipped/xfail marker if revisited; but even then, the issue body at #835 already describes the expected behaviour.
+
+**Short-circuit streak check:**
+
+Counting non-housekeeping Step-6 cycles:
+
+| Cycle | Finding produced? |
+|---|---|
+| 330 | 0 |
+| 331 | 0 |
+| 334 | 1 (#835) |
+| 335 | 0 |
+| 336 | 0 |
+| 337 | 0 |
+
+Last 5 (333/334/335/336/337... excluding housekeeping 333): 334/335/336/337 + whatever came before = depends on strict counting. If we take last 5 non-housekeeping = 330/331/334/335/336 = 1 finding. If we include 337 as a 6th and drop 330 = 331/334/335/336/337 = 1 finding. Short-circuit threshold (zero findings across 5) NOT met either way because #835 is within the window.
+
+**If cycles 338/339/340 also produce zero findings**, the window becomes 334/335/336/337/338 → then 335/336/337/338/339 → at some point #835 ages out and the window becomes 5× zero-finding cycles. That's the short-circuit trigger.
+
+Counting precisely: #835 at cycle 334 will age out after cycle 339 (last 5 = 335/336/337/338/339). If 335-339 all had zero findings, short-circuit fires at 340.
+
+**Budget state:** 92 → 93 / 100. 7 cycles until primary short-circuit.
+
+**Minimal-cycle discipline note:** when productivity is dimming and no obvious high-value target exists, "add a small thing just to have output" is worse than logging the observational finding and moving on. The loop's log entries themselves are valuable — a deliberate "nothing to do" cycle is a legitimate data point for operator pattern-match on cron cadence.
+
+**Cross-app verification** (Heuristic 3): N/A — no code changes.
+
+**Explore budget used**: 92 → 93.
+
+### Running UX-governance total: 79 contracts (unchanged — minimal cycle)
+
+### Next candidate cycles
+
+- **Same operator decision point** remains (cadence slowdown / pause / continue)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
