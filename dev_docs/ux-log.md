@@ -10730,3 +10730,9 @@ Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped
 Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped. Budget 95. (20 consecutive idle ticks.)
 
 ---
+
+## Cycle 360 — 2026-04-20 — short-circuit continues (idle tick, milestone)
+
+Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped. Budget 95. (21 consecutive idle ticks; ~3.5 hours since the loop last produced any output.)
+
+---
