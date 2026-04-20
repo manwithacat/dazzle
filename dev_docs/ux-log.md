@@ -10202,3 +10202,53 @@ Not every scatter justifies consolidation. The heuristic: when 3+ cycles have su
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 333 — 2026-04-20 — backlog FILED→FIXED status sweep (3 rows)
+
+**Strategy:** housekeeping — picked "Drill EX-017" from cycle 332's candidate queue; Heuristic-1 drill revealed EX-017 + EX-002 + EX-007's filed issues all CLOSED. Status drift. Corrected.
+
+**Sweep outcome:**
+
+Cross-referenced every FILED→#NNN row in the backlog against GitHub state:
+
+| EX | Issue | Backlog said | GH state | Action |
+|---|---|---|---|---|
+| EX-002 | #775 | FILED→#775 | CLOSED | → FIXED (#775 closed) |
+| EX-007 | #774 | FILED→#774 | CLOSED | → FIXED (#774 closed) |
+| EX-017 | #777 | FILED→#777 | CLOSED | → FIXED (#777 closed) |
+| EX-054 | #829 | FILED→#829 | OPEN | no change |
+| EX-055 | #831 | FILED→#831 | OPEN | no change |
+
+Three stale rows transitioned. Framework fix for #777 landed in commit `679918ab "fix(runtime): list routes eagerly load ref relations (closes #777)"`. #775 + #774 were support_tickets app-layer fixes also closed by downstream.
+
+**Meta-observation: cycle 322's audit pattern extended.**
+
+Cycle 322 noted that automated staleness tests catch STRUCTURAL drift (e.g. orphan lint entry becomes referenced) but miss **issue-state drift** (FILED entry's issue got closed). Cycle 333 is the second example — opportunistic manual sweep catches what automation doesn't.
+
+Is this auditable-automated? In principle yes: a test could `gh issue view $N` on every FILED→#N entry and check state. Would need `gh` on the test runner + live network. Probably not worth the test complexity; periodic manual sweep (like this cycle) handles it with less infrastructure.
+
+**Reduced "still-OPEN" count: from ~6 to ~3.**
+
+Post-cycle-333, truly open EX rows are:
+- EX-026 (workspace contract generator asymmetry) — framework-level, not filed
+- EX-054 + EX-055 — FILED, upstream issues still OPEN, tracking
+- ~1-2 edge cases my earlier parser got confused by
+
+The backlog is even healthier than cycle 331's snapshot suggested.
+
+**Heuristic 1 applied:** I didn't assume EX-017 still needed framework work. I checked #777's state first; when CLOSED, pivoted from "investigate" to "status-update sweep." This prevented an unnecessary cycle of code-level investigation on an already-solved bug.
+
+**Cross-app verification** (Heuristic 3): N/A — documentation cycle; the fix for #777 was already cross-app-verified at its original commit time (cycle 219).
+
+**Explore budget used**: 88 → 89.
+
+### Running UX-governance total: 79 contracts (unchanged — housekeeping cycle)
+
+### Next candidate cycles
+
+- **Drill EX-026** (workspace contract generator asymmetry — genuinely open, framework-level, NOT yet filed)
+- **Pick a new theme for `framework_gap_analysis`**
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
