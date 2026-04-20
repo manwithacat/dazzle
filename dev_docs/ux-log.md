@@ -7881,3 +7881,52 @@ This cross-scope sibling-mutation pattern is unusual — Alpine components norma
 - **`framework_gap_analysis`** — last was cycle 287 (6 cycles ago). Synthesis debt accumulating.
 
 ---
+
+## Cycle 294 — 2026-04-20 — contract_audit: workspace-heading (UX-074)
+
+**Strategy:** `contract_audit` — promotion of cycle 290's workspace-shell v2 Q1 (the final open v2 candidate from that contract)
+**Outcome:** 75 → 76 contracts. Both cycle-290 v2 promotion questions (Q1 heading, Q2 context-selector) now closed. Cross-shell title divergence flagged as v2 Q3 for a future harmonisation cycle.
+
+**Chosen this cycle.** Cycle 293 closed v2 Q2 (context-selector). Natural completion of the cycle-290 arc was to promote the heading too, closing all outstanding embedded-gate promotions from that contract. Scope is tight (~21 template lines, two distinct pieces: title + primary-actions cluster). No browser, no fitness engine, pure template-level contract work.
+
+**The heading is deceptively simple.** Two visible elements (`<h2>` + actions cluster), but three separate design invariants woven together:
+
+1. **Title scale is specific, not generic.** The 17px font-medium 24px-line-height tracking-tight scale is Linear's canonical medium-heading type. Drifting to `text-lg` (18px) or `font-bold` loses the "dense-but-readable" feel. The experience-shell title uses `text-2xl font-bold` — a known drift; v2 Q3 flags this as a future cross-shell harmonisation cycle.
+
+2. **Title fallback chain is a DSL ergonomics convenience.** Authors who don't provide a `title:` get a decent auto-title from `name.replace('_', ' ').title()`. But the fallback applies at render time, not at DSL validation time — a workspace with `name = ops_dashboard` and no title will render "Ops Dashboard" forever, even if the author later adds a title.
+
+3. **Primary actions are permission-sensitive AND pre-filtered server-side.** The `_user_can_mutate` filter in `page_routes.py:1340` (#827) runs before the template receives the list. The template MUST NOT re-check, or it would either double-filter (wrong counts) or silently re-leak actions the server already blocked. This is a repeat of the cycle-228 lesson about single-source-of-truth helpers.
+
+**Contract at** `~/.claude/skills/ux-architect/components/workspace-heading.md` — 12 quality gates + 9 v2 open questions:
+
+- Gate 1: all 5 title classes (`text-[17px]`, `font-medium`, `leading-[24px]`, `tracking-[-0.01em]`, `text-[hsl(var(--foreground))]`) — verified via regex-extracted `<h2>` tag.
+- Gates 2+3: title precedence + fallback chain (both branches tested).
+- Gate 4+5: conditional absent/present based on `primary_actions` list — NOT `hidden` via CSS, but entirely absent from DOM when empty.
+- Gate 6: `hx-boost="true"` on every action (N actions → N `hx-boost` occurrences).
+- Gate 9: plus-icon SVG has `aria-hidden="true"` — pins the "icon is decorative, label provides semantic meaning" design.
+- Gate 11: heading row is Alpine-free — needed a careful regex-scoped window to avoid false positive from the toolbar's Reset button `@click="resetLayout()"` further down in the rendered HTML.
+
+**Test-writing subtlety.** First-pass gate-11 test used a 2000-byte window from the heading start — caught the toolbar's `@click="resetLayout()"` because the toolbar is in the same Alpine scope rendered right after. Fix: scope the window by regex-matching the primary-actions wrapper from its `data-test-id` anchor to its closing `</div>`. The wrapper contains only `<a>` children with no nested divs, so the first `</div>` after the open is reliably the wrapper's close. This pattern is worth reusing in future contract tests that need to assert properties of ONE section of a composite template.
+
+**No drift fixed.** Template was already clean on tokens, `hx-boost`, `aria-hidden`, and pre-filtering. Contract pointer NOT added to `_content.html` — the parent workspace-shell already owns the file's pointer header. Cross-shell title harmonisation (v2 Q3) is NOT fixed — it's a legitimate cross-shell discussion deserving its own cycle, and "experience-shell uses a bigger/bolder title" might be an intentional design choice that shouldn't be collapsed without thought.
+
+**Updated workspace-shell.md** v2 Q1 to "✅ Promoted cycle 294" + mention of the cross-shell harmonisation candidate. Cycle 290's v2 question list is now: Q1 ✅, Q2 ✅, Q3-Q10 still open (most are minor edge cases + documentation items, not promotion candidates).
+
+**Cross-app verification** (Heuristic 3): 367/367 workspace + lint + session tests pass (up from 355). No regressions.
+
+**Explore budget used**: 49 → 50. Halfway to the 100 soft cap.
+
+### Running UX-governance total: 76 contracts
+
+### Next candidate cycles
+
+- **`trial-cycle probe for experience transitions`** — verify cycle 292 EX-053 fix end-to-end. Not a ux-cycle concern (the `/trial-cycle` companion loop handles this).
+- **Execute `row-click-keyboard-affordance-gap`** — still parked, needs browser verification
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`framework_gap_analysis`** — last was cycle 287 (7 cycles ago). Soft threshold in the skill is "~7 cycles" — now at threshold.
+- **NEW: `cross-shell title harmonisation`** — workspace vs experience shell titles diverge (17px medium vs text-2xl bold). Resolving requires a design decision (converge on one style, OR document the distinction as intentional and introduce a typed spec for it). Warrants a dedicated cycle.
+- **NEW: `missing_contracts` scan** — hasn't run since cycle 285 (9 cycles ago). With 76 contracts now in catalog, a fresh breadth scan might surface new un-covered patterns.
+
+---

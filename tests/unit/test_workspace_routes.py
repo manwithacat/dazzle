@@ -6095,6 +6095,179 @@ class TestWorkspaceContextSelector:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 294 — Workspace heading contract (UX-074)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceHeading:
+    """workspace-heading.md — promoted from workspace-shell v2 Q1 (cycle 294).
+
+    The heading is a two-part flex row inside `workspace/_content.html`:
+    `<h2>` title on the left (with fallback from workspace.title to
+    `name.replace('_', ' ').title()`) + optional `primary_actions` cluster
+    on the right (pre-filtered by `_user_can_mutate` in page_routes.py,
+    rendered as `<a hx-boost="true">` with plus-icon SVG).
+
+    Tests pin all 12 quality gates. The heading is Alpine-free pure
+    server-side HTML; the parent workspace-shell's Alpine scope wraps
+    the broader composition but this row inside it has no Alpine.
+    """
+
+    def _render(
+        self,
+        *,
+        workspace_title: str = "",
+        workspace_name: str = "my_dashboard",
+        primary_actions: list[dict[str, str]] | None = None,
+    ) -> str:
+        from dazzle_ui.runtime.workspace_renderer import WorkspaceContext
+
+        ws = WorkspaceContext(
+            name=workspace_name,
+            title=workspace_title,
+        )
+        return render_fragment(
+            "workspace/_content.html",
+            workspace=ws,
+            layout_json="[]",
+            primary_actions=primary_actions or [],
+        )
+
+    # Gate 1: title uses full 4-class token set
+    def test_title_uses_full_token_set(self) -> None:
+        html = self._render(workspace_title="Dashboard")
+        import re
+
+        h2_match = re.search(r"<h2[^>]*>", html)
+        assert h2_match is not None
+        tag = h2_match.group(0)
+        for cls in (
+            "text-[17px]",
+            "font-medium",
+            "leading-[24px]",
+            "tracking-[-0.01em]",
+            "text-[hsl(var(--foreground))]",
+        ):
+            assert cls in tag, f"missing class {cls!r} in h2 tag: {tag}"
+
+    # Gate 2: title fallback works
+    def test_title_fallback_from_name(self) -> None:
+        html = self._render(workspace_title="", workspace_name="my_custom_board")
+        assert "My Custom Board" in html
+
+    # Gate 3: title precedence
+    def test_title_takes_precedence_over_name(self) -> None:
+        html = self._render(workspace_title="Custom Title", workspace_name="ops_board")
+        assert "Custom Title" in html
+        # Fallback should NOT appear
+        assert "Ops Board" not in html
+
+    # Gate 4: primary-actions wrapper absent when list empty
+    def test_primary_actions_wrapper_absent_when_empty(self) -> None:
+        html = self._render(primary_actions=[])
+        assert 'data-test-id="dz-workspace-primary-actions"' not in html
+
+    # Gate 5: primary-actions wrapper present when list non-empty
+    def test_primary_actions_wrapper_present_when_populated(self) -> None:
+        html = self._render(primary_actions=[{"label": "New Task", "route": "/app/task/new"}])
+        assert html.count('data-test-id="dz-workspace-primary-actions"') == 1
+
+    # Gate 6: one <a hx-boost="true"> per action
+    def test_one_anchor_with_hx_boost_per_action(self) -> None:
+        actions = [
+            {"label": "New Task", "route": "/app/task/new"},
+            {"label": "New Contact", "route": "/app/contact/new"},
+            {"label": "New Project", "route": "/app/project/new"},
+        ]
+        html = self._render(primary_actions=actions)
+        # hx-boost appears exactly N times, once per action
+        assert html.count('hx-boost="true"') == len(actions)
+
+    # Gate 7: URLs and labels match
+    def test_action_href_and_label_rendered_correctly(self) -> None:
+        html = self._render(
+            primary_actions=[
+                {"label": "New Ticket", "route": "/app/tickets/new"},
+                {"label": "New User", "route": "/app/users/new"},
+            ]
+        )
+        assert 'href="/app/tickets/new"' in html
+        assert 'href="/app/users/new"' in html
+        assert "New Ticket" in html
+        assert "New User" in html
+
+    # Gate 8: primary-token class set on each action
+    def test_action_uses_primary_token_set(self) -> None:
+        html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
+        assert "bg-[hsl(var(--primary))]" in html
+        assert "text-[hsl(var(--primary-foreground))]" in html
+        assert "hover:bg-[hsl(var(--primary)/0.9)]" in html
+
+    # Gate 9: plus-icon SVG is decorative
+    def test_plus_icon_svg_is_aria_hidden(self) -> None:
+        html = self._render(primary_actions=[{"label": "Create", "route": "/create"}])
+        import re
+
+        # Find the SVG inside the primary-actions wrapper
+        wrapper_match = re.search(
+            r'<div[^>]*data-test-id="dz-workspace-primary-actions".*?</div>\s*</div>',
+            html,
+            re.DOTALL,
+        )
+        assert wrapper_match is not None
+        wrapper = wrapper_match.group(0)
+        assert 'aria-hidden="true"' in wrapper
+        assert 'class="w-3.5 h-3.5"' in wrapper
+        assert 'fill="none"' in wrapper
+        assert 'stroke="currentColor"' in wrapper
+
+    # Gate 10: asymmetric flex row
+    def test_row_uses_asymmetric_flex(self) -> None:
+        html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
+        import re
+
+        # Find the outer heading row wrapper
+        # Pattern: <div class="flex items-start justify-between gap-4 mb-4">
+        assert "flex items-start justify-between gap-4 mb-4" in html
+        # Actions wrapper has shrink-0
+        actions_match = re.search(
+            r'<div class="flex items-center gap-2 shrink-0"',
+            html,
+        )
+        assert actions_match is not None
+
+    # Gate 11: no Alpine on the heading row
+    def test_heading_row_is_alpine_free(self) -> None:
+        """Heading is pure server-side; no Alpine escapes into the h2 or action anchors."""
+        actions = [{"label": "X", "route": "/x"}]
+        html = self._render(primary_actions=actions)
+        # Scope via regex: match the primary-actions wrapper greedily up to its
+        # closing </div> (the wrapper contains only <a> children, no nested <div>s,
+        # so finding the first </div> after the wrapper open is the correct close).
+        import re
+
+        wrapper_re = re.compile(
+            r'<div[^>]*data-test-id="dz-workspace-primary-actions"[^>]*>'
+            r".*?</div>",
+            re.DOTALL,
+        )
+        wrapper_match = wrapper_re.search(html)
+        assert wrapper_match is not None
+        h2_idx = html.find("<h2")
+        assert 0 < h2_idx < wrapper_match.start()
+        window = html[h2_idx : wrapper_match.end()]
+        for banned in ("x-data", "x-show", "x-transition", "@click", "@change"):
+            assert banned not in window, f"Alpine directive leaked into heading row: {banned}"
+
+    # Gate 12: no DaisyUI
+    def test_no_daisyui_classes_in_heading(self) -> None:
+        html = self._render(primary_actions=[{"label": "Create", "route": "/create"}])
+        for banned in ("btn ", "btn-primary", "hero ", "card-body"):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+
+# ---------------------------------------------------------------------------
 # Cycle 291 — Experience shell composition contract (experience-shell.md, UX-072)
 # ---------------------------------------------------------------------------
 
