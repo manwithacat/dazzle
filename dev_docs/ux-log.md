@@ -9216,4 +9216,64 @@ The framework is now **DaisyUI-free in the rendering path.** The three deferred 
 
 ---
 
+## Cycle 317 — 2026-04-20 — framework_gap_analysis: silent-drift classes in /ux-cycle
+
+**Strategy:** framework_gap_analysis (12 cycles since last — 305 template-ship-without-wiring). Synthesis debt due.
+**Outcome:** Written `dev_docs/framework-gaps/2026-04-20-ux-cycle-silent-drift-classes.md` (~250 lines). Consolidates 6 distinct silent-drift classes surfaced across cycles 311-316 into one framework-level analysis. Proposes 2-axis fix strategy + elevation of a 5th durable heuristic.
+
+**Strategy candidates considered:**
+- `framework_gap_analysis` — 12 cycles since last; 5 recent cycles all surfaced drift-related themes. **Picked.**
+- `missing_contracts` — retired cycle 309 (superseded by lints)
+- `contract_audit` — no specific target queued; would need to pick one
+- `finding_investigation` — no OPEN EX rows with concerning status pending action
+- `edge_cases` — no persona/app axis flagged as under-probed
+
+**6 classes synthesised** (details in gap doc):
+
+| # | Class | Surfaced | Gate status |
+|---|---|---|---|
+| 1 | Syrupy baseline drift | cycle 311 (40-cycle accumulation) | GATED (312) |
+| 2 | UI type-error drift | 313/314 (pre-empted) | GATED (314) |
+| 3 | Dist/ build artifact drift | 313 (≥20-cycle accumulation) | MANUAL |
+| 4 | Canonical-helper bypass | 315 | MANUAL |
+| 5 | DaisyUI in Python-embedded HTML | 316 (≥300-cycle accumulation) | MANUAL |
+| 6 | contract_audit hygiene | 311 root cause | GATED downstream (312) |
+
+**Three root-cause factors** (from doc):
+
+1. **Scope asymmetry** — /ux-cycle commits but pre-cycle-312 ran no pytest/mypy. /ship runs both. Cron loop could drop changes through git faster than /ship could audit them.
+2. **File-extension-scoped sweeps miss adjacent patterns** — cycle 17's DaisyUI template sweep missed Python-embedded HTML (cycle 316 finding); cycle 302's orphan_lint is template-scoped.
+3. **contract_audit discipline is implicit** — strategy spec says "regression tests matching each quality gate" but doesn't enumerate snapshot refresh, mypy, DaisyUI grep.
+
+**2-axis fix strategy proposed:**
+
+- **Axis A — close remaining gates:** add `test-ux-deep` for broader mypy (not blocking preflight cadence); add dist/ drift warning; add DaisyUI-token Python lint (5th horizontal-discipline lint candidate).
+- **Axis B — codify contract_audit hygiene:** extract checklist into explicit skill docs; optional `/contract_audit <component>` subcommand for reproducibility.
+
+**Durable heuristic candidate — Heuristic 5:**
+
+> After any cycle that edits template files, Python files emitting HTML, or CSS, run `make test-ux-preflight`. Do not commit if red.
+
+Converts the existing preflight gate (a Step 0a of the NEXT cycle) into an outbound gate of THIS cycle — drift caught on introduction, not one cron tick later. This is what cycles 311-316 have been doing implicitly via the preflight check I run in Step 0a; making it an explicit Heuristic 5 formalises the discipline for future runners.
+
+**Heuristic 1 verified (meta):** I grepped existing gap docs to ensure I wasn't duplicating a theme. Cycle 300's external-resource-integrity, cycle 305's template-ship-without-wiring, cycle 287's pr600-dormant-alpine-primitives are adjacent but distinct — they're about "shipped-but-not-used" / "depends-on-external" patterns, not the "silent-drift-in-our-own-cycles" pattern this doc frames.
+
+**Explore budget used**: 72 → 73.
+
+### Running UX-governance total: 79 contracts (unchanged — analysis cycle)
+
+### Next candidate cycles
+
+**Priority order (from gap doc's Axis A recommendations):**
+
+- **Add DaisyUI-token Python lint (5th horizontal-discipline)** — Axis A3. Directly closes Class 5. ~80 LOC, <0.5s preflight cost.
+- **Add `make test-ux-deep` target with broader mypy** — Axis A1. Non-preflight, manual invocation. Low scope, closes type-error drift beyond dazzle_ui.
+- **Add dist/ drift warning to preflight** — Axis A2. Git-status scan; non-blocking. Closes Class 3.
+- **Apply orphan_lint pattern to Python modules** — still outstanding from prior cycles, but gap doc's framing suggests it's narrower-scope than originally planned
+- **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; warrants contract_audit treatment
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
