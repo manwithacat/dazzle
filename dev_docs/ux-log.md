@@ -10766,3 +10766,11 @@ Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped
 Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped. Budget 95. (26 consecutive idle ticks.)
 
 ---
+
+## Cycle 366 — 2026-04-20 — short-circuit continues (idle tick, FINAL — operator cancelled cron)
+
+Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped. Budget 95. (27 consecutive idle ticks.)
+
+**Operator action:** `cancelcron` invoked at cycle 366. Loop is stopping.
+
+---
