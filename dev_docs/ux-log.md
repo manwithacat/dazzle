@@ -10507,3 +10507,41 @@ Matches the cycle 326/332 "consolidation is a legitimate durable cycle type" pat
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 339 — 2026-04-20 — status-quo cycle
+
+**Strategy:** minimal observational — nothing has changed since cycle 338's dashboard shipped.
+**Outcome:** Preflight green. All 7 issues (#829-835) still OPEN. No operator action on the cadence-or-pause decision raised cycle 336. No new findings.
+
+**Issue-queue snapshot:** identical to cycle 338's dashboard. No state transitions.
+
+**Cycles since operator-escalation (cycle 336):**
+- 336: escalated operator-decision point
+- 337: minimal, no findings
+- 338: shipped loop-state dashboard (housekeeping)
+- 339 (this cycle): no change
+
+**Observation: auto-mode + no operator response = loop keeps running.** At current cadence with current productivity, the loop will:
+- Hit primary short-circuit (budget 100) at cycle ~345
+- Continue producing ~1 log entry per 10 minutes
+- Generate ~50+ lines of log text per hour
+
+This is not harmful but it's not productive either. The short-circuit at cycle 345 will be a natural pause point — until then the loop keeps the preflight gate firing (which IS valuable ongoing work, even if no new findings surface).
+
+**Preflight gate value proposition remains intact:**
+
+Every cycle runs `make test-ux-preflight` — 46 tests + mypy(ui) + dist-warn in ~5s. If ANY template edit lands (e.g. from a parallel `/improve` or `/ship` cycle), the gate catches regression immediately. Six months from now when the loop has been idle for a long time, the first real-work cycle will inherit a green preflight and can focus on the new work.
+
+So: the "non-productive" cycles are actually **continuous-integration cycles for the loop's own infrastructure**. The absence of findings is not the absence of value.
+
+**Explore budget used**: 94 → 95.
+
+### Running UX-governance total: 79 contracts (unchanged — status-quo)
+
+### Next candidate cycles
+
+- **Continue until cycle 345 short-circuit** unless operator intervenes or a new signal emerges
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
