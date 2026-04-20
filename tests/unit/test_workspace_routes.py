@@ -6095,6 +6095,165 @@ class TestWorkspaceContextSelector:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 296 — Steps indicator primitive contract (UX-075)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestStepsIndicator:
+    """steps-indicator.md — generic position-based stepper primitive.
+
+    Cycle 296 — contracts `fragments/steps_indicator.html`. Intentionally
+    distinct from `experience/_content.html`'s inline stepper (which uses
+    server-state flags). These tests pin the fragment's 12 quality gates +
+    the semantic that connector-colour threshold is STRICT less-than
+    (connector LEADING INTO current = primary, LEADING OUT = muted).
+    """
+
+    def _render(self, *, steps: list[dict], current_step: int | None = None) -> str:
+        kwargs: dict = {"steps": steps}
+        if current_step is not None:
+            kwargs["current_step"] = current_step
+        return render_fragment("fragments/steps_indicator.html", **kwargs)
+
+    # Gate 1: <ol> root has dz-steps class
+    def test_root_has_canonical_class(self) -> None:
+        html = self._render(steps=[{"label": "A"}])
+        assert '<ol class="dz-steps' in html
+        assert "flex items-center w-full" in html
+
+    # Gate 2: N steps → N <li>
+    def test_n_steps_produce_n_li(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}])
+        assert html.count("<li") == 3
+
+    # Gate 3: current step has aria-current
+    def test_current_step_has_aria_current(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}], current_step=2)
+        assert html.count('aria-current="step"') == 1
+
+    # Gate 4: default current_step = 1
+    def test_default_current_step_is_first(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}])
+        # With default=1, aria-current should be on the first <li>
+        import re
+
+        li_matches = re.findall(r"<li[^>]*>", html)
+        assert 'aria-current="step"' in li_matches[0]
+        assert 'aria-current="step"' not in li_matches[1]
+
+    # Gate 5: steps <= current use --primary tokens
+    def test_steps_up_to_current_use_primary(self) -> None:
+        html = self._render(
+            steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
+            current_step=3,
+        )
+        # 3 circles should be primary (steps 1, 2, 3)
+        assert html.count("bg-[hsl(var(--primary))]") >= 3
+        # Current step + completed labels use --foreground
+        assert "text-[hsl(var(--foreground))]" in html
+
+    # Gate 6: steps > current use --muted tokens
+    def test_steps_after_current_use_muted(self) -> None:
+        html = self._render(
+            steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
+            current_step=3,
+        )
+        # 2 circles muted (steps 4, 5)
+        assert html.count("bg-[hsl(var(--muted))]") >= 2
+        # Muted labels for steps 4, 5
+        assert "text-[hsl(var(--muted-foreground))]" in html
+
+    # Gate 7: connector colour is STRICT less-than current
+    def test_connector_threshold_is_strict_less_than(self) -> None:
+        """Connector LEADING INTO current = primary. Connector LEADING OUT = muted."""
+        html = self._render(
+            steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
+            current_step=3,
+        )
+        # Extract connector divs in order
+        import re
+
+        connectors = re.findall(
+            r'<div class="flex-1 mx-3 h-px (bg-\[hsl\(var\(--[^)]+\)\)\])',
+            html,
+        )
+        # 4 connectors between 5 steps
+        assert len(connectors) == 4
+        # Connectors 1→2, 2→3 (leading INTO current=3) are primary
+        assert connectors[0] == "bg-[hsl(var(--primary))]"
+        assert connectors[1] == "bg-[hsl(var(--primary))]"
+        # Connector 3→4 (leading OUT of current) is border
+        assert connectors[2] == "bg-[hsl(var(--border))]"
+        assert connectors[3] == "bg-[hsl(var(--border))]"
+
+    # Gate 8: flex-1 on all non-last steps
+    def test_flex_1_on_non_last_steps_only(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}])
+        import re
+
+        li_tags = re.findall(r"<li[^>]*>", html)
+        # First two should have flex-1, last shouldn't
+        assert "flex-1" in li_tags[0]
+        assert "flex-1" in li_tags[1]
+        assert "flex-1" not in li_tags[2]
+
+    # Gate 9: no connector after last step
+    def test_no_connector_after_last_step(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}])
+        # Only 1 connector between 2 steps
+        import re
+
+        connectors = re.findall(
+            r'<div class="flex-1 mx-3 h-px',
+            html,
+        )
+        assert len(connectors) == 1
+
+    # Gate 10: label uses step.label
+    def test_label_reads_step_label_key(self) -> None:
+        html = self._render(steps=[{"label": "Authenticate"}, {"label": "Authorize"}])
+        assert "Authenticate" in html
+        assert "Authorize" in html
+        # Wrong-shape (step.title instead of step.label) → empty labels
+        html_wrong = self._render(steps=[{"title": "Should not render"}])
+        assert "Should not render" not in html_wrong
+
+    # Gate 11: circles are 6x6, rounded-full, 11px semibold
+    def test_circle_styling_is_canonical(self) -> None:
+        html = self._render(steps=[{"label": "A"}])
+        # The span carrying the number
+        assert "shrink-0 w-6 h-6 rounded-full" in html
+        assert "text-[11px] font-semibold" in html
+
+    # Gate 12: zero Alpine, HTMX, JS
+    def test_no_alpine_htmx_or_js(self) -> None:
+        html = self._render(steps=[{"label": "A"}, {"label": "B"}], current_step=2)
+        for banned in ("x-data", "x-show", "@click", "hx-get", "hx-post", "<script"):
+            assert banned not in html, f"unexpected {banned!r} in stepper primitive"
+
+    # Contract pointer present on source template
+    def test_contract_pointer_present(self) -> None:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "fragments" / "steps_indicator.html").read_text()
+        assert (
+            "Contract: ~/.claude/skills/ux-architect/components/steps-indicator.md (UX-075)" in src
+        )
+
+    # Divergence note present
+    def test_experience_shell_divergence_documented(self) -> None:
+        """The fragment's NOTE warns against collapsing experience-shell into it."""
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "fragments" / "steps_indicator.html").read_text()
+        assert "experience/_content.html" in src
+        assert "do NOT" in src or "do not" in src.lower()
+
+
+# ---------------------------------------------------------------------------
 # Cycle 294 — Workspace heading contract (UX-074)
 # ---------------------------------------------------------------------------
 

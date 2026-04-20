@@ -1,5 +1,10 @@
 {# Visual step indicator for multi-step flows — pure Tailwind (cycle 251).
-   Parameters: steps (list of {label: str}), current_step (int, 1-based) #}
+   Contract: ~/.claude/skills/ux-architect/components/steps-indicator.md (UX-075)
+   Parameters: steps (list of {label: str}), current_step (int, 1-based).
+   NOTE: experience/_content.html has its OWN inline stepper — do NOT
+   collapse into this fragment. The experience shell needs server-state
+   flags (is_current, is_completed, is_skipped) that this primitive's
+   position-based model cannot express. #}
 {% set current = current_step | default(1) %}
 <ol class="dz-steps flex items-center w-full">
   {% for step in steps %}

@@ -7996,3 +7996,65 @@ Natural follow-ups ranked by leverage:
 - **`dormant_primitives_audit`** — awaiting user direction.
 
 ---
+
+## Cycle 296 — 2026-04-20 — contract_audit: steps-indicator (UX-075) — Heuristic 1 prevents wrong consolidation
+
+**Strategy:** `contract_audit` — promoting PROP-069 from cycle 295's scan
+**Outcome:** 76 → 77 contracts. **Heuristic 1 prevented a wrong consolidation** — the expected "merge experience-shell's inline stepper into the fragment" move would have silently lost the `is_skipped` semantic. Kept as documented siblings.
+
+**Chosen this cycle.** Smallest + highest-leverage of the three PROP-068/069/070 candidates from cycle 295. 22-LOC fragment template. Cycle 295's PROP row explicitly called out "could drive a consolidation where experience-shell's inline stepper becomes `{% include %}`". That consolidation was the expected side quest.
+
+**Heuristic 1 applied — expected consolidation turned out to be wrong.** Before promoting the fragment to a contract + doing the consolidation, close-read both steppers. Found they LOOK identical but DIVERGE semantically:
+
+- **Fragment (`fragments/steps_indicator.html`)** uses position-based state:
+  - `loop.index <= current_step` → step is completed-or-current
+  - `loop.index < current_step` → connector is completed
+  - Caller passes `current_step: int (1-based)` and the fragment computes everything from step position.
+
+- **Experience-shell inline stepper (`experience/_content.html:11-32`)** uses server-state flags:
+  - `step.is_completed or step.is_current` → step is completed-or-current
+  - `step.is_completed` → connector is completed
+  - Server populates `ExperienceStepContext.{is_current, is_completed, is_skipped}` per step from the flow state + `evaluate_simple_condition(step.when, state.data)`.
+
+**The divergence matters.** Experience flows can mark steps as skipped (via conditional `when:` DSL blocks). The flag-based model renders a skipped step with its circle MUTED, a completed connector LEADING INTO it (from its predecessor) coloured primary, and a muted connector leading out of it. The position-based model treats `loop.index < current_step` as "completed" uniformly — a skipped step at position 2 with current at 4 would render as PRIMARY circle, which is wrong.
+
+Had I done the consolidation, the `is_skipped` semantic would have silently collapsed. Would likely have stayed undetected for cycles because the current example app's `incident_response` experience doesn't use conditional steps. Would surface later when some downstream adopter wrote a conditional flow and got visual inconsistency.
+
+**Heuristic 1 track record — this is save #7 in the current era.** The expected "simple" consolidation was a trap; close-reading surfaced a real semantic difference. Documented as intentional siblings in both contracts. Pattern continues paying.
+
+**Contract at** `~/.claude/skills/ux-architect/components/steps-indicator.md` — 12 quality gates. Notable pins:
+
+- Gate 7: connector colour threshold is **STRICT less-than** (`loop.index < current_step`). Connector LEADING INTO current step uses `--primary`; connector LEADING OUT uses `--border`. This is a subtle off-by-one guard — `<=` vs `<` changes visual meaning.
+- Gate 5/6: circle colour is **inclusive** (`<=`). The current step's circle is primary, NOT muted.
+- Gate 10: label reads `step.label`, not `step.title` — wrong-shape input renders empty strings (fail loudly, not silently).
+- Gate 3/4: default `current_step = 1` — matches `loop.index` 1-based convention.
+
+**10 v2 open questions** including: no visual focus distinction for current step (relies on `aria-current` alone), mobile responsiveness for long labels, RTL support, `<ol>` start-index override, extraction of a shared macro between this + experience-shell + form-wizard.
+
+**14 regression tests** in `TestStepsIndicator`. Gate 7 uses regex to extract connector `bg-[hsl(...)]` classes in order and assert the exact expected pattern (PRIM PRIM BORDER BORDER for 5-step, current=3). Two extra guard tests: `test_contract_pointer_present` pins the Contract: header, `test_experience_shell_divergence_documented` pins the "do NOT collapse" warning.
+
+**Experience-shell contract updated** with a new cross-reference bullet under Cross-references: "Sibling primitive (intentionally distinct): components/steps-indicator.md (UX-075). Same visual treatment but position-based state model cannot express skipped steps. Keep them as documented siblings rather than force a shared macro."
+
+**No drift fixed.** Fragment template was already clean. Only code change: added Contract: pointer header + divergence NOTE to lines 1-7.
+
+**Cross-app verification** (Heuristic 3): 381/381 workspace + lint + session tests pass (up from 367). No regressions.
+
+**Explore budget used**: 51 → 52.
+
+### Running UX-governance total: 77 contracts
+
+### Next candidate cycles
+
+Remaining PROPOSED from cycle 295:
+- **PROP-068 `auth-2fa-flow` contract_audit** — HIGH priority, 441 LOC across 3 surfaces, cryptographic-UX. Largest remaining gap.
+- **PROP-070 `site-footer` contract_audit** — LOW priority, 17 LOC, non-tokenized.
+
+Queued from prior cycles:
+- **`trial-cycle probe for experience transitions`** — verify cycle 292 EX-053 fix end-to-end (not a ux-cycle concern)
+- **Execute `row-click-keyboard-affordance-gap`** — still parked, needs browser verification
+- **`cross-shell title harmonisation`** — workspace/experience title divergence; design-decision cycle
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+
+---
