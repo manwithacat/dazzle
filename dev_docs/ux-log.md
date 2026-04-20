@@ -10319,3 +10319,58 @@ Zero rows remaining that are "open + concerning + not filed." The backlog is in 
 - **Potential: generator-symmetry audit meta-check** — grep for generators that emit contract-subclasses and verify persona/operation coverage is equal across subclasses (would have caught EX-026 half-2 at code-review time)
 
 ---
+
+## Cycle 335 — 2026-04-20 — preemptive generator-symmetry audit: no additional gaps
+
+**Strategy:** preemptive finding_investigation — cycle 334 identified "asymmetric generator in shared file" as a potential 5th heuristic pending a 2nd instance. This cycle scans framework generators to test that hypothesis.
+**Outcome:** Audited 5 multi-output generator files. Only `contracts.py`'s WorkspaceContract vs RBACContract asymmetry (already filed #835) matched the pattern. **No additional gaps surfaced.** Generator-symmetry heuristic NOT elevated — single-example rule stands.
+
+**Audit trail:**
+
+1. Grepped for `*.append(` on lists that hold multiple contract/test kinds:
+   - `src/dazzle/testing/ux/contracts.py` — #835 scope (already filed)
+   - `src/dazzle/testing/curl_test_generator.py` — **persona-aware**: iterates personas at lines 273, 441
+   - `src/dazzle/testing/dsl_test_generator.py` — **persona-aware**: workspace-tests check `workspace.access.allow_personas` at line 1133
+   - `src/dazzle/testing/test_generator.py`, `event_test_runner.py`, etc — surface-level only; no persona/entity dimensions to audit
+   - `src/dazzle/agent/compiler.py` — narrative compiler; emits proposals, single dimension
+
+2. Spot-checked `dsl_test_generator.py:_generate_workspace_tests()`:
+   ```python
+   if workspace.access and workspace.access.allow_personas:
+       ws_persona = workspace.access.allow_personas[0]
+   ```
+   The generator correctly consults persona-access and logs in as the first allowed persona — unlike `contracts.py` which ignored access entirely.
+
+3. Spot-checked `curl_test_generator.py`:
+   ```python
+   for persona in personas:
+       ...
+   ```
+   Iterates personas directly — symmetric per-persona coverage.
+
+**Conclusion:** the asymmetry in `contracts.py`'s workspace loop is isolated. The "sister" generators in the testing tree all handle persona access correctly. #835's fix would complete the normalization without requiring broader refactoring.
+
+**Heuristic elevation decision:** `generator_symmetry_audit` NOT elevated to durable heuristic. Rule of thumb from cycle 332's consolidation: "when 3+ cycles surface same-pattern instances with common action template." Only 1 instance found. If a future cycle's `finding_investigation` surfaces a 2nd persona-blind generator elsewhere in the framework, revisit.
+
+**Benefit of running the audit anyway:** even without finding new gaps, this cycle gives downstream confidence that #835's fix is complete in scope. Future /issues cycle picking up #835 can focus on `contracts.py` without worrying about hidden siblings.
+
+**Cross-app verification** (Heuristic 3): N/A — audit cycle, no code changes.
+
+**Meta-observation: loop in steady-state mode.**
+
+Cycles 323-334 triaged the entire previously-accumulated EX-row backlog to FILED/CLOSED/DEFERRED status. Cycle 335's audit scan found no unfiled gaps. The loop has reached a genuinely-maintenance state: continuous lints catch new drift, periodic audits catch stale status, investigations return quickly (most pivot to FP or existing-fix).
+
+Tactically: future cycles should probably bias toward `contract_audit` or `edge_cases` strategies (discovering new targets) rather than `finding_investigation` (which now mostly validates existing resolutions). OR: explicit decision to slow the cron cadence if there's genuinely nothing to find.
+
+**Explore budget used**: 90 → 91.
+
+### Running UX-governance total: 79 contracts (unchanged — audit cycle)
+
+### Next candidate cycles
+
+- **Bias toward `contract_audit` or `edge_cases` strategies** — finding_investigation has been low-yield recently; breadth discovery may be higher-value
+- **Consider cron-cadence adjustment** — 10-minute interval was right when backlog was full; steady-state loop may warrant slower cadence to reduce redundant scans
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
