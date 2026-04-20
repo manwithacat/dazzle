@@ -61,6 +61,11 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
     "components/alpine/confirm_dialog.html": (
         "Dormant Alpine primitive; PR #600; cycle 287 gap doc"
     ),
+    "components/alpine/dropdown.html": (
+        "Dormant Alpine primitive; PR #600; cycle 286 gap doc. "
+        "Self-reference in Usage docstring ({# Usage: %}) was hiding "
+        "this from the scan until cycle 304 fixed the comment-strip."
+    ),
     # Dormant building-blocks with ux-architect contracts but no
     # production consumer. Same class as the PR #600 primitives.
     "components/modal.html": (
@@ -88,6 +93,12 @@ def _collect_all_templates() -> set[str]:
 
 _INCLUDE_RE = re.compile(r'{%\s*(?:include|extends|import|from)\s+["\']([^"\']+)["\']')
 _PY_TEMPLATE_STRING_RE = re.compile(r'["\']([a-zA-Z_][a-zA-Z0-9_/]*\.html)["\']')
+# Jinja comments can contain example `{% include ... %}` calls in their text.
+# Strip `{# ... #}` blocks (possibly multi-line) before running include-match
+# so doc-only references don't count as real consumers. Cycle 304 fix — a
+# false-negative surfaced for `alpine/dropdown.html` whose own `{# Usage: %}`
+# comment referenced itself, making the scanner think it was consumed.
+_JINJA_COMMENT_RE = re.compile(r"\{#.*?#\}", re.DOTALL)
 
 
 def _collect_referenced_paths() -> set[str]:
@@ -95,17 +106,25 @@ def _collect_referenced_paths() -> set[str]:
 
     Recognises:
     - `{% include/extends/import/from "path" %}` in templates
-    - `'path.html'` or `"path.html"` string literals in Python
+      (Jinja `{# ... #}` comments are stripped first to avoid
+      counting example-usage docstrings as real consumers).
+    - `'path.html'` or `"path.html"` string literals in Python.
 
     Does NOT attempt to resolve dynamic string concatenation — the
     `DYNAMIC_DIRECTORY_EXEMPTIONS` table covers those cases.
+
+    Self-references (a template referring to itself in an include) are
+    ignored — an orphan that "includes itself" is still an orphan.
     """
     referenced: set[str] = set()
-    # Scan templates
+    # Scan templates — strip Jinja comments first
     for p in TEMPLATES_ROOT.rglob("*.html"):
-        text = p.read_text()
+        self_path = p.relative_to(TEMPLATES_ROOT).as_posix()
+        text = _JINJA_COMMENT_RE.sub("", p.read_text())
         for m in _INCLUDE_RE.finditer(text):
-            referenced.add(m.group(1))
+            ref = m.group(1)
+            if ref != self_path:  # self-references don't count
+                referenced.add(ref)
     # Scan Python across all three src subtrees
     for root in (DAZZLE_UI_ROOT, DAZZLE_BACK_ROOT, DAZZLE_CORE_ROOT):
         if not root.exists():

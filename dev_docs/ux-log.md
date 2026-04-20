@@ -8497,3 +8497,59 @@ OPEN EX rows: 0.
 - **NEW: framework_gap_analysis on "templates-ship-without-routes"** — EX-055 could be a class, not a one-off. Worth scanning other template-families for similar gaps: are all `site/auth/` templates actually served? What about `components/alpine/` orphans (is the confirm_dialog `dz-confirm` event ever dispatched)? Pattern worth a gap doc once enough evidence accumulates.
 
 ---
+
+## Cycle 304 — 2026-04-20 — orphan scanner hardening: fix comment-strip false negative
+
+**Strategy:** infrastructure fix — close cycle 302's deferred `dropdown.html` verification + harden the orphan_lint_rule scanner
+**Outcome:** Scanner now strips Jinja comments before ref-matching. `components/alpine/dropdown.html` correctly surfaces as an orphan. Allowlist grows to 7 entries (up from 6 post-cycle-302, +1 dropdown with reason).
+
+**Chosen this cycle.** Cycle 302 noted a possible false negative: the orphan scanner claimed `components/alpine/dropdown.html` was referenced, but cycle 286's gap doc said it was dormant. The scanner's output was contradicted by prior evidence — worth a targeted 5-min check. After 3 consecutive FILE-don't-FIX cycles (299/301/303), a pure code-maintenance pivot also provides strategy diversity.
+
+**Root cause found in one grep.** `grep -rnE 'dropdown\.html' src/dazzle_ui` surfaced a self-reference inside a Jinja comment at `components/alpine/dropdown.html:4`:
+
+```jinja
+{# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
+```
+
+The scanner's `_INCLUDE_RE` regex matched the `{% include %}` inside the `{# ... #}` comment, marking dropdown.html as "referenced" when in fact the only "reference" is a documentation example pointing at itself. **False negative confirmed.** Cycle 286 was right; scanner was wrong.
+
+**Fix: two-line scanner change.**
+
+1. Added `_JINJA_COMMENT_RE` (with `re.DOTALL` for multi-line) and strip `{# ... #}` blocks before running include-match.
+2. Added self-reference check: a template's include reference to itself doesn't count as external usage. (Defense-in-depth — even if a future comment-strip missed a case, self-references still wouldn't count.)
+
+**Allowlist updated.** Added `components/alpine/dropdown.html` with reason:
+> "Dormant Alpine primitive; PR #600; cycle 286 gap doc. Self-reference in Usage docstring ({# Usage: %}) was hiding this from the scan until cycle 304 fixed the comment-strip."
+
+Explains both what dropdown is (dormant) AND why it wasn't caught before (comment-strip bug). Future engineers reading the allowlist understand the full history.
+
+**Post-fix scan state:**
+- total templates: 112
+- directly referenced: 88
+- covered by dynamic-dir exemptions: 20
+- orphans (unallowed): 0
+- orphans (allowed): 7 = INDIVIDUAL_ALLOWLIST = {2 PR#600-primitives, 2 unused-building-blocks, 3 2FA-page-orphans}
+
+**No other false negatives** uncovered by the fix. My worry was that other templates with example-usage docstrings might have been hidden too — the scan after fix still surfaces exactly the 7 expected orphans + adds dropdown. So the comment-strip bug only affected dropdown (which is the only template that self-references in its docstring). Clean fix.
+
+**Test suite unchanged at 414/414.** 5 orphan-scan tests still pass (test (2) "every allowlist entry is still orphaned" validates the new dropdown entry matches reality).
+
+**Meta-pattern: the scanner caught its own bug.** Cycle 302 shipped the scanner. Cycle 303 used the scanner to surface EX-055 → #831. Cycle 304 refined the scanner after noticing a contradiction between its output and prior-cycle evidence. This is the self-correcting cycle pattern working as designed — automated discipline, when wrong, gets caught by human review of prior findings.
+
+**Explore budget used**: 59 → 60.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure fix)
+
+### Next candidate cycles
+
+OPEN EX rows: 0.
+
+- **`missing_contracts` scan** — 9 cycles since 295 — strongly overdue
+- **Gap doc Phase 2 as GitHub issue** — vendor Tailwind + Dazzle own dist
+- **`templates-ship-without-routes` framework_gap_analysis** — synthesis of EX-055 + the 6 other allowlisted orphans. Common theme: "framework ships scaffolding, downstream wiring is incomplete". Could generalise.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+
+---
