@@ -1,12 +1,14 @@
-{# Detail region — UX-035 adopter #14. #}
+{# Detail region — UX-035 adopter #14.
+   Contract: ~/.claude/skills/ux-architect/components/detail-region.md (UX-063) #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
+<div class="dz-detail-region">
   {% if item %}
-  <dl class="grid grid-cols-2 gap-2">
+  <dl class="dz-detail-grid grid grid-cols-2 gap-2">
     {% for col in columns %}
-    <dt class="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">{{ col.label }}</dt>
-    <dd class="text-[13px] text-[hsl(var(--foreground))]">
+    <dt class="dz-detail-label text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">{{ col.label }}</dt>
+    <dd class="dz-detail-value text-[13px] text-[hsl(var(--foreground))]">
       {% if col.type == "badge" %}
         {{ render_status_badge(value=item[col.key], bordered=true) }}
       {% elif col.type == "bool" %}
@@ -25,7 +27,8 @@
           {% else %}{{ display_name }}{% endif %}
         {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
       {% else %}
-        {{ item[col.key] | default("—") }}
+        {% set val = item[col.key] %}
+        {% if val is none %}—{% else %}{{ val }}{% endif %}
       {% endif %}
     </dd>
     {% endfor %}
@@ -33,4 +36,5 @@
   {% else %}
   <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No record selected.") }}</p>
   {% endif %}
+</div>
 {% endcall %}

@@ -1157,6 +1157,180 @@ class TestProgressRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("PROGRESS") == "workspace/regions/progress.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 272 — Detail region contract (UX-063)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestDetailRegionTemplate:
+    """Detail region renders a single entity record as <dl>/<dt>/<dd> pairs.
+
+    Cycle 272 — contracts the detail.html region template. Quality gates
+    encoded here mirror the ones in
+    ~/.claude/skills/ux-architect/components/detail-region.md.
+    """
+
+    def _detail_kwargs(self, **overrides):
+        defaults = {
+            "title": "Selected Contact",
+            "item": None,
+            "columns": [],
+            "empty_message": "No record selected.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_and_grid(self) -> None:
+        """Gates 1 + 2: dz-detail-region + dz-detail-grid <dl>."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"name": "Alice", "status": "active"},
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {"key": "status", "label": "Status", "type": "badge"},
+                ],
+            ),
+        )
+        assert "dz-detail-region" in html
+        assert "dz-detail-grid" in html
+        assert "<dl" in html
+
+    def test_dt_dd_pair_count_matches_columns(self) -> None:
+        """Gate 3: <dt> and <dd> counts equal len(columns)."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"name": "Alice", "email": "alice@example.com", "status": "active"},
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {"key": "email", "label": "Email", "type": "text"},
+                    {"key": "status", "label": "Status", "type": "badge"},
+                ],
+            ),
+        )
+        assert html.count("<dt") == 3
+        assert html.count("<dd") == 3
+
+    def test_labels_use_muted_foreground_token(self) -> None:
+        """Gate 4: <dt> class references --muted-foreground token, no hardcoded HSL."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"name": "Alice"},
+                columns=[{"key": "name", "label": "Name", "type": "text"}],
+            ),
+        )
+        # dt label uses the token
+        assert "hsl(var(--muted-foreground))" in html
+        # No digit-starting HSL literals inside class attributes
+        import re
+
+        dt_match = re.search(r"<dt[^>]*class=\"([^\"]+)\"", html)
+        assert dt_match is not None
+        assert "hsl(" not in dt_match.group(1) or "var(--" in dt_match.group(1)
+
+    def test_values_use_foreground_token(self) -> None:
+        """Gate 5: <dd> class references --foreground token."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"name": "Alice"},
+                columns=[{"key": "name", "label": "Name", "type": "text"}],
+            ),
+        )
+        assert "hsl(var(--foreground))" in html
+
+    def test_badge_column_delegates_to_status_badge_macro(self) -> None:
+        """Gate 6: type=badge invokes render_status_badge, producing dz-status-badge."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"status": "active"},
+                columns=[{"key": "status", "label": "Status", "type": "badge"}],
+            ),
+        )
+        assert "dz-status-badge" in html
+
+    def test_ref_anchor_uses_primary_token(self) -> None:
+        """Gate 7: ref column with ref_route + mapping value → anchor with primary token."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={
+                    "owner": {"id": "42", "name": "Bob"},
+                    "owner_display": "Bob Smith",
+                },
+                columns=[
+                    {
+                        "key": "owner",
+                        "label": "Owner",
+                        "type": "ref",
+                        "ref_route": "/app/user/{id}",
+                    }
+                ],
+            ),
+        )
+        assert "hsl(var(--primary))" in html
+        assert 'href="/app/user/42"' in html
+        assert "Bob Smith" in html
+
+    def test_emdash_fallback_for_null_value(self) -> None:
+        """Gate 8: plain-type column renders emdash for missing value, not 'None'."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"notes": None},
+                columns=[{"key": "notes", "label": "Notes", "type": "text"}],
+            ),
+        )
+        assert "—" in html
+        # The literal Python string "None" must not leak
+        assert ">None<" not in html
+
+    def test_empty_state_when_no_item(self) -> None:
+        """Gate 9: item=None → role=status paragraph, no <dl>."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item=None,
+                empty_message="Pick a contact from the list.",
+            ),
+        )
+        assert "<dl" not in html
+        assert 'role="status"' in html
+        assert "Pick a contact from the list." in html
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 10: zero DaisyUI class references in rendered output."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            **self._detail_kwargs(
+                item={"name": "Alice", "status": "active"},
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {"key": "status", "label": "Status", "type": "badge"},
+                ],
+            ),
+        )
+        for banned in (
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "badge-error",
+            "btn-primary",
+            "card-body",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_detail_routes_to_detail_template(self) -> None:
+        """Gate 0 (routing): DETAIL display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("DETAIL") == "workspace/regions/detail.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
