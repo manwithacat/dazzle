@@ -30,6 +30,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
+from typing import Any
 
 
 @dataclass
@@ -201,7 +202,7 @@ _WORKSPACE_LAYOUT_RE = re.compile(
 )
 
 
-def _extract_workspace_layout(initial_html: str) -> dict | None:
+def _extract_workspace_layout(initial_html: str) -> dict[str, Any] | None:
     """Pull the embedded layout JSON from a workspace page.
 
     Returns the parsed dict (with ``cards``, ``catalog``,
@@ -249,7 +250,7 @@ def assemble_workspace_composite(
             re.DOTALL,
         )
         composite = pattern.sub(
-            lambda m, html=region_html: m.group(1) + html + m.group(3),
+            lambda m, html=region_html: m.group(1) + html + m.group(3),  # type: ignore[misc]
             composite,
             count=1,
         )

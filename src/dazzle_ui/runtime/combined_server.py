@@ -439,11 +439,20 @@ def run_backend_only(
     # Mount GraphQL if enabled
     if enable_graphql:
         try:
+            from dazzle_back import convert_appspec_to_backend
             from dazzle_back.graphql import mount_graphql
 
+            # mount_graphql expects a BackendSpec (not AppSpec) — the
+            # function reads `spec.entities` directly, whereas AppSpec
+            # exposes entities at `appspec.domain.entities`. Without
+            # the conversion this path would raise AttributeError the
+            # moment GraphQL is enabled (the bug stayed latent because
+            # --graphql defaults to off). Match the pattern already
+            # used by dazzle.mcp.runtime_tools.handlers.
+            backend_spec = convert_appspec_to_backend(appspec)
             mount_graphql(
                 app,
-                appspec,
+                backend_spec,
                 services=app_builder.services,
                 repositories=app_builder.repositories,
             )

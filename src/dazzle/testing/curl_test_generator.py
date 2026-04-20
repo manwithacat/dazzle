@@ -83,7 +83,7 @@ class CurlTestGenerator:
 
     def generate(self, suites: list[str] | None = None) -> str:
         """Generate the complete bash smoke test script."""
-        selected = suites or ALL_SUITES
+        selected: list[str] = list(suites or ALL_SUITES)
         parts: list[str] = []
         parts.append(self._script_header())
         parts.append(self._helper_functions())

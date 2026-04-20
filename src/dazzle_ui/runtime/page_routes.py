@@ -240,7 +240,7 @@ def _user_can_mutate(
         _runtime_ctx,
         entity_name=_entity_name or "",
     )
-    return _decision.allowed
+    return bool(_decision.allowed)
 
 
 def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
@@ -1186,7 +1186,7 @@ async def _workspace_handler(
     user_name = ""
     user_roles: list[str] = []
 
-    user_preferences: dict[str, object] = {}
+    user_preferences: dict[str, str] = {}
     auth_ctx = None
 
     if deps.get_auth_context is not None:

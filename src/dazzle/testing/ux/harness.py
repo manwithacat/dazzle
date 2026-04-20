@@ -10,6 +10,7 @@ import logging
 import shutil
 import subprocess
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class PostgresHarness:
     keep_db: bool = False
     test_db_url: str = ""
 
-    def _admin_connection(self):
+    def _admin_connection(self) -> Any:
         """Connect to the admin database (usually 'postgres')."""
         import psycopg
 

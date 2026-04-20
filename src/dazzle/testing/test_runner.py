@@ -127,11 +127,19 @@ class DazzleClient:
         self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
 
     def _ensure_csrf_token(self) -> None:
-        """Acquire a CSRF token by making a GET request if we don't have one."""
+        """Acquire a CSRF token by making a GET request if we don't have one.
+
+        Real latent bug fixed in today's debt-sweep: previously used
+        ``self.base_url`` which doesn't exist on DazzleClient (fields
+        are ``api_url`` and ``ui_url``). An AttributeError here would
+        surface at test-run time whenever the CSRF cookie was absent
+        and we ever reached the except-block branch. ``api_url`` is
+        the correct target — `/health` is an API endpoint.
+        """
         if self.client.cookies.get("dazzle_csrf"):
             return
         try:
-            self.client.get(f"{self.base_url}/health")
+            self.client.get(f"{self.api_url}/health")
         except Exception:
             pass  # Best-effort — server may not be ready yet
 

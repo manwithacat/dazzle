@@ -5,6 +5,15 @@ This module transforms Dazzle's surface definitions into DNR UI components,
 mapping surface modes to appropriate UI patterns.
 """
 
+# `ElementNode(as_=...)` works at runtime via Pydantic
+# `populate_by_name=True` — the field is declared as `as_: str =
+# Field(..., alias="as")` because `as` is a Python keyword. Mypy's
+# Pydantic plugin strictly accepts only the alias and reports
+# call-arg errors on every `as_=` kwarg (17 sites in this file). The
+# runtime accepts both. Suppressing the rule module-wide here instead
+# of scattering 17 identical `# type: ignore[call-arg]` comments.
+# mypy: disable-error-code="call-arg"
+
 from dazzle.core import ir
 from dazzle.core.strings import to_api_plural
 from dazzle_ui.specs import (
