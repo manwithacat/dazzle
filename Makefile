@@ -92,10 +92,11 @@ test:
 test-fast:
 	pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
 
-# Fast infrastructure-drift gate used by /ux-cycle (cycle 312).
+# Fast infrastructure-drift gate used by /ux-cycle (cycles 312 + 314).
 # Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
-# in ~3s. Catches the class of silent drift that accumulated for ~40 cycles
-# before cycle 311 surfaced 9 red tests in the full suite.
+# + mypy on the UI subtree. Budget <6s. Catches the drift class that accumulated
+# for ~40 cycles before cycle 311 surfaced 9 red tests in the full suite, AND
+# the hypothesized 4th class (type-error drift in dazzle_ui/) that cycle 313 flagged.
 test-ux-preflight:
 	pytest tests/unit/test_template_orphan_scan.py \
 	       tests/unit/test_page_route_coverage.py \
@@ -104,6 +105,7 @@ test-ux-preflight:
 	       tests/unit/test_dom_snapshots.py \
 	       tests/unit/test_card_safety_invariants.py \
 	       -q
+	mypy src/dazzle_ui/ --ignore-missing-imports
 
 test-integration:
 	pytest tests/integration/ -v
