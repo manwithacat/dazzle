@@ -8247,3 +8247,74 @@ OPEN EX rows: 0 (EX-054 now FILED).
 - **NEW: security-chrome audit** — EX-053 and EX-054 are the second + third cryptographic/security-adjacent findings surfaced by the UX cycle. Worth a dedicated pass that looks at all auth / CSRF / session-handling surfaces for similar data-flow issues.
 
 ---
+
+## Cycle 300 — 2026-04-20 — framework_gap_analysis: external-resource-integrity 🎉
+
+**Strategy:** `framework_gap_analysis` — 12 cycles since last (cycle 287), well past the ~7-cycle soft threshold
+**Outcome:** 1 gap doc written synthesising EX-054 into a broader class. Identified 3 additional high-risk CDN loads (Tailwind JIT, Dazzle own dist, Mermaid) that share the same class. **Cycle 300 milestone reached.**
+
+**Chosen this cycle.** Five strategy candidates evaluated:
+- `framework_gap_analysis` — explicitly suggested by cycle 299 log; 12 cycles since last is 5 beyond threshold.
+- `missing_contracts` — only 4 cycles since 295, less leverage.
+- `edge_cases` — no pressing driver, high cost.
+- `contract_audit` — no specific target without a scan first.
+- `finding_investigation` — 0 OPEN EX rows, no material.
+
+Picked framework_gap_analysis to close the synthesis debt + because cycle 299's note ("security-chrome audit — EX-053 and EX-054 are the second + third cryptographic/security-adjacent findings") hinted at a theme worth exploring.
+
+**Theme explored: external-resource integrity.**
+
+Started by grep-scanning templates for `<form method="post">` (cycle 292's class) — zero hits, EX-053 fix was complete. Pivoted to external-resource loads (`https?://api\.|cdn\.|unpkg\.|googleapis\.|jsdelivr\.`) and found **11 hits across 4 template files**:
+
+| Template | Line | Resource | Risk |
+|----------|------|----------|------|
+| `base.html` | 11, 13 | `fonts.googleapis.com` + Inter font | Low |
+| `base.html` | 24 | `cdn.tailwindcss.com` (executable JS) | **HIGH** |
+| `base.html` | 27 | `cdn.jsdelivr.net/gh/manwithacat/dazzle@vX/dist` | Medium |
+| `site/site_base.html` | 9, 11 | Google Fonts preconnect + Inter | Low |
+| `site/site_base.html` | 18 | `cdn.jsdelivr.net/npm/daisyui@5/daisyui.css` | Low |
+| `site/site_base.html` | 19 | `cdn.jsdelivr.net/npm/@tailwindcss/browser@4` (JS) | **HIGH** |
+| `site/site_base.html` | 21 | `cdn.jsdelivr.net/gh/manwithacat/dazzle@vX/dist` | Medium |
+| `workspace/regions/diagram.html` | 12 | `cdn.jsdelivr.net/npm/mermaid@11/dist/...` (JS) | **HIGH** |
+| `site/auth/2fa_setup.html` | 135 | `api.qrserver.com` (EX-054, issue #829) | **HIGH** |
+
+**Zero `integrity=` SRI attributes in any template.** Every external load is trusted blindly.
+
+**Plus the CSP-integration contradiction.** `src/dazzle_back/runtime/security_middleware.py` has a well-designed `_build_csp_header()` with strict defaults (`default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `font-src 'self'`, `connect-src 'self'` — no CDN whitelist). But CSP is DISABLED in both `basic` (default) and `standard` profiles — only `strict` enables it. The templates and CSP defaults are **mutually incompatible**: enabling CSP breaks the templates; leaving CSP off means the security intent coded into the middleware never runs.
+
+**Gap doc** at `dev_docs/framework-gaps/2026-04-20-external-resource-integrity.md`:
+
+- Problem statement (two-layer vulnerability: SRI absence + CSP opt-in burden)
+- Evidence table (11 external loads categorised by risk)
+- CSP config analysis (basic/standard: off, strict: on but breaks templates)
+- Cross-cycle reinforcement (EX-054 is one of 4+ instances)
+- Root cause hypothesis (no template build pipeline SRI enforcement; CSP designed for back-end routes not template asset loading; "don't break apps" default priority hides the gap)
+- **Fix sketch in 4 phases**:
+  - **Phase 1 (LOW effort, HIGH value):** add SRI to all fixed-version CDN loads — ~10 lines HTML, no CSP changes, immediate defense
+  - **Phase 2:** vendor Tailwind CDN + Dazzle-own-dist (both already have local alternatives). Removes ~60% of external surface.
+  - **Phase 3:** fix CSP defaults + enable in `standard` profile after Phase 2 cleanup; CSP-Report-Only in `basic` as adoption stepping stone
+  - **Phase 4:** lint rule (parallel to cycle 284's EX-051 None-vs-default scanner) to prevent future regression
+- Blast radius (all 5 example apps + any downstream Dazzle deployment)
+- 6 open questions (is cdn.tailwindcss.com intentional? why does Dazzle load its own dist from jsdelivr/gh? Mermaid vendoring cost tradeoff? Google Fonts self-host size?)
+- Recommendation (no unilateral action; file Phase 1 as a focused GitHub issue)
+
+**Meta-observation** captured in the "Cross-cycle reinforcement" section: 2 security-adjacent findings in ~20 cycles is a noteworthy rate. The pattern is "UX contract_audits surface latent security defects that escape narrow dev review" — semgrep hooks + close-reading discipline both contribute. Worth flagging to product-direction as a signal that UX-cycle is incidentally delivering security value.
+
+**Milestone: cycle 300.** First framework_gap_analysis cycle since 287 (12 cycles). 80 contract files now in catalog. 55 explore budget used. 229 cycles since the pre-cycle-72 era (if any). Worth a brief reflection in the commit message — this is the third framework_gap_analysis cycle in the current arc (272 rewind, 287, 300).
+
+**Explore budget used**: 55 → 56.
+
+### Running UX-governance total: 79 contracts (unchanged — analysis cycle)
+
+### Next candidate cycles
+
+- **File Phase 1 as focused GitHub issue** — SRI hardening, ~10 lines HTML. Could be a `/issues` pickup or paired with #829.
+- **`missing_contracts` scan** — 5 cycles since cycle 295
+- **`row-click-keyboard-affordance-gap` execution** — parked, needs browser; may be ready for another attempt
+- **`cross-shell title harmonisation`** — still queued
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`cross-chrome style-locality audit`** — site-footer v2 Q8
+
+---
