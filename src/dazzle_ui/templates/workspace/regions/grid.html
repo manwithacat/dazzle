@@ -1,7 +1,9 @@
-{# Grid region — first adopter of the shared region_card macro (UX-035). #}
+{# Grid region — first adopter of the shared region_card macro (UX-035).
+   Contract: ~/.claude/skills/ux-architect/components/grid-region.md (UX-066) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
+<div class="dz-grid-region">
   {% if items %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     {% for item in items %}
@@ -10,7 +12,7 @@
        visible card chrome lives on the enclosing region_card macro
        (rounded-[6px] + border + bg). Duplicating chrome here produced
        a card-within-a-card effect; see issue #794 and its follow-up. #}
-    <div class="rounded-[4px] p-3 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+    <div class="dz-grid-cell rounded-[4px] p-3 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
       {% if attn %}
         border-l-4
         {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))]{% endif %}
@@ -46,7 +48,7 @@
                  class="text-[hsl(var(--primary))] hover:underline"
                  onclick="event.stopPropagation()">{{ display_name }}</a>
             {% else %}{{ display_name }}{% endif %}
-          {% elif display_name %}{{ display_name }}{% elif ref %}-{% else %}-{% endif %}
+          {% elif display_name %}{{ display_name }}{% else %}-{% endif %}
         {% else %}
           {{ item[col.key] | default("") | truncate_text }}
         {% endif %}
@@ -59,4 +61,5 @@
   {% else %}
   {% include "fragments/empty_state.html" %}
   {% endif %}
+</div>
 {% endcall %}

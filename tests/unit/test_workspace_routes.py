@@ -1812,6 +1812,269 @@ class TestBarChartRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("BAR_CHART") == "workspace/regions/bar_chart.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 275 — Grid region contract (UX-066)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestGridRegionTemplate:
+    """Grid region renders items as a responsive 1/2/3-column card grid.
+
+    Cycle 275 — contracts grid.html. Template was already drift-clean on
+    tokens. Minor simplification: removed dead `{% elif ref %}` branch
+    that fell through to dash (same output as `{% else %}` branch).
+    """
+
+    def _grid_kwargs(self, **overrides):
+        defaults = {
+            "title": "Systems",
+            "items": [],
+            "columns": [
+                {"key": "name", "label": "Name", "type": "text"},
+                {"key": "status", "label": "Status", "type": "badge"},
+            ],
+            "display_key": "name",
+            "action_url": "",
+            "action_id_field": "id",
+            "entity_name": "System",
+            "empty_message": "No systems registered.",
+            "create_url": "",
+            "create_label": "",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_and_grid(self) -> None:
+        """Gates 1 + 2: dz-grid-region + responsive CSS grid container."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active"}],
+            ),
+        )
+        assert "dz-grid-region" in html
+        # Responsive grid utilities
+        assert "grid-cols-1" in html
+        assert "sm:grid-cols-2" in html
+        assert "lg:grid-cols-3" in html
+
+    def test_cell_count_matches_items_length(self) -> None:
+        """Gate 3: dz-grid-cell count equals len(items)."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[
+                    {"id": "1", "name": "Alpha", "status": "active"},
+                    {"id": "2", "name": "Beta", "status": "active"},
+                    {"id": "3", "name": "Gamma", "status": "active"},
+                ],
+            ),
+        )
+        assert html.count("dz-grid-cell") == 3
+
+    def test_primary_label_in_h4(self) -> None:
+        """Gate 4: each cell contains <h4> with display_key value + foreground token."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active"}],
+            ),
+        )
+        assert "<h4" in html
+        assert "hsl(var(--foreground))" in html
+        assert "Alpha" in html
+
+    def test_non_primary_columns_render_as_paragraphs(self) -> None:
+        """Gate 5: each cell contains len(columns) - 1 <p> label-value pairs."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active", "cpu": 42}],
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {"key": "status", "label": "Status", "type": "badge"},
+                    {"key": "cpu", "label": "CPU", "type": "text"},
+                ],
+                display_key="name",
+            ),
+        )
+        # 2 non-primary columns → 2 <p> per cell
+        # Count <p> tags inside the grid (exclude any outside if present)
+        assert html.count("<p ") == 2  # status + cpu
+        assert "Status:" in html
+        assert "CPU:" in html
+
+    def test_attention_level_critical_uses_destructive_token(self) -> None:
+        """Gate 6 (critical): _attention={level:critical} → --destructive left border."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Alpha",
+                        "status": "down",
+                        "_attention": {"level": "critical", "message": "System down"},
+                    },
+                ],
+            ),
+        )
+        assert "border-l-[hsl(var(--destructive))]" in html
+        assert 'title="System down"' in html
+
+    def test_attention_level_warning_uses_warning_token(self) -> None:
+        """Gate 6 (warning): --warning left border."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Alpha",
+                        "status": "degraded",
+                        "_attention": {"level": "warning", "message": "High latency"},
+                    },
+                ],
+            ),
+        )
+        assert "border-l-[hsl(var(--warning))]" in html
+
+    def test_attention_level_notice_uses_primary_token(self) -> None:
+        """Gate 6 (notice): --primary left border."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Alpha",
+                        "status": "active",
+                        "_attention": {"level": "notice", "message": "Just deployed"},
+                    },
+                ],
+            ),
+        )
+        assert "border-l-[hsl(var(--primary))]" in html
+
+    def test_htmx_drill_down_wired_when_action_url(self) -> None:
+        """Gate 7: cells have hx-get iff action_url is non-empty."""
+        with_action = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "abc123", "name": "Alpha", "status": "active"}],
+                action_url="/app/system/{id}",
+            ),
+        )
+        assert 'hx-get="/app/system/abc123"' in with_action
+        assert "#dz-detail-drawer-content" in with_action
+        assert "cursor-pointer" in with_action
+
+        without_action = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "abc123", "name": "Alpha", "status": "active"}],
+                action_url="",
+            ),
+        )
+        assert "hx-get=" not in without_action
+        assert "cursor-pointer" not in without_action
+
+    def test_ref_anchor_stop_propagation(self) -> None:
+        """Gate 8: ref column anchor includes event.stopPropagation() onclick.
+
+        Without this, clicking a ref link would both navigate AND fire the
+        cell's HTMX drill-down, creating a race.
+        """
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Alpha",
+                        "owner": {"id": "u42", "name": "Bob"},
+                        "owner_display": "Bob Smith",
+                    },
+                ],
+                columns=[
+                    {"key": "name", "label": "Name", "type": "text"},
+                    {
+                        "key": "owner",
+                        "label": "Owner",
+                        "type": "ref",
+                        "ref_route": "/app/user/{id}",
+                    },
+                ],
+                display_key="name",
+                action_url="/app/system/{id}",
+            ),
+        )
+        assert 'onclick="event.stopPropagation()"' in html
+
+    def test_empty_state_delegates_to_empty_state_fragment(self) -> None:
+        """Gate 9: empty items → empty_state fragment markers, no cells."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(items=[]),
+        )
+        assert "dz-grid-cell" not in html
+        # The empty_state fragment emits its own canonical markers
+        # (role="status" + dz-empty-state or similar)
+        assert "No systems registered." in html or "empty" in html.lower()
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 10: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active"}],
+            ),
+        )
+        for banned in (
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "badge-error",
+            "btn-primary",
+            "card-body",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_cell_chrome_not_duplicated(self) -> None:
+        """Gate 11: cells MUST NOT duplicate region-wrapper card chrome.
+
+        Pins the #794 fix: the enclosing region_card owns rounded-[6px] +
+        border + bg. Cells must stay plain inside (no full border, no bg-card,
+        no outer-card radii).
+        """
+        html = render_fragment(
+            "workspace/regions/grid.html",
+            **self._grid_kwargs(
+                items=[{"id": "1", "name": "Alpha", "status": "active"}],
+            ),
+        )
+        import re
+
+        cell_match = re.search(
+            r'class="dz-grid-cell([^"]*)"',
+            html,
+        )
+        assert cell_match is not None
+        cell_class = cell_match.group(1)
+        # Permitted inside the cell: rounded-[4px] (inner), border-l-4 (attn accent only)
+        # Forbidden: 'border ' as a standalone utility (full border), bg-card, rounded-md/lg
+        assert "bg-card" not in cell_class
+        assert "rounded-md" not in cell_class
+        assert "rounded-lg" not in cell_class
+
+    def test_grid_routes_to_grid_template(self) -> None:
+        """Gate 0 (routing): GRID display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("GRID") == "workspace/regions/grid.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
