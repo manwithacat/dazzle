@@ -154,6 +154,7 @@
   --dz-footer-text: oklch(0.7 0 0);
   --dz-footer-link: oklch(0.6 0 0);
   --dz-footer-border: oklch(1 0 0 / 0.1);
+  --dz-footer-heading: oklch(1 0 0);
 
   /* Logo */
   --dz-logo-color: oklch(0.25 0.02 260);
@@ -280,6 +281,7 @@
   --dz-footer-text: oklch(0.65 0 0);
   --dz-footer-link: oklch(0.55 0 0);
   --dz-footer-border: oklch(1 0 0 / 0.1);
+  --dz-footer-heading: oklch(1 0 0);
 
   /* Logo */
   --dz-logo-color: oklch(0.95 0 0);

@@ -6095,6 +6095,201 @@ class TestWorkspaceContextSelector:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 297 — Marketing site-footer contract (UX-076)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestSiteFooter:
+    """site-footer.md — marketing-chrome footer. Dual-file contract.
+
+    Cycle 297 — promotes PROP-070. Template is a class-contract scaffold
+    (canonical `dz-footer-*` markers + data binding), styling lives in
+    site-sections.css via --dz-footer-* custom properties. Cycle also
+    migrated two hardcoded `color: white` to `var(--dz-footer-heading)`.
+    """
+
+    def _render(
+        self,
+        *,
+        footer_columns: list[dict] | None = None,
+        copyright_text: str = "© 2026 Example Inc.",
+    ) -> str:
+        from dazzle_ui.runtime.template_context import SiteFooterColumn, SiteFooterLink
+
+        cols = []
+        for c in footer_columns or []:
+            cols.append(
+                SiteFooterColumn(
+                    title=c["title"],
+                    links=[SiteFooterLink(**link) for link in c.get("links", [])],
+                )
+            )
+        return render_fragment(
+            "site/includes/footer.html",
+            footer_columns=cols,
+            copyright_text=copyright_text,
+        )
+
+    @staticmethod
+    def _read_css(relpath: str) -> str:
+        from pathlib import Path
+
+        css_dir = (
+            Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "runtime" / "static" / "css"
+        )
+        return (css_dir / relpath).read_text()
+
+    # Gate 1: exactly one <footer class="dz-site-footer">
+    def test_single_footer_element_with_canonical_class(self) -> None:
+        html = self._render()
+        assert html.count('<footer class="dz-site-footer">') == 1
+
+    # Gate 2: contract pointer header present
+    def test_contract_pointer_header_present(self) -> None:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "site" / "includes" / "footer.html").read_text()
+        assert "Contract: ~/.claude/skills/ux-architect/components/site-footer.md (UX-076)" in src
+
+    # Gate 3: four canonical class markers render
+    def test_four_canonical_class_markers(self) -> None:
+        html = self._render(
+            footer_columns=[
+                {"title": "Product", "links": [{"label": "Features", "href": "/features"}]}
+            ]
+        )
+        for marker in ("dz-site-footer", "dz-footer-content", "dz-footer-col", "dz-footer-bottom"):
+            assert marker in html
+
+    # Gate 4: N columns → N .dz-footer-col blocks
+    def test_n_columns_produce_n_col_blocks(self) -> None:
+        html = self._render(
+            footer_columns=[
+                {"title": "Product", "links": []},
+                {"title": "Company", "links": []},
+                {"title": "Resources", "links": []},
+            ]
+        )
+        assert html.count('class="dz-footer-col"') == 3
+
+    # Gate 5: each column has one <h4> and one <ul>
+    def test_each_column_has_h4_and_ul(self) -> None:
+        html = self._render(
+            footer_columns=[
+                {"title": "Product", "links": [{"label": "X", "href": "/x"}]},
+                {"title": "Company", "links": [{"label": "Y", "href": "/y"}]},
+            ]
+        )
+        # Per column: 1 <h4> + 1 <ul>. For 2 columns: 2 of each.
+        assert html.count("<h4>") == 2
+        assert html.count("<ul>") == 2
+
+    # Gate 6: link count matches server data
+    def test_link_count_matches(self) -> None:
+        html = self._render(
+            footer_columns=[
+                {
+                    "title": "Product",
+                    "links": [
+                        {"label": "Features", "href": "/features"},
+                        {"label": "Pricing", "href": "/pricing"},
+                        {"label": "Changelog", "href": "/changelog"},
+                    ],
+                }
+            ]
+        )
+        assert html.count("<li>") == 3
+        assert 'href="/features"' in html
+        assert "Features" in html
+        assert 'href="/pricing"' in html
+        assert "Pricing" in html
+
+    # Gate 7: copyright renders in .dz-footer-bottom
+    def test_copyright_renders_in_bottom(self) -> None:
+        html = self._render(copyright_text="© 2026 Dazzle Inc.")
+        import re
+
+        # Extract .dz-footer-bottom block
+        bottom_match = re.search(
+            r'<div class="dz-footer-bottom">.*?</div>',
+            html,
+            re.DOTALL,
+        )
+        assert bottom_match is not None
+        assert "© 2026 Dazzle Inc." in bottom_match.group(0)
+        assert "<p>" in bottom_match.group(0)
+
+    # Gate 8: empty footer_columns still renders copyright
+    def test_empty_columns_still_renders_copyright(self) -> None:
+        html = self._render(footer_columns=[], copyright_text="© Empty Footer")
+        assert 'class="dz-footer-bottom"' in html
+        assert "© Empty Footer" in html
+        # No column divs when list is empty
+        assert 'class="dz-footer-col"' not in html
+
+    # Gate 9: no inline Tailwind utility classes on footer elements
+    def test_no_inline_tailwind_utilities_on_footer(self) -> None:
+        html = self._render(
+            footer_columns=[{"title": "Product", "links": [{"label": "X", "href": "/x"}]}]
+        )
+        # These would indicate someone added inline Tailwind mixing with the class-contract
+        banned_prefixes = (
+            "text-[",
+            "bg-[",
+            "hover:",
+            "focus:",
+            "h-8",
+            "px-4",
+            "text-sm",
+            "text-lg",
+        )
+        for banned in banned_prefixes:
+            # Allow them IF they appear somewhere outside the footer scope, but in this fragment
+            # the whole output IS the footer, so any presence is a contract violation
+            assert banned not in html, f"Inline Tailwind utility {banned!r} leaked into footer"
+
+    # Gate 10: no Alpine / HTMX / JS
+    def test_no_alpine_htmx_or_script(self) -> None:
+        html = self._render(
+            footer_columns=[{"title": "Product", "links": [{"label": "X", "href": "/x"}]}]
+        )
+        for banned in ("x-data", "x-show", "@click", "hx-get", "hx-post", "<script"):
+            assert banned not in html, f"unexpected {banned!r} in footer"
+
+    # Gate 11: --dz-footer-heading defined in both themes
+    def test_dz_footer_heading_defined_in_both_themes(self) -> None:
+        css = self._read_css("design-system.css")
+        # Count occurrences — must be ≥ 2 (one for light :root, one for dark [data-theme="dark"])
+        assert css.count("--dz-footer-heading:") >= 2, (
+            "--dz-footer-heading must be defined in both light and dark theme blocks"
+        )
+
+    # Gate 12: no hardcoded color:white in .dz-footer-* rules
+    def test_no_hardcoded_white_in_dz_footer_rules(self) -> None:
+        """Cycle 297 migrated two `color: white` hardcodes to `var(--dz-footer-heading)`."""
+        css = self._read_css("site-sections.css")
+        # Extract just the .dz-footer-* CSS block (lines 757-813 roughly)
+        import re
+
+        # Find each .dz-footer-* rule block and check for color: white
+        rule_blocks = re.findall(
+            r"\.dz-(?:site-footer|footer-[\w-]+)[\s,:].*?\{([^}]*)\}",
+            css,
+            re.DOTALL,
+        )
+        assert rule_blocks, "no .dz-footer-* rule blocks found in site-sections.css"
+        for block in rule_blocks:
+            # `color: white` or `#fff` or `#ffffff`
+            assert "color: white" not in block, (
+                f"hardcoded color: white still present in .dz-footer-* rule block: {block[:100]}"
+            )
+            assert "#fff" not in block
+            assert "#ffffff" not in block.lower()
+
+
+# ---------------------------------------------------------------------------
 # Cycle 296 — Steps indicator primitive contract (UX-075)
 # ---------------------------------------------------------------------------
 

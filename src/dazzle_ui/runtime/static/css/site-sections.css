@@ -773,7 +773,7 @@
 .dz-footer-col h4 {
   font-size: 0.875rem;
   font-weight: 600;
-  color: white;
+  color: var(--dz-footer-heading);
   margin: 0 0 1rem;
 }
 
@@ -795,7 +795,7 @@
 }
 
 .dz-footer-col a:hover {
-  color: white;
+  color: var(--dz-footer-heading);
 }
 
 .dz-footer-bottom {

@@ -8058,3 +8058,59 @@ Queued from prior cycles:
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 297 — 2026-04-20 — contract_audit: site-footer (UX-076) — first dual-file contract
+
+**Strategy:** `contract_audit` — promoting PROP-070 from cycle 295's scan
+**Outcome:** 77 → 78 contracts. Novel pattern: first **dual-file contract** in the catalog (template + dedicated CSS file). 2 CSS drift fixes bundled.
+
+**Chosen this cycle.** Of the 2 remaining PROP candidates from cycle 295 (PROP-068 auth-2fa-flow at 441 LOC, PROP-070 site-footer at 17 LOC), picked the smaller one to ship this cycle. PROP-068's cryptographic-UX scope warrants a dedicated 60-90 min cycle, not a quick one. PROP-070 was marked LOW priority but closing it clears cycle 295's backlog and the drift findings turned out to be concrete.
+
+**Novel pattern: dual-file contract.** Every other shell contract in the catalog (workspace-shell, experience-shell, site-shell, etc.) uses inline Tailwind utilities rendered into the template. Site-footer is the exception — the template is a **class-contract scaffold** (17 LOC, 4 canonical `dz-footer-*` markers + data binding only), with the real design owned by a 57-line CSS block at `src/dazzle_ui/runtime/static/css/site-sections.css:757-813`. Custom properties in the `--dz-footer-*` namespace define colour, spacing, type at two theme levels (light + dark).
+
+**Why this pattern makes sense here.** The footer is **always-dark chrome** regardless of theme — its background is `oklch(0.15 0.01 260)` in light theme and `oklch(0.08 0.01 260)` in dark theme. Both are nearly-black. That visual decision (marketing hierarchy: page light, footer dark, always) requires its own coherent colour system; inlining theme-independent Tailwind utilities at every element would fragment the design. A dedicated CSS file + `--dz-footer-*` token namespace is the cleaner pattern.
+
+**2 drift fixes bundled.**
+
+- `site-sections.css:776` — `.dz-footer-col h4 { color: white; }` → `color: var(--dz-footer-heading);`
+- `site-sections.css:798` — `.dz-footer-col a:hover { color: white; }` → `color: var(--dz-footer-heading);`
+- New `--dz-footer-heading: oklch(1 0 0)` custom property added to BOTH light-theme `:root` block (`design-system.css:157`) AND dark-theme `[data-theme="dark"]` block (`design-system.css:283`). Both themes use white since the footer is always dark.
+
+Governance consistency: all chrome colours flow through a named custom property, not hardcoded literals. Values happen to match across themes, but the indirection is the contract.
+
+**Contract at** `~/.claude/skills/ux-architect/components/site-footer.md` — 12 quality gates spanning BOTH the template layer (1-10) AND the CSS source-of-truth (11-12). 10 v2 open questions including:
+- **Q8**: should other always-distinct chrome (marketing-nav?) follow the same dual-file pattern? Worth a cross-chrome consolidation cycle.
+- Q1: 150px grid minimum is arbitrary
+- Q9: intentionally-dark-footer in light theme — validate with product/design
+- Q3: flat link list with no grouping sub-headings
+
+**12 regression tests** in `TestSiteFooter`:
+
+- Gates 1-10 (template): single `<footer>`, contract-pointer-present, four canonical class markers, N-columns → N-blocks, per-column `<h4>`+`<ul>`, link-count-matches, copyright-in-bottom, empty-columns-still-renders-copyright, no-inline-Tailwind-leak, no-Alpine-HTMX-script.
+- Gate 11 (CSS): `--dz-footer-heading:` defined ≥ 2 times in design-system.css (light + dark blocks).
+- Gate 12 (CSS): regex-extracts every `.dz-footer-*` rule block and asserts zero `color: white` / `#fff` / `#ffffff` literals anywhere.
+
+Gate 12 is a regression guard that a future edit reintroducing a hardcoded literal would fail immediately. The test reads source CSS, not the generated `dazzle-bundle.css` (gitignored build artifact).
+
+**Cross-app verification** (Heuristic 3): 393/393 workspace + lint + session tests pass (up from 381). No regressions.
+
+**Explore budget used**: 52 → 53. Just past halfway.
+
+### Running UX-governance total: 78 contracts
+
+### Remaining PROPOSED
+
+- **PROP-068 `auth-2fa-flow`** — HIGH priority, 441 LOC (2fa_challenge + 2fa_setup + 2fa_settings). Dedicated cryptographic-UX cycle warranted.
+
+### Next candidate cycles
+
+- **PROP-068 `auth-2fa-flow` contract_audit** — last remaining cycle-295 PROP row. Biggest gap in the current catalog.
+- **`framework_gap_analysis`** — 0 OPEN EX rows; still minimal synthesis material but worth a scan.
+- **`cross-shell title harmonisation`** — workspace/experience title divergence
+- **`row-click-keyboard-affordance-gap`** — parked, needs browser
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **NEW: `cross-chrome style-locality audit`** — surfaced in site-footer v2 Q8. Should other chrome (marketing-nav, headers) follow the dual-file pattern? Worth a single audit cycle once both footer + nav patterns are stabilized.
+
+---
