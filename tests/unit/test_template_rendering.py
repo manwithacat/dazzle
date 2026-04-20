@@ -579,28 +579,17 @@ class TestJinjaFilters:
         assert "01" in result
         assert "Jun" in result
 
-    def test_badge_class_active(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_class }}")
-        assert "badge-success" in tmpl.render(val="active")
-
-    def test_badge_class_pending(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_class }}")
-        assert "badge-warning" in tmpl.render(val="pending")
-
-    def test_badge_class_unknown(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_class }}")
-        assert "badge-ghost" in tmpl.render(val="xyz")
-
     def test_bool_icon_true(self, env) -> None:
         # Use |safe since bool_icon returns raw HTML (autoescaped by Jinja2)
         tmpl = env.from_string("{{ val|bool_icon|safe }}")
         result = tmpl.render(val=True)
-        assert "text-success" in result
+        assert "text-[hsl(var(--success))]" in result
         assert "✓" in result or "&#10003;" in result
 
     def test_bool_icon_false(self, env) -> None:
         tmpl = env.from_string("{{ val|bool_icon|safe }}")
         result = tmpl.render(val=False)
+        assert "text-[hsl(var(--muted-foreground)/0.3)]" in result
         assert "✗" in result or "&#10005;" in result
 
     def test_truncate_text(self, env) -> None:
@@ -669,12 +658,6 @@ class TestJinjaFilters:
         result = tmpl.render(val=dt)
         assert "25" in result
         assert "Dec" in result
-
-    # --- badge filter edge cases ---
-
-    def test_badge_class_none(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_class }}")
-        assert tmpl.render(val=None) == ""
 
     # --- badge_tone filter (cycle 238, closes part of EX-041 status-badge
     # drift). Exercises the canonical semantic tone resolver used by the

@@ -92,7 +92,8 @@ def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
 
 # Canonical semantic tones for status badges. The macro at
 # `templates/macros/status_badge.html` maps these to design-system tokens.
-# Cycle 238 — single source of truth shared by `badge_tone` and `badge_class`.
+# Cycle 238 defined the tones; cycle 321 removed the deprecated
+# `badge_class` filter (0 template consumers) leaving only `badge_tone`.
 _STATUS_TONE_MAP: dict[str, str] = {
     # Success — things that reached a positive terminal state
     "active": "success",
@@ -186,32 +187,11 @@ def _badge_tone_filter(value: Any) -> str:
     return _STATUS_TONE_MAP.get(status, "neutral")
 
 
-def _badge_filter(value: Any) -> str:
-    """Map a status value to a legacy CSS badge class.
-
-    **Deprecated** (cycle 238): new templates should use the
-    ``render_status_badge`` macro from ``templates/macros/status_badge.html``
-    which maps the canonical tone to hsl(var(--token))-based Tailwind classes.
-    Retained only for any stragglers that still emit the legacy class names.
-    """
-    if value is None:
-        return ""
-    tone = _badge_tone_filter(value)
-    tone_to_legacy = {
-        "neutral": "badge-ghost",
-        "success": "badge-success",
-        "info": "badge-info",
-        "warning": "badge-warning",
-        "destructive": "badge-error",
-    }
-    return tone_to_legacy.get(tone, "badge-ghost")
-
-
 def _bool_icon_filter(value: Any) -> Markup:
     """Render a boolean as a check or cross icon."""
     if value:
-        return Markup('<span class="text-success">&#10003;</span>')
-    return Markup('<span class="text-base-content/30">&#10005;</span>')
+        return Markup('<span class="text-[hsl(var(--success))]">&#10003;</span>')
+    return Markup('<span class="text-[hsl(var(--muted-foreground)/0.3)]">&#10005;</span>')
 
 
 def _timeago_filter(value: Any) -> str:
@@ -421,7 +401,6 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     # Custom filters
     env.filters["currency"] = _currency_filter
     env.filters["dateformat"] = _date_filter
-    env.filters["badge_class"] = _badge_filter
     env.filters["badge_tone"] = _badge_tone_filter
     env.filters["metric_number"] = _metric_number_filter
     env.filters["bool_icon"] = _bool_icon_filter

@@ -83,13 +83,6 @@ _DICT_KEY_RE = re.compile(
 
 
 INDIVIDUAL_ALLOWLIST: dict[str, str] = {
-    # Tone-vocabulary grammar — migrating requires redesigning every
-    # caller's tone strings. Deferred cycle 316; warrants contract_audit.
-    "src/dazzle_ui/runtime/template_renderer.py": (
-        "badge-* tone dispatch table (lines 201-207) + text-base-content/30 "
-        "X-mark helper (line 214). Grammar + helper; migration requires "
-        "redesign of tone vocabulary. Deferred cycle 316; candidate contract_audit."
-    ),
     # Fallback alert — only reachable when template_renderer fails to
     # import. Dev-only; migrating has no user-visible benefit.
     "src/dazzle_ui/runtime/htmx.py": (
@@ -97,6 +90,11 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "template_renderer import fails — dev-only, unreachable in production. "
         "Deferred cycle 316."
     ),
+    # NOTE: template_renderer.py was removed from the allowlist in cycle 321.
+    # The deprecated `_badge_filter` (dead code, 0 template consumers since
+    # cycle 238) was deleted; `_bool_icon_filter`'s two remaining tokens
+    # (text-success, text-base-content/30) were migrated to HSL canonical.
+    # File now has 0 DaisyUI hits.
 }
 
 
