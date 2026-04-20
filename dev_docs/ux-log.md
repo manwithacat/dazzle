@@ -8441,3 +8441,59 @@ OPEN EX rows: 1 (EX-055, concerning).
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 303 — 2026-04-20 — finding_investigation: EX-055 → #831 (framework bug confirmed)
+
+**Strategy:** `finding_investigation` — close EX-055 from cycle 302 via FILE-don't-FIX
+**Outcome:** EX-055 OPEN → FILED→#831. Heuristic 1 raw-layer repro confirmed interpretation (a): 2FA UI feature is half-shipped — templates ship but no Python page routes serve them.
+
+**Chosen this cycle.** Cycle 302's orphan_lint_rule surfaced EX-055 + explicitly recommended `finding_investigation` as the next move. Single OPEN concerning EX row → clear target.
+
+**Heuristic 1 via static inspection.** Key realisation: the question "does a page route for \`/2fa/setup\` exist?" is answerable via code inspection alone — no need to boot a server. The orphan scan + direct grep + file reading are sufficient raw-layer evidence.
+
+Steps:
+
+1. Read \`site_routes.py:498-520\` in full — confirmed routes created: `/login`, `/signup`, `/forgot-password`, `/reset-password`. No `/2fa/*` routes.
+2. Grep for any other GET route registration matching `/2fa` — zero hits (only `/auth/2fa/*` API endpoints in `routes_2fa.py`).
+3. Grep for `render_site_page("site/auth/2fa_*")` — zero hits.
+4. Check CHANGELOG for 2FA wiring docs — line 3013 refers to "all 7 `site/auth/` templates under macro governance" — frames templates as first-class framework UI, not user-supplied scaffolding.
+5. Check examples/*/dsl/ for 2FA route wiring — zero hits.
+6. Check docs/ + README — no "how to wire 2FA page routes" doc.
+
+**Interpretations (b) and (c) from EX-055's initial filing both rejected:**
+
+- (b) "Framework ships UI, users wire own routes" — if this were the expected pattern, `site_routes.py` wouldn't serve `/login` either. The framework clearly serves some auth pages and not others; the absence of /2fa pages is inconsistency, not design.
+- (c) "Mechanism I missed" — exhaustive grep + inspection covered all plausible paths. There is no such mechanism.
+
+**Conclusion: interpretation (a) — framework bug. 2FA feature is half-shipped.** The UI templates exist and are styled (CHANGELOG confirms they went through UX-036 macro migration) but no Python glue serves them. A Dazzle user who configures 2FA backend has no way to reach the UI.
+
+**Issue #831 filed.** Label: `needs-triage,bug`. Content includes:
+- Summary + impact (3 broken user flows: initial setup, management, mid-login challenge)
+- Raw-layer repro evidence (file+line refs for each observation)
+- Pattern cautionary note: cycle 298's source-level template-text assertions passed because templates EXIST, not because anything serves them. This is a repeatable lesson for future contract_audits.
+- Fix scope split: "Add 3 GET routes" is simple; the **mid-login challenge flow** is the trickier part (session_token needs to travel from login POST response to challenge page; 3 sketched options with trade-offs: query param vs. signed cookie vs. direct-response-rendering).
+- Interpretations (b) and (c) explicitly considered + rejected
+- Cross-refs to #829 + #830 + auth-2fa.md contract
+
+**FILE-don't-FIX pattern (third in a row).** Cycles 299 (EX-054 → #829), 301 (Phase 1 → #830), 303 (EX-055 → #831) all closed with file, not fix. Common factor: each fix embeds trust or design decisions that benefit from human triage. My cycle-301 rule — "pure code refactor → FIX; trust/dependency/design decisions → FILE" — continues to apply.
+
+**No code changes this cycle.** Pure reasoning + issue-filing. Test suite unchanged at 414/414. Explore budget: 58 → 59.
+
+**Meta-cycle observation: orphan_lint_rule paid off immediately.** Cycle 302 shipped the lint rule + scan surfaced EX-055. Cycle 303 closed EX-055 as a real bug (FILED→#831). From "parked for 15 cycles" to "surfaced a framework bug + got it triaged" in 2 cycles. This is a strong argument for the horizontal-discipline cycle type (cycles 284 + 302 are both examples): lint rules have a high leverage-per-LOC once implemented.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+OPEN EX rows: 0.
+
+- **Verify dropdown.html isn't false-negative** — 5-min targeted check cycle 302 deferred
+- **`missing_contracts` scan** — 8 cycles since 295 — stale
+- **Gap doc Phase 2 as GitHub issue** — vendor Tailwind + Dazzle own dist
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+- **NEW: framework_gap_analysis on "templates-ship-without-routes"** — EX-055 could be a class, not a one-off. Worth scanning other template-families for similar gaps: are all `site/auth/` templates actually served? What about `components/alpine/` orphans (is the confirm_dialog `dz-confirm` event ever dispatched)? Pattern worth a gap doc once enough evidence accumulates.
+
+---
