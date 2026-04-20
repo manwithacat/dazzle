@@ -7930,3 +7930,69 @@ This cross-scope sibling-mutation pattern is unusual — Alpine components norma
 - **NEW: `missing_contracts` scan** — hasn't run since cycle 285 (9 cycles ago). With 76 contracts now in catalog, a fresh breadth scan might surface new un-covered patterns.
 
 ---
+
+## Cycle 295 — 2026-04-20 — missing_contracts breadth scan (10-cycles-since-last)
+
+**Strategy:** `missing_contracts` (no browser, no subagent)
+**Outcome:** 3 new PROP rows added to backlog (PROP-068/069/070). 2 minor gaps documented as intentional-or-deferrable. Catalog now at 80 contract files (76 UX-NN contracts + 4 framework/utility docs).
+
+**Chosen this cycle.** 5 of the last 6 cycles (289-294, excluding the cycle-292 finding_investigation) were `contract_audit`. Need strategy diversity. `missing_contracts` hadn't run since cycle 285 (10 cycles ago, well past the 3-cycle default guidance). With 8 new contracts added in the interim (UX-065..074 region menagerie + shell contracts), the catalog has grown enough that a fresh breadth scan is warranted. Alternative candidates considered: `framework_gap_analysis` (0 OPEN EX rows → no synthesis material), `finding_investigation` (same reason), `edge_cases` (high-cost browser-subagent work, overkill for "catch up on scan coverage"), another `contract_audit` (5-in-a-row would be mechanical).
+
+**Scan methodology.**
+- Walked every template directory: `fragments/` (31 files), `components/` (6 files + 3 alpine sub-files), `workspace/` (3 non-region files + 16 contracted regions), `experience/` (2 files), `layouts/` (2 files), `macros/` (8 files), `site/` (top-level 3 + 19 sections + 10 auth + 4 includes).
+- Cross-referenced each template against the 80-contract catalog.
+- Distinguished family-contract-covered from genuinely uncontracted.
+
+**Template-family summary (current state):**
+
+| Family | Templates | Covered (directly or via family) | Gap |
+|--------|-----------|----------------------------------|-----|
+| `fragments/` | 31 | 28 | 3 (steps_indicator, table_sentinel, detail_fields — last 2 likely covered by data-table.md / detail-view.md families) |
+| `components/` | 6 | 6 | 0 |
+| `components/alpine/` | 3 | 3 | 0 (all contracted cycles 286/287) |
+| `workspace/` (non-region) | 3 | 3 | 0 (shell + card-picker contracted; workspace.html is 5-LOC wrapper) |
+| `workspace/regions/` | 16 | 16 | 0 (all contracted cycles 271-279) |
+| `experience/` | 2 | 2 | 0 (cycle 291) |
+| `layouts/` | 2 | 2 | 0 (app-shell UX-031, base-layout) |
+| `macros/` | 8 | 6 | 2 (a11y.html, attention_accent macro from cycle 282 gap doc — latter treated as dev_docs not a contract) |
+| `site/` top-level | 3 | 3 | 0 |
+| `site/sections/` | 19 | 18 | 1 (qa_personas — explicitly excluded by site-section-family PROP-058 as "dev-only off-pattern") |
+| `site/auth/` | 10 | 7 | **3 (2fa_challenge, 2fa_setup, 2fa_settings)** |
+| `site/includes/` | 4 | 3 | 1 (footer.html) |
+
+**3 new PROP rows filed:**
+
+- **PROP-068 `auth-2fa-flow`** (HIGH priority). 441 LOC across 3 surfaces (2fa_challenge, 2fa_setup, 2fa_settings) — cryptographic UX patterns (TOTP code entry, QR code rendering, backup codes copy-to-clipboard). Not covered by auth-page.md (UX-036) which handles the non-2FA login flow. Candidate for a single flow contract (similar structure to search-flow-fragments.md pairing request+response).
+
+- **PROP-069 `steps-indicator`** (MEDIUM priority). 22-LOC generic primitive at `fragments/steps_indicator.html` (cycle 251). **Cross-cutting observation**: `experience/_content.html` inlines the SAME stepper logic (experience-shell lines 9-29) rather than including this fragment. A steps-indicator.md contract would formalise the primitive AND enable a consolidation cycle that makes experience-shell `{% include %}` the fragment — reducing experience-shell's LOC and killing a stepper duplication.
+
+- **PROP-070 `site-footer`** (LOW priority). 17 LOC at `site/includes/footer.html`. Uses non-tokenized CSS class markers (`dz-site-footer`, `dz-footer-*`) — styles live in external stylesheet, not inline Tailwind. Diverges from the catalog's convention of inline `hsl(var(--...))` tokens. Worth either formalising the external-stylesheet contract OR migrating to inline tokens.
+
+**Deferred / not-a-gap observations:**
+
+- **`fragments/detail_fields.html`** (26 LOC) — HTMX content-negotiation fragment for API read handler, uses definition-list layout + `render_status_badge` macro. Uses `text-lg font-semibold` for heading (drift from Linear 17px/medium scale). Covered by UX-029 `detail-view.md` family. Minor folding-in opportunity but not urgent.
+
+- **`fragments/table_sentinel.html`** (15 LOC) — infinite-scroll HTMX sentinel (`hx-trigger="revealed"`, `hx-swap="afterend"`). Part of data-table.md family. Tiny scope.
+
+- **`macros/a11y.html`** (~30 LOC seen) — `sr_only`, `skip_link`, `icon` utility macros. Small utility file. Gap candidate but priority is low because these macros are widely-established a11y patterns with minimal design discretion.
+
+- **`site/sections/qa_personas.html`** (78 LOC) — dev-mode-only (#768) persona picker. Explicitly excluded from PROP-058 site-section-family ("dev-only off-pattern"). Uses some hardcoded colors (`bg-amber-100 text-amber-900`) — but since this is dev-mode-only, production UX concerns don't apply.
+
+**Explore budget used**: 50 → 51.
+
+### Running UX-governance total: 76 contracts (unchanged — missing_contracts scans don't create contracts, only PROP rows)
+
+### Running PROP-candidate queue: 3 new (PROP-068/069/070)
+
+### Next candidate cycles
+
+Natural follow-ups ranked by leverage:
+- **PROP-068 `auth-2fa-flow` contract_audit** — highest-LOC + most-distinct gap. Cryptographic-UX patterns worth pinning.
+- **PROP-069 `steps-indicator` contract_audit** — pairs with a consolidation opportunity against experience-shell's inline stepper.
+- **PROP-070 `site-footer` contract_audit** — lower priority, small.
+- **`framework_gap_analysis`** — 0 OPEN EX rows means minimal synthesis material. Could be skipped via secondary short-circuit if a scan cycle found no actionable themes. Worth deferring until new observations accumulate.
+- **`cross-shell title harmonisation`** — design-decision cycle, worth scheduling after PROP-068/069 clear.
+- **`row-click-keyboard-affordance-gap`** — still parked, needs browser verification.
+- **`dormant_primitives_audit`** — awaiting user direction.
+
+---
