@@ -72,14 +72,14 @@ def create_fragment_router(
         if len(q) < min_chars:
             # min_chars is validated as int by FastAPI; explicit int() for static analysis
             return _html(
-                '<div class="p-3 text-sm text-base-content/50">'
+                '<div class="p-3 text-sm text-[hsl(var(--muted-foreground)/0.5)]">'
                 f"Type at least {int(min_chars)} characters to search...</div>"
             )
 
         source_config = sources.get(source)
         if not source_config:
             return _html(
-                f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
+                f'<div class="p-3 text-sm text-[hsl(var(--destructive))]">Unknown source: {html_escape(source)}</div>'
             )
 
         try:
@@ -140,7 +140,9 @@ def create_fragment_router(
 
         except Exception as e:
             logger.warning("Fragment search error for source=%s: %s", source, e)
-            return _html('<div class="p-3 text-sm text-error">Search failed</div>')
+            return _html(
+                '<div class="p-3 text-sm text-[hsl(var(--destructive))]">Search failed</div>'
+            )
 
     @router.get("/select")
     async def fragment_select(
@@ -152,7 +154,7 @@ def create_fragment_router(
         source_config = sources.get(source)
         if not source_config:
             return _html(
-                f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
+                f'<div class="p-3 text-sm text-[hsl(var(--destructive))]">Unknown source: {html_escape(source)}</div>'
             )
 
         try:
@@ -203,6 +205,8 @@ def create_fragment_router(
 
         except Exception as e:
             logger.warning("Fragment select error for source=%s, id=%s: %s", source, id, e)
-            return _html('<div class="p-3 text-sm text-error">Selection failed</div>')
+            return _html(
+                '<div class="p-3 text-sm text-[hsl(var(--destructive))]">Selection failed</div>'
+            )
 
     return router
