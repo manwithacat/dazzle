@@ -5708,3 +5708,229 @@ class TestContractPointerCanonicalFormat:
         """The cycle-285 drift ('data-table contract' comma-joined in line 1) must be gone."""
         src = self._read("components/filterable_table.html")
         assert "ux-architect/components/data-table contract" not in src
+
+
+# ---------------------------------------------------------------------------
+# Cycle 290 — Workspace shell composition contract (workspace-shell.md)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceShellComposition:
+    """workspace/_content.html — composition shell pinning how 6 sub-components assemble.
+
+    Cycle 290 — contract at ~/.claude/skills/ux-architect/components/workspace-shell.md.
+    The shell delegates most sub-components to their own contracts (dashboard-grid,
+    dashboard-edit-chrome, workspace-card-picker, workspace-detail-drawer). These
+    tests pin the composition-level invariants + the two uncontracted sub-parts
+    (workspace heading, context selector) per the embedded quality gates.
+    """
+
+    def _render(
+        self,
+        *,
+        sse_url: str = "",
+        context_options_url: str = "",
+        context_selector_label: str = "",
+        context_selector_entity: str = "",
+        primary_actions: list[dict[str, str]] | None = None,
+    ) -> str:
+        from dazzle_ui.runtime.workspace_renderer import WorkspaceContext
+
+        ws = WorkspaceContext(
+            name="my_dashboard",
+            title="My Dashboard",
+            sse_url=sse_url,
+            context_options_url=context_options_url,
+            context_selector_label=context_selector_label,
+            context_selector_entity=context_selector_entity,
+        )
+        return render_fragment(
+            "workspace/_content.html",
+            workspace=ws,
+            layout_json="[]",
+            primary_actions=primary_actions or [],
+        )
+
+    # Gate 1
+    def test_layout_json_island_precedes_alpine_root(self) -> None:
+        """Data island must appear before the Alpine controller root so init() can hydrate."""
+        html = self._render()
+        island_idx = html.find('id="dz-workspace-layout"')
+        alpine_idx = html.find('x-data="dzDashboardBuilder()"')
+        assert island_idx >= 0 and alpine_idx >= 0
+        assert island_idx < alpine_idx
+
+    # Gate 2
+    def test_detail_drawer_sits_outside_alpine_root(self) -> None:
+        """Detail drawer must be outside the Alpine scope — singleton, not per-instance."""
+        html = self._render()
+        drawer_idx = html.find('id="dz-detail-drawer"')
+        alpine_root_close_idx = html.rfind("</div>", 0, drawer_idx)
+        alpine_open_idx = html.find('x-data="dzDashboardBuilder()"')
+        assert drawer_idx > alpine_root_close_idx > alpine_open_idx
+
+    # Gate 3
+    def test_six_composition_markers_present_in_order(self) -> None:
+        html = self._render(primary_actions=[{"label": "New Task", "route": "/app/task/new"}])
+        markers = [
+            "<h2",
+            'data-test-id="dz-workspace-primary-actions"',
+            "resetLayout()",
+            "data-grid-container",
+            'data-test-id="dz-add-card-trigger"',
+            'id="dz-detail-drawer"',
+        ]
+        positions = [html.find(m) for m in markers]
+        assert all(p >= 0 for p in positions), (
+            f"missing markers: {list(zip(markers, positions, strict=False))}"
+        )
+        assert positions == sorted(positions), "composition order drifted"
+
+    # Gate 4
+    def test_singleton_ids_unique(self) -> None:
+        html = self._render()
+        for marker in (
+            'id="dz-workspace-layout"',
+            'id="dz-detail-drawer"',
+            'id="dz-drawer-backdrop"',
+            'id="dz-detail-drawer-content"',
+            'id="dz-drawer-expand"',
+        ):
+            assert html.count(marker) == 1, f"{marker} not unique"
+
+    # Gate 5
+    def test_heading_uses_foreground_token_with_title_fallback(self) -> None:
+        html = self._render()
+        # The h2 opening tag and the --foreground token must co-occur
+        assert "<h2" in html
+        assert "text-[hsl(var(--foreground))]" in html
+        # Title renders ("My Dashboard" — set on the WorkspaceContext)
+        assert "My Dashboard" in html
+
+    # Gate 6
+    def test_primary_actions_row_conditional(self) -> None:
+        # Empty list → wrapper absent
+        html_empty = self._render(primary_actions=[])
+        assert 'data-test-id="dz-workspace-primary-actions"' not in html_empty
+        # Populated → wrapper present + hx-boost + primary token
+        html_full = self._render(
+            primary_actions=[
+                {"label": "New Task", "route": "/app/task/new"},
+                {"label": "New Contact", "route": "/app/contact/new"},
+            ]
+        )
+        assert 'data-test-id="dz-workspace-primary-actions"' in html_full
+        assert html_full.count('hx-boost="true"') >= 2
+        assert "bg-[hsl(var(--primary))]" in html_full
+        assert "text-[hsl(var(--primary-foreground))]" in html_full
+        # Action labels render into anchor inner text (allowing intermediate whitespace + SVG icons)
+        assert "New Task" in html_full
+        assert "New Contact" in html_full
+        assert 'href="/app/task/new"' in html_full
+        assert 'href="/app/contact/new"' in html_full
+
+    # Gate 7
+    def test_context_selector_conditional_on_context_options_url(self) -> None:
+        html_off = self._render(context_options_url="", context_selector_entity="project")
+        assert 'id="dz-context-selector"' not in html_off
+
+        html_on = self._render(
+            context_options_url="/api/workspaces/my_dashboard/context_options",
+            context_selector_entity="project",
+            context_selector_label="Project",
+        )
+        assert 'id="dz-context-selector"' in html_on
+        assert "Project:" in html_on
+
+    # Gate 8
+    def test_context_selector_uses_full_token_set(self) -> None:
+        html = self._render(
+            context_options_url="/api/foo",
+            context_selector_entity="tenant",
+        )
+        # All four required tokens on the <select>
+        assert "border-[hsl(var(--border))]" in html
+        assert "bg-[hsl(var(--background))]" in html
+        assert "text-[hsl(var(--foreground))]" in html
+        assert "focus:ring-[hsl(var(--ring))]" in html
+
+    # Gate 9
+    def test_context_selector_uses_canonical_prefs_key(self) -> None:
+        html = self._render(
+            context_options_url="/api/foo",
+            context_selector_entity="tenant",
+        )
+        # The prefs key is constructed in the bootstrap script — canonical shape
+        assert "'workspace.' + wsName + '.context'" in html
+
+    # Gate 10
+    def test_grid_container_has_role_application_and_aria_label(self) -> None:
+        html = self._render()
+        # Single data-grid-container element carries both
+        assert "data-grid-container" in html
+        assert 'role="application"' in html
+        assert 'aria-label="Dashboard card grid"' in html
+
+    # Gate 11
+    def test_sse_wiring_conditional(self) -> None:
+        html_off = self._render(sse_url="")
+        assert 'hx-ext="sse"' not in html_off
+        assert "sse-connect=" not in html_off
+
+        html_on = self._render(sse_url="/_ops/sse/events")
+        assert 'hx-ext="sse"' in html_on
+        assert 'sse-connect="/_ops/sse/events"' in html_on
+        # Card body also listens for entity events when SSE is active
+        assert "sse:entity.created" in html_on
+
+    # Gate 12
+    def test_card_body_hx_trigger_includes_load(self) -> None:
+        """#798 regression guard: 'load' must be the primary trigger."""
+        html = self._render()
+        # The x-for template body has the card content <div> with hx-trigger
+        import re
+
+        triggers = re.findall(r'hx-trigger="([^"]+)"', html)
+        assert any(t.startswith("load, intersect once") for t in triggers), (
+            f"no hx-trigger starting with 'load, intersect once' — got: {triggers}"
+        )
+
+    # Gate 13
+    def test_card_focus_ring_on_wrapper_not_article(self) -> None:
+        """#794 card-within-a-card guard: focus ring lives on the wrapper with offset-2."""
+        html = self._render()
+        assert "focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2" in html
+        # The inner <article> must NOT have focus:ring classes
+        import re
+
+        article_tag = re.search(r"<article[^>]*>", html)
+        assert article_tag is not None
+        assert "focus:ring-" not in article_tag.group(0)
+
+    # Gate 14 — drawer aside carries no Alpine directives (plain-JS imperative API only)
+    def test_drawer_aside_has_no_alpine_directives(self) -> None:
+        """The drawer is deliberately NOT Alpine-owned — it uses window.dzDrawer imperative API."""
+        import re
+
+        html = self._render()
+        aside_match = re.search(r"<aside[^>]*id=\"dz-detail-drawer\"[^>]*>", html)
+        assert aside_match is not None
+        aside_tag = aside_match.group(0)
+        for banned in ("x-data", "x-show", "x-transition", "@click", "@keydown"):
+            assert banned not in aside_tag, f"Alpine directive leaked onto drawer aside: {banned}"
+
+    # Gate 15
+    def test_escape_key_handler_on_document(self) -> None:
+        html = self._render()
+        assert "document.addEventListener('keydown'" in html
+        assert "e.key === 'Escape'" in html
+        assert "window.dzDrawer.close()" in html
+
+    # Contract pointer
+    def test_contract_pointer_header_present(self) -> None:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        src = (root / "workspace" / "_content.html").read_text()
+        assert "Contract: ~/.claude/skills/ux-architect/components/workspace-shell.md" in src

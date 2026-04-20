@@ -7670,3 +7670,63 @@ Queue is now very narrow:
 - **`canonical_pointer_lint`** (new, this cycle) — promote the 2-template regression tests into a general shape-conformance lint across the template tree. Lower priority; requires careful shape taxonomy.
 
 ---
+
+## Cycle 290 — 2026-04-20 — contract_audit: workspace-shell (composition)
+
+**Strategy:** `contract_audit` — composition contract for `workspace/_content.html`
+**Outcome:** 72 → 73 contracts. The largest uncontracted workspace template (307 LOC) now has governance.
+
+**Chosen this cycle.** Queue was very narrow after cycle 289's pointer-format sweep — OPEN EX rows at 0, no PENDING backlog rows, recent `missing_contracts` scan (cycle 285) already exhausted. The remaining high-priority target was `workspace/_content.html` (307 LOC) — flagged in cycles 237 + 285 as the largest uncontracted piece. Needed a disciplined scope strategy so a 307-LOC template didn't blow the cycle budget.
+
+**Scope decomposition.** Read the template and found it decomposes cleanly into **6 sub-components**, four of which already have contracts:
+
+| Sub-component | Lines | Contract status |
+|---------------|-------|-----------------|
+| Layout JSON data island (#635) | L1-5 | Embedded invariant (shell level) |
+| Workspace heading + primary actions | L12-33 | **uncontracted** — pinned via embedded gates here |
+| Context selector (conditional) | L35-78 | **uncontracted** — pinned via embedded gates here |
+| Edit chrome toolbar (Reset/Save) | L81-117 | UX-045 dashboard-edit-chrome |
+| Card grid (x-for + per-card article) | L119-218 | UX-001 dashboard-grid + UX-035 region-wrapper |
+| Add Card + picker | L221-234 | UX-045 + UX-038 workspace-card-picker |
+| Detail drawer singleton | L237-307 | workspace-detail-drawer |
+
+**Composition contract angle.** Rather than authoring a 700-line full audit that re-derives what 4 sub-contracts already pin, wrote `workspace-shell.md` as a **composition contract** that:
+(a) names the assembly order invariant + 3 cross-component invariants (singleton IDs, Alpine-root boundary, pre-filtered `primary_actions`),
+(b) delegates sub-components to their existing contracts,
+(c) embeds gates for the 2 uncontracted sub-parts (workspace heading + context selector) with explicit v2 promotion candidates flagged.
+
+This angle gives the shell a governance surface without re-deriving 4 other contracts' worth of analysis.
+
+**Heuristic 1 applied at read-time**: literally read every line of `_content.html`, noted the inline comments explaining the pointer-drag/resize-window lifecycle (#795), the card focus-ring offset (#794), the hx-trigger "load" addition (#798), and the primary-action card-hide visibility change (#799). Those carry-over invariants got baked into the contract's "Drift forbidden" rules so future edits can't silently regress them.
+
+**The 3 cross-component invariants** (novel to this contract, not owned by sub-contracts):
+1. Singleton DOM IDs at shell level (6 IDs verified exactly-once)
+2. Alpine root must wrap heading+context+toolbar+grid+add-card but NOT the JSON island OR the drawer
+3. `primary_actions` must be server-pre-filtered (never re-check in template)
+
+**16 regression tests** across `TestWorkspaceShellComposition` (workspace_routes.py). Each test is tied to one quality gate. Gate 12 (hx-trigger includes "load") uses regex to find every `hx-trigger="..."` attribute in the rendered HTML and asserts one starts with `load, intersect once` — this is the structural #798 regression guard. Gate 13 parses the inner `<article>` tag and asserts it has zero `focus:ring-*` classes — this is the #794 regression guard. Gate 14 parses the drawer `<aside>` tag and asserts zero Alpine directives — pins the plain-JS imperative API as the drawer's deliberate design.
+
+**One test needed rewriting mid-cycle**: initial Gate 14 assumed the "Detail drawer (preserved unchanged)" Jinja comment would survive rendering. It doesn't — Jinja strips comments. Refactored to check a more meaningful invariant: that the `<aside id="dz-detail-drawer">` opening tag carries no `x-data` / `x-show` / `x-transition` / `@click` / `@keydown` directives. This is a stronger invariant because it pins the design intent (plain-JS API) rather than a weak textual marker.
+
+**Primary action test adjustment**: also caught that stripping whitespace from the rendered HTML collapses "New Task" to "NewTask", so the assertion needed multiple label-anchor-href checks instead.
+
+**Cross-app verification** (Heuristic 3): 315/315 workspace + lint tests pass (up from 299 pre-cycle, reflecting the 16 new gates). No regressions.
+
+**No drift found** in the template itself — already uses tokens correctly, no DaisyUI leaks, no hardcoded HSL literals. Added the Contract: pointer header (3-line preamble) as the only code change.
+
+### Running UX-governance total: 73 contracts
+
+**All 5 example apps + every persona that reaches a workspace** now render through a contracted shell. This is the single widest-blast-radius contract shipped to date.
+
+### Next candidate cycles
+
+Queue is now extremely narrow:
+- **Execute `row-click-keyboard-affordance-gap`** — 5 components, still needs browser verification
+- **`dormant_primitives_audit`** — parked pending user direction on cycle 287's gap doc
+- **`orphan_lint_rule`** — automatic orphan detection (cycle 287 raised as candidate)
+- **`canonical_pointer_lint`** (cycle 289) — lower priority, requires shape taxonomy
+- **NEW: `workspace-heading` sub-component contract** — Q1 of this cycle's v2 questions. Small scope, pattern likely recurs in `experience/_content.html`.
+- **NEW: `workspace-context-selector` sub-component contract** — Q2 of this cycle's v2 questions. Richer than the shell can pin — writes to dzPrefs + rebinds sibling HTMX attributes.
+- **NEW: `experience/_content.html` parity audit** — Shell contract references this sibling as likely a near-twin. Worth a cross-read cycle to check whether workspace-shell's invariants apply verbatim or if there are legitimate divergences.
+
+---
