@@ -8553,3 +8553,82 @@ OPEN EX rows: 0.
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 305 — 2026-04-20 — framework_gap_analysis: template-ship-without-wiring
+
+**Strategy:** `framework_gap_analysis` — synthesise the 7 orphan-lint allowlist entries + EX-055 into a unified class
+**Outcome:** 1 gap doc at `dev_docs/framework-gaps/2026-04-20-template-ship-without-wiring.md`. Two distinct sub-classes identified (primitive dormancy vs. page-route gaps) with asymmetric severity. New `/issues` candidate: page-route-coverage lint.
+
+**Chosen this cycle.** Cycle 302 surfaced 7 orphans; cycle 303 closed EX-055 via #831; cycle 304 hardened the scanner. That's enough cross-cycle evidence to synthesise. Last gap_analysis was cycle 300 (5 cycles ago, below the 7-cycle threshold) but the evidence accumulation justified an early cycle. The skill's "prefer diverse cycles over mechanical rotation" rule explicitly permits this.
+
+Alternative strategies considered + rejected:
+- `missing_contracts` scan (10 cycles since 295): overdue but prior scan found only templates-all-contracted; low expected yield.
+- Phase 2 GitHub issue filing: gap doc already describes it; redundant.
+- `contract_audit`: no specific target available.
+- `finding_investigation`: 0 OPEN EX rows.
+- `edge_cases`: high cost, no driver.
+
+**Key synthesis: the class splits into two distinct sub-classes with asymmetric severity.**
+
+### Sub-class A: Primitive dormancy (low severity, high ambiguity)
+
+4 contracted primitives with no adopters: `components/alpine/confirm_dialog.html`, `components/alpine/dropdown.html`, `components/modal.html`, `components/island.html`. Low impact — dead code, not broken flows. Three policy options:
+
+1. Accept + document (current de-facto state)
+2. Prune (delete + remove contracts)
+3. Adopt (land production uses)
+
+Recommendation: Option 1, re-evaluate at v1.0.
+
+### Sub-class B: Page-route gaps (high severity, user-facing breakage)
+
+3 page templates that ship without Python routes serving them: `site/auth/2fa_{challenge,setup,settings}.html`. 441 LOC total, covers the entire 2FA UI flow. A Dazzle deployment with 2FA configured hits unreachable pages.
+
+Why this happened: cycles 33-41 migrated the templates to UX-036 macro + pure-Tailwind as part of "all 7 site/auth/ templates under macro governance" (CHANGELOG line 3013). The migration touched **template styling** but not **route wiring**. `site_routes.py` was not updated. Cycle 298's contract_audit (UX-077) formalised the 2FA templates without raw-layer-verifying page routes — cycle 298's tests were source-level (template-text assertions), not end-to-end render tests. The contract "passed" → false confidence.
+
+**Without cycle 302's orphan scanner, Sub-class B could have persisted indefinitely.**
+
+### Track B recommendation: page-route-coverage lint
+
+Proposed **NEW lint** as a natural extension of cycle 302's orphan_lint: verify every page-like template has a corresponding route in the site-routes module. Would catch EX-055-class gaps at test-time.
+
+Scope: ~50 LOC in `tests/unit/test_page_route_coverage.py`. Infrastructure parallel to the orphan lint. Could be a `/issues` candidate (FILE-don't-FIX pattern because "which templates are page-like" needs a convention decision).
+
+**6 open questions** in the gap doc:
+- Should Sub-class A primitives come with example adopters (e.g. component_showcase)?
+- Cadence for orphan-lint review?
+- Meta-lint for contract_audits (require end-to-end test OR cross-ref to page route)?
+- Are other site/auth/ families similarly half-shipped?
+- Track B implementation: what makes a template "page-like" (naming? frontmatter?)?
+- Should components/alpine/ get a family-level contract like UX-058?
+
+**Meta-observation captured in the gap doc.** The gap-doc library is growing into a **structural-completeness health report**:
+- Cycle 287: PR #600 dormant primitives (Sub-class A precursor)
+- Cycle 300: external-resource-integrity (parallel theme, SRI + CSP)
+- Cycle 305: template-ship-without-wiring (this doc)
+
+A future synthesis cycle could combine them into an evergreen "structural-completeness-health-report" document tracking the state of all identified sub-classes. Worth flagging as a post-v1 candidate.
+
+**Second meta-observation.** Cycle 302's orphan_lint and cycle 284's EX-051 None-vs-default lint are the two horizontal-discipline infrastructure cycles shipped to date. Both have paid off within 2-3 cycles:
+- Cycle 284 lint → caught 5+ bug sites in cycle 280-284's sweep
+- Cycle 302 lint → surfaced EX-055 → #831 filed within 1 cycle
+
+**The gap-doc itself identifies a third horizontal-discipline opportunity (Track B page-route-coverage).** If the pattern keeps paying off, the framework benefits from more such lints.
+
+**No code changes this cycle.** Pure synthesis + gap doc. Gap doc location `dev_docs/framework-gaps/` is gitignored (`.gitignore:dev_docs/`); doc persists locally for future agents.
+
+**Explore budget used**: 60 → 61.
+
+### Running UX-governance total: 79 contracts (unchanged — analysis cycle)
+
+### Next candidate cycles
+
+- **File Track B lint as GitHub issue** — page-route-coverage lint proposal from this cycle's gap doc. Small scope (~50 LOC), clear prevention value, natural follow-up to #831.
+- **`missing_contracts` scan** — 10 cycles since 295 — still overdue
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity Phase 2
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+
+---
