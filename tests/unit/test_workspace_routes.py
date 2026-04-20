@@ -5673,3 +5673,38 @@ class TestSelectResultFragment:
         html = self._render()
         for banned in ("input-bordered", "dropdown ", "menu ", "btn-primary"):
             assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+
+class TestContractPointerCanonicalFormat:
+    """Cycle 289 — pointer-format drift sweep.
+
+    Cycle 285's missing_contracts scan flagged two templates with non-canonical
+    Contract: pointer headers (filterable_table.html had an inline comma-joined
+    reference; _card_picker.html had no pointer at all). This test pins the
+    canonical shape so future edits don't silently regress.
+
+    Canonical shape: ``{# ... Contract: ~/.claude/skills/ux-architect/components/<name>.md (UX-NNN)? #}``
+    """
+
+    @staticmethod
+    def _read(rel_path: str) -> str:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        return (root / rel_path).read_text()
+
+    def test_filterable_table_has_canonical_pointer(self) -> None:
+        src = self._read("components/filterable_table.html")
+        assert "Contract: ~/.claude/skills/ux-architect/components/data-table.md" in src
+
+    def test_card_picker_has_canonical_pointer_with_ux_id(self) -> None:
+        src = self._read("workspace/_card_picker.html")
+        assert (
+            "Contract: ~/.claude/skills/ux-architect/components/workspace-card-picker.md (UX-038)"
+            in src
+        )
+
+    def test_filterable_table_does_not_retain_legacy_pointer(self) -> None:
+        """The cycle-285 drift ('data-table contract' comma-joined in line 1) must be gone."""
+        src = self._read("components/filterable_table.html")
+        assert "ux-architect/components/data-table contract" not in src
