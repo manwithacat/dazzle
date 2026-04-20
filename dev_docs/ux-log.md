@@ -9557,4 +9557,69 @@ Only remaining DaisyUI residue: `htmx.py:168` fallback alert, which is unreachab
 
 ---
 
+## Cycle 322 — 2026-04-20 — lint allowlist drift audit: 11/11 valid
+
+**Strategy:** opportunistic housekeeping — explicit manual audit of the 3 lint allowlists. Complements the CONTINUOUS staleness-detection tests built into each lint.
+**Outcome:** All 11 allowlist entries across 3 lints remain valid. No changes. Audit timestamp recorded here as a discoverable checkpoint for future cycles.
+
+**Why audit when staleness tests already run continuously?**
+
+The 3 lints each carry an automated staleness check:
+
+| Lint | Staleness test |
+|---|---|
+| `test_template_orphan_scan.py` | `test_every_allowlist_entry_is_still_orphaned` |
+| `test_page_route_coverage.py` | `test_every_allowlist_entry_is_still_unserved` |
+| `test_daisyui_python_lint.py` | `test_every_allowlist_entry_has_hits` |
+
+These catch entries that become **structurally stale** (e.g. a template allowlisted as orphan gets a consumer; the test fires and forces removal). They do NOT catch:
+1. **Citation rot** — reason string points at a gap doc / issue / EX row that itself has changed status
+2. **Reason-drift** — the original reason becomes outdated even while the structural condition holds (e.g. "deferred pending #831" after #831 is closed a different way)
+
+Cycle 322 is the human sign-off on (1) and (2). Next opportunistic audit due ~cycle 330.
+
+**Audit findings:**
+
+| Allowlist | Entry | File exists | Citation | Status |
+|---|---|---|---|---|
+| orphan_scan | `components/alpine/confirm_dialog.html` | YES | PR #600, cycle 287 gap doc | VALID (still 0 consumers) |
+| orphan_scan | `components/alpine/dropdown.html` | YES | PR #600, cycle 286 gap doc, cycle 304 scanner fix | VALID |
+| orphan_scan | `components/modal.html` | YES | dormant contract (modal.md) | VALID |
+| orphan_scan | `components/island.html` | YES | dormant contract (island.md, UX-059) | VALID |
+| orphan_scan | `site/auth/2fa_challenge.html` | YES | EX-055 cycle 302 | VALID (#831 still OPEN) |
+| orphan_scan | `site/auth/2fa_setup.html` | YES | EX-055 cycle 302 | VALID |
+| orphan_scan | `site/auth/2fa_settings.html` | YES | EX-055 cycle 302 | VALID |
+| page_route_coverage | `site/auth/2fa_challenge.html` | YES | EX-055 → #831 | VALID |
+| page_route_coverage | `site/auth/2fa_setup.html` | YES | EX-055 → #831 | VALID |
+| page_route_coverage | `site/auth/2fa_settings.html` | YES | EX-055 → #831 | VALID |
+| daisyui_python | `src/dazzle_ui/runtime/htmx.py` | YES | cycle 316 deferral — dev-only fallback | VALID |
+
+**Heuristic 1 verification per entry:**
+
+1. **Dormant primitives (4)** — greppped for `include 'components/alpine/{confirm_dialog,dropdown}.html'` and `components/{modal,island}.html`. Zero consumers, same as cycles 286/287 discovery. No adopters have materialised across the intervening ~35 cycles. The gap doc's recommendation (Option 1 — "accept & document") still holds.
+
+2. **2FA templates (3, referenced twice)** — greppped `src/` for `2fa_challenge.html`, `2fa_setup.html`, `2fa_settings.html` as Python string literals in render-helper calls. Zero matches. Confirmed #831 still OPEN via `gh issue view 831` — title: "Bug: 2FA UI shipped but no page routes serve /2fa/setup, /2fa/settings, /2fa/challenge".
+
+3. **htmx.py fallback (1)** — read `src/dazzle_ui/runtime/htmx.py:165-172`. The `alert alert-error mb-4` fallback still exists at line 168, still gated by `ImportError` catch-block above it. Unreachable in production; deferral rationale intact.
+
+**Meta-observation: the automated tests are the workhorse.**
+
+Structural staleness is caught within hours (every test suite run). Human audits for citation/reason drift are a safety net — useful but low-yield. This cycle's value is more about **documenting the audit cadence** than catching concrete drift.
+
+Recommendation: run this audit every ~10 cycles OR whenever a major issue closure happens (e.g. #831 lands) that could invalidate multiple entries at once. Not every cycle; the continuous tests cover the high-frequency failure modes.
+
+**Cross-app verification** (Heuristic 3): N/A — audit cycle, no code changes.
+
+**Explore budget used**: 77 → 78.
+
+### Running UX-governance total: 79 contracts (unchanged — audit cycle)
+
+### Next candidate cycles
+
+- **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint candidate. Still outstanding.
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (cycle 300 theme); would extend the auth-page CDN hardening work from cycle 301
+- **Dormant primitives review** — 4 entries have been dormant ~35+ cycles. Policy decision: adopt, prune, or document as "intentionally catalogued"? Gap doc cycle 287 recommended Option 1 (accept+document); worth re-affirming
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
 ---
