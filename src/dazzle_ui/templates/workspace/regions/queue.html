@@ -3,6 +3,7 @@
    Contract: ~/.claude/skills/ux-architect/components/queue-region.md (UX-068) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/attention_accent.html' import attention_classes %}
 {% call region_card(None) %}
 <div class="dz-queue-region">
   {# Count badge row — dashboard slot owns the title (#794 second
@@ -51,15 +52,7 @@
        #794 second follow-up). Attention states keep their left-border
        accent since side borders are accents, not chrome. #}
     <div class="dz-queue-row flex items-center gap-3 p-3 rounded-[4px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-      {% if attn %}
-        border-l-4
-        {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.04)]
-        {% elif attn.level == 'warning' %}border-l-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.04)]
-        {% elif attn.level == 'notice' %}border-l-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.04)]
-        {% endif %}
-      {% else %}
-        hover:bg-[hsl(var(--muted)/0.4)]
-      {% endif %}">
+      {% if attn %}{{ attention_classes(attn, 'both') }}{% else %}hover:bg-[hsl(var(--muted)/0.4)]{% endif %}">
 
       {# Main content — clickable to navigate to detail #}
       <div class="flex-1 min-w-0 {% if action_url %}cursor-pointer{% endif %}"

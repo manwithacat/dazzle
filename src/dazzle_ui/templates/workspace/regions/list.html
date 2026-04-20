@@ -2,6 +2,7 @@
    Contract: ~/.claude/skills/ux-architect/components/list-region.md (UX-069) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/attention_accent.html' import attention_classes %}
 {% call region_card(None) %}
 <div class="dz-list-region">
   {# Action row: region actions + CSV export. The dashboard slot
@@ -76,11 +77,7 @@
         {% for item in items %}
         {% set attn = item.get("_attention") if item.get is defined else none %}
         <tr class="dz-list-row border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-            {% if attn %}
-              {% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% endif %}
-              {% if attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% endif %}
-              {% if attn.level == 'notice' %}bg-[hsl(var(--primary)/0.06)]{% endif %}
-            {% endif %}
+            {{ attention_classes(attn, 'tint') }}
             {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
             {% if attn %}title="{{ attn.message }}"{% endif %}
             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"

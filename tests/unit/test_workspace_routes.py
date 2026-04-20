@@ -5110,3 +5110,117 @@ class TestNoneVsDefaultDriftSweep:
             table=self._pct_table(rate_value=42),
         )
         assert "42%" in html
+
+
+# ---------------------------------------------------------------------------
+# Cycle 282 — attention_accent macro (shared consolidation)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestAttentionAccentMacro:
+    """The attention_accent macro consolidates the tier-to-class mapping.
+
+    Cycle 282 — extracted from dev_docs/framework-gaps/2026-04-20-
+    attention-tier-taxonomy-drift.md. The macro has 4 style variants
+    (border/tint/both/bullet) and 3 tiers (critical/warning/notice),
+    mirroring the per-region implementations that were previously
+    duplicated across grid/timeline/queue/list.
+    """
+
+    def _render_macro(self, attn, style):
+        """Render the macro in isolation via Jinja env."""
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        tmpl = env.from_string(
+            "{% from 'macros/attention_accent.html' import attention_classes %}"
+            "{{ attention_classes(attn, style) }}"
+        )
+        return tmpl.render(attn=attn, style=style)
+
+    def test_border_critical_destructive(self) -> None:
+        out = self._render_macro({"level": "critical"}, "border")
+        assert "border-l-4" in out
+        assert "border-l-[hsl(var(--destructive))]" in out
+
+    def test_border_warning_warning(self) -> None:
+        out = self._render_macro({"level": "warning"}, "border")
+        assert "border-l-[hsl(var(--warning))]" in out
+
+    def test_border_notice_primary(self) -> None:
+        out = self._render_macro({"level": "notice"}, "border")
+        assert "border-l-[hsl(var(--primary))]" in out
+
+    def test_border_none_emits_nothing(self) -> None:
+        """With no attn and style=border, macro emits empty string."""
+        out = self._render_macro(None, "border")
+        assert out.strip() == ""
+
+    def test_tint_critical_destructive_0_08(self) -> None:
+        out = self._render_macro({"level": "critical"}, "tint")
+        assert "bg-[hsl(var(--destructive)/0.08)]" in out
+
+    def test_tint_warning_warning_0_08(self) -> None:
+        out = self._render_macro({"level": "warning"}, "tint")
+        assert "bg-[hsl(var(--warning)/0.08)]" in out
+
+    def test_tint_notice_primary_0_06(self) -> None:
+        """Notice alpha is 0.06 (lighter than critical/warning 0.08)."""
+        out = self._render_macro({"level": "notice"}, "tint")
+        assert "bg-[hsl(var(--primary)/0.06)]" in out
+
+    def test_both_critical_border_and_tint_0_04(self) -> None:
+        """Queue-region style: dual signal (border + 0.04 alpha tint)."""
+        out = self._render_macro({"level": "critical"}, "both")
+        assert "border-l-[hsl(var(--destructive))]" in out
+        assert "bg-[hsl(var(--destructive)/0.04)]" in out
+
+    def test_both_warning_dual_signal(self) -> None:
+        out = self._render_macro({"level": "warning"}, "both")
+        assert "border-l-[hsl(var(--warning))]" in out
+        assert "bg-[hsl(var(--warning)/0.04)]" in out
+
+    def test_both_notice_dual_signal(self) -> None:
+        out = self._render_macro({"level": "notice"}, "both")
+        assert "border-l-[hsl(var(--primary))]" in out
+        assert "bg-[hsl(var(--primary)/0.04)]" in out
+
+    def test_bullet_critical_text_destructive(self) -> None:
+        """Timeline-region style: bullet marker text colour."""
+        out = self._render_macro({"level": "critical"}, "bullet")
+        assert "text-[hsl(var(--destructive))]" in out
+
+    def test_bullet_warning_text_warning(self) -> None:
+        out = self._render_macro({"level": "warning"}, "bullet")
+        assert "text-[hsl(var(--warning))]" in out
+
+    def test_bullet_notice_text_primary(self) -> None:
+        out = self._render_macro({"level": "notice"}, "bullet")
+        assert "text-[hsl(var(--primary))]" in out
+
+    def test_bullet_none_falls_back_to_primary(self) -> None:
+        """Bullet is the only style that emits a class when attn is None —
+        timeline's default bullet colour is --primary."""
+        out = self._render_macro(None, "bullet")
+        assert "text-[hsl(var(--primary))]" in out
+
+    def test_tint_none_emits_nothing(self) -> None:
+        out = self._render_macro(None, "tint")
+        assert out.strip() == ""
+
+    def test_both_none_emits_nothing(self) -> None:
+        out = self._render_macro(None, "both")
+        assert out.strip() == ""
+
+    def test_unknown_level_emits_safe_fallback(self) -> None:
+        """Unknown level (e.g. 'error' instead of 'critical') emits
+        the base class only (border-l-4 for border, nothing for others).
+        Protects against typos in DSL-authored attention values."""
+        out = self._render_macro({"level": "error"}, "border")
+        # base 'border-l-4' present but no specific colour token
+        assert "border-l-4" in out
+        assert "hsl(var(--destructive))" not in out
+
+        out_tint = self._render_macro({"level": "error"}, "tint")
+        assert out_tint.strip() == ""

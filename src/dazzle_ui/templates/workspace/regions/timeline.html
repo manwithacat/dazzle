@@ -2,6 +2,7 @@
    Contract: ~/.claude/skills/ux-architect/components/timeline-region.md (UX-067) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/attention_accent.html' import attention_classes %}
 {% call region_card(title) %}
 <div class="dz-timeline-region">
   {% if items %}
@@ -11,10 +12,7 @@
     <li class="dz-timeline-item relative">
       {# Bullet marker on the border line #}
       <span class="absolute -left-[21px] top-1.5 flex h-3 w-3 items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="dz-timeline-bullet h-3 w-3
-          {% if attn and attn.level == 'critical' %}text-[hsl(var(--destructive))]
-          {% elif attn and attn.level == 'warning' %}text-[hsl(var(--warning))]
-          {% else %}text-[hsl(var(--primary))]{% endif %}"
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="dz-timeline-bullet h-3 w-3 {{ attention_classes(attn, 'bullet') }}"
           aria-hidden="true">
           <circle cx="10" cy="10" r="6"/>
         </svg>

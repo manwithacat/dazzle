@@ -2,6 +2,7 @@
    Contract: ~/.claude/skills/ux-architect/components/grid-region.md (UX-066) #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/attention_accent.html' import attention_classes %}
 {% call region_card(title) %}
 <div class="dz-grid-region">
   {% if items %}
@@ -13,12 +14,7 @@
        (rounded-[6px] + border + bg). Duplicating chrome here produced
        a card-within-a-card effect; see issue #794 and its follow-up. #}
     <div class="dz-grid-cell rounded-[4px] p-3 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-      {% if attn %}
-        border-l-4
-        {% if attn.level == 'critical' %}border-l-[hsl(var(--destructive))]{% endif %}
-        {% if attn.level == 'warning' %}border-l-[hsl(var(--warning))]{% endif %}
-        {% if attn.level == 'notice' %}border-l-[hsl(var(--primary))]{% endif %}
-      {% endif %}
+      {{ attention_classes(attn, 'border') }}
       {% if action_url %} cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]{% endif %}"
          {% if attn %}title="{{ attn.message }}"{% endif %}
          {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
