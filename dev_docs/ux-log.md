@@ -10076,4 +10076,79 @@ Add to observer failure modes: "hidden elements with dynamically-assigned attrib
 
 ---
 
+## Cycle 331 — 2026-04-20 — EX-019/023 Heuristic-1 sign-off + backlog-open-count meta
+
+**Strategy:** finding_investigation continuation — drill EX-023 (bulk-action placeholder "Delete  items") as cycle 330 previewed
+**Outcome:** Same result as cycle 330: EX-023 already `FIXED_LOCALLY`, EX-019 already `CLOSED_SUPERSEDED`. Both observer reports were pre-Alpine-hydration textContent-read artifacts. Framework template at `fragments/bulk_actions.html` is correct. Meta-scan: of 54 EX rows, only ~6 are genuinely open — backlog is healthier than "Next candidate cycles" suggested.
+
+**Heuristic 1 on EX-023:**
+
+Read `src/dazzle_ui/templates/fragments/bulk_actions.html` + verified `[x-cloak]` CSS at `dazzle-layer.css:25`:
+
+```html
+<div x-show="bulkCount > 0" x-cloak ...>
+  <button ...>
+    <svg ...></svg>
+    <span>Delete <span x-text="bulkCount">0</span> item<span x-show="bulkCount !== 1">s</span></span>
+  </button>
+  ...
+</div>
+```
+
+Template is structurally correct:
+- Outer div hidden (`x-show="bulkCount > 0"` + `x-cloak`) when count is 0
+- `x-text="bulkCount"` has fallback `0` between tags
+- Pluralisation via `x-show="bulkCount !== 1"` on the trailing `s`
+
+Observer's "Delete  items" report requires reading DOM textContent pre-hydration. `textContent` is not suppressed by `display:none` (which is what `[x-cloak]` and `x-show` produce). The observer snapshot captured template-literal text without Alpine's runtime substitution.
+
+Same observer failure class as cycle 330: **pre-hydration DOM read** (now catalogued as a distinct mode from cycle 229/234 mechanisms).
+
+**Meta-scan: how open is the backlog really?**
+
+Ran a regex over `dev_docs/ux-backlog.md`'s EX rows:
+- 54 total rows
+- ~6 genuinely open (EX-002, 017, 026, 055, 054, + maybe 1-2 edge cases)
+- Others: FIXED / CLOSED / CLOSED_NO_ACTION / CLOSED_SUPERSEDED / FIXED_LOCALLY / DEFERRED_APP_QUALITY / VERIFIED_FALSE_POSITIVE / MOSTLY_FIXED / FILED / SUSPECTED_FALSE_POSITIVE
+
+**~89% of EX rows are in a closed/deferred/filed state.** The loop's decades-of-cycles-work has systematically worked through them. The "still-OPEN concerning EX rows" candidate line in recent logs is technically accurate but overstates how many actionable rows remain.
+
+Genuinely open rows worth investigating:
+- **EX-002** — workspace nav exposes links the persona can't actually access (403s). This IS framework-level and NOT yet filed as a GitHub issue that I can see. Potential next-cycle target.
+- **EX-017** — list route doesn't eagerly-load ref relations + demo seed missing `reported_at`. Framework bug, partially investigated cycle 219.
+- **EX-026** — simple_task workspace contract generator over/under-probes personas. Framework-layer asymmetry.
+- **EX-055, 054** — FILED as #831, #829 already
+- **EX-041** — FIXED_LOCALLY per my scroll earlier
+
+**Updated picture for the candidate queue:**
+
+The queue's "drill more still-OPEN concerning EX rows" suggestion becomes more targeted: EX-002 and EX-026 are the strongest candidates (framework-level, not obviously superseded).
+
+**Cross-cycle pattern from cycles 330+331:**
+
+Two consecutive Heuristic-1 drills have validated existing FIXED/CLOSED statuses rather than surfacing new framework bugs. This is consistent with **the backlog being in a healthy state** — most "looks open" is already closed. Further investigation cycles should focus on the truly-open 6-ish rows, not re-drill the 89% closed ones.
+
+**Substrate-intel catalog update** (observer failure modes):
+1. **Substrate statelessness** (cycle 229) — form state evaporates across subprocess boundaries
+2. **DSL copy misinterpreted as affordance** (cycle 234)
+3. **Pre-open DOM of dynamically-populated elements** (cycle 330) — `hidden` + dynamic `href`
+4. **Pre-hydration DOM textContent** (cycle 331) — `x-text` fallback text + `x-cloak` elements
+
+Future observer upgrades should wait for Alpine hydration (poll for `Alpine.initialized` or similar) before snapshotting DOM.
+
+**Explore budget used**: 86 → 87.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+- **Drill EX-002** (workspace nav exposes forbidden surfaces) — genuinely open, framework-level, not yet filed
+- **Drill EX-026** (workspace contract generator asymmetry) — genuinely open, framework-level
+- **Drill EX-017** (list route ref eager-loading) — framework bug, partially investigated cycle 219
+- **Pick a new cross-cycle theme for `framework_gap_analysis`** — "widget-selection dispatch" per EX-006/009 still a candidate
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
+
 ---
