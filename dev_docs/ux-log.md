@@ -8180,3 +8180,70 @@ OPEN EX rows: 1 (EX-054, concerning).
 - **`cross-chrome style-locality audit`** — site-footer v2 Q8
 
 ---
+
+## Cycle 299 — 2026-04-20 — finding_investigation: EX-054 filed as issue #829
+
+**Strategy:** `finding_investigation` — close EX-054 (cycle 298) via FILE-don't-FIX
+**Outcome:** EX-054 OPEN → FILED→#829. Heuristic 1 raw-layer repro confirmed the defect is real. Dependency decision (segno vs. qrcode-js) warrants human triage, so filed rather than fixed directly.
+
+**Chosen this cycle.** EX-054 was filed cycle 298 with status OPEN as a concerning cryptographic-UX defect. Per skill rules: `finding_investigation` is the natural next step for concerning OPEN rows. Strategy diversity also argued for it — 5 of the last 7 cycles were `contract_audit` or similar shipping work; a close-an-investigation cycle is a good pacing change.
+
+**Heuristic 1 applied — defect confirmed real.**
+
+- **Template layer** (`2fa_setup.html:133`):
+  ```javascript
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.uri);
+  ```
+- **Backend layer** (`routes_2fa.py:78-96` `_setup_totp`):
+  ```python
+  secret = generate_totp_secret()
+  uri = get_totp_uri(secret, user.email)
+  return {"secret": secret, "uri": uri}
+  ```
+- **URI builder** (`totp.py:29-44` `get_totp_uri`) confirms the URI embeds the secret:
+  ```
+  otpauth://totp/<label>?secret=<base32-secret>&issuer=Dazzle&algorithm=SHA1&digits=6&period=30
+  ```
+
+Every enrollment transmits the raw TOTP seed (base32) to `api.qrserver.com` as an HTTPS GET query parameter. HTTPS does NOT help — the receiving server sees the plaintext query. A malicious or compromised QR service can log + exfiltrate seeds, enabling full 2FA bypass.
+
+**Why FILE, not FIX.** Fix requires a dependency decision:
+
+- **Option A (recommended)**: add `segno` (pure-Python, no deps) to pyproject.toml, generate QR server-side in `_setup_totp`, return as base64 data-URI alongside existing fields. ~10 lines of backend change + 2 lines of template change.
+- **Option B**: vendor a JS QR library (e.g. `qrcode-generator`), render client-side. Avoids Python dep. Secret still touches the client (already the case) but stays in-origin.
+- **Option C**: CSP + SRI on api.qrserver.com. Weakest, doesn't prevent data exfiltration at the external server.
+
+The totp.py module is **explicitly "no external dependencies"** (line 5: `Pure-Python implementation using HMAC-SHA1 — no external dependencies.`). Adding a QR library to top-level Dazzle-back deps is OK (doesn't touch totp.py itself) but is still a library-choice decision that benefits from human review. Trade-off between "one more Python dep" (Option A) vs. "one more JS vendor" (Option B) is a judgment call worth triaging properly via the `/issues` flow.
+
+**Issue #829 filed** with full content:
+- Summary + threat model (every enrollment exposes seed; HTTPS doesn't help; full 2FA bypass on affected users)
+- Raw-layer evidence (template line + backend handler + URI builder quoted with line refs)
+- 3 fix options with code sketches
+- Recommendation (Option A, segno)
+- Cross-references (auth-2fa.md UX-077, EX-054 backlog row)
+
+**Labeled `needs-triage`** so `/issues` picks it up on its next run.
+
+**EX-054 status updated** `OPEN → FILED→#829` in `dev_docs/ux-backlog.md`.
+
+**No code changes** this cycle — pure reasoning + issue-filing. Session-level test suite unchanged at 409/409. Explore budget: 54 → 55.
+
+**Signal note.** Per skill spec, this cycle emits `ux-investigation-complete` with payload `{cycle: 299, ex_id: 'EX-054', outcome: 'FILED→#829'}`.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+OPEN EX rows: 0 (EX-054 now FILED).
+
+- **`missing_contracts` scan** — 4 cycles since cycle 295. Could run.
+- **`framework_gap_analysis`** — 12 cycles since cycle 287. Very overdue. Even with 0 OPEN EX rows, worth reviewing the closed-recently observations (EX-053 FIXED_LOCALLY, EX-054 FILED) for cross-cycle themes.
+- **`cross-shell title harmonisation`** — design-decision cycle
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`cross-chrome style-locality audit`** — site-footer v2 Q8
+- **NEW: security-chrome audit** — EX-053 and EX-054 are the second + third cryptographic/security-adjacent findings surfaced by the UX cycle. Worth a dedicated pass that looks at all auth / CSRF / session-handling surfaces for similar data-flow issues.
+
+---
