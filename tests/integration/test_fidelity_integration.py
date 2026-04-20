@@ -31,15 +31,11 @@ def rendered_pages(simple_task_appspec):
     )
 
     page_contexts = compile_mod.compile_appspec_to_templates(simple_task_appspec)
-    pages: dict[str, str] = {}
-    for route, ctx in page_contexts.items():
+    pages: dict[tuple[str, str], str] = {}
+    for _route, ctx in page_contexts.items():
         try:
             html = render_mod.render_page(ctx)
-            for surface in simple_task_appspec.surfaces:
-                sname = surface.name.replace("_", "-")
-                if sname in route or surface.name in route:
-                    pages[surface.name] = html
-                    break
+            pages[(ctx.view_name, ctx.entity_ref)] = html
         except Exception:
             continue
     return pages

@@ -795,3 +795,97 @@ class TestWidgetRenderedInputTypes:
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
         assert len(type_gaps) == 1
+
+
+class TestRenderedPagesCompositeKey:
+    """Regression guard for #828 — rendered_pages keyed by ``(view_name, entity_ref)``.
+
+    Prior behaviour: rendered_pages was keyed by surface name alone, so two
+    surfaces that shared a name but targeted different entities (e.g. an app's
+    own ``feedback_create`` vs. the framework's auto-synthesised
+    ``feedback_create`` on FeedbackReport) would silently collide. The scorer
+    then compared the losing surface's fields against the winning surface's
+    HTML, producing ghost structural gaps on a surface that actually rendered
+    all its inputs correctly.
+    """
+
+    def test_colliding_surface_names_scored_independently(self) -> None:
+        """Two surfaces with the same name but different entity_ref must score
+        against their own HTML, not clobber each other."""
+        from dazzle.core.fidelity_scorer import score_appspec_fidelity
+
+        surface_a = _make_surface(
+            name="feedback_create",
+            entity_ref="ManuscriptFeedback",
+            mode=SurfaceMode.CREATE,
+            field_names=["manuscript", "summary"],
+        )
+        surface_b = _make_surface(
+            name="feedback_create",
+            entity_ref="FeedbackReport",
+            mode=SurfaceMode.CREATE,
+            field_names=["category", "severity"],
+        )
+
+        entity_a = MagicMock()
+        entity_a.name = "ManuscriptFeedback"
+        entity_a.fields = [
+            FieldSpec(name="manuscript", type=FieldType(kind=FieldTypeKind.STR)),
+            FieldSpec(name="summary", type=FieldType(kind=FieldTypeKind.STR)),
+        ]
+        entity_b = MagicMock()
+        entity_b.name = "FeedbackReport"
+        entity_b.fields = [
+            FieldSpec(name="category", type=FieldType(kind=FieldTypeKind.STR)),
+            FieldSpec(name="severity", type=FieldType(kind=FieldTypeKind.STR)),
+        ]
+
+        appspec = MagicMock()
+        appspec.surfaces = [surface_a, surface_b]
+        appspec.stories = []
+        appspec.get_entity = lambda ref: entity_a if ref == "ManuscriptFeedback" else entity_b
+
+        html_a = """
+        <form>
+            <input name="manuscript"><input name="summary">
+            <button type="submit">Save</button>
+        </form>
+        """
+        html_b = """
+        <form>
+            <input name="category"><input name="severity">
+            <button type="submit">Save</button>
+        </form>
+        """
+
+        rendered = {
+            ("feedback_create", "ManuscriptFeedback"): html_a,
+            ("feedback_create", "FeedbackReport"): html_b,
+        }
+
+        report = score_appspec_fidelity(appspec, rendered)
+
+        # Both surfaces must be scored — no silent drop from key collision.
+        assert len(report.surface_scores) == 2
+
+    def test_missing_entity_ref_uses_empty_string_key(self) -> None:
+        """Surface with no entity_ref looks up by ``(name, "")``."""
+        from dazzle.core.fidelity_scorer import score_appspec_fidelity
+
+        surface = _make_surface(
+            name="dashboard",
+            entity_ref=None,
+            mode=SurfaceMode.LIST,
+            field_names=["title"],
+        )
+        appspec = MagicMock()
+        appspec.surfaces = [surface]
+        appspec.stories = []
+        appspec.get_entity = lambda ref: None
+
+        rendered = {
+            ("dashboard", ""): "<div>stub</div>",
+        }
+
+        report = score_appspec_fidelity(appspec, rendered)
+        assert len(report.surface_scores) == 1

@@ -932,7 +932,7 @@ def _load_stories_for_scoring(
 
 def score_appspec_fidelity(
     appspec: AppSpec,
-    rendered_pages: dict[str, str],
+    rendered_pages: dict[tuple[str, str], str],
     surface_filter: str | None = None,
     project_root: str | None = None,
 ) -> FidelityReport:
@@ -940,7 +940,9 @@ def score_appspec_fidelity(
 
     Args:
         appspec: Full application specification.
-        rendered_pages: Mapping of surface_name → rendered HTML.
+        rendered_pages: Mapping of ``(surface_name, entity_ref)`` → rendered HTML.
+            The composite key prevents silent collisions when two surfaces share
+            a name but target different entities (see #828).
         surface_filter: Optional surface name to score only one surface.
 
     Returns:
@@ -956,7 +958,8 @@ def score_appspec_fidelity(
         if surface_filter and surface.name != surface_filter:
             continue
 
-        html = rendered_pages.get(surface.name, "")
+        key = (surface.name, surface.entity_ref or "")
+        html = rendered_pages.get(key, "")
         if not html:
             continue
 

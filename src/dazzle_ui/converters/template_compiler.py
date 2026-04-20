@@ -1465,6 +1465,7 @@ def compile_appspec_to_templates(
         ctx.nav_items = nav_items
         ctx.nav_by_persona = nav_by_persona
         ctx.view_name = surface.name
+        ctx.entity_ref = surface.entity_ref or ""
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")
@@ -1524,6 +1525,7 @@ def compile_appspec_to_templates(
             root_ctx.nav_items = nav_items
             root_ctx.nav_by_persona = nav_by_persona
             root_ctx.view_name = first_list.name
+            root_ctx.entity_ref = first_list.entity_ref or ""
             root_ctx.current_route = "/"
             contexts["/"] = root_ctx
 

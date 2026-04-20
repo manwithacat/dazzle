@@ -346,6 +346,12 @@ class PageContext(BaseModel):
 
     # Semantic identifier for the current view (surface name)
     view_name: str = ""
+    # Entity the surface targets. Used together with view_name to form a
+    # composite identity so fidelity scoring doesn't collapse two distinct
+    # surfaces that happen to share a name — e.g. an app declaring
+    # ``surface feedback_create`` against its own entity while the framework
+    # auto-synthesises one with the same name against FeedbackReport. See #828.
+    entity_ref: str = ""
 
     # Auth context (populated at render time when auth is enabled)
     is_authenticated: bool = False

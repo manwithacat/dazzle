@@ -59,15 +59,17 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     progress.log_sync("Compiling templates...")
     page_contexts = compile_appspec_to_templates(appspec)
 
-    # Render each page and build surface_name → HTML mapping
+    # Render each page and build (surface_name, entity_ref) → HTML mapping.
+    # Composite key — view_name alone collides when two surfaces share a name
+    # but target different entities (e.g. an app's ``feedback_create`` vs. the
+    # framework-synth ``feedback_create`` on FeedbackReport). See #828.
     progress.log_sync(f"Rendering {len(page_contexts)} pages...")
-    rendered_pages: dict[str, str] = {}
+    rendered_pages: dict[tuple[str, str], str] = {}
     render_failure_details: list[dict[str, str]] = []
     for _route, ctx in page_contexts.items():
         try:
             html = render_page(ctx)
-            # Use view_name from PageContext — this is the surface name
-            rendered_pages[ctx.view_name] = html
+            rendered_pages[(ctx.view_name, ctx.entity_ref)] = html
         except Exception as e:  # nosec B112 - skip unrenderable pages gracefully
             logger.warning("Fidelity: failed to render %s: %s", ctx.view_name, e)
             render_failure_details.append({"surface": ctx.view_name, "error": str(e)})
