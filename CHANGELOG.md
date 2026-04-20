@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-04-20
+
+Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issues closed (#823, #824, #825, #826), two latent runtime bugs found via static-debt sweep, 19 blueprint errors across three example apps, and a trial-harness gate that prevents the agent from landing a devastating verdict without recording any friction observations.
+
+### Added
+- **`submit_verdict` friction gate (trial harness).** When the agent's verdict text contains negative-sentiment tokens (`broken`, `404`, `cannot`, `unusable`, `fail`, `missing`, `unresponsive`, `timeout`, etc.) AND `record_friction` was never called during the run, the tool rejects with a nudge to record each specific failure as its own friction entry first. Closes the observed shape where the agent articulated 4+ failures in its verdict paragraph but produced zero actionable friction rows. Three regression tests in `tests/unit/test_qa_trial.py::TestBuildTrialMission`.
+- **`dazzle qa trial --fresh-db` pre-flight + circuit breaker (#826).** `verify_blueprint` is now a hard-gate at trial entry — trial aborts with the first 5 error details when the blueprint is drifted, instead of firing 200+ × 400 `/__test__/seed` POSTs and then timing out on `/__test__/authenticate`. Circuit breaker additionally trips after 10 consecutive seed failures with the accumulated error samples and a pointer at `dazzle demo verify`.
+
+### Fixed
+- **AppSpec→BackendSpec type mismatch in `combined_server.py` (latent runtime bug).** `mount_graphql(app, appspec, ...)` would raise `AttributeError` the moment `--graphql` was enabled because the function reads `spec.entities` and AppSpec exposes entities at `appspec.domain.entities`. Now calls `convert_appspec_to_backend(appspec)` first, matching the pattern in `dazzle.mcp.runtime_tools.handlers`.
+- **`DazzleClient._ensure_csrf_token` referenced non-existent `self.base_url` (latent runtime bug).** Would raise `AttributeError` whenever the CSRF cookie was absent. Swapped to `self.api_url` (`/health` is an API endpoint). Discovered by mypy debt sweep.
+- **Fidelity check no longer misfires on float fields (#825).** Added `FieldTypeKind.FLOAT: "number"` to `FIELD_TYPE_TO_INPUT` in `fidelity_scorer.py`. Float fields now render `<input type="number">` as expected; the spurious "change input type to text for float field" gap is gone.
+- **Graph-edge lint no longer misfires on audit metadata (#823).** Added `_AUDIT_METADATA_FIELD_NAMES` exclusion set and tightened `_is_edge_field` to require `has_edge AND NOT has_audit`. Fields like `assigned_to` (edge token `to` + audit token `assigned`) resolve as audit and are excluded. 3 regression tests in `test_graph_semantics.py`.
+- **Workspace + surface lint skips framework-synthesised names (#824).** `_lint_workspace_personas`, `_lint_workspace_access_declarations`, and `_lint_list_surface_ux` all skip names starting with `_` — `_platform_admin`, `_admin_metrics`, `_admin_sessions`, etc. Adopters can't fix these from their DSL.
+- **Admin builder produces sortable/filterable defaults (#824 bonus).** `_TIMESTAMP_SUFFIXES` gained `_start`/`_end` so `bucket_start` gets a newest-first sort. New `_CATEGORICAL_FIELD_NAMES` set makes `event_type`, `component`, `topic`, `process_name` recognised as filter candidates.
+- **3 example-app blueprints: 19 strategy-type errors → 0.** simple_task (3), support_tickets (4 + 1 length-cap warning), fieldtest_hub (12). Pattern: `date_relative`/`free_text_lorem`/`uuid_generate` on `ref` → `foreign_key`; `date_relative` on numeric fields → `numeric_range`; `date_relative` on `str` → `static_list`. `dazzle demo verify` on all three: "Blueprint looks healthy." `qa trial --fresh-db` can now actually run against these apps.
+- **`src/dazzle_ui/` fully mypy-clean (28 → 0 errors).** Narrow correctness wraps in `page_routes.py` (`bool()` cast + preference-dict narrowing), `expression_eval.py` (6 comparison returns), `experience_routes.py` (RedirectResponse/HTMLResponse rebind `# type: ignore[assignment]`), `hot_reload.py` (tuple→list). Module-level mypy-plugin suppression on `surface_converter.py` for a Pydantic `populate_by_name=True` false positive (17 sites → 1 annotation).
+- **`src/dazzle/testing/` fully mypy-clean (7 → 0 errors).**
+
+### Changed
+- **EX-048 marked MOSTLY_FIXED.** `purpose` wired (shipped in v0.57.98); `show` + `show_aggregate` classified YAGNI (zero DSL consumers across the 5 example apps); `action_primary`, `defaults`, `focus` deferred as niche follow-ups pending a dedicated renderer per field. Issue #827 filed for `action_primary`'s nearest concrete consumer: workspace dashboards missing a primary-create CTA (surfaced during 2026-04-20 trial-cycle on simple_task).
+
+### Agent Guidance
+- **`dazzle demo verify` is now the right first step before seeding.** If it reports any errors, `dazzle qa trial --fresh-db` will refuse to seed — check the output there first.
+- **Framework-synthesised names use `_`-prefix convention.** Lint rules now skip `_*` workspaces + surfaces automatically. When authoring new framework-generated constructs, use the prefix.
+
 ## [0.57.98] - 2026-04-19
 
 ### Added
