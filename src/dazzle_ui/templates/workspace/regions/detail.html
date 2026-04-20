@@ -2,6 +2,7 @@
    Contract: ~/.claude/skills/ux-architect/components/detail-region.md (UX-063) #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
+{% from 'macros/ref_cell.html' import ref_cell %}
 {% call region_card(title) %}
 <div class="dz-detail-region">
   {% if item %}
@@ -18,14 +19,7 @@
       {% elif col.type == "currency" %}
         {{ item[col.key] | currency }}
       {% elif col.type == "ref" %}
-        {% set ref = item[col.key] %}
-        {% set display_name = item.get(col.key ~ "_display", "") %}
-        {% if ref is mapping %}
-          {% set display_name = display_name or (ref | ref_display) %}
-          {% if col.ref_route and ref.get("id") %}
-            <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline">{{ display_name }}</a>
-          {% else %}{{ display_name }}{% endif %}
-        {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
+        {{ ref_cell(item[col.key], item.get(col.key ~ "_display", ""), col.ref_route or "", 'link') }}
       {% else %}
         {% set val = item[col.key] %}
         {% if val is none %}—{% else %}{{ val }}{% endif %}

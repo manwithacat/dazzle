@@ -1,0 +1,58 @@
+{# Ref-cell macro — consolidates the ref-column display chain used by
+   detail-region (UX-063), grid-region (UX-066), and list-region (UX-069).
+
+   Cycle 283 extraction of the repeated pattern:
+     {% set ref = item[col.key] %}
+     {% set display_name = item.get(col.key ~ "_display", "") %}
+     {% if ref is mapping %}
+       {% set display_name = display_name or (ref | ref_display) %}
+       {% if col.ref_route and ref.get("id") %}
+         <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
+            class="text-[hsl(var(--primary))] hover:underline">{{ display_name }}</a>
+       {% else %}{{ display_name }}{% endif %}
+     {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
+
+   Three mode variants:
+     - mode='link'          → detail-region (plain <a href>, no stopPropagation
+                              because detail-page row isn't HTMX-clickable)
+     - mode='link_stop'     → grid-region (<a href> + stopPropagation to prevent
+                              row-level HTMX drill-down double-firing)
+     - mode='htmx_drawer'   → list-region (<a hx-get> that loads detail into
+                              the drawer without leaving the list context)
+
+   timeline-region (UX-067) intentionally uses a simplified inline chain without
+   any anchor wrapping — not migrated to this macro (per its v2 contract note).
+
+   queue-region (UX-068) has no ref-column rendering today; the macro is
+   available if queue adds one in a future revision.
+
+   Contract: see dev_docs/framework-gaps/2026-04-20-ref-display-align.md (gap
+   doc pending if needed; macro extraction alone suffices for the known cases).
+#}
+
+{%- macro ref_cell(ref, display_hint='', ref_route='', mode='link') -%}
+{%- if ref is mapping -%}
+{%- set display_name = display_hint or (ref | ref_display) -%}
+{%- if ref_route and ref.get("id") -%}
+{%- if mode == 'link' -%}
+<a href="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline">{{ display_name }}</a>
+{%- elif mode == 'link_stop' -%}
+<a href="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}"
+   class="text-[hsl(var(--primary))] hover:underline"
+   onclick="event.stopPropagation()">{{ display_name }}</a>
+{%- elif mode == 'htmx_drawer' -%}
+<a hx-get="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}"
+   hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"
+   class="text-[hsl(var(--primary))] hover:underline" onclick="event.stopPropagation()">{{ display_name }}</a>
+{%- else -%}
+{{- display_name -}}
+{%- endif -%}
+{%- else -%}
+{{- display_name -}}
+{%- endif -%}
+{%- elif display_hint -%}
+{{- display_hint -}}
+{%- elif ref -%}
+{{- ref -}}
+{%- else -%}—{%- endif -%}
+{%- endmacro -%}

@@ -5224,3 +5224,116 @@ class TestAttentionAccentMacro:
 
         out_tint = self._render_macro({"level": "error"}, "tint")
         assert out_tint.strip() == ""
+
+
+# ---------------------------------------------------------------------------
+# Cycle 283 — ref_cell macro (shared consolidation across 3 regions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestRefCellMacro:
+    """The ref_cell macro consolidates the ref-column display chain.
+
+    Cycle 283 — the repeated pattern (set display_name from _display hint
+    or ref_display filter; wrap in anchor when ref_route present; emdash
+    fallback for None) was duplicated across detail/grid/list regions with
+    only the anchor mode differing. Macro extracted with 3 mode variants:
+
+    - mode='link'        — detail-region (plain <a href>, no stopPropagation)
+    - mode='link_stop'   — grid-region (<a href> + event.stopPropagation)
+    - mode='htmx_drawer' — list-region (<a hx-get> into drawer + stopPropagation)
+
+    timeline-region (UX-067) deliberately kept its simplified chain, not
+    migrated to this macro.
+    """
+
+    def _render_macro(self, ref, display_hint="", ref_route="", mode="link"):
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        tmpl = env.from_string(
+            "{% from 'macros/ref_cell.html' import ref_cell %}"
+            "{{ ref_cell(ref, display_hint, ref_route, mode) }}"
+        )
+        return tmpl.render(ref=ref, display_hint=display_hint, ref_route=ref_route, mode=mode)
+
+    def test_link_mode_mapping_with_route_renders_anchor(self) -> None:
+        out = self._render_macro({"id": "u42", "name": "Alice"}, "", "/user/{id}", "link")
+        assert '<a href="/user/u42"' in out
+        assert "hsl(var(--primary))" in out
+        assert ">Alice</a>" in out
+        assert "onclick" not in out  # detail mode does NOT include stopPropagation
+
+    def test_link_stop_mode_adds_stop_propagation(self) -> None:
+        out = self._render_macro({"id": "u42", "name": "Bob"}, "", "/user/{id}", "link_stop")
+        assert '<a href="/user/u42"' in out
+        assert 'onclick="event.stopPropagation()"' in out
+        assert ">Bob</a>" in out
+
+    def test_htmx_drawer_mode_uses_hx_get_not_href(self) -> None:
+        out = self._render_macro({"id": "u42", "name": "Carol"}, "", "/user/{id}", "htmx_drawer")
+        assert 'hx-get="/user/u42"' in out
+        assert 'hx-target="#dz-detail-drawer-content"' in out
+        assert 'onclick="event.stopPropagation()"' in out
+        # No href attribute — this is an HTMX-driven anchor, not a native nav
+        assert 'href="' not in out
+
+    def test_display_hint_wins_over_ref_display_filter(self) -> None:
+        """When `_display` suffix value is provided, it's used verbatim."""
+        out = self._render_macro(
+            {"id": "u42", "name": "Alice"}, "Alice Smith (VIP)", "/user/{id}", "link"
+        )
+        assert "Alice Smith (VIP)" in out
+        assert ">Alice<" not in out  # ref_display fallback must not fire
+
+    def test_ref_display_filter_fires_when_no_hint(self) -> None:
+        """With no hint, ref_display_name(ref) drives display name."""
+        out = self._render_macro(
+            {"id": "u42", "first_name": "Alice", "last_name": "Zhang"},
+            "",
+            "/user/{id}",
+            "link",
+        )
+        # ref_display_name concatenates first+last when `name` isn't set
+        assert "Alice Zhang" in out
+
+    def test_mapping_without_route_renders_plain_name(self) -> None:
+        """No ref_route → no anchor, just display name as text."""
+        out = self._render_macro({"id": "u42", "name": "Alice"}, "", "", "link")
+        assert "<a " not in out
+        assert "Alice" in out
+
+    def test_mapping_without_id_renders_plain_name(self) -> None:
+        """Route set but ref lacks id → no anchor (can't fill template)."""
+        out = self._render_macro({"name": "Alice"}, "", "/user/{id}", "link")
+        assert "<a " not in out
+        assert "Alice" in out
+
+    def test_scalar_ref_renders_verbatim(self) -> None:
+        """Non-mapping ref (e.g. raw string id) renders the value directly."""
+        out = self._render_macro("raw-id-value", "", "", "link")
+        assert "raw-id-value" in out
+
+    def test_display_hint_only_when_no_ref(self) -> None:
+        """No ref but display_hint set → hint rendered as plain text."""
+        out = self._render_macro("", "Cached Display Name", "", "link")
+        assert "Cached Display Name" in out
+        assert "<a " not in out
+
+    def test_emdash_fallback_for_none(self) -> None:
+        """Ref=None with no display hint → em-dash."""
+        out = self._render_macro(None, "", "", "link")
+        assert out.strip() == "—"
+
+    def test_emdash_fallback_for_empty_ref(self) -> None:
+        """Ref=empty string with no display hint → em-dash."""
+        out = self._render_macro("", "", "", "link")
+        assert out.strip() == "—"
+
+    def test_mode_defaults_to_link_when_unknown(self) -> None:
+        """Unknown mode falls through to plain display_name (no anchor)."""
+        out = self._render_macro({"id": "u42", "name": "Alice"}, "", "/user/{id}", "weird_mode")
+        # No anchor for unknown mode (safety default)
+        assert "<a " not in out
+        assert "Alice" in out

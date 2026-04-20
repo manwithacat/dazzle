@@ -3,6 +3,7 @@
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/attention_accent.html' import attention_classes %}
+{% from 'macros/ref_cell.html' import ref_cell %}
 {% call region_card(None) %}
 <div class="dz-list-region">
   {# Action row: region actions + CSV export. The dashboard slot
@@ -93,16 +94,7 @@
             {% elif col.type == "currency" %}
               {{ item[col.key] | currency }}
             {% elif col.type == "ref" %}
-              {% set ref = item[col.key] %}
-              {% set display_name = item.get(col.key ~ "_display", "") %}
-              {% if ref is mapping %}
-                {% set display_name = display_name or (ref | ref_display) %}
-                {% if col.ref_route and ref.get("id") %}
-                <a hx-get="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
-                   hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"
-                   class="text-[hsl(var(--primary))] hover:underline" onclick="event.stopPropagation()">{{ display_name }}</a>
-                {% else %}{{ display_name }}{% endif %}
-              {% elif display_name %}{{ display_name }}{% else %}-{% endif %}
+              {{ ref_cell(item[col.key], item.get(col.key ~ "_display", ""), col.ref_route or "", 'htmx_drawer') }}
             {% else %}
               {{ item[col.key] | default("") | truncate_text }}
             {% endif %}
