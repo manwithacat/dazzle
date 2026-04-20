@@ -37,7 +37,8 @@
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}
              {% if attn %}title="{{ attn.message }}"{% endif %}>
-          <p class="text-[13px] font-medium text-[hsl(var(--foreground))]">{{ item[display_key] | default(item.get("name", (entity_name|default("Event")))) }}</p>
+          {% set _primary = item[display_key] %}
+          <p class="text-[13px] font-medium text-[hsl(var(--foreground))]">{% if _primary is none %}{{ item.get("name", (entity_name|default("Event"))) }}{% else %}{{ _primary }}{% endif %}</p>
           {% for col in columns %}
           {% if col.key != display_key and col.type != "date" %}
           <p class="text-[11px] text-[hsl(var(--muted-foreground))]">

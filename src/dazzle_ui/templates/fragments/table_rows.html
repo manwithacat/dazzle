@@ -67,8 +67,9 @@
                    hover:outline hover:outline-1 hover:outline-[hsl(var(--border))]
                    hover:cursor-text transition-all duration-[80ms]
                    [transition-timing-function:cubic-bezier(0.2,0,0,1)] truncate"
-            @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', '{{ item[col.key] | default('') | e }}')"
-            title="{{ item[col.key] | default('') }}">
+            {% set _edit_val = item[col.key] %}
+            @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', '{% if _edit_val is not none %}{{ _edit_val | e }}{% endif %}')"
+            title="{% if _edit_val is not none %}{{ _edit_val }}{% endif %}">
         {% if col.type == "badge" %}
           {{ render_status_badge(value=item[col.key]) }}
         {% elif col.type == "bool" %}
