@@ -9681,3 +9681,81 @@ Cycle 300 identified the theme; cycle 301 filed Phase 1 (#830); cycle 323 now fi
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 324 — 2026-04-20 — external-resource lint: 6th horizontal-discipline (closes Phase 4)
+
+**Strategy:** infrastructure extension — implements Phase 4 of the cycle 300 external-resource-integrity gap doc directly (instead of filing as an issue like Phase 2 did in cycle 323)
+**Outcome:** Shipped `tests/unit/test_external_resource_lint.py`. 3 gates, 5 allowlisted origins documenting the current external-load surface. Added to `test-ux-preflight` — 46 tests + mypy(ui) in ~5s.
+
+**Implementation vs issue-filing trade-off:**
+
+Cycle 323 filed Phase 2 as #832 because the fix (vendoring Tailwind + Dazzle own dist) requires coordinated template + build-pipeline work and is substantive enough to warrant a downstream PR cycle.
+
+Phase 4 is different: the "fix" IS a static lint. Building it directly is:
+- **Lower effort** than writing a spec + filing an issue + waiting for PR cycle
+- **Higher leverage** — the lint immediately gates against regression in every future cycle
+- **Scoped tightly** — ~200 LOC, no framework runtime impact
+
+So cycle 324 implements rather than files. Phase 4 marked SHIPPED on the gap doc status tracker.
+
+**Lint design:**
+
+Scans `src/dazzle_ui/templates/**/*.html` for `https?://` URLs; requires each distinct origin to be in `ALLOWED_EXTERNAL_ORIGINS` with a reason citing a filed issue / gap doc / deferral rationale.
+
+Tracked at **origin level** (not full URL) so version bumps like `jsdelivr/npm/mermaid@11` → `@12` don't require lint edits. Semantic meaning: "this CDN is approved as an external load source"; the lint is about SOURCE-of-external-load, not specific asset identities.
+
+**Discrimination rules** (Heuristic 1 verified):
+- `<script src="https://unpkg.com/...">` → DETECTED (unpkg not allowlisted, gate fires)
+- `<svg xmlns="http://www.w3.org/2000/svg">` → SKIPPED (standards origin)
+- `{# Usage: <link href="https://cdn..."> #}` → SKIPPED (Jinja comment stripped)
+- `<script src="//cdn.example.com/...">` → NOT MATCHED (protocol-relative, regex limitation; flagged as case-by-case if seen in practice)
+- Origin with port (`https://internal.example.com:8080`) → DETECTED correctly
+
+**Baseline state (cycle 324):**
+
+| Origin | Templates | Citation |
+|---|---|---|
+| `fonts.googleapis.com` | base.html×2 + site_base.html×2 | Google Fonts CSS; gap doc open question 4 |
+| `fonts.gstatic.com` | base.html + site_base.html (preconnect) | Companion to fonts.googleapis.com |
+| `cdn.tailwindcss.com` | base.html:24 | Tailwind JIT; tracked by #832 (cycle 323) |
+| `cdn.jsdelivr.net` | base.html:27 + site_base.html×3 + diagram.html:12 | Multi-use; tracked by #830 + #832 |
+| `api.qrserver.com` | 2fa_setup.html:135 | TOTP QR; tracked by #829 (cycle 299) |
+
+5 origins, 13 distinct URLs. All allowlisted. Future work on #830/#832/#829 will naturally shrink this table.
+
+**Lint stack status after cycle 324 (6 lints):**
+
+| Lint | Cycle | Prevents |
+|---|---|---|
+| `test_template_none_safety.py` | 284 | None-vs-default anti-pattern |
+| `test_template_orphan_scan.py` | 302, 304 | Templates without consumers |
+| `test_page_route_coverage.py` | 306-308 | Page templates without routes |
+| `test_canonical_pointer_lint.py` | 310 | Pointer-comment drift |
+| `test_daisyui_python_lint.py` | 318 | DaisyUI tokens in Python HTML |
+| `test_external_resource_lint.py` | **324** | **New CDN loads without review** |
+
+**Preflight gate evolution:**
+
+- Cycle 312: 3 lints, snapshots, card-safety — total ~3s
+- Cycle 314: +mypy(dazzle_ui) — ~5s
+- Cycle 318: +DaisyUI Python — ~5s
+- Cycle 319: +dist/ warning — ~5s (warning is free)
+- Cycle 324: +external-resource lint — ~5s
+
+Stays under 6s after 4 additions. The lint stack compounds value at near-zero marginal cost, exactly as cycle 309 endorsed.
+
+**Cross-app verification** (Heuristic 3): N/A — build-time lint, no framework runtime code touched.
+
+**Explore budget used**: 79 → 80.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **File Phase 3 (CSP default alignment) as a GitHub issue** — harder to implement directly; spans middleware + template + build-pipeline work. Matches cycle 323's issue-filing pattern.
+- **Apply orphan_lint pattern to Python modules** — still outstanding
+- **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---

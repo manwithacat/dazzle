@@ -164,6 +164,6 @@ Cycle 299's EX-054 filing (#829) already covers the QR-service piece in isolatio
 | 1 — SRI attributes on fixed-version CDN loads | FILED | [#830](https://github.com/manwithacat/dazzle/issues/830) (cycle 301) |
 | 2 — Vendor Tailwind + Dazzle own dist | FILED | [#832](https://github.com/manwithacat/dazzle/issues/832) (cycle 323) |
 | 3 — CSP default alignment | OPEN | Not filed yet |
-| 4 — Template lint rule | OPEN | Not filed yet |
+| 4 — Template lint rule | **SHIPPED** | cycle 324 commit `a699e11c` — `tests/unit/test_external_resource_lint.py` |
 
 Sub-case: QR service exfiltration — [#829](https://github.com/manwithacat/dazzle/issues/829) (cycle 299, EX-054).
