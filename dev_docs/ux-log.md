@@ -8996,3 +8996,50 @@ Cycle 311 proposed "add full-suite health check to /ux-cycle" and mused about "h
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 313 — 2026-04-20 — housekeeping: first-dogfood of test-ux-preflight + dist/ clean-worktree restore
+
+**Strategy:** housekeeping — dogfood cycle 312's new preflight gate, clean up persistent dist/ drift surfaced by checking worktree state
+**Outcome:** Preflight gate confirmed working in production invocation (39/40 tests, 1.93s). Dist/ drift from v0.58.0→v0.58.1 bump + cycle 297 footer CSS change committed — 3 files, 7 insertions, 5 deletions. Worktree clean. mypy clean (383 + 248 files).
+
+**Dogfooding cycle 312's gate:**
+
+First production `/ux-cycle` invocation of Step 0a.4 (`make test-ux-preflight`). Ran clean in 1.93s. No drift to report. Confirms the gate is a low-friction addition — the cycle cadence is unaffected; cycles just gain an early infrastructure-health signal.
+
+**Dist/ drift — same silent-drift class as cycle 311's snapshot debt:**
+
+Cycle 313's housekeeping check noticed 3 modified dist/ files persisting across multiple cycles (visible as `M dist/...` in git status since cycle 310). Two changes:
+1. Version header 0.58.0 → 0.58.1 (the `/bump minor` from several cycles ago)
+2. `--dz-footer-heading: oklch(1 0 0)` HSL variable in dazzle.min.css (cycle 297's source fix that never propagated to dist)
+
+**This is the same defect class cycle 311 caught with snapshots.** `/ux-cycle` commits source changes but doesn't run whatever build step regenerates `dist/`. Over cycles 297→312, the drift compounded. Spec says "Ship Discipline ... Clean worktree: Every push must leave git status clean. After shipping, check for untracked or modified files (especially dist/) and commit them before moving on" (.claude/CLAUDE.md) — but ux-cycle is not /ship. The `/ship` skill would catch this; the `/ux-cycle` skill doesn't.
+
+**Meta-pattern: "silent drift" has at least 3 flavours so far.**
+
+| Class | Evidence cycle | Detection mechanism |
+|---|---|---|
+| Snapshot baselines vs template changes | 311 | `test_dom_snapshots.py` (now in test-ux-preflight gate) |
+| dist/ rebuild vs source changes | 313 | Manual git status check |
+| Governance pointer drift | 310 | `test_canonical_pointer_lint.py` |
+
+**Hypothesis: a 4th class — mypy type errors accumulating across cycles — is possible but not evidenced.** Mypy was clean at cycle 313 (no new errors since last check). If `/ux-cycle` never runs mypy, errors could accumulate the same way snapshots did. Worth adding `mypy src/dazzle/...` to `test-ux-preflight` OR a separate gate, depending on mypy speed.
+
+**No new gap doc this cycle** — the theme is clear enough to track in-line rather than via a standalone gap doc. If a 4th silent-drift class surfaces, that's the trigger for formalising the theme into `dev_docs/framework-gaps/`.
+
+**Heuristic 3 (cross-app verification)** N/A — no framework code touched.
+
+**Explore budget used**: 68 → 69.
+
+### Running UX-governance total: 79 contracts (unchanged — housekeeping cycle)
+
+### Next candidate cycles
+
+- **Add mypy to `test-ux-preflight`** — preempts a hypothetical 4th silent-drift class. Run `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'` — measure time (<5s?) and add if fast enough.
+- **Apply orphan_lint pattern to Python modules** — still outstanding; 5th horizontal-discipline lint candidate
+- **helper_audit on canonical rendering helpers** — grep for all `render_*` helpers across `src/dazzle_back/runtime/`; verify each page-rendering call site uses one of them (no raw `HTMLResponse(` bypassing the canonical path)
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
