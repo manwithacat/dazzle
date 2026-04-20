@@ -176,6 +176,40 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
     )
 
 
+# Negative-sentiment tokens that indicate a verdict contains real
+# complaints. When `submit_verdict` is called with any of these present
+# AND `record_friction` was never called, the tool rejects and nudges
+# the agent to record specific friction observations first. This fixes
+# the observed pattern where the agent articulates 4+ concrete failures
+# in its verdict paragraph but calls `record_friction` zero times (the
+# simple_task trial on 2026-04-20 was the motivating case).
+_NEGATIVE_VERDICT_TOKENS: frozenset[str] = frozenset(
+    {
+        "broken",
+        "cannot",
+        "can't",
+        "404",
+        "unusable",
+        "fail",
+        "failed",
+        "failing",
+        "missing",
+        "nowhere",
+        "dead",
+        "doesn't work",
+        "does not work",
+        "non-functional",
+        "nonfunctional",
+        "deeply broken",
+        "inferior",
+        "blocker",
+        "unresponsive",
+        "timeout",
+        "times out",
+    }
+)
+
+
 def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
     """Tool: ``submit_verdict`` — wrap up the trial with a verdict.
 
@@ -186,9 +220,42 @@ def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) 
     takes no verdict arg), so our handler never fired and the verdict
     was never captured. The core framework does warn about the
     collision — we now heed that warning by picking a unique name.
+
+    Enforces a minimum friction-record gate: if the verdict text
+    contains negative-sentiment tokens (broken, 404, unusable, fail,
+    etc.) AND `record_friction` was never called, the tool rejects
+    with a nudge to record specific friction observations first.
+    This closes the #818-adjacent observation pattern where the
+    agent would articulate every failure in its verdict paragraph
+    but never call `record_friction` — leaving the report with zero
+    actionable rows even though the verdict was devastating.
     """
 
     def submit_verdict(verdict: str = "") -> dict[str, Any]:
+        verdict_lower = verdict.lower()
+        has_negative = any(tok in verdict_lower for tok in _NEGATIVE_VERDICT_TOKENS)
+        friction_count = len(transcript_sink.get("friction", []))
+
+        if has_negative and friction_count == 0:
+            return {
+                "rejected": True,
+                "reason": (
+                    "Your verdict describes concrete failures (e.g. 'broken', "
+                    "'404', 'missing', 'unusable') but you have not called "
+                    "`record_friction` once. Before you submit the verdict, "
+                    "record each specific failure as its own friction entry "
+                    "with a URL and evidence snippet, so a human triager can "
+                    "reproduce what you saw. Then call `submit_verdict` again."
+                ),
+                "friction_count": friction_count,
+                "hint": (
+                    "Look at your verdict paragraph — every distinct complaint "
+                    "should be its own `record_friction` call. Example: '404 on "
+                    "/app/task' is one entry; 'no Create button on Task Board' "
+                    "is a separate entry."
+                ),
+            }
+
         transcript_sink["verdict"] = [{"text": verdict}]
         return {"ended": True}
 
@@ -199,7 +266,10 @@ def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) 
             "verdict from your business user's perspective: would you recommend "
             "this software to a colleague? What would need to change? This is "
             "how you end the trial — do NOT use the `done` page action, which "
-            "won't capture your verdict."
+            "won't capture your verdict. "
+            "NOTE: if your verdict describes concrete failures but you haven't "
+            "called `record_friction` for them, this tool will reject — call "
+            "record_friction for each specific failure first."
         ),
         schema={
             "type": "object",

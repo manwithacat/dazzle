@@ -101,8 +101,66 @@ class TestBuildTrialMission:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         tool = next(t for t in m.tools if t.name == "submit_verdict")
-        tool.handler(verdict="Would not switch — missing filters.")
-        assert sink["verdict"][0]["text"] == "Would not switch — missing filters."
+        # Verdict with NO negative tokens — should record without rejection.
+        result = tool.handler(verdict="Would not switch — tight UX quirks.")
+        assert sink["verdict"][0]["text"] == "Would not switch — tight UX quirks."
+        assert result.get("ended") is True
+
+    def test_submit_verdict_rejects_negative_verdict_without_friction(self, scenario: dict) -> None:
+        """Regression guard for the simple_task/agency_lead trial on
+        2026-04-20: agent articulated 4+ failures in its verdict
+        ('deeply broken', '404', 'missing', 'unresponsive') but called
+        record_friction zero times, leaving the report with no
+        actionable rows. The tool now rejects this shape and nudges."""
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        tool = next(t for t in m.tools if t.name == "submit_verdict")
+        result = tool.handler(
+            verdict=(
+                "I cannot recommend this. The Task List is 404. Multiple UI "
+                "elements are unresponsive. The core functionality appears "
+                "deeply broken."
+            )
+        )
+        assert result.get("rejected") is True
+        assert result.get("friction_count") == 0
+        assert "record_friction" in result.get("reason", "")
+        # Verdict should NOT have been recorded on rejection.
+        assert "verdict" not in sink
+
+    def test_submit_verdict_allows_negative_verdict_when_friction_was_recorded(
+        self, scenario: dict
+    ) -> None:
+        """When the agent has already recorded friction, a negative
+        verdict is legitimate and should be accepted."""
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        record = next(t for t in m.tools if t.name == "record_friction")
+        submit = next(t for t in m.tools if t.name == "submit_verdict")
+        # Record one friction first.
+        record.handler(
+            category="bug",
+            description="Task List 404s",
+            url="/app/task",
+            severity="high",
+        )
+        result = submit.handler(verdict="Task List is broken — 404 on every nav attempt.")
+        assert result.get("ended") is True
+        assert sink["verdict"][0]["text"].startswith("Task List is broken")
+
+    def test_submit_verdict_allows_positive_verdict_without_friction(self, scenario: dict) -> None:
+        """A positive/neutral verdict without any negative tokens
+        passes through regardless of friction count. A trial that
+        actually went smoothly produces no friction and a happy
+        verdict, which is a valid outcome."""
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        tool = next(t for t in m.tools if t.name == "submit_verdict")
+        result = tool.handler(
+            verdict="Smooth experience — I could complete my tasks without friction."
+        )
+        assert result.get("ended") is True
+        assert sink["verdict"][0]["text"].startswith("Smooth experience")
 
     def test_max_steps_override_wins(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
