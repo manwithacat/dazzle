@@ -2602,3 +2602,119 @@ class TestNavGroupEntityExclusion:
         assert len(entity_items) == 2
         labels = {i["label"] for i in entity_items}
         assert labels == {"Tasks", "Projects"}
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Workspace primary-action candidates (#827)
+# ---------------------------------------------------------------------------
+
+
+class TestWorkspacePrimaryActionCandidates:
+    """``_build_workspace_primary_action_candidates`` collects "New X" buttons.
+
+    Regression guard for #827: workspace dashboards rendered title-only
+    headers even when regions referenced an entity with a working create
+    surface. The helper must produce one candidate per unique region-source
+    entity that has a CREATE surface.
+    """
+
+    def _ws(self, *regions: Any) -> Any:
+        return SimpleNamespace(name="ws", regions=list(regions))
+
+    def _region(self, source: str | None = None, sources: list[str] | None = None) -> Any:
+        return SimpleNamespace(source=source or "", sources=sources or [])
+
+    def test_single_region_entity_with_create_surface_emits_candidate(self) -> None:
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(self._region(source="Task"))
+        create_surfaces = {"Task": SimpleNamespace(name="task_create")}
+        list_surfaces = {"Task": SimpleNamespace(title="Tasks")}
+
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity=create_surfaces,
+            list_surfaces_by_entity=list_surfaces,
+        )
+        assert actions == [
+            {
+                "entity": "Task",
+                "surface": "task_create",
+                "label": "New Tasks",
+                "route": "/app/task/create",
+            }
+        ]
+
+    def test_entity_without_create_surface_omitted(self) -> None:
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(self._region(source="Report"))
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={},
+            list_surfaces_by_entity={"Report": SimpleNamespace(title="Reports")},
+        )
+        assert actions == []
+
+    def test_duplicate_entity_references_deduplicated(self) -> None:
+        """Multiple regions on the same entity only surface one button."""
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(
+            self._region(source="Task"),
+            self._region(source="Task"),
+            self._region(sources=["Task"]),
+        )
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={"Task": SimpleNamespace(name="task_create")},
+            list_surfaces_by_entity={"Task": SimpleNamespace(title="Tasks")},
+        )
+        assert len(actions) == 1
+
+    def test_multi_source_region_collects_each_entity(self) -> None:
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(self._region(sources=["Task", "Project"]))
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={
+                "Task": SimpleNamespace(name="task_create"),
+                "Project": SimpleNamespace(name="project_create"),
+            },
+            list_surfaces_by_entity={
+                "Task": SimpleNamespace(title="Tasks"),
+                "Project": SimpleNamespace(title="Projects"),
+            },
+        )
+        assert [a["entity"] for a in actions] == ["Task", "Project"]
+
+    def test_missing_list_surface_falls_back_to_humanised_entity_name(self) -> None:
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(self._region(source="AuditLog"))
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={"AuditLog": SimpleNamespace(name="auditlog_create")},
+            list_surfaces_by_entity={},
+        )
+        assert actions[0]["label"] == "New Audit Log" or actions[0]["label"] == "New Auditlog"
+
+    def test_entity_slug_uses_lowercase_dashed_form(self) -> None:
+        """Matches the routing convention at template_compiler.py:1474."""
+        from dazzle_ui.runtime.page_routes import _build_workspace_primary_action_candidates
+
+        ws = self._ws(self._region(source="ProjectMember"))
+        actions = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={"ProjectMember": SimpleNamespace(name="pm_create")},
+            list_surfaces_by_entity={},
+        )
+        # PascalCase lower().replace("_","-") → "projectmember"
+        assert actions[0]["route"] == "/app/projectmember/create"

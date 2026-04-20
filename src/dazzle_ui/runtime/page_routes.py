@@ -1156,6 +1156,61 @@ def _make_page_handler(
     return partial(_page_handler, deps, route_path, ctx, view_name)
 
 
+def _build_workspace_primary_action_candidates(
+    workspace: Any,
+    *,
+    app_prefix: str,
+    create_surfaces_by_entity: dict[str, Any],
+    list_surfaces_by_entity: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Collect "New X" primary-action candidates for a workspace header.
+
+    Walks the workspace's regions (single and multi-source), deduplicates
+    the referenced entities, and emits one candidate per entity that has a
+    CREATE surface. Does NOT filter by persona permission — the caller is
+    expected to apply ``_user_can_mutate`` per-request before surfacing the
+    button. Closes #827 (workspace dashboards with no create CTA).
+
+    Args:
+        workspace: WorkspaceSpec IR node.
+        app_prefix: Route prefix (e.g. ``/app``).
+        create_surfaces_by_entity: Map entity_ref → CREATE SurfaceSpec.
+        list_surfaces_by_entity: Map entity_ref → LIST SurfaceSpec (used
+            for a nicer label fallback from the list surface title).
+
+    Returns:
+        List of action dicts: ``{entity, surface, label, route}``.
+    """
+    seen: set[str] = set()
+    actions: list[dict[str, str]] = []
+    for region in workspace.regions:
+        region_sources: list[str] = []
+        if region.source:
+            region_sources.append(region.source)
+        region_sources.extend(getattr(region, "sources", []) or [])
+        for src in region_sources:
+            if src in seen:
+                continue
+            seen.add(src)
+            create_surface = create_surfaces_by_entity.get(src)
+            if not create_surface:
+                continue
+            entity_slug = src.lower().replace("_", "-")
+            list_surface = list_surfaces_by_entity.get(src)
+            label_source = (
+                getattr(list_surface, "title", "") if list_surface else ""
+            ) or src.replace("_", " ").title()
+            actions.append(
+                {
+                    "entity": src,
+                    "surface": create_surface.name,
+                    "label": f"New {label_source}",
+                    "route": f"{app_prefix}/{entity_slug}/create",
+                }
+            )
+    return actions
+
+
 async def _workspace_handler(
     deps: _PageDeps,
     ws_context: Any,
@@ -1165,6 +1220,7 @@ async def _workspace_handler(
     ws_entity_items: list[dict[str, Any]],
     ws_groups: list[dict[str, Any]],
     ws_app_name: str,
+    primary_action_candidates: list[dict[str, str]],
     request: Request,
 ) -> Response:
     """Handle a workspace page route."""
@@ -1272,6 +1328,23 @@ async def _workspace_handler(
 
     ws_title = render_ws_ctx.title or render_ws_ctx.name.replace("_", " ").title()
 
+    # Filter primary-action candidates by per-request create permission (#827).
+    # The candidate list was precomputed at registration from workspace
+    # regions + create-surface presence; here we check that the authenticated
+    # user can actually create each entity before surfacing the button. When
+    # no auth is configured, ``_user_can_mutate`` returns True and all
+    # candidates pass — matching the existing permissive fallback.
+    primary_actions: list[dict[str, str]] = []
+    for cand in primary_action_candidates:
+        surface_name = cand.get("surface", "")
+        if _user_can_mutate(deps, surface_name, "create", auth_ctx):
+            primary_actions.append(
+                {
+                    "label": cand["label"],
+                    "route": cand["route"],
+                }
+            )
+
     # Fragment targeting: return only the workspace content
     if htmx.wants_fragment:
         html = render_fragment(
@@ -1279,6 +1352,7 @@ async def _workspace_handler(
             workspace=render_ws_ctx,
             user_preferences=user_preferences,
             layout_json=layout_json,
+            primary_actions=primary_actions,
         )
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=html, headers=headers)  # nosemgrep
@@ -1296,6 +1370,7 @@ async def _workspace_handler(
         user_name=user_name,
         user_preferences=user_preferences,
         layout_json=layout_json,
+        primary_actions=primary_actions,
         _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
     )
     return HTMLResponse(content=html)  # nosemgrep
@@ -1530,9 +1605,12 @@ def create_page_routes(
         # Add entity surface links from each workspace's regions
         surfaces = getattr(appspec, "surfaces", []) or []
         _list_surfaces_by_entity: dict[str, Any] = {}
+        _create_surfaces_by_entity: dict[str, Any] = {}
         for surface in surfaces:
             if surface.mode.value == "list" and surface.entity_ref:
                 _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
+            elif surface.mode.value == "create" and surface.entity_ref:
+                _create_surfaces_by_entity.setdefault(surface.entity_ref, surface)
 
         # Collect entities claimed by nav_groups per workspace (for #430 dedup)
         ws_grouped_entities: dict[str, set[str]] = {}
@@ -1569,6 +1647,23 @@ def create_page_routes(
                                 }
                             )
             ws_entity_nav[ws.name] = entity_items
+
+        # Per-workspace primary actions: "Create X" buttons derived from
+        # regions that reference an entity with a CREATE surface. Closes #827
+        # — prior behaviour rendered workspace header with title only, leaving
+        # users who landed on a Task Board dashboard with no way to create a
+        # Task from that view. Filter by persona-create permission happens
+        # per-request in ``_workspace_handler``; this build step just collects
+        # the candidate set from the workspace's region sources.
+        ws_primary_actions: dict[str, list[dict[str, str]]] = {
+            ws.name: _build_workspace_primary_action_candidates(
+                ws,
+                app_prefix=app_prefix,
+                create_surfaces_by_entity=_create_surfaces_by_entity,
+                list_surfaces_by_entity=_list_surfaces_by_entity,
+            )
+            for ws in workspaces
+        }
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
@@ -1614,6 +1709,7 @@ def create_page_routes(
             _ws_allowed = [] if _allowed is None else list(_allowed)
             _ws_entity_items = ws_entity_nav.get(workspace.name, [])
             _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
+            _ws_primary = ws_primary_actions.get(workspace.name, [])
 
             handler = partial(
                 _workspace_handler,
@@ -1625,6 +1721,7 @@ def create_page_routes(
                 _ws_entity_items,
                 _ws_nav_groups,
                 ws_app_name,
+                _ws_primary,
             )
             router.get(f"/workspaces/{workspace.name}", response_class=HTMLResponse)(handler)
 
