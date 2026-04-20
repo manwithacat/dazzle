@@ -8789,3 +8789,59 @@ Each extension took <15 min of work. The infrastructure accumulates leverage —
 - **`dormant_primitives_audit`** — awaiting user direction
 
 ---
+
+## Cycle 309 — 2026-04-20 — missing_contracts scan retrospective: strategy superseded by lints
+
+**Strategy:** `missing_contracts` scan (chosen this cycle — 13 cycles since last run, strongly overdue per prior cycle's "next candidate" list)
+**Outcome:** Meta-finding. The scan surfaced **zero new proposals.** The automated lints shipped cycles 302-308 (orphan_lint_rule + page-route-coverage + layout detection) have made manual breadth scans redundant. Recommending retirement of `missing_contracts` from the default rotation.
+
+**Scan executed:**
+- 112 total .html templates in `src/dazzle_ui/templates/`
+- 85 directly referenced via `{% include/extends/import/from %}` or Python string literals
+- 20 covered by dynamic-dir exemptions (`site/sections/`, `reports/`)
+- 7 allowlisted orphans (4 dormant primitives + 3 2FA pages pending #831)
+- **0 unallowed orphans** — all known gaps already surfaced, governed, or filed
+- 83 contract files in `~/.claude/skills/ux-architect/components/` (79 UX-NN + 4 unnumbered supporting docs)
+- 5 templates modified since cycle 295's last missing_contracts scan — **all subsequently contracted:**
+  - `steps_indicator.html` → UX-075 (cycle 296)
+  - `2fa_challenge.html` + `2fa_setup.html` + `2fa_settings.html` → UX-077 (cycle 298)
+  - `site_footer.html` (partial, drift-fix cycle 297) → UX-076
+
+**Meta-finding: `missing_contracts` strategy is superseded by continuous lint coverage.**
+
+The `/ux-cycle` skill's Step 6 `missing_contracts` strategy exists to batch-gather "which components lack contracts." But **three horizontal-discipline lints** now run on every test suite execution:
+
+1. **`test_template_orphan_scan.py`** (cycle 302, hardened 304) — surfaces ANY template without a production consumer. Since a template with a contract but no consumer is still an orphan, this lint's allowlist becomes the single-source-of-truth for "shipped but not yet adopted."
+2. **`test_page_route_coverage.py`** (cycles 306-308) — surfaces page templates shipped without route wiring. Catches the narrower "templates ship but aren't reachable" sub-class.
+3. **`test_none_vs_default_guard.py`** (cycle 284) — surfaces the None-vs-default-value anti-pattern at contract/IR boundaries.
+
+Any new uncontracted component introduced to the framework will trip one of these lints within the next test run. The signal is **continuous** rather than **batched**. Manual scans add nothing when the automated ones cover the same territory.
+
+**Evidence that continuous lints work:** cycle 302 surfaced 7 orphans immediately after shipping. Cycle 306 surfaced 7 unserved pages immediately. Cycle 304 caught a scanner bug via contradiction with prior evidence (Heuristic 1). Each lint has paid for itself in under two cycles.
+
+**Recommendation: retire `missing_contracts` from the default rotation.**
+
+Replace with two new entries in the candidate queue:
+- **Monitor lint allowlist drift** — if an allowlist entry's reason is older than N cycles, investigate whether the underlying gap has moved. Cheap, opportunistic.
+- **Propose new horizontal-discipline lints** — the 3-lint stack should keep growing. Each new lint converts accidental discovery into systematic discovery. Cycle 309's meta-finding is the pattern: breadth-scan strategies rot; lints accumulate value.
+
+**Heuristic reinforcement: Heuristic 1 applies at the strategy layer too.** Before burning a cycle on `missing_contracts`, I ran the actual scan. Raw-layer evidence (zero new proposals, all 5 touched templates already contracted) disconfirmed the assumption that a 13-cycle gap had accumulated work. Without that check, I'd have either (a) invented work that didn't exist, or (b) complained about low yield. The check instead produced a **framework-strategy finding** — much higher leverage than whatever single contract the scan might have surfaced.
+
+**Cross-app verification** (Heuristic 3): No code changes this cycle. 420/420 tests still pass (no regressions because nothing was touched).
+
+**Explore budget used**: 64 → 65.
+
+### Running UX-governance total: 79 contracts (unchanged — retrospective/meta cycle)
+
+### Next candidate cycles
+
+- **`canonical_pointer_lint`** — 4th horizontal-discipline lint. Enforces `{# Contract: ~/.claude/skills/ux-architect/components/<name>.md (UX-NNN)? #}` shape on all UX-contracted templates. Per cycle 309's meta-finding, this is the highest-leverage next move: grow the lint stack.
+- **Apply orphan_lint pattern to Python modules** — fresh horizontal-discipline target. Uncovered Python helpers (the Python equivalent of "orphan template") accumulate similarly.
+- **Monitor lint allowlist drift** — opportunistic check on allowlist entry ages
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity (vendor Tailwind + Dazzle own dist)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- ~~**`missing_contracts` scan`**~~ — retired (superseded by continuous lints per cycle 309)
+
+---
