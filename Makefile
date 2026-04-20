@@ -104,6 +104,7 @@ test-ux-preflight:
 	       tests/unit/test_canonical_pointer_lint.py \
 	       tests/unit/test_template_none_safety.py \
 	       tests/unit/test_daisyui_python_lint.py \
+	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_dom_snapshots.py \
 	       tests/unit/test_card_safety_invariants.py \
 	       -q
