@@ -1,4 +1,4 @@
-/* dazzle v0.58.0 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.58.1 | MIT License | https://github.com/manwithacat/dazzle */
 @layer base, framework, app, overrides;
 @layer framework {
 [x-cloak] {
@@ -199,6 +199,7 @@ font-size: 0.875rem;
 --dz-footer-text: oklch(0.7 0 0);
 --dz-footer-link: oklch(0.6 0 0);
 --dz-footer-border: oklch(1 0 0 / 0.1);
+--dz-footer-heading: oklch(1 0 0);
 --dz-logo-color: oklch(0.25 0.02 260);
 --dz-error-bg: oklch(0.95 0.03 25);
 --dz-error-text: oklch(0.45 0.15 25);
@@ -281,6 +282,7 @@ font-size: 0.875rem;
 --dz-footer-text: oklch(0.65 0 0);
 --dz-footer-link: oklch(0.55 0 0);
 --dz-footer-border: oklch(1 0 0 / 0.1);
+--dz-footer-heading: oklch(1 0 0);
 --dz-logo-color: oklch(0.95 0 0);
 --dz-error-bg: oklch(0.20 0.06 25);
 --dz-error-text: oklch(0.80 0.15 25);
@@ -1837,7 +1839,7 @@ margin-bottom: 2rem;
 .dz-footer-col h4 {
 font-size: 0.875rem;
 font-weight: 600;
-color: white;
+color: var(--dz-footer-heading);
 margin: 0 0 1rem;
 }
 .dz-footer-col ul {
@@ -1855,7 +1857,7 @@ text-decoration: none;
 transition: color var(--dz-transition-fast, 150ms);
 }
 .dz-footer-col a:hover {
-color: white;
+color: var(--dz-footer-heading);
 }
 .dz-footer-bottom {
 max-width: 72rem;
