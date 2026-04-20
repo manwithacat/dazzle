@@ -10470,3 +10470,40 @@ Counting precisely: #835 at cycle 334 will age out after cycle 339 (last 5 = 335
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 338 — 2026-04-20 — loop-state dashboard: `dev_docs/ux-loop-state.md`
+
+**Strategy:** housekeeping / consolidation — the cycle-by-cycle log at `dev_docs/ux-log.md` has grown to >10400 lines; an operator landing on the loop today would struggle to grok current state without reading 30+ recent cycles. Cycle 338 produces a single-glance dashboard.
+**Outcome:** Wrote `dev_docs/ux-loop-state.md` — 6 tables capturing (1) current mode + budget, (2) productivity of last 10 cycles, (3) 7 OPEN issues filed by the loop, (4) 6-lint stack, (5) silent-drift coverage matrix, (6) 3 truly-open EX rows. ~80 lines. Regenerable on-demand.
+
+**Complement to existing artifacts:**
+
+- `dev_docs/ux-log.md` — temporal journal (cycle-by-cycle)
+- `dev_docs/ux-backlog.md` — row-level state (PROP + EX tables)
+- `dev_docs/framework-gaps/*.md` — per-theme syntheses
+- `dev_docs/ux-loop-state.md` (new) — single-page dashboard
+
+Different access patterns for different operator needs. The new doc answers "what's happening right now?" in ≤1 minute of reading.
+
+**Why this cycle vs. continuing minimal work:**
+
+Cycles 336/337 produced observational output in log-entry form. Cycle 338 elevates that observational material into a separate discoverable artifact. If an operator lands on the repo after a week of loop running autonomously, they can `cat dev_docs/ux-loop-state.md` and immediately see: 7 OPEN issues, 20% productivity, 93/100 budget, 6-lint stack, 3 open EX rows. No journal spelunking.
+
+Matches the cycle 326/332 "consolidation is a legitimate durable cycle type" pattern — scattered observations into persistent dashboard.
+
+**Heuristic 1 verification:** the dashboard values are cross-checked against current state (`gh issue list`, `ls dev_docs/`, `wc -l ux-log.md`, `cat .dazzle/ux-cycle-explore-count`) before writing. Any future cycle regenerating the dashboard should re-verify the same way.
+
+**Cross-app verification** (Heuristic 3): N/A — documentation cycle.
+
+**Explore budget used**: 93 → 94.
+
+### Running UX-governance total: 79 contracts (unchanged — dashboard cycle)
+
+### Next candidate cycles
+
+- **Regenerate `ux-loop-state.md`** opportunistically (every ~10 cycles or when a major event — issue close, new lint, gap doc — would change a table row)
+- **Same operator decision point** remains (cadence slowdown / pause / continue)
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
