@@ -9043,3 +9043,51 @@ Cycle 313's housekeeping check noticed 3 modified dist/ files persisting across 
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 314 — 2026-04-20 — extend test-ux-preflight with mypy(dazzle_ui)
+
+**Strategy:** infrastructure extension — directly implements cycle 313's top "next candidate"
+**Outcome:** Gate now runs lints + snapshots + card-safety + mypy on `src/dazzle_ui/` in ~9s wall-clock (up from 1.7s). Closes the hypothesised 4th silent-drift class before it manifests.
+
+**Timing measurement** (Heuristic 1 — measure before committing):
+- Preflight pytest subset alone: 1.7s
+- mypy `src/dazzle/core src/dazzle/cli src/dazzle/mcp`: 7.0s wall (3.8s CPU) — too heavy for preflight
+- mypy `src/dazzle_ui/` (54 files): 3.7s wall (3.0s CPU) — tolerable
+- mypy `src/dazzle_back/runtime` (138 files): 3.8s wall — similar, not added
+- **Final gate: pytest + mypy(dazzle_ui) = ~9s wall, ~6s CPU**
+
+Scoped decision — mypy on `src/dazzle_ui/` only because that's the subtree `/ux-cycle` cycles most frequently touch (templates, template_context, converters/template_compiler, template macros, static assets). Broader mypy coverage stays with `/ship`'s pre-push gate which runs `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/` already. No coverage regression — this is an early-detection signal, not a replacement.
+
+**Silent-drift defense stack as of cycle 314:**
+
+| Drift class | Gate | Cost | Status |
+|---|---|---|---|
+| Template without consumer | `test_template_orphan_scan.py` (302) | <100ms | Surfaced 7 orphans cycle 302, hardened cycle 304 |
+| Page template without route | `test_page_route_coverage.py` (306-308) | <100ms | Surfaced 2FA gap, now 12 tracked |
+| None-vs-default anti-pattern | `test_template_none_safety.py` (284) | <100ms | Prevents EX-051 regression |
+| Pointer-comment malformation | `test_canonical_pointer_lint.py` (310) | <100ms | Forward-looking; 19 pointers locked |
+| Syrupy baseline drift | `test_dom_snapshots.py` | ~500ms | 13 baselines; cycle 311 cleared 8 stale |
+| Card/chrome invariant | `test_card_safety_invariants.py` | ~800ms | 8 invariants |
+| **UI Python type errors** | **mypy src/dazzle_ui/ (NEW cycle 314)** | **~3.7s** | **54 files** |
+
+Five classes actively gated. dist/ drift (cycle 313's 3rd class) remains manual — no automated detector cheaper than `git status` itself, and a hook could be disruptive; deferring.
+
+**Heuristic 1 verified retroactively:** mypy's "Success: no issues found in 54 source files" means there's no DRIFT today — but the gate's value is forward-looking. Same shape as cycle 310's canonical_pointer_lint (shipped with all 19 pointers passing). The Makefile comment documents the intent so a future runner understands why the step is there even when it's always green.
+
+**Cross-app verification** (Heuristic 3): N/A — build-system change, no framework runtime code touched.
+
+**Explore budget used**: 69 → 70.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+- **Measure mypy against `src/dazzle_back/runtime`** — if it adds <3s and a cycle there has appetite, add as a 6th step. Or leave to `/ship`.
+- **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding. Highest unsettled candidate.
+- **helper_audit on canonical rendering helpers** — grep `HTMLResponse(` call sites vs `render_site_page` / `_render_app_shell_error` canonical helpers
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
