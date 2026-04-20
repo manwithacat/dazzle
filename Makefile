@@ -24,7 +24,8 @@ help:
 	@echo "Testing:"
 	@echo "  test             Run all tests"
 	@echo "  test-fast        Run fast tests only (no integration/slow)"
-	@echo "  test-ux-preflight  Infrastructure-drift gate (~3s): lints + snapshots + card-safety"
+	@echo "  test-ux-preflight  UX cycle gate (~5s): lints + snapshots + card-safety + mypy(ui)"
+	@echo "  test-ux-deep     Preflight + mypy across core/cli/mcp/back (~15s warm) — use before ship"
 	@echo "  test-integration Run integration tests only"
 	@echo "  coverage         Run tests with coverage report"
 	@echo ""
@@ -117,6 +118,15 @@ test-ux-preflight:
 		git status --short dist/ | sed 's/^/  /'; \
 		echo "  Rebuild + commit before /ship to keep the wheel fresh."; \
 	fi
+
+# Deeper drift audit for cycles touching framework Python beyond src/dazzle_ui/
+# (cycle 320). Superset of test-ux-preflight plus mypy across core + cli +
+# mcp + dazzle_back. Takes ~7s — not part of the per-cron-tick preflight,
+# but recommended before /ship or after any cross-subtree edit. Complements
+# /ship's own mypy which only runs on push.
+test-ux-deep: test-ux-preflight
+	mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/ \
+	     --ignore-missing-imports --exclude 'eject'
 
 test-integration:
 	pytest tests/integration/ -v
