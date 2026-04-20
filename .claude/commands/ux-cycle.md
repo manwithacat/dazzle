@@ -13,6 +13,7 @@ Bring Dazzle's UX layer under ux-architect governance one component at a time, a
 1. Check `.dazzle/ux-cycle.lock`. If it exists and its timestamp is < 45 minutes old, **abort** with "Another ux-cycle is already running (lock at $LOCKFILE, PID $PID)". If it's older, delete it as stale.
 2. Create `.dazzle/ux-cycle.lock` with current PID and ISO timestamp.
 3. Read signals via `dazzle.cli.runtime_impl.ux_cycle_signals.since_last_run(source="ux-cycle")`. Handle any `dazzle-updated` or `fix-deployed` signals by marking affected backlog rows for re-verification.
+4. **Infrastructure-drift gate** (~3s): run `make test-ux-preflight`. This runs the 4 horizontal-discipline lints (orphan, page-route, canonical-pointer, none-safety) + DOM snapshots + card-safety invariants. **If red, STOP and fix before continuing** — cycle 311 exposed ~40 cycles of silent snapshot drift from contract_audit cycles that never refreshed syrupy baselines. This gate prevents that class recurring. If red and root cause is snapshot-baseline drift from recent template changes, regenerate via `pytest tests/unit/test_dom_snapshots.py --snapshot-update` after verifying the diff is additive-only.
 
 ### Step 0b: Init (first run only)
 

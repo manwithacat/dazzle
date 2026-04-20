@@ -24,6 +24,7 @@ help:
 	@echo "Testing:"
 	@echo "  test             Run all tests"
 	@echo "  test-fast        Run fast tests only (no integration/slow)"
+	@echo "  test-ux-preflight  Infrastructure-drift gate (~3s): lints + snapshots + card-safety"
 	@echo "  test-integration Run integration tests only"
 	@echo "  coverage         Run tests with coverage report"
 	@echo ""
@@ -90,6 +91,19 @@ test:
 
 test-fast:
 	pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
+
+# Fast infrastructure-drift gate used by /ux-cycle (cycle 312).
+# Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
+# in ~3s. Catches the class of silent drift that accumulated for ~40 cycles
+# before cycle 311 surfaced 9 red tests in the full suite.
+test-ux-preflight:
+	pytest tests/unit/test_template_orphan_scan.py \
+	       tests/unit/test_page_route_coverage.py \
+	       tests/unit/test_canonical_pointer_lint.py \
+	       tests/unit/test_template_none_safety.py \
+	       tests/unit/test_dom_snapshots.py \
+	       tests/unit/test_card_safety_invariants.py \
+	       -q
 
 test-integration:
 	pytest tests/integration/ -v
