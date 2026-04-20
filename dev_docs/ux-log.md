@@ -8385,3 +8385,59 @@ OPEN EX rows: 0. Open gap-doc phases: 3 (Phases 2-4 of external-resource-integri
 - **`cross-chrome style-locality audit`** — site-footer v2 Q8
 
 ---
+
+## Cycle 302 — 2026-04-20 — orphan_lint_rule shipped + EX-055 surfaced
+
+**Strategy:** `contract_audit`-adjacent — promote the 15-cycle-parked `orphan_lint_rule` candidate into real infrastructure
+**Outcome:** New test module `tests/unit/test_template_orphan_scan.py` (5 tests) + EX-055 filed (2FA page-route orphan discovered by the scan itself).
+
+**Chosen this cycle.** 7 cycles since last `missing_contracts` (295) + `orphan_lint_rule` parked since cycle 287 (15 cycles). Initially planned another missing_contracts scan but only 5 templates have been touched since cycle 295 and all 5 already became contracts — low expected yield. Pivoted to `orphan_lint_rule` (parked candidate, concrete implementation value, permanent preventive scope).
+
+**Immediate discovery** (Heuristic 1 in action): the first scan revealed 24 "potential orphans". Most (16 site/sections + 1 reports) are dynamic-dispatch false positives. After filtering:
+
+| Real orphan | Status |
+|-------------|--------|
+| `components/alpine/confirm_dialog.html` | Known dormant — cycle 287 gap doc |
+| `components/alpine/dropdown.html` | Known dormant — cycle 287 gap doc |
+| `components/island.html` | Contracted UX-059 but unused in production |
+| `components/modal.html` | Contracted but unused in production |
+| `site/auth/2fa_challenge.html` | **NEW finding — no page route serves this** |
+| `site/auth/2fa_setup.html` | **NEW finding — no page route serves this** |
+| `site/auth/2fa_settings.html` | **NEW finding — no page route serves this** |
+
+**EX-055 filed (concerning)** — the 2FA page templates have ZERO Python consumers. Cycle 298's auth-2fa contract assumed production usage but wrote source-level tests (template-text assertions) rather than end-to-end render tests. Those tests passed because the templates EXIST, not because anything serves them. `src/dazzle_back/runtime/site_routes.py:502-520` serves login/signup/forgot/reset pages via `render_site_page()` — but the equivalent `/2fa/setup` page route is absent. Possible interpretations: (a) feature half-shipped, (b) framework starter, user wires own routes, (c) mechanism scan missed. Heuristic 1 raw-layer repro needed in a future `finding_investigation` cycle.
+
+**This discovery alone validates the orphan_lint_rule work.** Without a walk-and-assert mechanism, EX-055 would have continued to hide behind the contract's "the feature works" assumption. Meta-pattern reinforcement: automated lint rules catch class-of-drift issues that per-component contract_audits miss. Cycle 284 (EX-051 None-vs-default lint) and cycle 302 (orphan_lint_rule) are both this same kind of horizontal discipline.
+
+**The lint rule itself** (`tests/unit/test_template_orphan_scan.py`, 200 LOC):
+
+- Walks 112 templates under `src/dazzle_ui/templates/`.
+- Collects references via regex-scan of `{% include/extends/import/from "path" %}` in all `.html` + `["path.html"]` string literals in all `.py` across 3 subtrees (dazzle_ui + dazzle_back + dazzle/core).
+- **DYNAMIC_DIRECTORY_EXEMPTIONS** table handles whole-directory dynamic dispatch: `site/sections/` (via `site/page.html:15,18`'s concat include) + `reports/` (via `journey_reporter.py:23`'s `env.get_template`).
+- **INDIVIDUAL_ALLOWLIST** table has 7 entries, each with a mandatory reason. Test `test_every_allowlist_entry_has_non_empty_reason` enforces reasons ≥ 20 chars + cite evidence.
+- **5 gates**: (1) every orphan is allowlisted, (2) every allowlist entry is still orphaned (stale-entry detection), (3) allowlist entries exist as real templates, (4) dynamic-dir exemptions match real dirs, (5) every reason is non-empty.
+
+Test (1) is the critical gate: new orphans without allowlist entries fail immediately with a "wire them up OR add to allowlist with reason" error. Test (2) catches stale allowlist — if a dormant template becomes adopted, its reason goes stale and the test forces removal. This symmetry is the same pattern as cycle 284's EX-051 lint but for orphan class instead of None-vs-default class.
+
+**Cross-app verification** (Heuristic 3): 414/414 workspace+lint+session+orphan tests pass (up from 409, +5 new).
+
+**Interesting null result**: my `components/alpine/dropdown.html` was NOT surfaced as an orphan by the scan. Cycle 286 identified it as orphaned. Possibilities: (a) dropdown.html has since been adopted (unlikely — cycle 287 gap doc still open), (b) the regex matches some JS/CSS ref that looks like a template path but isn't (false negative). Worth a v2 investigation but not blocking this cycle.
+
+**Explore budget used**: 57 → 58.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure cycle)
+
+### Next candidate cycles
+
+OPEN EX rows: 1 (EX-055, concerning).
+
+- **EX-055 `finding_investigation`** — boot a server, try navigating to /2fa/setup, confirm whether page route exists. Determines the right fix (bug/doc/scan-update).
+- **Verify dropdown.html isn't false-negative** — my scan claimed it's referenced but cycle 286 said it's dormant. Worth a targeted 5-min check.
+- **`missing_contracts` scan** — 7 cycles since 295. Stale rotation.
+- **Gap doc Phase 2 as GitHub issue** — parallel to #830 (Phase 1). Vendor Tailwind + Dazzle own dist.
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`canonical_pointer_lint`** — lower priority
+
+---
