@@ -1,9 +1,11 @@
-{# Heatmap region — UX-035 adopter #13. #}
+{# Heatmap region — UX-035 adopter #13.
+   Contract: ~/.claude/skills/ux-architect/components/heatmap-region.md (UX-064) #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
+<div class="dz-heatmap-region">
   {% if heatmap_matrix %}
-  <div class="overflow-x-auto">
-    <table class="w-full text-[13px] border-collapse">
+  <div class="dz-heatmap-scroll overflow-x-auto">
+    <table class="dz-heatmap-grid w-full text-[13px] border-collapse">
       <thead>
         <tr class="border-b border-[hsl(var(--border))]">
           <th class="py-1 px-2"></th>
@@ -17,15 +19,15 @@
         <tr class="border-b border-[hsl(var(--border))] last:border-0">
           <td class="py-1 px-2 font-medium text-[hsl(var(--foreground))]">{{ row.row }}</td>
           {% for cell in row.cells %}
-          <td class="py-1 px-2 text-center cursor-pointer transition-opacity duration-[80ms] hover:opacity-80
+          <td class="dz-heatmap-cell py-1 px-2 text-center cursor-pointer transition-opacity duration-[80ms] hover:opacity-80
             {%- if heatmap_thresholds|length >= 2 -%}
-              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(0_72%_51%/0.15)] text-[hsl(0_72%_35%)]
+              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
               {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))]
-              {%- else %} bg-[hsl(142_71%_45%/0.15)] text-[hsl(142_71%_30%)]
+              {%- else %} bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]
               {%- endif -%}
             {%- elif heatmap_thresholds|length == 1 -%}
-              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(0_72%_51%/0.15)] text-[hsl(0_72%_35%)]
-              {%- else %} bg-[hsl(142_71%_45%/0.15)] text-[hsl(142_71%_30%)]
+              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
+              {%- else %} bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]
               {%- endif -%}
             {%- endif -%}"
             {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
@@ -43,4 +45,5 @@
   {% else %}
   <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
+</div>
 {% endcall %}

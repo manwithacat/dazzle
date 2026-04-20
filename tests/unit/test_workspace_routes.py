@@ -1331,6 +1331,267 @@ class TestDetailRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("DETAIL") == "workspace/regions/detail.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 273 — Heatmap region contract (UX-064)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestHeatmapRegionTemplate:
+    """Heatmap region renders a matrix with threshold-driven cell colouring.
+
+    Cycle 273 — contracts heatmap.html. Load-bearing structural fix: migrated
+    4 hardcoded HSL literals (`hsl(0_72%_51%)`, `hsl(0_72%_35%)`,
+    `hsl(142_71%_45%)`, `hsl(142_71%_30%)`) to `hsl(var(--destructive))` and
+    `hsl(var(--success))` — same drift class as cycle 239's warning-literal
+    sweep and cycle 271's progress-region green literal.
+    """
+
+    def _heatmap_kwargs(self, **overrides):
+        defaults = {
+            "title": "Activity Heatmap",
+            "heatmap_matrix": [],
+            "heatmap_col_values": [],
+            "heatmap_thresholds": [],
+            "action_url": "",
+            "items": [],
+            "total": 0,
+            "empty_message": "No data available.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper_and_grid(self) -> None:
+        """Gates 1 + 2: dz-heatmap-region + dz-heatmap-grid <table>."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {"row": "Mon", "row_id": "mon", "cells": [{"value": 5.0}]},
+                ],
+                heatmap_col_values=["9am"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1],
+                total=1,
+            ),
+        )
+        assert "dz-heatmap-region" in html
+        assert "dz-heatmap-scroll" in html
+        assert "dz-heatmap-grid" in html
+        assert "<table" in html
+
+    def test_row_count_matches_matrix_length(self) -> None:
+        """Gate 3: tbody <tr> count equals len(heatmap_matrix)."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {"row": "Mon", "row_id": "mon", "cells": [{"value": 5.0}]},
+                    {"row": "Tue", "row_id": "tue", "cells": [{"value": 7.0}]},
+                    {"row": "Wed", "row_id": "wed", "cells": [{"value": 9.0}]},
+                ],
+                heatmap_col_values=["9am"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1, 2, 3],
+                total=3,
+            ),
+        )
+        # tbody rows (not thead) — match data-rich cell class as proxy
+        assert html.count("dz-heatmap-cell") == 3
+
+    def test_column_header_count(self) -> None:
+        """Gate 4: thead has 1 + len(heatmap_col_values) <th> elements."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {
+                        "row": "Mon",
+                        "row_id": "mon",
+                        "cells": [{"value": 1.0}, {"value": 2.0}, {"value": 3.0}],
+                    },
+                ],
+                heatmap_col_values=["9am", "12pm", "3pm"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1],
+                total=1,
+            ),
+        )
+        # Extract thead and count <th>
+        import re
+
+        thead_match = re.search(r"<thead[^>]*>(.*?)</thead>", html, re.DOTALL)
+        assert thead_match is not None
+        thead_html = thead_match.group(1)
+        assert thead_html.count("<th") == 4  # 1 empty corner + 3 column labels
+
+    def test_three_tier_threshold_colouring_uses_tokens(self) -> None:
+        """Gate 5 (positive): 2-threshold path references all 3 design tokens."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {
+                        "row": "Low",
+                        "row_id": "low",
+                        "cells": [{"value": 1.0}],
+                    },  # below first (destructive)
+                    {"row": "Mid", "row_id": "mid", "cells": [{"value": 5.0}]},  # between (warning)
+                    {
+                        "row": "High",
+                        "row_id": "high",
+                        "cells": [{"value": 9.0}],
+                    },  # at/above second (success)
+                ],
+                heatmap_col_values=["val"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1, 2, 3],
+                total=3,
+            ),
+        )
+        assert "hsl(var(--destructive)" in html
+        assert "hsl(var(--warning)" in html
+        assert "hsl(var(--success)" in html
+
+    def test_no_hardcoded_hsl_literals(self) -> None:
+        """Gate 5 (negative): pre-cycle-273 red/green literals must not reappear."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {
+                        "row": "R",
+                        "row_id": "r",
+                        "cells": [
+                            {"value": 1.0},
+                            {"value": 5.0},
+                            {"value": 9.0},
+                        ],
+                    },
+                ],
+                heatmap_col_values=["a", "b", "c"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1],
+                total=1,
+            ),
+        )
+        assert "0_72%" not in html  # old destructive literal
+        assert "142_71%" not in html  # old success literal
+
+    def test_cell_value_formatted_one_decimal(self) -> None:
+        """Gate 6: cells render {value | round 1}."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[
+                    {"row": "R", "row_id": "r", "cells": [{"value": 7.283}]},
+                ],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1],
+                total=1,
+            ),
+        )
+        assert "7.3" in html
+        assert "7.283" not in html  # raw float must not leak
+
+    def test_empty_state_when_no_matrix(self) -> None:
+        """Gate 7: heatmap_matrix empty → role=status, no <table>."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[],
+                empty_message="No activity this period.",
+            ),
+        )
+        assert "<table" not in html
+        assert 'role="status"' in html
+        assert "No activity this period." in html
+
+    def test_drill_down_wired_when_action_url(self) -> None:
+        """Gate 8: cells have hx-get iff action_url is non-empty."""
+        with_action = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[{"row": "R", "row_id": "abc123", "cells": [{"value": 5.0}]}],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                action_url="/app/tickets/{id}",
+                items=[1],
+                total=1,
+            ),
+        )
+        assert 'hx-get="/app/tickets/abc123"' in with_action
+        assert "#dz-detail-drawer-content" in with_action
+
+        without_action = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[{"row": "R", "row_id": "abc123", "cells": [{"value": 5.0}]}],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                action_url="",
+                items=[1],
+                total=1,
+            ),
+        )
+        assert "hx-get=" not in without_action
+
+    def test_truncation_footer_conditional(self) -> None:
+        """Gate 9: 'Showing N of M' renders only when total > items|length."""
+        truncated = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[{"row": "R", "row_id": "r", "cells": [{"value": 5.0}]}],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1, 2, 3],  # 3 shown
+                total=10,  # 10 exist
+            ),
+        )
+        assert "Showing 3 of 10" in truncated
+
+        not_truncated = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[{"row": "R", "row_id": "r", "cells": [{"value": 5.0}]}],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1, 2, 3],
+                total=3,
+            ),
+        )
+        assert "Showing" not in not_truncated
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 10: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/heatmap.html",
+            **self._heatmap_kwargs(
+                heatmap_matrix=[{"row": "R", "row_id": "r", "cells": [{"value": 5.0}]}],
+                heatmap_col_values=["a"],
+                heatmap_thresholds=[3.0, 8.0],
+                items=[1],
+                total=1,
+            ),
+        )
+        for banned in (
+            "badge-primary",
+            "badge-success",
+            "badge-warning",
+            "alert-error",
+            "btn-primary",
+            "table-zebra",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_heatmap_routes_to_heatmap_template(self) -> None:
+        """Gate 0 (routing): HEATMAP display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("HEATMAP") == "workspace/regions/heatmap.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
