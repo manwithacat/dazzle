@@ -8114,3 +8114,69 @@ Gate 12 is a regression guard that a future edit reintroducing a hardcoded liter
 - **NEW: `cross-chrome style-locality audit`** — surfaced in site-footer v2 Q8. Should other chrome (marketing-nav, headers) follow the dual-file pattern? Worth a single audit cycle once both footer + nav patterns are stabilized.
 
 ---
+
+## Cycle 298 — 2026-04-20 — contract_audit: auth-2fa (UX-077) — largest remaining gap cleared
+
+**Strategy:** `contract_audit` — promoting PROP-068 from cycle 295's scan
+**Outcome:** 78 → 79 contracts. Cycle 295 backlog fully cleared. **EX-054 filed** for a concerning cryptographic-UX finding (TOTP secrets exfiltrated via external QR service).
+
+**Chosen this cycle.** Last remaining PROP candidate from cycle 295's missing_contracts scan. 441 LOC across 3 surfaces — the biggest single gap in the current catalog. Marked HIGH priority in the PROP row because cryptographic UX deserves explicit governance (cryptographic secrets + 2FA = security-critical).
+
+**Paired contract pattern.** Like `search-flow-fragments.md` (UX-068 — request+response paired), chose a **single `auth-2fa.md` contract covering all 3 surfaces as a flow** rather than 3 separate contracts. The surfaces share so much (auth_page_card macro, canonical TOTP input shape, plain-JS IIFE pattern, CSRF-exempt /auth/* endpoints, button class vocabulary) that separating them would fragment the design story without clarifying anything. The contract documents each surface's unique content separately but pins the shared invariants as cross-surface gates.
+
+**Key findings from close-reading all 3 templates:**
+
+1. **Shared TOTP input pattern** — 5 canonical attributes (`autocomplete="one-time-code"`, `inputmode="numeric"`, `pattern="[0-9]*"`, `maxlength="6"`, `placeholder="000000"`) that must be present for iOS/Android autofill + SMS autofill + password-manager detection to work. Pinned as gate 2.
+
+2. **Session token lives in a hidden `<input>`, not a cookie** (challenge surface). Reason: mid-login flow; user isn't yet fully authenticated. Cookie-based session would require "pending login" cookie state — more attack surface + more complex rollback. Documented as drift-forbidden #4.
+
+3. **Recovery codes are NEVER localStorage-persisted**. Shown once, expected to be copied externally. Drift-forbidden #5.
+
+4. **CSRF exemption is deliberate** — `/auth/` is in `csrf.py:exempt_path_prefixes`. Unlike EX-053 (experience transitions POST'd to a NOT-exempt path), 2FA's plain `fetch()` calls correctly skip the CSRF header requirement. Explicitly cross-referenced in gates + drift-forbidden.
+
+5. **9-endpoint API surface documented** — `/auth/2fa/verify`, `/setup/totp`, `/verify/totp`, `/setup/email-otp`, `/status` (GET), `/totp` (DELETE), `/email-otp` (DELETE), `/recovery/regenerate`, `/challenge`. Useful for future QA probes.
+
+**EX-054 filed (concerning)** — discovered during close-read of `2fa_setup.html:133`:
+
+```html
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=...otpauth-URI...">
+```
+
+The `otpauth://` URI contains the TOTP secret. Every enrollment sends the secret to `api.qrserver.com` over HTTPS. A compromised or malicious QR service could log + exfiltrate the seeds, enabling full 2FA bypass on affected users. Recommended fix: server-side QR render via Python `qrcode` library, return as base64 or data URI in the `/auth/2fa/setup/totp` response. Warrants a dedicated security-focused `finding_investigation` cycle.
+
+**12 v2 open questions** covering: Q1 external-QR security (EX-054), Q2 `alert()` for recovery-code display (blocks Playwright + poor UX), Q3 CSP/SRI absence, Q4 no 429 retry-after surface, Q5 `aria-live` verification, Q6 no copy-all for recovery codes, Q7 JS class-string duplication across setup+settings, Q8 inconsistent `hx-history="false"` placement, Q9 rate-limit messaging inconsistency, Q10 missing confirm on recovery regenerate, Q11 one-way method toggle on challenge, Q12 form-control size drift.
+
+**16 regression tests** in `TestAuth2FAFlow`. **Important choice**: tests read template SOURCE rather than rendering. The three templates extend `site/site_base.html` which needs a full site-context (theme_css, og_meta, nav items, persona data, etc.) to render. Source-level regex assertions are the appropriate verification approach for class-contract + extends-based templates where the rendered output is dominated by parent chrome. Gate 15 (no Alpine/HTMX directives) uses regex to allow the one legitimate HTMX usage (`hx-history="false"` on challenge) while rejecting all others. Gate 16 asserts the `/auth/` prefix is in the CSRF exempt list (cross-references the csrf.py config).
+
+**No drift fixed in templates.** The 3 templates are clean on tokens, aria attributes, CSRF (via exempt prefix). The 2 real drift findings (EX-054 QR security + v2 Q2 alert() UX) both require backend changes or UX-rework that's out of scope for a pure template contract_audit. Deferring to future cycles is appropriate scope discipline.
+
+**Added Contract: pointer headers to all 3 templates** as 2-line comment blocks at top with UX-077 ID + (1/3, 2/3, 3/3) suffixes.
+
+**Cross-app verification** (Heuristic 3): 409/409 workspace + lint + session tests pass (up from 393). No regressions.
+
+**Explore budget used**: 53 → 54.
+
+### Running UX-governance total: 79 contracts
+
+### Cycle 295 backlog fully cleared
+
+All 3 PROP rows from cycle 295's missing_contracts scan now promoted:
+- PROP-068 → UX-077 (this cycle)
+- PROP-069 → UX-075 (cycle 296, Heuristic 1 save)
+- PROP-070 → UX-076 (cycle 297, first dual-file contract)
+
+### Next candidate cycles
+
+OPEN EX rows: 1 (EX-054, concerning).
+
+- **EX-054 `finding_investigation`** — QR-external-service security concern. Requires backend change (return QR as base64 in /auth/2fa/setup/totp response). Cryptographic-UX deserves the raw-layer repro + fix discipline.
+- **`framework_gap_analysis`** — last was cycle 287 (11 cycles ago). Soft threshold is 7. Now strongly overdue. BUT: only 1 OPEN EX row (EX-054), not really 2+ for synthesis.
+- **`missing_contracts` scan** — last was cycle 295 (3 cycles ago). Just under the 3-cycle default.
+- **`cross-shell title harmonisation`** — design-decision cycle
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`cross-chrome style-locality audit`** — site-footer v2 Q8
+
+---

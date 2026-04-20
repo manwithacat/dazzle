@@ -6095,6 +6095,164 @@ class TestWorkspaceContextSelector:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 298 — 2FA flow contract (auth-2fa.md, UX-077) — 3-surface paired contract
+# ---------------------------------------------------------------------------
+
+
+class TestAuth2FAFlow:
+    """auth-2fa.md — paired contract covering 3 surfaces (challenge/setup/settings).
+
+    Cycle 298 — promotes PROP-068 from cycle 295's scan. Tests pin 16
+    structural quality gates across the flow. **Does NOT render the
+    templates** because they extend site_base.html which requires a
+    full site context + theme_css / assets / etc. Instead reads template
+    source and asserts structural invariants — the appropriate approach
+    for class-contract + extends-based templates where the rendered
+    output is dominated by parent chrome.
+    """
+
+    @staticmethod
+    def _read(relpath: str) -> str:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
+        return (root / relpath).read_text()
+
+    # --- Challenge surface ---------------------------------------------------
+
+    def test_challenge_extends_site_base_and_uses_auth_page_card(self) -> None:
+        src = self._read("site/auth/2fa_challenge.html")
+        assert '{% extends "site/site_base.html" %}' in src
+        assert "{% call auth_page_card(" in src
+
+    def test_challenge_has_canonical_totp_input_attributes(self) -> None:
+        src = self._read("site/auth/2fa_challenge.html")
+        # All 5 required attributes on the code input — pinned as gate 2
+        for attr in (
+            'autocomplete="one-time-code"',
+            'inputmode="numeric"',
+            'pattern="[0-9]*"',
+            'maxlength="6"',
+            'placeholder="000000"',
+        ):
+            assert attr in src, f"missing required TOTP attribute: {attr}"
+
+    def test_challenge_has_hidden_session_token_and_method(self) -> None:
+        src = self._read("site/auth/2fa_challenge.html")
+        assert 'id="session_token"' in src
+        assert 'id="method"' in src
+        # Both must be hidden inputs
+        import re
+
+        assert re.search(r'<input type="hidden"[^>]*id="session_token"', src)
+        assert re.search(r'<input type="hidden"[^>]*id="method"', src)
+
+    def test_challenge_sets_hx_history_false(self) -> None:
+        src = self._read("site/auth/2fa_challenge.html")
+        assert 'hx-history="false"' in src
+
+    def test_challenge_email_otp_conditional(self) -> None:
+        """Send-code-to-email button is gated on `email_otp in methods`."""
+        src = self._read("site/auth/2fa_challenge.html")
+        # The conditional must be a defensive `if` around the button
+        assert '{% if "email_otp" in methods %}' in src
+        assert 'id="dz-send-otp"' in src
+
+    def test_challenge_has_use_recovery_link(self) -> None:
+        src = self._read("site/auth/2fa_challenge.html")
+        assert 'id="dz-use-recovery"' in src
+
+    # --- Setup surface -------------------------------------------------------
+
+    def test_setup_has_two_sections_with_hr(self) -> None:
+        src = self._read("site/auth/2fa_setup.html")
+        assert 'id="dz-totp-section"' in src
+        assert 'id="dz-email-otp-section"' in src
+        # An <hr> must separate them
+        assert "<hr" in src
+
+    def test_setup_qr_verify_and_recovery_initially_hidden(self) -> None:
+        src = self._read("site/auth/2fa_setup.html")
+        # The verify form is hidden until fetch succeeds
+        assert 'id="dz-totp-verify" class="hidden"' in src
+        # Recovery section is hidden until codes are generated
+        assert 'id="dz-recovery-section" class="hidden' in src
+
+    def test_setup_has_inline_success_banner(self) -> None:
+        src = self._read("site/auth/2fa_setup.html")
+        assert 'id="dz-auth-success"' in src
+        assert 'role="status"' in src
+
+    # --- Settings surface ----------------------------------------------------
+
+    def test_settings_has_status_loading_placeholder(self) -> None:
+        src = self._read("site/auth/2fa_settings.html")
+        assert 'id="dz-status"' in src
+        assert "Loading status" in src
+
+    def test_settings_has_back_to_app_link(self) -> None:
+        src = self._read("site/auth/2fa_settings.html")
+        assert 'href="/app"' in src
+        assert "Back to App" in src
+
+    def test_settings_has_inline_success_banner(self) -> None:
+        src = self._read("site/auth/2fa_settings.html")
+        assert 'id="dz-auth-success"' in src
+
+    # --- Cross-surface gates -------------------------------------------------
+
+    def test_all_three_surfaces_have_iife_script(self) -> None:
+        """Each template has a scripts_extra block with an IIFE pattern."""
+        for path in (
+            "site/auth/2fa_challenge.html",
+            "site/auth/2fa_setup.html",
+            "site/auth/2fa_settings.html",
+        ):
+            src = self._read(path)
+            assert "{% block scripts_extra %}" in src
+            assert "(function()" in src or "(function ()" in src
+            assert "})()" in src or "})();" in src
+
+    def test_no_alpine_or_htmx_directives(self) -> None:
+        """All three surfaces are plain-JS — no Alpine, no HTMX."""
+        import re
+
+        for path in (
+            "site/auth/2fa_challenge.html",
+            "site/auth/2fa_setup.html",
+            "site/auth/2fa_settings.html",
+        ):
+            src = self._read(path)
+            for banned in ("x-data", "x-show", "@click"):
+                assert banned not in src, f"Alpine directive {banned} in {path}"
+            # HTMX directives (but allow hx-history on challenge — intentional)
+            hx_attrs = re.findall(r"\bhx-[a-z-]+", src)
+            for attr in hx_attrs:
+                assert attr == "hx-history", (
+                    f"unexpected HTMX directive {attr} in {path} — 2FA uses plain fetch()"
+                )
+
+    def test_all_three_surfaces_have_contract_pointer(self) -> None:
+        """Cycle 298 added Contract: pointer headers to all 3 templates."""
+        for path in (
+            "site/auth/2fa_challenge.html",
+            "site/auth/2fa_setup.html",
+            "site/auth/2fa_settings.html",
+        ):
+            src = self._read(path)
+            assert (
+                "Contract: ~/.claude/skills/ux-architect/components/auth-2fa.md (UX-077" in src
+            ), f"missing Contract pointer in {path}"
+
+    def test_auth_2fa_endpoints_are_csrf_exempt(self) -> None:
+        """`/auth/` must be in the CSRF exempt_path_prefixes for 2FA fetches to work."""
+        from dazzle_back.runtime.csrf import configure_csrf_for_profile
+
+        config = configure_csrf_for_profile("standard")
+        assert "/auth/" in config.exempt_path_prefixes
+
+
+# ---------------------------------------------------------------------------
 # Cycle 297 — Marketing site-footer contract (UX-076)
 # ---------------------------------------------------------------------------
 
