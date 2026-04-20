@@ -9091,3 +9091,65 @@ Five classes actively gated. dist/ drift (cycle 313's 3rd class) remains manual 
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 315 — 2026-04-20 — helper_audit: HTMLResponse canonical wrapper in fragment_routes.py
+
+**Strategy:** helper_audit (Heuristic 2) — cycle 313 flagged this candidate; concrete, scoped, low-risk
+**Outcome:** Found 5 sites in `src/dazzle_back/runtime/fragment_routes.py` using raw `HTMLResponse(...)` for inline error HTML while the same file defines `_html(content)` as the canonical wrapper with a docstring explicitly explaining why it exists ("so that static-analysis tools can distinguish template-rendered output from raw string interpolation"). Migrated all 5 to `_html(...)`. Removed the now-unused `HTMLResponse` import. 112 fragment tests pass.
+
+**The drift (Heuristic 2 — helper-called-but-bypassed):**
+
+`_html` defined at line 19:
+```python
+def _html(content: str) -> Response:
+    """Return Jinja2-rendered HTML as a Response.
+
+    Uses ``starlette.responses.Response`` with an explicit media type so
+    that static-analysis tools can distinguish template-rendered output
+    from raw string interpolation (which would be flagged as XSS).
+    """
+    return Response(content=content, media_type="text/html")
+```
+
+The file has 7 `return _html(...)` call sites (happy paths) and previously had 5 `return HTMLResponse(...)` call sites (all error/fallback paths). Each bypass was inline error HTML built in the function body — ≤1 line of `<div class="p-3 text-sm text-error">...</div>`.
+
+**Security impact: none today.** All dynamic inputs were already `html_escape(source)`d. The audit's value was hygiene + maintaining the static-analysis discrimination that the `_html` helper was designed to enable. Future semgrep rules that distinguish "template-rendered" from "string-interpolated" HTML can now trust the file's pattern.
+
+**Other HTMLResponse call sites scanned:**
+
+| File | Sites | Status |
+|---|---|---|
+| `page_routes.py` | 5 | Wrap `render_page()` / `render_fragment()` output — canonical |
+| `site_routes.py` | 1 | Wraps `render_site_page(...)` — canonical |
+| `exception_handlers.py` | 3 | Wrap rendered shell templates — canonical |
+| `workspace_rendering.py` | 1 | Wraps `render_fragment()` — canonical |
+| `experience_routes.py` | 4 | Wrap rendered output — canonical (with `# nosemgrep`) |
+| `route_generator.py` | 4 | Wrap rendered output — canonical |
+| `htmx.py` | 1 | `_fragment_response()` helper itself — canonical |
+| `response_helpers.py` | 1 | Wrapper constructor — canonical |
+| `route_overrides.py` | 1 | Inside a docstring example — not actual code |
+| `fragment_routes.py` | **5 → 0** | **FIXED this cycle** |
+
+Total: 26 call sites scanned, 0 bypasses post-cycle.
+
+**Heuristic 1 verified:** grepped for `HTMLResponse(` AND `HTMLResponse(["\']...` (raw string first-arg) separately. Only fragment_routes.py matched the inline-string pattern. Everything else canonically wraps render-helper output. No framework-wide audit needed; the gap was local.
+
+**Heuristic 3 (cross-app):** N/A — no DSL- or app-behaviour-changing code. `tests/unit/ -k fragment`: 112 passed.
+
+**Side-observation noted for follow-up:** fragment_routes.py's inline error HTML uses DaisyUI tokens `text-error` and `text-base-content/50`. Cycle 17 closed EX-001 "82 files with DaisyUI tokens" but these 3 sites slipped through (they're inside Python string literals, not `.html` templates, so prior-cycle template sweeps missed them). Small migration target for a future cycle.
+
+**Explore budget used**: 70 → 71.
+
+### Running UX-governance total: 79 contracts (unchanged — refactor cycle)
+
+### Next candidate cycles
+
+- **DaisyUI token sweep in Python-embedded HTML strings** — `text-error` + `text-base-content/50` in fragment_routes.py (≤3 sites). Migrate to `text-[hsl(var(--error))]` + `text-[hsl(var(--muted-foreground))]`. Smaller than a template-file migration; quick win.
+- **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding.
+- **Measure mypy against `src/dazzle_back/runtime`** — if <3s, add as a 3rd preflight step
+- **Monitor lint allowlist drift** — opportunistic
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+
+---
