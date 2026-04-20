@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.1] - 2026-04-20
+
+Patch bump. Two framework-level issues closed with regression tests; one stale trial-backlog entry cleaned up; three UX contract pointers added; seed generator email-uniqueness fix.
+
+### Fixed
+- **Fidelity scoring no longer drops collisions when surfaces share a name (#828).** `rendered_pages` was keyed by surface name alone, so two surfaces sharing a name but targeting different entities (e.g. an app's own `feedback_create` vs. the framework's auto-synthesised `feedback_create` on FeedbackReport) silently collided — the scorer then compared the losing surface's fields against the winning surface's HTML and produced ghost structural gaps on a surface that actually rendered its inputs correctly. AegisMark saw 99.65% fidelity where 100% was correct. Fix: `rendered_pages` now keyed by `(surface_name, entity_ref)` tuple; `PageContext.entity_ref` added so compiled contexts are self-describing; `score_appspec_fidelity` signature updated (breaking change on internal function — 2 callers updated in-place per ADR-0003). Regression guard: `TestRenderedPagesCompositeKey` pins the colliding-surface-name case.
+- **Workspace dashboards now render inferred primary-action buttons (#827).** When a workspace region references an entity that has a CREATE surface and the current persona can create it, the workspace header shows a "New X" button. Framework-inferred — zero DSL changes. Filter happens per-request via `_user_can_mutate`. Regression tests in `TestWorkspacePrimaryActionCandidates` pin 6 cases (single-region emission, missing CREATE surface, dedup, multi-source fan-out, label fallback, slug form).
+- **Seed generator: EMAIL_FROM_NAME and USERNAME_FROM_NAME no longer collapse to duplicate "user" strings when `source_field` misses.** Robust fallback chain (`source_field → name → full_name → first+last → random`) + uniqueness suffix (`.NNNN`). Every seed row produces a distinct email/username even when faker's name pool repeats. Fixed symptom across 4 example-app blueprints where 11-row+ seeds tripped the circuit breaker. Auto-propose default switched from `"full_name"` → `"name"` to match `person_name` output.
+
+### Changed
+- **3 UX contract pointers added** to templates that had contracts but no `Contract:` header reference: `filter_bar.html` (UX-033), `search_input.html`, `workspace/regions/diagram.html` (UX-061).
+
+### Agent Guidance
+- **Heuristic 1 (raw-layer repro before framework fix)** validated again: TR-1 "--fresh-db truncation silently failing" had a class-names-vs-table-names hypothesis that turned out to be wrong — the actual root cause was `.env` loading, already fixed in #814. Marked the trial-backlog entry RESOLVED.
+
 ## [0.58.0] - 2026-04-20
 
 Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issues closed (#823, #824, #825, #826), two latent runtime bugs found via static-debt sweep, 19 blueprint errors across three example apps, and a trial-harness gate that prevents the agent from landing a devastating verdict without recording any friction observations.
