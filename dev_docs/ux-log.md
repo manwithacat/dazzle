@@ -10602,3 +10602,21 @@ Cycles 336-339 increasingly acknowledged diminishing returns but kept producing 
 - **`cross-shell title harmonisation`** — design decision
 
 ---
+
+## Cycle 341 — 2026-04-20 — short-circuit continues (auto-pause)
+
+**Preflight:** green (46 pass / 1 skip, mypy clean, dist warn clean).
+
+**Signals since cycle 340:** none.
+
+**Backlog state:** unchanged. 0 PENDING / IN_PROGRESS / REGRESSION / QA-PENDING rows.
+
+**Open loop-filed issues:** #829-835 still open. No closures → no FILED→FIXED sweep material.
+
+**Step 6:** skipped per secondary short-circuit rule (now 6 consecutive zero-finding Step-6 cycles including 340's skip).
+
+**Log discipline:** enforcing cycle 340's lesson — no filler output when the rule fires. Entry kept minimal.
+
+**Explore budget:** 95 → 95 (unchanged).
+
+---
