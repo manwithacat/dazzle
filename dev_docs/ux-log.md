@@ -8318,3 +8318,70 @@ Started by grep-scanning templates for `<form method="post">` (cycle 292's class
 - **`cross-chrome style-locality audit`** — site-footer v2 Q8
 
 ---
+
+## Cycle 301 — 2026-04-20 — finding_investigation: gap doc Phase 1 filed as #830
+
+**Strategy:** `finding_investigation` — follow through on cycle 300 gap doc's explicit recommendation
+**Outcome:** Phase 1 of external-resource-integrity gap filed as issue **#830**. Complements issue #829 (EX-054, QR service sub-case).
+
+**Chosen this cycle.** Cycle 300's gap doc at `dev_docs/framework-gaps/2026-04-20-external-resource-integrity.md` recommended: "File Phase 1 as focused GitHub issue — SRI hardening, ~10 lines HTML. Could be a /issues pickup or paired with #829." That's the highest-leverage move available. Strategy classification: closest match is `finding_investigation` since the "finding" is the gap-level synthesis and the action is filing a tracking issue with code-level evidence.
+
+**Alternative considered & rejected**: implement Phase 1 directly. Would require fetching each CDN URL to compute SHA-384 hashes (network I/O + trust each CDN to be uncompromised during the fetch). Also hash-pinning introduces ongoing maintenance burden that benefits from human triage + version-bump workflow coordination. Same reasoning that cycle 299 used for EX-054 → file #829 instead of fixing: coordinated framework changes with trust decisions warrant human review.
+
+**Pre-filing due diligence**: searched existing issues for `SRI|integrity|CDN|CSP`. Found:
+- #671 (CLOSED): CDN tag lag causes stale styles — different symptom
+- #637 (CLOSED): `--local-assets` flag for dev mode — Phase 2-adjacent but scoped to local dev, not production security
+- #829 (OPEN, cycle 299): QR service TOTP exfiltration — one instance of the same class, orthogonal scope
+
+No duplicate. Filing is correct.
+
+**Issue #830 includes:**
+- Summary + threat model (compromised CDN = full XSS)
+- Full 9-template table with per-load risk classification
+- Zero `integrity=` attributes in templates (`grep` evidence)
+- Concrete fix (before/after HTML example)
+- Hash computation recipe (`curl | openssl dgst -sha384 -binary | openssl base64 -A`)
+- Regression test recommendation (parallel to cycle 284's EX-051 None-vs-default lint)
+- 3 open questions (Tailwind CDN unpinned, jsdelivr/gh per-version SRI maintenance, Mermaid patch drift)
+- Scope fence: "Phase 1 scope is SRI attributes only — does NOT change CDN sources or CSP config"
+- References: gap doc path, cross-ref #829, cycle 300 log entry
+
+**Labeled `needs-triage`** for `/issues` pickup on its next run.
+
+**Gap doc updated** with Status tracking table:
+
+| Phase | Status | Issue/Commit |
+|-------|--------|--------------|
+| 1 — SRI attributes | FILED | #830 (this cycle) |
+| 2 — Vendor Tailwind + Dazzle own dist | OPEN | not filed |
+| 3 — CSP default alignment | OPEN | not filed |
+| 4 — Template lint rule | OPEN | not filed |
+
+Phase 2-4 are higher-effort and benefit from Phase 1 landing first (so the implementer can see which CDN loads survived vs. got vendored).
+
+**No code changes** this cycle. Pure reasoning + issue-filing, mirroring cycle 299's EX-054 pattern.
+
+**Cross-cycle pattern worth noting**: cycles 299 and 301 both closed with FILE-not-FIX for framework-level security concerns. This is the appropriate pattern when:
+- Fix involves dependency decisions (#829: segno vs. qrcode-js vs. CSP)
+- Fix involves trust decisions at commit time (#830: hash pinning for CDN loads)
+- Fix spans multiple team disciplines (template + middleware + CSS-build)
+
+Cycles 292 (EX-053 CSRF) and 294 (workspace-heading) both FIXED directly — appropriate when the fix is clearly scoped, the mechanism is certain, and no trust decisions are required. The pattern split is: **"is the fix a pure code refactor, or does it embed trust/dependency decisions?"** Code refactor → FIX. Trust decisions → FILE.
+
+**Explore budget used**: 56 → 57.
+
+### Running UX-governance total: 79 contracts (unchanged — investigation cycle)
+
+### Next candidate cycles
+
+OPEN EX rows: 0. Open gap-doc phases: 3 (Phases 2-4 of external-resource-integrity.md).
+
+- **`missing_contracts` scan** — 6 cycles since cycle 295. Catalog at 79 contracts; growing enough that a re-scan might find more uncovered patterns.
+- **`row-click-keyboard-affordance-gap` execution** — still parked, needs browser verification
+- **`cross-shell title harmonisation`** — design decision, still queued
+- **`dormant_primitives_audit`** — awaiting user direction
+- **`orphan_lint_rule`** — automatic orphan detection
+- **`canonical_pointer_lint`** — lower priority
+- **`cross-chrome style-locality audit`** — site-footer v2 Q8
+
+---
