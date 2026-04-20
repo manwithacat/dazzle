@@ -2349,6 +2349,320 @@ class TestTimelineRegionTemplate:
         assert DISPLAY_TEMPLATE_MAP.get("TIMELINE") == "workspace/regions/timeline.html"
 
 
+# ---------------------------------------------------------------------------
+# Cycle 277 — Queue region contract (UX-068)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestQueueRegionTemplate:
+    """Queue region renders ops-style work queues with inline transitions.
+
+    Cycle 277 — contracts queue.html. Template was already drift-clean on
+    tokens. This region is the richest yet: count badge + metrics strip +
+    filter bar + attention-accented rows (dual signal: border + tint) +
+    inline HTMX transition action buttons.
+    """
+
+    def _queue_kwargs(self, **overrides):
+        defaults = {
+            "title": None,
+            "items": [],
+            "columns": [
+                {"key": "name", "label": "Name", "type": "text"},
+                {"key": "priority", "label": "Priority", "type": "badge"},
+            ],
+            "display_key": "name",
+            "total": 0,
+            "metrics": [],
+            "filter_columns": [],
+            "active_filters": {},
+            "action_url": "",
+            "action_id_field": "id",
+            "queue_transitions": [],
+            "queue_status_field": "",
+            "queue_api_endpoint": "",
+            "region_name": "review_queue",
+            "endpoint": "/api/workspaces/w/regions/review_queue",
+            "empty_message": "Queue is empty.",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_renders_canonical_wrapper(self) -> None:
+        """Gate 1: dz-queue-region outer wrapper."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "Alpha", "priority": "high"}],
+                total=1,
+            ),
+        )
+        assert "dz-queue-region" in html
+
+    def test_count_badge_when_total_nonzero(self) -> None:
+        """Gate 2: total > 0 → count badge with primary token."""
+        with_count = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "Alpha", "priority": "high"}],
+                total=42,
+            ),
+        )
+        assert ">42<" in with_count
+        assert "bg-[hsl(var(--primary))]" in with_count
+
+    def test_metrics_strip_when_metrics_present(self) -> None:
+        """Gate 3: metrics → dz-queue-metrics with one tile per metric."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "A", "priority": "low"}],
+                total=1,
+                metrics=[
+                    {"label": "Critical", "value": 3},
+                    {"label": "Warning", "value": 7},
+                ],
+            ),
+        )
+        assert "dz-queue-metrics" in html
+        assert ">Critical<" in html
+        assert ">Warning<" in html
+
+    def test_filter_bar_when_filter_columns_present(self) -> None:
+        """Gate 4: filter_columns → <select>s with hx-get + hx-include."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "A", "priority": "low"}],
+                total=1,
+                filter_columns=[
+                    {
+                        "key": "status",
+                        "label": "Status",
+                        "options": ["open", "closed"],
+                    },
+                ],
+            ),
+        )
+        assert "dz-queue-filters" in html
+        assert "filter-bar" in html
+        assert "<select" in html
+        assert 'hx-get="/api/workspaces/w/regions/review_queue"' in html
+        assert 'hx-include="closest .filter-bar"' in html
+        assert 'name="filter_status"' in html
+
+    def test_row_count_matches_items_length(self) -> None:
+        """Gate 5: dz-queue-row count equals len(items)."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[
+                    {"id": "1", "name": "A", "priority": "high"},
+                    {"id": "2", "name": "B", "priority": "low"},
+                    {"id": "3", "name": "C", "priority": "medium"},
+                ],
+                total=3,
+            ),
+        )
+        assert html.count("dz-queue-row") == 3
+
+    def test_attention_critical_dual_signal(self) -> None:
+        """Gate 6 (critical): border + tint use --destructive."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Urgent",
+                        "priority": "critical",
+                        "_attention": {"level": "critical", "message": "Blocker"},
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "border-l-[hsl(var(--destructive))]" in html
+        assert "bg-[hsl(var(--destructive)/0.04)]" in html
+        assert "Blocker" in html
+
+    def test_attention_warning_dual_signal(self) -> None:
+        """Gate 6 (warning): border + tint use --warning."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "Warn",
+                        "priority": "medium",
+                        "_attention": {"level": "warning", "message": "Stale"},
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "border-l-[hsl(var(--warning))]" in html
+        assert "bg-[hsl(var(--warning)/0.04)]" in html
+
+    def test_attention_notice_dual_signal(self) -> None:
+        """Gate 6 (notice): border + tint use --primary."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[
+                    {
+                        "id": "1",
+                        "name": "New",
+                        "priority": "low",
+                        "_attention": {"level": "notice", "message": "Recent"},
+                    },
+                ],
+                total=1,
+            ),
+        )
+        assert "border-l-[hsl(var(--primary))]" in html
+        assert "bg-[hsl(var(--primary)/0.04)]" in html
+
+    def test_badge_column_delegates_to_status_badge(self) -> None:
+        """Gate 7: badge-typed columns render via render_status_badge."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "A", "priority": "high"}],
+                total=1,
+            ),
+        )
+        assert "dz-status-badge" in html
+
+    def test_transition_button_wiring(self) -> None:
+        """Gate 10: transition buttons use hx-put + hx-vals + hx-ext=json-enc."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "abc", "name": "A", "priority": "open", "status": "open"}],
+                total=1,
+                queue_transitions=[
+                    {"label": "Close", "to_state": "closed"},
+                    {"label": "Archive", "to_state": "archived"},
+                ],
+                queue_status_field="status",
+                queue_api_endpoint="/api/ticket",
+            ),
+        )
+        assert 'hx-put="/api/ticket/abc"' in html
+        assert '"status": "closed"' in html
+        assert '"status": "archived"' in html
+        assert 'hx-ext="json-enc"' in html
+        assert "#region-review_queue" in html
+
+    def test_transition_current_state_suppressed(self) -> None:
+        """Gate 9: transitions whose to_state matches current state are NOT rendered."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "abc", "name": "A", "priority": "open", "status": "open"}],
+                total=1,
+                queue_transitions=[
+                    {"label": "Open again", "to_state": "open"},
+                    {"label": "Close", "to_state": "closed"},
+                ],
+                queue_status_field="status",
+                queue_api_endpoint="/api/ticket",
+            ),
+        )
+        # "Close" transition button present (Jinja whitespace around label varies)
+        assert "Close" in html
+        # "Open again" transition button NOT present (current state is "open")
+        assert "Open again" not in html
+
+    def test_button_group_has_stop_propagation(self) -> None:
+        """Gate 11: button-group wrapper has inline event.stopPropagation().
+
+        Same class as grid-region's ref-anchor stopPropagation exception —
+        prevents the row's hx-get drill-down from firing when clicking a
+        transition button.
+        """
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "abc", "name": "A", "priority": "open", "status": "open"}],
+                total=1,
+                queue_transitions=[{"label": "Close", "to_state": "closed"}],
+                queue_status_field="status",
+                queue_api_endpoint="/api/ticket",
+                action_url="/app/ticket/{id}",
+            ),
+        )
+        assert 'onclick="event.stopPropagation()"' in html
+
+    def test_empty_state_when_no_items(self) -> None:
+        """Gate 12: empty items → role=status, no .dz-queue-row."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[],
+                total=0,
+                empty_message="No work to do.",
+            ),
+        )
+        assert "dz-queue-row" not in html
+        assert 'role="status"' in html
+        assert "No work to do." in html
+
+    def test_truncation_footer_conditional(self) -> None:
+        """Gate 13: 'Showing N of M' renders iff total > len(items)."""
+        truncated = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[
+                    {"id": "1", "name": "A", "priority": "low"},
+                    {"id": "2", "name": "B", "priority": "low"},
+                ],
+                total=100,
+            ),
+        )
+        assert "Showing 2 of 100" in truncated
+
+        not_truncated = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "A", "priority": "low"}],
+                total=1,
+            ),
+        )
+        assert "Showing" not in not_truncated
+
+    def test_no_daisyui_leaks(self) -> None:
+        """Gate 14: zero DaisyUI class references."""
+        html = render_fragment(
+            "workspace/regions/queue.html",
+            **self._queue_kwargs(
+                items=[{"id": "1", "name": "A", "priority": "low"}],
+                total=1,
+                queue_transitions=[{"label": "Close", "to_state": "closed"}],
+                queue_status_field="status",
+                queue_api_endpoint="/api/ticket",
+            ),
+        )
+        for banned in (
+            "alert-info",
+            "alert-warning",
+            "alert-error",
+            "alert-success",
+            "badge-primary",
+            "btn-primary",
+        ):
+            assert banned not in html, f"DaisyUI leak: {banned!r}"
+
+    def test_queue_routes_to_queue_template(self) -> None:
+        """Gate 0 (routing): QUEUE display mode resolves to this template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert DISPLAY_TEMPLATE_MAP.get("QUEUE") == "workspace/regions/queue.html"
+
+
 # Step 8 — Kanban display mode (#274)
 # ---------------------------------------------------------------------------
 
