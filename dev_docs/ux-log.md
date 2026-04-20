@@ -8740,3 +8740,52 @@ Candidates:
 - **`canonical_pointer_lint`** — lower priority
 
 ---
+
+## Cycle 308 — 2026-04-20 — page-route-coverage: site/ top-level + layout detection
+
+**Strategy:** infrastructure extension — resolve cycle 307's deferred "site/ top-level needs layout detection" candidate
+**Outcome:** Lint coverage expanded from 9 → 12 page templates. Layout-detection mechanism added to correctly exclude `site_base.html`. `PAGE_FAMILY_DIRS` tuple migrated to glob-pattern `PAGE_TEMPLATE_PATTERNS` for cleaner scope control.
+
+**Chosen this cycle.** Cycle 307 explicitly flagged layout detection as the blocker for adding `site/`. Natural follow-through. Small, focused extension of working infrastructure. Alternative strategies considered: `missing_contracts` scan (still overdue but low yield expected), `canonical_pointer_lint` (4th horizontal-discipline lint — valid but each one is smaller marginal value). Picked layout-extension because it CLOSES a known deferred candidate.
+
+**Three-part extension:**
+
+1. **Glob patterns replace prefix strings.** Cycle 307 used `PAGE_FAMILY_DIRS = ("site/auth/", "app/")` with `str.startswith()` matching. That can't cleanly express "site/ top-level but not site/auth/ or site/sections/" — prefix matching is too coarse. Migrated to `PAGE_TEMPLATE_PATTERNS = ("site/auth/*.html", "app/*.html", "site/*.html")` using `Path.match()` which does NOT cross `/` with `*`. Now `site/*.html` matches site/page.html but NOT site/auth/login.html.
+
+2. **Layout template detection.** Added `_collect_layout_templates()` — scans all templates for `{% extends "X" %}` and returns the set of X values. These are "extended by others" → layouts, NOT served directly. `_collect_page_templates()` now excludes any template in this set.
+
+3. **All 4 existing test gates migrated** to use PAGE_TEMPLATE_PATTERNS + Path.match semantics. `test_page_family_dirs_match_real_directories` renamed to `test_page_template_patterns_match_real_templates`.
+
+**Post-extension coverage:**
+- 12 page templates total (up from 9 in cycle 307, up from 7 in cycle 306)
+- 9 served by render helpers (4 site/auth + 2 app + 3 site/ top-level: page, 403, 404)
+- 3 allowlisted (2FA templates pending #831)
+- **`site_base.html` correctly excluded** as a layout (extended by page.html, 403.html, 404.html, site/auth/* → 7+ direct children)
+- 0 unallowed failures
+
+**Verified site_base.html exclusion works.** Manual report shows it's absent from the page-like set even though it matches `site/*.html` pattern — layout detection caught it as expected.
+
+**Meta-observation: compounding infrastructure pays off across cycles.**
+- Cycle 306: lint for 1 family, 1 render pattern → 7 templates tracked
+- Cycle 307: +1 family, +1 render pattern → 9 templates (29% increase for ~30 LOC)
+- Cycle 308: +1 family (with layout detection) → 12 templates (33% more)
+
+Each extension took <15 min of work. The infrastructure accumulates leverage — lint config changes produce wider coverage at near-zero marginal cost. Contrast with contract_audit cycles where scope is fixed per component.
+
+**Cross-app verification** (Heuristic 3): 420/420 tests pass. No regressions. Ruff format applied. Module docstring updated to reflect full coverage evolution (cycles 306-308).
+
+**Explore budget used**: 63 → 64.
+
+### Running UX-governance total: 79 contracts (unchanged — infrastructure extension)
+
+### Next candidate cycles
+
+- **`canonical_pointer_lint`** — 4th horizontal-discipline lint. Enforces `{# Contract: ~/.claude/skills/ux-architect/components/<name>.md (UX-NNN)? #}` shape on all UX-contracted templates.
+- **Apply orphan_lint pattern to Python modules** — fresh horizontal-discipline target.
+- **`missing_contracts` scan** — 13 cycles since 295
+- **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
+- **`row-click-keyboard-affordance-gap`** — parked, browser needed
+- **`cross-shell title harmonisation`** — design decision
+- **`dormant_primitives_audit`** — awaiting user direction
+
+---

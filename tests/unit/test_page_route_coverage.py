@@ -13,13 +13,17 @@ found `site/auth/2fa_*.html` in this state: templates EXIST, cycle 298
 contract tests pass (source-level assertions), but no `render_site_page`
 call serves them.
 
-Scope: only `site/auth/` family for v1 — the original EX-055 site. Can
-be extended to `site/`, `app/` top-level, etc. in future cycles if the
-pattern proves valuable.
+Coverage evolution:
+- Cycle 306: `site/auth/` family only (EX-055 site, 7 templates)
+- Cycle 307: added `app/` + 2nd render regex (`_render_app_shell_error`)
+- Cycle 308: added `site/` top-level + layout-template detection so
+  `site_base.html` is correctly excluded (it's extended by children,
+  not served directly)
 
-Convention: a template is page-like if (a) it lives under a
-PAGE_FAMILY_DIRS prefix AND (b) its filename does not start with `_`
-(underscore-prefixed files are partials, scripts, or shared fragments).
+Convention: a template is page-like if ALL of:
+(a) matches a `PAGE_TEMPLATE_PATTERNS` glob (Path.match: `*` doesn't cross `/`)
+(b) filename does not start with `_` (underscore = partial / script / fragment)
+(c) is NOT in `_collect_layout_templates()` (not extended by any other template)
 """
 
 from __future__ import annotations
@@ -32,19 +36,20 @@ TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle_ui" / "templates"
 DAZZLE_BACK_ROOT = REPO_ROOT / "src" / "dazzle_back"
 DAZZLE_UI_ROOT = REPO_ROOT / "src" / "dazzle_ui"
 
-# Directories whose non-underscore templates are expected to be served by
-# a Python page route. Started with `site/auth/` (cycle 306) — the family
-# where EX-055 surfaced. Cycle 307 added `app/` once the regex was
-# broadened to recognise `_render_app_shell_error(template_name=)`.
+# Glob patterns matching templates that are expected to be served by a
+# Python page route. Pattern semantics use `Path.match()` which does NOT
+# cross `/` with `*` — so `site/*.html` matches site/page.html but NOT
+# site/auth/foo.html.
 #
-# NOT including `site/` top-level because:
-# - site_base.html is a layout (extended, not served)
-# - site/sections/ and site/includes/ are dynamic-loaded fragments
-# - the top-level pages (page.html, 403, 404) ARE served but adding
-#   `site/` as a prefix would sweep in the subdirectories above
-# If we want to cover those individually, add them to a separate
-# INDIVIDUAL_REQUIRED list in a future cycle.
-PAGE_FAMILY_DIRS: tuple[str, ...] = ("site/auth/", "app/")
+# Started with `site/auth/` (cycle 306) — the family where EX-055
+# surfaced. Cycle 307 added `app/`. Cycle 308 added `site/` top-level
+# + layout-template detection so site_base.html (extended, not served)
+# is correctly excluded.
+PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
+    "site/auth/*.html",
+    "app/*.html",
+    "site/*.html",
+)
 
 # Page templates that genuinely should NOT be served by a page route
 # (e.g. the template is consumed by a different mechanism, or the
@@ -72,15 +77,39 @@ _RENDER_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
+_EXTENDS_RE = re.compile(r'{%\s*extends\s+["\']([^"\']+)["\']')
+
+
+def _collect_layout_templates() -> set[str]:
+    """Find templates that are extended by others — these are layouts, not pages.
+
+    A page is something a route SERVES. A layout is something other templates
+    EXTEND via `{% extends %}`. Layout templates shouldn't be flagged as
+    unserved — they're structurally not meant to be served directly.
+
+    Example: `site/site_base.html` is extended by `site/page.html`,
+    `site/403.html`, `site/404.html`, `site/auth/login.html` etc. The base
+    itself is not served — only its children are.
+    """
+    layouts: set[str] = set()
+    for p in TEMPLATES_ROOT.rglob("*.html"):
+        for m in _EXTENDS_RE.finditer(p.read_text()):
+            layouts.add(m.group(1))
+    return layouts
+
+
 def _collect_page_templates() -> set[str]:
-    """Every non-underscore .html file under a PAGE_FAMILY_DIRS prefix."""
+    """Every non-underscore .html file matching PAGE_TEMPLATE_PATTERNS, excluding layouts."""
+    layouts = _collect_layout_templates()
     pages: set[str] = set()
     for p in TEMPLATES_ROOT.rglob("*.html"):
         rel = p.relative_to(TEMPLATES_ROOT).as_posix()
-        if not any(rel.startswith(prefix) for prefix in PAGE_FAMILY_DIRS):
+        if not any(Path(rel).match(pattern) for pattern in PAGE_TEMPLATE_PATTERNS):
             continue
         if p.name.startswith("_"):
             continue  # partial / script / shared fragment
+        if rel in layouts:
+            continue  # layout, extended by others, not served directly
         pages.add(rel)
     return pages
 
@@ -104,7 +133,7 @@ def _compute_unserved_pages() -> set[str]:
 
 
 class TestPageRouteCoverage:
-    """Every page template under PAGE_FAMILY_DIRS must be served by a route.
+    """Every page template under PAGE_TEMPLATE_PATTERNS must be served by a route.
 
     Surfaces EX-055-class bugs at test-time — templates that ship with
     full styling + cycle-298-style source-level test coverage but zero
@@ -116,7 +145,7 @@ class TestPageRouteCoverage:
         unserved = _compute_unserved_pages()
         unallowed = unserved - INDIVIDUAL_ALLOWLIST.keys()
         assert not unallowed, (
-            "\n\nPage template(s) under PAGE_FAMILY_DIRS with no "
+            "\n\nPage template(s) under PAGE_TEMPLATE_PATTERNS with no "
             "render_site_page() call serving them:\n"
             + "\n".join(f"  - {t}" for t in sorted(unallowed))
             + "\n\nEither wire a page route in "
@@ -147,20 +176,19 @@ class TestPageRouteCoverage:
         )
 
     def test_allowlist_entries_are_in_page_families(self) -> None:
-        """Allowlist must target templates in one of PAGE_FAMILY_DIRS.
+        """Allowlist must target templates matching PAGE_TEMPLATE_PATTERNS.
 
-        A template outside PAGE_FAMILY_DIRS doesn't need this lint — the
+        A template outside the patterns doesn't need this lint — the
         orphan_lint or other coverage handles it. Stale allowlist entries
-        (from a directory that used to be a page-family but no longer is)
-        should be removed.
+        (from a pattern that no longer matches) should be removed.
         """
         misplaced = {
             t
             for t in INDIVIDUAL_ALLOWLIST
-            if not any(t.startswith(prefix) for prefix in PAGE_FAMILY_DIRS)
+            if not any(Path(t).match(pattern) for pattern in PAGE_TEMPLATE_PATTERNS)
         }
         assert not misplaced, (
-            f"\n\nAllowlist entries outside PAGE_FAMILY_DIRS={PAGE_FAMILY_DIRS}:\n"
+            f"\n\nAllowlist entries outside PAGE_TEMPLATE_PATTERNS={PAGE_TEMPLATE_PATTERNS}:\n"
             + "\n".join(f"  - {t}" for t in sorted(misplaced))
             + "\n\nThese don't belong in this lint's allowlist."
         )
@@ -174,15 +202,15 @@ class TestPageRouteCoverage:
                 f"cite a gap doc, EX row, GitHub issue, or cycle number"
             )
 
-    def test_page_family_dirs_match_real_directories(self) -> None:
-        """Guard against stale PAGE_FAMILY_DIRS entries."""
+    def test_page_template_patterns_match_real_templates(self) -> None:
+        """Guard against stale PAGE_TEMPLATE_PATTERNS entries."""
         all_templates = {
             p.relative_to(TEMPLATES_ROOT).as_posix() for p in TEMPLATES_ROOT.rglob("*.html")
         }
-        for prefix in PAGE_FAMILY_DIRS:
-            matching = [t for t in all_templates if t.startswith(prefix)]
+        for pattern in PAGE_TEMPLATE_PATTERNS:
+            matching = [t for t in all_templates if Path(t).match(pattern)]
             assert matching, (
-                f"PAGE_FAMILY_DIRS[{prefix!r}] matches zero templates; remove it from the tuple."
+                f"PAGE_TEMPLATE_PATTERNS[{pattern!r}] matches zero templates; remove it from the tuple."
             )
 
 
@@ -192,7 +220,7 @@ def print_coverage_report() -> None:
     pages = _collect_page_templates()
     rendered = _collect_rendered_pages()
     unserved = _compute_unserved_pages()
-    print(f"page templates under {PAGE_FAMILY_DIRS}: {len(pages)}")
+    print(f"page templates under {PAGE_TEMPLATE_PATTERNS}: {len(pages)}")
     print(f"served by render_site_page: {len(pages & rendered)}")
     print(f"unserved: {len(unserved)}")
     if unserved:
