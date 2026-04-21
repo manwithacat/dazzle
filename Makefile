@@ -130,6 +130,14 @@ test-ux-deep: test-ux-preflight
 	mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/ \
 	     --ignore-missing-imports --exclude 'eject'
 
+# On-demand half-finished-internals audit. Not part of preflight — regenerates
+# dev_docs/audit-internals.md with two high-noise sections (IR field orphans,
+# module import-graph orphans) for loop triage. Real findings from this shape:
+# #834 (hot_reload.py). Expected FP rate is high (cycle 328 measured ~83% for
+# module orphans); report format supports human skimming, not blocking CI.
+audit-internals:
+	python tests/unit/audit_internals.py
+
 test-integration:
 	pytest tests/integration/ -v
 
