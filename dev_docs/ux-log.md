@@ -10801,3 +10801,30 @@ with cross-refs to #829 + #831. Issue describes the three-layer wiring fix
 **Explore budget:** 95 → 96.
 
 ---
+
+## Cycle 368 — 2026-04-21 — framework_gap_analysis: IR policy-field drift
+
+**Strategy:** `framework_gap_analysis`. Cycle 367's TwoFactorConfig investigation
+revealed a pattern that likely generalises: IR policy-type declared, DSL parser
+populates it, runtime ignores it. Heuristic 1 raw-layer checks on 4 candidate
+clusters (messaging.ThrottleSpec, governance.TenantProvisioningSpec,
+grants.GrantRelationSpec, hless.StreamSpec) confirmed the same drift shape — DSL
+parser produces, runtime does not consume.
+
+**Candidates considered:**
+- finding_investigation on messaging.* cluster — would have produced another
+  isolated issue; gap analysis is higher leverage
+- framework_gap_analysis — the 4-cluster convergence deserves consolidation
+- finding_investigation on compliance module orphans — saved for a future
+  cycle
+
+**Picked:** framework_gap_analysis. Synthesises 6 clusters (2FA, messaging,
+governance tenant-provisioning, grants, HLESS, approvals) covering ~50 of the
+186 baseline orphans. Proposes a per-cluster triage policy (Verdict A: wire the
+runtime; Verdict B: retire the vocabulary) rather than one monolithic fix.
+
+**Output:** `dev_docs/framework-gaps/2026-04-21-ir-policy-field-drift.md`.
+
+**Explore budget:** 96 → 97.
+
+---
