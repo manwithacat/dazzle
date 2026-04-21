@@ -19,6 +19,9 @@ Coverage evolution:
 - Cycle 308: added `site/` top-level + layout-template detection so
   `site_base.html` is correctly excluded (it's extended by children,
   not served directly)
+- Post-342: widened to `workspace/`, `experience/`, `reports/` top-level
+  templates + added `render_fragment()` and `env.get_template(...)`
+  render patterns (half-finished-internals shape #1 follow-up).
 
 Convention: a template is page-like if ALL of:
 (a) matches a `PAGE_TEMPLATE_PATTERNS` glob (Path.match: `*` doesn't cross `/`)
@@ -33,8 +36,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle_ui" / "templates"
-DAZZLE_BACK_ROOT = REPO_ROOT / "src" / "dazzle_back"
-DAZZLE_UI_ROOT = REPO_ROOT / "src" / "dazzle_ui"
+SRC_ROOT = REPO_ROOT / "src"
+# Python trees where render-call sites may live. `src/dazzle/` was added
+# post-342 to cover `journey_reporter.py` (reports/e2e_journey.html).
+RENDER_CALLER_ROOTS = (
+    REPO_ROOT / "src" / "dazzle",
+    REPO_ROOT / "src" / "dazzle_back",
+    REPO_ROOT / "src" / "dazzle_ui",
+)
 
 # Glob patterns matching templates that are expected to be served by a
 # Python page route. Pattern semantics use `Path.match()` which does NOT
@@ -49,6 +58,9 @@ PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
     "site/auth/*.html",
     "app/*.html",
     "site/*.html",
+    "workspace/*.html",
+    "experience/*.html",
+    "reports/*.html",
 )
 
 # Page templates that genuinely should NOT be served by a page route
@@ -74,6 +86,13 @@ _RENDER_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
         r'_render_app_shell_error\([^)]*?template_name\s*=\s*["\']([^"\']+)["\']', re.DOTALL
     ),
+    # `render_fragment("<path>", ...)` — htmx fragments + composite pages
+    # (workspace/experience are served this way via the route layer).
+    re.compile(r'render_fragment\(\s*["\']([^"\']+)["\']'),
+    # `env.get_template("<path>")` — direct Jinja usage (reports/e2e_journey.html).
+    # Note: renderer helpers in template_renderer.py pass a variable, not a literal,
+    # so they don't self-match.
+    re.compile(r'\.get_template\(\s*["\']([^"\']+)["\']'),
 )
 
 
@@ -117,10 +136,14 @@ def _collect_page_templates() -> set[str]:
 def _collect_rendered_pages() -> set[str]:
     """Extract every template path passed to a known render-helper in Python."""
     rendered: set[str] = set()
-    for root in (DAZZLE_BACK_ROOT, DAZZLE_UI_ROOT):
+    seen: set[Path] = set()  # dazzle and dazzle_ui may overlap — dedup by path
+    for root in RENDER_CALLER_ROOTS:
         if not root.exists():
             continue
         for p in root.rglob("*.py"):
+            if p in seen:
+                continue
+            seen.add(p)
             text = p.read_text()
             for pattern in _RENDER_PATTERNS:
                 for m in pattern.finditer(text):
