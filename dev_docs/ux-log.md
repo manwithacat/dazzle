@@ -10880,3 +10880,47 @@ reflect:
 **No budget increment. No short-circuit streak impact.**
 
 ---
+
+## Cycle 371 — 2026-04-21 — finding_investigation: fitness parser → observer artifact → audit-tool fix
+
+**Strategy:** `finding_investigation` on `dazzle.core.dsl_parser_impl.fitness`
+(flagged as orphan in the cycle 368 audit — suspected fitness DSL unwired).
+
+**Investigation (Heuristic 1 raw-layer):**
+
+Grep for `parse_fitness_block` and `FitnessSpec`:
+
+```
+src/dazzle/core/dsl_parser_impl/entity.py:15:from .fitness import parse_fitness_block
+```
+
+Sibling relative import. `fitness.py` IS wired into `entity.py`. My audit
+tool's `_imports_in_file` only handled `node.level == 0` (absolute imports)
+— all relative imports were silently ignored.
+
+**Pivot:** framework bug → detection-tool artifact. This is a new failure
+mode of the substrate-intel catalog:
+
+- **Mode 5:** Detection-tool AST blindspot → sibling imports via
+  `from .submod import X` never register as graph edges.
+
+**Fix:** extended `_imports_in_file` to resolve relative imports by
+stripping `level` trailing parts from the file's own module path, using
+an `__init__.py`-aware offset. Verified:
+
+- `fitness.py` correctly cleared (FP resolved)
+- `hot_reload` correctly remains flagged (#834 still surfaces)
+- Compliance trio correctly remains flagged (#839 still surfaces)
+
+**Impact:** audit orphan count **150 → 65 (−56%)**. The remaining 65
+candidates are now a much more actionable list.
+
+**Catalog update:** added mode 5 to the substrate-intel catalog in
+`.claude/commands/ux-cycle.md`. Skill now explicitly documents that
+detection tools themselves can produce observer artifacts, not just
+agents and browsers.
+
+**Explore budget:** 98 → 99 (finding_investigation that pivoted to
+tool-bug fix still counts against the budget per the playbook).
+
+---

@@ -151,26 +151,58 @@ def _module_name_from_path(p: Path) -> str:
 def _imports_in_file(py_path: Path) -> set[str]:
     """Module names imported by this file.
 
-    Captures both forms:
+    Captures all three forms:
+
     * ``import A.B.C`` → ``A.B.C``
     * ``from A.B import C`` → ``A.B`` AND ``A.B.C`` (C may be a submodule
       or a name; we emit both so a submodule import resolves correctly).
+    * ``from .sub import C`` / ``from ..pkg import C`` — **relative imports**
+      are resolved to their absolute module path using the file's own package
+      path, then treated as the absolute form above.
+
+    **Relative-import resolution matters.** Without it, a sibling import
+    like ``src/dazzle/core/dsl_parser_impl/entity.py`` doing
+    ``from .fitness import parse_fitness_block`` would not register
+    ``dazzle.core.dsl_parser_impl.fitness`` as imported — the audit would
+    then flag fitness.py as orphan despite it being actively used.
+    Surfaced cycle 371 while investigating a suspected fitness-parser gap.
     """
     try:
         tree = ast.parse(py_path.read_text())
     except SyntaxError:
         return set()
     imports: set[str] = set()
+    # Resolve relative imports using the file's own package path.
+    try:
+        module_parts = _module_name_from_path(py_path).split(".")
+    except ValueError:
+        module_parts = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.add(alias.name)
         elif isinstance(node, ast.ImportFrom):
-            if node.module and node.level == 0:
-                imports.add(node.module)
+            base: str | None = None
+            if node.level == 0 and node.module:
+                base = node.module
+            elif node.level > 0 and module_parts:
+                # Resolve relative import to absolute module path.
+                # For __init__.py: module_parts already equals the package path,
+                #   so level=1 ("current package") → keep all parts.
+                # For foo.py:     module_parts ends in "foo", so level=1 → strip "foo".
+                # General rule: anchor length = len(module_parts) - level + (1 if __init__ else 0).
+                init_adj = 1 if py_path.name == "__init__.py" else 0
+                anchor_len = len(module_parts) - node.level + init_adj
+                anchor_parts = module_parts[:anchor_len] if anchor_len > 0 else []
+                if node.module:
+                    base = ".".join([*anchor_parts, node.module]) if anchor_parts else node.module
+                elif anchor_parts:
+                    base = ".".join(anchor_parts)
+            if base:
+                imports.add(base)
                 for alias in node.names:
                     if alias.name != "*":
-                        imports.add(f"{node.module}.{alias.name}")
+                        imports.add(f"{base}.{alias.name}")
     return imports
 
 
