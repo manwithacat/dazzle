@@ -10828,3 +10828,34 @@ runtime; Verdict B: retire the vocabulary) rather than one monolithic fix.
 **Explore budget:** 96 → 97.
 
 ---
+
+## Cycle 369 — 2026-04-21 — finding_investigation: compliance pipeline orphans → #839
+
+**Strategy:** `finding_investigation` on the `dazzle.compliance.{citation,
+renderer,slicer}` module-orphan cluster from cycle 368's shape-#3 advisory
+audit. Bounded scope — quick-resolution expected either way.
+
+**Investigation (Heuristic 1 raw-layer):**
+
+Grep across all src/ + tests/ for each module:
+
+- `citation` — imported ONLY by `tests/unit/test_compliance_citation.py`.
+  Zero src/ importers.
+- `slicer` — imported ONLY by `tests/unit/test_compliance_slicer.py`. Zero
+  src/ importers.
+- `renderer` — zero importers ANYWHERE, not even a test. Implements PDF
+  rendering via optional weasyprint with HAS_RENDERER_DEPS flag. No
+  pipeline hook.
+
+The production pipeline (`dazzle compliance {compile,evidence,gaps}`) runs
+through `coordinator.compile_full_pipeline` which uses only compiler +
+evidence + models + taxonomy.
+
+**Outcome:** filed #839 — consolidated issue with triage options per module
+(wire it up / retire / document as public API). Same defect shape as #834.
+Validates the shape-#3 advisory audit as a real signal source — 2/2 real
+findings from 150-entry report so far (`hot_reload.py` + compliance trio).
+
+**Explore budget:** 97 → 98.
+
+---
