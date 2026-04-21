@@ -10965,3 +10965,37 @@ MCP handler registration pattern + dynamic-import awareness still pending —
 larger improvements, deferred to future sessions.
 
 ---
+
+## Cycle 374 — 2026-04-21 — housekeeping: audit string-literal module-path detection (−10)
+
+**Strategy:** housekeeping. Cycle 373 flagged MCP handler registration as a
+remaining audit blindspot. Heuristic 1: `handlers_consolidated.py` has 32
+lines of the form `_MOD_DSL = "dazzle.mcp.server.handlers.dsl"`, loaded
+dynamically via `importlib.import_module`. The AST sees no import edge.
+
+**Fix:** added `_string_literals_in_file()` — collects top-level string
+constants that parse as dotted Python identifiers, then intersects with
+`all_modules` keys. Any exact match counts as an import edge.
+
+Deliberately narrow: matches must be exact module paths (no partial
+matches, no fuzzy names). Keeps FP rate near zero.
+
+**Impact:** 63 → 53 orphans (−10). Entire `dazzle.mcp.server.handlers.*`
+cluster cleared. Real findings (hot_reload, compliance trio) preserved.
+
+**Session cumulative audit refinement:**
+- cycle 368 initial: 278 orphans
+- cycle 368 refinements (re-export, alias imports): 150
+- cycle 371 relative imports: 65
+- cycle 373 path exclusions: 63
+- cycle 374 string-literal module paths: 53
+
+278 → 53 is an 81% noise-floor reduction over 4 improvements. The remaining
+53 are much more likely to be real signal — each one is worth investigating
+without the skepticism the 150-list required.
+
+**Explore budget unchanged at 99/100.** Session-end audit tool is now a
+meaningfully different instrument from what shipped in cycle 368. Worth
+noting in operator handoff.
+
+---

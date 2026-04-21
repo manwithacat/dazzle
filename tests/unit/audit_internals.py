@@ -148,6 +148,29 @@ def _module_name_from_path(p: Path) -> str:
     return ".".join(parts)
 
 
+def _string_literals_in_file(py_path: Path) -> set[str]:
+    """Every top-level string literal in a Python file.
+
+    Used to detect dynamic-import patterns: modules registered via path
+    strings (``_MOD_DSL = "dazzle.mcp.server.handlers.dsl"``) or loaded
+    via ``importlib.import_module("dazzle.x.y")`` / subprocess
+    ``python -c "from dazzle.x import y"``. The audit intersects these
+    strings with ``all_modules`` to find dynamic edges that the AST
+    import pass misses.
+    """
+    try:
+        tree = ast.parse(py_path.read_text())
+    except SyntaxError:
+        return set()
+    strings: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            # Only interested in dotted strings that could plausibly be module paths.
+            if "." in node.value and all(part.isidentifier() for part in node.value.split(".")):
+                strings.add(node.value)
+    return strings
+
+
 def _imports_in_file(py_path: Path) -> set[str]:
     """Module names imported by this file.
 
@@ -289,6 +312,7 @@ def module_orphans() -> list[tuple[str, Path]]:
 
     # Build reverse-import set: set of modules imported from anywhere under src/
     importers: defaultdict[str, set[str]] = defaultdict(set)
+    known_modules = set(all_modules.keys())
     for mod, p in all_modules.items():
         for target in _imports_in_file(p):
             # Strip the leaf to bubble imports up the hierarchy so
@@ -300,6 +324,14 @@ def module_orphans() -> list[tuple[str, Path]]:
                 # Propagate to re-exported submodules of this ancestor.
                 for reexp in reexports.get(ancestor, ()):
                     importers[reexp].add(mod)
+        # Dynamic-import detection: any string literal that exactly matches
+        # a known module path counts as an import edge. Catches handlers
+        # registered via `_MOD_X = "dazzle.pkg.mod"` and loaded via
+        # importlib.import_module, subprocess `python -c "from X import Y"`
+        # (the literal appears as a string), and similar indirection.
+        for literal in _string_literals_in_file(p):
+            if literal in known_modules:
+                importers[literal].add(mod)
 
     script_modules = _console_script_modules()
     orphans: list[tuple[str, Path]] = []
