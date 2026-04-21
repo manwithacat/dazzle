@@ -184,6 +184,35 @@ class TestExternalResourceLint:
                 "cite a GitHub issue (#NNN), gap doc, or cycle number."
             )
 
+    def test_every_allowlist_entry_cites_a_replacement_path(self) -> None:
+        """Shape #4 (external-API without canonical equivalent).
+
+        The external-resource allowlist doubles as a canonical-replacement
+        registry: each allowlisted origin must cite AT LEAST ONE concrete
+        replacement path so a future cycle / issue / gap doc resolves the
+        external dependency. Enforces this is a "planned-to-leave" list,
+        not a permanent exception list.
+
+        Accepted citations:
+        * ``#NNN``        — filed GitHub issue tracking replacement
+        * ``gap doc``     — dev_docs/framework-gaps/*.md entry
+        * ``cycle NNN``   — cycle number documenting deferral rationale
+        """
+        issue_re = re.compile(r"#\d+")
+        gap_re = re.compile(r"gap doc", re.IGNORECASE)
+        cycle_re = re.compile(r"cycle\s+\d+", re.IGNORECASE)
+        missing: list[tuple[str, str]] = []
+        for origin, reason in ALLOWED_EXTERNAL_ORIGINS.items():
+            if not (issue_re.search(reason) or gap_re.search(reason) or cycle_re.search(reason)):
+                missing.append((origin, reason))
+        assert not missing, (
+            "\n\nAllowlist entry(ies) without a replacement-path citation:\n"
+            + "\n".join(f"  - {o}: {r!r}" for o, r in missing)
+            + "\n\nEach origin must cite at least one of: GitHub issue (#NNN), "
+            "gap doc, or cycle NNN — forcing the allowlist to be a planned-exit "
+            "registry, not a permanent exception list."
+        )
+
 
 def print_externals_report() -> None:
     """Manual debugging helper."""
