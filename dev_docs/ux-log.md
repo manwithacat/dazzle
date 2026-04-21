@@ -10924,3 +10924,25 @@ agents and browsers.
 tool-bug fix still counts against the budget per the playbook).
 
 ---
+
+## Cycle 372 — 2026-04-21 — housekeeping: session retrospective at budget=99
+
+**Budget:** 99/100 (one slot from soft cap). Rather than burn it on another
+filing (queue already at 9 OPEN), wrote an explicit session retrospective
+at `dev_docs/ux-session-retro-2026-04-21.md`. Documents:
+
+- 5 pre-resume infrastructure commits (shapes #1-4)
+- 4 productive post-resume cycles (367/368/369/371)
+- 1 housekeeping cycle (370)
+- The 3-way 2FA picture coordinated for /issues pickup (#829/#831/#838)
+- The external-resource triad (#830/#832/#833)
+- Remaining audit-tool blindspots that could tighten the 65-orphan list
+  further (node_modules paths, MCP handler registration, dynamic imports)
+- Operator decision points (triage / budget-reset / audit tightening)
+
+**No budget increment. No short-circuit streak impact.**
+
+Budget remains 99/100. Next productive cycle hits 100 → primary short-
+circuit → loop auto-pauses until operator batch-reset.
+
+---
