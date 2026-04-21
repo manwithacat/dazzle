@@ -248,12 +248,31 @@ def _package_reexports(init_path: Path) -> list[str]:
 
 def module_orphans() -> list[tuple[str, Path]]:
     """Return [(module_name, path)] for modules with zero importers under SCAN_ROOTS."""
+    # Path-substring excludes: vendored code, build artefacts, generated tests.
+    # Third-party packages under node_modules are orphan by definition from
+    # Dazzle's perspective — not worth reporting. Build artefacts under
+    # `src/**/build/` are generated copies, not source. Generated tests under
+    # `examples/**/tests/e2e/test_*_generated.py` are collected by pytest, not
+    # imported. All three showed up as noise in the 65-orphan list post cycle
+    # 371; adding them here reduces the list further without losing real signal.
+    EXCLUDED_PATH_PARTS: tuple[str, ...] = (
+        "__pycache__",
+        "node_modules",
+        "alembic/versions",
+    )
+    EXCLUDED_PATH_GLOBS: tuple[str, ...] = (
+        "*/build/*",
+        "*/tests/e2e/test_*_generated.py",
+    )
+
     all_modules: dict[str, Path] = {}
     for root in SCAN_ROOTS:
         if not root.exists():
             continue
         for p in root.rglob("*.py"):
-            if "__pycache__" in p.parts or "alembic/versions" in str(p):
+            if any(part in EXCLUDED_PATH_PARTS for part in p.parts):
+                continue
+            if any(p.match(g) for g in EXCLUDED_PATH_GLOBS):
                 continue
             if p.name == "__main__.py":
                 continue

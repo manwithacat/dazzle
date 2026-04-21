@@ -10946,3 +10946,22 @@ Budget remains 99/100. Next productive cycle hits 100 → primary short-
 circuit → loop auto-pauses until operator batch-reset.
 
 ---
+
+## Cycle 373 — 2026-04-21 — housekeeping: audit path exclusions (−2)
+
+**Strategy:** housekeeping; doesn't increment explore budget (stays 99/100).
+Retro in cycle 372 identified several audit-tool blindspots still present
+after cycle 371's relative-import fix. Adding path-based exclusions:
+
+- `node_modules` — third-party vendored code, orphan by Dazzle's perspective
+- `*/build/*` — generated build artefacts committed under src/
+- `*/tests/e2e/test_*_generated.py` — pytest-collected but not imported
+
+Post-fix: 65 → 63 orphans. Small but directionally correct — removes
+categorically uninteresting FPs without losing real signal (`hot_reload`,
+compliance trio still surface).
+
+MCP handler registration pattern + dynamic-import awareness still pending —
+larger improvements, deferred to future sessions.
+
+---
