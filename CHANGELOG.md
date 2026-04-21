@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.2] - 2026-04-21
+
+Patch bump. One UI bug fixed (#837).
+
+### Fixed
+- **filterable_table loading overlay no longer flashes on initial navigation (#837).** Added `x-cloak` attribute to the overlay container in `src/dazzle_ui/templates/components/filterable_table.html`. Previously the SSR'd HTML arrived with the overlay at its default Tailwind `flex` display; Alpine would take ~169ms to hydrate and apply `x-show="loading"` → `display: none`, producing a visible loading flash that agent-QA tools (LLM + Playwright `browser_snapshot`) consistently captured as "stuck Loading". The `[x-cloak]` CSS rule in `dazzle-layer.css` already existed for this exact pattern — the overlay just missed the sweep that added `x-cloak` to the other Alpine-gated components (`search_input`, `search_select`, `table_pagination`, `bulk_actions`). Zero CSS change required. Surfaced by an AegisMark `dazzle qa trial` run.
+
 ## [0.58.1] - 2026-04-20
 
 Patch bump. Two framework-level issues closed with regression tests; one stale trial-backlog entry cleaned up; three UX contract pointers added; seed generator email-uniqueness fix.

@@ -140,8 +140,12 @@
   {# ── Table scroll + loading overlay container ─────────────────────────────── #}
   <div class="relative rounded-[6px] border border-[hsl(var(--border))] overflow-hidden">
 
-    {# Loading overlay — sits above the table, dimmed backdrop #}
-    <div x-show="loading"
+    {# Loading overlay — sits above the table, dimmed backdrop.
+       x-cloak suppresses the SSR'd overlay until Alpine hydrates and
+       applies x-show — prevents the ~169ms loading-flash reported in #837
+       that agent-QA tools consistently caught as "stuck Loading". #}
+    <div x-cloak
+         x-show="loading"
          x-transition:enter="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
