@@ -1,6 +1,6 @@
 # /ux-cycle loop state snapshot
 
-Last updated: cycle 338 (2026-04-20)
+Last updated: cycle 370 (2026-04-21)
 
 Single-glance dashboard of where the `/ux-cycle` autonomous loop is now. Regenerated on-demand (see also `dev_docs/ux-log.md` for the full cycle-by-cycle journal).
 
@@ -8,30 +8,33 @@ Single-glance dashboard of where the `/ux-cycle` autonomous loop is now. Regener
 
 | Dimension | Value |
 |---|---|
-| **Mode** | Steady-state |
-| **Explore budget** | 93 / 100 |
-| **Cycles to primary short-circuit** | 7 |
+| **Mode** | Resumed after 26-tick auto-pause (340→366) |
+| **Explore budget** | 98 / 100 |
+| **Cycles to primary short-circuit** | 2 |
 | **UX-architect contracts shipped** | 79 |
-| **Preflight gate** | 6 lints + mypy(ui) + dist-warn, ~5s wall |
+| **Preflight gate** | **7 lints** + mypy(ui) + dist-warn, ~5s wall (added ir-field-reader-parity cycle 367) |
+| **Advisory audit** | `make audit-internals` (cycle 368) — 2/2 real findings so far |
 | **Last full-suite run** | Cycle 311 (11432 passed, 0 failed) |
-| **Active `/loop` cadence** | 10m (unchanged since setup) |
+| **Active `/loop` cadence** | 15m (was 10m; tightened at resume cycle 367) |
 
-## Recent cycle productivity (last 10 non-housekeeping)
+## This session's burst (cycles 367-369)
 
-| Cycle | Strategy | Finding? |
+Loop resumed after 26-tick auto-pause with **new detection infrastructure** seeded operator-side — four horizontal-discipline shapes codifying the "half-finished internals" pattern from cycles 829/831/834/835:
+
+| Shape | Detection | Ship | Cycle |
+|---|---|---|---|
+| **#2 IR field ↔ reader parity** | ratchet lint (baseline of 186 known orphans) | `95a23c4a` | pre-resume |
+| **#1 template ↔ route parity** | widened existing page-route-coverage (3→6 patterns, +2 render callers, +src/dazzle scan) | `8d076dc6` | pre-resume |
+| **#3 module import-graph orphans** | on-demand `make audit-internals` + re-export pre-pass (83% FP → 150 candidates) | `fc8a2096` | pre-resume |
+| **#4 external canonical-registry** | new assertion on external-resource allowlist (must cite #NNN / gap doc / cycle) | `e101fef7` | pre-resume |
+
+Then 3 productive post-resume cycles:
+
+| Cycle | Strategy | Outcome |
 |---|---|---|
-| 323 | issue-filing | #832 ✓ |
-| 324 | lint-shipping | external-resource lint ✓ |
-| 325 | issue-filing | #833 ✓ |
-| 327 | finding_investigation | #834 ✓ |
-| 328 | lint rule-out | decision |
-| 330 | finding_investigation | FP validated |
-| 331 | finding_investigation | FP validated |
-| 334 | finding_investigation | #835 ✓ |
-| 335 | preemptive audit | no gaps |
-| 336/337 | observational | zero |
-
-**Rate:** ~50% across last 10, dropped to ~20% in last 5. Backlog exhausted.
+| 367 | finding_investigation | **#838** — TwoFactorConfig IR orphan; triple signal convergence (external-resource + page-route + reader-parity all point at 2FA) |
+| 368 | framework_gap_analysis | `dev_docs/framework-gaps/2026-04-21-ir-policy-field-drift.md` — systematises #838 into a subsystem-wide pattern covering ~50 of the 186 baselined orphans (messaging, governance, grants, HLESS, approvals, LLM cost, appspec.hless_mode) |
+| 369 | finding_investigation | **#839** — compliance pipeline orphans (citation/renderer/slicer tested-but-unwired, same shape as #834) |
 
 ## Open GitHub issues filed by the loop
 
@@ -44,21 +47,24 @@ Single-glance dashboard of where the `/ux-cycle` autonomous loop is now. Regener
 | 833 | 325 | OPEN | CSP default alignment |
 | 834 | 327 | OPEN | `hot_reload.py` orphan investigate |
 | 835 | 334 | OPEN | WorkspaceContract persona gap |
+| **838** | **367** | **OPEN** | **2FA subsystem: TwoFactorConfig IR has no producer/consumer** |
+| **839** | **369** | **OPEN** | **Compliance pipeline: citation/renderer/slicer tested but unwired** |
 
-**Downstream `/issues` queue is well-stocked.** No new filings expected in the near term without new exploration signal.
+**Downstream `/issues` queue now at 9 OPEN.** Three are 2FA-related (#829/#831/#838) and collectively describe the three-layer wiring gap documented in the cycle-368 gap doc.
 
-## Horizontal-discipline lint stack
+## Horizontal-discipline lint stack (7 gates)
 
-| Lint | Cycle | File |
-|---|---|---|
-| none-vs-default guard | 284 | `tests/unit/test_template_none_safety.py` |
-| template orphan scan | 302/304 | `tests/unit/test_template_orphan_scan.py` |
-| page route coverage | 306-308 | `tests/unit/test_page_route_coverage.py` |
-| canonical pointer | 310 | `tests/unit/test_canonical_pointer_lint.py` |
-| DaisyUI-in-Python | 318 | `tests/unit/test_daisyui_python_lint.py` |
-| external-resource | 324 | `tests/unit/test_external_resource_lint.py` |
+| Lint | Cycle | File | Shape |
+|---|---|---|---|
+| template orphan scan | 302/304 | `test_template_orphan_scan.py` | structural |
+| page route coverage | 306-308 / post-342 | `test_page_route_coverage.py` | #1 |
+| canonical pointer | 310 | `test_canonical_pointer_lint.py` | structural |
+| template-none-safety | 284 | `test_template_none_safety.py` | structural |
+| daisyui-in-python | 318 | `test_daisyui_python_lint.py` | structural |
+| external-resource | 324 + 370 | `test_external_resource_lint.py` | #4 |
+| **ir-field-reader-parity** | **367** | **`test_ir_field_reader_parity.py`** | **#2** |
 
-Plus `test_dom_snapshots.py`, `test_card_safety_invariants.py`, and `mypy src/dazzle_ui/` in the preflight gate. `make test-ux-deep` extends to core/cli/mcp/back mypy.
+Plus `test_dom_snapshots.py`, `test_card_safety_invariants.py`, and `mypy src/dazzle_ui/`. `make test-ux-deep` extends to core/cli/mcp/back mypy. `make audit-internals` generates `dev_docs/audit-internals.md` as advisory shape-#3 output.
 
 ## Silent-drift coverage
 
@@ -70,29 +76,34 @@ Plus `test_dom_snapshots.py`, `test_card_safety_invariants.py`, and `mypy src/da
 | 4 | Canonical-helper bypass | MANUAL |
 | 5 | DaisyUI in Python HTML | GATED (cycle 318) |
 | 6 | contract_audit hygiene | GATED downstream |
+| **7** | **IR field consumer drift** | **GATED (cycle 367)** |
+| **8** | **External-origin replacement-path** | **GATED (cycle 370/e101fef7)** |
 
-Gap doc: `dev_docs/framework-gaps/2026-04-20-ux-cycle-silent-drift-classes.md` (cycle 317).
+## Loop health
 
-## Truly-open EX rows
+- **Explore-budget velocity:** 3 productive cycles → +3 budget (95 → 98). At current rhythm, 2 more productive cycles reach 100 → deliberate batch reset by operator.
+- **Finding rate post-resume:** 100% (3/3 cycles produced concrete artifacts). Pre-pause the loop was at ~20%.
+- **Shape-#3 audit real-finding rate:** 2/150 entries = 1.3%. Not high, but 2/2 filings have been actionable, which is the rate that matters.
+- **Synthesis debt:** 1 gap doc written this session; covers 6 clusters. Should be enough without another gap-analysis cycle for ~5 cycles.
 
-All 3 remaining open rows are FILED:
+## Framework-gap docs (recent)
 
-- EX-054 → #829 (OPEN)
-- EX-055 → #831 (OPEN)
-- EX-026 → #835 (OPEN, filed cycle 334)
-
-Rest of 54-row backlog is FIXED / CLOSED / DEFERRED / VERIFIED_FALSE_POSITIVE.
+- `2026-04-21-ir-policy-field-drift.md` — **NEW** (cycle 368)
+- `2026-04-20-ux-cycle-silent-drift-classes.md` (cycle 317)
+- `2026-04-20-external-resource-integrity.md` (cycle 300)
 
 ## Operator decision points
 
-1. **Cron cadence** — current 10-min interval calibrated for full-backlog era; steady-state may warrant 30m or 60m.
-2. **Pause until issues close** — downstream `/issues` has 7 OPEN issues filed by this loop to work through. Closing 3-4 would give this loop material for a cycle 333-style FILED→FIXED sweep.
-3. **Continue at current cost** — 20% productivity is still producing some value (#835, cycle 334). No hard requirement to change.
+1. **Explore budget at 98/100** — one or two more productive cycles will hit the cap. Plan a batch-reset pass after that (skim the 9 OPEN issues, decide triage order, reset the counter).
+2. **Issue queue stocked** — #829/#831/#838 are three separate filings on the 2FA subsystem; they naturally go together in one `/issues` pickup. Same for #830/#832/#833 (external-resource triad).
+3. **Gap doc awaiting action** — the IR policy-field drift doc proposes per-cluster triage (wire vs retire). No single `/issues` pickup can resolve it; needs a subsystem-by-subsystem call from the operator.
+4. **Loop cadence** — 15m is steady; no reason to change unless the next cycle or two produces nothing new.
 
 ## Where to look for more detail
 
-- `dev_docs/ux-log.md` — full cycle-by-cycle journal (cycles 1→present)
+- `dev_docs/ux-log.md` — full cycle-by-cycle journal (cycles 1→370)
 - `dev_docs/ux-backlog.md` — EX rows + PROP rows
 - `dev_docs/framework-gaps/` — consolidated theme analyses
-- `tests/unit/test_*lint*.py` — all 6 horizontal-discipline lints
+- `dev_docs/audit-internals.md` — regenerate via `make audit-internals` (local-only, gitignored)
+- `tests/unit/test_*lint*.py` + `tests/unit/test_ir_field_reader_parity.py` — all 7 horizontal-discipline lints
 - `.claude/commands/ux-cycle.md` — the skill itself (playbook + heuristics)

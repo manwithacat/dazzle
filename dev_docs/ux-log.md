@@ -10859,3 +10859,24 @@ findings from 150-entry report so far (`hot_reload.py` + compliance trio).
 **Explore budget:** 97 → 98.
 
 ---
+
+## Cycle 370 — 2026-04-21 — housekeeping: refresh loop-state dashboard
+
+**Strategy:** housekeeping (NOT counted toward explore budget or short-circuit
+streak per the cycle-340 rule). After three productive post-resume cycles
+filing #838, writing a gap doc, and filing #839, the dashboard at
+`dev_docs/ux-loop-state.md` was stale (last updated cycle 338). Refreshed to
+reflect:
+
+- the 4 new detection shapes shipped pre-resume (commits 8d076dc6 / 95a23c4a /
+  fc8a2096 / e101fef7)
+- the 3 post-resume cycles (367/368/369) and their outcomes
+- preflight gate now 7 lints, not 6
+- issue queue now at 9 OPEN (was 7), plus the post-342 external-resource
+  citation assertion making the silent-drift table 8 entries
+- explore budget 98/100 (from 93) — 2 cycles from primary short-circuit
+- finding rate post-resume = 100% (3/3), validating the new detection tooling
+
+**No budget increment. No short-circuit streak impact.**
+
+---
