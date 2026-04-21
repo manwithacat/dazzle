@@ -10774,3 +10774,30 @@ Preflight green. 0 signals, 0 backlog changes, #829-835 all OPEN. Step 6 skipped
 **Operator action:** `cancelcron` invoked at cycle 366. Loop is stopping.
 
 ---
+
+## Cycle 367 — 2026-04-21 — finding_investigation: TwoFactorConfig orphan IR → #838
+
+**Loop resumed.** New detection machinery shipped in the previous session
+(commits 8d076dc6 / 95a23c4a / fc8a2096 / e101fef7) provides fresh signal.
+Short-circuit lifts per cycle 340's "unblock" conditions 2 & 3 (new signal +
+operator explicit resume).
+
+**Strategy:** `finding_investigation` on the 2FA cluster — triple-signal
+convergence (external-resource lint + page-route lint + IR-reader-parity
+ratchet all point at 2FA).
+
+**Investigation (Heuristic 1 raw-layer repro):**
+
+Grep across entire `src/` tree for `TwoFactorConfig`: single match at the
+declaration site. No DSL parser clause for `two_factor` / `2fa` / `totp`
+beyond the enum value. `SecurityConfig` does not compose `TwoFactorConfig`.
+Runtime `routes_2fa.py` + `totp.py` use hardcoded constants. Three independent
+gaps in the subsystem, not two.
+
+**Outcome:** filed #838 — consolidated the TwoFactorConfig-is-orphan finding
+with cross-refs to #829 + #831. Issue describes the three-layer wiring fix
+(compose into SecurityConfig → DSL parser clause → runtime reads from spec).
+
+**Explore budget:** 95 → 96.
+
+---
