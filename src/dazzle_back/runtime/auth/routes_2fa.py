@@ -76,7 +76,11 @@ def _get_current_user(deps: _TwoFaDeps, request: FastAPIRequest) -> UserRecord:
 
 
 async def _setup_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, str]:
-    """Start TOTP setup — returns secret and QR code URI."""
+    """Start TOTP setup — returns secret, URI, and server-rendered QR data URI."""
+    import base64
+    import io
+
+    import segno
     from fastapi import HTTPException
 
     from dazzle_back.runtime.totp import generate_totp_secret, get_totp_uri
@@ -89,11 +93,18 @@ async def _setup_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, st
     secret = generate_totp_secret()
     uri = get_totp_uri(secret, user.email)
 
+    # Render the QR code server-side. The otpauth URI embeds the TOTP secret;
+    # sending it to a third-party QR service would leak the secret (#829).
+    qr = segno.make(uri, error="L")
+    buf = io.BytesIO()
+    qr.save(buf, kind="png", scale=4)
+    qr_data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
     # Temporarily store the secret without enabling TOTP — it will be enabled
     # after the user verifies their first code in _verify_totp_setup.
     deps.auth_store.store_totp_secret_pending(user.id, secret)
 
-    return {"secret": secret, "uri": uri}
+    return {"secret": secret, "uri": uri, "qr_data_uri": qr_data_uri}
 
 
 async def _verify_totp_setup(

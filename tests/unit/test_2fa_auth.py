@@ -716,3 +716,50 @@ class TestLoginFlowAsync:
                 )
 
         assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_setup_totp_returns_server_rendered_qr_data_uri(
+        self, app_and_store: tuple[Any, MagicMock]
+    ) -> None:
+        """Regression for #829: QR is rendered server-side, never sent to a third party.
+
+        The otpauth URI embeds the TOTP secret. Prior to v0.58.3, the setup
+        flow handed the URI to `api.qrserver.com` via a client-side <img src=>,
+        leaking the secret to that service. Fix: segno renders a PNG
+        server-side and the response carries it as a base64 data URI.
+        """
+        import base64
+
+        import httpx
+
+        app, mock_store = app_and_store
+        user = UserRecord(
+            email="qr-setup@example.com",
+            password_hash=hash_password("pass"),
+            totp_enabled=False,
+        )
+        session = _make_session(user, minutes=60)
+        mock_store.validate_session.return_value = _make_auth_context(user, session)
+
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://test",
+            cookies={"dazzle_session": session.id},
+        ) as ac:
+            response = await ac.post("/auth/2fa/setup/totp")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert "secret" in body
+        assert "uri" in body
+        assert body["uri"].startswith("otpauth://")
+
+        qr_data_uri = body.get("qr_data_uri")
+        assert qr_data_uri, "qr_data_uri must be present (issue #829)"
+        assert qr_data_uri.startswith("data:image/png;base64,"), (
+            "QR must be an inline PNG data URI, not a third-party URL"
+        )
+        # The payload must decode as binary PNG (magic bytes \x89PNG).
+        payload = base64.b64decode(qr_data_uri.removeprefix("data:image/png;base64,"))
+        assert payload.startswith(b"\x89PNG\r\n\x1a\n"), "payload is not a PNG"

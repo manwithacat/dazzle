@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.3] - 2026-04-21
+
+Patch bump. One security fix (#829).
+
+### Security
+- **TOTP enrollment no longer leaks the shared secret to a third-party QR service (#829).** The 2FA setup flow previously handed the full `otpauth://` URI — including the base32 TOTP seed — to `api.qrserver.com` via a client-side `<img src=…>`, so every enrollment transmitted the secret to that service in the clear query string. Fix: `_setup_totp` in `src/dazzle_back/runtime/auth/routes_2fa.py` now renders the QR server-side with `segno` and returns it as an inline `data:image/png;base64,…` URI alongside `secret`/`uri`. Template `src/dazzle_ui/templates/site/auth/2fa_setup.html` reads `data.qr_data_uri` directly — the secret never leaves the server. `segno>=1.5` added as a required dependency (pure-Python, zero transitive deps). External-resource allowlist entry for `api.qrserver.com` removed; regression test in `test_2fa_auth.py::TestLoginFlowAsync::test_setup_totp_returns_server_rendered_qr_data_uri` pins the new shape.
+
 ## [0.58.2] - 2026-04-21
 
 Patch bump. One UI bug fixed (#837).

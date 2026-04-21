@@ -86,13 +86,6 @@ ALLOWED_EXTERNAL_ORIGINS: dict[str, str] = {
         "@tailwindcss/browser). Tracked by #830 (SRI hashes, cycle 301) + "
         "#832 (Phase 2 vendor own-dist, cycle 323). cycle 300 gap doc."
     ),
-    # TOTP QR service — exfiltrates the TOTP secret. Issue #829 filed
-    # cycle 299 (EX-054).
-    "api.qrserver.com": (
-        "TOTP QR-code service (2fa_setup.html:135) — HIGH risk per cycle "
-        "300 gap doc (secret exfiltration). Tracked by #829 (cycle 299, EX-054). "
-        "Fix path: server-side QR render."
-    ),
 }
 
 

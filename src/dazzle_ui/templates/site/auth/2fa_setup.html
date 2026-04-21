@@ -132,7 +132,7 @@
       const qrContainer = document.getElementById('dz-qr-container');
       qrContainer.replaceChildren();
       const img = document.createElement('img');
-      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.uri);
+      img.src = data.qr_data_uri;
       img.alt = 'QR Code';
       img.width = 200;
       img.height = 200;
