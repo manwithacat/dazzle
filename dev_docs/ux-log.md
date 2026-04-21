@@ -10999,3 +10999,14 @@ meaningfully different instrument from what shipped in cycle 368. Worth
 noting in operator handoff.
 
 ---
+
+## Cycle 375 — 2026-04-21 — idle tick (queue-saturation pause)
+
+Preflight green. 0 signals. Budget 99/100. Skipping Step 6 by judgment: the
+9-issue queue is saturated and the session already produced 4 concrete
+filings + 1 gap doc + the 4-step audit refinement (278→53 orphans). Further
+filings without closures would dilute the triage signal for downstream
+`/issues` pickup. Housekeeping-only (no budget increment, no short-circuit
+streak impact).
+
+---
