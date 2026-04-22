@@ -8,14 +8,16 @@
 {#   {% endcall %}                                                               #}
 
 {% macro auth_page_card(title, product_name) %}
-<div class="min-h-screen flex items-center justify-center p-4 bg-[hsl(var(--muted)/0.3)]">
-  <div class="w-full max-w-sm bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[8px] shadow-[0_20px_40px_rgb(0_0_0/0.08),0_2px_8px_rgb(0_0_0/0.04)] p-6">
-    <a href="/" class="block text-center text-[16px] font-semibold text-[hsl(var(--primary))] mb-4 hover:underline">{{ product_name }}</a>
-    <h1 class="text-center text-[20px] font-semibold text-[hsl(var(--foreground))] mb-6">{{ title }}</h1>
-    <div id="dz-auth-error"
-         class="hidden flex gap-2 p-3 mb-4 rounded-[4px] border border-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.08)] text-[13px] text-[hsl(var(--foreground))]"
-         role="alert"></div>
-    {{ caller() }}
-  </div>
+{# Outer wrapper removed in #842 — .dz-auth-page on <body> already provides
+   the min-height + flex centering + gradient background. The previous
+   `min-h-screen flex ... bg-[hsl(var(--muted)/0.3)]` wrapper shrunk to
+   max-w-sm and painted a translucent vertical strip over the gradient. #}
+<div class="w-full max-w-sm bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[8px] shadow-[0_20px_40px_rgb(0_0_0/0.08),0_2px_8px_rgb(0_0_0/0.04)] p-6">
+  <a href="/" class="block text-center text-[16px] font-semibold text-[hsl(var(--primary))] mb-4 hover:underline">{{ product_name }}</a>
+  <h1 class="text-center text-[20px] font-semibold text-[hsl(var(--foreground))] mb-6">{{ title }}</h1>
+  <div id="dz-auth-error"
+       class="hidden flex gap-2 p-3 mb-4 rounded-[4px] border border-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.08)] text-[13px] text-[hsl(var(--foreground))]"
+       role="alert"></div>
+  {{ caller() }}
 </div>
 {% endmacro %}

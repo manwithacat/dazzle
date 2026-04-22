@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.12] - 2026-04-22
+
+Patch bump. One UI fix (#842).
+
+### Fixed
+- **Auth pages no longer paint a muted strip over the gradient background (#842).** The `auth_page_card` macro wrapped its card content in a `min-h-screen flex items-center justify-center p-4 bg-[hsl(var(--muted)/0.3)]` div. As a flex child of the `.dz-auth-page` body, that wrapper shrunk to fit the `max-w-sm` card width and painted a translucent vertical strip over the gradient instead of filling the viewport. Fix: drop the outer wrapper — `.dz-auth-page` on `<body>` already provides `min-height: 100vh`, flex centering, and the gradient background. All 7 auth templates (login, signup, forgot/reset password, 2fa_setup, 2fa_settings, 2fa_challenge) inherit the fix because they use the same macro. Regression coverage in `tests/unit/test_auth_page_wrapper.py` (4 tests).
+
 ## [0.58.11] - 2026-04-22
 
 Patch bump. One orphan-wiring fix (#838).
