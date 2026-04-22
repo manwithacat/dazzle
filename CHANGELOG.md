@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.22] - 2026-04-23
+
+Patch bump. Two follow-on fixes to #849 (#850).
+
+### Fixed
+- **Bar-chart source enumeration now requests `include=[group_by]` so FK columns expand to dicts (#850).** Without it, `repo.list` returned ORM rows whose `model_dump()` rendered the FK column as a raw UUID string — `_bucket_key_label` then produced `(uuid, uuid)` and bars rendered as UUIDs. The items-page fallback path coincidentally worked because the workspace handler fetches with `include=auto_include`, so the cells were already dicts; the source-enumeration path skipped that step. Now the enumeration call mirrors the workspace fetch and asks for the FK relation explicitly.
+- **Source-enumeration zero-rows result no longer triggers the items-page fallback (#850).** When the source query succeeds with zero rows in scope (e.g. a persona-scoped reviewer with no reviews yet), the chart now renders no bars instead of falling back to a stale items-page derivation that would surface buckets the user can't actually see rows for. `_enumerate_distinct_buckets` now returns `(buckets, succeeded: bool)` and the call site only falls back when `succeeded=False` (i.e. the source query raised). 4 new regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py` (2 for the success-flag behaviour, 2 for the `include`/scope-filter pass-through), bringing the file total to 27.
+
+### Agent Guidance
+- **Source-enumeration always passes `include=[group_by]`.** This matches the workspace items fetch — the FK relation must be present in the dump for `_bucket_key_label` to derive a sensible label. If you add a new path that calls `_enumerate_distinct_buckets`, route it through a repo that supports the `include` kwarg, or supply pre-computed `bucket_values` instead.
+
 ## [0.58.21] - 2026-04-22
 
 Patch bump. Two follow-on bug fixes (#849).

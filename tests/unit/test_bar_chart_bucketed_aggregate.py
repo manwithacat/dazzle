@@ -390,3 +390,111 @@ class TestPerBucketFilterShape:
             items=[{"assessment_objective": {"id": "ao-1"}}],
         )
         assert result == [{"label": "ao-1", "value": 0}]
+
+
+# ---------------------------------------------------------------------------
+# #850: scope-aware enumeration must not silently fall back to items page
+# when source query succeeded with zero rows; FK relation must be loaded
+# via include=[group_by] so model_dump produces the expected dict shape.
+# ---------------------------------------------------------------------------
+
+
+def _make_capturing_source_repo(*pages):
+    """Source repo that captures every .list call's kwargs.
+
+    Returns ``(repo, captured_kwargs_list)``. The ``include=[group_by]``
+    arg from #850 must appear in every captured call.
+    """
+    repo = MagicMock()
+    captured: list[dict] = []
+    page_iter = iter(pages)
+
+    async def _list(**kw):
+        captured.append(dict(kw))
+        try:
+            items = next(page_iter)
+        except StopIteration:
+            items = []
+        return {"items": items, "total": 0}
+
+    repo.list = AsyncMock(side_effect=_list)
+    return repo, captured
+
+
+class TestSourceEnumerationSuccessFlag:
+    """#850: distinguish 'enumeration succeeded with 0 rows' from 'enumeration raised'."""
+
+    @pytest.mark.asyncio()
+    async def test_empty_successful_enumeration_does_not_fall_back(self) -> None:
+        """Source returned no rows → render no bars, NOT page-1 stale buckets."""
+        agg_repo, _ = _make_capturing_repo()
+        source_repo, _ = _make_capturing_source_repo([])  # zero rows, no exception
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "criterion",
+            # items has stale data but enum succeeded → must NOT fall back.
+            items=[{"criterion": {"id": "STALE", "label": "Stale"}}],
+            source_entity="Source",
+        )
+        assert result == []
+        agg_repo.list.assert_not_called()  # no per-bucket queries either
+
+    @pytest.mark.asyncio()
+    async def test_exception_falls_back_to_items(self) -> None:
+        """Source raised → fall back to items-page derivation as last resort."""
+        agg_repo, _ = _make_capturing_repo(8)
+        source_repo = MagicMock()
+        source_repo.list = AsyncMock(side_effect=RuntimeError("DB down"))
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "criterion",
+            items=[{"criterion": {"id": "fallback", "label": "FB"}}],
+            source_entity="Source",
+        )
+        assert result == [{"label": "FB", "value": 8}]
+
+
+class TestSourceEnumerationFKExpansion:
+    """#850: source query must request include=[group_by] so FK expands to dict."""
+
+    @pytest.mark.asyncio()
+    async def test_include_passed_to_source_list(self) -> None:
+        agg_repo, _ = _make_capturing_repo(0)
+        source_repo, captured = _make_capturing_source_repo(
+            [{"criterion": {"id": "c-1", "label": "Crit1"}}],
+            [],
+        )
+        await _compute_bucketed_aggregates(
+            {"count": "count(Review)"},
+            {"Review": agg_repo, "Source": source_repo},
+            "criterion",
+            items=[],
+            source_entity="Source",
+        )
+        assert len(captured) >= 1
+        # Every source query must request the FK relation explicitly,
+        # otherwise model_dump returns a raw UUID string instead of the
+        # {id, label, ...} dict and the bar renders as a UUID.
+        for call_kw in captured:
+            assert call_kw.get("include") == ["criterion"]
+
+    @pytest.mark.asyncio()
+    async def test_scope_filters_passed_to_source_list(self) -> None:
+        """Scope filters must reach source repo (REST/bucketed parity)."""
+        agg_repo, _ = _make_capturing_repo(5)
+        source_repo, captured = _make_capturing_source_repo(
+            [{"criterion": {"id": "c-1", "label": "Crit1"}}],
+            [],
+        )
+        await _compute_bucketed_aggregates(
+            {"count": "count(Review)"},
+            {"Review": agg_repo, "Source": source_repo},
+            "criterion",
+            items=[],
+            source_entity="Source",
+            scope_filters={"__scope_predicate": ("dept = $1", ["d-1"])},
+        )
+        # First source call must carry the scope filter dict.
+        assert captured[0].get("filters") == {"__scope_predicate": ("dept = $1", ["d-1"])}

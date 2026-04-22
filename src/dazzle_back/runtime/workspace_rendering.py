@@ -1216,8 +1216,8 @@ async def _enumerate_distinct_buckets(
     group_by: str,
     scope_filters: dict[str, Any] | None,
     fetch_cap: int = 1000,
-) -> list[tuple[str, str]]:
-    """Pull distinct group_by values from the SOURCE entity (#849 Bug B).
+) -> tuple[list[tuple[str, str]], bool]:
+    """Pull distinct group_by values from the SOURCE entity (#849, #850).
 
     Pre-fix the bucket list was derived from the region's first items page
     — so any group_by value that didn't happen to appear on page 1 was
@@ -1228,6 +1228,19 @@ async def _enumerate_distinct_buckets(
     on the bucket key. Reuses ``_bucket_key_label`` so FK-dict cells
     bucket on id and render on display field, matching the per-bucket
     filter semantics in ``_compute_bucketed_aggregates``.
+
+    The source query passes ``include=[group_by]`` so FK columns come back
+    as ``{id, <display_field>, ...}`` dicts (#850) — without it the repo
+    serialiser drops the relation and ``_bucket_key_label`` only sees the
+    raw FK UUID, producing UUID-as-label bars.
+
+    Returns ``(buckets, succeeded)``:
+      * ``succeeded=True`` — the source query ran without raising, even
+        if zero rows came back. Caller must not fall back to items-page
+        derivation in this case (a true empty state should render as
+        no bars, not as page-1 fallback).
+      * ``succeeded=False`` — the source query raised and the caller
+        should fall back to items-page derivation as a last resort.
     """
     seen_keys: set[str] = set()
     out: list[tuple[str, str]] = []
@@ -1240,6 +1253,7 @@ async def _enumerate_distinct_buckets(
                 page=page,
                 page_size=page_size,
                 filters=scope_filters,
+                include=[group_by],
             )
         except Exception:
             logger.warning(
@@ -1248,7 +1262,7 @@ async def _enumerate_distinct_buckets(
                 group_by,
                 exc_info=True,
             )
-            return out
+            return out, False
         items = result.get("items", []) if isinstance(result, dict) else []
         if not items:
             break
@@ -1266,7 +1280,7 @@ async def _enumerate_distinct_buckets(
         if len(items) < page_size:
             break
         page += 1
-    return out
+    return out, True
 
 
 async def _compute_bucketed_aggregates(
@@ -1332,14 +1346,20 @@ async def _compute_bucketed_aggregates(
     else:
         # Prefer enumerating distinct values from the source entity (#849
         # Bug B) so buckets that don't appear on the region's first items
-        # page still render. Fall back to items-page derivation only when
-        # the source repo isn't available.
+        # page still render. Items-page derivation is a last-resort
+        # fallback and only fires when the source query itself raises
+        # — a successful-but-empty enumeration is a true empty state and
+        # must not be papered over with a page-1 derivation that would
+        # show stale or wrong-scope buckets (#850).
         source_repo = repositories.get(source_entity) if (repositories and source_entity) else None
+        enum_succeeded = False
         if source_repo is not None:
-            buckets = await _enumerate_distinct_buckets(source_repo, group_by, scope_filters)
+            buckets, enum_succeeded = await _enumerate_distinct_buckets(
+                source_repo, group_by, scope_filters
+            )
         else:
             buckets = []
-        if not buckets:
+        if not buckets and not enum_succeeded:
             seen_keys: set[str] = set()
             derived: list[tuple[str, str]] = []
             for item in items:
