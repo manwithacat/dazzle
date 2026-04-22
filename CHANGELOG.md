@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.6] - 2026-04-22
+
+Patch bump. One security hardening (#832 Phase 2 of external-resource hardening).
+
+### Security
+- **Removed Tailwind CDN + jsdelivr-mirror-of-GitHub loads from page shells (#832).** Phase 2 of the cycle 300 external-resource-integrity gap doc. `src/dazzle_ui/templates/base.html` and `src/dazzle_ui/templates/site/site_base.html` previously loaded (a) the Tailwind browser JIT runtime as executable JS via `cdn.tailwindcss.com` / `cdn.jsdelivr.net/npm/@tailwindcss/browser@4`, and (b) Dazzle's own compiled dist via `cdn.jsdelivr.net/gh/manwithacat/dazzle@v<version>/dist/...` — both are now removed. `dazzle-bundle.css` (produced by `scripts/build_css.py`) is served from `/static/css/` unconditionally, and the Dazzle design-system CSS / lucide icons come from the local static routes. The `_tailwind_bundled` / `_use_cdn` Jinja globals are no longer consulted by any shipped template (kept set for compatibility with downstream apps that may read them). External-resource allowlist in `tests/unit/test_external_resource_lint.py` narrowed: `cdn.tailwindcss.com` removed entirely; `cdn.jsdelivr.net` reason updated to cite only the remaining consumer (mermaid lazy-load in `workspace/regions/diagram.html`, still Phase 1 SRI territory tracked by #830). The `test_every_allowlist_entry_has_hits` guard ratchets this — any future reintroduction fails CI.
+
+### Agent Guidance
+- **Do not re-introduce CDN loads in page shells.** Tailwind must be compiled via `build_css.py`; any new vendored JS must live under `src/dazzle_ui/runtime/static/vendor/` and be referenced by the `static_url` filter. The external-resource lint in `tests/unit/test_external_resource_lint.py` enforces this — new allowlist entries require a citation (filed issue, gap doc, or cycle number).
+- **`dazzle-bundle.css` is now a hard prerequisite, not a fallback.** Running `dazzle serve` from a source checkout requires `dazzle build-css` to have emitted `src/dazzle_ui/runtime/static/css/dazzle-bundle.css` (gitignored, built on demand). PyPI installs ship the bundle via `package_data`. Missing bundle → unstyled pages, no runtime crash, no CDN fallback.
+
 ## [0.58.5] - 2026-04-22
 
 Patch bump. One bug fix (#831).

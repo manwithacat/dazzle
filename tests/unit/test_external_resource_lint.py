@@ -75,16 +75,11 @@ ALLOWED_EXTERNAL_ORIGINS: dict[str, str] = {
         "Google Fonts WOFF file delivery — companion to fonts.googleapis.com. "
         "Cycle 300 gap doc. Same self-host question."
     ),
-    # Tailwind CDN — issue #832 (cycle 323 Phase 2) will vendor this.
-    "cdn.tailwindcss.com": (
-        "Tailwind browser JIT runtime (base.html:24) — cycle 300 gap doc "
-        "HIGH risk. Tracked by #832 (cycle 323 Phase 2) — vendor via build_css.py."
-    ),
-    # jsdelivr — multi-use: mermaid, DaisyUI, Dazzle own dist, Tailwind browser.
+    # jsdelivr — single remaining use after #832 (Tailwind + Dazzle own-dist
+    # removed): mermaid renderer lazy-loaded by workspace/regions/diagram.html.
     "cdn.jsdelivr.net": (
-        "jsdelivr CDN — multi-use (mermaid, DaisyUI, Dazzle own dist, "
-        "@tailwindcss/browser). Tracked by #830 (SRI hashes, cycle 301) + "
-        "#832 (Phase 2 vendor own-dist, cycle 323). cycle 300 gap doc."
+        "jsdelivr CDN — mermaid.min.js, lazy-loaded by workspace/regions/"
+        "diagram.html. Tracked by #830 (SRI hashes, cycle 301). cycle 300 gap doc."
     ),
 }
 

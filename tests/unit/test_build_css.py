@@ -302,10 +302,10 @@ class TestTemplateReferences:
         content = site.read_text()
         assert "/static/vendor/lucide.min.js" in content
 
-    def test_tailwind_conditional_fallback(self) -> None:
-        """CDN is only used as fallback when bundle doesn't exist."""
+    def test_tailwind_self_hosted_only(self) -> None:
+        """Post-#832: base.html loads the compiled bundle unconditionally."""
         base = Path(__file__).parent.parent.parent / "src" / "dazzle_ui" / "templates" / "base.html"
         content = base.read_text()
-        assert "_tailwind_bundled" in content
-        assert "cdn.tailwindcss.com" in content  # Still present as fallback
-        assert "dazzle-bundle.css" in content  # Bundle path is there
+        assert "dazzle-bundle.css" in content
+        # The CDN fallback was removed by #832 (cycle 323 Phase 2).
+        assert "cdn.tailwindcss.com" not in content

@@ -11,30 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   {# CSS Cascade Layer order #}
   <style>@layer base, framework, app, overrides;</style>
-  {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
-  {% if _tailwind_bundled | default(false) %}
+  {# Tailwind CSS + DaisyUI — self-hosted compiled bundle (#832, cycle 323). #}
   <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
-  {% else %}
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  {% endif %}
-  {% set _cdn_base = "https://cdn.jsdelivr.net/gh/manwithacat/dazzle@v" ~ _dazzle_version ~ "/dist" %}
-  {# DAZZLE design system layer #}
-  {% if _use_cdn | default(false) %}
-  <link rel="stylesheet" href="{{ _cdn_base }}/dazzle.min.css">
-  {% else %}
+  {# DAZZLE design system layer — local route served by site_routes.py. #}
   <link rel="stylesheet" href="/styles/dazzle.css">
-  {% endif %}
   {% if custom_css %}
   {# Project custom CSS #}
   <link rel="stylesheet" href="/static/css/custom.css">
   {% endif %}
-  {# Lucide icons #}
-  {% if _use_cdn | default(false) %}
-  <script src="{{ _cdn_base }}/dazzle-icons.min.js"></script>
-  {% else %}
+  {# Lucide icons — self-hosted vendored copy. #}
   <script src="/static/vendor/lucide.min.js"></script>
-  {% endif %}
   {% block og_meta %}{% endblock %}
   {% block head_extra %}{% endblock %}
 </head>
