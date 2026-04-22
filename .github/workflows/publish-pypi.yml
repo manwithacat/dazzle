@@ -56,8 +56,31 @@ jobs:
       - name: Install build tools
         run: python -m pip install --upgrade pip build twine
 
+      - name: Install dazzle-dsl (for build_css CLI)
+        # Editable install so the `dazzle` console script is available on
+        # PATH for the build-css step. Minimal install — no extras needed.
+        run: python -m pip install -e .
+
+      - name: Rebuild Tailwind CSS bundle (#843)
+        # dazzle-bundle.css is gitignored (.gitignore:45). Without this
+        # step the wheel ships whatever stale bundle the runner happens to
+        # have — i.e. nothing on a clean checkout — so new Tailwind classes
+        # added in template refactors don't appear on downstream installs.
+        # Run build_css against the committed templates so the wheel is
+        # always consistent with the tagged commit.
+        run: dazzle build-css --output src/dazzle_ui/runtime/static/css/dazzle-bundle.css
+
       - name: Build package
         run: python -m build --outdir py_dist/
+
+      - name: Verify bundle shipped in wheel
+        # Catch regressions where build-css succeeds but the wheel omits
+        # the bundle (pyproject.toml package_data drift).
+        run: |
+          python -m zipfile -l py_dist/dazzle_dsl-*.whl | grep -E 'dazzle_ui/runtime/static/css/dazzle-bundle\.css' || {
+            echo "::error::dazzle-bundle.css missing from wheel — #843 regression";
+            exit 1;
+          }
 
       - name: Check package
         run: twine check py_dist/*

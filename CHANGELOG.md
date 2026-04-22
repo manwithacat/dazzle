@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.15] - 2026-04-22
+
+Patch bump. One release-packaging fix (#843).
+
+### Fixed
+- **PyPI wheels now ship a fresh `dazzle-bundle.css` built from the tagged commit's templates (#843).** `src/dazzle_ui/runtime/static/css/dazzle-bundle.css` is gitignored (it's a Tailwind build artifact) and nothing in `publish-pypi.yml` rebuilt it before `python -m build`. On a fresh CI checkout the file was absent, so the wheel shipped a bundle that was either stale (carried over from a previous run) or missing entirely — new Tailwind classes added in template refactors silently dropped from downstream installs. The incident that surfaced this was the UX-031 app-shell refactor (cycle 0.57 → 0.58): classes like `lg:pl-64`, `inset-y-0`, `translate-x-0`, `-translate-x-full` never made it into CyFuture's wheel, collapsing the left sidebar on every workspace page. Fix: `publish-pypi.yml` now installs the package editable, runs `dazzle build-css --output src/dazzle_ui/runtime/static/css/dazzle-bundle.css` against the committed templates, then proceeds to `python -m build`. A post-build guard (`python -m zipfile -l py_dist/dazzle_dsl-*.whl | grep dazzle-bundle.css`) fails the release if the artifact isn't inside the wheel. Regression coverage in `tests/unit/test_publish_workflow.py` pins the step ordering + the grep guard.
+
+### Agent Guidance
+- **Don't remove the `dazzle build-css` step from `publish-pypi.yml` without a replacement.** Wheels need the bundle; the `**/*.css` glob in `pyproject.toml` picks it up only when the file exists on disk at packaging time. The `test_runs_build_css_before_python_build` ratchet fires if someone re-orders or deletes the step.
+
 ## [0.58.14] - 2026-04-22
 
 Patch bump. One migration-gap fix (#840).
