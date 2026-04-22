@@ -47,6 +47,36 @@ def test_workspace_contract() -> None:
     assert c.url_path == "/app/workspaces/task_board"
 
 
+def test_workspace_contract_id_includes_persona_and_expected_present() -> None:
+    """Regression for #835 — contract identity now keys on (workspace, persona,
+    expected_present) so the generator can emit one row per (workspace, persona)
+    pair without collisions."""
+    base = WorkspaceContract(workspace="my_work", regions=["tasks"], fold_count=0)
+    admin_allowed = WorkspaceContract(
+        workspace="my_work", regions=["tasks"], fold_count=0, persona="admin", expected_present=True
+    )
+    admin_denied = WorkspaceContract(
+        workspace="my_work",
+        regions=["tasks"],
+        fold_count=0,
+        persona="admin",
+        expected_present=False,
+    )
+    member_allowed = WorkspaceContract(
+        workspace="my_work",
+        regions=["tasks"],
+        fold_count=0,
+        persona="member",
+        expected_present=True,
+    )
+    # Persona differentiates:
+    assert admin_allowed.contract_id != member_allowed.contract_id
+    # expected_present differentiates:
+    assert admin_allowed.contract_id != admin_denied.contract_id
+    # The legacy persona-less shape is also distinct from the new per-persona shape.
+    assert base.contract_id != admin_allowed.contract_id
+
+
 class TestContractGeneration:
     def setup_method(self) -> None:
         self.appspec = load_project_appspec(Path("examples/simple_task").resolve())
@@ -78,6 +108,36 @@ class TestContractGeneration:
         workspaces = [c for c in contracts if c.kind == ContractKind.WORKSPACE]
         ws_names = {c.workspace for c in workspaces}
         assert "task_board" in ws_names
+
+    def test_workspace_contracts_fan_out_by_persona(self) -> None:
+        """Regression for #835 — the generator emits one WorkspaceContract per
+        (workspace, persona) pair with expected_present derived from
+        ``workspace_allowed_personas``. Before this fix the generator emitted
+        one contract per workspace with no persona field, producing spurious
+        403 failures whenever the admin driver hit a persona-scoped
+        workspace (EX-026)."""
+        contracts = generate_contracts(self.appspec)
+        workspaces = [c for c in contracts if c.kind == ContractKind.WORKSPACE]
+
+        # Every contract carries a persona.
+        assert all(c.persona for c in workspaces), (
+            "WorkspaceContract.persona must be populated after #835"
+        )
+
+        # simple_task's admin_dashboard declares `access: persona(admin)`.
+        # Admin must be expected to access it; non-admin personas must be
+        # expected to 403.
+        admin_only = [c for c in workspaces if c.workspace == "admin_dashboard"]
+        assert admin_only, "fixture missing — expected an admin_dashboard workspace"
+        by_persona = {c.persona: c.expected_present for c in admin_only}
+        assert by_persona.get("admin") is True, "admin must be expected to access admin_dashboard"
+        non_admin = [pid for pid, present in by_persona.items() if pid != "admin"]
+        assert non_admin, "expected non-admin personas in the fan-out"
+        for pid in non_admin:
+            assert by_persona[pid] is False, (
+                f"persona {pid} should not be expected to access admin_dashboard — "
+                f"got expected_present=True"
+            )
 
     def test_generates_rbac_contracts(self) -> None:
         contracts = generate_contracts(self.appspec)

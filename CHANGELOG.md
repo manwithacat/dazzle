@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.4] - 2026-04-22
+
+Patch bump. One framework-correctness fix (#835).
+
+### Changed
+- **`WorkspaceContract` generator now fans out per persona (#835).** Previously the generator at `src/dazzle/testing/ux/contracts.py` emitted exactly one contract per workspace with no persona field, so persona-scoped workspaces (`access: persona(admin)`) legitimately 403-ing non-admin personas were misread as framework bugs (EX-026). `WorkspaceContract` now carries `persona` and `expected_present`, mirroring `RBACContract`. The generator iterates `(workspace, persona)` pairs using `workspace_allowed_personas()` — the same single-source-of-truth helper the runtime enforcement path uses — so the contract and the runtime agree on visibility. The driver in `src/dazzle/cli/ux.py` uses the contract's persona when authenticating and treats HTTP 403 as a PASS when `expected_present=False`. Regression tests in `tests/unit/test_ux_contracts.py` pin the fan-out shape and the admin_dashboard persona-filter example; cross-app generation verified against all 5 example apps (simple_task: 15 contracts, contact_manager: 4, support_tickets: 16, ops_dashboard: 4, fieldtest_hub: 12 — each with a sensible allowed/denied split). Internal API break (contract identity changed); no downstream shim per ADR-0003.
+
+### Agent Guidance
+- **`WorkspaceContract` identity now includes `persona` and `expected_present`.** When authoring verification tests or baselines that reference workspace contract IDs, regenerate them — old hashes are no longer stable. The `_id_key` grammar is documented in the `WorkspaceContract` docstring.
+
 ## [0.58.3] - 2026-04-21
 
 Patch bump. One security fix (#829).

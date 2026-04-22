@@ -230,7 +230,11 @@ def _run_contracts(
                     permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.LIST)
                 persona = permitted[0] if permitted else "admin"
             elif ws_name:
-                persona = _pick_workspace_check_persona(appspec, ws_name)
+                # Each WorkspaceContract now carries its own persona (#835).
+                # Fall back to the legacy picker only for older contracts
+                # without a persona field.
+                ws_persona = getattr(contract, "persona", "")
+                persona = ws_persona or _pick_workspace_check_persona(appspec, ws_name)
             else:
                 persona = "admin"
 
@@ -276,7 +280,21 @@ def _run_contracts(
                     page_resp = await active_client.get_workspace_composite(path)
                 else:
                     page_resp = await active_client.get_full_page(path)
-                if page_resp.status == 403:
+
+                # Workspace contracts carry an `expected_present` flag per
+                # (workspace, persona) pair (#835). 403 is a PASS when the
+                # persona is not allowed, and a FAIL otherwise — mirrors
+                # RBAC contract semantics below.
+                if isinstance(contract, WorkspaceContract) and not contract.expected_present:
+                    if page_resp.status in (403, 404):
+                        contract.status = "passed"
+                    else:
+                        contract.status = "failed"
+                        contract.error = (
+                            f"HTTP {page_resp.status} as {persona} — expected 403 "
+                            f"(persona not in workspace allow list)"
+                        )
+                elif page_resp.status == 403:
                     contract.status = "failed"
                     contract.error = f"HTTP 403 as {persona}"
                 else:

@@ -140,18 +140,28 @@ class DetailViewContract(Contract):
 
 @dataclass
 class WorkspaceContract(Contract):
-    """Contract asserting that a workspace renders with the expected regions."""
+    """Contract asserting that a workspace renders (or 403s) for a given persona.
+
+    Mirrors the ``RBACContract`` shape: one contract per (workspace, persona) pair
+    with ``expected_present`` indicating whether that persona should be allowed.
+    The generator derives ``expected_present`` from
+    ``workspace_allowed_personas`` — the single source of truth for workspace
+    visibility (see #835 / ``src/dazzle_ui/converters/workspace_converter.py``).
+    """
 
     workspace: str = ""
     regions: list[str] = field(default_factory=list)
     fold_count: int = 0
+    persona: str = ""
+    expected_present: bool = True
 
     def __post_init__(self) -> None:
         self.kind = ContractKind.WORKSPACE
 
     def _id_key(self) -> str:
         return (
-            f"workspace:{self.workspace}:{','.join(sorted(self.regions))}:folds={self.fold_count}"
+            f"workspace:{self.workspace}:{self.persona}:present={self.expected_present}"
+            f":{','.join(sorted(self.regions))}:folds={self.fold_count}"
         )
 
     @property
@@ -340,15 +350,29 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
                         )
                     )
 
-    # WorkspaceContracts — workspaces don't use triples
+    # WorkspaceContracts — one per (workspace, persona) pair. expected_present
+    # comes from workspace_allowed_personas(). When the helper returns None
+    # ("no filter"), every persona is expected to access the workspace.
+    # See #835 — prior to this pattern the generator emitted one contract
+    # per workspace with no persona field, which falsely flagged
+    # persona-scoped workspaces as framework bugs whenever the admin driver
+    # was redirected to 403.
+    from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+
+    all_persona_ids = [p.id for p in appspec.personas]
     for workspace in appspec.workspaces:
         region_names = [r.name for r in getattr(workspace, "regions", [])]
-        contracts.append(
-            WorkspaceContract(
-                workspace=workspace.name,
-                regions=region_names,
-                fold_count=0,
+        allowed = workspace_allowed_personas(workspace, list(appspec.personas))
+        allowed_set = set(all_persona_ids) if allowed is None else set(allowed)
+        for pid in all_persona_ids:
+            contracts.append(
+                WorkspaceContract(
+                    workspace=workspace.name,
+                    regions=region_names,
+                    fold_count=0,
+                    persona=pid,
+                    expected_present=pid in allowed_set,
+                )
             )
-        )
 
     return contracts
