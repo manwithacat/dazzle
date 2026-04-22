@@ -16,10 +16,14 @@
       </thead>
       <tbody>
         {% for row in heatmap_matrix %}
-        <tr class="border-b border-[hsl(var(--border))] last:border-0">
+        {# action_url is row-scoped — attached to the <tr> so clicking the
+           row label (leftmost <td>) navigates too (#845). Per-cell hover
+           feedback stays for the threshold-colour cells below. #}
+        <tr class="border-b border-[hsl(var(--border))] last:border-0 {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.3)]{% endif %}"
+            {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           <td class="py-1 px-2 font-medium text-[hsl(var(--foreground))]">{{ row.row }}</td>
           {% for cell in row.cells %}
-          <td class="dz-heatmap-cell py-1 px-2 text-center cursor-pointer transition-opacity duration-[80ms] hover:opacity-80
+          <td class="dz-heatmap-cell py-1 px-2 text-center transition-opacity duration-[80ms]
             {%- if heatmap_thresholds|length >= 2 -%}
               {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
               {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))]
@@ -29,8 +33,7 @@
               {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
               {%- else %} bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]
               {%- endif -%}
-            {%- endif -%}"
-            {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+            {%- endif -%}">
             {{ "%.1f"|format(cell.value) }}
           </td>
           {% endfor %}

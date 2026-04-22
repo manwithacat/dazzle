@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.18] - 2026-04-22
+
+Patch bump. One UI fix (#845).
+
+### Fixed
+- **Heatmap row labels are now clickable (#845).** `src/dazzle_ui/templates/workspace/regions/heatmap.html` attached `hx-get` / `cursor-pointer` / `hover:opacity-80` only to the value `<td>` cells, so the leftmost row-label `<td>` was a dead zone — clicking it did nothing. Moved the HTMX attributes + pointer affordance up to the `<tr>` (gated on `action_url`), so the whole row is now the click target. Removed the per-cell `hx-get` to avoid double-fire when the `<tr>` swap would otherwise compete with the per-cell one. Threshold-colour classes still live on each `<td>` as before. Regression coverage in `tests/unit/test_heatmap_row_click.py` (3 tests).
+
 ## [0.58.17] - 2026-04-22
 
 Patch bump. One UI fix (#846).
