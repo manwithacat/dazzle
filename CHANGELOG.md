@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.9] - 2026-04-22
+
+Patch bump. One orphan-wiring fix (#839).
+
+### Added
+- **`dazzle compliance render`** — render a markdown compliance document to a branded PDF using `dazzle.compliance.renderer.render_document` + `load_brandspec`. Requires the `weasyprint`/`jinja2`/`markdown` optional dependency group; prints a clear install hint and exits 1 when missing. Brandspec auto-resolves from `.dazzle/compliance/brandspec.yaml` or falls back to the framework default.
+- **`dazzle compliance validate-citations <markdown>`** — post-render check that every `DSL ref: Entity.construct` citation resolves against the compiled auditspec. Exits 1 with a listing of unresolved citations so CI pipelines can gate on it.
+
+### Fixed
+- **Three compliance modules are now wired to the runtime pipeline (#839).** `dazzle.compliance.citation`, `dazzle.compliance.renderer`, and `dazzle.compliance.slicer` had unit tests but zero `src/` importers — cycle 369 surfaced them as an orphan cluster in the same defect class as #834. `src/dazzle/cli/compliance.py` now uses `slice_auditspec` in the `gaps` subcommand (adds a `--status` flag so gap, partial, or both can be requested from one call site) and exposes the two new subcommands above. `src/dazzle/mcp/server/handlers/compliance_handler.py::compliance_gaps` routes through `slice_auditspec` with optional `status_filter`/`tier_filter` args instead of the previous inline list-comprehension filter — the filter logic now lives in exactly one place. Regression coverage in `tests/unit/test_compliance_wiring.py` (7 tests) pins the imports, the subcommand registration, and the graceful-optional-deps behaviour.
+
 ## [0.58.8] - 2026-04-22
 
 Patch bump. One orphan-wiring fix (#834).

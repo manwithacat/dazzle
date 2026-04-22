@@ -23,13 +23,28 @@ def extract_evidence_op(project_path: Path, args: dict[str, Any]) -> str:
 
 
 def compliance_gaps(project_path: Path, args: dict[str, Any]) -> str:
-    """Compile + filter to gaps/partial → ControlResult list JSON."""
+    """Compile + filter to gaps/partial → ControlResult list JSON.
+
+    Uses ``dazzle.compliance.slicer.slice_auditspec`` so the filter logic
+    stays in one place (shared with the ``dazzle compliance gaps`` CLI).
+    """
     from dazzle.compliance.coordinator import compile_full_pipeline
+    from dazzle.compliance.slicer import slice_auditspec
 
     framework = args.get("framework", "iso27001")
     auditspec = compile_full_pipeline(project_path, framework=framework)
-    gaps = [c.model_dump() for c in auditspec.controls if c.status in ("gap", "partial")]
-    return json.dumps({"gaps": gaps, "count": len(gaps)}, indent=2)
+
+    status_filter = args.get("status_filter") or ["gap", "partial"]
+    tier_filter_arg = args.get("tier_filter")
+    tier_filter = [int(t) for t in tier_filter_arg] if tier_filter_arg else None
+
+    sliced = slice_auditspec(
+        auditspec.model_dump(),
+        status_filter=status_filter,
+        tier_filter=tier_filter,
+    )
+    controls = sliced["controls"]
+    return json.dumps({"gaps": controls, "count": len(controls)}, indent=2)
 
 
 def compliance_summary(project_path: Path, args: dict[str, Any]) -> str:
