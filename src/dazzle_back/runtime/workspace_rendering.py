@@ -1259,35 +1259,45 @@ async def _compute_bucketed_aggregates(
     if not agg_repo:
         return []
 
+    # buckets is a list of (key, label). key goes into the per-bucket
+    # filter; label renders on the bar. For FK group_by fields the list
+    # endpoint serialises rows as `{id, <display_field>, ...}` dicts —
+    # the old `str(dict)` produced a Python-repr string for both, so
+    # filters never matched and labels rendered as junk (#848).
     if bucket_values:
-        buckets = list(bucket_values)
+        buckets: list[tuple[str, str]] = [(str(b), str(b)) for b in bucket_values]
     else:
-        seen: list[str] = []
+        seen_keys: set[str] = set()
+        derived: list[tuple[str, str]] = []
         for item in items:
             v = item.get(group_by)
             if v is None:
                 continue
-            sv = str(v)
-            if sv not in seen:
-                seen.append(sv)
-        buckets = seen
+            key, label = _bucket_key_label(v)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            derived.append((key, label))
+        buckets = derived
 
     if not buckets:
         return []
 
-    async def _per_bucket(bucket_value: str) -> tuple[str, int]:
-        sub_clause = (where_clause or "").replace("current_bucket", str(bucket_value))
+    async def _per_bucket(bucket_key: str, bucket_label: str) -> tuple[str, int]:
+        # Substitute the sentinel with the bucket KEY (so FK filters match
+        # on id, not on the human-readable label).
+        sub_clause = (where_clause or "").replace("current_bucket", str(bucket_key))
         # When the expression has no current_bucket sentinel, fall back to
         # filtering on the group_by field directly so naive authors still
         # get a per-bucket result instead of N copies of the same total.
         if not where_clause or "current_bucket" not in where_clause:
-            extra = f"{group_by} = {bucket_value}"
+            extra = f"{group_by} = {bucket_key}"
             sub_clause = f"{where_clause} and {extra}" if where_clause else extra
         _, value = await _fetch_count_metric(metric_name, agg_repo, sub_clause, scope_filters)
-        return str(bucket_value), value
+        return bucket_label, value
 
     results = await asyncio.gather(
-        *(_per_bucket(b) for b in buckets),
+        *(_per_bucket(key, label) for key, label in buckets),
         return_exceptions=True,
     )
 
@@ -1299,6 +1309,44 @@ async def _compute_bucketed_aggregates(
         bucket_label, value = r
         out.append({"label": bucket_label, "value": value})
     return out
+
+
+# Display-field probe order for FK dicts. `name` and `title` are common
+# defaults; `code` / `label` cover enum-like reference data (e.g.
+# AssessmentObjective.code, GradeBoundary.label). `display_name` is the
+# convention used by user-management and FK display injection (#571).
+_FK_DISPLAY_FIELDS: tuple[str, ...] = (
+    "display_name",
+    "name",
+    "title",
+    "label",
+    "code",
+)
+
+
+def _bucket_key_label(value: Any) -> tuple[str, str]:
+    """Derive (filter_key, render_label) from a group_by cell value (#848).
+
+    For FK fields the list endpoint serialises the related row as a dict
+    (``{id, <display_field>, ...}``). The id is what the per-bucket
+    filter needs; the display field is what should render on the bar.
+    Scalars pass through with key == label.
+    """
+    if isinstance(value, dict):
+        # Prefer 'id' as the filter key; fall back to first key with a
+        # primitive value so non-id-keyed dicts still bucket sensibly.
+        key = value.get("id")
+        if key is None:
+            for _k, v in value.items():
+                if isinstance(v, str | int | float | bool):
+                    key = v
+                    break
+        key_str = str(key) if key is not None else str(value)
+        for field in _FK_DISPLAY_FIELDS:
+            if field in value and value[field]:
+                return key_str, str(value[field])
+        return key_str, key_str
+    return str(value), str(value)
 
 
 async def _compute_aggregate_metrics(

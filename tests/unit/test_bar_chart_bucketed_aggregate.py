@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from dazzle_back.runtime.workspace_rendering import (
+    _bucket_key_label,
     _compute_bucketed_aggregates,
 )
 
@@ -123,3 +124,94 @@ class TestBucketedAggregates:
         for call in calls:
             filters = call.kwargs.get("filters") or {}
             assert filters.get("school_id") == "abc"
+
+
+# ---------------------------------------------------------------------------
+# FK group_by — buckets derived from {id, display_field, ...} dicts (#848)
+# ---------------------------------------------------------------------------
+
+
+class TestBucketKeyLabel:
+    def test_scalar_passes_through(self) -> None:
+        assert _bucket_key_label("9") == ("9", "9")
+        assert _bucket_key_label(42) == ("42", "42")
+
+    def test_fk_dict_uses_id_for_key_and_display_for_label(self) -> None:
+        v = {"id": "uuid-1", "code": "AO1", "label": "Knowledge"}
+        # display_name → name → title → label → code probe order.
+        # `label` wins over `code` because it appears first in the probe list.
+        assert _bucket_key_label(v) == ("uuid-1", "Knowledge")
+
+    def test_fk_dict_falls_back_to_code_when_no_label(self) -> None:
+        v = {"id": "uuid-2", "code": "AO2"}
+        assert _bucket_key_label(v) == ("uuid-2", "AO2")
+
+    def test_fk_dict_uses_id_as_label_when_no_display_field(self) -> None:
+        v = {"id": "uuid-3", "irrelevant_field": "x"}
+        assert _bucket_key_label(v) == ("uuid-3", "uuid-3")
+
+    def test_fk_dict_prefers_display_name(self) -> None:
+        v = {"id": "uuid-4", "display_name": "Alice", "name": "alice123", "code": "A"}
+        assert _bucket_key_label(v) == ("uuid-4", "Alice")
+
+
+class TestBucketedAggregatesWithFK:
+    @pytest.mark.asyncio()
+    async def test_fk_buckets_use_id_as_filter_value(self) -> None:
+        """Per-bucket filter must use the FK id, not the stringified dict (#848)."""
+        repo = _make_repo_returning(7, 4)
+        items = [
+            {"assessment_objective": {"id": "ao-1", "code": "AO1", "label": "Knowledge"}},
+            {"assessment_objective": {"id": "ao-2", "code": "AO2", "label": "Application"}},
+        ]
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": repo},
+            "assessment_objective",
+            items,
+        )
+        assert result == [
+            {"label": "Knowledge", "value": 7},
+            {"label": "Application", "value": 4},
+        ]
+        # The filter passed to repo.list must be `assessment_objective: ao-N`,
+        # not the dict-repr Python string.
+        calls = repo.list.await_args_list
+        seen_filter_values = sorted(
+            c.kwargs.get("filters", {}).get("assessment_objective", "") for c in calls
+        )
+        assert seen_filter_values == ["ao-1", "ao-2"]
+
+    @pytest.mark.asyncio()
+    async def test_duplicate_fk_dicts_dedupe_on_id(self) -> None:
+        """Two items pointing at the same FK row → one bucket."""
+        repo = _make_repo_returning(3)
+        items = [
+            {"target": {"id": "t-1", "label": "T"}},
+            # Same id, slightly different other fields — still one bucket.
+            {"target": {"id": "t-1", "label": "T", "extra": "noise"}},
+        ]
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(Other)"},
+            {"Other": repo},
+            "target",
+            items,
+        )
+        assert len(result) == 1
+        assert result[0]["label"] == "T"
+        assert result[0]["value"] == 3
+
+    @pytest.mark.asyncio()
+    async def test_current_bucket_substituted_with_id(self) -> None:
+        """`where x = current_bucket` must substitute the id, not the dict."""
+        repo = _make_repo_returning(5)
+        items = [{"target": {"id": "t-1", "label": "T"}}]
+        await _compute_bucketed_aggregates(
+            {"count": "count(Other where target = current_bucket)"},
+            {"Other": repo},
+            "target",
+            items,
+        )
+        # _parse_simple_where turns `target = t-1` into {"target": "t-1"}.
+        call = repo.list.await_args_list[0]
+        assert call.kwargs.get("filters", {}).get("target") == "t-1"

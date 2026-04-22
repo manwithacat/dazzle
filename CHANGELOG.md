@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.20] - 2026-04-22
+
+Patch bump. One follow-on bug fix to #847 (#848).
+
+### Fixed
+- **`bar_chart` with `group_by: <FK>` now uses the FK id for filtering and the display field for the label (#848).** Follow-on to #847 — when `group_by` pointed at a ref field, the list endpoint serialised that cell as a `{id, <display_field>, ...}` dict and the bucket derivation called `str(dict)` on it, producing a Python-repr string for both the bar label and the per-bucket filter value. Labels rendered as junk; filters never matched. New `_bucket_key_label(value)` returns a `(filter_key, render_label)` tuple — for FK dicts it pulls `id` for the key and probes `display_name → name → title → label → code` for the label. `_compute_bucketed_aggregates` now threads the tuple through `_per_bucket` so the `current_bucket` substitution and the auto-augmented `<group_by> = <bucket>` filter both use the FK id, and the bar renders the human-readable label. Dedup is by id, so multiple items pointing at the same FK row collapse into one bucket. 8 new regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py` (5 for `_bucket_key_label`, 3 for the FK end-to-end paths).
+
+### Agent Guidance
+- **`group_by:` on bar_chart accepts FK fields again.** The runtime auto-resolves FK dicts to their id+display_field. Authors need no DSL changes — `group_by: assessment_objective` (a ref) and `group_by: status` (a scalar enum) both work. The display-field probe order is `display_name`, `name`, `title`, `label`, `code` — falls through to `id` when none are present, so bare reference rows still get a deterministic (if ugly) bar.
+
 ## [0.58.19] - 2026-04-22
 
 Patch bump. One feature/fix (#847).
