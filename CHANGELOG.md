@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.8] - 2026-04-22
+
+Patch bump. One orphan-wiring fix (#834).
+
+### Fixed
+- **`HotReloadManager` is now wired into `run_unified_server()` (#834).** `src/dazzle_ui/runtime/hot_reload.py` was authored behind the `enable_watch` + `watch_source` config flags but never imported from any runtime path — the flags were marked `# noqa: F841 — reserved for future use` since the Vite→CSS refactor and nothing actually instantiated the manager. `combined_server.py` now constructs a manager when `enable_watch=True` and a single worker is configured, registers the current `(appspec, ui_spec)` pair, starts the file watcher, and tears it down in the `finally` block of the uvicorn loop. The manager is stashed on `app.state.hot_reload_manager` so later SSE endpoints can register reload clients. Multi-worker mode prints a warning and skips the watcher (fork conflict). Regression coverage in `tests/unit/test_hot_reload.py` (10 tests) pins the watcher lifecycle, SSE registration, and the structural fact that `combined_server` imports `HotReloadManager` without `F841` suppressions.
+
+### Agent Guidance
+- **`enable_watch` is now live — multi-worker deployments must keep `workers=1` for the watcher to run.** If you see `--watch is ignored when --workers > 1` at startup, that is expected: fork-based multi-worker mode can't share watcher threads.
+
 ## [0.58.7] - 2026-04-22
 
 Patch bump. One security hardening (#830 Phase 1 of external-resource hardening).
