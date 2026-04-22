@@ -125,7 +125,12 @@
      pattern used by dzTable for issue #795) — using @<event>.window
      here leaks the listener across HTMX morph navigations and throws
      ReferenceError on the next pointer event. #}
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
+  {# items-start: CSS Grid defaults to align-items: stretch, which sizes
+     every row to its tallest card and leaves dead whitespace in shorter
+     ones. Fixed in #844 — each cell now collapses to intrinsic content
+     height. dashboard-builder.js only manipulates grid-column spans, so
+     drag/resize behaviour is unaffected. #}
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start"
        data-grid-container
        role="application"
        aria-label="Dashboard card grid"

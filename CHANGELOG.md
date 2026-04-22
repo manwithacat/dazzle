@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.16] - 2026-04-22
+
+Patch bump. One UI fix (#844).
+
+### Fixed
+- **Workspace card grid rows no longer stretch to the tallest card (#844).** `src/dazzle_ui/templates/workspace/_content.html` used `class="grid grid-cols-1 md:grid-cols-12 gap-4"` with no `align-items` override — CSS Grid's default is `align-items: stretch`, which sized every row to the tallest card and left shorter cards with hundreds of pixels of dead whitespace. Added `items-start` so each grid cell collapses to its intrinsic content height. `dashboard-builder.js` only manipulates `grid-column` spans, so drag/resize behaviour is unaffected. Regression coverage in `tests/unit/test_workspace_grid_align.py`.
+
 ## [0.58.15] - 2026-04-22
 
 Patch bump. One release-packaging fix (#843).
