@@ -9,7 +9,12 @@
   <script>
     if (typeof mermaid === "undefined") {
       var s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
+      // Pinned version + SRI hash (#830 Phase 1 of external-resource hardening).
+      // Hash regenerated when the pinned version is bumped — `curl -sL <url> |
+      // openssl dgst -sha384 -binary | openssl base64 -A`.
+      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.min.js";
+      s.integrity = "sha384-1CMXl090wj8Dd6YfnzSQUOgWbE6suWCaenYG7pox5AX7apTpY3PmJMeS2oPql4Gk";
+      s.crossOrigin = "anonymous";
       s.onload = function () {
         mermaid.initialize({ startOnLoad: true, theme: "neutral" });
         mermaid.run();

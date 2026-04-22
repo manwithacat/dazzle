@@ -120,6 +120,102 @@ def _collect_external_urls() -> dict[str, list[tuple[int, str, str]]]:
     return result
 
 
+# URL-bearing elements that must carry SRI + crossorigin when pointing at a
+# cross-origin resource. Google Fonts CSS is deliberately excluded because the
+# response is dynamically generated per-User-Agent and therefore has no stable
+# hash — any SRI attribute would break rendering for newer browsers.
+#
+# Pattern matches `<script src="https://...">`, `<link href="https://...">`,
+# and JS-injected loads that set `.src = "https://..."` on a <script> element.
+_SCRIPT_SRC_RE = re.compile(r'<script[^>]*\bsrc\s*=\s*"(https?://[^"]+)"[^>]*>', re.IGNORECASE)
+_LINK_HREF_RE = re.compile(r'<link[^>]*\bhref\s*=\s*"(https?://[^"]+)"[^>]*>', re.IGNORECASE)
+_JS_SRC_RE = re.compile(r'\.src\s*=\s*"(https?://[^"]+)"')
+
+# Origins for which SRI cannot be applied — dynamic responses, JIT runtimes,
+# or external services that don't return stable bytes. Each entry carries the
+# same citation requirement as ALLOWED_EXTERNAL_ORIGINS.
+_SRI_EXEMPT_ORIGINS: dict[str, str] = {
+    "fonts.googleapis.com": (
+        "Google Fonts CSS — dynamic per-UA response, no stable hash. Cycle 300 "
+        "gap doc open question 4 (self-host to remove exemption)."
+    ),
+}
+
+
+class TestSRIIntegrity:
+    """Every pinned external script/link must carry integrity + crossorigin.
+
+    Phase 1 of the cycle 300 external-resource-integrity gap doc (#830). Fires
+    when a cross-origin load is introduced without an SRI hash, or when an
+    existing load regresses by losing its integrity attribute. The
+    _SRI_EXEMPT_ORIGINS dict carries citations for origins that cannot have
+    SRI applied (dynamic responses).
+    """
+
+    def test_every_script_link_has_sri(self) -> None:
+        missing: list[tuple[str, int, str]] = []
+        for p in TEMPLATES_ROOT.rglob("*.html"):
+            rel = p.relative_to(TEMPLATES_ROOT).as_posix()
+            text = p.read_text()
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                stripped = _JINJA_COMMENT_RE.sub("", line)
+                for pattern in (_SCRIPT_SRC_RE, _LINK_HREF_RE):
+                    for m in pattern.finditer(stripped):
+                        full_tag = m.group(0)
+                        url = m.group(1)
+                        origin = url.split("://", 1)[1].split("/", 1)[0].split(":", 1)[0]
+                        if origin in _SRI_EXEMPT_ORIGINS or origin in _STANDARDS_ORIGINS:
+                            continue
+                        # preconnect is a hint, not a load — no SRI applicable.
+                        if 'rel="preconnect"' in full_tag or "rel='preconnect'" in full_tag:
+                            continue
+                        if "integrity=" not in full_tag:
+                            missing.append((rel, lineno, full_tag[:120]))
+        assert not missing, (
+            "\n\nCross-origin load(s) without SRI integrity attribute:\n"
+            + "\n".join(f"  - {p}:L{ln}  {tag}" for p, ln, tag in missing)
+            + '\n\nAdd integrity="sha384-<hash>" crossorigin="anonymous" to each. '
+            "Compute via: curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A. "
+            "If the origin cannot carry SRI (dynamic response), add it to _SRI_EXEMPT_ORIGINS "
+            "with a citation."
+        )
+
+    def test_every_js_injected_script_has_sri(self) -> None:
+        """`s.src = 'https://...'` + `.appendChild(s)` patterns need SRI too."""
+        missing: list[tuple[str, int, str]] = []
+        for p in TEMPLATES_ROOT.rglob("*.html"):
+            rel = p.relative_to(TEMPLATES_ROOT).as_posix()
+            text = p.read_text()
+            for m in _JS_SRC_RE.finditer(text):
+                url = m.group(1)
+                origin = url.split("://", 1)[1].split("/", 1)[0].split(":", 1)[0]
+                if origin in _SRI_EXEMPT_ORIGINS or origin in _STANDARDS_ORIGINS:
+                    continue
+                # Scan ±20 lines for integrity + crossOrigin assignments on
+                # the same dynamically-created script element.
+                before = text[: m.start()]
+                line_no = before.count("\n") + 1
+                start = max(0, m.start() - 600)
+                end = min(len(text), m.end() + 600)
+                window = text[start:end]
+                if ".integrity" not in window or ".crossOrigin" not in window:
+                    missing.append((rel, line_no, url))
+        assert not missing, (
+            "\n\nJS-injected script load(s) without SRI:\n"
+            + "\n".join(f"  - {p}:L{ln}  {url}" for p, ln, url in missing)
+            + "\n\nSet script.integrity = 'sha384-<hash>' and "
+            "script.crossOrigin = 'anonymous' before appending."
+        )
+
+    def test_every_sri_exempt_entry_has_citation(self) -> None:
+        """Governance: SRI exemptions must cite a replacement/reason."""
+        for origin, reason in _SRI_EXEMPT_ORIGINS.items():
+            assert len(reason) > 40, (
+                f"SRI-exempt reason for {origin} too short ({len(reason)} chars) — "
+                "cite gap doc / cycle / issue for deferred replacement."
+            )
+
+
 class TestExternalResourceLint:
     """Every external URL in a template must be at an allowlisted origin.
 

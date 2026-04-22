@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.7] - 2026-04-22
+
+Patch bump. One security hardening (#830 Phase 1 of external-resource hardening).
+
+### Security
+- **SRI integrity on the remaining CDN load (#830).** `src/dazzle_ui/templates/workspace/regions/diagram.html` dynamically injects mermaid via `document.createElement('script')`. The load is now pinned to `mermaid@11.14.0` (was `mermaid@11`, a floating major-version URL) and carries `script.integrity = "sha384-1CMXl090wj8Dd6YfnzSQUOgWbE6suWCaenYG7pox5AX7apTpY3PmJMeS2oPql4Gk"` + `script.crossOrigin = "anonymous"`. Any corruption on the CDN path or intermediate MITM now fails the integrity check and the browser refuses to execute. Google Fonts CSS (still loaded in both shells) is exempted from SRI because the response is dynamically generated per-User-Agent — documented in `_SRI_EXEMPT_ORIGINS` with a citation to the gap doc. Post-#832, this was the only pinned cross-origin JS load remaining in the shipped templates. Preventive lint extended: `tests/unit/test_external_resource_lint.py` gains three new tests — `test_every_script_link_has_sri`, `test_every_js_injected_script_has_sri`, and `test_every_sri_exempt_entry_has_citation` — which fire if a new cross-origin load lands without SRI or without a documented exemption.
+
+### Agent Guidance
+- **Bumping mermaid requires regenerating the SRI hash.** Compute via `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A` and update both the URL and the `script.integrity` string in `src/dazzle_ui/templates/workspace/regions/diagram.html`. The `test_every_js_injected_script_has_sri` lint will fail if only one is updated.
+
 ## [0.58.6] - 2026-04-22
 
 Patch bump. One security hardening (#832 Phase 2 of external-resource hardening).
