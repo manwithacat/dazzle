@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.17] - 2026-04-22
+
+Patch bump. One UI fix (#846).
+
+### Fixed
+- **Sidebar Lucide icons upgrade on initial load and after HTMX swaps (#846).** `lucide.min.js` is loaded with `defer` in `base.html`, but the old upgrade call sat as a synchronous `<script>if(window.lucide)lucide.createIcons();</script>` at the bottom of `templates/layouts/app_shell.html:186`. The deferred script hadn't executed yet, so `window.lucide` was always `undefined` — every `<i data-lucide>` stayed blank on initial render. HTMX nav swaps had no re-invocation either, so a refresh wouldn't fix it. Moved the hook to `base.html` where it fires on `DOMContentLoaded` (initial load after defer resolves) and `htmx:afterSettle` (every nav swap), so new icon markup rendered into swapped fragments upgrades automatically. Removed the stale one-shot from `app_shell.html`. Regression coverage in `tests/unit/test_lucide_icon_upgrade.py` (4 tests).
+
 ## [0.58.16] - 2026-04-22
 
 Patch bump. One UI fix (#844).

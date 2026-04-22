@@ -57,8 +57,28 @@
   });
   </script>
 
-  {# Lucide icons (v0.38.0: nav group icons) — self-hosted vendored copy. #}
+  {# Lucide icons (v0.38.0: nav group icons) — self-hosted vendored copy.
+     The inline `lucide.createIcons()` in app_shell used to run before the
+     deferred script loaded, leaving every `<i data-lucide>` as an empty
+     <i>. #846: hook createIcons to DOMContentLoaded *and* htmx:afterSettle
+     so icons upgrade on initial load and after every HTMX swap. #}
   <script defer src="{{ 'vendor/lucide.min.js' | static_url }}"></script>
+  <script>
+    (function() {
+      function upgrade() {
+        if (window.lucide && typeof lucide.createIcons === 'function') {
+          lucide.createIcons();
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', upgrade);
+      } else {
+        upgrade();
+      }
+      document.body && document.body.addEventListener('htmx:afterSettle', upgrade);
+      document.addEventListener('htmx:afterSettle', upgrade);
+    })();
+  </script>
 
   {# Design token CSS custom properties #}
   <style>

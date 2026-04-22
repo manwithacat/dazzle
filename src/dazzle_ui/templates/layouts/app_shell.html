@@ -182,8 +182,10 @@
       {% endfor %}
     </ul>
     </nav>
-    {# Initialize Lucide icons in sidebar #}
-    <script>if(window.lucide)lucide.createIcons();</script>
+    {# Icon upgrade is handled globally in base.html via DOMContentLoaded +
+       htmx:afterSettle hooks (#846) — the old inline one-shot ran before
+       the deferred lucide.min.js loaded and left every <i data-lucide>
+       blank on initial render. #}
     {% endblock sidebar_nav %}
 
     {# User section + dark mode toggle #}
