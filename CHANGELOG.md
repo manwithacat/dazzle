@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.19] - 2026-04-22
+
+Patch bump. One feature/fix (#847).
+
+### Added
+- **Bar-chart regions now honour `aggregate:` per bucket (#847).** Authors can express true distributions like "students per grade band" by combining `display: bar_chart`, `group_by: <field>`, and an `aggregate:` block. The runtime evaluates the first aggregate expression once per bucket — substituting the new `current_bucket` sentinel into the where clause when present, or otherwise auto-augmenting the where clause with `<group_by> = <bucket>`. Bucket values come from the field's enum / state-machine first (so empty-but-defined buckets render as zero bars), falling back to distinct values from the source items.
+
+### Fixed
+- **Bar-chart no longer silently drops `aggregate:` (#847).** Pre-fix, the template ignored the metrics list when `items + group_by` were both set and rendered raw row counts per bucket — so `count(Manuscript where ...)` came back as a single bar with the count of source rows, not the per-bucket totals authors meant to express. New `_compute_bucketed_aggregates` in `src/dazzle_back/runtime/workspace_rendering.py` runs the per-bucket queries concurrently (one `asyncio.gather` per region) and merges scope filters into each query so row-level security still applies. The template `src/dazzle_ui/templates/workspace/regions/bar_chart.html` prefers `bucketed_metrics` when present and falls through to the existing count/metrics paths otherwise. 7 regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py`.
+
+### Agent Guidance
+- **Use `current_bucket` to write per-bucket aggregate expressions.** Example: `aggregate: students: count(Manuscript where computed_grade = current_bucket)`. The runtime substitutes the sentinel with each enum value or state-machine state from the `group_by` field. If the sentinel is omitted, the runtime auto-augments the where clause with `<group_by> = <bucket>` — works when the source entity and the count entity share the same field name. Only the *first* aggregate is rendered as the bar value; secondary aggregates are still computed via the metrics path.
+
 ## [0.58.18] - 2026-04-22
 
 Patch bump. One UI fix (#845).

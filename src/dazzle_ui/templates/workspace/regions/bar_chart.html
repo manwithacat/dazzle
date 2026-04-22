@@ -4,7 +4,29 @@
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
 <div class="dz-bar-chart-region">
-  {% if items and group_by %}
+  {% if bucketed_metrics %}
+  {# Per-bucket aggregate (#847): the runtime evaluated the aggregate
+     once per group_by value, so each bar shows the true distribution
+     value (e.g. count of Manuscripts per grade band) instead of how
+     many source rows landed in each bucket. #}
+  {% set max_val = bucketed_metrics | map(attribute='value') | max if bucketed_metrics else 1 %}
+  {% set max_val = max_val if max_val > 0 else 1 %}
+  <div class="dz-bar-chart-bars space-y-2 mt-2">
+    {% for bucket in bucketed_metrics %}
+    <div class="dz-bar-chart-row flex items-center gap-2">
+      <span class="text-[11px] w-24 truncate text-right">
+        {{ render_status_badge(value=bucket.label, size='sm') }}
+      </span>
+      <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
+        <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+             style="width: {{ (bucket.value / max_val * 100) | int }}%">
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-[hsl(var(--muted-foreground))] w-10 text-right">{{ bucket.value }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% elif items and group_by %}
   {% set grouped = {} %}
   {% for item in items %}
   {% set key = item[group_by] | default("Unknown") %}

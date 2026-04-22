@@ -664,6 +664,14 @@ async def _workspace_region_handler(
             scope_filters=_scope_only_filters,
         )
 
+    # Bucketed aggregates for bar_chart distributions (#847). When a
+    # bar_chart region declares both `group_by` and `aggregates`, evaluate
+    # the first aggregate once per bucket so authors can express true
+    # distributions instead of getting raw row counts. The bucket list
+    # comes from `kanban_columns` when available (enum / state-machine
+    # values), else falls back to distinct items[group_by].
+    bucketed_metrics: list[dict[str, Any]] = []
+
     # Build filter column metadata for template
     filter_columns: list[dict[str, Any]] = [
         {
@@ -726,6 +734,18 @@ async def _workspace_region_handler(
             sm = ctx.entity_spec.state_machine
             if sm and sm.status_field == group_by:
                 kanban_columns = [s if isinstance(s, str) else str(s) for s in sm.states]
+
+    # Compute bucketed aggregates for bar_chart (#847) — does nothing for
+    # other display modes or when no aggregate is declared.
+    if ctx.ctx_region.display == "BAR_CHART" and group_by and ctx.ctx_region.aggregates:
+        bucketed_metrics = await _compute_bucketed_aggregates(
+            ctx.ctx_region.aggregates,
+            ctx.repositories,
+            group_by,
+            items,
+            bucket_values=kanban_columns or None,
+            scope_filters=_scope_only_filters,
+        )
 
     # Queue display: extract state machine transitions for inline action buttons
     queue_transitions: list[dict[str, str]] = []
@@ -883,6 +903,7 @@ async def _workspace_region_handler(
         total=total,
         columns=columns,
         metrics=metrics,
+        bucketed_metrics=bucketed_metrics,
         empty_message=ctx.surface_empty_message or ctx.ctx_region.empty_message,
         display_key=next(
             (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
@@ -1187,6 +1208,97 @@ async def _fetch_count_metric(
     except Exception:
         logger.warning("Failed to compute aggregate metric %s", metric_name, exc_info=True)
     return metric_name, 0
+
+
+async def _compute_bucketed_aggregates(
+    aggregates: dict[str, str],
+    repositories: dict[str, Any] | None,
+    group_by: str,
+    items: list[dict[str, Any]],
+    bucket_values: list[str] | None = None,
+    scope_filters: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Evaluate aggregate expressions once per bucket — for bar_chart distributions.
+
+    Used by bar_chart regions when both ``group_by`` and ``aggregates`` are
+    declared. The ``current_bucket`` sentinel inside the where clause is
+    substituted with each distinct group_by value before the count is
+    fetched, so authors can express true distributions:
+
+        aggregate:
+          students: count(Manuscript where computed_grade = current_bucket)
+
+    Closes #847 — previously bar_chart counted source rows per bucket and
+    silently dropped the aggregate clause.
+
+    Args:
+        aggregates: Mapping of metric_name → expression. The first
+            metric is the one rendered as the bar value.
+        repositories: Repository registry keyed by entity name.
+        group_by: Field name to bucket by.
+        items: The source rows (used to derive bucket values when
+            ``bucket_values`` is empty).
+        bucket_values: Pre-computed bucket list (e.g. enum values or
+            state-machine states from ``kanban_columns``). When empty,
+            distinct ``items[group_by]`` values are used.
+        scope_filters: Scope predicates to merge into every per-bucket
+            query (security gate per #574).
+
+    Returns one ``{label, value}`` dict per bucket, ordered by
+    ``bucket_values`` if provided, else by first appearance in items.
+    """
+    if not aggregates:
+        return []
+
+    metric_name, expr = next(iter(aggregates.items()))
+    agg_match = _AGGREGATE_RE.match(expr)
+    if not agg_match or agg_match.group(1) != "count":
+        return []
+    func, entity_name, where_clause = agg_match.groups()
+    agg_repo = repositories.get(entity_name) if repositories else None
+    if not agg_repo:
+        return []
+
+    if bucket_values:
+        buckets = list(bucket_values)
+    else:
+        seen: list[str] = []
+        for item in items:
+            v = item.get(group_by)
+            if v is None:
+                continue
+            sv = str(v)
+            if sv not in seen:
+                seen.append(sv)
+        buckets = seen
+
+    if not buckets:
+        return []
+
+    async def _per_bucket(bucket_value: str) -> tuple[str, int]:
+        sub_clause = (where_clause or "").replace("current_bucket", str(bucket_value))
+        # When the expression has no current_bucket sentinel, fall back to
+        # filtering on the group_by field directly so naive authors still
+        # get a per-bucket result instead of N copies of the same total.
+        if not where_clause or "current_bucket" not in where_clause:
+            extra = f"{group_by} = {bucket_value}"
+            sub_clause = f"{where_clause} and {extra}" if where_clause else extra
+        _, value = await _fetch_count_metric(metric_name, agg_repo, sub_clause, scope_filters)
+        return str(bucket_value), value
+
+    results = await asyncio.gather(
+        *(_per_bucket(b) for b in buckets),
+        return_exceptions=True,
+    )
+
+    out: list[dict[str, Any]] = []
+    for r in results:
+        if isinstance(r, BaseException):
+            logger.warning("Bucketed aggregate query failed: %s", r)
+            continue
+        bucket_label, value = r
+        out.append({"label": bucket_label, "value": value})
+    return out
 
 
 async def _compute_aggregate_metrics(
