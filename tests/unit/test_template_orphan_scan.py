@@ -75,14 +75,6 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Dormant building-block with contract (island.md, UX-059); "
         "IslandContext dataclass wired but no template include"
     ),
-    # 2FA page templates — NO Python route renders these as HTML pages.
-    # Only /auth/2fa/* JSON API endpoints exist in routes_2fa.py.
-    # Surfaced cycle 302 orphan_lint scan. Filing EX-055 for
-    # finding_investigation to determine: is the feature broken at the
-    # page level, OR is there a mechanism the scan missed?
-    "site/auth/2fa_challenge.html": "EX-055 (cycle 302) — no page route found",
-    "site/auth/2fa_setup.html": "EX-055 (cycle 302) — no page route found",
-    "site/auth/2fa_settings.html": "EX-055 (cycle 302) — no page route found",
 }
 
 

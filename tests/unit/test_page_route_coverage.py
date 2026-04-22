@@ -66,14 +66,7 @@ PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
 # Page templates that genuinely should NOT be served by a page route
 # (e.g. the template is consumed by a different mechanism, or the
 # feature is pending a separate triage). Each entry requires a reason.
-INDIVIDUAL_ALLOWLIST: dict[str, str] = {
-    # 2FA pages — templates ship but no page route exists. Filed as
-    # EX-055 (cycle 302/303) → #831. Kept allowlisted here so this lint
-    # passes while the framework bug is triaged. Remove when #831 lands.
-    "site/auth/2fa_challenge.html": "EX-055 → #831; 2FA UI feature half-shipped",
-    "site/auth/2fa_setup.html": "EX-055 → #831; 2FA UI feature half-shipped",
-    "site/auth/2fa_settings.html": "EX-055 → #831; 2FA UI feature half-shipped",
-}
+INDIVIDUAL_ALLOWLIST: dict[str, str] = {}
 
 # Render-call patterns. Each matches a known way the runtime serves a
 # page template as an HTML response. Extend when new render helpers land.

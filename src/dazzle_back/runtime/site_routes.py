@@ -473,15 +473,20 @@ def create_site_page_routes(
 def create_auth_page_routes(
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes for authentication pages.
 
-    Routes: /login, /signup, /forgot-password, /reset-password
+    Routes: /login, /signup, /forgot-password, /reset-password,
+    /2fa/setup, /2fa/settings, /2fa/challenge.
 
     Args:
         sitespec_data: SiteSpec as dict
         project_root: Project root for detecting custom CSS
+        get_auth_context: Optional callable that takes a Request and returns an
+            auth context with ``is_authenticated``. When provided, /2fa/setup
+            and /2fa/settings redirect unauthenticated users to /login.
 
     Returns:
         FastAPI router with auth page routes
@@ -494,6 +499,24 @@ def create_auth_page_routes(
     has_custom_css = bool(
         project_root and (project_root / "static" / "css" / "custom.css").is_file()
     )
+
+    _auth_fn = get_auth_context
+
+    def _require_auth(request: Request, next_path: str) -> RedirectResponse | None:
+        """Return a redirect to /login when the request is unauthenticated.
+
+        When no auth callable is wired, fall through (treat all requests as
+        permitted) so the page is still reachable in dev/testing setups.
+        """
+        if _auth_fn is None:
+            return None
+        try:
+            auth_ctx = _auth_fn(request)
+            if auth_ctx and getattr(auth_ctx, "is_authenticated", False):
+                return None
+        except Exception:
+            logger.debug("Auth check failed, redirecting to login", exc_info=True)
+        return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
 
     @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
     async def login_page(sitespec: dict[str, Any] = sitespec_data) -> str:
@@ -518,5 +541,52 @@ def create_auth_page_routes(
         """Serve the reset-password page."""
         ctx = build_site_auth_context(sitespec, "reset_password", custom_css=has_custom_css)
         return render_site_page("site/auth/reset_password.html", ctx)
+
+    @router.get("/2fa/setup", include_in_schema=False)
+    async def two_factor_setup_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> Response:
+        """Serve the 2FA enrolment page (authenticated users only)."""
+        redirect = _require_auth(request, "/2fa/setup")
+        if redirect is not None:
+            return redirect
+        ctx = build_site_auth_context(sitespec, "2fa_setup", custom_css=has_custom_css)
+        return HTMLResponse(content=render_site_page("site/auth/2fa_setup.html", ctx))
+
+    @router.get("/2fa/settings", include_in_schema=False)
+    async def two_factor_settings_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> Response:
+        """Serve the 2FA management page (authenticated users only)."""
+        redirect = _require_auth(request, "/2fa/settings")
+        if redirect is not None:
+            return redirect
+        ctx = build_site_auth_context(sitespec, "2fa_settings", custom_css=has_custom_css)
+        return HTMLResponse(content=render_site_page("site/auth/2fa_settings.html", ctx))
+
+    @router.get("/2fa/challenge", response_class=HTMLResponse, include_in_schema=False)
+    async def two_factor_challenge_page(
+        session: str = "",
+        method: str = "totp",
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> str:
+        """Serve the mid-login 2FA challenge page.
+
+        Public route — the pre-login session_token is the sole credential the
+        subsequent POST /auth/2fa/verify call relies on. The token is passed in
+        as ``?session=<token>`` from the login flow when the backend returns
+        ``status: "2fa_required"``.
+        """
+        ctx = build_site_auth_context(
+            sitespec,
+            "2fa_challenge",
+            custom_css=has_custom_css,
+            session_token=session,
+            default_method=method,
+            methods=["totp", "email_otp"],
+        )
+        return render_site_page("site/auth/2fa_challenge.html", ctx)
 
     return router

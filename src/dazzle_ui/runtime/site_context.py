@@ -188,13 +188,21 @@ def build_site_auth_context(
     page_type: str,
     *,
     custom_css: bool = False,
+    session_token: str = "",
+    default_method: str = "totp",
+    methods: list[str] | None = None,
 ) -> SiteAuthContext:
     """Build a SiteAuthContext for auth page templates.
 
     Args:
         sitespec_data: Site specification data.
-        page_type: One of "login", "signup", "forgot_password", "reset_password".
+        page_type: One of "login", "signup", "forgot_password", "reset_password",
+            "2fa_setup", "2fa_settings", "2fa_challenge".
         custom_css: Include project-level custom CSS.
+        session_token: Pre-login session token for 2FA challenge (#831).
+        default_method: Default 2FA method to challenge ("totp" or "email_otp").
+        methods: Enabled 2FA methods for the user; controls UI affordances
+            on the challenge page.
 
     Returns:
         SiteAuthContext ready for template rendering.
@@ -255,6 +263,45 @@ def build_site_auth_context(
             "show_success_alert": False,
             "subtitle": "",
         },
+        "2fa_setup": {
+            "title": "Set Up 2FA",
+            "action_url": "/auth/2fa/setup/totp",
+            "button_text": "Enable",
+            "is_login": False,
+            "other_page": "/app",
+            "other_link_text": "Back to app",
+            "show_forgot_password": False,
+            "show_name_field": False,
+            "show_confirm_password": False,
+            "show_success_alert": True,
+            "subtitle": "",
+        },
+        "2fa_settings": {
+            "title": "2FA Settings",
+            "action_url": "/auth/2fa/status",
+            "button_text": "",
+            "is_login": False,
+            "other_page": "/app",
+            "other_link_text": "Back to app",
+            "show_forgot_password": False,
+            "show_name_field": False,
+            "show_confirm_password": False,
+            "show_success_alert": True,
+            "subtitle": "",
+        },
+        "2fa_challenge": {
+            "title": "Verify Your Identity",
+            "action_url": "/auth/2fa/verify",
+            "button_text": "Verify",
+            "is_login": False,
+            "other_page": "/login",
+            "other_link_text": "Back to sign in",
+            "show_forgot_password": False,
+            "show_name_field": False,
+            "show_confirm_password": False,
+            "show_success_alert": False,
+            "subtitle": "Enter the verification code to continue.",
+        },
     }
 
     cfg = configs.get(page_type, configs["login"])
@@ -263,6 +310,9 @@ def build_site_auth_context(
         product_name=product_name,
         page_type=page_type,
         custom_css=custom_css,
+        session_token=session_token,
+        default_method=default_method,
+        methods=list(methods) if methods else ["totp"],
         **cfg,
     )
 

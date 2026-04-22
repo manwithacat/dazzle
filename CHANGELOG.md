@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.5] - 2026-04-22
+
+Patch bump. One bug fix (#831).
+
+### Fixed
+- **2FA page routes now exist (#831).** `src/dazzle_ui/templates/site/auth/2fa_challenge.html`, `2fa_setup.html`, and `2fa_settings.html` shipped in an earlier cycle as styled templates but no Python page route served them — users could configure 2FA at the backend but had no URL to reach the UI. `create_auth_page_routes` in `src/dazzle_back/runtime/site_routes.py` now registers `GET /2fa/setup`, `GET /2fa/settings`, and `GET /2fa/challenge`. Setup/settings redirect unauthenticated requests to `/login?next=<path>`; the mid-login challenge is public and accepts the pre-login session token via `?session=<token>`. `SiteAuthContext` gains `session_token`, `default_method`, and `methods` fields; `build_site_auth_context` handles three new page types. `create_auth_page_routes` now accepts an optional `get_auth_context` callable, threaded through from `app_factory.py`. Orphan and page-route ratchets in `tests/unit/test_template_orphan_scan.py` and `tests/unit/test_page_route_coverage.py` no longer allowlist the three templates. Regression coverage in `tests/unit/test_2fa_page_routes.py`.
+
 ## [0.58.4] - 2026-04-22
 
 Patch bump. One framework-correctness fix (#835).

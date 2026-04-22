@@ -512,10 +512,10 @@ class SitePageContext(BaseModel):
 
 
 class SiteAuthContext(BaseModel):
-    """Context for auth page templates (login, signup, forgot/reset password)."""
+    """Context for auth page templates (login, signup, forgot/reset password, 2fa_*)."""
 
     product_name: str = "My App"
-    page_type: str = "login"  # login, signup, forgot_password, reset_password
+    page_type: str = "login"  # login, signup, forgot_password, reset_password, 2fa_*
     title: str = "Sign In"
     action_url: str = "/auth/login"
     button_text: str = "Sign In"
@@ -528,6 +528,10 @@ class SiteAuthContext(BaseModel):
     show_success_alert: bool = False
     subtitle: str = ""
     custom_css: bool = False
+    # 2FA-specific fields; unused on other auth pages.
+    session_token: str = ""
+    default_method: str = "totp"
+    methods: list[str] = Field(default_factory=lambda: ["totp"])
 
 
 class Site404Context(BaseModel):

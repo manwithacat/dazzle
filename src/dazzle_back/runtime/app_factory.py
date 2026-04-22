@@ -506,9 +506,13 @@ def assemble_post_build_routes(
             logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
 
             # ---- 2. Auth page routes ----
-            auth_page_router = create_auth_page_routes(sitespec_data, project_root=project_root)
+            auth_page_router = create_auth_page_routes(
+                sitespec_data,
+                project_root=project_root,
+                get_auth_context=get_auth_context,
+            )
             app.include_router(auth_page_router)
-            logger.info("  Auth pages: /login, /signup")
+            logger.info("  Auth pages: /login, /signup, /2fa/setup, /2fa/settings, /2fa/challenge")
         except ImportError:
             pass
 
