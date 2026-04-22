@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.23] - 2026-04-23
+
+Patch bump. One follow-on fix to #850 + diagnostic logging (#851).
+
+### Fixed
+- **Bar-chart per-bucket count call now mirrors the items list call exactly (#851).** The auto-augmented per-bucket query in `_compute_bucketed_aggregates._per_bucket` now passes `include=[group_by]` to `agg_repo.list(...)` — the same arg the workspace items fetch and the source enumeration use. Without it, some repo backends silently match zero rows when filtering an FK UUID column because the column-type coercion hook only fires for relations the query layer is aware of via `include`. With this change every cell in the bar_chart pipeline (enumeration, items, per-bucket) hits the repo with the same kwargs.
+- **Per-bucket DEBUG log captures the filter dict + result.** When `dazzle.workspace_rendering` is at DEBUG, every per-bucket query logs `bucketed-aggregate <metric>[<group_by>=<key>] → total=N (filters=<dict>)`. Operators can `grep` for this in production logs to compare against the equivalent REST list call when the chart values look wrong.
+
+### Agent Guidance
+- **`include=[group_by]` is now load-bearing on the per-bucket call.** The 2 new ratchets in `tests/unit/test_bar_chart_bucketed_aggregate.py::TestPerBucketIncludesGroupBy` fail if the kwarg is dropped — keep it in the signature when refactoring.
+
 ## [0.58.22] - 2026-04-23
 
 Patch bump. Two follow-on fixes to #849 (#850).

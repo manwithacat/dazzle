@@ -1388,8 +1388,29 @@ async def _compute_bucketed_aggregates(
                 base_filters[group_by] = bucket_key
                 if scope_filters:
                     base_filters = {**scope_filters, **base_filters}
-                agg_result = await agg_repo.list(page=1, page_size=1, filters=base_filters)
+                # Mirror the items list call exactly (#851): pass
+                # include=[group_by] so the FK column is loaded the same
+                # way the items endpoint does. Some repo backends only
+                # apply column-type coercion (UUID etc.) on relations
+                # they're aware of via include — without it the WHERE
+                # filter against an FK UUID column can silently match
+                # zero rows.
+                agg_result = await agg_repo.list(
+                    page=1,
+                    page_size=1,
+                    filters=base_filters,
+                    include=[group_by],
+                )
                 value = agg_result.get("total", 0) if isinstance(agg_result, dict) else 0
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(
+                        "bucketed-aggregate %s[%s=%s] → total=%s (filters=%r)",
+                        metric_name,
+                        group_by,
+                        bucket_key,
+                        value,
+                        base_filters,
+                    )
                 return bucket_label, value
             except Exception:
                 logger.warning(

@@ -498,3 +498,53 @@ class TestSourceEnumerationFKExpansion:
         )
         # First source call must carry the scope filter dict.
         assert captured[0].get("filters") == {"__scope_predicate": ("dept = $1", ["d-1"])}
+
+
+# ---------------------------------------------------------------------------
+# #851: per-bucket count call must mirror the items-list call (pass include).
+# ---------------------------------------------------------------------------
+
+
+def _make_capturing_agg_repo(*totals: int):
+    """Repo whose .list captures kwargs and returns successive totals."""
+    repo = MagicMock()
+    captured: list[dict] = []
+    iterator = iter(totals)
+
+    async def _list(**kw):
+        captured.append(dict(kw))
+        return {"total": next(iterator)}
+
+    repo.list = AsyncMock(side_effect=_list)
+    return repo, captured
+
+
+class TestPerBucketIncludesGroupBy:
+    """#851: per-bucket repo call must pass include=[group_by] like the items path."""
+
+    @pytest.mark.asyncio()
+    async def test_per_bucket_passes_include(self) -> None:
+        agg_repo, captured = _make_capturing_agg_repo(7)
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[{"assessment_objective": {"id": "ao-1", "label": "AO1"}}],
+        )
+        assert len(captured) == 1
+        assert captured[0].get("include") == ["assessment_objective"]
+
+    @pytest.mark.asyncio()
+    async def test_per_bucket_filter_shape_unchanged(self) -> None:
+        """The new include arg must not perturb the filter dict shape."""
+        agg_repo, captured = _make_capturing_agg_repo(42)
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[{"assessment_objective": {"id": "ao-1"}}],
+            scope_filters={"__scope_predicate": ("dept = $1", ["d-1"])},
+        )
+        f = captured[0].get("filters") or {}
+        assert f.get("assessment_objective") == "ao-1"
+        assert f.get("__scope_predicate") == ("dept = $1", ["d-1"])
