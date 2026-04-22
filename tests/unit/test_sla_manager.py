@@ -446,3 +446,57 @@ class TestStartShutdown:
 
         await mgr.on_entity_event("SupportTicket", "t1", {"status": "resolved"}, {"status": "open"})
         assert mgr.active_timer_count == 0
+
+
+# ---------------------------------------------------------------------------
+# ParamRef resolution in _elapsed (#841)
+# ---------------------------------------------------------------------------
+
+
+class TestBusinessHoursParamRefResolution:
+    """BusinessHoursSpec.schedule/timezone can be ParamRef — must resolve to str
+    before parse_schedule sees them. Regression guard for #841 where the
+    scheduler loop crashed with `'ParamRef' object has no attribute 'strip'`
+    every second on Heroku."""
+
+    def test_elapsed_accepts_param_ref_schedule(self) -> None:
+        from dazzle.core.ir.params import ParamRef
+
+        bh = BusinessHoursSpec(
+            schedule=ParamRef(
+                key="business_schedule", param_type="str", default="Mon-Fri 09:00-17:00"
+            ),
+            timezone=ParamRef(key="business_tz", param_type="str", default="UTC"),
+        )
+        sla = _make_sla(business_hours=bh)
+        mgr = SLAManager(sla_specs=[sla])
+        # Seed a timer directly; short elapsed window so the business_seconds
+        # path runs without needing a full entity event loop.
+        now = time.time()
+        timer = SLATimer(
+            sla_name=sla.name,
+            entity_name=sla.entity,
+            entity_id="t1",
+            started_at=now - 60,
+            accumulated_seconds=0.0,
+        )
+        mgr._timers["SupportTicket:t1"] = timer
+        # Must not raise AttributeError: 'ParamRef' object has no attribute 'strip'
+        elapsed = mgr._elapsed(timer)
+        assert elapsed >= 0
+
+    def test_elapsed_still_accepts_plain_str(self) -> None:
+        bh = BusinessHoursSpec(schedule="Mon-Fri 09:00-17:00", timezone="UTC")
+        sla = _make_sla(business_hours=bh)
+        mgr = SLAManager(sla_specs=[sla])
+        now = time.time()
+        timer = SLATimer(
+            sla_name=sla.name,
+            entity_name=sla.entity,
+            entity_id="t2",
+            started_at=now - 60,
+            accumulated_seconds=0.0,
+        )
+        mgr._timers["SupportTicket:t2"] = timer
+        elapsed = mgr._elapsed(timer)
+        assert elapsed >= 0

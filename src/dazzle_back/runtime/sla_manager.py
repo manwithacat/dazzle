@@ -327,7 +327,13 @@ class SLAManager:
 
         if sla and sla.business_hours and sla.business_hours.schedule:
             bh = sla.business_hours
-            biz = business_seconds(raw_start, now, bh.schedule, bh.timezone)
+            # BusinessHoursSpec declares schedule/timezone as str | ParamRef.
+            # Resolve ParamRefs to their default value before handing to
+            # business_seconds — the parse layer expects a concrete str.
+            # Mirrors the _tier_seconds pattern for duration_value. (#841)
+            schedule = bh.schedule.default if hasattr(bh.schedule, "default") else bh.schedule
+            timezone_ = bh.timezone.default if hasattr(bh.timezone, "default") else bh.timezone
+            biz = business_seconds(raw_start, now, schedule, timezone_)
             return timer.accumulated_seconds + biz
 
         return raw

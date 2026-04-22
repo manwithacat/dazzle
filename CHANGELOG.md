@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.13] - 2026-04-22
+
+Patch bump. One critical-path bug fix (#841).
+
+### Fixed
+- **SLA breach-check loop no longer crashes every second when `business_hours.schedule` is a `ParamRef` (#841).** `BusinessHoursSpec.schedule` and `.timezone` are declared as `str | ParamRef` (DSL authors can bind them to runtime params), but `SLAManager._elapsed()` passed `bh.schedule` / `bh.timezone` directly to `business_seconds()`, which in turn called `schedule.strip().split()` — raising `AttributeError: 'ParamRef' object has no attribute 'strip'` on every scheduler tick. On Heroku this flooded the logplex buffer until the drain dropped messages. Fix mirrors the `_tier_seconds` pattern already present in-file (`hasattr(x, "default")` guard): `bh.schedule` and `bh.timezone` are now resolved to their default string before `business_seconds` runs. Regression coverage in `tests/unit/test_sla_manager.py::TestBusinessHoursParamRefResolution` (2 tests — one with ParamRef, one with plain str).
+
 ## [0.58.12] - 2026-04-22
 
 Patch bump. One UI fix (#842).
