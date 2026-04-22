@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.14] - 2026-04-22
+
+Patch bump. One migration-gap fix (#840).
+
+### Added
+- **`dazzle db verify --fix-money`** — detects and (optionally) repairs legacy money columns that pre-date the v0.58 split into `{name}_minor` (BIGINT) + `{name}_currency` (TEXT). New module `src/dazzle/db/money_migration.py` walks the DSL's `money(...)` fields, checks each against `information_schema.columns` on the live DB, and classifies every field as **clean** / **drift** (legacy single-column shape still present, no new columns yet) / **partial** (legacy + one of the new columns — repair skipped to avoid clobber). For drifts, the 4-statement repair pattern (`ADD COLUMN _minor` + `ADD COLUMN _currency` + data-preserving `UPDATE` + `DROP COLUMN`) is emitted to stdout by default and, with `--fix-money`, executed on the connection.
+
+### Fixed
+- **`dazzle db verify` now surfaces legacy money-column drift instead of leaving apps 500'ing (#840).** Upgrades from pre-v0.58 DBs left money columns on the old DOUBLE PRECISION shape; every `POST`/`PUT` against affected entities returned `psycopg.errors.UndefinedColumn: column "{name}_minor" of relation "..." does not exist` because Alembic autogenerate sees two ADDs with zero DROPs and never detects the type reshaping. The verify command now runs FK integrity **and** money-column drift checks in one pass, prints the repair SQL for operator review, and offers `--fix-money` to auto-apply. 12 regression tests in `tests/unit/test_money_migration.py` cover clean/drift/partial classification, the SQL builder's safety guards (identifier quoting, 3-letter currency validation), and the dry-run-vs-apply behaviour.
+
+### Agent Guidance
+- **Don't autogenerate a migration for money-field reshaping.** Alembic's autogen doesn't understand that a DOUBLE PRECISION `{name}` column maps to a `{name}_minor` + `{name}_currency` pair — it will emit two ADD COLUMNs but never DROP the legacy column. Use `dazzle db verify` (with `--fix-money` after backup) to repair; or author the migration by hand following the 4-statement pattern.
+
 ## [0.58.13] - 2026-04-22
 
 Patch bump. One critical-path bug fix (#841).

@@ -40,9 +40,17 @@ class TestDbVerifyCommand:
         appspec.domain.entities = []
         mock_load.return_value = appspec
 
+        # Post-#840 the runner returns {"fk": ..., "money": ...} so both
+        # checks appear in one verify output.
         mock_run.return_value = {
-            "checks": [],
-            "total_issues": 0,
+            "fk": {"checks": [], "total_issues": 0},
+            "money": {
+                "drifts": [],
+                "drift_count": 0,
+                "partial_count": 0,
+                "applied_count": 0,
+                "errors": [],
+            },
         }
 
         result = runner.invoke(db_app, ["verify"])
@@ -52,6 +60,46 @@ class TestDbVerifyCommand:
             or "issues" in result.output.lower()
             or "valid" in result.output.lower()
         )
+
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.load_project_appspec")
+    def test_verify_reports_money_drift(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
+        """Drift rows are printed to the user with the repair SQL."""
+        appspec = MagicMock()
+        appspec.domain.entities = []
+        mock_load.return_value = appspec
+
+        mock_run.return_value = {
+            "fk": {"checks": [], "total_issues": 0},
+            "money": {
+                "drifts": [
+                    {
+                        "entity": "Company",
+                        "field": "revenue",
+                        "currency": "GBP",
+                        "legacy_type": "double precision",
+                        "status": "drift",
+                        "repair_sql": (
+                            'ALTER TABLE "Company" ADD COLUMN "revenue_minor" BIGINT;\n'
+                            'ALTER TABLE "Company" ADD COLUMN "revenue_currency" TEXT;\n'
+                            'UPDATE "Company" SET "revenue_minor" = ROUND("revenue"*100)::bigint, '
+                            '"revenue_currency" = \'GBP\' WHERE "revenue" IS NOT NULL;\n'
+                            'ALTER TABLE "Company" DROP COLUMN "revenue";'
+                        ),
+                    }
+                ],
+                "drift_count": 1,
+                "partial_count": 0,
+                "applied_count": 0,
+                "errors": [],
+            },
+        }
+
+        result = runner.invoke(db_app, ["verify"])
+        assert result.exit_code == 0
+        assert "Company" in result.output
+        assert "revenue" in result.output
+        assert "--fix-money" in result.output
 
 
 class TestDbResetCommand:

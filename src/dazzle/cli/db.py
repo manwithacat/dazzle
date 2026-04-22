@@ -490,8 +490,13 @@ def verify_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+    fix_money: bool = typer.Option(
+        False,
+        "--fix-money",
+        help="Auto-apply legacy money-column migration (#840). Destructive — back up the DB first.",
+    ),
 ) -> None:
-    """Check FK integrity across all entity relationships."""
+    """Check FK integrity + legacy money-column shape across entities (#840)."""
     import json as json_mod
 
     project_root = Path.cwd().resolve()
@@ -500,10 +505,13 @@ def verify_command(
     url = _resolve_url(database_url)
     schema = _resolve_tenant_schema(tenant) if tenant else ""
 
+    from dazzle.db.money_migration import repair_money_drifts
     from dazzle.db.verify import db_verify_impl
 
     async def _run(conn: Any) -> Any:
-        return await db_verify_impl(entities=entities, conn=conn)
+        fk_result = await db_verify_impl(entities=entities, conn=conn)
+        money_result = await repair_money_drifts(conn, list(entities), apply=fix_money)
+        return {"fk": fk_result, "money": money_result}
 
     result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
@@ -512,7 +520,8 @@ def verify_command(
         return
 
     console.print("\n[bold]FK Integrity:[/bold]")
-    for check in result["checks"]:
+    fk_result = result["fk"]
+    for check in fk_result["checks"]:
         if check["status"] == "ok":
             console.print(f"  [green]✓[/green] {check['entity']}.{check['field']} → {check['ref']}")
         elif check["status"] == "orphans":
@@ -526,10 +535,36 @@ def verify_command(
                 f"{check.get('error', 'unknown error')}"
             )
 
-    if result["total_issues"] == 0:
+    if fk_result["total_issues"] == 0:
         console.print("\n[green]All FK references valid.[/green]")
     else:
-        console.print(f"\n[red]{result['total_issues']} issues found.[/red]")
+        console.print(f"\n[red]{fk_result['total_issues']} FK issues found.[/red]")
+
+    money_result = result["money"]
+    if money_result["drift_count"] or money_result["partial_count"]:
+        console.print("\n[bold]Legacy money-column drift (#840):[/bold]")
+        for drift in money_result["drifts"]:
+            label = "[red]drift[/red]" if drift["status"] == "drift" else "[yellow]partial[/yellow]"
+            console.print(
+                f"  {label} {drift['entity']}.{drift['field']} "
+                f"(legacy {drift['legacy_type']}, ccy {drift['currency']})"
+            )
+            if drift["status"] == "drift" and not fix_money:
+                for line in drift["repair_sql"].splitlines():
+                    console.print(f"    [dim]{line}[/dim]")
+        if fix_money:
+            console.print(f"\n[green]Applied {money_result['applied_count']} statement(s).[/green]")
+            if money_result["errors"]:
+                console.print(f"[red]{len(money_result['errors'])} error(s) during repair:[/red]")
+                for err in money_result["errors"]:
+                    console.print(f"  {err['entity']}.{err['field']}: {err['error']}")
+        else:
+            console.print(
+                "\n[yellow]Re-run with --fix-money to auto-apply "
+                "(back up the DB first — destructive).[/yellow]"
+            )
+    else:
+        console.print("\n[green]No legacy money-column drift.[/green]")
 
 
 @db_app.command(name="reset")
