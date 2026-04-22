@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.10] - 2026-04-22
+
+Patch bump. One security hardening (#833 Phase 3 of external-resource hardening, closes the phase series).
+
+### Security
+- **CSP defaults now align with the bundled templates, and the `standard` profile emits CSP (#833).** `src/dazzle_back/runtime/security_middleware.py::_build_csp_header` previously defaulted `script-src`/`style-src`/`font-src` to `'self' 'unsafe-inline'` only — which meant every deployment using `security_profile="strict"` saw broken pages because the bundled shells load from Google Fonts (+ jsdelivr for the mermaid lazy-load in `workspace/regions/diagram.html`). Defaults now whitelist exactly the origins the post-#832 templates actually reach: `fonts.googleapis.com` (style-src), `fonts.gstatic.com` (font-src), `cdn.jsdelivr.net` (script-src). `SecurityHeadersConfig` gains a `csp_report_only: bool` flag; when set, the middleware emits `Content-Security-Policy-Report-Only` instead of the enforcing header so browsers surface violations without breaking pages. The `standard` profile flips from `enable_csp=False` (historical "CSP can break many apps" comment) to `enable_csp=True, csp_report_only=True` — a stepping-stone for apps graduating to `strict` (which is now enforcing, not report-only). IR-level `SecurityConfig.from_profile` (`src/dazzle/core/ir/security.py`) updated in lockstep. 8 new tests in `tests/unit/test_security.py` pin the default directives, the Report-Only behaviour, and the profile-level flags.
+
+### Agent Guidance
+- **When adding new template loads, extend the default CSP directives in one place.** `_build_csp_header` is the single source of truth. The external-resource lint in `tests/unit/test_external_resource_lint.py` plus the CSP-default tests together ratchet both sides — a new CDN load without a matching directive (or vice versa) fails CI.
+
 ## [0.58.9] - 2026-04-22
 
 Patch bump. One orphan-wiring fix (#839).

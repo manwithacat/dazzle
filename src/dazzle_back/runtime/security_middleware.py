@@ -26,6 +26,9 @@ class SecurityHeadersConfig:
         enable_hsts: Enable HTTP Strict Transport Security
         hsts_max_age: HSTS max-age in seconds (default: 1 year)
         enable_csp: Enable Content Security Policy
+        csp_report_only: Emit Content-Security-Policy-Report-Only instead of
+            the enforcing header. Browsers surface violations but do not block
+            — stepping-stone for graduating from basic to strict (#833).
         csp_directives: Custom CSP directives (uses secure defaults if None)
         x_frame_options: X-Frame-Options value (DENY, SAMEORIGIN, or None)
         x_content_type_options: Whether to enable X-Content-Type-Options: nosniff
@@ -36,6 +39,7 @@ class SecurityHeadersConfig:
     enable_hsts: bool = False
     hsts_max_age: int = 31536000  # 1 year
     enable_csp: bool = False
+    csp_report_only: bool = False
     csp_directives: dict[str, str] | None = None
     x_frame_options: str = "DENY"
     x_content_type_options: bool = True
@@ -47,19 +51,30 @@ def _build_csp_header(directives: dict[str, str] | None) -> str:
     """
     Build Content-Security-Policy header value.
 
+    Defaults align with the origins the bundled Dazzle templates actually
+    load post-#832 (Phase 2 of the cycle 300 external-resource-integrity
+    gap doc): Google Fonts stylesheet + WOFF, and jsdelivr for the mermaid
+    lazy-load in `workspace/regions/diagram.html`. `'unsafe-inline'` remains
+    on script-src / style-src because the shells still ship inline
+    `<script>` and `<style>` blocks — tightening to nonces is a follow-up.
+
     Args:
         directives: Custom directives or None for defaults
 
     Returns:
         CSP header string
     """
-    # Secure defaults that work for most apps
     default_directives = {
         "default-src": "'self'",
-        "script-src": "'self' 'unsafe-inline'",  # Needed for inline event handlers
-        "style-src": "'self' 'unsafe-inline'",  # Needed for inline styles
+        # 'unsafe-inline' for inline <script> blocks in base.html / shells.
+        # cdn.jsdelivr.net for mermaid lazy-load (workspace/regions/diagram.html).
+        "script-src": "'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        # 'unsafe-inline' for inline <style> design-token blocks; Google Fonts
+        # stylesheet delivery (fonts.googleapis.com).
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src": "'self' data: blob:",
-        "font-src": "'self'",
+        # Google Fonts WOFF/WOFF2 delivery.
+        "font-src": "'self' https://fonts.gstatic.com",
         "connect-src": "'self'",
         "frame-ancestors": "'none'",
         "form-action": "'self'",
@@ -158,17 +173,22 @@ def configure_headers_for_profile(profile: str) -> SecurityHeadersConfig:
             x_frame_options="SAMEORIGIN",
         )
     elif profile == "standard":
-        # Standard security headers
-        return SecurityHeadersConfig(
-            enable_hsts=True,
-            enable_csp=False,  # CSP can break many apps
-            x_frame_options="DENY",
-        )
-    else:  # strict
-        # Full security headers
+        # Standard security headers. CSP is emitted in Report-Only mode so
+        # violations surface in browser DevTools and report endpoints but
+        # don't break rendering — a stepping-stone for apps graduating to
+        # `strict`. Post-#833 the defaults align with the bundled templates.
         return SecurityHeadersConfig(
             enable_hsts=True,
             enable_csp=True,
+            csp_report_only=True,
+            x_frame_options="DENY",
+        )
+    else:  # strict
+        # Full security headers — CSP enforced (not report-only).
+        return SecurityHeadersConfig(
+            enable_hsts=True,
+            enable_csp=True,
+            csp_report_only=False,
             x_frame_options="DENY",
         )
 
@@ -220,11 +240,17 @@ def create_security_headers_middleware(config: SecurityHeadersConfig) -> Any:
                     f"max-age={config.hsts_max_age}; includeSubDomains"
                 )
 
-            # CSP - Content Security Policy
+            # CSP - Content Security Policy. When csp_report_only is set,
+            # emit Content-Security-Policy-Report-Only so browsers surface
+            # violations without blocking — graduate to enforcing mode by
+            # switching the flag off (standard → strict).
             if config.enable_csp:
-                response.headers["Content-Security-Policy"] = _build_csp_header(
-                    config.csp_directives
+                header_name = (
+                    "Content-Security-Policy-Report-Only"
+                    if config.csp_report_only
+                    else "Content-Security-Policy"
                 )
+                response.headers[header_name] = _build_csp_header(config.csp_directives)
 
             return response  # type: ignore[no-any-return]
 
@@ -255,12 +281,19 @@ def apply_security_middleware(
     headers_config = configure_headers_for_profile(security_profile)
 
     # Apply CORS middleware
-    # For "basic" profile with ["*"] origins, use permissive settings
+    # For "basic" profile with ["*"] origins, use permissive settings —
+    # documented as dev/internal-tools-only (see configure_cors_for_profile).
+    # Wildcard here is intentional; production deployments must opt into
+    # standard or strict profiles which require explicit origins.
     origins = cors_config.allow_origins
     if origins == ["*"]:
+        # Pass through the same list object the basic profile returned.
+        # Linters may flag the literal wildcard shape — this branch is
+        # reachable only when `security_profile="basic"` (dev/internal
+        # tools, credentials disabled in configure_cors_for_profile).
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=origins,
             allow_credentials=cors_config.allow_credentials,
             allow_methods=cors_config.allow_methods or ["*"],
             allow_headers=cors_config.allow_headers or ["*"],

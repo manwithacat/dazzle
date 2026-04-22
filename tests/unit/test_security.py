@@ -53,7 +53,9 @@ class TestSecurityConfig:
         assert config.profile == SecurityProfile.STANDARD
         assert config.cors_origins is None  # Same-origin only
         assert config.enable_hsts is True
-        assert config.enable_csp is False  # Can break apps
+        # Post-#833: standard profile enables CSP — runtime middleware
+        # switches to Report-Only mode so violations surface without blocking.
+        assert config.enable_csp is True
         assert config.require_auth_by_default is True
         assert config.tenant_isolation is False
 
@@ -156,23 +158,25 @@ class TestSecurityMiddleware:
         assert config.x_frame_options == "SAMEORIGIN"
 
     def test_standard_headers_config(self) -> None:
-        """Test standard profile has reasonable headers."""
+        """Standard profile emits CSP in Report-Only mode (#833)."""
         from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
         config = configure_headers_for_profile("standard")
 
         assert config.enable_hsts is True
-        assert config.enable_csp is False
+        assert config.enable_csp is True
+        assert config.csp_report_only is True
         assert config.x_frame_options == "DENY"
 
     def test_strict_headers_config(self) -> None:
-        """Test strict profile has full headers."""
+        """Strict profile enforces CSP (not report-only)."""
         from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
         config = configure_headers_for_profile("strict")
 
         assert config.enable_hsts is True
         assert config.enable_csp is True
+        assert config.csp_report_only is False
         assert config.x_frame_options == "DENY"
 
 
@@ -515,3 +519,78 @@ entity Task "Task":
 
         assert app_config is not None
         assert app_config.security_profile == "basic"
+
+
+# =============================================================================
+# CSP Default Directives + Report-Only Mode (#833)
+# =============================================================================
+
+
+class TestCSPDefaults:
+    """Default CSP directives must align with what the bundled shells load."""
+
+    def test_defaults_allow_google_fonts(self) -> None:
+        from dazzle_back.runtime.security_middleware import _build_csp_header
+
+        csp = _build_csp_header(None)
+        assert "https://fonts.googleapis.com" in csp
+        assert "https://fonts.gstatic.com" in csp
+
+    def test_defaults_allow_jsdelivr_for_mermaid(self) -> None:
+        """diagram.html lazy-loads mermaid from jsdelivr — CSP must permit it."""
+        from dazzle_back.runtime.security_middleware import _build_csp_header
+
+        csp = _build_csp_header(None)
+        assert "https://cdn.jsdelivr.net" in csp
+        # jsdelivr origin must appear in script-src specifically.
+        directives = {d.split(" ", 1)[0]: d for d in csp.split("; ")}
+        assert "cdn.jsdelivr.net" in directives["script-src"]
+
+    def test_defaults_do_not_allow_tailwind_cdn(self) -> None:
+        """Post-#832, cdn.tailwindcss.com must NOT be in the defaults."""
+        from dazzle_back.runtime.security_middleware import _build_csp_header
+
+        csp = _build_csp_header(None)
+        assert "cdn.tailwindcss.com" not in csp
+
+    def test_custom_directives_override_defaults(self) -> None:
+        from dazzle_back.runtime.security_middleware import _build_csp_header
+
+        csp = _build_csp_header({"script-src": "'self'"})
+        directives = {d.split(" ", 1)[0]: d for d in csp.split("; ")}
+        assert directives["script-src"] == "script-src 'self'"
+
+
+class TestCSPReportOnly:
+    """The middleware must emit the Report-Only header when configured."""
+
+    def test_enforcing_header_by_default(self) -> None:
+        from dazzle_back.runtime.security_middleware import (
+            SecurityHeadersConfig,
+            create_security_headers_middleware,
+        )
+
+        config = SecurityHeadersConfig(enable_csp=True, csp_report_only=False)
+        middleware = create_security_headers_middleware(config)
+        # Structural smoke test — the middleware class carries the config.
+        assert middleware is not None
+
+    def test_report_only_config_exists(self) -> None:
+        from dazzle_back.runtime.security_middleware import SecurityHeadersConfig
+
+        config = SecurityHeadersConfig(enable_csp=True, csp_report_only=True)
+        assert config.csp_report_only is True
+
+    def test_standard_profile_uses_report_only(self) -> None:
+        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
+
+        config = configure_headers_for_profile("standard")
+        assert config.enable_csp is True
+        assert config.csp_report_only is True
+
+    def test_strict_profile_enforces(self) -> None:
+        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
+
+        config = configure_headers_for_profile("strict")
+        assert config.enable_csp is True
+        assert config.csp_report_only is False

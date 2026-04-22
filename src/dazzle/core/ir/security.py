@@ -117,11 +117,15 @@ class SecurityConfig(BaseModel):
                 tenant_isolation=False,
             )
         elif profile == SecurityProfile.STANDARD:
+            # Post-#833: CSP is enabled at the IR level for `standard`.
+            # The runtime middleware emits the header in Report-Only mode
+            # so violations surface without blocking — graduate to strict
+            # to switch to enforcement.
             return cls(
                 profile=profile,
                 cors_origins=cors_origins,  # None = same-origin in production
                 enable_hsts=True,
-                enable_csp=False,  # CSP can break many apps
+                enable_csp=True,
                 require_auth_by_default=True,
                 tenant_isolation=False,
             )
