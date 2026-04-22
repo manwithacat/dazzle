@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.21] - 2026-04-22
+
+Patch bump. Two follow-on bug fixes (#849).
+
+### Fixed
+- **Bar-chart FK `group_by` enumerates buckets from the full source entity, not the region's first items page (#849 Bug B).** New `_enumerate_distinct_buckets` in `src/dazzle_back/runtime/workspace_rendering.py` pages through the source repo (cap 1000 rows, 200/page), dedupes by bucket key via the same `_bucket_key_label` used elsewhere, and applies scope filters so users can't see buckets they wouldn't be allowed to see rows for. The items-page derivation remains as the fallback when the source repo isn't available or the enumeration fails.
+- **Per-bucket aggregate filter is now built as a dict, bypassing `_parse_simple_where` for the auto-augmented case (#849 Bug A).** Pre-fix the auto-augment built a SQL fragment string (`"<group_by> = <bucket_key>"`) and round-tripped it through `_parse_simple_where`, which made the per-bucket query brittle to any oddity in the bucket key (UUIDs with dashes, whitespace, etc.) and harder to keep in sync with the REST list endpoint. The `current_bucket` sentinel path still parses the where clause for backward compat with author-written expressions. Per-bucket exceptions now log + return zero instead of breaking the whole region. 8 new regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py` (3 covering the dict-shape + scope merge + failure isolation, 5 covering source-entity enumeration with pagination + fallback paths).
+
+### Agent Guidance
+- **`_compute_bucketed_aggregates` now takes `source_entity`.** Callers should pass `ctx.source` so the bucket enumeration can hit the source repo. Without it, the function silently falls back to deriving buckets from the items page (which is what was wrong in v0.58.20).
+
 ## [0.58.20] - 2026-04-22
 
 Patch bump. One follow-on bug fix to #847 (#848).

@@ -215,3 +215,178 @@ class TestBucketedAggregatesWithFK:
         # _parse_simple_where turns `target = t-1` into {"target": "t-1"}.
         call = repo.list.await_args_list[0]
         assert call.kwargs.get("filters", {}).get("target") == "t-1"
+
+
+# ---------------------------------------------------------------------------
+# Source-entity bucket enumeration + UUID-shaped per-bucket filters (#849)
+# ---------------------------------------------------------------------------
+
+
+def _make_capturing_repo(*totals: int):
+    """Repo whose .list captures each call's filters and returns successive totals."""
+    repo = MagicMock()
+    captured: list[dict] = []
+    iterator = iter(totals)
+
+    async def _list(**kw):
+        captured.append(dict(kw.get("filters") or {}))
+        return {"total": next(iterator)}
+
+    repo.list = AsyncMock(side_effect=_list)
+    return repo, captured
+
+
+def _make_source_repo_returning(*pages):
+    """Source repo whose .list returns paged result pages.
+
+    Each page: list of dict items. The repo emits the pages in order.
+    """
+    repo = MagicMock()
+    page_iter = iter(pages)
+
+    async def _list(**kw):
+        try:
+            items = next(page_iter)
+        except StopIteration:
+            items = []
+        return {"items": items, "total": 0}
+
+    repo.list = AsyncMock(side_effect=_list)
+    return repo
+
+
+class TestSourceEntityBucketEnumeration:
+    """#849 Bug B: buckets must come from the full source entity, not page 1."""
+
+    @pytest.mark.asyncio()
+    async def test_buckets_pulled_from_source_repo_not_items(self) -> None:
+        """Items page is short; source repo carries the full bucket set."""
+        agg_repo, captured = _make_capturing_repo(10, 5, 3)
+        # Source returns A, B, C in a single < page_size page (terminates loop).
+        source_repo = _make_source_repo_returning(
+            [
+                {"target": {"id": "A", "label": "A"}},
+                {"target": {"id": "B", "label": "B"}},
+                {"target": {"id": "C", "label": "C"}},
+            ],
+            [],
+        )
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "target",
+            items=[{"target": {"id": "A", "label": "A"}}],  # only A on first page
+            source_entity="Source",
+        )
+        assert sorted(r["label"] for r in result) == ["A", "B", "C"]
+
+    @pytest.mark.asyncio()
+    async def test_pagination_continues_until_short_page(self) -> None:
+        """Full page (200) keeps loop alive; short page terminates it."""
+        full_page = [{"target": {"id": f"X{i}", "label": f"X{i}"}} for i in range(200)]
+        agg_repo = MagicMock()
+        agg_repo.list = AsyncMock(return_value={"total": 1})
+        source_repo = _make_source_repo_returning(
+            full_page,
+            [{"target": {"id": "Y", "label": "Y"}}],
+            [],
+        )
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "target",
+            items=[],
+            source_entity="Source",
+        )
+        # 200 X-buckets + Y = 201
+        assert len(result) == 201
+        assert any(r["label"] == "Y" for r in result)
+
+    @pytest.mark.asyncio()
+    async def test_falls_back_to_items_when_no_source_entity(self) -> None:
+        """Without source_entity, the items-page fallback still works."""
+        agg_repo, _ = _make_capturing_repo(7)
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "computed_grade",
+            [{"computed_grade": "9"}],
+        )
+        assert len(result) == 1
+        assert result[0]["label"] == "9"
+
+    @pytest.mark.asyncio()
+    async def test_bucket_values_override_source_query(self) -> None:
+        """Pre-supplied buckets (enum/state-machine) skip the source query entirely."""
+        agg_repo, _ = _make_capturing_repo(0, 0)
+        source_repo = _make_source_repo_returning([{"target": {"id": "ignored"}}])
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "target",
+            items=[],
+            bucket_values=["A", "B"],
+            source_entity="Source",
+        )
+        # Source repo must not be queried when bucket_values is supplied.
+        source_repo.list.assert_not_called()
+
+    @pytest.mark.asyncio()
+    async def test_source_query_failure_falls_back_to_items(self) -> None:
+        """If the source repo raises, we must not crash — fall back to items."""
+        agg_repo, _ = _make_capturing_repo(4)
+        source_repo = MagicMock()
+        source_repo.list = AsyncMock(side_effect=RuntimeError("DB down"))
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "Source": source_repo},
+            "computed_grade",
+            [{"computed_grade": "9"}],
+            source_entity="Source",
+        )
+        # Items fallback yields one bucket "9".
+        assert len(result) == 1
+        assert result[0]["label"] == "9"
+
+
+class TestPerBucketFilterShape:
+    """#849 Bug A: auto-augmented filter must be `{group_by: bucket_key}` directly."""
+
+    @pytest.mark.asyncio()
+    async def test_auto_augment_passes_filter_dict_not_string(self) -> None:
+        """The repo must receive {group_by: bucket} as a dict, no parser detour."""
+        agg_repo, captured = _make_capturing_repo(1560)
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[{"assessment_objective": {"id": "55a15a5d-be5e-4abc-9def-aabbccddeeff"}}],
+        )
+        assert len(captured) == 1
+        # Filter dict goes straight to the repo with the FK id as the value.
+        assert captured[0] == {"assessment_objective": "55a15a5d-be5e-4abc-9def-aabbccddeeff"}
+
+    @pytest.mark.asyncio()
+    async def test_auto_augment_merges_scope_filters(self) -> None:
+        agg_repo, captured = _make_capturing_repo(42)
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[{"assessment_objective": {"id": "ao-1"}}],
+            scope_filters={"school_id": "abc"},
+        )
+        assert captured[0] == {"school_id": "abc", "assessment_objective": "ao-1"}
+
+    @pytest.mark.asyncio()
+    async def test_per_bucket_query_failure_returns_zero(self) -> None:
+        """A per-bucket query exception must not crash the whole render."""
+        agg_repo = MagicMock()
+        agg_repo.list = AsyncMock(side_effect=RuntimeError("connection lost"))
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[{"assessment_objective": {"id": "ao-1"}}],
+        )
+        assert result == [{"label": "ao-1", "value": 0}]

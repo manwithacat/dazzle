@@ -745,6 +745,7 @@ async def _workspace_region_handler(
             items,
             bucket_values=kanban_columns or None,
             scope_filters=_scope_only_filters,
+            source_entity=ctx.source,
         )
 
     # Queue display: extract state machine transitions for inline action buttons
@@ -1210,6 +1211,64 @@ async def _fetch_count_metric(
     return metric_name, 0
 
 
+async def _enumerate_distinct_buckets(
+    source_repo: Any,
+    group_by: str,
+    scope_filters: dict[str, Any] | None,
+    fetch_cap: int = 1000,
+) -> list[tuple[str, str]]:
+    """Pull distinct group_by values from the SOURCE entity (#849 Bug B).
+
+    Pre-fix the bucket list was derived from the region's first items page
+    — so any group_by value that didn't happen to appear on page 1 was
+    silently absent from the chart. For FK / high-cardinality columns
+    that's most of them.
+
+    Pages through the source repo (cap at ``fetch_cap`` rows) and dedupes
+    on the bucket key. Reuses ``_bucket_key_label`` so FK-dict cells
+    bucket on id and render on display field, matching the per-bucket
+    filter semantics in ``_compute_bucketed_aggregates``.
+    """
+    seen_keys: set[str] = set()
+    out: list[tuple[str, str]] = []
+    page_size = 200
+    page = 1
+    fetched = 0
+    while fetched < fetch_cap:
+        try:
+            result = await source_repo.list(
+                page=page,
+                page_size=page_size,
+                filters=scope_filters,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to enumerate distinct buckets for %s — falling back to "
+                "items-page derivation",
+                group_by,
+                exc_info=True,
+            )
+            return out
+        items = result.get("items", []) if isinstance(result, dict) else []
+        if not items:
+            break
+        for item in items:
+            it = item.model_dump() if hasattr(item, "model_dump") else dict(item)
+            v = it.get(group_by)
+            if v is None:
+                continue
+            key, label = _bucket_key_label(v)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            out.append((key, label))
+        fetched += len(items)
+        if len(items) < page_size:
+            break
+        page += 1
+    return out
+
+
 async def _compute_bucketed_aggregates(
     aggregates: dict[str, str],
     repositories: dict[str, Any] | None,
@@ -1217,6 +1276,7 @@ async def _compute_bucketed_aggregates(
     items: list[dict[str, Any]],
     bucket_values: list[str] | None = None,
     scope_filters: dict[str, Any] | None = None,
+    source_entity: str | None = None,
 ) -> list[dict[str, Any]]:
     """Evaluate aggregate expressions once per bucket — for bar_chart distributions.
 
@@ -1236,16 +1296,19 @@ async def _compute_bucketed_aggregates(
             metric is the one rendered as the bar value.
         repositories: Repository registry keyed by entity name.
         group_by: Field name to bucket by.
-        items: The source rows (used to derive bucket values when
-            ``bucket_values`` is empty).
+        items: The source rows (used as a fallback bucket source when
+            ``bucket_values`` is empty AND ``source_entity`` cannot be
+            queried for distinct values).
         bucket_values: Pre-computed bucket list (e.g. enum values or
             state-machine states from ``kanban_columns``). When empty,
-            distinct ``items[group_by]`` values are used.
+            distinct values are pulled from the source entity instead
+            (#849).
         scope_filters: Scope predicates to merge into every per-bucket
-            query (security gate per #574).
-
-    Returns one ``{label, value}`` dict per bucket, ordered by
-    ``bucket_values`` if provided, else by first appearance in items.
+            query (security gate per #574). Also applied to the
+            distinct-bucket enumeration so users can't see buckets they
+            wouldn't be allowed to see rows for.
+        source_entity: The source entity name — used to resolve the
+            source repo for distinct-bucket enumeration (#849 Bug B).
     """
     if not aggregates:
         return []
@@ -1267,32 +1330,58 @@ async def _compute_bucketed_aggregates(
     if bucket_values:
         buckets: list[tuple[str, str]] = [(str(b), str(b)) for b in bucket_values]
     else:
-        seen_keys: set[str] = set()
-        derived: list[tuple[str, str]] = []
-        for item in items:
-            v = item.get(group_by)
-            if v is None:
-                continue
-            key, label = _bucket_key_label(v)
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            derived.append((key, label))
-        buckets = derived
+        # Prefer enumerating distinct values from the source entity (#849
+        # Bug B) so buckets that don't appear on the region's first items
+        # page still render. Fall back to items-page derivation only when
+        # the source repo isn't available.
+        source_repo = repositories.get(source_entity) if (repositories and source_entity) else None
+        if source_repo is not None:
+            buckets = await _enumerate_distinct_buckets(source_repo, group_by, scope_filters)
+        else:
+            buckets = []
+        if not buckets:
+            seen_keys: set[str] = set()
+            derived: list[tuple[str, str]] = []
+            for item in items:
+                v = item.get(group_by)
+                if v is None:
+                    continue
+                key, label = _bucket_key_label(v)
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                derived.append((key, label))
+            buckets = derived
 
     if not buckets:
         return []
 
     async def _per_bucket(bucket_key: str, bucket_label: str) -> tuple[str, int]:
-        # Substitute the sentinel with the bucket KEY (so FK filters match
-        # on id, not on the human-readable label).
-        sub_clause = (where_clause or "").replace("current_bucket", str(bucket_key))
-        # When the expression has no current_bucket sentinel, fall back to
-        # filtering on the group_by field directly so naive authors still
-        # get a per-bucket result instead of N copies of the same total.
+        # When the expression has no current_bucket sentinel, build the
+        # filter dict directly — bypassing _parse_simple_where avoids any
+        # parser quirks around UUIDs / dashes / whitespace (#849 Bug A).
         if not where_clause or "current_bucket" not in where_clause:
-            extra = f"{group_by} = {bucket_key}"
-            sub_clause = f"{where_clause} and {extra}" if where_clause else extra
+            try:
+                base_filters: dict[str, Any] = {}
+                if where_clause:
+                    base_filters = _parse_simple_where(where_clause)
+                base_filters[group_by] = bucket_key
+                if scope_filters:
+                    base_filters = {**scope_filters, **base_filters}
+                agg_result = await agg_repo.list(page=1, page_size=1, filters=base_filters)
+                value = agg_result.get("total", 0) if isinstance(agg_result, dict) else 0
+                return bucket_label, value
+            except Exception:
+                logger.warning(
+                    "Per-bucket query failed for %s = %s",
+                    group_by,
+                    bucket_key,
+                    exc_info=True,
+                )
+                return bucket_label, 0
+
+        # Sentinel path: substitute and round-trip through _parse_simple_where.
+        sub_clause = where_clause.replace("current_bucket", str(bucket_key))
         _, value = await _fetch_count_metric(metric_name, agg_repo, sub_clause, scope_filters)
         return bucket_label, value
 
