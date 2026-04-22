@@ -5,6 +5,7 @@ from datetime import timedelta
 from functools import partial
 from typing import Any
 
+from dazzle.core.ir.security import TwoFactorConfig
 from dazzle_back.runtime._fastapi_compat import (
     FASTAPI_AVAILABLE,
     APIRouter,
@@ -29,6 +30,7 @@ class _TwoFaDeps:
     cookie_name: str
     session_expires_days: int
     database_url: str | None
+    two_factor_config: TwoFactorConfig = field(default_factory=TwoFactorConfig)
     stores: dict[str, Any] = field(default_factory=dict)
 
 
@@ -133,7 +135,7 @@ async def _verify_totp_setup(
     if recovery_store and not user.recovery_codes_generated:
         from dazzle_back.runtime.recovery_codes import generate_recovery_codes
 
-        codes = generate_recovery_codes()
+        codes = generate_recovery_codes(count=deps.two_factor_config.recovery_code_count)
         recovery_store.store_codes(user.id, codes)
         deps.auth_store.set_recovery_codes_generated(user.id, True)
         recovery_codes = codes
@@ -154,7 +156,7 @@ async def _setup_email_otp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[st
     if recovery_store and not user.recovery_codes_generated:
         from dazzle_back.runtime.recovery_codes import generate_recovery_codes
 
-        codes = generate_recovery_codes()
+        codes = generate_recovery_codes(count=deps.two_factor_config.recovery_code_count)
         recovery_store.store_codes(user.id, codes)
         deps.auth_store.set_recovery_codes_generated(user.id, True)
 
@@ -286,7 +288,7 @@ async def _regenerate_recovery_codes(deps: _TwoFaDeps, request: FastAPIRequest) 
     if not recovery_store:
         raise HTTPException(status_code=500, detail="Recovery store not configured")
 
-    codes = generate_recovery_codes()
+    codes = generate_recovery_codes(count=deps.two_factor_config.recovery_code_count)
     recovery_store.store_codes(user.id, codes)
     deps.auth_store.set_recovery_codes_generated(user.id, True)
 
@@ -343,6 +345,7 @@ def create_2fa_routes(
     cookie_name: str = "dazzle_session",
     session_expires_days: int = 7,
     database_url: str | None = None,
+    two_factor_config: TwoFactorConfig | None = None,
 ) -> APIRouter:
     """Create two-factor authentication routes.
 
@@ -351,6 +354,11 @@ def create_2fa_routes(
         cookie_name: Session cookie name
         session_expires_days: Session cookie lifetime in days
         database_url: PostgreSQL URL for OTP/recovery stores
+        two_factor_config: 2FA policy struct (recovery-code count, etc.).
+            When None, uses framework defaults (``TwoFactorConfig()``) — the
+            same numbers previously hardcoded. Supply one threaded through
+            from ``AppSpec.security.two_factor`` to let DSL authors override
+            the policy at app-configuration time (#838).
     """
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for 2FA routes")
@@ -364,6 +372,7 @@ def create_2fa_routes(
         cookie_name=cookie_name,
         session_expires_days=session_expires_days,
         database_url=database_url,
+        two_factor_config=two_factor_config or TwoFactorConfig(),
     )
 
     # TOTP Setup

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.11] - 2026-04-22
+
+Patch bump. One orphan-wiring fix (#838).
+
+### Fixed
+- **`TwoFactorConfig` IR type is now composed into `SecurityConfig` and read by the runtime (#838).** The type declared 5 policy fields (`enabled`, `methods`, `otp_length`, `otp_expiry_seconds`, `recovery_code_count`, `enforce_for_roles`) but nothing in `src/` referenced it — same defect shape as #834 and #839. `SecurityConfig` now carries `two_factor: TwoFactorConfig = TwoFactorConfig()`. `dazzle_back.runtime.auth.routes_2fa.create_2fa_routes` accepts a `two_factor_config` parameter and stashes it on `_TwoFaDeps`; the three `generate_recovery_codes()` call sites (TOTP enrolment, email-OTP enrolment, regenerate-codes endpoint) now read `deps.two_factor_config.recovery_code_count` instead of the previous hardcoded 8. `AuthSubsystem` in `src/dazzle_back/runtime/subsystems/auth.py` resolves `ctx.appspec.security.two_factor` at startup and threads it through, falling back to framework defaults when no `SecurityConfig` is present on the AppSpec. IR field-reader-parity baseline in `tests/unit/fixtures/ir_reader_baseline.json` shrinks by one (`recovery_code_count` is no longer orphan). 9 new regression tests in `tests/unit/test_two_factor_config_wiring.py` pin the composition, the create_2fa_routes signature, and the structural ratchet that the handlers read from the config.
+
+### Agent Guidance
+- **DSL-level 2FA configuration is the next step.** The parser currently has no `two_factor:` clause — downstream apps configure 2FA policy by constructing a `TwoFactorConfig` in Python and threading it through `AppSpec.security`. A DSL parser clause (e.g. `app my_app: security: two_factor: recovery_code_count: 12`) is a natural follow-up and would slot into `src/dazzle/core/dsl_parser_impl/` plus the linker's `_build_security_config` path.
+
 ## [0.58.10] - 2026-04-22
 
 Patch bump. One security hardening (#833 Phase 3 of external-resource hardening, closes the phase series).

@@ -158,7 +158,6 @@
   "security.TwoFactorConfig.enforce_for_roles",
   "security.TwoFactorConfig.otp_expiry_seconds",
   "security.TwoFactorConfig.otp_length",
-  "security.TwoFactorConfig.recovery_code_count",
   "seed.SeedTemplateSpec.month_anchor",
   "services.APISpec.owner",
   "services.DomainServiceSpec.stub_language",

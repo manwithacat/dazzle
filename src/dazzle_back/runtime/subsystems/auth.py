@@ -58,10 +58,17 @@ class AuthSubsystem:
         magic_link_router = create_magic_link_routes()
         ctx.app.include_router(magic_link_router)
 
-        # 2FA routes
+        # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
+        # DSL authors can tune recovery-code count etc. at app-configuration
+        # time (#838). When no SecurityConfig is present on the AppSpec, the
+        # routes fall back to framework defaults via TwoFactorConfig().
+        twofa_config = None
+        if ctx.appspec.security is not None:
+            twofa_config = ctx.appspec.security.two_factor
         twofa_router = create_2fa_routes(
             ctx.auth_store,
             database_url=ctx.database_url,
+            two_factor_config=twofa_config,
         )
         ctx.app.include_router(twofa_router)
 
