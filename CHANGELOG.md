@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.4] - 2026-04-23
+
+Patch bump. Fixes #855 — marketing `site_base.html` hardcoded three `/static/...` asset references, bypassing the `static_url` fingerprinting filter that the authenticated `base.html` already uses correctly. CDN-fronted apps served stale CSS / JS after every deploy because the URL never changed.
+
+### Fixed
+- **`src/dazzle_ui/templates/site/site_base.html`** now routes `css/dazzle-bundle.css`, `css/custom.css`, and `vendor/lucide.min.js` through the `static_url` filter, matching the pattern in `base.html`. The asset paths themselves are unchanged — only the URL-rewriting layer differs, so local dev behaves identically.
+- **Regression guard** added in `tests/unit/test_asset_fingerprint.py::TestTemplatesUseStaticUrl` — scans `site_base.html` for hardcoded `/static/` `href` / `src` attributes (allowing Jinja `default()` fallbacks for override params). Existing `test_build_css.py::test_site_base_uses_vendor` updated to require the filter pattern.
+
+### Agent Guidance
+- **Framework asset references in templates must use `{{ 'path' | static_url }}`.** Never hardcode `/static/...`. The filter handles fingerprinting for CDN cache-busting; bare paths skip it. Jinja `default('/static/...')` fallbacks on override parameters (favicon, custom brand assets) are the one exception — they're author-supplied, not framework-supplied.
+
 ## [0.60.3] - 2026-04-23
 
 Patch bump. Fixes #856 — `filterable_table` search input was silently non-functional because `build_entity_search_fields()` in `app_factory.py` only read the legacy top-level `surface.search_fields` and ignored the canonical `surface.ux.search` declaration. The search input rendered + fired HTMX requests correctly; the SQL just omitted the WHERE clause because `entity_search_fields["Contact"]` was empty.

@@ -95,6 +95,41 @@ class TestStaticUrlFilter:
         assert result == "/static/css/unknown.css"
 
 
+class TestTemplatesUseStaticUrl:
+    """Regression guard for #855 — Jinja templates that ship framework
+    assets must route them through the ``static_url`` filter so CDN-fronted
+    apps get fresh asset URLs after a version bump. A hardcoded
+    ``href="/static/..."`` or ``src="/static/..."`` bypasses fingerprinting
+    and leaves CDNs serving stale files indefinitely.
+
+    Exceptions: Jinja default() fallbacks for override parameters (like
+    the favicon) are intentionally hardcoded and skipped here.
+    """
+
+    def test_no_hardcoded_static_refs_in_site_base(self) -> None:
+        import re
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parents[2]
+        site_base = repo_root / "src" / "dazzle_ui" / "templates" / "site" / "site_base.html"
+        content = site_base.read_text()
+
+        offenders = []
+        for lineno, line in enumerate(content.splitlines(), start=1):
+            if "| static_url" in line or "|static_url" in line:
+                continue
+            # Allow default() fallbacks for override params (favicon).
+            if "default(" in line and "/static/" in line:
+                continue
+            for m in re.finditer(r'(href|src)="(/static/[^"]+)"', line):
+                offenders.append((lineno, m.group(2)))
+
+        assert not offenders, (
+            "site_base.html has hardcoded /static/ references (#855 regression):\n"
+            + "\n".join(f"  line {n}: {p}" for n, p in offenders)
+        )
+
+
 class TestStripFingerprint:
     def test_strips_valid_fingerprint(self) -> None:
         assert strip_fingerprint("css/app.a1b2c3d4.css") == "css/app.css"

@@ -12,15 +12,15 @@
   {# CSS Cascade Layer order #}
   <style>@layer base, framework, app, overrides;</style>
   {# Tailwind CSS + DaisyUI — self-hosted compiled bundle (#832, cycle 323). #}
-  <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
+  <link rel="stylesheet" href="{{ 'css/dazzle-bundle.css' | static_url }}">
   {# DAZZLE design system layer — local route served by site_routes.py. #}
   <link rel="stylesheet" href="/styles/dazzle.css">
   {% if custom_css %}
   {# Project custom CSS #}
-  <link rel="stylesheet" href="/static/css/custom.css">
+  <link rel="stylesheet" href="{{ 'css/custom.css' | static_url }}">
   {% endif %}
   {# Lucide icons — self-hosted vendored copy. #}
-  <script src="/static/vendor/lucide.min.js"></script>
+  <script src="{{ 'vendor/lucide.min.js' | static_url }}"></script>
   {% block og_meta %}{% endblock %}
   {% block head_extra %}{% endblock %}
 </head>

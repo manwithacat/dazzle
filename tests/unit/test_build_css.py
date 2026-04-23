@@ -300,7 +300,13 @@ class TestTemplateReferences:
             / "site_base.html"
         )
         content = site.read_text()
-        assert "/static/vendor/lucide.min.js" in content
+        # Post-#855: vendor assets route through the static_url filter
+        # for CDN-aware fingerprinting. The self-hosted vendor path is
+        # preserved; only the URL rewriting layer changed.
+        assert "vendor/lucide.min.js" in content
+        assert "| static_url" in content
+        # The specific regression #855 caught:
+        assert 'src="/static/vendor/lucide.min.js"' not in content
 
     def test_tailwind_self_hosted_only(self) -> None:
         """Post-#832: base.html loads the compiled bundle unconditionally."""
