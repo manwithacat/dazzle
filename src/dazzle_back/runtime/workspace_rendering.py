@@ -1003,7 +1003,7 @@ async def _workspace_region_handler(
         active_filters=active_filters,
         # Templates expect a string or None; reduce BucketRef to its field
         # name (the unit already drove bucketed_metrics labels server-side).
-        group_by=(group_by.field if _gb_is_bucket else group_by),
+        group_by=(group_by.field if isinstance(group_by, _BucketRef) else group_by),
         kanban_columns=kanban_columns,
         queue_transitions=queue_transitions,
         queue_status_field=queue_status_field,

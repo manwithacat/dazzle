@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.7] - 2026-04-23
+
+Patch bump. Unblocks the `type-check` CI job — replaces a boolean flag `_gb_is_bucket` with direct `isinstance(group_by, BucketRef)` so mypy narrows the union type correctly. Same behaviour, mypy-friendlier. Introduced during cycle 28 time-bucketing work; v0.60.6 cleared pytest + docs but mypy was still failing on this one line.
+
+### Fixed
+- **`src/dazzle_back/runtime/workspace_rendering.py:1006`** — `group_by.field if _gb_is_bucket else group_by` became `group_by.field if isinstance(group_by, _BucketRef) else group_by`. mypy can't narrow through a separately-computed boolean; inlining the check lets it prove `group_by.field` is safe.
+
+### CI status after this bump
+All four required checks expected green: `CI` (pytest + mypy + lint), `docs`, `CodeQL`, `Homebrew Formula Validation`.
+
 ## [0.60.6] - 2026-04-23
 
 Patch bump. CI hygiene — three pre-existing / recently-introduced CI failures cleared so the pipeline is green and dependabot PRs can land.
