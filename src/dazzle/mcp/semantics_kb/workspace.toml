@@ -21,6 +21,8 @@ debugger.
 Fast path (recommended — one SQL query, scope evaluated once):
 - ``count(<source_entity>)`` with ``group_by: <field>`` — bar_chart
 - ``count(<source_entity>)`` with ``group_by: [<a>, <b>]`` — pivot_table
+- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart, sparkline) — v0.60.0
+- ``count(<source_entity>)`` with ``group_by: [bucket(<ts>, week), severity]`` — stacked area_chart — v0.60.0
 - ``sum:<col>``, ``avg:<col>``, ``min:<col>``, ``max:<col>`` — numeric measures
 
 Slow path (N+1 — avoid when the fast path applies):
@@ -38,6 +40,7 @@ aggregate:
 related = ["regions", "workspace", "display_modes"]
 v0_2_changes = "NEW in v0.2"
 v0_59_changes = "Strategy C aggregate primitive. count(<source>) routes through Repository.aggregate (one GROUP BY query, scope pre-applied). Multi-dim via group_by: [a, b] in v0.59.3. dazzle db explain-aggregate CLI in v0.59.4."
+v0_60_changes = "Time bucketing via bucket(<ts>, day|week|month|quarter|year) — emits date_trunc in SQL, chronological ASC order, formatted labels (2026-04-23, 2026-W17, Apr 2026, Q2 2026, 2026). Powers line_chart + area_chart + sparkline display modes."
 
 [concepts.display_modes]
 category = "Workspace Component (v0.2)"
@@ -54,6 +57,9 @@ specific IR shape:
 - ``kanban`` — single-dim grouping with column-per-value layout
 - ``heatmap`` — 2-dim matrix (``heatmap_rows:`` + ``heatmap_columns:``)
 - ``pivot_table`` — N-dim cross-tab (``group_by: [field, field]``) — v0.59.3
+- ``line_chart`` — single-dim time series (``group_by: bucket(ts, day)``) — v0.60.0
+- ``area_chart`` — stacked time series (``group_by: [bucket(ts, week), series]``) — v0.60.0
+- ``sparkline`` — compact time-series tile — v0.60.0
 - ``tree`` / ``activity_feed`` / ``queue`` / ``progress`` — specialised
 
 **New in v0.59: Strategy C aggregate primitive.** Chart regions now run
@@ -65,6 +71,7 @@ syntax = "display: <list|grid|timeline|map|metrics|bar_chart|funnel_chart|pivot_
 related = ["regions", "workspace", "aggregates"]
 v0_2_changes = "NEW in v0.2"
 v0_59_changes = "pivot_table display added; bar_chart / pivot_table routed through Repository.aggregate (Strategy C)."
+v0_60_changes = "Time-series displays: line_chart (single-dim time bucket), area_chart (stacked time + series), sparkline (compact KPI). All three consume bucket(<ts>, unit) via the same Strategy C primitive — single scope-safe GROUP BY query, no JS."
 
 [concepts.regions]
 category = "Workspace Component (v0.2)"

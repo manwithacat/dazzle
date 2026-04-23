@@ -561,3 +561,113 @@ class TestExplainAggregate:
 
 def _raise_on_connect() -> None:
     raise AssertionError("explain_aggregate must not open a DB connection")
+
+
+# ---------------------------------------------------------------------------
+# Cycle 28: Time-bucketing — Dimension.truncate
+# ---------------------------------------------------------------------------
+
+
+class TestTimeBucketDimension:
+    def test_truncate_sets_is_time_bucket(self) -> None:
+        dim = Dimension(name="created_at", truncate="day")
+        assert dim.is_time_bucket is True
+        assert dim.has_fk_join is False
+
+    def test_truncate_none_is_not_time_bucket(self) -> None:
+        assert Dimension(name="status").is_time_bucket is False
+
+    def test_invalid_truncate_unit_raises(self) -> None:
+        import pytest
+
+        with pytest.raises(ValueError, match="Invalid truncate unit"):
+            Dimension(name="created_at", truncate="millennia")  # type: ignore[arg-type]
+
+    def test_truncate_with_fk_raises(self) -> None:
+        """A timestamp column is never a foreign key — guard in ctor."""
+        import pytest
+
+        with pytest.raises(ValueError, match="cannot combine truncate"):
+            Dimension(
+                name="created_at",
+                truncate="day",
+                fk_table="Something",
+                fk_display_field="name",
+            )
+
+
+class TestBuildAggregateSQLTimeBucket:
+    def test_day_bucket_emits_date_trunc_and_chronological_order(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Alert",
+            placeholder_style="%s",
+            dimensions=[Dimension(name="created_at", truncate="day")],
+            measures={"count": "count"},
+            filters=None,
+        )
+        assert 'date_trunc(\'day\', "Alert"."created_at") AS "dim_0_id"' in sql
+        assert "LEFT JOIN" not in sql
+        assert 'GROUP BY date_trunc(\'day\', "Alert"."created_at")' in sql
+        # ASC ordering for time buckets — earliest first.
+        assert 'ORDER BY date_trunc(\'day\', "Alert"."created_at") ASC NULLS LAST' in sql
+
+    def test_every_granularity(self) -> None:
+        for unit in ("day", "week", "month", "quarter", "year"):
+            sql, _ = build_aggregate_sql(
+                table_name="Alert",
+                placeholder_style="%s",
+                dimensions=[Dimension(name="created_at", truncate=unit)],  # type: ignore[arg-type]
+                measures={"count": "count"},
+                filters=None,
+            )
+            assert f"date_trunc('{unit}'," in sql
+
+    def test_time_bucket_plus_scalar_dim(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Alert",
+            placeholder_style="%s",
+            dimensions=[
+                Dimension(name="created_at", truncate="week"),
+                Dimension(name="severity"),
+            ],
+            measures={"count": "count"},
+            filters=None,
+        )
+        assert "date_trunc('week'," in sql
+        assert '"Alert"."severity" AS "dim_1_id"' in sql
+        # Time dim chronological ASC, scalar dim alphabetical NULLS LAST.
+        assert (
+            'ORDER BY date_trunc(\'week\', "Alert"."created_at") ASC NULLS LAST, '
+            '"Alert"."severity" NULLS LAST'
+        ) in sql
+
+    def test_time_bucket_plus_fk_dim(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Alert",
+            placeholder_style="%s",
+            dimensions=[
+                Dimension(name="created_at", truncate="day"),
+                Dimension(name="system", fk_table="System", fk_display_field="name"),
+            ],
+            measures={"count": "count"},
+            filters=None,
+        )
+        # Alias is indexed by dimension position, so the FK on dim_1 uses fk_1.
+        assert 'LEFT JOIN "System" fk_1 ON "Alert"."system" = fk_1."id"' in sql
+        assert "date_trunc('day'," in sql
+        assert 'fk_1."name" AS "dim_1_label"' in sql
+
+    def test_time_bucket_with_scope_predicate(self) -> None:
+        """Scope predicate must not interfere with the date_trunc expression."""
+        sql, params = build_aggregate_sql(
+            table_name="Alert",
+            placeholder_style="%s",
+            dimensions=[Dimension(name="created_at", truncate="day")],
+            measures={"count": "count"},
+            filters={
+                "__scope_predicate": ('"Alert"."tenant_id" = %s', ["t-1"]),
+            },
+        )
+        assert '"Alert"."tenant_id" = %s' in sql
+        assert params == ["t-1"]
+        assert "date_trunc('day'," in sql

@@ -856,3 +856,118 @@ class TestPivotBuckets:
         # dim_specs still produced — header rendering survives the failure.
         assert len(specs) == 1
         assert specs[0]["name"] == "severity"
+
+
+# ---------------------------------------------------------------------------
+# Cycle 28: time-bucketing via BucketRef
+# ---------------------------------------------------------------------------
+
+
+class TestTimeBucketedAggregates:
+    """BucketRef(field, unit) threads through _aggregate_via_groupby and
+    _compute_pivot_buckets, producing ISO bucket ids + formatted labels."""
+
+    @pytest.mark.asyncio()
+    async def test_single_dim_time_bucket_formats_labels(self) -> None:
+        import datetime as dt
+
+        from dazzle.core.ir import BucketRef
+        from dazzle_back.runtime.aggregate import AggregateBucket
+        from dazzle_back.runtime.workspace_rendering import _aggregate_via_groupby
+
+        agg_repo = MagicMock()
+        agg_repo.aggregate = AsyncMock(
+            return_value=[
+                AggregateBucket(
+                    dimensions={"created_at": dt.datetime(2026, 4, 21, 0, 0)},
+                    measures={"count": 3},
+                ),
+                AggregateBucket(
+                    dimensions={"created_at": dt.datetime(2026, 4, 22, 0, 0)},
+                    measures={"count": 7},
+                ),
+            ]
+        )
+
+        rows = await _aggregate_via_groupby(
+            agg_repo,
+            metric_name="count",
+            group_by=BucketRef(field="created_at", unit="day"),
+            where_clause=None,
+            scope_filters=None,
+            source_entity_spec=None,
+            fk_target_spec=None,
+        )
+        assert rows == [
+            {"label": "2026-04-21", "value": 3, "bucket": "2026-04-21T00:00:00"},
+            {"label": "2026-04-22", "value": 7, "bucket": "2026-04-22T00:00:00"},
+        ]
+
+        # Aggregate call used a single time-bucket Dimension.
+        dims = agg_repo.aggregate.call_args.kwargs["dimensions"]
+        assert len(dims) == 1
+        assert dims[0].truncate == "day"
+        assert dims[0].is_time_bucket is True
+
+    @pytest.mark.asyncio()
+    async def test_pivot_multi_dim_with_time_bucket(self) -> None:
+        """group_by: [bucket(created_at, week), severity] produces rows with
+        both the ISO week id and a human-readable week label."""
+        import datetime as dt
+
+        from dazzle.core.ir import BucketRef
+        from dazzle_back.runtime.aggregate import AggregateBucket
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        source_repo = MagicMock()
+        source_repo.entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[
+                SimpleNamespace(name="created_at", type=SimpleNamespace(kind="scalar")),
+                SimpleNamespace(name="severity", type=SimpleNamespace(kind="scalar")),
+            ],
+        )
+        source_repo.aggregate = AsyncMock(
+            return_value=[
+                AggregateBucket(
+                    dimensions={"created_at": dt.datetime(2026, 4, 20), "severity": "high"},
+                    measures={"count": 9},
+                ),
+            ]
+        )
+
+        rows, specs = await _compute_pivot_buckets(
+            {"count": "count(Alert)"},
+            {"Alert": source_repo},
+            [BucketRef(field="created_at", unit="week"), "severity"],
+            source_entity="Alert",
+            source_entity_spec=source_repo.entity_spec,
+            scope_filters=None,
+        )
+
+        assert len(rows) == 1
+        # Time-bucketed dim: raw id is ISO string, companion _label is formatted.
+        assert rows[0]["created_at"] == "2026-04-20T00:00:00"
+        assert rows[0]["created_at_label"] == "2026-W17"
+        assert rows[0]["severity"] == "high"
+        assert rows[0]["count"] == 9
+
+        # Specs carry is_time_bucket marker for template routing.
+        assert specs[0]["is_time_bucket"] is True
+        assert specs[0]["unit"] == "week"
+        assert specs[1]["is_time_bucket"] is False
+
+    def test_format_bucket_label_every_unit(self) -> None:
+        import datetime as dt
+
+        from dazzle_back.runtime.workspace_rendering import _format_bucket_label
+
+        d = dt.datetime(2026, 5, 18, 14, 30)  # Monday, week 21
+        assert _format_bucket_label(d, "day") == "2026-05-18"
+        assert _format_bucket_label(d, "week") == "2026-W21"
+        assert _format_bucket_label(d, "month") == "May 2026"
+        assert _format_bucket_label(d, "quarter") == "Q2 2026"
+        assert _format_bucket_label(d, "year") == "2026"
+        assert _format_bucket_label(None, "day") == ""
+        # Non-datetime fallback.
+        assert _format_bucket_label("not-a-date", "day") == "not-a-date"

@@ -205,6 +205,37 @@ workspace command_center "Command Center":
       count: count(Alert)
     empty: "No alerts"
 
+  # Time-series: alerts per day (v0.60.0, cycle 28 — Strategy C time
+  # bucket fast path). group_by: bucket(triggered_at, day) emits a single
+  # date_trunc('day', triggered_at) GROUP BY query.
+  alerts_timeseries:
+    source: Alert
+    display: line_chart
+    group_by: bucket(triggered_at, day)
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts in the window"
+
+  # Time-series stacked by severity: one area per severity level across
+  # weeks. Exercises the two-dim BucketRef + scalar fast path.
+  alerts_weekly_stacked:
+    source: Alert
+    display: area_chart
+    group_by: [bucket(triggered_at, week), severity]
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts to stack"
+
+  # Sparkline: daily volume for the last window — the compact tile form
+  # of the time series. Shares the Strategy C fast path with line_chart.
+  alerts_daily_sparkline:
+    source: Alert
+    display: sparkline
+    group_by: bucket(triggered_at, day)
+    aggregate:
+      count: count(Alert)
+    empty: "—"
+
   # Acknowledgement Queue — review queue for unacked alerts
   ack_queue:
     source: Alert

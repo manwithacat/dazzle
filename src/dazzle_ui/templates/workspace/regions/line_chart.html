@@ -1,0 +1,110 @@
+{# Line chart region — UX-067 (cycle 28, v0.60.0).
+   Contract: ~/.claude/skills/ux-architect/components/line-chart-region.md
+
+   Server-rendered SVG polyline for time-series distributions. Consumes
+   `bucketed_metrics` from _aggregate_via_groupby when group_by is a
+   BucketRef (bucket(created_at, day|week|month|quarter|year)).
+
+   Aesthetic target: Linear — subtle grid, hairline axis, primary-tint
+   fill under the line. No JS, no Alpine — pure HTMX-friendly.
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-line-chart-region">
+  {% if bucketed_metrics and bucketed_metrics | length > 1 %}
+    {% set max_val = bucketed_metrics | map(attribute='value') | max %}
+    {% set max_val = max_val if max_val > 0 else 1 %}
+    {% set count = bucketed_metrics | length %}
+    {# SVG 400×120, 8/8/28/8 padding (t/r/b/l). Bottom band reserved for
+       x-axis tick labels. #}
+    {% set w = 400 %}
+    {% set h = 120 %}
+    {% set pt = 8 %}
+    {% set pr = 8 %}
+    {% set pb = 28 %}
+    {% set pl = 8 %}
+    {% set plot_w = w - pl - pr %}
+    {% set plot_h = h - pt - pb %}
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 {{ w }} {{ h }}"
+         class="dz-line-chart-svg w-full h-auto"
+         role="img"
+         aria-label="{{ title }} time series — {{ count }} buckets, peak {{ max_val }}">
+      {# Grid: single baseline at the bottom of the plot area. #}
+      <line x1="{{ pl }}" y1="{{ pt + plot_h }}"
+            x2="{{ pl + plot_w }}" y2="{{ pt + plot_h }}"
+            stroke="hsl(var(--border))" stroke-width="1" />
+
+      {# Build the polyline points + area polygon. #}
+      {% set step = plot_w / (count - 1) %}
+      {% set line_points = [] %}
+      {% for b in bucketed_metrics %}
+        {% set x = pl + (loop.index0 * step) %}
+        {% set y = pt + plot_h - ((b.value / max_val) * plot_h) %}
+        {% set _ = line_points.append(x | round(2) ~ ',' ~ y | round(2)) %}
+      {% endfor %}
+
+      {# Area fill: close the polyline back to the baseline. #}
+      {% set first_x = pl %}
+      {% set last_x = pl + plot_w %}
+      {% set base_y = pt + plot_h %}
+      <polygon
+        points="{{ first_x }},{{ base_y }} {{ line_points | join(' ') }} {{ last_x }},{{ base_y }}"
+        fill="hsl(var(--primary))"
+        fill-opacity="0.12"
+        stroke="none" />
+
+      {# The line itself. #}
+      <polyline
+        points="{{ line_points | join(' ') }}"
+        fill="none"
+        stroke="hsl(var(--primary))"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+        stroke-linecap="round" />
+
+      {# Data points + accessible <title> tooltips. #}
+      {% for b in bucketed_metrics %}
+        {% set x = pl + (loop.index0 * step) %}
+        {% set y = pt + plot_h - ((b.value / max_val) * plot_h) %}
+        <circle cx="{{ x | round(2) }}" cy="{{ y | round(2) }}" r="2.5"
+                fill="hsl(var(--primary))"
+                stroke="hsl(var(--card))"
+                stroke-width="1">
+          <title>{{ b.label }}: {{ b.value }}</title>
+        </circle>
+      {% endfor %}
+
+      {# X-axis labels. Render first, last, and middle to avoid collisions
+         on wide series. For ≤5 buckets show them all. #}
+      {% set show_every = 1 if count <= 5 else ((count / 5) | round(0, 'ceil') | int) %}
+      {% for b in bucketed_metrics %}
+        {% if loop.index0 == 0 or loop.last or (loop.index0 % show_every == 0) %}
+          {% set x = pl + (loop.index0 * step) %}
+          <text x="{{ x | round(2) }}" y="{{ h - 8 }}"
+                text-anchor="middle"
+                font-size="9"
+                fill="hsl(var(--muted-foreground))"
+                font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ b.label }}</text>
+        {% endif %}
+      {% endfor %}
+    </svg>
+
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+      {{ count }} buckets · peak {{ max_val }}
+    </p>
+  {% elif bucketed_metrics and bucketed_metrics | length == 1 %}
+    {# Single-point series — fall back to a tall KPI tile rather than draw
+       a zero-width line. #}
+    {% set b = bucketed_metrics[0] %}
+    <div class="text-center py-4">
+      <div class="text-[28px] font-semibold text-[hsl(var(--foreground))]">{{ b.value }}</div>
+      <div class="text-[11px] text-[hsl(var(--muted-foreground))] mt-1 font-mono">{{ b.label }}</div>
+    </div>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

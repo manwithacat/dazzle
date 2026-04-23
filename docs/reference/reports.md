@@ -24,6 +24,9 @@ Before you write DSL, pick the cardinality × visualisation:
 | Heatmap | `heatmap` | 2 | Week × hour traffic |
 | Pivot table | `pivot_table` | 1..N | Alerts by (system, severity) with counts |
 | Kanban | `kanban` | 1 | Tickets by status as columns |
+| Line chart | `line_chart` | 1 (time) | Alerts per day |
+| Area chart | `area_chart` | 2 (time + series) | Alerts per week, stacked by severity |
+| Sparkline | `sparkline` | 1 (time) | Compact "latest" tile with trend |
 
 Each consumes a different IR shape. `bar_chart` reads `group_by: <field>`. `pivot_table` reads `group_by: [<field>, <field>]`. `heatmap` reads `heatmap_rows:` + `heatmap_columns:`. `metrics` reads only `aggregate:`.
 
@@ -57,6 +60,34 @@ alert_pivot:
 ```
 
 One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed aliases (`fk_0`, `fk_1`, ...) so two FKs to the same table don't collide. Count for each cell computed in the same query. See `examples/ops_dashboard` for a working reference.
+
+## Time bucketing (v0.60.0)
+
+Wrap any timestamp field in `bucket(<field>, <unit>)` to group by calendar unit instead of distinct value. The runtime emits `date_trunc('<unit>', <field>)` in the SQL. Valid units: `day`, `week`, `month`, `quarter`, `year` (whitelist enforced at parse time).
+
+```dsl
+# Single-dim time series → line_chart / sparkline
+alerts_timeseries:
+  source: Alert
+  display: line_chart
+  group_by: bucket(triggered_at, day)
+  aggregate:
+    count: count(Alert)
+
+# Two-dim (time + categorical) → area_chart stacked by series
+alerts_weekly_stacked:
+  source: Alert
+  display: area_chart
+  group_by: [bucket(triggered_at, week), severity]
+  aggregate:
+    count: count(Alert)
+```
+
+Time buckets are chronologically ordered (ASC), not alphabetical. Labels format per unit: `2026-04-23` (day), `2026-W17` (week), `Apr 2026` (month), `Q2 2026` (quarter), `2026` (year). The raw ISO timestamp survives as `bucket` for the bar click / filter downstream.
+
+Time-bucketed dims are **mutually exclusive with FK joins** — a timestamp column cannot be a foreign key. Combining `bucket(...)` with a scalar or FK dim in the same `group_by_dims` list is fine (and common for area_chart).
+
+No gap-filling in v0.60.0 — days with zero rows don't appear in the result. Line/area charts handle the gap visually (straight segment between adjacent buckets); sparklines show the present buckets only.
 
 ## Supported measures
 
@@ -108,7 +139,7 @@ All three have been root-cause patterns; `explain-aggregate` lets authors diagno
 ## What NOT to do
 
 - **Don't compute aggregates in templates.** Jinja arithmetic like `{{ rows | sum(attribute='amount') }}` loads every row into RAM, ignores scope, and breaks at scale. Use `aggregate:` with measures.
-- **Don't group on high-cardinality columns without a limit.** `group_by: created_at` with a million rows returns a million buckets. Use date bucketing (future DSL feature) or `limit:` explicitly.
+- **Don't group on high-cardinality columns without a limit.** `group_by: created_at` with a million rows returns a million buckets. Use `bucket(created_at, day|week|month)` or `limit:` explicitly.
 - **Don't mix `group_by:` and `group_by_dims:`.** They're mutually exclusive; `group_by_dims` wins when both are set but the DSL intent is confusing. Pick one form per region.
 - **Don't use `count(OtherEntity where field = current_bucket)` if the source-same path works.** The sentinel-based slow path is for cross-entity measures only — same-entity counts should use `count(<source>)` and get the fast path automatically.
 - **Don't reach for raw SQL.** The aggregate primitive covers the 90% case; if you need something it doesn't, file a DSL extension rather than bypass the scope contract.

@@ -183,6 +183,9 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "ACTIVITY_FEED": "workspace/regions/activity_feed.html",
     "TREE": "workspace/regions/tree.html",
     "PIVOT_TABLE": "workspace/regions/pivot_table.html",
+    "LINE_CHART": "workspace/regions/line_chart.html",
+    "AREA_CHART": "workspace/regions/area_chart.html",
+    "SPARKLINE": "workspace/regions/sparkline.html",
     "DIAGRAM": "workspace/regions/diagram.html",
 }
 

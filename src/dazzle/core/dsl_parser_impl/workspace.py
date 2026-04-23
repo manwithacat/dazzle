@@ -37,9 +37,50 @@ class WorkspaceParserMixin:
         parse_sort_list: Any
         parse_ux_block: Any
         current_token: Any
+        peek_token: Any
         file: Any
         _source_location: Any
         _parse_construct_header: Any
+
+    # v0.60.0: Valid units for bucket(field, unit) — keep in sync with
+    # aggregate.TruncateUnit. The parser rejects other units at parse
+    # time so the runtime never sees an invalid truncate string.
+    _BUCKET_UNITS: frozenset[str] = frozenset({"day", "week", "month", "quarter", "year"})
+
+    def _parse_group_by_element(self) -> str | ir.BucketRef:
+        """Parse one group_by entry — either a bare field name or bucket().
+
+        Supports:
+          ``status`` → returns "status"
+          ``bucket(created_at, day)`` → returns BucketRef(field, unit)
+
+        The ``bucket`` keyword is recognised by identifier value followed
+        by ``(`` — it's not a reserved token so normal fields named
+        anything else are unaffected.
+        """
+        tok = self.current_token()
+        if (
+            tok.type == TokenType.IDENTIFIER
+            and tok.value == "bucket"
+            and self.peek_token().type == TokenType.LPAREN
+        ):
+            self.advance()  # consume `bucket`
+            self.expect(TokenType.LPAREN)
+            field = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COMMA)
+            unit_tok = self.expect_identifier_or_keyword()
+            unit = unit_tok.value
+            if unit not in self._BUCKET_UNITS:
+                raise make_parse_error(
+                    f"Invalid bucket unit {unit!r}. Expected one of {sorted(self._BUCKET_UNITS)}.",
+                    self.file,
+                    unit_tok.line,
+                    unit_tok.column,
+                )
+            self.expect(TokenType.RPAREN)
+            return ir.BucketRef(field=field, unit=unit)
+        name: str = self.expect_identifier_or_keyword().value
+        return name
 
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """
@@ -325,8 +366,8 @@ class WorkspaceParserMixin:
         display = ir.DisplayMode.LIST
         action = None
         empty_message = None
-        group_by = None
-        group_by_dims: list[str] | None = None
+        group_by: str | ir.BucketRef | None = None
+        group_by_dims: list[str | ir.BucketRef] | None = None
         aggregates: dict[str, str] = {}
         date_field: str | None = None
         date_range: bool = False
@@ -424,24 +465,26 @@ class WorkspaceParserMixin:
 
             # group_by: field_name        (single-dim, bar_chart)
             # group_by: [field_a, field_b] (multi-dim, pivot_table — cycle 25)
+            # group_by: bucket(field, unit) or [bucket(field, unit), scalar]
+            #                             (time-bucketing, line_chart — cycle 28)
             elif self.match(TokenType.GROUP_BY):
                 self.advance()
                 self.expect(TokenType.COLON)
                 if self.match(TokenType.LBRACKET):
                     self.advance()  # consume [
-                    dims: list[str] = []
+                    dims: list[str | ir.BucketRef] = []
                     while not self.match(TokenType.RBRACKET):
                         self.skip_newlines()
                         if self.match(TokenType.RBRACKET):
                             break
-                        dims.append(self.expect_identifier_or_keyword().value)
+                        dims.append(self._parse_group_by_element())
                         if self.match(TokenType.COMMA):
                             self.advance()
                         self.skip_newlines()
                     self.expect(TokenType.RBRACKET)
                     group_by_dims = dims
                 else:
-                    group_by = self.expect_identifier_or_keyword().value
+                    group_by = self._parse_group_by_element()
                 self.skip_newlines()
 
             # date_field: created_at

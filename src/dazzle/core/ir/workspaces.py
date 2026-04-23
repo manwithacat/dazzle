@@ -68,6 +68,30 @@ class DisplayMode(StrEnum):
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
     TREE = "tree"  # v0.44.0: Tree / hierarchy display
     PIVOT_TABLE = "pivot_table"  # v0.59.3: Multi-dimension cross-tab view (cycle 25)
+    LINE_CHART = "line_chart"  # v0.60.0: Time-series line chart (cycle 28)
+    AREA_CHART = "area_chart"  # v0.60.0: Stacked time-series area chart (cycle 28)
+    SPARKLINE = "sparkline"  # v0.60.0: Compact line for KPI tiles (cycle 28)
+
+
+class BucketRef(BaseModel):
+    """A time-bucketed group-by dimension.
+
+    Produced by the parser for the DSL form ``bucket(<field>, <unit>)``.
+    Downstream, the workspace runtime maps this into a
+    ``Dimension(truncate=<unit>)`` on the aggregate primitive, which
+    emits ``date_trunc('<unit>', <col>)`` in SQL.
+
+    Units are whitelisted — only the five literals below are valid.
+
+    Attributes:
+        field: Timestamp column on the source entity to bucket by.
+        unit: Calendar granularity. One of day/week/month/quarter/year.
+    """
+
+    field: str
+    unit: str  # "day" | "week" | "month" | "quarter" | "year"
+
+    model_config = ConfigDict(frozen=True)
 
 
 class WorkspaceRegion(BaseModel):
@@ -104,14 +128,15 @@ class WorkspaceRegion(BaseModel):
     display: DisplayMode = DisplayMode.LIST
     action: str | None = None  # Surface reference
     empty_message: str | None = None
-    group_by: str | None = None  # Field to group by (single dimension)
+    group_by: str | BucketRef | None = None  # Field or bucket() ref (single dim)
     # v0.59.3 (cycle 25): multi-dimension group_by for pivot_table /
     # cross-tab views. When set, the runtime composes a multi-dim
     # GROUP BY via Repository.aggregate. Each entry is a column name on
-    # the source entity; FK columns auto-LEFT JOIN their target so the
-    # bucket carries the resolved display field. Mutually exclusive with
-    # group_by — when both are set, group_by_dims wins.
-    group_by_dims: list[str] | None = None
+    # the source entity, or a v0.60.0 BucketRef for time-bucketed dims;
+    # FK columns auto-LEFT JOIN their target so the bucket carries the
+    # resolved display field. Mutually exclusive with group_by — when
+    # both are set, group_by_dims wins.
+    group_by_dims: list[str | BucketRef] | None = None
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
     # v0.34.0: Date-range filtering
     date_field: str | None = None

@@ -338,6 +338,113 @@ workspace activity "Activity":
         assert region.display.value == "activity_feed"
 
 
+class TestGroupByBucket:
+    """Tests for group_by: bucket(field, unit) parsing (v0.60.0, cycle 28)."""
+
+    def _base_dsl(self, region_body: str) -> str:
+        return f"""
+module test.core
+app MyApp "My App"
+
+entity Alert "Alert":
+  id: uuid pk
+  created_at: datetime
+  severity: enum[high, low]
+
+workspace dash "Dashboard":
+  chart:
+{region_body}
+"""
+
+    def test_single_dim_bucket(self):
+        """group_by: bucket(created_at, day) → BucketRef on .group_by."""
+        from dazzle.core.ir import BucketRef
+        from dazzle.core.parser import parse_dsl
+
+        dsl = self._base_dsl(
+            "    source: Alert\n"
+            "    display: line_chart\n"
+            "    group_by: bucket(created_at, day)\n"
+            "    aggregate:\n"
+            "      count: count(Alert)\n"
+        )
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        region = fragment.workspaces[0].regions[0]
+
+        assert isinstance(region.group_by, BucketRef)
+        assert region.group_by.field == "created_at"
+        assert region.group_by.unit == "day"
+
+    def test_multi_dim_bucket_plus_scalar(self):
+        """group_by: [bucket(created_at, week), severity] → [BucketRef, str]."""
+        from dazzle.core.ir import BucketRef
+        from dazzle.core.parser import parse_dsl
+
+        dsl = self._base_dsl(
+            "    source: Alert\n"
+            "    display: area_chart\n"
+            "    group_by: [bucket(created_at, week), severity]\n"
+            "    aggregate:\n"
+            "      count: count(Alert)\n"
+        )
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        region = fragment.workspaces[0].regions[0]
+
+        assert region.group_by_dims is not None
+        assert len(region.group_by_dims) == 2
+        assert isinstance(region.group_by_dims[0], BucketRef)
+        assert region.group_by_dims[0].field == "created_at"
+        assert region.group_by_dims[0].unit == "week"
+        assert region.group_by_dims[1] == "severity"
+
+    def test_all_five_units_parse(self):
+        """day / week / month / quarter / year all accepted."""
+        from dazzle.core.parser import parse_dsl
+
+        for unit in ("day", "week", "month", "quarter", "year"):
+            dsl = self._base_dsl(
+                "    source: Alert\n"
+                "    display: line_chart\n"
+                f"    group_by: bucket(created_at, {unit})\n"
+                "    aggregate:\n"
+                "      count: count(Alert)\n"
+            )
+            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+            region = fragment.workspaces[0].regions[0]
+            assert region.group_by.unit == unit  # type: ignore[union-attr]
+
+    def test_invalid_unit_raises_parse_error(self):
+        """bucket(created_at, millennia) → parse error."""
+        import pytest
+
+        from dazzle.core.parser import parse_dsl
+
+        dsl = self._base_dsl(
+            "    source: Alert\n"
+            "    display: line_chart\n"
+            "    group_by: bucket(created_at, millennia)\n"
+            "    aggregate:\n"
+            "      count: count(Alert)\n"
+        )
+        with pytest.raises(Exception, match="Invalid bucket unit"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_bare_field_still_works(self):
+        """Non-bucket group_by values parse unchanged (regression guard)."""
+        from dazzle.core.parser import parse_dsl
+
+        dsl = self._base_dsl(
+            "    source: Alert\n"
+            "    display: bar_chart\n"
+            "    group_by: severity\n"
+            "    aggregate:\n"
+            "      count: count(Alert)\n"
+        )
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        region = fragment.workspaces[0].regions[0]
+        assert region.group_by == "severity"
+
+
 class TestAppConfig:
     """Tests for app config block parsing (v0.9.5)."""
 

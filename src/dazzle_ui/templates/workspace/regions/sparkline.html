@@ -1,0 +1,61 @@
+{# Sparkline region — UX-069 (cycle 28, v0.60.0).
+   Contract: ~/.claude/skills/ux-architect/components/sparkline-region.md
+
+   Compact time-series for KPI tiles: title + big-number + tiny line
+   underneath. Single-dim only — always time-bucketed. Consumes
+   `bucketed_metrics` from _aggregate_via_groupby.
+
+   Card safety: region emits zero chrome + zero title. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-sparkline-region">
+  {% if bucketed_metrics and bucketed_metrics | length > 0 %}
+    {% set last = bucketed_metrics[-1] %}
+    {% set max_val = bucketed_metrics | map(attribute='value') | max %}
+    {% set max_val = max_val if max_val > 0 else 1 %}
+    {% set count = bucketed_metrics | length %}
+
+    <div class="flex items-baseline gap-2">
+      <span class="text-[28px] font-semibold text-[hsl(var(--foreground))] leading-none">{{ last.value }}</span>
+      <span class="text-[11px] text-[hsl(var(--muted-foreground))] font-mono">{{ last.label }}</span>
+    </div>
+
+    {% if count > 1 %}
+      {% set w = 180 %}
+      {% set h = 32 %}
+      {% set pt = 2 %}
+      {% set pb = 2 %}
+      {% set step = w / (count - 1) %}
+      {% set plot_h = h - pt - pb %}
+      {% set pts = [] %}
+      {% for b in bucketed_metrics %}
+        {% set x = (loop.index0 * step) %}
+        {% set y = pt + plot_h - ((b.value / max_val) * plot_h) %}
+        {% set _ = pts.append(x | round(2) ~ ',' ~ y | round(2)) %}
+      {% endfor %}
+      <svg xmlns="http://www.w3.org/2000/svg"
+           viewBox="0 0 {{ w }} {{ h }}"
+           class="dz-sparkline-svg mt-1 w-full h-8"
+           role="img"
+           aria-label="Sparkline — {{ count }} points, latest {{ last.value }}, peak {{ max_val }}">
+        <polygon
+          points="0,{{ h }} {{ pts | join(' ') }} {{ w }},{{ h }}"
+          fill="hsl(var(--primary))"
+          fill-opacity="0.15"
+          stroke="none" />
+        <polyline
+          points="{{ pts | join(' ') }}"
+          fill="none"
+          stroke="hsl(var(--primary))"
+          stroke-width="1.25"
+          stroke-linejoin="round"
+          stroke-linecap="round" />
+      </svg>
+    {% endif %}
+  {% else %}
+    <div class="text-center py-2">
+      <span class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("—") }}</span>
+    </div>
+  {% endif %}
+</div>
+{% endcall %}

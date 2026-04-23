@@ -1,0 +1,134 @@
+{# Area chart region — UX-068 (cycle 28, v0.60.0).
+   Contract: ~/.claude/skills/ux-architect/components/area-chart-region.md
+
+   Stacked-area time-series from a multi-dim pivot: dim 0 = time bucket
+   (BucketRef), dim 1 = series key (scalar / enum / FK). Consumes
+   `pivot_buckets` + `pivot_dim_specs` so the same data path that feeds
+   pivot_table feeds this chart too — the dimensions just get pivoted
+   from rows to stacked series.
+
+   Card safety: region emits zero chrome + zero title. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-area-chart-region">
+  {% if pivot_buckets and pivot_dim_specs and pivot_dim_specs | length == 2 and pivot_dim_specs[0].is_time_bucket %}
+    {% set time_spec = pivot_dim_specs[0] %}
+    {% set series_spec = pivot_dim_specs[1] %}
+    {% set metric_name = (pivot_buckets[0].keys() | reject('in', [time_spec.name, time_spec.name ~ '_label', series_spec.name, series_spec.name ~ '_label']) | list)[0] | default('count') %}
+
+    {# Group buckets into (time_bucket_label → {series: value}). Also track
+       distinct time buckets in order and distinct series keys. #}
+    {% set by_bucket = {} %}
+    {% set time_keys = [] %}
+    {% set series_keys = [] %}
+    {% for row in pivot_buckets %}
+      {% set tk = row[time_spec.name ~ '_label'] %}
+      {% set sk = row[series_spec.name ~ '_label'] if series_spec.is_fk else row[series_spec.name] %}
+      {% if tk not in time_keys %}{% set _ = time_keys.append(tk) %}{% endif %}
+      {% if sk not in series_keys %}{% set _ = series_keys.append(sk) %}{% endif %}
+      {% if tk not in by_bucket %}{% set _ = by_bucket.update({tk: {}}) %}{% endif %}
+      {% set _ = by_bucket[tk].update({sk: row[metric_name]}) %}
+    {% endfor %}
+
+    {# Stacked totals per time bucket for Y-max. #}
+    {% set max_total = 1 %}
+    {% for tk in time_keys %}
+      {% set tot = by_bucket[tk].values() | sum %}
+      {% if tot > max_total %}{% set max_total = tot %}{% endif %}
+    {% endfor %}
+
+    {% set w = 460 %}
+    {% set h = 180 %}
+    {% set pt = 8 %}
+    {% set pr = 8 %}
+    {% set pb = 36 %}
+    {% set pl = 8 %}
+    {% set plot_w = w - pl - pr %}
+    {% set plot_h = h - pt - pb %}
+    {% set tcount = time_keys | length %}
+
+    {# Series colour palette — cycle through HSL hues. Legend uses same. #}
+    {% set palette = [
+      'hsl(var(--primary))',
+      'hsl(var(--accent))',
+      'hsl(210, 80%, 55%)',
+      'hsl(145, 55%, 45%)',
+      'hsl(30, 85%, 55%)',
+      'hsl(290, 55%, 55%)',
+    ] %}
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 {{ w }} {{ h }}"
+         class="dz-area-chart-svg w-full h-auto"
+         role="img"
+         aria-label="{{ title }} stacked area chart — {{ tcount }} time buckets, {{ series_keys | length }} series">
+      <line x1="{{ pl }}" y1="{{ pt + plot_h }}"
+            x2="{{ pl + plot_w }}" y2="{{ pt + plot_h }}"
+            stroke="hsl(var(--border))" stroke-width="1" />
+
+      {% if tcount > 1 %}
+        {% set step = plot_w / (tcount - 1) %}
+
+        {# Build per-series stacked polygons. Render from top of the stack
+           down so earlier series sit below later ones visually. #}
+        {# Running top-of-stack per time bucket. #}
+        {% set tops = [] %}
+        {% for _ in time_keys %}{% set _ = tops.append(0) %}{% endfor %}
+
+        {% for series_key in series_keys %}
+          {% set colour = palette[loop.index0 % (palette | length)] %}
+          {% set top_points = [] %}
+          {% set bottom_points = [] %}
+          {% for tk in time_keys %}
+            {% set x = pl + (loop.index0 * step) %}
+            {% set v = by_bucket[tk][series_key] | default(0) %}
+            {% set prev_top = tops[loop.index0] %}
+            {% set new_top = prev_top + v %}
+            {% set _ = tops.__setitem__(loop.index0, new_top) %}
+            {% set y_top = pt + plot_h - (new_top / max_total * plot_h) %}
+            {% set y_bot = pt + plot_h - (prev_top / max_total * plot_h) %}
+            {% set _ = top_points.append(x | round(2) ~ ',' ~ y_top | round(2)) %}
+            {% set _ = bottom_points.append(x | round(2) ~ ',' ~ y_bot | round(2)) %}
+          {% endfor %}
+          {# Polygon = top-left → top-right → bottom-right → bottom-left (reversed). #}
+          <polygon
+            points="{{ top_points | join(' ') }} {{ bottom_points | reverse | join(' ') }}"
+            fill="{{ colour }}"
+            fill-opacity="0.35"
+            stroke="{{ colour }}"
+            stroke-width="1" />
+        {% endfor %}
+
+        {# X-axis tick labels — first, last, and spaced to 5. #}
+        {% set show_every = 1 if tcount <= 5 else ((tcount / 5) | round(0, 'ceil') | int) %}
+        {% for tk in time_keys %}
+          {% if loop.index0 == 0 or loop.last or (loop.index0 % show_every == 0) %}
+            {% set x = pl + (loop.index0 * step) %}
+            <text x="{{ x | round(2) }}" y="{{ h - 16 }}"
+                  text-anchor="middle"
+                  font-size="9"
+                  fill="hsl(var(--muted-foreground))"
+                  font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ tk }}</text>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    </svg>
+
+    {# Legend — colour key → series name. #}
+    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+      {% for series_key in series_keys %}
+        {% set colour = palette[loop.index0 % (palette | length)] %}
+        <span class="inline-flex items-center gap-1">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ colour }}; opacity: 0.7"></span>
+          <span class="font-mono">{{ series_key }}</span>
+        </span>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-1 font-mono">
+      {{ tcount }} buckets · {{ series_keys | length }} series · peak {{ max_total }}
+    </p>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

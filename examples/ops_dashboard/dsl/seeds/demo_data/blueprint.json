@@ -140,8 +140,8 @@
       },
       {
         "name": "Alert",
-        "row_count_default": 20,
-        "notes": "Alert",
+        "row_count_default": 80,
+        "notes": "Alert — 80 rows spread across the last 21 days so the time-series charts (line_chart, area_chart, sparkline) have meaningful density per bucket.",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -167,10 +167,10 @@
                 "critical"
               ],
               "weights": [
-                0.25,
-                0.25,
-                0.25,
-                0.25
+                0.4,
+                0.3,
+                0.2,
+                0.1
               ]
             }
           },
@@ -187,7 +187,7 @@
             "strategy": "date_relative",
             "params": {
               "anchor": "today",
-              "min_offset_days": -365,
+              "min_offset_days": -21,
               "max_offset_days": 0
             }
           },

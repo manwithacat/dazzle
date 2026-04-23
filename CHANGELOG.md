@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-04-23
+
+Minor bump. Time-series display family — the next chapter of the v0.59 aggregate stack (cycle 28). One DSL primitive (`bucket(<field>, <unit>)`) unlocks three new display modes: `line_chart`, `area_chart`, and `sparkline`. Same Strategy C pipeline — one scope-safe `GROUP BY` SQL query via `date_trunc`, zero JS, pure server-rendered SVG.
+
+### Added
+- **`bucket(<field>, <unit>)` DSL syntax** in `group_by:` and `group_by: [...]`. Valid units whitelisted at parse time: `day`, `week`, `month`, `quarter`, `year`. Emits `date_trunc('<unit>', <col>)` in the SQL, preserves chronological ordering (ASC not alphabetical), and formats labels per unit (`2026-04-23`, `2026-W17`, `Apr 2026`, `Q2 2026`, `2026`).
+- **`Dimension.truncate`** on `aggregate.py` — new field on the aggregate primitive's dimension type. SQL builder wraps time dims with `date_trunc(...)` in SELECT + GROUP BY. Guarded against invalid units (ValueError at construction) and against combining with `fk_table` (a timestamp column is not a foreign key).
+- **`BucketRef` IR type** in `dazzle.core.ir.workspaces`. Produced by the parser for the `bucket()` form; consumed by `_aggregate_via_groupby` and `_compute_pivot_buckets`.
+- **`display: line_chart`** — single-dim time-series. Server-rendered SVG polyline with area fill, data points, `<title>` tooltips, adaptive x-axis tick labels. Pure Tailwind + HSL variables, no JS.
+- **`display: area_chart`** — stacked multi-dim time-series. Two-dim (`[bucket(ts, unit), series]`); each series is a polygon in the stack, legend below the chart. 6-entry palette cycles for high series counts.
+- **`display: sparkline`** — compact time-series tile: latest value + mini line underneath. Same data shape as `line_chart`, KPI tile form.
+- **`examples/ops_dashboard`** regions: `alerts_timeseries` (line), `alerts_weekly_stacked` (area), `alerts_daily_sparkline` (sparkline). Blueprint updated to spread `triggered_at` across the last 21 days at 80 rows so the charts show meaningful density and a spike is visible.
+- **Trial scenario `trend_spike_detection`** in `examples/ops_dashboard/trial.toml`. The qa-trial persona (Priya) must identify the peak day and dominant severity from the time-series charts alone — negative verdict blocks downstream adoption.
+- **Three skill-library component contracts:** `~/.claude/skills/ux-architect/components/line-chart-region.md`, `area-chart-region.md`, `sparkline-region.md`. ux-architect skill agents auto-discover these when asked to build a time-series region.
+
+### Changed
+- **`docs/reference/reports.md`** — new "Time bucketing" section covering the DSL syntax, the five whitelisted units, label formats, chronological ordering, the FK-exclusion rule, and the gap-filling non-goal. Decision table extended to include the three new display modes.
+- **MCP knowledge base** (`workspace.toml`) — `aggregates` and `display_modes` concepts both document the v0.60.0 additions. Agents querying the `knowledge` MCP tool get the current story.
+- **`_compute_bucketed_aggregates` + `_aggregate_via_groupby` + `_compute_pivot_buckets`** accept `str | BucketRef` (`group_by`) and `list[str | BucketRef]` (`group_by_dims`). Bar-chart caller routes `LINE_CHART` and `SPARKLINE` through the same single-dim path; pivot caller routes `AREA_CHART` through the multi-dim path. Time-bucketed dims always take the GROUP BY fast path — there's no N+1 fallback that makes sense for a time axis.
+- **Bucket rows** carry both the raw ISO timestamp (via the dim's `name` key) and a formatted `<name>_label` — templates render the label, downstream drill-down uses the ISO.
+
+### Agent Guidance
+- **Time-series is a first-class chart shape now.** When a user asks for "alerts over time", "trend", "daily volume", or similar, reach for `bucket(<field>, day|week|month|quarter|year)` and `line_chart` / `area_chart` / `sparkline`. Don't compose a time series from distinct timestamps — that blows up on high-cardinality columns and lands in the slow path.
+- **Time buckets + FK in the same dim: not allowed.** A timestamp column isn't a foreign key. Mixing them in the same `group_by_dims` list *is* allowed (`[bucket(ts, week), severity]` is the canonical stacked-area case) — they just can't collapse into a single `Dimension`.
+- **No gap filling.** Days / weeks with zero rows don't appear in the result. If you need explicit zeros, compose them in a view layer; don't expect the aggregate primitive to synthesise them.
+
 ## [0.59.5] - 2026-04-23
 
 Patch bump. Documentation surface for the v0.59 aggregate stack — makes Layers 1–3 (`Repository.aggregate`, multi-dim, `explain_aggregate`) discoverable to AI agents building Dazzle apps.

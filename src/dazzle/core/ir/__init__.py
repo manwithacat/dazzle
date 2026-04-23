@@ -739,6 +739,7 @@ from .webhooks import (
 
 # Workspaces
 from .workspaces import (
+    BucketRef,
     ContextSelectorSpec,
     DisplayMode,
     NavGroupSpec,
@@ -815,6 +816,7 @@ __all__ = [
     "SurfaceAccessSpec",
     "SurfaceSpec",
     # Workspaces
+    "BucketRef",
     "DisplayMode",
     "NavGroupSpec",
     "ContextSelectorSpec",

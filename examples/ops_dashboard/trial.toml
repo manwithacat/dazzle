@@ -37,3 +37,46 @@ in a real incident. Call `submit_verdict` with a one-paragraph verdict
 as Dan — would it survive first contact with a 3am page, or would you
 fall back to your existing tools?
 """
+
+# v0.60.0 — trend spike detection scenario. Exercises the time-series
+# chart family (line_chart, area_chart, sparkline) added in cycle 28.
+# Success requires reading the chart well enough to tell which day had
+# the most alerts AND which severity dominated that spike. If the
+# persona can't answer without scrolling through 80 rows of alerts,
+# the time-series regions haven't earned their place on the dashboard.
+[[scenario]]
+name = "trend_spike_detection"
+login_persona = "ops_engineer"
+time_budget_seconds = 300
+max_steps = 25
+
+user_identity = """
+You are Priya, a senior ops engineer. The head of platform just asked
+you in Slack: 'quick — which day had our worst alert spike in the last
+three weeks, and what kind of alerts was it?' You need to answer in
+under five minutes using only the ops dashboard she linked you.
+"""
+
+business_context = """
+You have exactly one tool open: the Command Center workspace. There's
+an alert list, a pivot table by system × severity, a bar chart by
+system, and — newly — a time-series line chart, a stacked area chart
+by week, and a sparkline. You've seen time-series charts before;
+the point is whether these ones actually let you identify a spike
+day and its dominant severity at a glance.
+"""
+
+tasks = [
+    "Find the time-series chart of alerts per day. Identify the peak day — what date is it, and how many alerts that day?",
+    "Now look at the weekly stacked chart. Which severity level dominated the busiest week?",
+    "Cross-check: does the sparkline value (today / latest) agree with the rightmost point on the line chart? If not, that's a trust problem.",
+    "Decide: could you have answered the VP's question from these charts alone, or would you have had to scroll through the alert list?",
+]
+
+stop_when = """
+Stop once you've identified the peak day + dominant severity, OR
+concluded the charts don't support that question. Call `submit_verdict`
+as Priya with a one-paragraph verdict — did the time-series regions
+answer the VP's question, or did you end up relying on the flat
+alert list?
+"""

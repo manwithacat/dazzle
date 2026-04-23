@@ -6,6 +6,7 @@ metrics, and rendering workspace regions as HTML or JSON.
 
 import asyncio
 import csv
+import datetime as _dt
 import io
 import logging
 import re
@@ -19,6 +20,45 @@ logger = logging.getLogger(__name__)
 # Regex for aggregate expressions like count(Task) or count(Task where status = open)
 # Tolerates whitespace around parens and entity name (DSL parser joins tokens with spaces).
 _AGGREGATE_RE = re.compile(r"\s*(count|sum|avg|min|max)\s*\(\s*(\w+)\s*(?:where\s+(.+?))?\s*\)")
+
+
+def _format_bucket_label(value: Any, unit: str) -> str:
+    """Render a time-bucket SQL value as a human-readable string.
+
+    ``date_trunc`` returns a datetime object (or tz-aware datetime on
+    timestamptz columns). We emit a stable, locale-free label per unit
+    so templates, snapshot tests, and charts all agree.
+
+        day     → ``2026-04-23``
+        week    → ``2026-W17``    (ISO week — Monday start)
+        month   → ``Apr 2026``
+        quarter → ``Q2 2026``
+        year    → ``2026``
+
+    Non-datetime / None values pass through as ``str(value)`` — the caller
+    is responsible for deciding whether a null time bucket deserves a
+    placeholder or should be filtered out.
+    """
+    if value is None:
+        return ""
+    if not isinstance(value, _dt.datetime | _dt.date):
+        return str(value)
+    # date (from date_trunc on a date column) vs datetime — both have
+    # the strftime hooks we need.
+    if unit == "day":
+        return value.strftime("%Y-%m-%d")
+    if unit == "week":
+        # ISO week format — `%G` is ISO year, `%V` is ISO week number.
+        return value.strftime("%G-W%V")
+    if unit == "month":
+        return value.strftime("%b %Y")
+    if unit == "quarter":
+        month = value.month
+        quarter = (month - 1) // 3 + 1
+        return f"Q{quarter} {value.year}"
+    if unit == "year":
+        return str(value.year)
+    return str(value)
 
 
 async def _resolve_workspace_user(
@@ -722,7 +762,17 @@ async def _workspace_region_handler(
     kanban_columns: list[str] = []
     group_by = ctx.ctx_region.group_by
     _grouped_modes = {"KANBAN", "BAR_CHART", "FUNNEL_CHART"}
-    if group_by and ctx.ctx_region.display in _grouped_modes and ctx.entity_spec:
+    # Time-bucketed group_by is a BucketRef — it has no enum values and is
+    # never kanban. Skip the enum/state-machine resolution for it.
+    from dazzle.core.ir import BucketRef as _BucketRef
+
+    _gb_is_bucket = isinstance(group_by, _BucketRef)
+    if (
+        group_by
+        and not _gb_is_bucket
+        and ctx.ctx_region.display in _grouped_modes
+        and ctx.entity_spec
+    ):
         # Try enum values first, then state machine states
         for f in ctx.entity_spec.fields:
             if f.name == group_by:
@@ -735,9 +785,11 @@ async def _workspace_region_handler(
             if sm and sm.status_field == group_by:
                 kanban_columns = [s if isinstance(s, str) else str(s) for s in sm.states]
 
-    # Compute bucketed aggregates for bar_chart (#847) — does nothing for
-    # other display modes or when no aggregate is declared.
-    if ctx.ctx_region.display == "BAR_CHART" and group_by and ctx.ctx_region.aggregates:
+    # Compute bucketed aggregates for bar_chart / line_chart / sparkline —
+    # single-dim distributions or time-series. Multi-dim (area_chart /
+    # pivot_table) runs through _compute_pivot_buckets below.
+    _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE"}
+    if ctx.ctx_region.display in _single_dim_chart_modes and group_by and ctx.ctx_region.aggregates:
         bucketed_metrics = await _compute_bucketed_aggregates(
             ctx.ctx_region.aggregates,
             ctx.repositories,
@@ -748,15 +800,17 @@ async def _workspace_region_handler(
             source_entity=ctx.source,
         )
 
-    # Multi-dimension aggregate for pivot_table (cycle 25). Reads
-    # `group_by_dims: list[str]` from the IR and runs ONE multi-dim
-    # GROUP BY via Repository.aggregate. Each entry is a column on the
-    # source entity; FK columns auto-LEFT JOIN their target so the
-    # bucket carries the resolved display field.
+    # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
+    # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
+    # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
+    # is a column on the source entity or a BucketRef for time-bucketed
+    # dims; FK columns auto-LEFT JOIN their target so the bucket carries
+    # the resolved display field.
     pivot_buckets: list[dict[str, Any]] = []
     pivot_dim_specs: list[dict[str, Any]] = []
+    _multi_dim_modes = {"PIVOT_TABLE", "AREA_CHART"}
     if (
-        ctx.ctx_region.display == "PIVOT_TABLE"
+        ctx.ctx_region.display in _multi_dim_modes
         and getattr(ctx.ctx_region, "group_by_dims", None)
         and ctx.ctx_region.aggregates
     ):
@@ -941,7 +995,9 @@ async def _workspace_region_handler(
         region_name=ctx.ctx_region.name,
         filter_columns=filter_columns,
         active_filters=active_filters,
-        group_by=group_by,
+        # Templates expect a string or None; reduce BucketRef to its field
+        # name (the unit already drove bucketed_metrics labels server-side).
+        group_by=(group_by.field if _gb_is_bucket else group_by),
         kanban_columns=kanban_columns,
         queue_transitions=queue_transitions,
         queue_status_field=queue_status_field,
@@ -1265,7 +1321,7 @@ def _resolve_fk_target_spec(
 async def _compute_pivot_buckets(
     aggregates: dict[str, str],
     repositories: dict[str, Any] | None,
-    group_by_dims: list[str],
+    group_by_dims: list[Any],
     *,
     source_entity: str | None,
     source_entity_spec: Any,
@@ -1303,15 +1359,35 @@ async def _compute_pivot_buckets(
     if source_repo is None:
         return [], []
 
-    # Resolve each dim — FK target spec (if any), display field via probe.
+    # Resolve each dim — FK target spec (if any), display field via probe,
+    # or time-bucket via BucketRef (cycle 28).
+    from dazzle.core.ir import BucketRef
+
     dimensions: list[Dimension] = []
     dim_specs: list[dict[str, Any]] = []
-    for dim_name in group_by_dims:
-        field = next(
+    for dim_entry in group_by_dims:
+        if isinstance(dim_entry, BucketRef):
+            # Time-bucketed dim — no FK, no enum, just date_trunc on the
+            # timestamp column. The label generator in _format_bucket_label
+            # handles the display format.
+            dimensions.append(Dimension(name=dim_entry.field, truncate=dim_entry.unit))  # type: ignore[arg-type]
+            dim_specs.append(
+                {
+                    "name": dim_entry.field,
+                    "label": dim_entry.field.replace("_", " ").title(),
+                    "is_fk": False,
+                    "is_time_bucket": True,
+                    "unit": dim_entry.unit,
+                }
+            )
+            continue
+
+        dim_name = dim_entry
+        fld = next(
             (f for f in getattr(source_entity_spec, "fields", []) if f.name == dim_name),
             None,
         )
-        ftype = getattr(field, "type", None) if field else None
+        ftype = getattr(fld, "type", None) if fld else None
         is_fk = ftype is not None and getattr(ftype, "kind", None) == "ref"
         fk_table = None
         fk_display_field = None
@@ -1329,6 +1405,8 @@ async def _compute_pivot_buckets(
                 "name": dim_name,
                 "label": dim_name.replace("_", " ").title(),
                 "is_fk": bool(fk_table and fk_display_field),
+                "is_time_bucket": False,
+                "unit": None,
             }
         )
 
@@ -1358,10 +1436,16 @@ async def _compute_pivot_buckets(
     for b in buckets:
         row: dict[str, Any] = {}
         for spec in dim_specs:
-            row[spec["name"]] = b.dimensions.get(spec["name"])
+            raw = b.dimensions.get(spec["name"])
+            row[spec["name"]] = raw
             if spec["is_fk"]:
                 lbl_key = f"{spec['name']}_label"
-                row[lbl_key] = b.dimensions.get(lbl_key) or row[spec["name"]]
+                row[lbl_key] = b.dimensions.get(lbl_key) or raw
+            elif spec.get("is_time_bucket"):
+                # Formatted label + ISO string for chart axes / JSON.
+                row[f"{spec['name']}_label"] = _format_bucket_label(raw, spec["unit"])
+                if isinstance(raw, _dt.datetime | _dt.date):
+                    row[spec["name"]] = raw.isoformat()
         for k, v in b.measures.items():
             row[k] = v
         out.append(row)
@@ -1372,7 +1456,7 @@ async def _aggregate_via_groupby(
     agg_repo: Any,
     *,
     metric_name: str,
-    group_by: str,
+    group_by: Any,  # str | BucketRef
     where_clause: str | None,
     scope_filters: dict[str, Any] | None,
     source_entity_spec: Any,
@@ -1388,6 +1472,7 @@ async def _aggregate_via_groupby(
     queries, no possibility of the two paths producing different scoped
     row sets.
     """
+    from dazzle.core.ir import BucketRef
     from dazzle_back.runtime.aggregate import Dimension, resolve_fk_display_field
 
     # Merge any author-supplied where clause into the filter dict via
@@ -1398,6 +1483,30 @@ async def _aggregate_via_groupby(
         merged_filters.update(_parse_simple_where(where_clause))
     if scope_filters:
         merged_filters = {**scope_filters, **merged_filters}
+
+    # Time-bucketed single-dim path — no FK join, date_trunc in SQL.
+    if isinstance(group_by, BucketRef):
+        bucket_dim = Dimension(name=group_by.field, truncate=group_by.unit)  # type: ignore[arg-type]
+        buckets = await agg_repo.aggregate(
+            dimensions=[bucket_dim],
+            measures={metric_name: "count"},
+            filters=merged_filters or None,
+        )
+        out: list[dict[str, Any]] = []
+        for b in buckets:
+            raw = b.dimensions.get(group_by.field)
+            if raw is None:
+                continue
+            label = _format_bucket_label(raw, group_by.unit)
+            iso = raw.isoformat() if isinstance(raw, _dt.datetime | _dt.date) else str(raw)
+            out.append(
+                {
+                    "label": label,
+                    "value": b.measures.get(metric_name, 0),
+                    "bucket": iso,
+                }
+            )
+        return out
 
     fk_table = getattr(fk_target_spec, "name", None) if fk_target_spec is not None else None
     fk_display_field = (
@@ -1411,7 +1520,7 @@ async def _aggregate_via_groupby(
         filters=merged_filters or None,
     )
 
-    out: list[dict[str, Any]] = []
+    out = []
     for b in buckets:
         bucket_id = b.dimensions.get(group_by)
         if bucket_id is None:
@@ -1497,7 +1606,7 @@ async def _enumerate_distinct_buckets(
 async def _compute_bucketed_aggregates(
     aggregates: dict[str, str],
     repositories: dict[str, Any] | None,
-    group_by: str,
+    group_by: Any,  # str | BucketRef
     items: list[dict[str, Any]],
     bucket_values: list[str] | None = None,
     scope_filters: dict[str, Any] | None = None,
@@ -1554,14 +1663,23 @@ async def _compute_bucketed_aggregates(
     # no possibility of enumeration/per-bucket divergence. The slow
     # sentinel path below stays for `count(OtherEntity where ... =
     # current_bucket)` expressions that need true per-bucket queries.
+    from dazzle.core.ir import BucketRef as _BucketRef
+
+    is_bucket_ref = isinstance(group_by, _BucketRef)
     is_simple_distribution = (
         not bucket_values  # caller didn't pre-supply enum/state buckets
         and source_entity is not None
         and entity_name == source_entity
         and (not where_clause or "current_bucket" not in (where_clause or ""))
     )
-    if is_simple_distribution:
+    # Time-bucketed distributions always take the GROUP BY path — there's no
+    # per-bucket substitution to fall back to (current_bucket only makes sense
+    # for enum / categorical group_by).
+    if is_simple_distribution or is_bucket_ref:
         try:
+            fk_target = None
+            if not is_bucket_ref:
+                fk_target = _resolve_fk_target_spec(agg_repo, group_by, repositories)
             return await _aggregate_via_groupby(
                 agg_repo,
                 metric_name=metric_name,
@@ -1569,16 +1687,19 @@ async def _compute_bucketed_aggregates(
                 where_clause=where_clause,
                 scope_filters=scope_filters,
                 source_entity_spec=getattr(agg_repo, "entity_spec", None),
-                fk_target_spec=_resolve_fk_target_spec(agg_repo, group_by, repositories),
+                fk_target_spec=fk_target,
             )
         except Exception:
             logger.warning(
-                "GROUP BY aggregate failed for %s.%s — falling back to N+1",
+                "GROUP BY aggregate failed for %s.%r — falling back to N+1",
                 entity_name,
                 group_by,
                 exc_info=True,
             )
-            # fall through to the old loop on exception
+            # fall through to the old loop on exception. Time buckets have
+            # no N+1 fallback — they'll just return [] below.
+            if is_bucket_ref:
+                return []
 
     # ---- Slow path: per-bucket loop (enumeration + per-bucket count) ----
     # Used when the aggregate expression has a current_bucket sentinel

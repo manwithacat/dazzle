@@ -36,7 +36,7 @@ Scope contract (aggregate-safe scopes):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from dazzle_back.runtime.query_builder import QueryBuilder, quote_identifier
 
@@ -49,6 +49,12 @@ _NULLARY_MEASURES: dict[str, str] = {"count": "COUNT(*)"}
 
 # Aggregate measures of the form `<op>:<column>`.
 _UNARY_MEASURES: frozenset[str] = frozenset({"sum", "avg", "min", "max"})
+
+# Time-bucket granularities. Whitelist — NEVER interpolate user input into
+# the date_trunc unit string; PostgreSQL treats the unit as a literal but
+# the typing below also blocks any other value reaching build_aggregate_sql.
+TruncateUnit = Literal["day", "week", "month", "quarter", "year"]
+_VALID_TRUNCATE_UNITS: frozenset[str] = frozenset({"day", "week", "month", "quarter", "year"})
 
 
 @dataclass(frozen=True)
@@ -65,15 +71,39 @@ class Dimension:
             bucket label. Caller resolves via :func:`resolve_fk_display_field`
             against the target's EntitySpec. Required when ``fk_table``
             is set.
+        truncate: When set, applies ``date_trunc('<unit>', col)`` — the
+            dimension buckets by calendar unit rather than distinct
+            value. Mutually exclusive with ``fk_table`` (an FK column
+            isn't a timestamp). Time dims render in chronological ASC
+            order, not alphabetical. Unit is validated on construction.
     """
 
     name: str
     fk_table: str | None = None
     fk_display_field: str | None = None
+    truncate: TruncateUnit | None = None
+
+    def __post_init__(self) -> None:
+        if self.truncate is not None:
+            if self.truncate not in _VALID_TRUNCATE_UNITS:
+                raise ValueError(
+                    f"Invalid truncate unit {self.truncate!r}; "
+                    f"expected one of {sorted(_VALID_TRUNCATE_UNITS)}"
+                )
+            if self.fk_table is not None:
+                raise ValueError(
+                    "Dimension cannot combine truncate (time bucket) "
+                    "with fk_table (FK join) — a timestamp column is "
+                    "not a foreign key."
+                )
 
     @property
     def has_fk_join(self) -> bool:
         return bool(self.fk_table and self.fk_display_field)
+
+    @property
+    def is_time_bucket(self) -> bool:
+        return self.truncate is not None
 
 
 @dataclass
@@ -177,9 +207,17 @@ def build_aggregate_sql(
     for i, dim in enumerate(dimensions):
         col_q = quote_identifier(dim.name)
         id_alias = quote_identifier(f"dim_{i}_id")
-        select_parts.append(f"{src}.{col_q} AS {id_alias}")
-        group_parts.append(f"{src}.{col_q}")
-        if dim.has_fk_join:
+        if dim.is_time_bucket:
+            # `truncate` is validated against _VALID_TRUNCATE_UNITS in
+            # Dimension.__post_init__, so inlining it here is safe.
+            bucket_expr = f"date_trunc('{dim.truncate}', {src}.{col_q})"
+            select_parts.append(f"{bucket_expr} AS {id_alias}")
+            group_parts.append(bucket_expr)
+            # Chronological order — ASC so earliest bucket first.
+            order_parts.append(f"{bucket_expr} ASC NULLS LAST")
+        elif dim.has_fk_join:
+            select_parts.append(f"{src}.{col_q} AS {id_alias}")
+            group_parts.append(f"{src}.{col_q}")
             fk_alias = f"fk_{i}"
             fk_t = quote_identifier(dim.fk_table or "")
             fk_disp_q = quote_identifier(dim.fk_display_field or "")
@@ -193,6 +231,8 @@ def build_aggregate_sql(
             # Order by label when joined — easier to read in chart/table.
             order_parts.append(f"{fk_alias}.{fk_disp_q} NULLS LAST")
         else:
+            select_parts.append(f"{src}.{col_q} AS {id_alias}")
+            group_parts.append(f"{src}.{col_q}")
             order_parts.append(f"{src}.{col_q} NULLS LAST")
 
     select_parts.extend(measure_sql_parts)
