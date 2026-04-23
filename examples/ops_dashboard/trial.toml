@@ -47,8 +47,13 @@ fall back to your existing tools?
 [[scenario]]
 name = "trend_spike_detection"
 login_persona = "ops_engineer"
-time_budget_seconds = 300
-max_steps = 25
+time_budget_seconds = 360
+max_steps = 45
+# Land directly on the Command Center workspace with a fragment anchor
+# to the alerts_timeseries region. Region cards emit `id="region-<name>"`
+# so the browser auto-scrolls past the ~10 regions above it on load.
+# Without this the persona burns all her steps scrolling.
+starting_url = "/app/workspaces/command_center#region-alerts_timeseries"
 
 user_identity = """
 You are Priya, a senior ops engineer. The head of platform just asked
@@ -58,25 +63,27 @@ under five minutes using only the ops dashboard she linked you.
 """
 
 business_context = """
-You have exactly one tool open: the Command Center workspace. There's
-an alert list, a pivot table by system × severity, a bar chart by
-system, and — newly — a time-series line chart, a stacked area chart
-by week, and a sparkline. You've seen time-series charts before;
-the point is whether these ones actually let you identify a spike
-day and its dominant severity at a glance.
+You are already on the Command Center workspace and the page has
+scrolled to a region called "Alerts Timeseries" — a line chart of
+daily alert volume. Below it are an "Alerts Weekly Stacked" area chart
+(severity per week) and an "Alerts Daily Sparkline" tile. The other
+regions (alert list, pivot, bar chart) are above these and also
+available if you scroll up. The point of this trial is whether the
+time-series charts themselves answer the VP's question — not whether
+you can navigate the dashboard.
 """
 
 tasks = [
-    "Find the time-series chart of alerts per day. Identify the peak day — what date is it, and how many alerts that day?",
-    "Now look at the weekly stacked chart. Which severity level dominated the busiest week?",
-    "Cross-check: does the sparkline value (today / latest) agree with the rightmost point on the line chart? If not, that's a trust problem.",
-    "Decide: could you have answered the VP's question from these charts alone, or would you have had to scroll through the alert list?",
+    "Look at the Alerts Timeseries line chart (you should be on it). Read the peak day from the chart — hover over the highest point, or use its label. What date is it? How many alerts?",
+    "Scroll down to the Alerts Weekly Stacked chart. For the busiest week, which severity (low / medium / high / critical) dominates the stack? Use the legend colours to identify.",
+    "Check the Alerts Daily Sparkline tile. Does its headline number match the rightmost point on the line chart? If not, that is a data-trust problem worth flagging.",
+    "Decide: could you have answered the VP's question from these three charts alone, or would you have had to scroll up to the raw alert list?",
 ]
 
 stop_when = """
-Stop once you've identified the peak day + dominant severity, OR
-concluded the charts don't support that question. Call `submit_verdict`
-as Priya with a one-paragraph verdict — did the time-series regions
-answer the VP's question, or did you end up relying on the flat
-alert list?
+Stop as soon as you've read the peak day + dominant severity off the
+charts, OR concluded the charts don't convey that information clearly.
+Call `submit_verdict` as Priya with a one-paragraph verdict — did the
+time-series regions answer the VP's question at a glance, or did you
+find yourself needing the flat alert list?
 """

@@ -52,6 +52,33 @@ class TestBuildTrialMission:
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert m.start_url == "http://host:1234/app"
 
+    def test_starting_url_relative_path_is_resolved_against_base(self, scenario: dict) -> None:
+        """starting_url lets a scenario target a specific workspace/region."""
+        sink: dict = {"friction": []}
+        scenario = {**scenario, "starting_url": "/app/workspaces/dash#region-foo"}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert m.start_url == "http://host:1234/app/workspaces/dash#region-foo"
+
+    def test_starting_url_absolute_overrides_base(self, scenario: dict) -> None:
+        """Absolute URLs pass through untouched — useful for cross-host targeting."""
+        sink: dict = {"friction": []}
+        scenario = {**scenario, "starting_url": "http://elsewhere:5000/whatever"}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert m.start_url == "http://elsewhere:5000/whatever"
+
+    def test_starting_url_strips_whitespace(self, scenario: dict) -> None:
+        sink: dict = {"friction": []}
+        scenario = {**scenario, "starting_url": "  /app/thing  "}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert m.start_url == "http://host:1234/app/thing"
+
+    def test_starting_url_missing_leading_slash(self, scenario: dict) -> None:
+        """Forgiving: no leading slash still produces a sane URL."""
+        sink: dict = {"friction": []}
+        scenario = {**scenario, "starting_url": "app/workspaces/x"}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert m.start_url == "http://host:1234/app/workspaces/x"
+
     def test_system_prompt_includes_identity_and_tasks(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)

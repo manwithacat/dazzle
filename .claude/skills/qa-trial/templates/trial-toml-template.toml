@@ -21,6 +21,14 @@ login_persona = "<PERSONA_ID>"
 time_budget_seconds = 400
 max_steps = 30
 
+# Optional. Relative URL the persona lands on after login (default /app).
+# Set this when the trial targets a specific region/workspace — region
+# cards emit id="region-<name>" anchors, so fragment URLs like
+# /app/workspaces/<ws>#region-<name> drop the persona right on target
+# and save a dozen scroll steps. Leave unset for whole-app discovery
+# trials where finding the feature is part of the test.
+# starting_url = "/app/workspaces/<WORKSPACE>#region-<REGION>"
+
 # First-person narrative. The agent reads this as "who am I today".
 # Include: name, role, company size/context, the tool they currently
 # use, and the decision at stake right now. Specific > generic.

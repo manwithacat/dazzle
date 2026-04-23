@@ -354,6 +354,20 @@ def build_trial_mission(
         "`submit_verdict` with a verdict."
     )
 
+    # starting_url: scenario-declared landing URL (relative to base_url).
+    # Lets a trial target a specific workspace, region anchor, or surface
+    # instead of always dropping the persona on /app. Absolute URLs are
+    # accepted as-is (useful for pointing at a different port or host,
+    # though in practice the runner boots a single app).
+    starting_url_raw = (scenario.get("starting_url") or "").strip()
+    if starting_url_raw:
+        if starting_url_raw.startswith(("http://", "https://")):
+            effective_start_url = starting_url_raw
+        else:
+            effective_start_url = f"{base_url.rstrip('/')}/{starting_url_raw.lstrip('/')}"
+    else:
+        effective_start_url = f"{base_url}/app"
+
     effective_max_steps = max_steps or int(scenario.get("max_steps", 35))
     # Wrap-up at 60% — trials 1-3 all ran out of budget at 75% wrap-up
     # because exploration + recording takes more steps than the LLM
@@ -380,7 +394,7 @@ def build_trial_mission(
         completion_criteria=_trial_completion,
         max_steps=effective_max_steps,
         token_budget=token_budget,
-        start_url=f"{base_url}/app",
+        start_url=effective_start_url,
         terminal_tools=["submit_verdict"],
         context={
             "mode": "trial",

@@ -95,6 +95,19 @@ Without a stop condition, agents either exhaust their step budget doing nothing 
 
 A trial tests a single `(user_identity, tasks)` pair against a single persona. If your app has 3 personas (admin, agent, customer) and you want to evaluate for all of them, write 3 `[[scenario]]` blocks in one `trial.toml`. The CLI picks the first by default; pass `--scenario <name>` to select.
 
+### Rule 6: `starting_url` when the trial targets one region (v0.60.2+)
+
+Default landing is `/app` — fine for "can the persona navigate the whole app" trials. Useless for "can the persona read this chart" trials, because the agent burns its step budget scrolling past a dozen regions before ever reaching the one you wanted tested.
+
+```toml
+# Scenario targeting a specific chart region
+starting_url = "/app/workspaces/command_center#region-alerts_timeseries"
+```
+
+The path is relative to the app's base URL. Fragment anchors work because workspace region cards emit `id="region-<name>"` — the browser auto-scrolls on load so the persona lands with the target visible. For discoverability trials leave `starting_url` unset and let the persona navigate from `/app`; for focused feature trials set it and save 10+ steps of scroll noise.
+
+Rule of thumb: if your tasks start with "Find the X chart…", you probably want `starting_url` to drop the persona at X. Otherwise you're testing page layout, not the chart.
+
 ## Template
 
 See `templates/trial-toml-template.toml` for a blank form to fill in. Copy it to your project root, edit, then:

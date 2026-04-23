@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-04-23
+
+Patch bump. Trial scenario design — `starting_url` field lets a trial target a specific workspace or region anchor instead of always dropping the persona on `/app`. Triggered by the `trend_spike_detection` trial where Priya exhausted her step budget scrolling a 13-region dashboard before reaching the time-series charts we wanted her to evaluate.
+
+### Added
+- **`starting_url:` field on `trial.toml` scenarios.** Relative paths resolve against the app's base URL (`http://localhost:<port>`); absolute URLs pass through untouched. Region cards already emit `id="region-<name>"` so fragment URLs like `/app/workspaces/command_center#region-alerts_timeseries` drop the persona right on target. Validated by 4 new unit tests in `tests/unit/test_qa_trial.py`.
+- **`trend_spike_detection` scenario updated** to use `starting_url` + raised `max_steps` to 45 + tasks rewritten with explicit region names. Previous run: 21 steps, 0 verdict, persona stuck scrolling. Setup now lands her on the target chart with the full budget for actual evaluation.
+- **qa-trial skill updates** (`.claude/skills/qa-trial/SKILL.md`): new "Rule 6" section explaining when to use `starting_url`. Template (`.claude/skills/qa-trial/templates/trial-toml-template.toml`) now documents the field as an optional setting.
+
+### Agent Guidance
+- **When a trial scenario says "Find the X region…" in its tasks, add `starting_url` to land on X.** The trial-cycle loop's value is qualitative feedback on the target feature; burning 15 scrolls on navigation before reaching X wastes the token budget. Leave `starting_url` unset only when whole-app discoverability *is* the thing being tested.
+
 ## [0.60.1] - 2026-04-23
 
 Patch bump. Trial-validation fix — the v0.60.0 BucketRef IR type was rejected by the pydantic `RegionContext` (template-facing context), which coerced `group_by` to `str`. Surfaced when `dazzle qa trial` couldn't boot the ops_dashboard server. Framework-level tests all passed; the regression only fired on a full app boot.
