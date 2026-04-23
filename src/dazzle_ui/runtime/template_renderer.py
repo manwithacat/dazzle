@@ -195,7 +195,15 @@ def _bool_icon_filter(value: Any) -> Markup:
 
 
 def _timeago_filter(value: Any) -> str:
-    """Format a datetime as relative time (e.g. '2 hours ago')."""
+    """Format a datetime as relative time (e.g. '2 hours ago').
+
+    Postgres ``TIMESTAMP WITH TIME ZONE`` columns return tz-aware
+    datetimes via psycopg; mixing those with ``datetime.now()`` (naive)
+    raised ``TypeError`` and 500'd region renders (#852). Strategy:
+    keep both sides naive for the subtraction — convert any tz-aware
+    input to local-naive so the comparison matches the existing
+    convention that callers pass naive local values.
+    """
     if value is None:
         return ""
     now = datetime.now()
@@ -206,11 +214,19 @@ def _timeago_filter(value: Any) -> str:
         dt = datetime(value.year, value.month, value.day)
     elif isinstance(value, str):
         try:
-            dt = datetime.fromisoformat(value)
+            # Python <3.11 doesn't parse the trailing `Z` — normalise it
+            # to the explicit UTC offset before fromisoformat.
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return str(value)
     if dt is None:
         return str(value)
+    if dt.tzinfo is not None:
+        # Convert tz-aware inputs (DB columns) to local-naive so they can
+        # subtract from naive `now` without raising. This is the smallest
+        # fix that closes #852 and keeps every existing local-naive call
+        # site working.
+        dt = dt.astimezone().replace(tzinfo=None)
     diff = now - dt
     seconds = int(diff.total_seconds())
     if seconds < 0:

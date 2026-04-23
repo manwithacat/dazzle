@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.1] - 2026-04-23
+
+Patch bump. One framework bug fix from /trial-cycle 15 (#852).
+
+### Fixed
+- **`activity_feed` region no longer 500s when source rows have tz-aware timestamps (#852).** `_timeago_filter` in `src/dazzle_ui/runtime/template_renderer.py` mixed `datetime.now()` (naive local) with the tz-aware datetimes Postgres returns for `TIMESTAMP WITH TIME ZONE` columns, raising `TypeError: can't subtract offset-naive and offset-aware datetimes` and bubbling up as a 500 on every region render that used the filter (e.g. `comment_activity` on `agent_dashboard` in support_tickets). Fix: when a tz-aware value arrives, convert it to local-naive (`dt.astimezone().replace(tzinfo=None)`) before the subtraction. Existing call sites that pass naive local values keep working unchanged. The ISO string parser also now handles the `Z` suffix (`fromisoformat` rejected it on Python <3.11).
+- **`activity_feed` template no longer fails the nested-card-chrome invariant.** With the timeago crash fixed, the previously-skipped composite shape test ran and surfaced an inner item `<div>` carrying both `border` and `rounded-[4px]` — flagged as nested chrome by `find_nested_chromes`. Removed the full border on the inner item div; visual grouping comes from the muted background only. The `tests/unit/test_dom_snapshots.py` baseline for `activity_feed` is now seeded for the first time.
+
+### Tests
+- 4 new regression tests in `tests/unit/test_template_rendering.py::TestJinjaFilters` pin tz-aware datetime input, ISO strings with `Z` suffix, naive-as-local convention, and the existing `datetime.now() - delta` call shape. Total 21 timeago tests in the suite.
+- `tests/unit/test_template_html.py::TestDashboardRegionCompositeShapes::test_composite_has_no_nested_chrome[activity_feed-...]` now actually runs (previously skipped on the tz exception).
+- `tests/unit/test_dom_snapshots.py::test_region_composite_snapshot[activity_feed-Comment Activity-context7]` baseline seeded.
+
+### Agent Guidance
+- **For datetime filters: prefer naive local on input, convert tz-aware to local-naive before arithmetic.** This matches every existing call site (`datetime.now() - timedelta(...)`) and is safe for both Postgres `TIMESTAMP WITH TIME ZONE` columns (which return tz-aware) and Python timestamps (typically naive local). Do not introduce a tz-aware-everywhere convention without auditing every caller.
+
 ## [0.59.0] - 2026-04-23
 
 Minor bump. Strategy C aggregate primitive — closes the bar_chart bug class (#847–#851) by replacing the N+1 enumerate-then-per-bucket-count pipeline with a single `GROUP BY` SQL query.

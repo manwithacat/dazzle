@@ -846,6 +846,34 @@ class TestJinjaFilters:
         result = tmpl.render(val="not-a-date")
         assert result == "not-a-date"
 
+    def test_timeago_tz_aware_datetime_does_not_raise(self, env) -> None:
+        """tz-aware values from Postgres TIMESTAMP WITH TIME ZONE columns
+        used to crash with `can't subtract offset-naive and offset-aware
+        datetimes` because `datetime.now()` was naive (#852)."""
+        from datetime import UTC
+
+        tmpl = env.from_string("{{ val|timeago }}")
+        past_aware = datetime.now(tz=UTC) - timedelta(hours=2)
+        result = tmpl.render(val=past_aware)
+        assert "hour" in result
+
+    def test_timeago_iso_string_with_z_suffix(self, env) -> None:
+        """`Z` is the canonical UTC suffix in ISO 8601 — fromisoformat used
+        to reject it on Python <3.11; we now normalise before parsing."""
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val="2026-04-22T10:00:00Z")
+        # Result depends on test clock; just confirm no crash + no
+        # passthrough (which would mean parsing failed).
+        assert result != "2026-04-22T10:00:00Z"
+
+    def test_timeago_naive_datetime_treated_as_local(self, env) -> None:
+        """Naive datetimes are treated as local time (the convention every
+        existing call site uses — `datetime.now() - delta`)."""
+        tmpl = env.from_string("{{ val|timeago }}")
+        past_naive = datetime.now() - timedelta(minutes=5)
+        result = tmpl.render(val=past_naive)
+        assert "minute" in result
+
     def test_timeago_non_datetime_type(self, env) -> None:
         tmpl = env.from_string("{{ val|timeago }}")
         result = tmpl.render(val=12345)

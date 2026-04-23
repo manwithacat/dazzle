@@ -14,7 +14,11 @@
         <div class="text-[11px] text-[hsl(var(--muted-foreground))] min-w-[80px] pt-1">
           {{ item.created_at|timeago if item.created_at else '' }}
         </div>
-        <div class="flex-1 py-1 px-2 rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[13px] text-[hsl(var(--foreground))]
+        {# No full `border` here — the dashboard slot already owns card
+           chrome (#852 follow-on). Border + rounded reads as a nested
+           card per the card-safety invariants. Background alone is fine
+           for visual grouping. #}
+        <div class="flex-1 py-1 px-2 rounded-[4px] bg-[hsl(var(--muted)/0.3)] text-[13px] text-[hsl(var(--foreground))]
           {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
