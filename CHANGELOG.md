@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.2] - 2026-04-23
+
+Patch bump. One UX bug fix from /trial-cycle 15 (#853).
+
+### Fixed
+- **Stale localStorage `hiddenColumns` no longer hide visible cells (#853).** `dzTable` loaded `hiddenColumns` from `localStorage["dz-cols-<tableId>"]` on init and applied `style.display="none"` to matching `[data-dz-col]` cells. When the column set changed between page loads (schema migration, persona swap, table id reused, or user toggled columns mid-session) any stale entries silently hid currently-visible columns — manifest as "headers render but cells are empty" because the cells exist with `display:none`. The trial agent saw exactly this on `support_tickets/ticket_list` after clicking the "Columns" toggle. Fix: new `_pruneStaleHiddenColumns()` helper drops entries that don't match any current `[data-dz-col]` and persists the cleaned list back; `init()` calls it before the first `applyColumnVisibility`.
+- **`resetColumnVisibility()` escape hatch.** Clears `hiddenColumns` + the localStorage entry so users stuck with everything hidden have a one-click recovery. Wire to a "Show all columns" entry in the column-toggle menu when ready.
+
+### Tests
+- 4 new structural ratchets in `tests/unit/test_dz_alpine_column_visibility.py` pin the prune helper, its placement before `applyColumnVisibility` in init, the localStorage persistence, and the reset escape hatch.
+
+### Agent Guidance
+- **localStorage-backed UI state must validate against current DOM on init.** This pattern applies anywhere `localStorage.getItem(...)` is consumed without checking that the stored keys still correspond to live elements. The `_pruneStaleHiddenColumns` template can be copied for column widths, sort preferences, etc. — drop entries that don't map to the current schema.
+
 ## [0.59.1] - 2026-04-23
 
 Patch bump. One framework bug fix from /trial-cycle 15 (#852).

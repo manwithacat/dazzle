@@ -180,6 +180,15 @@ document.addEventListener("alpine:init", () => {
       // guaranteed to be the x-data component root.
       this._root = this.$el;
 
+      // Validate hiddenColumns against the current table schema (#853).
+      // localStorage persists across page loads — if the column set
+      // changed (schema migration, persona swap, table id reused) any
+      // stale entries would silently hide visible columns. Drop any key
+      // that doesn't correspond to a [data-dz-col] in the current DOM
+      // and persist the cleaned list back so a single survives-all-loads
+      // cleanup happens here, not on every render.
+      this._pruneStaleHiddenColumns();
+
       this.applyColumnVisibility();
       this._applyStoredWidths();
 
@@ -308,6 +317,47 @@ document.addEventListener("alpine:init", () => {
         /** @type {HTMLElement} */ (cell).style.display =
           this.hiddenColumns.includes(key || "") ? "none" : "";
       });
+    },
+
+    /**
+     * Drop hiddenColumns entries that no longer correspond to a real
+     * column in the current DOM (#853). Without this, localStorage from
+     * an earlier page load could keep cells invisible even after the
+     * column has been removed or renamed — manifest as "headers render
+     * but cells are empty" because the cells exist with `display:none`.
+     *
+     * Persists the cleaned list back so the prune happens once on init,
+     * not on every applyColumnVisibility call.
+     */
+    _pruneStaleHiddenColumns() {
+      const presentKeys = new Set();
+      this.$el.querySelectorAll("[data-dz-col]").forEach((cell) => {
+        const key = cell.getAttribute("data-dz-col");
+        if (key) presentKeys.add(key);
+      });
+      // No columns present → either an empty-state render or the table
+      // hasn't materialised yet. Don't touch localStorage in that case;
+      // the next render-with-rows will prune cleanly.
+      if (presentKeys.size === 0) return;
+      const cleaned = this.hiddenColumns.filter((k) => presentKeys.has(k));
+      if (cleaned.length !== this.hiddenColumns.length) {
+        this.hiddenColumns = cleaned;
+        localStorage.setItem(
+          `dz-cols-${tableId}`,
+          JSON.stringify(this.hiddenColumns),
+        );
+      }
+    },
+
+    /**
+     * Reset all column visibility — clears hiddenColumns + localStorage.
+     * Wire to a "Show all columns" entry in the column-toggle menu so
+     * users have an escape hatch when they've hidden too much.
+     */
+    resetColumnVisibility() {
+      this.hiddenColumns = [];
+      localStorage.removeItem(`dz-cols-${tableId}`);
+      this.applyColumnVisibility();
     },
 
     // ── Column resize ─────────────────────────────────────────────────────
