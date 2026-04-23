@@ -247,6 +247,21 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 
 - **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them and `tests/unit/test_card_safety_invariants.py` pins each invariant to a named test. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
 
+## Reports & Charts
+
+When writing any chart / report region (bar_chart, pivot_table, heatmap, funnel_chart, metrics), read `docs/reference/reports.md` first. It's the canonical entry point covering:
+
+- Which `display:` mode matches which cardinality (0-dim KPI through N-dim pivot)
+- Single-dim (`group_by: status`) vs multi-dim (`group_by: [system, severity]`)
+- Fast vs slow path — prefer `count(<source>)` over `count(<other> where field = current_bucket)`
+- FK auto-join behaviour and the display-field probe order
+- Scope-safety contract (always pre-aggregation, no RBAC leaks)
+- `dazzle db explain-aggregate` for debugging wrong/empty charts
+
+Every chart region compiles to one `Repository.aggregate` call which runs one scope-aware `GROUP BY` SQL query. No N+1, no enumeration phase, no divergence between the bucket list and the counts (the bug class #847–#851 chased).
+
+Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`) and `pivot_table` (`group_by: [system, severity]`) regions.
+
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.

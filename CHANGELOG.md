@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.5] - 2026-04-23
+
+Patch bump. Documentation surface for the v0.59 aggregate stack — makes Layers 1–3 (`Repository.aggregate`, multi-dim, `explain_aggregate`) discoverable to AI agents building Dazzle apps.
+
+### Added
+- **`docs/reference/reports.md`** — canonical entry point for chart/report region authoring. Covers the mental model (DSL → IR → Repository.aggregate → SQL), the display-mode × cardinality decision table, single vs multi-dim syntax, supported measures, the fast-vs-slow-path distinction, FK auto-join resolution, the scope-safety contract, and the `dazzle db explain-aggregate` debugger. Explicit "don't" list (template-level aggregation, high-cardinality group_by without limit, mixing group_by and group_by_dims, reaching for raw SQL) so agents don't accidentally bypass the primitive.
+- **`~/.claude/skills/ux-architect/components/pivot-table-region.md`** — component contract sibling to `bar-chart-region.md`. Declares the Linear aesthetic target, the DSL shape, anatomy, scope/RBAC contract, non-goals, and quality gates. Skill-library agents auto-discover this when asked to build a pivot-table region.
+- **Reports & Charts section in `.claude/CLAUDE.md`** — short in-project pointer to `docs/reference/reports.md` + a summary of what the v0.59 primitive provides. The document agents load first on a new session now knows to route chart work through the primitive.
+
+### Changed
+- **MCP knowledge base `aggregates` + `display_modes` concepts updated.** `src/dazzle/mcp/semantics_kb/workspace.toml` now documents Strategy C, single vs multi-dim, fast/slow paths, and the per-display IR shapes. Agents that query the MCP `knowledge` tool for "aggregates" or "display_modes" get the current story instead of the v0.2 one. Re-seeds automatically on next start (seed_version = dazzle_version + schema_version; version bump triggers re-seed without schema schema increment).
+- **`docs/reference/index.md`** lists `reports.md` with a "**Start here**" emphasis.
+
+### Agent Guidance
+- **Chart authoring has a single entry point now:** `docs/reference/reports.md`. The `.claude/CLAUDE.md` Reports & Charts section routes agents there. If you're writing a chart region and haven't read that doc, stop — the fast/slow-path distinction and the scope-safety contract both matter.
+
 ## [0.59.4] - 2026-04-23
 
 Patch bump on the aggregate stack — `explain_aggregate` observability (cycle 26).

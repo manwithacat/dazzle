@@ -8,6 +8,7 @@
 | [Access Control](access-control.md) | DAZZLE uses Cedar-style access rules with three layers: entity-level permit/forbid blocks, surface-level access restrictions, and workspace-level persona allow/deny lists. |
 | [Surfaces](surfaces.md) | Surfaces define the UI and API interfaces for interacting with entities. |
 | [Workspaces](workspaces.md) | Workspaces compose multiple data views into cohesive dashboards or information hubs. |
+| [Reports & Charts](reports.md) | Aggregate data for charts and reports via the scope-aware `Repository.aggregate` primitive. **Start here when writing any chart region.** |
 | [UX Semantic Layer](ux.md) | The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. |
 | [Experiences](experiences.md) | Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. |
 | [Services](services.md) | Services declare custom business logic in DSL with implementation in Python or TypeScript stubs. |
