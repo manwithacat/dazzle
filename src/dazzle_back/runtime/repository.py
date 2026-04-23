@@ -592,6 +592,44 @@ class Repository(Generic[T]):
             measures=measures,
         )
 
+    def explain_aggregate(
+        self,
+        *,
+        dimensions: _list[Any],
+        measures: dict[str, str],
+        filters: dict[str, Any] | None = None,
+        limit: int = 200,
+    ) -> tuple[str, _list[Any]]:
+        """Return the ``(sql, params)`` ``aggregate(...)`` would execute.
+
+        Debug-velocity tool. When a chart renders wrong values or no
+        buckets, the answer to "why?" should be "here's the exact SQL
+        the framework runs" — not "read the source". Pair with
+        ``dazzle db explain-aggregate`` on the CLI for operators, or
+        call directly from tests / notebooks to inspect compilation.
+
+        No side effects: does not hit the database. Uses the same
+        :func:`dazzle_back.runtime.aggregate.build_aggregate_sql` the
+        live path uses, so what this returns is byte-for-byte what
+        :meth:`aggregate` would ``cursor.execute``.
+
+        Args are identical to :meth:`aggregate` — kept in sync so any
+        agg call can be copy-pasted into explain without edits.
+
+        Returns ``("", [])`` when no supported measures are present
+        (same short-circuit ``aggregate`` applies).
+        """
+        from dazzle_back.runtime.aggregate import build_aggregate_sql
+
+        return build_aggregate_sql(
+            table_name=self.table_name,
+            placeholder_style=self.db.placeholder,
+            dimensions=dimensions,
+            measures=measures,
+            filters=filters,
+            limit=limit,
+        )
+
     def _convert_row_dict(
         self,
         row: dict[str, Any],

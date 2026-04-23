@@ -56,13 +56,26 @@ def jinja_env():
 
 
 def _normalise(html: str) -> str:
-    """Collapse whitespace runs so trivial formatting drift doesn't
-    break the snapshot. Preserves visible text + structure.
+    """Collapse whitespace runs + strip clock-dependent timeago text so
+    snapshots don't drift across days.
+
+    Preserves visible text + structure apart from the ``timeago`` filter
+    output — that's always of the form ``<N> (seconds|minutes|hours|days
+    |months|years) ago`` or ``just now`` and changes on every test run
+    once the fixture date slips past real wall-clock time. Replacing
+    each match with a fixed sentinel keeps the rest of the DOM stable.
     """
     # Collapse whitespace between tags
     html = re.sub(r">\s+<", "><", html)
     # Collapse repeated inner whitespace
     html = re.sub(r"\s+", " ", html)
+    # Normalise timeago output — `N units ago`, `1 unit ago`, or `just now`.
+    html = re.sub(
+        r"\b\d+\s+(seconds?|minutes?|hours?|days?|months?|years?)\s+ago\b",
+        "<timeago>",
+        html,
+    )
+    html = html.replace("just now", "<timeago>")
     return html.strip()
 
 

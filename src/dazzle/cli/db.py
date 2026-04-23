@@ -793,3 +793,111 @@ def db_snapshot_gc_command(
         return
     for p in deleted:
         typer.echo(f"[db snapshot-gc] deleted {p.name}")
+
+
+@db_app.command(name="explain-aggregate")
+def explain_aggregate_command(
+    entity: str = typer.Argument(..., help="Source entity name (e.g. Alert)"),
+    group_by: str = typer.Option(
+        "",
+        "--group-by",
+        "-g",
+        help="Dimension field(s) — comma-separated for multi-dim. "
+        "FK fields auto-LEFT JOIN the target. e.g. 'system,severity'.",
+    ),
+    measures: str = typer.Option(
+        "count=count",
+        "--measures",
+        "-m",
+        help="Comma-separated metric=expr pairs. "
+        "Supported exprs: count, sum:<col>, avg:<col>, min:<col>, max:<col>. "
+        "Example: 'n=count,avg_score=avg:score'.",
+    ),
+    limit: int = typer.Option(200, "--limit", "-l", help="Bucket limit (default 200)"),
+) -> None:
+    """Print the SQL that ``Repository.aggregate`` would execute — no DB hit.
+
+    Debug-velocity tool for authors. When a bar_chart or pivot_table region
+    renders wrong values (or no buckets), run this against the same source
+    entity + group_by + measures to see the exact query the framework
+    emits. Pair with ``psql`` / ``sqlite3 .read`` to run the SQL manually
+    and compare row counts to the rendered bars.
+
+    Scope filters are NOT included — explain shows the base query before
+    row-level security is applied at request time. Add ``--scope`` later
+    if we need to simulate a persona's predicate.
+    """
+    from dazzle.core.ir.fields import FieldTypeKind
+    from dazzle_back.runtime.aggregate import (
+        Dimension,
+        build_aggregate_sql,
+        resolve_fk_display_field,
+    )
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+
+    src_entity = next(
+        (e for e in appspec.domain.entities if e.name == entity),
+        None,
+    )
+    if src_entity is None:
+        console.print(f"[red]Unknown entity:[/red] {entity}")
+        raise typer.Exit(code=1)
+
+    dim_names = [d.strip() for d in group_by.split(",") if d.strip()]
+    if not dim_names:
+        console.print("[red]--group-by is required[/red] (e.g. '--group-by system,severity')")
+        raise typer.Exit(code=1)
+
+    # Resolve each dim — scalar vs FK + target display field.
+    dimensions: list[Dimension] = []
+    for dim_name in dim_names:
+        field = next((f for f in src_entity.fields if f.name == dim_name), None)
+        if field is None:
+            console.print(f"[red]Unknown field {entity}.{dim_name}[/red]")
+            raise typer.Exit(code=1)
+        is_fk = field.type.kind == FieldTypeKind.REF
+        fk_table = None
+        fk_display_field = None
+        if is_fk:
+            fk_table = field.type.ref_entity
+            target = next(
+                (e for e in appspec.domain.entities if e.name == fk_table),
+                None,
+            )
+            fk_display_field = resolve_fk_display_field(target)
+        dimensions.append(
+            Dimension(name=dim_name, fk_table=fk_table, fk_display_field=fk_display_field)
+        )
+
+    # Parse measures: 'n=count,avg_score=avg:score' → {'n': 'count', 'avg_score': 'avg:score'}
+    measure_dict: dict[str, str] = {}
+    for pair in measures.split(","):
+        pair = pair.strip()
+        if not pair or "=" not in pair:
+            continue
+        name, _, expr = pair.partition("=")
+        measure_dict[name.strip()] = expr.strip()
+
+    sql, params = build_aggregate_sql(
+        table_name=src_entity.name,
+        placeholder_style="%s",
+        dimensions=dimensions,
+        measures=measure_dict,
+        filters=None,
+        limit=limit,
+    )
+
+    if not sql:
+        console.print(
+            "[yellow]No SQL generated[/yellow] — no supported measures "
+            "(recognised: count, sum:<col>, avg:<col>, min:<col>, max:<col>)."
+        )
+        return
+
+    console.print("\n[bold]Aggregate SQL[/bold] ([dim]no scope filter — base query[/dim])")
+    for part in sql.split(" FROM "):
+        console.print(part)
+    console.print("")
+    console.print(f"[bold]Params:[/bold] {params}")

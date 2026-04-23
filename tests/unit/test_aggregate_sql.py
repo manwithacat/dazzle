@@ -462,3 +462,102 @@ class TestAggregateBucket:
         )
         assert b.dimensions["status"] == "draft"
         assert b.measures["avg_score"] == 12.4
+
+
+# ---------------------------------------------------------------------------
+# Cycle 26: Repository.explain_aggregate — SQL-without-execute
+# ---------------------------------------------------------------------------
+
+
+class TestExplainAggregate:
+    """Explain returns exactly what aggregate would execute — byte-for-byte."""
+
+    def test_explain_returns_same_sql_as_build(self) -> None:
+        """explain_aggregate is a thin wrapper around build_aggregate_sql."""
+
+        from dazzle_back.runtime.repository import Repository
+
+        # Build a minimal repo that carries the bits explain_aggregate reads.
+        db = SimpleNamespace(placeholder="%s")
+        entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[SimpleNamespace(name="severity")],
+            computed_fields=[],
+        )
+        repo = Repository.__new__(Repository)
+        repo.db = db
+        repo.table_name = "Alert"
+        repo.entity_spec = entity_spec
+        repo._relation_loader = None
+        repo._metrics = None
+        repo._field_types = {}
+        repo._computed_fields = []
+
+        sql, params = repo.explain_aggregate(
+            dimensions=[Dimension(name="severity")],
+            measures={"count": "count"},
+            filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
+        )
+
+        # Byte-for-byte equivalence with the builder.
+        from dazzle_back.runtime.aggregate import build_aggregate_sql
+
+        expected_sql, expected_params = build_aggregate_sql(
+            table_name="Alert",
+            placeholder_style="%s",
+            dimensions=[Dimension(name="severity")],
+            measures={"count": "count"},
+            filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
+        )
+        assert sql == expected_sql
+        assert params == expected_params
+
+    def test_explain_does_not_touch_db(self) -> None:
+        """No side effects — the db connection must never be called."""
+        from dazzle_back.runtime.repository import Repository
+
+        db = SimpleNamespace(placeholder="%s", connection=lambda: _raise_on_connect())
+        entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[SimpleNamespace(name="severity")],
+            computed_fields=[],
+        )
+        repo = Repository.__new__(Repository)
+        repo.db = db
+        repo.table_name = "Alert"
+        repo.entity_spec = entity_spec
+        repo._relation_loader = None
+        repo._metrics = None
+        repo._field_types = {}
+        repo._computed_fields = []
+
+        # Must not raise — no DB connection attempted.
+        sql, _ = repo.explain_aggregate(
+            dimensions=[Dimension(name="severity")],
+            measures={"count": "count"},
+        )
+        assert sql.startswith("SELECT")
+
+    def test_explain_returns_empty_for_unsupported_measures(self) -> None:
+        """Same short-circuit as aggregate: unsupported → empty tuple."""
+        from dazzle_back.runtime.repository import Repository
+
+        repo = Repository.__new__(Repository)
+        repo.db = SimpleNamespace(placeholder="%s")
+        repo.table_name = "Alert"
+        repo.entity_spec = SimpleNamespace(name="Alert", fields=[], computed_fields=[])
+        repo._relation_loader = None
+        repo._metrics = None
+        repo._field_types = {}
+        repo._computed_fields = []
+
+        sql, params = repo.explain_aggregate(
+            dimensions=[Dimension(name="severity")],
+            measures={"weird": "median:score"},
+        )
+        assert sql == ""
+        assert params == []
+
+
+def _raise_on_connect() -> None:
+    raise AssertionError("explain_aggregate must not open a DB connection")

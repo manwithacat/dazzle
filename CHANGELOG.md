@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.4] - 2026-04-23
+
+Patch bump on the aggregate stack — `explain_aggregate` observability (cycle 26).
+
+### Added
+- **`Repository.explain_aggregate(...)`** — returns the exact `(sql, params)` that `aggregate(...)` would execute, with no DB side effects. Byte-for-byte equivalent to the live query so "why is my chart wrong?" has a one-line answer: inspect the SQL. Signature mirrors `aggregate()` so any call can be copy-pasted into explain without edits.
+- **`dazzle db explain-aggregate <Entity> --group-by <field>[,field2] --measures n=count,avg=avg:score`** CLI. Prints the SQL the framework would emit for a chart region's dimensions + measures. Auto-resolves FK dims' target tables + display fields the same way the runtime does. Does not connect to the database — pure compile path, suitable for lint/CI inspection.
+- **Time-independent snapshot normaliser.** `tests/unit/test_dom_snapshots.py::_normalise` now replaces `N units ago` / `just now` timeago output with a `<timeago>` sentinel so region snapshots don't drift across days (previously the `activity_feed` snapshot re-generated every cycle as the wall clock advanced past the fixture date).
+
+### Tests
+- 3 new `TestExplainAggregate` tests in `tests/unit/test_aggregate_sql.py`: byte-equivalence with `build_aggregate_sql`, no-DB-connection guarantee, unsupported-measure short-circuit. Total 37 in the file.
+
+### Agent Guidance
+- **When a chart renders wrong or empty, run `dazzle db explain-aggregate` first.** Copy the SQL into `psql` / `sqlite3 .read`, run it, and compare the row count to the rendered bars. The diff between expected and actual is usually (a) scope predicate narrower than expected, (b) FK display-field probe picking a different column than intended, or (c) zero source rows in the authenticated user's scope. All three have been root-cause patterns on the #847–#851 chain; explain_aggregate lets an author discover any of them without reading framework source.
+- **Explain does NOT apply scope filters.** The CLI runs without a session, so the printed SQL is the base query. For a scoped preview, call `repo.explain_aggregate(filters=<scope_dict>)` programmatically — the scope predicate passes through verbatim.
+
 ## [0.59.3] - 2026-04-23
 
 Minor bump on the aggregate stack — multi-dimension `Repository.aggregate` + new `pivot_table` region (cycle 25). First Layer 3 step toward the report architecture (see prior brainstorm).
