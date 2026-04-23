@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-04-23
+
+Patch bump. Trial-validation fix — the v0.60.0 BucketRef IR type was rejected by the pydantic `RegionContext` (template-facing context), which coerced `group_by` to `str`. Surfaced when `dazzle qa trial` couldn't boot the ops_dashboard server. Framework-level tests all passed; the regression only fired on a full app boot.
+
+### Fixed
+- **`BucketRef` now serializes cleanly through `RegionContext`.** `src/dazzle_ui/runtime/workspace_renderer.py` introduces `_flatten_group_by(value)` which reduces `str | BucketRef | None` to a plain string field name for templates. The typed IR form survives on `WorkspaceRegionContext.ir_region` so runtime routing can still branch on `isinstance(..., BucketRef)`.
+- **Runtime reads group_by from ir_region, not ctx_region.** `_compute_pivot_buckets`, `_aggregate_via_groupby`, and the chart-mode dispatcher in `workspace_rendering.py` now consult the untyped IR region for `group_by` + `group_by_dims`. The pydantic `RegionContext` stays str-only — safe for Jinja consumption.
+
+### Verified
+- `dazzle serve --local` boots cleanly for ops_dashboard with three new time-series regions.
+- Direct HTTP GET against `/api/workspaces/command_center/regions/alerts_timeseries` returns 200 OK with 22 daily buckets, peak 7, correct polyline + area fill + per-point tooltips. `alerts_weekly_stacked` and `alerts_daily_sparkline` also 200.
+- `dazzle qa trial --scenario trend_spike_detection --fresh-db` runs to completion (no server-boot crash). Trial outcome itself was inconclusive — persona exhausted step budget scrolling the 13-region dashboard before reaching the charts — but that's a scenario-design artefact, not a framework bug. Addressable by raising `max_steps` or reordering regions on the workspace.
+
 ## [0.60.0] - 2026-04-23
 
 Minor bump. Time-series display family — the next chapter of the v0.59 aggregate stack (cycle 28). One DSL primitive (`bucket(<field>, <unit>)`) unlocks three new display modes: `line_chart`, `area_chart`, and `sparkline`. Same Strategy C pipeline — one scope-safe `GROUP BY` SQL query via `date_trunc`, zero JS, pure server-rendered SVG.

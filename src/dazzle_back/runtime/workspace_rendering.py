@@ -760,7 +760,12 @@ async def _workspace_region_handler(
 
     # Grouped displays: extract column values from group_by field's enum/state-machine
     kanban_columns: list[str] = []
-    group_by = ctx.ctx_region.group_by
+    # Read group_by from ir_region — the IR preserves the typed form
+    # (str | BucketRef | None). ctx_region (pydantic, template-facing)
+    # flattens it to a string for Jinja.
+    group_by = (
+        getattr(ctx.ir_region, "group_by", None) if ctx.ir_region else ctx.ctx_region.group_by
+    )
     _grouped_modes = {"KANBAN", "BAR_CHART", "FUNNEL_CHART"}
     # Time-bucketed group_by is a BucketRef — it has no enum values and is
     # never kanban. Skip the enum/state-machine resolution for it.
@@ -809,15 +814,16 @@ async def _workspace_region_handler(
     pivot_buckets: list[dict[str, Any]] = []
     pivot_dim_specs: list[dict[str, Any]] = []
     _multi_dim_modes = {"PIVOT_TABLE", "AREA_CHART"}
+    _ir_group_by_dims = getattr(ctx.ir_region, "group_by_dims", None) if ctx.ir_region else None
     if (
         ctx.ctx_region.display in _multi_dim_modes
-        and getattr(ctx.ctx_region, "group_by_dims", None)
+        and _ir_group_by_dims
         and ctx.ctx_region.aggregates
     ):
         pivot_buckets, pivot_dim_specs = await _compute_pivot_buckets(
             ctx.ctx_region.aggregates,
             ctx.repositories,
-            ctx.ctx_region.group_by_dims,
+            _ir_group_by_dims,
             source_entity=ctx.source,
             source_entity_spec=ctx.entity_spec,
             scope_filters=_scope_only_filters,

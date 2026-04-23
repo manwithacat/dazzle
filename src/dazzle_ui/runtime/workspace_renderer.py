@@ -29,6 +29,21 @@ def _entity_to_app_url(entity_name: str) -> str:
     return f"/app/{slug}/{{id}}"
 
 
+def _flatten_group_by(value: Any) -> str:
+    """Reduce IR group_by (str | BucketRef | None) to a string for templates.
+
+    BucketRef is a v0.60.0 time-bucket wrapper — templates see only the
+    field name; the unit drove label formatting server-side. Keep the
+    typed form on ir_region for runtime routing decisions.
+    """
+    if value is None:
+        return ""
+    field_attr = getattr(value, "field", None)
+    if field_attr is not None:
+        return str(field_attr)
+    return str(value)
+
+
 # =============================================================================
 # Context Models
 # =============================================================================
@@ -357,7 +372,10 @@ def build_workspace_context(
                 sort=sort_specs,
                 limit=region.limit,
                 empty_message=region.empty_message or "No data available.",
-                group_by=region.group_by or "",
+                # Flatten BucketRef → field name for the template-facing context
+                # (templates consume `group_by` as a string). The typed IR form
+                # (BucketRef) lives on ir_region and drives runtime routing.
+                group_by=_flatten_group_by(region.group_by),
                 aggregates=dict(region.aggregates or {}),
                 action=action_name,
                 action_url=action_url,
