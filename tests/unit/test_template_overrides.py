@@ -98,7 +98,9 @@ class TestCreateJinjaEnv:
         env = create_jinja_env()
         assert "currency" in env.filters
         assert "dateformat" in env.filters
-        assert "badge_class" in env.filters
+        # badge_class was removed in favour of badge_tone — 0 template
+        # consumers per the note at template_renderer.py:96.
+        assert "badge_tone" in env.filters
         assert "bool_icon" in env.filters
         assert "timeago" in env.filters
         assert "slugify" in env.filters

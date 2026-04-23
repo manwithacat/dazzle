@@ -149,4 +149,4 @@ All three have been root-cause patterns; `explain-aggregate` lets authors diagno
 - [Workspaces](workspaces.md) — where chart regions live
 - [Access Control](access-control.md) — the scope predicate contract
 - [Entities](entities.md) — FK fields and `display_field`
-- CHANGELOG entries for [v0.59.0](../../CHANGELOG.md) (primitive), [v0.59.3](../../CHANGELOG.md) (multi-dim), [v0.59.4](../../CHANGELOG.md) (explain)
+- CHANGELOG entries for v0.59.0 (primitive), v0.59.3 (multi-dim), v0.59.4 (explain), v0.60.0 (time bucketing). See `CHANGELOG.md` at the repo root.

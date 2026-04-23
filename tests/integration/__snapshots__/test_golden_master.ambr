@@ -893,6 +893,18 @@
       'profile': <SecurityProfile.BASIC: 'basic'>,
       'require_auth_by_default': False,
       'tenant_isolation': False,
+      'two_factor': dict({
+        'enabled': False,
+        'enforce_for_roles': list([
+        ]),
+        'methods': list([
+          <TwoFactorMethod.EMAIL_OTP: 'email_otp'>,
+          <TwoFactorMethod.TOTP: 'totp'>,
+        ]),
+        'otp_expiry_seconds': 300,
+        'otp_length': 6,
+        'recovery_code_count': 8,
+      }),
     }),
     'slas': list([
     ]),
@@ -1179,6 +1191,7 @@
           ]),
           'empty_message': 'No records yet.',
           'filter': list([
+            'component',
             'status',
           ]),
           'persona_variants': list([
@@ -1364,6 +1377,7 @@
             'empty_message': None,
             'filter': None,
             'group_by': None,
+            'group_by_dims': None,
             'heatmap_columns': None,
             'heatmap_rows': None,
             'heatmap_thresholds': list([
@@ -1392,6 +1406,7 @@
             'empty_message': None,
             'filter': None,
             'group_by': None,
+            'group_by_dims': None,
             'heatmap_columns': None,
             'heatmap_rows': None,
             'heatmap_thresholds': list([
@@ -1420,6 +1435,7 @@
             'empty_message': None,
             'filter': None,
             'group_by': None,
+            'group_by_dims': None,
             'heatmap_columns': None,
             'heatmap_rows': None,
             'heatmap_thresholds': list([

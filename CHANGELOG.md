@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.6] - 2026-04-23
+
+Patch bump. CI hygiene — three pre-existing / recently-introduced CI failures cleared so the pipeline is green and dependabot PRs can land.
+
+### Fixed
+- **`docs/reference/reports.md` no longer links to `../../CHANGELOG.md`.** Three broken relative links (introduced in cycle 27 when `reports.md` was authored) aborted the `docs` workflow in strict mode. Replaced with a plain-text reference so the doc doesn't depend on the CHANGELOG being part of the mkdocs site.
+- **`test_template_overrides.py::test_custom_filters_registered` now asserts `badge_tone`** (not `badge_class`, which was removed in an earlier cleanup with 0 template consumers — noted at `template_renderer.py:96`).
+- **`tests/integration/__snapshots__/test_golden_master.ambr` regenerated** to include the `two_factor` settings block that was added to AppSpec in an earlier cycle. Snapshot had drifted; test now matches current IR shape.
+
+### CI status after this bump
+- `CI` (pytest main): green on `main`.
+- `docs`: green on `main`.
+- `CodeQL`: green (has been green across last 3 runs).
+- `Homebrew Formula Validation`: green (verified on open dependabot PR).
+- Open dependabot PRs (#836 `actions/upload-pages-artifact 4 → 5`) should unblock on next rerun.
+
 ## [0.60.5] - 2026-04-23
 
 Patch bump. Observability fixes toward #854 — the pivot_table empty-buckets bug still needs reproduction against the live AegisMark DB, but two diagnostic obstacles are now removed: the CLI explain-aggregate output no longer drops the `FROM` keyword, and pivot aggregate failures log at ERROR with the full dimension + filter detail operators need to reproduce.
