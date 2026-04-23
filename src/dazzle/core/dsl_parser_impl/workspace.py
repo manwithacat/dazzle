@@ -326,6 +326,7 @@ class WorkspaceParserMixin:
         action = None
         empty_message = None
         group_by = None
+        group_by_dims: list[str] | None = None
         aggregates: dict[str, str] = {}
         date_field: str | None = None
         date_range: bool = False
@@ -421,11 +422,26 @@ class WorkspaceParserMixin:
                 empty_message = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
-            # group_by: field_name
+            # group_by: field_name        (single-dim, bar_chart)
+            # group_by: [field_a, field_b] (multi-dim, pivot_table — cycle 25)
             elif self.match(TokenType.GROUP_BY):
                 self.advance()
                 self.expect(TokenType.COLON)
-                group_by = self.expect_identifier_or_keyword().value
+                if self.match(TokenType.LBRACKET):
+                    self.advance()  # consume [
+                    dims: list[str] = []
+                    while not self.match(TokenType.RBRACKET):
+                        self.skip_newlines()
+                        if self.match(TokenType.RBRACKET):
+                            break
+                        dims.append(self.expect_identifier_or_keyword().value)
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                        self.skip_newlines()
+                    self.expect(TokenType.RBRACKET)
+                    group_by_dims = dims
+                else:
+                    group_by = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
             # date_field: created_at
@@ -593,6 +609,7 @@ class WorkspaceParserMixin:
             action=action,
             empty_message=empty_message,
             group_by=group_by,
+            group_by_dims=group_by_dims,
             aggregates=aggregates,
             date_field=date_field,
             date_range=date_range,

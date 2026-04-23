@@ -67,6 +67,7 @@ class DisplayMode(StrEnum):
     PROGRESS = "progress"  # v0.44.0: Progress bar view
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
     TREE = "tree"  # v0.44.0: Tree / hierarchy display
+    PIVOT_TABLE = "pivot_table"  # v0.59.3: Multi-dimension cross-tab view (cycle 25)
 
 
 class WorkspaceRegion(BaseModel):
@@ -103,7 +104,14 @@ class WorkspaceRegion(BaseModel):
     display: DisplayMode = DisplayMode.LIST
     action: str | None = None  # Surface reference
     empty_message: str | None = None
-    group_by: str | None = None  # Field to group by
+    group_by: str | None = None  # Field to group by (single dimension)
+    # v0.59.3 (cycle 25): multi-dimension group_by for pivot_table /
+    # cross-tab views. When set, the runtime composes a multi-dim
+    # GROUP BY via Repository.aggregate. Each entry is a column name on
+    # the source entity; FK columns auto-LEFT JOIN their target so the
+    # bucket carries the resolved display field. Mutually exclusive with
+    # group_by — when both are set, group_by_dims wins.
+    group_by_dims: list[str] | None = None
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
     # v0.34.0: Date-range filtering
     date_field: str | None = None

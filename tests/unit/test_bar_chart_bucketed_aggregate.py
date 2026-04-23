@@ -637,9 +637,13 @@ class TestStrategyCGroupByFastPath:
         # no per-bucket loop.
         agg_repo.aggregate.assert_called_once()
         call_kwargs = agg_repo.aggregate.call_args.kwargs
-        assert call_kwargs["group_by"] == "assessment_objective"
-        assert call_kwargs["fk_table"] == "AssessmentObjective"
-        assert call_kwargs["fk_display_field"] == "label"
+        # Cycle 25: dimensions is now a list of Dimension objects; one-dim
+        # bar chart sends a single-element list with the FK target wired.
+        dims = call_kwargs["dimensions"]
+        assert len(dims) == 1
+        assert dims[0].name == "assessment_objective"
+        assert dims[0].fk_table == "AssessmentObjective"
+        assert dims[0].fk_display_field == "label"
 
     @pytest.mark.asyncio()
     async def test_scope_filters_passed_to_aggregate_call(self) -> None:
@@ -713,3 +717,142 @@ class TestStrategyCGroupByFastPath:
         )
         # The aggregate target is Manuscript, not MarkingResult → fast path skipped.
         agg_repo.aggregate.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Cycle 25: pivot_table multi-dim aggregate
+# ---------------------------------------------------------------------------
+
+
+class TestPivotBuckets:
+    """_compute_pivot_buckets routes count(<source>) with a list of dims
+    through Repository.aggregate as a single multi-dim GROUP BY query."""
+
+    @pytest.mark.asyncio()
+    async def test_two_dim_pivot_returns_rows(self) -> None:
+        from dazzle_back.runtime.aggregate import AggregateBucket
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        # Source repo with one FK field (system → System) + one scalar (severity).
+        source_repo = MagicMock()
+        source_repo.entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[
+                SimpleNamespace(
+                    name="system",
+                    type=SimpleNamespace(kind="ref", ref_entity="System"),
+                ),
+                SimpleNamespace(name="severity", type=SimpleNamespace(kind="scalar")),
+            ],
+        )
+        source_repo.aggregate = AsyncMock(
+            return_value=[
+                AggregateBucket(
+                    dimensions={"system": "sys-1", "system_label": "DB", "severity": "high"},
+                    measures={"count": 7},
+                ),
+                AggregateBucket(
+                    dimensions={"system": "sys-1", "system_label": "DB", "severity": "low"},
+                    measures={"count": 3},
+                ),
+            ]
+        )
+
+        # Target repo for the FK display-field probe.
+        target_repo = MagicMock()
+        target_repo.entity_spec = SimpleNamespace(
+            name="System",
+            fields=[
+                SimpleNamespace(name="id"),
+                SimpleNamespace(name="name"),
+            ],
+        )
+
+        rows, dim_specs = await _compute_pivot_buckets(
+            {"count": "count(Alert)"},
+            {"Alert": source_repo, "System": target_repo},
+            ["system", "severity"],
+            source_entity="Alert",
+            source_entity_spec=source_repo.entity_spec,
+            scope_filters=None,
+        )
+        assert len(rows) == 2
+        assert rows[0]["system"] == "sys-1"
+        assert rows[0]["system_label"] == "DB"
+        assert rows[0]["severity"] == "high"
+        assert rows[0]["count"] == 7
+
+        # dim_specs carry header metadata for the template.
+        assert [d["name"] for d in dim_specs] == ["system", "severity"]
+        assert dim_specs[0]["is_fk"] is True
+        assert dim_specs[1]["is_fk"] is False
+
+        # The aggregate call must use a list of two Dimension objects with
+        # the FK target wired on the first.
+        agg_kwargs = source_repo.aggregate.call_args.kwargs
+        dims = agg_kwargs["dimensions"]
+        assert len(dims) == 2
+        assert dims[0].name == "system"
+        assert dims[0].fk_table == "System"
+        assert dims[0].fk_display_field == "name"
+        assert dims[1].name == "severity"
+        assert dims[1].fk_table is None
+
+    @pytest.mark.asyncio()
+    async def test_no_aggregates_returns_empty(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        rows, specs = await _compute_pivot_buckets(
+            {},
+            {},
+            ["system", "severity"],
+            source_entity="Alert",
+            source_entity_spec=None,
+            scope_filters=None,
+        )
+        assert rows == []
+        assert specs == []
+
+    @pytest.mark.asyncio()
+    async def test_cross_entity_count_skips_pivot_path(self) -> None:
+        """count(OtherEntity ...) is not a same-entity GROUP BY — skip cleanly."""
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        source_repo = MagicMock()
+        source_repo.entity_spec = SimpleNamespace(name="Alert", fields=[])
+        source_repo.aggregate = AsyncMock()
+        rows, specs = await _compute_pivot_buckets(
+            {"count": "count(Manuscript)"},
+            {"Alert": source_repo},
+            ["system", "severity"],
+            source_entity="Alert",
+            source_entity_spec=source_repo.entity_spec,
+            scope_filters=None,
+        )
+        assert rows == []
+        # Aggregate not called — different entity short-circuits.
+        source_repo.aggregate.assert_not_called()
+
+    @pytest.mark.asyncio()
+    async def test_aggregate_failure_returns_empty_with_dim_specs(self) -> None:
+        """Errors during the aggregate call don't crash the region — empty rows + specs preserved."""
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        source_repo = MagicMock()
+        source_repo.entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[SimpleNamespace(name="severity", type=SimpleNamespace(kind="scalar"))],
+        )
+        source_repo.aggregate = AsyncMock(side_effect=RuntimeError("DB down"))
+        rows, specs = await _compute_pivot_buckets(
+            {"count": "count(Alert)"},
+            {"Alert": source_repo},
+            ["severity"],
+            source_entity="Alert",
+            source_entity_spec=source_repo.entity_spec,
+            scope_filters=None,
+        )
+        assert rows == []
+        # dim_specs still produced — header rendering survives the failure.
+        assert len(specs) == 1
+        assert specs[0]["name"] == "severity"

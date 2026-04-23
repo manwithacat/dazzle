@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.3] - 2026-04-23
+
+Minor bump on the aggregate stack — multi-dimension `Repository.aggregate` + new `pivot_table` region (cycle 25). First Layer 3 step toward the report architecture (see prior brainstorm).
+
+### Added
+- **Multi-dimension `Repository.aggregate`.** New `Dimension` dataclass and the `aggregate(*, dimensions=[...], measures=..., filters=...)` signature. Each dim is either scalar or FK; FK dims auto-LEFT JOIN the target with indexed aliases (`fk_0`, `fk_1`, ...) and pull a display field via the same probe order used by `_bucket_key_label`. One SQL query — `SELECT <dim cols + labels>, <measures> FROM src LEFT JOIN ... WHERE <scope> GROUP BY <dim cols + labels> ORDER BY <labels>` — returns all buckets in a single round-trip. The aggregate-safe scope contract from v0.59.0 carries over unchanged: indexed FK aliases don't shadow the source table name, so scope predicates that qualify columns as `<table>.<col>` still resolve cleanly.
+- **`display: pivot_table` workspace region** + `group_by_dims: [<field>, ...]` IR field for the multi-dim case (`group_by: <single>` continues to drive bar_chart, kanban, funnel_chart). DSL parser accepts both forms — `group_by: [a, b]` for multi-dim, `group_by: a` for single. Template renders one `<tr>` per `(dim_0, dim_1, ...)` combination with the FK-resolved label per cell and the measure(s) right-aligned. Scope-aware throughout: `_compute_pivot_buckets` threads the workspace's `_scope_only_filters` into the aggregate call so the same row-level rules that gate the items list also gate the pivot.
+- **`alert_pivot` region in `examples/ops_dashboard`** — `Alert` grouped by `(system, severity)` with count, exercising the FK + scalar combo. `/trial-cycle` will hit this on the next ops_dashboard rotation and validate the multi-dim path under a real persona scope.
+
+### Changed
+- **`Repository.aggregate` signature changed from `group_by: str, fk_table, fk_display_field` to `dimensions: list[Dimension]`.** Single-dim callers wrap their args in `[Dimension(name=..., fk_table=..., fk_display_field=...)]` — the one in-tree caller (`_aggregate_via_groupby` in `workspace_rendering.py`) updated in this commit. No backward-compat shim per ADR-0003. The bucket result shape (`AggregateBucket.dimensions[<name>]` + `[<name>_label]` for FKs) is unchanged for single-dim consumers and naturally extends to multi-dim by carrying one entry per dim.
+
+### Tests
+- 23 new tests in `tests/unit/test_aggregate_sql.py` (now 41 total). Covers single-dim back-compat, multi-dim SQL composition, two FK dims to same/different targets (alias collision guard), scalar+FK combos, the `Dimension` dataclass invariants, and `rows_to_buckets` for multi-dim including positional-tuple repos.
+- 4 new tests in `tests/unit/test_bar_chart_bucketed_aggregate.py::TestPivotBuckets` cover the workspace-level `_compute_pivot_buckets` orchestration: 2-dim end-to-end, empty aggregates, cross-entity short-circuit, exception isolation.
+
+### Agent Guidance
+- **`group_by: [a, b]` triggers `pivot_table`.** When you want a cross-tab, use `display: pivot_table` + `group_by: [a, b]`. Each dim can be scalar or FK; FK labels resolve via the same probe order (`display_name → name → title → label → code`). Two-dim count is the bounded-cost case — adding a third dimension multiplies bucket count, so `limit:` matters more.
+- **The aggregate stack is now multi-dim-capable but the chart templates (bar_chart, funnel_chart, heatmap) still consume single-dim shapes.** Don't pass `group_by_dims` to those displays — only `pivot_table` reads it. New chart templates that want multi-dim should consume `pivot_buckets` + `pivot_dim_specs` the same way `pivot_table.html` does.
+
 ## [0.59.2] - 2026-04-23
 
 Patch bump. One UX bug fix from /trial-cycle 15 (#853).

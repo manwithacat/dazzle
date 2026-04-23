@@ -1,0 +1,65 @@
+{# Pivot table region — multi-dimension cross-tab. v0.59.3 (cycle 25).
+   Consumes pivot_buckets (one row per (dim_0, dim_1, ...) combination)
+   and pivot_dim_specs (column-header metadata: name, label, is_fk).
+   Each row renders one combination of dimension values + measures.
+   Strategy C aggregate primitive — Repository.aggregate runs ONE
+   GROUP BY query, scope evaluated once, no N+1. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% from 'macros/status_badge.html' import render_status_badge %}
+{% call region_card(title) %}
+<div class="dz-pivot-region">
+  {% if pivot_buckets %}
+  <div class="dz-pivot-scroll overflow-x-auto">
+    <table class="dz-pivot-grid w-full text-[13px] border-collapse">
+      <thead>
+        <tr class="border-b border-[hsl(var(--border))]">
+          {% for spec in pivot_dim_specs %}
+          <th class="py-1 px-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{{ spec.label }}</th>
+          {% endfor %}
+          {% if pivot_buckets[0] %}
+            {% for k in pivot_buckets[0].keys() %}
+              {%- set is_dim_field = false -%}
+              {%- for spec in pivot_dim_specs -%}
+                {%- if k == spec.name or k == spec.name ~ '_label' -%}{%- set is_dim_field = true -%}{%- endif -%}
+              {%- endfor -%}
+              {%- if not is_dim_field -%}
+              <th class="py-1 px-2 text-right font-medium text-[hsl(var(--muted-foreground))] font-mono">{{ k.replace('_', ' ').title() }}</th>
+              {%- endif -%}
+            {% endfor %}
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pivot_buckets %}
+        <tr class="border-b border-[hsl(var(--border))] last:border-0">
+          {% for spec in pivot_dim_specs %}
+          <td class="py-1 px-2 text-[hsl(var(--foreground))]">
+            {% if spec.is_fk %}
+              {%- set fk_label = row[spec.name ~ '_label'] -%}
+              {%- if fk_label is none -%}{{ row[spec.name] or '—' }}{%- else -%}{{ fk_label }}{%- endif -%}
+            {% else %}
+              {%- set sval = row[spec.name] -%}
+              {%- if sval is none -%}<span class="text-[hsl(var(--muted-foreground))]">—</span>{%- else -%}{{ render_status_badge(value=sval, size='sm') }}{%- endif -%}
+            {% endif %}
+          </td>
+          {% endfor %}
+          {% for k, v in row.items() %}
+            {%- set is_dim_field = false -%}
+            {%- for spec in pivot_dim_specs -%}
+              {%- if k == spec.name or k == spec.name ~ '_label' -%}{%- set is_dim_field = true -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if not is_dim_field -%}
+            <td class="py-1 px-2 text-right font-mono text-[hsl(var(--foreground))]">{{ v }}</td>
+            {%- endif -%}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ pivot_buckets | length }} row{{ '' if pivot_buckets|length == 1 else 's' }}</p>
+  {% else %}
+  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data to pivot.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

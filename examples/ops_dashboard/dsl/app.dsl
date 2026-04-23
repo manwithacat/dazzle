@@ -183,6 +183,19 @@ workspace command_center "Command Center":
       count: count(Alert)
     empty: "No alerts grouped by system"
 
+  # Pivot Table — multi-dimension cross-tab (cycle 25, v0.59.3).
+  # Combines an FK dim (system) with a scalar enum dim (severity) so each
+  # row is one (system, severity) cell with its count. Exercises the
+  # multi-dim Repository.aggregate path: indexed FK aliases, multi-key
+  # GROUP BY, label resolution.
+  alert_pivot:
+    source: Alert
+    display: pivot_table
+    group_by: [system, severity]
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts to pivot"
+
   # Alert Heatmap — density of alerts by severity
   alert_heatmap:
     source: Alert

@@ -748,6 +748,27 @@ async def _workspace_region_handler(
             source_entity=ctx.source,
         )
 
+    # Multi-dimension aggregate for pivot_table (cycle 25). Reads
+    # `group_by_dims: list[str]` from the IR and runs ONE multi-dim
+    # GROUP BY via Repository.aggregate. Each entry is a column on the
+    # source entity; FK columns auto-LEFT JOIN their target so the
+    # bucket carries the resolved display field.
+    pivot_buckets: list[dict[str, Any]] = []
+    pivot_dim_specs: list[dict[str, Any]] = []
+    if (
+        ctx.ctx_region.display == "PIVOT_TABLE"
+        and getattr(ctx.ctx_region, "group_by_dims", None)
+        and ctx.ctx_region.aggregates
+    ):
+        pivot_buckets, pivot_dim_specs = await _compute_pivot_buckets(
+            ctx.ctx_region.aggregates,
+            ctx.repositories,
+            ctx.ctx_region.group_by_dims,
+            source_entity=ctx.source,
+            source_entity_spec=ctx.entity_spec,
+            scope_filters=_scope_only_filters,
+        )
+
     # Queue display: extract state machine transitions for inline action buttons
     queue_transitions: list[dict[str, str]] = []
     queue_status_field = ""
@@ -905,6 +926,8 @@ async def _workspace_region_handler(
         columns=columns,
         metrics=metrics,
         bucketed_metrics=bucketed_metrics,
+        pivot_buckets=pivot_buckets,
+        pivot_dim_specs=pivot_dim_specs,
         empty_message=ctx.surface_empty_message or ctx.ctx_region.empty_message,
         display_key=next(
             (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
@@ -1239,6 +1262,112 @@ def _resolve_fk_target_spec(
     return getattr(target_repo, "entity_spec", None) if target_repo else None
 
 
+async def _compute_pivot_buckets(
+    aggregates: dict[str, str],
+    repositories: dict[str, Any] | None,
+    group_by_dims: list[str],
+    *,
+    source_entity: str | None,
+    source_entity_spec: Any,
+    scope_filters: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Multi-dimension aggregate for pivot_table regions (cycle 25).
+
+    Returns ``(buckets, dim_specs)`` where:
+      * ``buckets`` is a list of ``{dim_<name>: <id>, dim_<name>_label:
+        <display>, <metric>: <value>, ...}`` dicts ready for the
+        template to render rows from;
+      * ``dim_specs`` is a list of ``{name, label, is_fk}`` describing
+        each dimension column header.
+
+    For each dim that's a FK on the source entity, the runtime resolves
+    the target's display field and routes the LEFT JOIN through
+    ``Repository.aggregate``. Scalar dims pass through verbatim.
+    """
+    if not aggregates or not repositories or not source_entity:
+        return [], []
+
+    from dazzle_back.runtime.aggregate import Dimension, resolve_fk_display_field
+
+    # Only the simple case (count(<source_entity>) with no current_bucket)
+    # routes through the pivot fast path. Other shapes fall through.
+    metric_name, expr = next(iter(aggregates.items()))
+    agg_match = _AGGREGATE_RE.match(expr)
+    if not agg_match or agg_match.group(1) != "count":
+        return [], []
+    _, entity_name, where_clause = agg_match.groups()
+    if entity_name != source_entity or (where_clause and "current_bucket" in where_clause):
+        return [], []
+
+    source_repo = repositories.get(source_entity)
+    if source_repo is None:
+        return [], []
+
+    # Resolve each dim — FK target spec (if any), display field via probe.
+    dimensions: list[Dimension] = []
+    dim_specs: list[dict[str, Any]] = []
+    for dim_name in group_by_dims:
+        field = next(
+            (f for f in getattr(source_entity_spec, "fields", []) if f.name == dim_name),
+            None,
+        )
+        ftype = getattr(field, "type", None) if field else None
+        is_fk = ftype is not None and getattr(ftype, "kind", None) == "ref"
+        fk_table = None
+        fk_display_field = None
+        if is_fk:
+            target_name = getattr(ftype, "ref_entity", None)
+            target_repo = repositories.get(target_name) if target_name else None
+            target_spec = getattr(target_repo, "entity_spec", None) if target_repo else None
+            fk_table = target_name
+            fk_display_field = resolve_fk_display_field(target_spec)
+        dimensions.append(
+            Dimension(name=dim_name, fk_table=fk_table, fk_display_field=fk_display_field)
+        )
+        dim_specs.append(
+            {
+                "name": dim_name,
+                "label": dim_name.replace("_", " ").title(),
+                "is_fk": bool(fk_table and fk_display_field),
+            }
+        )
+
+    # Merge any author-supplied where clause + scope filters.
+    merged_filters: dict[str, Any] = {}
+    if where_clause:
+        merged_filters.update(_parse_simple_where(where_clause))
+    if scope_filters:
+        merged_filters = {**scope_filters, **merged_filters}
+
+    try:
+        buckets = await source_repo.aggregate(
+            dimensions=dimensions,
+            measures={metric_name: "count"},
+            filters=merged_filters or None,
+        )
+    except Exception:
+        logger.warning(
+            "Pivot aggregate failed for %s by %r — returning empty buckets",
+            source_entity,
+            group_by_dims,
+            exc_info=True,
+        )
+        return [], dim_specs
+
+    out: list[dict[str, Any]] = []
+    for b in buckets:
+        row: dict[str, Any] = {}
+        for spec in dim_specs:
+            row[spec["name"]] = b.dimensions.get(spec["name"])
+            if spec["is_fk"]:
+                lbl_key = f"{spec['name']}_label"
+                row[lbl_key] = b.dimensions.get(lbl_key) or row[spec["name"]]
+        for k, v in b.measures.items():
+            row[k] = v
+        out.append(row)
+    return out, dim_specs
+
+
 async def _aggregate_via_groupby(
     agg_repo: Any,
     *,
@@ -1259,7 +1388,7 @@ async def _aggregate_via_groupby(
     queries, no possibility of the two paths producing different scoped
     row sets.
     """
-    from dazzle_back.runtime.aggregate import resolve_fk_display_field
+    from dazzle_back.runtime.aggregate import Dimension, resolve_fk_display_field
 
     # Merge any author-supplied where clause into the filter dict via
     # _parse_simple_where — same semantics the slow path used to apply
@@ -1275,12 +1404,11 @@ async def _aggregate_via_groupby(
         resolve_fk_display_field(fk_target_spec) if fk_target_spec is not None else None
     )
 
+    dim = Dimension(name=group_by, fk_table=fk_table, fk_display_field=fk_display_field)
     buckets = await agg_repo.aggregate(
-        group_by=group_by,
+        dimensions=[dim],
         measures={metric_name: "count"},
         filters=merged_filters or None,
-        fk_table=fk_table,
-        fk_display_field=fk_display_field,
     )
 
     out: list[dict[str, Any]] = []

@@ -521,24 +521,28 @@ class Repository(Generic[T]):
     async def aggregate(
         self,
         *,
-        group_by: str,
+        dimensions: _list[Any],
         measures: dict[str, str],
         filters: dict[str, Any] | None = None,
-        fk_table: str | None = None,
-        fk_display_field: str | None = None,
         limit: int = 200,
     ) -> _list[Any]:
-        """Run a single GROUP BY aggregation against this entity.
+        """Run a single multi-dimension GROUP BY aggregation against this entity.
 
         Closes the bug class (#847–#851) where bar_chart enumeration and
         per-bucket counts diverged: one SQL query, one scope evaluation,
         no N+1 round-trips. The bucket list, labels, and counts all come
         from the same row set.
 
+        v2 (cycle 25): supports multi-dimension ``GROUP BY`` for cross-tab
+        / pivot rendering. Each dimension is a
+        :class:`dazzle_back.runtime.aggregate.Dimension` — scalar dims
+        bucket by column value; FK dims auto-LEFT JOIN the target and
+        pull a display field for the bar/cell label.
+
         Args:
-            group_by: Column name on this entity to bucket by. For an FK
-                column, supply ``fk_table`` and ``fk_display_field`` so
-                the result carries the target's display name.
+            dimensions: Ordered list of :class:`Dimension`. The order
+                drives both SQL ``GROUP BY`` ordering and result-row
+                shape (bucket dicts carry one entry per dimension).
             measures: Mapping of metric name → measure spec. ``"count"``
                 is always supported; ``"sum:<col>"`` / ``"avg:<col>"`` /
                 ``"min:<col>"`` / ``"max:<col>"`` work for numeric
@@ -548,28 +552,21 @@ class Repository(Generic[T]):
                 ``_resolve_scope_filters`` emits. Threaded through
                 ``QueryBuilder.add_filters`` so the scope predicate
                 applies pre-GROUP BY.
-            fk_table / fk_display_field: When ``group_by`` is an FK,
-                the target table and the column on it to use as the
-                bucket label. Caller resolves these from the source
-                entity's FieldSpec + the target's display-field probe
-                (see ``aggregate.resolve_fk_display_field``).
             limit: Cap the number of buckets returned. Default 200.
 
         Returns:
             List of :class:`AggregateBucket` records with ``dimensions``
-            (the bucket id and optional FK label) and ``measures`` (the
-            computed values). Empty list on no matches or unsupported
-            measures.
+            (one entry per declared dim, plus ``<name>_label`` for FK
+            dims) and ``measures`` (the computed values). Empty list on
+            no matches or unsupported measures.
         """
         from dazzle_back.runtime.aggregate import build_aggregate_sql, rows_to_buckets
 
         sql, params = build_aggregate_sql(
             table_name=self.table_name,
             placeholder_style=self.db.placeholder,
-            group_by=group_by,
+            dimensions=dimensions,
             measures=measures,
-            fk_table=fk_table,
-            fk_display_field=fk_display_field,
             filters=filters,
             limit=limit,
         )
@@ -591,9 +588,8 @@ class Repository(Generic[T]):
 
         return rows_to_buckets(
             [dict(r) if hasattr(r, "keys") else r for r in rows],
-            group_by=group_by,
+            dimensions=dimensions,
             measures=measures,
-            has_fk_join=bool(fk_table and fk_display_field),
         )
 
     def _convert_row_dict(
