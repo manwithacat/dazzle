@@ -138,6 +138,37 @@ class TestBuildEntitySearchFields:
         result = build_entity_search_fields(surfaces)
         assert result == {}
 
+    def test_falls_back_to_ux_search_when_surface_lacks_search_fields(self) -> None:
+        """ux.search is the canonical form; build_entity_search_fields
+        must read it too (#856). Previously only legacy top-level
+        search_fields was honoured, which is why the contact_manager
+        filterable_table search input produced no WHERE clause."""
+        from dazzle.core.ir.ux import UXSpec
+
+        surface = SurfaceSpec(
+            name="contact_list",
+            entity_ref="Contact",
+            mode="list",
+            ux=UXSpec(search=["first_name", "last_name", "email"]),
+        )
+        result = build_entity_search_fields([surface])
+        assert result == {"Contact": ["first_name", "last_name", "email"]}
+
+    def test_top_level_search_fields_wins_over_ux_search(self) -> None:
+        """When both are declared, legacy top-level takes precedence — matches
+        existing doc comment semantics and avoids breaking apps that set both."""
+        from dazzle.core.ir.ux import UXSpec
+
+        surface = SurfaceSpec(
+            name="contact_list",
+            entity_ref="Contact",
+            mode="list",
+            search_fields=["email"],
+            ux=UXSpec(search=["first_name", "last_name"]),
+        )
+        result = build_entity_search_fields([surface])
+        assert result == {"Contact": ["email"]}
+
 
 # Need SurfaceSpec import for the test_first_surface_wins test
 from dazzle.core.ir.surfaces import SurfaceSpec  # noqa: E402

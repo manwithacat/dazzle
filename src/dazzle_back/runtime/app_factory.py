@@ -229,11 +229,13 @@ def build_entity_search_fields(
 ) -> dict[str, list[str]]:
     """Pre-plan search fields for each entity.
 
-    Surface ``search_fields:`` declarations take precedence. Where a surface
-    doesn't declare explicit search fields, entity-level ``searchable``
-    modifiers (``FieldModifier.SEARCHABLE``) are used as the fallback, so
-    ``title: str(300) searchable`` registers the field for search without
-    needing a matching surface declaration (#782).
+    Surface ``search_fields:`` (legacy top-level) takes precedence, followed
+    by ``surface.ux.search`` (the canonical form declared inside the ``ux:``
+    sub-block — closes #856). Where neither is declared on the surface,
+    entity-level ``searchable`` modifiers (``FieldModifier.SEARCHABLE``)
+    are used as the final fallback, so ``title: str(300) searchable``
+    registers the field for search without needing a matching surface
+    declaration (#782).
 
     Returns a mapping of ``{entity_name: [field_names]}``.
     """
@@ -245,6 +247,12 @@ def build_entity_search_fields(
         sf = surface.search_fields
         if sf:
             result[entity_ref] = list(sf)
+            continue
+        # Fallback to ux.search — mirrors build_entity_filter_fields'
+        # handling of ux.filter, which has always worked correctly.
+        ux = surface.ux
+        if ux and ux.search:
+            result[entity_ref] = list(ux.search)
     if entities:
         for entity in entities:
             if entity.name in result:

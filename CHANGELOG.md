@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.3] - 2026-04-23
+
+Patch bump. Fixes #856 — `filterable_table` search input was silently non-functional because `build_entity_search_fields()` in `app_factory.py` only read the legacy top-level `surface.search_fields` and ignored the canonical `surface.ux.search` declaration. The search input rendered + fired HTMX requests correctly; the SQL just omitted the WHERE clause because `entity_search_fields["Contact"]` was empty.
+
+### Fixed
+- **`build_entity_search_fields` now reads `ux.search` as a fallback** (#856). Mirrors the pattern already in `build_entity_filter_fields` for `ux.filter`. Legacy top-level `search_fields` still takes precedence when both are declared. Closes the regression where typing into the search input on contact_manager produced no filtering despite the input appearing to work.
+- 2 new unit tests in `tests/unit/test_search_fields.py` covering the fallback + precedence contract.
+
+### Agent Guidance
+- **`ux.search` is the canonical form.** The legacy top-level `search_fields:` keyword still works for back-compat, but when authoring new surfaces put search fields inside the `ux:` block — same place as `ux.filter`. The asymmetry that caused #856 (filter read ux, search didn't) is gone.
+
 ## [0.60.2] - 2026-04-23
 
 Patch bump. Trial scenario design — `starting_url` field lets a trial target a specific workspace or region anchor instead of always dropping the persona on `/app`. Triggered by the `trend_spike_detection` trial where Priya exhausted her step budget scrolling a 13-region dashboard before reaching the time-series charts we wanted her to evaluate.
