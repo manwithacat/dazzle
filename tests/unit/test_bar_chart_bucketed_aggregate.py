@@ -957,6 +957,40 @@ class TestTimeBucketedAggregates:
         assert specs[0]["unit"] == "week"
         assert specs[1]["is_time_bucket"] is False
 
+    @pytest.mark.asyncio()
+    async def test_pivot_aggregate_error_logged_at_error_level(self, caplog) -> None:
+        """Regression guard for #854 — a pivot aggregate failure used to log
+        at WARNING level, making the root cause invisible in production. It
+        now logs at ERROR with the dim + filter detail needed to reproduce."""
+        import logging
+
+        from dazzle_back.runtime.workspace_rendering import _compute_pivot_buckets
+
+        source_repo = MagicMock()
+        source_repo.entity_spec = SimpleNamespace(
+            name="MarkingResult",
+            fields=[SimpleNamespace(name="score", type=SimpleNamespace(kind="scalar"))],
+        )
+        source_repo.aggregate = AsyncMock(side_effect=RuntimeError("column does not exist"))
+
+        with caplog.at_level(logging.ERROR, logger="dazzle_back.runtime.workspace_rendering"):
+            rows, specs = await _compute_pivot_buckets(
+                {"count": "count(MarkingResult)"},
+                {"MarkingResult": source_repo},
+                ["score", "status"],
+                source_entity="MarkingResult",
+                source_entity_spec=source_repo.entity_spec,
+                scope_filters={"__scope_predicate": ('"MarkingResult"."dept" = %s', ["d1"])},
+            )
+
+        assert rows == []
+        assert any(r.levelno == logging.ERROR and "FAILED" in r.message for r in caplog.records)
+        # The reproduction info must be in the log record — dimensions + filters.
+        msg = next(r.message for r in caplog.records if r.levelno == logging.ERROR)
+        assert "MarkingResult" in msg
+        assert "score" in msg
+        assert "__scope_predicate" in msg
+
     def test_format_bucket_label_every_unit(self) -> None:
         import datetime as dt
 

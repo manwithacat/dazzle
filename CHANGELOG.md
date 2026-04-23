@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.5] - 2026-04-23
+
+Patch bump. Observability fixes toward #854 — the pivot_table empty-buckets bug still needs reproduction against the live AegisMark DB, but two diagnostic obstacles are now removed: the CLI explain-aggregate output no longer drops the `FROM` keyword, and pivot aggregate failures log at ERROR with the full dimension + filter detail operators need to reproduce.
+
+### Fixed
+- **`dazzle db explain-aggregate` CLI output now preserves the `FROM` keyword.** The `sql.split(" FROM ")` call dropped the separator — cosmetic, but it made authors second-guess the builder. Output is now a valid standalone SQL statement. Reported in #854.
+- **`_compute_pivot_buckets` exception-catch logs at ERROR (not WARNING) with dimensions + merged filters.** The prior WARNING-level log made it impossible to tell from production logs *why* a pivot region was returning empty — often the only signal was a user-visible empty state. Regression test in `tests/unit/test_bar_chart_bucketed_aggregate.py::TestTimeBucketedAggregates::test_pivot_aggregate_error_logged_at_error_level` asserts the log is at ERROR level and carries the source entity + dim list + filter dict.
+
+### Known limitation
+- **#854 root cause still unknown.** These diagnostic fixes make the error visible in logs; next reproduction against the live AegisMark teacher-scoped `MarkingResult` pivot will surface the actual PostgreSQL error (most likely a scope predicate interaction with the multi-dim LEFT JOIN + GROUP BY, but the exact failure mode is hidden without live logs).
+
+### Agent Guidance
+- **Framework-internal failure paths that return empty data silently should log at ERROR, not WARNING.** An empty region looks identical to "no data in scope" from the UI — the only way for operators to tell them apart is log level. WARNING is for recoverable fallbacks (e.g. `_aggregate_via_groupby` falling back to N+1); ERROR is for "this UI element is broken and we're returning empty to avoid a 500".
+
 ## [0.60.4] - 2026-04-23
 
 Patch bump. Fixes #855 — marketing `site_base.html` hardcoded three `/static/...` asset references, bypassing the `static_url` fingerprinting filter that the authenticated `base.html` already uses correctly. CDN-fronted apps served stale CSS / JS after every deploy because the URL never changed.

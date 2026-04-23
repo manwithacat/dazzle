@@ -1430,10 +1430,18 @@ async def _compute_pivot_buckets(
             filters=merged_filters or None,
         )
     except Exception:
-        logger.warning(
-            "Pivot aggregate failed for %s by %r — returning empty buckets",
+        # Promoted to ERROR for #854 — a silent WARNING on a pivot region's
+        # only failure path made the root cause invisible in production logs.
+        # The dimensions + merged filter dict are logged so operators can
+        # reproduce the exact SQL via `dazzle db explain-aggregate` without
+        # needing repository internals.
+        logger.error(
+            "Pivot aggregate FAILED for %s by %r — returning empty buckets. "
+            "dimensions=%r filters=%r",
             source_entity,
             group_by_dims,
+            [(d.name, d.fk_table, d.fk_display_field, d.truncate) for d in dimensions],
+            merged_filters or None,
             exc_info=True,
         )
         return [], dim_specs

@@ -897,7 +897,11 @@ def explain_aggregate_command(
         return
 
     console.print("\n[bold]Aggregate SQL[/bold] ([dim]no scope filter — base query[/dim])")
-    for part in sql.split(" FROM "):
-        console.print(part)
+    # Split for readability, but re-insert FROM on the follow-on line so the
+    # printed SQL is still a valid standalone statement (#854).
+    parts = sql.split(" FROM ", 1)
+    console.print(parts[0])
+    if len(parts) == 2:
+        console.print(f"FROM {parts[1]}")
     console.print("")
     console.print(f"[bold]Params:[/bold] {params}")
