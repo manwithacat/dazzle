@@ -1211,6 +1211,89 @@ async def _fetch_count_metric(
     return metric_name, 0
 
 
+def _resolve_fk_target_spec(
+    source_repo: Any,
+    group_by: str,
+    repositories: dict[str, Any] | None,
+) -> Any | None:
+    """Walk source_entity → field(group_by) → ref_entity → other repo's spec.
+
+    Returns the target entity's EntitySpec when ``group_by`` is an FK,
+    or None when it's a scalar / enum / state field. Used to drive
+    ``aggregate.resolve_fk_display_field`` so the bar label resolves
+    to the human-readable column on the related entity.
+    """
+    spec = getattr(source_repo, "entity_spec", None)
+    if spec is None or repositories is None:
+        return None
+    field = next((f for f in getattr(spec, "fields", []) if f.name == group_by), None)
+    if field is None:
+        return None
+    ftype = getattr(field, "type", None)
+    if ftype is None or getattr(ftype, "kind", None) != "ref":
+        return None
+    target_entity = getattr(ftype, "ref_entity", None)
+    if not target_entity:
+        return None
+    target_repo = repositories.get(target_entity)
+    return getattr(target_repo, "entity_spec", None) if target_repo else None
+
+
+async def _aggregate_via_groupby(
+    agg_repo: Any,
+    *,
+    metric_name: str,
+    group_by: str,
+    where_clause: str | None,
+    scope_filters: dict[str, Any] | None,
+    source_entity_spec: Any,
+    fk_target_spec: Any | None,
+) -> list[dict[str, Any]]:
+    """Run the bar-chart distribution as a single GROUP BY query.
+
+    Strategy C — replaces the N+1 enumerate-then-per-bucket-count
+    pipeline (#847–#851) with one ``Repository.aggregate`` call. The
+    aggregate method composes ``SELECT <dim>, COUNT(*) FROM src LEFT
+    JOIN <fk>... WHERE <scope> GROUP BY <dim>`` and returns the buckets
+    + counts in a single round-trip. No enumeration phase, no per-bucket
+    queries, no possibility of the two paths producing different scoped
+    row sets.
+    """
+    from dazzle_back.runtime.aggregate import resolve_fk_display_field
+
+    # Merge any author-supplied where clause into the filter dict via
+    # _parse_simple_where — same semantics the slow path used to apply
+    # before its per-bucket extension.
+    merged_filters: dict[str, Any] = {}
+    if where_clause:
+        merged_filters.update(_parse_simple_where(where_clause))
+    if scope_filters:
+        merged_filters = {**scope_filters, **merged_filters}
+
+    fk_table = getattr(fk_target_spec, "name", None) if fk_target_spec is not None else None
+    fk_display_field = (
+        resolve_fk_display_field(fk_target_spec) if fk_target_spec is not None else None
+    )
+
+    buckets = await agg_repo.aggregate(
+        group_by=group_by,
+        measures={metric_name: "count"},
+        filters=merged_filters or None,
+        fk_table=fk_table,
+        fk_display_field=fk_display_field,
+    )
+
+    out: list[dict[str, Any]] = []
+    for b in buckets:
+        bucket_id = b.dimensions.get(group_by)
+        if bucket_id is None:
+            continue
+        label_key = f"{group_by}_label"
+        label = b.dimensions.get(label_key) or str(bucket_id)
+        out.append({"label": str(label), "value": b.measures.get(metric_name, 0)})
+    return out
+
+
 async def _enumerate_distinct_buckets(
     source_repo: Any,
     group_by: str,
@@ -1336,6 +1419,42 @@ async def _compute_bucketed_aggregates(
     if not agg_repo:
         return []
 
+    # ---- Fast path: count(<source_entity>) with no current_bucket ----
+    # This is the bar-chart distribution case (#847–#851) — replace the
+    # enumerate-then-N+1-count pipeline with a single GROUP BY query
+    # via Repository.aggregate. One SQL statement, one scope evaluation,
+    # no possibility of enumeration/per-bucket divergence. The slow
+    # sentinel path below stays for `count(OtherEntity where ... =
+    # current_bucket)` expressions that need true per-bucket queries.
+    is_simple_distribution = (
+        not bucket_values  # caller didn't pre-supply enum/state buckets
+        and source_entity is not None
+        and entity_name == source_entity
+        and (not where_clause or "current_bucket" not in (where_clause or ""))
+    )
+    if is_simple_distribution:
+        try:
+            return await _aggregate_via_groupby(
+                agg_repo,
+                metric_name=metric_name,
+                group_by=group_by,
+                where_clause=where_clause,
+                scope_filters=scope_filters,
+                source_entity_spec=getattr(agg_repo, "entity_spec", None),
+                fk_target_spec=_resolve_fk_target_spec(agg_repo, group_by, repositories),
+            )
+        except Exception:
+            logger.warning(
+                "GROUP BY aggregate failed for %s.%s — falling back to N+1",
+                entity_name,
+                group_by,
+                exc_info=True,
+            )
+            # fall through to the old loop on exception
+
+    # ---- Slow path: per-bucket loop (enumeration + per-bucket count) ----
+    # Used when the aggregate expression has a current_bucket sentinel
+    # against a different entity, or when callers pre-supply bucket_values.
     # buckets is a list of (key, label). key goes into the per-bucket
     # filter; label renders on the bar. For FK group_by fields the list
     # endpoint serialises rows as `{id, <display_field>, ...}` dicts —

@@ -548,3 +548,168 @@ class TestPerBucketIncludesGroupBy:
         f = captured[0].get("filters") or {}
         assert f.get("assessment_objective") == "ao-1"
         assert f.get("__scope_predicate") == ("dept = $1", ["d-1"])
+
+
+# ---------------------------------------------------------------------------
+# Strategy C (Cycle 22): fast GROUP BY path via Repository.aggregate
+# ---------------------------------------------------------------------------
+
+
+def _make_aggregate_repo(buckets_payload):
+    """Repo whose .aggregate returns the given list of AggregateBucket objects."""
+    from dazzle_back.runtime.aggregate import AggregateBucket
+
+    repo = MagicMock()
+    repo.entity_spec = SimpleNamespace(
+        name="MarkingResult",
+        fields=[
+            SimpleNamespace(
+                name="assessment_objective",
+                type=SimpleNamespace(kind="ref", ref_entity="AssessmentObjective"),
+            )
+        ],
+    )
+
+    async def _aggregate(**kw):
+        # Convert dict payloads to AggregateBucket so the function under
+        # test sees realistic shapes.
+        return [
+            b if isinstance(b, AggregateBucket) else AggregateBucket(**b) for b in buckets_payload
+        ]
+
+    repo.aggregate = AsyncMock(side_effect=_aggregate)
+    return repo
+
+
+def _make_target_repo_with_label_field():
+    """FK target repo with a `label` field (so display-field probe picks it)."""
+    repo = MagicMock()
+    repo.entity_spec = SimpleNamespace(
+        name="AssessmentObjective",
+        fields=[
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="label"),
+            SimpleNamespace(name="code"),
+        ],
+    )
+    return repo
+
+
+from types import SimpleNamespace  # noqa: E402  (used only by the new tests above)
+
+
+class TestStrategyCGroupByFastPath:
+    """Cycle 22 — count(<source>) routes through repo.aggregate, not the loop."""
+
+    @pytest.mark.asyncio()
+    async def test_simple_distribution_uses_aggregate_call(self) -> None:
+        agg_repo = _make_aggregate_repo(
+            [
+                {
+                    "dimensions": {
+                        "assessment_objective": "ao-1",
+                        "assessment_objective_label": "Knowledge",
+                    },
+                    "measures": {"count": 1560},
+                },
+                {
+                    "dimensions": {
+                        "assessment_objective": "ao-2",
+                        "assessment_objective_label": "Application",
+                    },
+                    "measures": {"count": 720},
+                },
+            ]
+        )
+        target_repo = _make_target_repo_with_label_field()
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "AssessmentObjective": target_repo},
+            "assessment_objective",
+            items=[],
+            source_entity="MarkingResult",
+        )
+        assert result == [
+            {"label": "Knowledge", "value": 1560},
+            {"label": "Application", "value": 720},
+        ]
+        # The fast path must call .aggregate exactly once — no enumeration,
+        # no per-bucket loop.
+        agg_repo.aggregate.assert_called_once()
+        call_kwargs = agg_repo.aggregate.call_args.kwargs
+        assert call_kwargs["group_by"] == "assessment_objective"
+        assert call_kwargs["fk_table"] == "AssessmentObjective"
+        assert call_kwargs["fk_display_field"] == "label"
+
+    @pytest.mark.asyncio()
+    async def test_scope_filters_passed_to_aggregate_call(self) -> None:
+        agg_repo = _make_aggregate_repo([])
+        target_repo = _make_target_repo_with_label_field()
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo, "AssessmentObjective": target_repo},
+            "assessment_objective",
+            items=[],
+            source_entity="MarkingResult",
+            scope_filters={"__scope_predicate": ('"MarkingResult"."dept" = %s', ["d-1"])},
+        )
+        kw = agg_repo.aggregate.call_args.kwargs
+        assert "__scope_predicate" in (kw.get("filters") or {})
+
+    @pytest.mark.asyncio()
+    async def test_aggregate_failure_falls_back_to_slow_path(self) -> None:
+        """If .aggregate raises, the old enumeration loop kicks in as backup."""
+        agg_repo = _make_aggregate_repo([])
+        agg_repo.aggregate = AsyncMock(side_effect=RuntimeError("no SQL backend"))
+        # Equip the repo with a .list method too so the slow path can run.
+        list_call_count = {"n": 0}
+
+        async def _list(**kw):
+            list_call_count["n"] += 1
+            return {"items": [], "total": 0}
+
+        agg_repo.list = AsyncMock(side_effect=_list)
+        result = await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "assessment_objective",
+            items=[],
+            source_entity="MarkingResult",
+        )
+        # Slow-path enumeration ran (called .list at least once for source).
+        assert list_call_count["n"] >= 1
+        assert result == []  # empty source → empty buckets
+
+    @pytest.mark.asyncio()
+    async def test_bucket_values_supplied_skips_fast_path(self) -> None:
+        """Pre-supplied buckets (enum/state-machine) keep using the slow loop."""
+        agg_repo = _make_aggregate_repo([])
+        agg_repo.list = AsyncMock(return_value={"total": 5})
+        await _compute_bucketed_aggregates(
+            {"count": "count(MarkingResult)"},
+            {"MarkingResult": agg_repo},
+            "status",
+            items=[],
+            bucket_values=["draft", "published"],
+            source_entity="MarkingResult",
+        )
+        # Fast-path .aggregate must NOT be called when bucket_values is set.
+        agg_repo.aggregate.assert_not_called()
+        assert agg_repo.list.await_count == 2  # one per bucket
+
+    @pytest.mark.asyncio()
+    async def test_cross_entity_count_skips_fast_path(self) -> None:
+        """count(OtherEntity ...) keeps using the per-bucket loop."""
+        agg_repo = _make_aggregate_repo([])
+        agg_repo.list = AsyncMock(return_value={"total": 7})
+        source_repo = _make_aggregate_repo([])
+        source_repo.list = AsyncMock(return_value={"items": [], "total": 0})
+        await _compute_bucketed_aggregates(
+            {"count": "count(Manuscript where assessment_objective = current_bucket)"},
+            {"MarkingResult": source_repo, "Manuscript": agg_repo},
+            "assessment_objective",
+            items=[],
+            source_entity="MarkingResult",
+        )
+        # The aggregate target is Manuscript, not MarkingResult → fast path skipped.
+        agg_repo.aggregate.assert_not_called()

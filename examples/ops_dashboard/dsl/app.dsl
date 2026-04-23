@@ -171,6 +171,18 @@ workspace command_center "Command Center":
       count: count(Alert)
     empty: "No alerts"
 
+  # Alerts by System — FK distribution (Strategy C aggregate fast path).
+  # Group by an FK column to exercise the LEFT JOIN + display-field
+  # resolution path of Repository.aggregate. The bar labels render the
+  # System.name (probed via display_name → name → title → label → code).
+  alerts_by_system:
+    source: Alert
+    display: bar_chart
+    group_by: system
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts grouped by system"
+
   # Alert Heatmap — density of alerts by severity
   alert_heatmap:
     source: Alert

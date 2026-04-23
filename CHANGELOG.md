@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-04-23
+
+Minor bump. Strategy C aggregate primitive — closes the bar_chart bug class (#847–#851) by replacing the N+1 enumerate-then-per-bucket-count pipeline with a single `GROUP BY` SQL query.
+
+### Added
+- **`Repository.aggregate(group_by, measures, filters, fk_table, fk_display_field, limit)`.** New repo method that runs `SELECT <dim>, COUNT(*) FROM src LEFT JOIN <fk> WHERE <scope> GROUP BY <dim>` in one round-trip. Supports `count`, `sum:<col>`, `avg:<col>`, `min:<col>`, `max:<col>` measures. FK group_by joins the target entity once and returns the display field as `<col>_label` in the bucket — no per-bucket round-trip, no enumeration phase.
+- **`dazzle_back.runtime.aggregate` module.** SQL builder (`build_aggregate_sql`), measure dispatcher (`measure_to_sql`), FK display-field probe (`resolve_fk_display_field`), row-to-bucket converter (`rows_to_buckets`), and the `AggregateBucket` dataclass. Exposed as a separate module so the SQL composition is unit-testable without a repo.
+- **`alerts_by_system` region in `examples/ops_dashboard`** — exercises the FK group_by fast path so `/trial-cycle` validates the new aggregate primitive in production-equivalent rendering.
+
+### Changed
+- **`_compute_bucketed_aggregates` routes the simple `count(<source_entity>)` case through `Repository.aggregate` (the fast path).** When the aggregate target is the source entity and the expression has no `current_bucket` sentinel, the bar-chart distribution is now computed in one SQL statement. The slow per-bucket loop (enumeration + N+1 counts) remains for the `count(OtherEntity where ... = current_bucket)` shape — same fallback the prior fixes used. On any failure the slow path takes over so existing apps don't break.
+
+### Agent Guidance
+- **For chart distributions, prefer `count(<source>)` with `group_by: <field>`.** This routes through the new `Repository.aggregate` fast path — single query, scope evaluated once, no possibility of the bug class that #847–#851 chased. Use `count(OtherEntity where ... = current_bucket)` only when the bucketing dimension lives on a different entity than what you're counting; that path keeps the per-bucket loop with the constraint that mock-only tests can't catch SQL-layer divergence.
+- **The aggregate-safe scope contract:** the `__scope_predicate` SQL emitted by `_resolve_predicate_filters` must reference only the source table's columns (or correlated subqueries on related tables). Every scope shape currently emitted is compatible — direct equality, FK-path subqueries, EXISTS / NOT EXISTS, boolean compositions. New scope predicate shapes that reference the GROUP BY relation directly (post-join) would need a different code path.
+
 ## [0.58.23] - 2026-04-23
 
 Patch bump. One follow-on fix to #850 + diagnostic logging (#851).
