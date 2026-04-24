@@ -514,14 +514,20 @@ class TestFeedbackWidgetSurfaces:
         assert "page_url" in field_names
         assert "created_at" in field_names
 
-    def test_admin_surface_restricts_to_admin_personas(self) -> None:
-        """feedback_admin surface restricted to admin/super_admin."""
+    def test_admin_surface_auth_required_no_persona_gate(self) -> None:
+        """feedback_admin requires authentication; non-admin restriction
+        is now enforced at the entity-level scope (own rows only) instead
+        of a persona gate on the surface — see v0.61.6 / #859.
+        The persona gate leaked onto the shared entity LIST endpoint,
+        403ing non-admin feedback-widget polls."""
         app = self._link(self._DSL_ENABLED)
         admin = next(s for s in app.surfaces if s.name == "feedback_admin")
         assert admin.access is not None
         assert admin.access.require_auth is True
-        assert "admin" in admin.access.allow_personas
-        assert "super_admin" in admin.access.allow_personas
+        # Persona restriction intentionally empty — scope-based restriction
+        # via entity AccessSpec takes over. The entity-level UI still
+        # shows admins all reports and non-admins only their own.
+        assert admin.access.allow_personas == []
 
     def test_edit_surface_generated(self) -> None:
         """feedback_widget: enabled produces a feedback_edit surface."""
@@ -548,13 +554,77 @@ class TestFeedbackWidgetSurfaces:
         assert "assigned_to" in field_names
         assert "agent_notes" in field_names
 
-    def test_edit_surface_has_admin_access(self) -> None:
-        """feedback_edit surface restricted to admin/super_admin."""
+    def test_edit_surface_auth_required_no_persona_gate(self) -> None:
+        """feedback_edit requires authentication; non-admin UPDATE
+        restriction is now enforced at the entity-level scope (own rows
+        only) — see v0.61.6 / #859. Previously the persona gate 403ed
+        the feedback widget's _markNotified PUT for non-admin users,
+        breaking the "your feedback has been resolved" toast lifecycle."""
         app = self._link(self._DSL_ENABLED)
         edit = next(s for s in app.surfaces if s.name == "feedback_edit")
         assert edit.access is not None
         assert edit.access.require_auth is True
-        assert "admin" in edit.access.allow_personas
+        assert edit.access.allow_personas == []
+
+
+class TestFeedbackReportScopeRules:
+    """v0.61.6 (#859): entity-level scope restricts non-admins to own rows."""
+
+    _DSL = (
+        'module test\napp test "Test"\n\n'
+        'entity User "User":\n'
+        "  id: uuid pk\n\n"
+        "feedback_widget: enabled\n"
+    )
+
+    def _feedback_entity(self):
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.ir import ModuleIR
+        from dazzle.core.linker import build_appspec
+
+        mod_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+            self._DSL, Path("t.dsl")
+        )
+        module = ModuleIR(
+            name=mod_name or "test",
+            file=Path("t.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        app = build_appspec([module], module.name)
+        return next(e for e in app.domain.entities if e.name == "FeedbackReport")
+
+    def test_self_scope_rule_present_for_every_operation(self) -> None:
+        entity = self._feedback_entity()
+        ops = {rule.operation.value for rule in entity.access.scopes if rule.personas == ["*"]}
+        # One "own rows only" rule per operation (CREATE, READ, LIST, UPDATE, DELETE).
+        assert {"create", "read", "list", "update", "delete"} <= ops
+
+    def test_admin_scope_rule_has_no_row_filter(self) -> None:
+        entity = self._feedback_entity()
+        admin_rules = [r for r in entity.access.scopes if "admin" in r.personas]
+        assert admin_rules, "expected at least one admin scope rule"
+        for r in admin_rules:
+            assert r.condition is None, (
+                f"admin rule for op={r.operation.value} should have no row filter, "
+                f"got condition={r.condition}"
+            )
+
+    def test_self_scope_compares_reported_by(self) -> None:
+        entity = self._feedback_entity()
+        list_self = next(
+            r for r in entity.access.scopes if r.operation.value == "list" and r.personas == ["*"]
+        )
+        assert list_self.condition is not None
+        cmp = list_self.condition.comparison
+        assert cmp is not None
+        assert cmp.field == "reported_by"
+        assert cmp.value.literal == "current_user.email"
 
 
 # ---------------------------------------------------------------------------

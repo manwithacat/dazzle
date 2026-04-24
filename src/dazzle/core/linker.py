@@ -351,10 +351,12 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
         mods = [_MODIFIER_MAP[m] for m in modifiers]
         fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
 
-    # Any authenticated user can create/read; only admins can update/delete.
-    # ``scope: all for: *`` matches every permit so the runtime doesn't
-    # default-deny the LIST endpoint (silencing the per-app improve-loop
-    # warning: "permit: rules but no scope: blocks — default-deny").
+    # v0.61.6 (#859): scope rules split so non-admins see/update only their
+    # own reports, while admins see everything. Previously ``scope: all
+    # for: *`` opened LIST to every auth persona — but the admin surface's
+    # ``allow_personas=["admin","super_admin"]`` leaked onto the entity's
+    # LIST endpoint, producing 403s for the feedback-widget's resolved-
+    # report polls for non-admin users.
     _ops = (
         ir.PermissionKind.CREATE,
         ir.PermissionKind.READ,
@@ -362,12 +364,34 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
         ir.PermissionKind.UPDATE,
         ir.PermissionKind.DELETE,
     )
+
+    # "reported_by = current_user.email" — standard Dazzle runtime pattern.
+    _self_cond = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="reported_by",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="current_user.email"),
+        )
+    )
+    _scope_rules: list[ir.ScopeRule] = []
+    for op in _ops:
+        # Default: any authenticated persona sees / acts on own rows only.
+        _scope_rules.append(ir.ScopeRule(operation=op, condition=_self_cond, personas=["*"]))
+        # Admin: full row visibility.
+        _scope_rules.append(
+            ir.ScopeRule(
+                operation=op,
+                condition=None,
+                personas=["admin", "super_admin"],
+            )
+        )
+
     access = ir.AccessSpec(
         permissions=[
             ir.PermissionRule(operation=op, require_auth=True, effect=ir.PolicyEffect.PERMIT)
             for op in _ops
         ],
-        scopes=[ir.ScopeRule(operation=op, condition=None, personas=["*"]) for op in _ops],
+        scopes=_scope_rules,
     )
 
     # State machine: new → triaged → in_progress → resolved → verified
@@ -449,10 +473,12 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
         entity_ref="FeedbackReport",
         mode=ir.SurfaceMode.LIST,
         sections=[ir.SurfaceSection(name="main", title="Feedback", elements=elements)],
-        access=ir.SurfaceAccessSpec(
-            require_auth=True,
-            allow_personas=["admin", "super_admin"],
-        ),
+        # v0.61.6 (#859): allow_personas dropped — persona-level restriction
+        # was leaking onto the entity's shared LIST/PUT endpoints, 403ing the
+        # non-admin feedback-widget polls. Entity-level ``reported_by =
+        # current_user.email`` scope now restricts non-admins to their own
+        # rows; admins keep full visibility via the ``all for: admin`` scope.
+        access=ir.SurfaceAccessSpec(require_auth=True),
         ux=ux,
     )
 
@@ -496,8 +522,13 @@ def _build_feedback_edit_surface() -> ir.SurfaceSpec:
         entity_ref="FeedbackReport",
         mode=ir.SurfaceMode.EDIT,
         sections=[status_section, triage_section, relations_section],
-        access=ir.SurfaceAccessSpec(
-            require_auth=True,
-            allow_personas=["admin", "super_admin"],
-        ),
+        # v0.61.6 (#859): allow_personas dropped — persona gate was
+        # 403ing the feedback widget's _markNotified PUT for non-admin
+        # users. Entity-level ``reported_by = current_user.email`` scope
+        # restricts non-admins to updating only their own rows; admins
+        # keep full UPDATE access via the ``all for: admin`` scope. The
+        # edit-UI page itself is still at /app/feedbackreports/{id}/edit
+        # and rendering is filtered by the same scope — non-admins see
+        # only their own rows there too.
+        access=ir.SurfaceAccessSpec(require_auth=True),
     )

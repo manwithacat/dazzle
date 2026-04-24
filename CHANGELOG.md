@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.6] - 2026-04-24
+
+Patch bump. Closes #859 — feedback widget polled `GET /feedbackreports?reported_by=...&status=resolved&notification_sent=false` on every page load and got 403 for non-admin personas, so the "your feedback has been resolved" toast never fired for the users who actually submitted the feedback. Root cause: `allow_personas=["admin", "super_admin"]` on the auto-generated `feedback_admin` + `feedback_edit` surfaces leaked onto the shared entity endpoints (`GET /feedbackreports`, `PUT /feedbackreports/{id}`), gating them to admin-only before Cedar's entity-level check could consult the `scope: all for: *` rule.
+
+### Fixed
+- **`src/dazzle/core/linker.py`** — `_build_feedback_report_entity` replaces the blanket `scope: all for: *` with two rules per operation: `scope: reported_by = current_user.email for: *` (any authenticated user → own rows) and `scope: all for: admin, super_admin` (admins → every row). Non-admin feedback-widget polls now succeed and return only their own reports.
+- **`_build_feedback_admin_surface`** + **`_build_feedback_edit_surface`** — `allow_personas` dropped. Persona-level restriction is now enforced at the entity-level scope (own rows only), which is also the correct policy surface for row-level filtering. The UI pages still filter correctly: admins see all reports, non-admins see their own.
+
+### Tests
+- **`test_feedback_widget.py::TestFeedbackReportScopeRules`** — 3 new tests pin the scope rule shape: `reported_by = current_user.email` condition for every op with `personas=["*"]`; unconditional admin rule; exact field + value on the self-scope comparison.
+- Two existing tests updated: `test_admin_surface_auth_required_no_persona_gate` and `test_edit_surface_auth_required_no_persona_gate` now assert the persona gate is intentionally empty.
+
+### Agent Guidance
+- **Surface `allow_personas` is UI-level only**: it gates who can navigate to the rendered page. Don't rely on it to secure the underlying API endpoint — the surface → endpoint converter propagates it onto the shared entity endpoints, which share across every surface targeting the same entity.
+- **Row-level restriction lives in entity `scope:` rules**. Express "user sees their own rows" as `scope: <owner_field> = current_user.<user_attr> for: *`; express "admins see everything" as `scope: all for: admin, super_admin`. The runtime intersects the right rule with the request's persona.
+- **Feedback widget lifecycle** — with this fix, `_checkResolved` + `_markNotified` JS paths both succeed for non-admin users; the resolved-report toast fires exactly once per report (until `notification_sent=true` is persisted), closing the notification loop as originally intended.
+
 ## [0.61.5] - 2026-04-24
 
 Patch bump. Closes #863 — entity-list pages (`/app/<entity>`) showed a reduced sidebar compared to workspace pages because the entity-list code path (`template_compiler.py`) never populated `PageContext.nav_groups`. `app_shell.html` was already rendering `nav_groups | default([])` — the field simply wasn't set, collapsing the sidebar's group structure whenever the user navigated between an entity and its workspace.
