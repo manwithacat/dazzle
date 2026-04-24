@@ -105,17 +105,21 @@
             :title="saveState === 'error' ? _saveError : ''"
             class="h-8 px-3 rounded-[4px] text-[13px] font-medium border border-transparent
                    transition-all duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-      <span x-show="saveState === 'clean'">Saved</span>
-      <span x-show="saveState === 'dirty'">Save layout</span>
-      <span x-show="saveState === 'saving'" class="flex items-center gap-1">
+      {# x-cloak gates visibility until Alpine evaluates x-show — protects
+         against degraded state (#866) where alpine:init fails to fire
+         (HTMX morph race, layout-JSON parse error, etc.) and the browser's
+         default `display: inline` stacks every status label simultaneously. #}
+      <span x-cloak x-show="saveState === 'clean'">Saved</span>
+      <span x-cloak x-show="saveState === 'dirty'">Save layout</span>
+      <span x-cloak x-show="saveState === 'saving'" class="flex items-center gap-1">
         <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
         Saving
       </span>
-      <span x-show="saveState === 'saved'" class="flex items-center gap-1">
+      <span x-cloak x-show="saveState === 'saved'" class="flex items-center gap-1">
         <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
         Saved
       </span>
-      <span x-show="saveState === 'error'">Retry</span>
+      <span x-cloak x-show="saveState === 'error'">Retry</span>
     </button>
   </div>
 

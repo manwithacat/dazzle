@@ -28,5 +28,8 @@
       <span class="text-[11px] text-[hsl(var(--muted-foreground))] ml-auto" x-text="item.entity"></span>
     </button>
   </template>
-  <div x-show="catalog.length === 0" class="text-[13px] text-[hsl(var(--muted-foreground))] py-2">No widgets available.</div>
+  {# x-cloak — see #866. Hide "No widgets available" until Alpine hydrates
+     `catalog` from the layout-JSON data island. Otherwise a failed alpine:init
+     leaves this string visible even when the catalog is non-empty. #}
+  <div x-cloak x-show="catalog.length === 0" class="text-[13px] text-[hsl(var(--muted-foreground))] py-2">No widgets available.</div>
 </div>

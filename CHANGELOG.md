@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.1] - 2026-04-24
+
+Patch bump. Closes #866 — dashboard builder rendered in degraded state when Alpine's `alpine:init` didn't fire (HTMX morph race, layout-JSON parse error, etc.). Pure template fix: `x-cloak` added to five status-label spans inside the save button in `_content.html` and the "No widgets available" div in `_card_picker.html`. The existing `[x-cloak] { display: none }` rule in `dazzle-layer.css` hides these elements until Alpine takes control; failed init now produces a blank control panel rather than five stacked status labels + ghost catalog.
+
+### Fixed
+- **`src/dazzle_ui/templates/workspace/_content.html`** — 5 `x-show="saveState === '...'"` spans gain `x-cloak`.
+- **`src/dazzle_ui/templates/workspace/_card_picker.html`** — `x-show="catalog.length === 0"` gains `x-cloak`.
+
 ## [0.61.0] - 2026-04-24
 
 **Analytics, Consent & Privacy — stable release.** Completes the 6-phase design started in `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`. This release rolls up rc1-rc5 and adds Phase 6 (per-tenant analytics resolution).
