@@ -2426,6 +2426,30 @@ def _validate_predicate_node(
             errors.append(
                 f"{ctx}: ExistsCheck references non-existent entity '{node.target_entity}'"
             )
+            return
+        # Dotted junction-field paths (#858): walk segments through the FK
+        # graph starting from the junction. All but the last must resolve
+        # as FK hops; the last is a column on the tail entity.
+        for binding in node.bindings:
+            if "." not in binding.junction_field:
+                continue
+            segments = binding.junction_field.split(".")
+            current = node.target_entity
+            for i, segment in enumerate(segments):
+                is_last = i == len(segments) - 1
+                if is_last:
+                    if not fk_graph.field_exists(current, segment):
+                        errors.append(
+                            f"{ctx}: via binding '{binding.junction_field}' — "
+                            f"terminal field '{segment}' does not exist on '{current}'"
+                        )
+                else:
+                    try:
+                        _, target = fk_graph.resolve_segment(current, segment)
+                        current = target
+                    except (ValueError, AttributeError) as exc:
+                        errors.append(f"{ctx}: via binding '{binding.junction_field}' — {exc}")
+                        break
         return
 
     if isinstance(node, BoolComposite):

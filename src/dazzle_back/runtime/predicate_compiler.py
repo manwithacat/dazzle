@@ -265,9 +265,66 @@ def _compile_path_check(
     return sql, params
 
 
+def _compile_dotted_junction_predicate(
+    junction_entity: str,
+    path: list[str],
+    op: str,
+    value_sql: str,
+    value_params: list[Any],
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> str:
+    """Expand a dotted junction-field predicate into nested IN (SELECT ...) (#858).
+
+    Given ``junction_field = teaching_group.teacher.user`` on junction
+    ``ClassEnrolment`` comparing against some ``value_sql``, walk the path
+    segment-by-segment via the FK graph and emit the fully nested subquery.
+
+    The *last* segment is the column on the tail entity that holds the
+    comparison value; all prior segments must resolve to FK fields.
+    """
+    assert len(path) >= 2, "dotted path must have at least one hop + final column"
+    *hop_segments, final_col = path
+
+    # Resolve each hop to (fk_field, next_entity) starting from the junction.
+    current_entity = junction_entity
+    hops: list[tuple[str, str]] = []  # list of (fk_field, target_entity)
+    for segment in hop_segments:
+        fk_field, next_entity = _resolve_segment(fk_graph, current_entity, segment)
+        hops.append((fk_field, next_entity))
+        current_entity = next_entity
+
+    # Build innermost WHERE first: on the entity that *owns* final_col,
+    # which is hops[-1].to_entity (or the junction if there are no hops).
+    tail_table = _qualify_table(current_entity, schema)
+    inner_sql = (
+        f"SELECT {quote_identifier('id')} FROM {tail_table} "
+        f"WHERE {quote_identifier(final_col)} {op} {value_sql}"
+    )
+
+    # Wrap tail→head. For each intermediate hop, the FK lives on the
+    # previous hop's target entity (or the junction for hop 0). So the
+    # SELECT in each wrap is FROM the entity that *owns* this hop's FK.
+    for i in range(len(hops) - 1, 0, -1):
+        fk_field = hops[i][0]
+        owner_entity = hops[i - 1][1]
+        owner_table = _qualify_table(owner_entity, schema)
+        inner_sql = (
+            f"SELECT {quote_identifier('id')} FROM {owner_table} "
+            f"WHERE {quote_identifier(fk_field)} IN ({inner_sql})"
+        )
+
+    # Outer binding: the first hop's fk_field IN (inner_sql) — bound against
+    # the junction table via the enclosing EXISTS WHERE clause.
+    root_fk = hops[0][0]
+    return f"{quote_identifier(root_fk)} IN ({inner_sql})"
+
+
 def _compile_exists_check(
     predicate: ExistsCheck,
     entity_name: str,
+    fk_graph: FKGraph | None = None,
     *,
     schema: str | None = None,
 ) -> tuple[str, list[Any]]:
@@ -277,30 +334,60 @@ def _compile_exists_check(
     params: list[Any] = []
 
     for binding in predicate.bindings:
-        jf = quote_identifier(binding.junction_field)
+        is_dotted = "." in binding.junction_field
+        jf = quote_identifier(binding.junction_field) if not is_dotted else ""
         op = binding.operator  # "=" or "!="
 
         target_val = binding.target
+
+        # Resolve right-hand value first — shared between dotted and flat paths.
+        value_sql: str | None = None
+        extra_params: list[Any] = []
         if target_val == "current_user":
-            conditions.append(f"{jf} {op} %s")
-            params.append(CurrentUserRef())
+            value_sql = "%s"
+            extra_params.append(CurrentUserRef())
         elif target_val == "id":
-            # Bind to the root entity's primary key
-            conditions.append(f"{jf} {op} {quote_identifier(entity_name)}.{quote_identifier('id')}")
+            value_sql = f"{quote_identifier(entity_name)}.{quote_identifier('id')}"
         elif target_val == "null":
+            pass  # handled specially below
+        elif target_val.startswith("current_user."):
+            attr = target_val[len("current_user.") :]
+            value_sql = "%s"
+            extra_params.append(UserAttrRef(attr))
+        else:
+            value_sql = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
+
+        if is_dotted:
+            # Dotted junction-field (#858): expand via FK graph into nested
+            # IN (SELECT …). NULL targets are not supported on dotted paths.
+            if target_val == "null" or fk_graph is None or value_sql is None:
+                raise ValueError(
+                    f"Dotted via-binding '{binding.junction_field}' requires a "
+                    f"non-null target value and the FK graph context"
+                )
+            path = binding.junction_field.split(".")
+            clause = _compile_dotted_junction_predicate(
+                predicate.target_entity,
+                path,
+                op,
+                value_sql,
+                extra_params,
+                fk_graph,
+                schema=schema,
+            )
+            conditions.append(clause)
+            params.extend(extra_params)
+            continue
+
+        if target_val == "null":
             if op == "=":
                 conditions.append(f"{jf} IS NULL")
             else:
                 conditions.append(f"{jf} IS NOT NULL")
-        elif target_val.startswith("current_user."):
-            attr = target_val[len("current_user.") :]
-            conditions.append(f"{jf} {op} %s")
-            params.append(UserAttrRef(attr))
         else:
-            # Bind to a column on the root entity (field reference).
-            # Dazzle FK columns use bare field names (no _id suffix).
-            root_col = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
-            conditions.append(f"{jf} {op} {root_col}")
+            assert value_sql is not None
+            conditions.append(f"{jf} {op} {value_sql}")
+            params.extend(extra_params)
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
     exists_kw = "NOT EXISTS" if predicate.negated else "EXISTS"
@@ -380,7 +467,7 @@ def compile_predicate(
             return _compile_path_check(predicate, entity_name, fk_graph, schema=schema)
 
         case ExistsCheck():
-            return _compile_exists_check(predicate, entity_name, schema=schema)
+            return _compile_exists_check(predicate, entity_name, fk_graph, schema=schema)
 
         case BoolComposite():
             return _compile_bool_composite(predicate, entity_name, fk_graph, schema=schema)

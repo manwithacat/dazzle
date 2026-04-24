@@ -1199,6 +1199,22 @@ class EntityParserMixin:
             junction_field = field_token.value
             self.advance()
 
+            # Accumulate dotted path segments (#858): `teaching_group.teacher.user`
+            # resolves at compile time via a JOIN chain through the junction's
+            # FK graph. The IR stores the full dotted string in junction_field.
+            while self.match(TokenType.DOT):
+                self.advance()
+                segment_token = self.current_token()
+                if segment_token.type != TokenType.IDENTIFIER:
+                    raise make_parse_error(
+                        f"Expected field name after '.' in via binding, got {segment_token.type.value!r}",
+                        self.file,
+                        segment_token.line,
+                        segment_token.column,
+                    )
+                junction_field = f"{junction_field}.{segment_token.value}"
+                self.advance()
+
             # Parse operator: = or !=
             op_token = self.current_token()
             if self.match(TokenType.EQUALS):

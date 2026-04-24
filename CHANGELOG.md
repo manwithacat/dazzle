@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.10] - 2026-04-24
+
+Patch bump. Closes #858 — the `via EntityName(...)` scope-rule form required flat single-segment junction fields, so two-hop traversals like `teaching_group.teacher.user = current_user` errored at the first `.` with "Expected '=' or '!=' in via binding". AegisMark needed this shape for teacher-to-pupil visibility routed through `ClassEnrolment → TeachingGroup → StaffMember → User` and was working around it with denormalised FKs.
+
+### Fixed
+- **`src/dazzle/core/dsl_parser_impl/entity.py`** — `_parse_via_condition` now accumulates dotted segments on the junction-field side via a `while self.match(TokenType.DOT)` loop that mirrors the existing pattern in `_parse_comparison`. The full dotted path is stored verbatim on `ViaBinding.junction_field`.
+- **`src/dazzle_back/runtime/predicate_compiler.py`** — new `_compile_dotted_junction_predicate` helper expands a dotted path into a nested `IN (SELECT id FROM ...)` chain that walks the junction's FK graph segment-by-segment. The innermost subquery holds the `<final_col> <op> <value>` comparison; each wrap selects `id` from the entity that *owns* the next FK (not its target — the initial implementation had this reversed). `_compile_exists_check` grew a `fk_graph` parameter and routes dotted bindings through the new helper while flat bindings keep the single-column shape.
+- **`src/dazzle/core/validator.py`** — `_validate_predicate_node` validates dotted junction fields against the FK graph: each intermediate segment must resolve as an FK hop and the terminal segment must exist as a column on the final entity. Unknown segments produce a clear `dazzle validate` error naming the bad hop.
+
+### Tests
+- **`test_via_dotted_paths.py`** — 6 tests pin the full path: parser accepts dotted paths and preserves them on `ViaBinding`, linker produces an `ExistsCheck` with the dotted path intact, compiler emits a correctly-nested `IN (SELECT ...)` chain walking `TeachingGroup → StaffMember → User`, flat bindings keep their single-column shape, valid dotted via produces no lint error, unknown segment surfaces via `lint_appspec`.
+
+### Agent Guidance
+- **Dotted `via` paths walk the junction's FK graph** — `via ClassEnrolment(student_profile = id, teaching_group.teacher.user = current_user)` means "exists a ClassEnrolment whose `teaching_group.teacher.user` equals the current user". All intermediate segments must be FK fields on successive entities; the terminal segment is a plain column (often itself a FK, compared against `current_user` / literal / parent id).
+- **Zero-hop `via` bindings still work** — `via M(field = id, user = current_user)` has no dotted paths; the compiler's fast path for flat bindings is unchanged.
+- **`dazzle validate` now catches bad paths** — if a hop doesn't exist on the FK graph the error names it ("Entity 'TeachingGroup' has no FK for segment 'nonexistent_fk' ..."), so misconfigured scope rules fail at validate time rather than runtime.
+
 ## [0.61.9] - 2026-04-24
 
 Patch bump. Closes #865 — workspace list regions issued one follow-up `SELECT *` per FK relation via the batched `_load_to_one` path. For AegisMark's teacher workspace (14 regions × 3-5 FKs) that's ~50+ round-trips per page load. The FK-display fast path now collapses each region's FK display resolution into a single LEFT JOIN'd query, matching the single-SQL-statement approach the issue proposed.
