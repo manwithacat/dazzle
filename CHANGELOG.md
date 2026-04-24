@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.2] - 2026-04-24
+
+Patch bump. Closes #864 — every above-fold workspace region fetched twice on first paint because the template emitted `hx-trigger="load, intersect once"` for every card. `load` fires when HTMX processes the element; `intersect once` fires once the IntersectionObserver reports the element visible (which, for above-fold cards, happens in the same paint cycle). Result: ~20% wasted backend work per login on production workspaces.
+
+### Fixed
+- **`src/dazzle_ui/runtime/page_routes.py`** — `fold_count` now threaded into the workspace layout data island (previously only on the server-side WorkspaceContext).
+- **`src/dazzle_ui/runtime/static/js/dashboard-builder.js`** — new `foldCount` state + `isEagerCard(card)` + `cardHxTrigger(card, sseEnabled)` helpers. Above-fold cards get `hx-trigger="load"`; below-fold cards get `"intersect once"`. SSE triggers are appended when `sseEnabled=true`.
+- **`src/dazzle_ui/templates/workspace/_content.html`** — static `hx-trigger="load, intersect once..."` replaced with Alpine-bound `:hx-trigger="cardHxTrigger(card, ...)"`.
+
+### Changed
+- **Workspace region double-fetch eliminated**. Each region fetches exactly once on first paint.
+- **Tests**: `test_dashboard_builder_triggers.py` adds source-regression tests for the new helpers; `test_workspace_routes.py` updated to verify the dynamic `:hx-trigger` binding + signalling of `sseEnabled`.
+
+### Agent Guidance
+- **Trigger selection is JS-side now**. If you add a new region type or change fold behaviour, update `cardHxTrigger` in `dashboard-builder.js` — don't revert to static `hx-trigger` in templates or the double-fetch returns.
+- **Legacy workspaces without `fold_count` in the data island default to `isEagerCard → true`** (all cards use `load`). This preserves the pre-fix behaviour for any stored layout JSON that predates #864.
+
 ## [0.61.1] - 2026-04-24
 
 Patch bump. Closes #866 — dashboard builder rendered in degraded state when Alpine's `alpine:init` didn't fire (HTMX morph race, layout-JSON parse error, etc.). Pure template fix: `x-cloak` added to five status-label spans inside the save button in `_content.html` and the "No widgets available" div in `_card_picker.html`. The existing `[x-cloak] { display: none }` rule in `dazzle-layer.css` hides these elements until Alpine takes control; failed init now produces a blank control panel rather than five stacked status labels + ghost catalog.

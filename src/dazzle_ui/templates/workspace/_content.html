@@ -194,21 +194,18 @@
           </div>
 
           {# Card body — HTMX-loaded region content.
-             hx-trigger "load" fires as soon as HTMX processes the
-             element (works for both initial page load AND dynamic
-             addCard). The original "intersect once" trigger only
-             fires on viewport-entry events and never triggers for
-             an element that's already in-viewport at observation
-             time (the #798 symptom). We keep `intersect once` as a
-             fallback for cards that scroll into view from off-
-             screen, but "load" is the primary trigger now.
-             See issues #798 and the v0.57.58/59 interaction-walk
-             diagnosis that showed the JS-level imperative kickoff
-             wasn't reliable across Alpine + x-for re-renders. #}
+             v0.61.1 (#864): above-fold cards use hx-trigger="load" only;
+             below-fold cards use "intersect once" only. Combining both
+             previously double-fetched every above-fold region on first
+             paint (3-4s apart, ~20% wasted backend work per login).
+             See dashboard-builder.js::cardHxTrigger for the decision.
+             #798 preserved: eager "load" still handles cards already
+             in-viewport at observation time (IntersectionObserver fires
+             for NEW intersections only). #}
           <div class="px-4 pb-4"
                :id="'region-' + card.region + '-' + card.id"
                :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
-               hx-trigger="load, intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+               :hx-trigger="cardHxTrigger(card, {{ 'true' if workspace.sse_url else 'false' }})"
                hx-swap="innerHTML">
             {# Skeleton loading state #}
             <div class="space-y-3 py-2 animate-pulse">

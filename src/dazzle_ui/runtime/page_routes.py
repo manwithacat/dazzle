@@ -1323,6 +1323,11 @@ async def _workspace_handler(
             "cards": cards_for_json,
             "catalog": catalog,
             "workspace_name": render_ws_ctx.name,
+            # v0.61.1 (#864): the number of above-fold cards. Eager load
+            # hx-trigger="load" fires for these; below-fold cards use
+            # "intersect once" only. Splitting the triggers avoids the
+            # double-fetch every region suffered when both were combined.
+            "fold_count": getattr(render_ws_ctx, "fold_count", 0) or 0,
         }
     )
 

@@ -13,6 +13,11 @@ document.addEventListener("alpine:init", () => {
     cards: [],
     catalog: [],
     workspaceName: "",
+    // v0.61.1 (#864): count of above-fold cards hydrated from the layout
+    // JSON. isEager() uses it to split hx-trigger between "load" (above
+    // fold) and "intersect once" (below fold) — previously both triggers
+    // fired for every card, doubling backend work on first paint.
+    foldCount: 0,
 
     // ── UI state ──
     showPicker: false,
@@ -71,6 +76,9 @@ document.addEventListener("alpine:init", () => {
         this.cards = data.cards || [];
         this.catalog = data.catalog || [];
         this.workspaceName = data.workspace_name || "";
+        this.foldCount = Number.isInteger(data.fold_count)
+          ? data.fold_count
+          : 0;
       } catch {
         // Leave listeners in place — the user can still drag / keyboard-
         // edit a stale layout even if the JSON payload was malformed.
@@ -676,6 +684,33 @@ document.addEventListener("alpine:init", () => {
     _colSpanClass(span) {
       const s = Math.min(Math.max(span, 3), 12);
       return "grid-column: span " + s + " / span " + s;
+    },
+
+    /**
+     * v0.61.1 (#864): return True when `card` is above the fold and
+     * should use the eager `hx-trigger="load"`. Below-fold cards use
+     * `intersect once` only — combining the two triggers previously
+     * double-fetched every above-fold region on first paint.
+     *
+     * row_order is the authoritative fold position (index in the sorted
+     * card list). Falls back to True when foldCount is 0 to preserve
+     * the pre-fix behaviour for legacy workspaces.
+     */
+    isEagerCard(card) {
+      if (!this.foldCount) return true;
+      return (card.row_order ?? 0) < this.foldCount;
+    },
+
+    /**
+     * Build the hx-trigger expression for one card (#864). SSE triggers
+     * always append; the load/intersect split is the only decision.
+     */
+    cardHxTrigger(card, sseEnabled) {
+      const base = this.isEagerCard(card) ? "load" : "intersect once";
+      if (!sseEnabled) return base;
+      return (
+        base + ", sse:entity.created, sse:entity.updated, sse:entity.deleted"
+      );
     },
 
     _announce(message) {

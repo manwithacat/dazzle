@@ -788,23 +788,31 @@ class TestWorkspaceSSEConditional:
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert "sse-connect" not in html
         assert 'hx-ext="sse"' not in html
-        assert "sse:entity.created" not in html
+        # v0.61.1 (#864): triggers now built JS-side. Template passes
+        # `false` when SSE is disabled so cardHxTrigger skips SSE events.
+        assert "cardHxTrigger(card, false)" in html
 
     def test_sse_attributes_present_when_sse_url_set(self) -> None:
         ws = self._make_workspace_ctx(sse_url="/_ops/sse/events")
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert 'sse-connect="/_ops/sse/events"' in html
         assert 'hx-ext="sse"' in html
-        assert "sse:entity.created" in html
+        # v0.61.1 (#864): SSE event names are appended inside
+        # cardHxTrigger(card, true) in dashboard-builder.js — the template
+        # now just flags sseEnabled=true. The JS-side unit tests cover
+        # that the three sse:entity.* triggers are appended.
+        assert "cardHxTrigger(card, true)" in html
 
     def test_regions_still_load_without_sse(self) -> None:
         """Regions should still have hx-get and a non-SSE trigger even without SSE."""
         ws = self._make_workspace_ctx(sse_url="")
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert "hx-get=" in html
-        # Dashboard rebuild uses intersect-based lazy loading instead of load trigger
-        assert "hx-trigger=" in html
-        assert "intersect" in html
+        # v0.61.1 (#864): hx-trigger is now dynamic via :hx-trigger Alpine
+        # binding resolved to cardHxTrigger(card, ...). The helper returns
+        # "load" for above-fold cards and "intersect once" for below-fold.
+        assert ":hx-trigger=" in html
+        assert "cardHxTrigger(card, false)" in html
 
 
 # ---------------------------------------------------------------------------
@@ -5877,24 +5885,31 @@ class TestWorkspaceShellComposition:
         html_off = self._render(sse_url="")
         assert 'hx-ext="sse"' not in html_off
         assert "sse-connect=" not in html_off
+        # v0.61.1 (#864): cardHxTrigger receives sseEnabled=false
+        assert "cardHxTrigger(card, false)" in html_off
 
         html_on = self._render(sse_url="/_ops/sse/events")
         assert 'hx-ext="sse"' in html_on
         assert 'sse-connect="/_ops/sse/events"' in html_on
-        # Card body also listens for entity events when SSE is active
-        assert "sse:entity.created" in html_on
+        # v0.61.1 (#864): SSE triggers now appended JS-side by
+        # cardHxTrigger(card, true) in dashboard-builder.js — the
+        # template just signals sseEnabled=true. JS unit tests verify
+        # the three sse:entity.* triggers are appended.
+        assert "cardHxTrigger(card, true)" in html_on
 
     # Gate 12
-    def test_card_body_hx_trigger_includes_load(self) -> None:
-        """#798 regression guard: 'load' must be the primary trigger."""
-        html = self._render()
-        # The x-for template body has the card content <div> with hx-trigger
-        import re
+    def test_card_body_hx_trigger_dynamic(self) -> None:
+        """v0.61.1 (#864): triggers are now built dynamically in JS.
 
-        triggers = re.findall(r'hx-trigger="([^"]+)"', html)
-        assert any(t.startswith("load, intersect once") for t in triggers), (
-            f"no hx-trigger starting with 'load, intersect once' — got: {triggers}"
-        )
+        Above-fold cards get "load", below-fold get "intersect once" —
+        combining both previously double-fetched every above-fold region.
+        The #798 regression guard (load is primary for above-fold cards)
+        is enforced by dashboard-builder.js::isEagerCard + cardHxTrigger.
+        """
+        html = self._render()
+        # The :hx-trigger (Alpine-bound) attribute is what drives region loads.
+        assert ":hx-trigger=" in html
+        assert "cardHxTrigger(card" in html
 
     # Gate 13
     def test_card_focus_ring_on_wrapper_not_article(self) -> None:
