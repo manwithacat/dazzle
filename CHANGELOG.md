@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0rc5] - 2026-04-24
+
+Phase 5 of the **Analytics, Consent & Privacy** design: server-side analytics sinks via the existing event bus. Business events (audit, state transitions, completed orders) can now forward to Google Analytics 4's Measurement Protocol from server code — ad-blocker-proof, PII-safe, and independent of client JS / consent state for business-critical signals.
+
+### Added
+
+- **`AnalyticsSink` protocol** + shared types (`AnalyticsEvent`, `TenantContext`, `SinkMetrics`, `SinkResult`) in `dazzle.compliance.analytics.sinks.base`. Sinks implement `async emit(event, tenant) -> SinkResult` and track success/failure/drop counters.
+
+- **`GA4MeasurementProtocolSink`** — posts to `https://www.google-analytics.com/mp/collect`. API secret from `DAZZLE_GA4_API_SECRET` env (never from DSL or TOML). Retries with exponential backoff on 5xx/network; drops on 4xx (bad event shape won't be fixed by retry). Missing secret or measurement_id → logs + returns `ok=False`, no HTTP call.
+
+- **`analytics.server_side:` DSL subsection** — declare the sink + default measurement ID + bus topic globs:
+  ```dsl
+  analytics:
+    server_side:
+      sink: ga4_measurement_protocol
+      measurement_id: "G-XXXXXX"
+      bus_topics: [audit.*, transition.**, order.completed]
+  ```
+  Parser validates required `sink:`; link-time validation deferred to bridge construction.
+
+- **`AnalyticsServerSideSpec`** IR type. Extends `AnalyticsSpec` with optional `server_side` field.
+
+- **`AnalyticsBridge`** — routes bus events to sinks. Matches `event_type` against topic globs (single `*` = one segment, `**` = any remainder), applies PII stripping via `strip_pii()` when entity schema is known, invokes sink emission. Honors `analytics_globally_disabled()` (dev/trial/qa suppression from Phase 4). Errors never propagate — they surface via metrics + logs only.
+
+- **Sink registry** — `FRAMEWORK_SINKS` maps sink name → factory. GA4 MP ships as first entry. Adding a sink is one factory + one registry entry.
+
+- **`match_topic_glob()`** public helper — usable by downstream consumers who need routing logic without the full bridge.
+
+- **27 new tests** (`tests/unit/test_analytics_sinks.py`) covering sink retry/drop behaviour, bridge topic matching, PII-safe payload coercion, disable-gate integration, and spec → bridge resolution.
+
+### Agent Guidance
+
+- **GA4 API secret must come from env.** `DAZZLE_GA4_API_SECRET` is a runtime secret. The DSL / TOML intentionally cannot declare it — committing secrets is the bug this avoids.
+- **Server-side sinks run ALONGSIDE client-side providers.** They capture what GTM can't (ad-blocked requests, non-JS clients, state transitions that happen outside a browser). They don't replace the client layer — they complement it.
+- **Bridge is best-effort.** Sink errors never fail the publisher. Use `sink.metrics.failure_total` to monitor delivery; missing events = reliability issue, not correctness issue.
+- **Topic globs aren't auto-expanded to bus subscriptions.** `start_bridge_consumer()` skips wildcard topics — expand them in caller code against your known topic catalog. Glob expansion against the full event catalog is a future extension.
+- **Tenant resolver is pluggable.** Pass a callable that maps envelope → TenantContext if you need per-tenant measurement IDs. Phase 6 will wire this via the tenant entity automatically.
+- **entity_specs_by_name enables PII stripping.** Pass the entity spec map from AppSpec to get automatic `pii()`-field redaction on bridge payloads. Without it, payloads pass through untouched (safer for audit/compliance topics that are already PII-aware).
+
 ## [0.61.0rc4] - 2026-04-24
 
 Phase 4 of the **Analytics, Consent & Privacy** design: client-side event vocabulary, htmx integration, template-layer `data-dz-*` attribute injection, and dev/trial/qa disable semantics. The framework now auto-emits structured events onto `window.dataLayer` — consumed identically by GTM, Plausible, PostHog, or any bus-aware provider.

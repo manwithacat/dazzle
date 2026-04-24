@@ -6,6 +6,12 @@ filtering utilities that downstream phases (consent, providers, privacy-page
 generation) depend on.
 """
 
+from .bridge import (
+    AnalyticsBridge,
+    build_bridge_from_spec,
+    match_topic_glob,
+    start_bridge_consumer,
+)
 from .consent import (
     CONSENT_COOKIE_MAX_AGE_SECONDS,
     CONSENT_COOKIE_NAME,
@@ -50,6 +56,17 @@ from .registry import (
     merge_app_subprocessors,
 )
 from .render import analytics_globally_disabled, resolve_active_providers
+from .sinks import (
+    FRAMEWORK_SINKS,
+    AnalyticsEvent,
+    AnalyticsSink,
+    GA4MeasurementProtocolSink,
+    SinkMetrics,
+    SinkResult,
+    TenantContext,
+    get_sink_factory,
+    list_sink_names,
+)
 
 __all__ = [
     "CONSENT_COOKIE_MAX_AGE_SECONDS",
@@ -80,7 +97,20 @@ __all__ = [
     "VOCABULARY_VERSION",
     "get_event_schema",
     "list_event_names",
+    "AnalyticsBridge",
+    "AnalyticsEvent",
+    "AnalyticsSink",
+    "build_bridge_from_spec",
+    "match_topic_glob",
+    "start_bridge_consumer",
+    "FRAMEWORK_SINKS",
+    "GA4MeasurementProtocolSink",
+    "SinkMetrics",
+    "SinkResult",
+    "TenantContext",
     "analytics_globally_disabled",
+    "get_sink_factory",
+    "list_sink_names",
     "parse_consent_cookie",
     "resolve_active_providers",
     "strip_pii",

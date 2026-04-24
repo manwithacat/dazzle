@@ -53,6 +53,7 @@ class AnalyticsParserMixin:
 
         providers: list[ir.AnalyticsProviderInstance] = []
         consent: ir.AnalyticsConsentSpec | None = None
+        server_side: ir.AnalyticsServerSideSpec | None = None
 
         if not self.match(TokenType.INDENT):
             return ir.AnalyticsSpec()
@@ -73,9 +74,14 @@ class AnalyticsParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 consent = self._parse_consent_block()
+            elif key == "server_side":
+                self.advance()
+                self.expect(TokenType.COLON)
+                server_side = self._parse_server_side_block(key_tok.line, key_tok.column)
             else:
                 raise make_parse_error(
-                    f"Unknown analytics key `{key}`. Expected `providers` or `consent`.",
+                    f"Unknown analytics key `{key}`. "
+                    f"Expected `providers`, `consent`, or `server_side`.",
                     self.file,
                     key_tok.line,
                     key_tok.column,
@@ -85,7 +91,11 @@ class AnalyticsParserMixin:
         if self.match(TokenType.DEDENT):
             self.advance()
 
-        return ir.AnalyticsSpec(providers=providers, consent=consent)
+        return ir.AnalyticsSpec(
+            providers=providers,
+            consent=consent,
+            server_side=server_side,
+        )
 
     def _parse_providers_block(self) -> list[ir.AnalyticsProviderInstance]:
         """Parse an indented providers map:
@@ -167,6 +177,120 @@ class AnalyticsParserMixin:
         if self.match(TokenType.DEDENT):
             self.advance()
         return params
+
+    def _parse_server_side_block(
+        self,
+        block_line: int,
+        block_col: int,
+    ) -> ir.AnalyticsServerSideSpec:
+        """Parse the server_side: subsection.
+
+        Keys:
+            sink:             required — name of a registered AnalyticsSink
+            measurement_id:   optional — provider default ID
+            bus_topics:       optional — list of topic globs to subscribe to
+        """
+        self.skip_newlines()
+        sink: str | None = None
+        measurement_id: str | None = None
+        bus_topics: list[str] = []
+        seen_keys: set[str] = set()
+
+        if not self.match(TokenType.INDENT):
+            raise make_parse_error(
+                "Empty `server_side:` block — must declare at least `sink:`.",
+                self.file,
+                block_line,
+                block_col,
+            )
+
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT, TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT, TokenType.EOF):
+                break
+
+            key_tok = self.current_token()
+            key = str(key_tok.value)
+            if key in seen_keys:
+                raise make_parse_error(
+                    f"Duplicate server_side key `{key}`.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            if key not in ("sink", "measurement_id", "bus_topics"):
+                raise make_parse_error(
+                    f"Unknown server_side key `{key}`. "
+                    f"Expected `sink`, `measurement_id`, or `bus_topics`.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            seen_keys.add(key)
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "bus_topics":
+                bus_topics = self._parse_topic_glob_list()
+            else:
+                val_tok = self.current_token()
+                value = str(val_tok.value)
+                self.advance()
+                if key == "sink":
+                    sink = value
+                else:
+                    measurement_id = value
+            self.skip_newlines()
+
+        if self.match(TokenType.DEDENT):
+            self.advance()
+
+        if sink is None:
+            raise make_parse_error(
+                "`server_side:` block missing required `sink:` key.",
+                self.file,
+                block_line,
+                block_col,
+            )
+        return ir.AnalyticsServerSideSpec(
+            sink=sink,
+            measurement_id=measurement_id,
+            bus_topics=bus_topics,
+        )
+
+    def _parse_topic_glob_list(self) -> list[str]:
+        """Parse a bracket list of topic globs.
+
+        Globs accept alphanumerics, underscore, dot, and `*`. The parser
+        concatenates tokens so `audit.*` / `transition.*.created` parse
+        cleanly even though the lexer splits them.
+        """
+        topics: list[str] = []
+        if not self.match(TokenType.LBRACKET):
+            tok = self.current_token()
+            self.advance()
+            return [str(tok.value)]
+
+        self.advance()  # consume '['
+        while not self.match(TokenType.RBRACKET):
+            tok = self.current_token()
+            value = str(tok.value)
+            self.advance()
+            # Stitch subsequent DOT + identifier / STAR tokens into one glob.
+            while self.match(TokenType.DOT) or self.match(TokenType.STAR):
+                piece = self.advance().value
+                value = f"{value}{piece}"
+                # After a dot, the next token is usually an identifier/star.
+                if value.endswith("."):
+                    next_tok = self.current_token()
+                    value = f"{value}{next_tok.value}"
+                    self.advance()
+            topics.append(value)
+            if self.match(TokenType.COMMA):
+                self.advance()
+        self.expect(TokenType.RBRACKET)
+        return topics
 
     def _parse_consent_block(self) -> ir.AnalyticsConsentSpec:
         """Parse the consent: subsection."""

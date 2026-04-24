@@ -47,10 +47,38 @@ class AnalyticsConsentSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class AnalyticsServerSideSpec(BaseModel):
+    """DSL-declared server-side sink wiring (v0.61.0 Phase 5).
+
+    Example:
+
+        analytics:
+          server_side:
+            sink: ga4_measurement_protocol
+            measurement_id: "G-XXXXXX"
+            bus_topics: [audit.*, transition.*, order.completed]
+
+    Attributes:
+        sink: Name of a registered AnalyticsSink (see sinks registry).
+        measurement_id: Provider-specific default ID (GA4 property, etc.).
+            Can be overridden per-tenant in Phase 6.
+        bus_topics: Topic globs the sink subscribes to. ``*`` matches one
+            path segment; ``**`` matches any remainder. ``audit.*``
+            matches ``audit.order``, not ``audit.order.created``.
+    """
+
+    sink: str
+    measurement_id: str | None = None
+    bus_topics: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class AnalyticsSpec(BaseModel):
     """Top-level `analytics:` block declaration."""
 
     providers: list[AnalyticsProviderInstance] = Field(default_factory=list)
     consent: AnalyticsConsentSpec | None = None
+    server_side: AnalyticsServerSideSpec | None = None
 
     model_config = ConfigDict(frozen=True)

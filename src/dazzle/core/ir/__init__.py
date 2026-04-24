@@ -12,10 +12,11 @@ All types are re-exported from this package for backward compatibility.
 # Fields
 # App Specification
 # Approvals (v0.25.0)
-# Analytics (v0.61.0 Phase 3)
+# Analytics (v0.61.0 Phase 3 + Phase 5)
 from .analytics import (
     AnalyticsConsentSpec,
     AnalyticsProviderInstance,
+    AnalyticsServerSideSpec,
     AnalyticsSpec,
 )
 from .approvals import (
@@ -795,9 +796,10 @@ __all__ = [
     "DataCategory",
     "LegalBasis",
     "SubprocessorSpec",
-    # Analytics (v0.61.0 Phase 3)
+    # Analytics (v0.61.0 Phase 3 + Phase 5)
     "AnalyticsConsentSpec",
     "AnalyticsProviderInstance",
+    "AnalyticsServerSideSpec",
     "AnalyticsSpec",
     # Conditions
     "ComparisonOperator",
