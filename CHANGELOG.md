@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.12] - 2026-04-24
+
+Patch bump. Closes #868 — the consent banner served correctly after #867, but every button click (Accept all / Reject all / Save choices) 403'd on `POST /dz/consent` with `{"detail":"CSRF token missing or invalid"}`. Anonymous marketing-page visitors don't carry a `dazzle_csrf` cookie (the cookie is issued on first app-page visit, not on the site template), and `site_base.html` doesn't render a `<meta name="csrf-token">` tag, so there's no client-side token to forward. The banner rendered, looked interactive, and did nothing.
+
+### Fixed
+- **`src/dazzle_back/runtime/csrf.py`** — added `/dz/consent`, `/dz/consent/banner`, `/dz/consent/state` to `CSRFConfig.exempt_paths`. The endpoints are idempotent cookie-setters with no authority-escalating side effects; same-origin is still enforced by the `credentials: "same-origin"` policy in `dz-consent.js`. This matches the existing exemption pattern for `/feedbackreports` (also issued from anon pages).
+
+### Tests
+- **`test_consent_csrf_exempt.py`** — 5 tests pin the contract: default `CSRFConfig` lists all three paths as exempt, `POST /dz/consent` without any CSRF token returns 204 (not 403), `GET /dz/consent/state` returns 200, `GET /dz/consent/banner` returns 200/204, and a control test confirms a *non-exempt* POST still 403s (sanity: middleware not globally disabled).
+
+### Agent Guidance
+- **CSRF exemption is the right pattern for consent-style endpoints**. They're called before a user has any authenticated session, can't rely on the `dazzle_csrf` cookie being issued, and have no CSRF-sensitive side effects (the consent cookie itself is set by the request, not consulted for authority). Don't try to force CSRF on this path — add the new endpoint to `CSRFConfig.exempt_paths` following the pattern on lines 36–55.
+- **When building a new anon-safe API endpoint**: either (1) mount it under one of the `exempt_path_prefixes` (e.g. `/auth/`, `/webhooks/`) or (2) add its exact path to `exempt_paths`. Don't try to thread a CSRF token through marketing-page JS — there's no infrastructure for it and the token wouldn't be meaningful without a session.
+
 ## [0.61.11] - 2026-04-24
 
 Patch bump. Closes #867 — the v0.61.0 consent banner + analytics JS files were packaged under `src/dazzle_ui/static/js/`, but `site_base.html` references them via the `static_url` filter which resolves to `/static/*` served from `src/dazzle_ui/runtime/static/`. Every app declaring an `analytics:` block 404'd on `dz-consent.js` and `dz-analytics.js`, leaving the consent banner rendered but its buttons inert (no JS attached ⇒ clicks did nothing ⇒ GTM never initialised). Worse than no banner at all for visitors outside EEA who'd otherwise auto-grant.

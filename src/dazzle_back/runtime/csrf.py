@@ -34,7 +34,23 @@ class CSRFConfig:
     header_name: str = "X-CSRF-Token"
     token_length: int = 32
     exempt_paths: list[str] = field(
-        default_factory=lambda: ["/health", "/docs", "/openapi.json", "/redoc", "/feedbackreports"]
+        default_factory=lambda: [
+            "/health",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/feedbackreports",
+            # v0.61.12 (#868): consent endpoints are idempotent cookie-setters
+            # invoked from anon visitors on marketing pages that don't carry
+            # a CSRF token (no meta tag, no dazzle_csrf cookie issued to
+            # unauthenticated sessions). Blocking them at CSRF makes the
+            # banner unusable — buttons click, fetch 403s, banner never
+            # dismisses. Same-origin is enforced by the fetch credentials
+            # policy on the client side.
+            "/dz/consent",
+            "/dz/consent/banner",
+            "/dz/consent/state",
+        ]
     )
     exempt_path_prefixes: list[str] = field(
         default_factory=lambda: [
