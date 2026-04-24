@@ -526,32 +526,52 @@ entity Task "Task":
 # =============================================================================
 
 
+def _csp_tokens(csp: str, directive: str) -> list[str]:
+    """Return the whitespace-separated token list for a CSP directive.
+
+    Parsing into tokens (rather than substring-matching the raw header) keeps
+    membership tests exact — required to avoid CodeQL's
+    py/incomplete-url-substring-sanitization false positive on `"url" in csp`.
+    """
+    for part in csp.split("; "):
+        name, _, rest = part.partition(" ")
+        if name == directive:
+            return rest.split()
+    return []
+
+
+def _csp_all_tokens(csp: str) -> list[str]:
+    tokens: list[str] = []
+    for part in csp.split("; "):
+        _, _, rest = part.partition(" ")
+        tokens.extend(rest.split())
+    return tokens
+
+
 class TestCSPDefaults:
     """Default CSP directives must align with what the bundled shells load."""
 
     def test_defaults_allow_google_fonts(self) -> None:
         from dazzle_back.runtime.security_middleware import _build_csp_header
 
-        csp = _build_csp_header(None)
-        assert "https://fonts.googleapis.com" in csp
-        assert "https://fonts.gstatic.com" in csp
+        tokens = _csp_all_tokens(_build_csp_header(None))
+        assert "https://fonts.googleapis.com" in tokens
+        assert "https://fonts.gstatic.com" in tokens
 
     def test_defaults_allow_jsdelivr_for_mermaid(self) -> None:
         """diagram.html lazy-loads mermaid from jsdelivr — CSP must permit it."""
         from dazzle_back.runtime.security_middleware import _build_csp_header
 
         csp = _build_csp_header(None)
-        assert "https://cdn.jsdelivr.net" in csp
-        # jsdelivr origin must appear in script-src specifically.
-        directives = {d.split(" ", 1)[0]: d for d in csp.split("; ")}
-        assert "cdn.jsdelivr.net" in directives["script-src"]
+        script_src = _csp_tokens(csp, "script-src")
+        assert "https://cdn.jsdelivr.net" in script_src
 
     def test_defaults_do_not_allow_tailwind_cdn(self) -> None:
         """Post-#832, cdn.tailwindcss.com must NOT be in the defaults."""
         from dazzle_back.runtime.security_middleware import _build_csp_header
 
-        csp = _build_csp_header(None)
-        assert "cdn.tailwindcss.com" not in csp
+        tokens = _csp_all_tokens(_build_csp_header(None))
+        assert not any("cdn.tailwindcss.com" in t for t in tokens)
 
     def test_custom_directives_override_defaults(self) -> None:
         from dazzle_back.runtime.security_middleware import _build_csp_header

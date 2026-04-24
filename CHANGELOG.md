@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.8] - 2026-04-24
+
+Patch bump. Closes four open CodeQL alerts (#63, #64, #65, #66) — all `py/incomplete-url-substring-sanitization` false positives in `tests/unit/test_security.py`. The tests verify CSP header contents; CodeQL couldn't distinguish that from URL sanitisation because the pattern `"literal-url" in some_string` is the same shape either way.
+
+### Fixed
+- **`tests/unit/test_security.py`** — CSP assertions now parse the header into per-directive token lists (`_csp_tokens`, `_csp_all_tokens`) and check exact token membership instead of substring-matching the raw header. Same semantic coverage, no false positive. No production code changed.
+
 ## [0.60.7] - 2026-04-23
 
 Patch bump. Unblocks the `type-check` CI job — replaces a boolean flag `_gb_is_bucket` with direct `isinstance(group_by, BucketRef)` so mypy narrows the union type correctly. Same behaviour, mypy-friendlier. Introduced during cycle 28 time-bucketing work; v0.60.6 cleared pytest + docs but mypy was still failing on this one line.
