@@ -1,7 +1,10 @@
 {# Detail view component - displays entity fields as a definition list #}
 {# Contract: ~/.claude/skills/ux-architect/components/detail-view.md (UX-029) #}
 {% if detail %}
-<div class="{% if detail.related_groups %}max-w-5xl{% else %}max-w-3xl{% endif %}" data-dazzle-entity="{{ detail.entity_name }}">
+<div class="{% if detail.related_groups %}max-w-5xl{% else %}max-w-3xl{% endif %}"
+     data-dazzle-entity="{{ detail.entity_name }}"
+     data-dz-entity="{{ detail.entity_name }}"
+     {% if detail.entity_id %}data-dz-entity-id="{{ detail.entity_id }}"{% endif %}>
   {# Header with actions #}
   {% block detail_header %}
   <div class="flex items-center justify-between mb-6">
@@ -15,11 +18,15 @@
       {% if detail.edit_url %}
       <a href="{{ detail.edit_url }}"
          class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-         data-dazzle-action="{{ detail.entity_name }}.edit">Edit</a>
+         data-dazzle-action="{{ detail.entity_name }}.edit"
+         data-dz-action="edit"
+         data-dz-entity="{{ detail.entity_name }}">Edit</a>
       {% endif %}
       {% if detail.delete_url %}
       <button class="h-8 px-3 rounded-[4px] border border-[hsl(var(--destructive))] text-[13px] font-medium text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
               data-dazzle-action="{{ detail.entity_name }}.delete"
+              data-dz-action="delete"
+              data-dz-entity="{{ detail.entity_name }}"
               hx-delete="{{ detail.delete_url }}"
               hx-confirm="Delete this {{ detail.entity_name | lower }}?"
               hx-target="body"
@@ -38,6 +45,8 @@
     {% for transition in detail.transitions %}
     <button class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
             data-dazzle-action="{{ detail.entity_name }}.transition.{{ transition.to_state }}"
+            data-dz-action="transition.{{ transition.to_state }}"
+            data-dz-entity="{{ detail.entity_name }}"
             hx-put="{{ transition.api_url }}"
             hx-vals='{"{{ detail.status_field }}": "{{ transition.to_state }}"}'
             hx-ext="json-enc"

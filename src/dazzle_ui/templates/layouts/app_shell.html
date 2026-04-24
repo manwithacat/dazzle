@@ -75,9 +75,11 @@
     </div>
     {% endblock navbar %}
 
-    {# Page content #}
+    {# Page content — data-dz-* attrs feed the v0.61.0 analytics bus #}
     <main id="main-content" class="flex-1 p-4 lg:p-6" tabindex="-1"
-          data-dazzle-view="{{ view_name | default('') }}">
+          data-dazzle-view="{{ view_name | default('') }}"
+          {% if surface_name %}data-dz-surface="{{ surface_name }}"{% endif %}
+          {% if workspace_name %}data-dz-workspace="{{ workspace_name }}"{% endif %}>
       {# Surface-level purpose subtitle (UX-048). Rendered above the
          content block as a muted intro line. Per-persona override
          resolved in page_routes._render_response. #}

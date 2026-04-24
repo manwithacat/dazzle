@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0rc4] - 2026-04-24
+
+Phase 4 of the **Analytics, Consent & Privacy** design: client-side event vocabulary, htmx integration, template-layer `data-dz-*` attribute injection, and dev/trial/qa disable semantics. The framework now auto-emits structured events onto `window.dataLayer` — consumed identically by GTM, Plausible, PostHog, or any bus-aware provider.
+
+### Added
+
+- **Event vocabulary v1** (`dz/v1`) pinned in `dazzle.compliance.analytics.event_vocabulary`. Six events: `dz_page_view`, `dz_action`, `dz_transition`, `dz_form_submit`, `dz_search`, `dz_api_error`. Every event carries `dz_schema_version="1"` plus optional `dz_tenant`. Parameter names are snake_case, value types are primitive, string values clamp to 100 chars (URLs 255). Drift test `tests/unit/test_event_vocabulary_v1.py` pins the schema so changes are explicit; additive-only rule documented.
+
+- **`dz-analytics.js`** — framework-owned client bus. Hooks `htmx:afterSwap` for page views, click delegation for `[data-dz-action]`, `htmx:afterRequest` for form submits + API errors, debounced input for `[data-dz-search]`. PII-safe: reads from `data-dz-*` attributes only, never from input values. Loaded automatically when `active_analytics_providers` is non-empty.
+
+- **Template `data-dz-*` attribute injection** — `app_shell.html` main element emits `data-dz-surface` + `data-dz-workspace`; body tag emits `data-dz-tenant` + `data-dz-persona-class`; `detail_view.html` action/edit/delete/transition buttons emit `data-dz-action` + `data-dz-entity`. Authors never write these by hand — they fall out of the DSL compilation.
+
+- **Disable semantics** — `analytics_globally_disabled()` respects `DAZZLE_ENV={dev,development,test}` and `DAZZLE_MODE={trial,qa}` to suppress emission. `resolve_active_providers()` returns `[]` under these conditions regardless of DSL declaration. Override via `DAZZLE_ANALYTICS_FORCE=1` for framework devs exercising the stack in dev.
+
+### Changed
+
+- **`SitePageContext`** doesn't change further — the banner + provider injection from Phase 2/3 already drives the JS bus load.
+- **`site_base.html`** loads `js/dz-analytics.js` alongside `js/dz-consent.js` when providers are active. Both gated on the same condition so users who opt out entirely incur no JS weight.
+
+### Agent Guidance
+
+- **The event vocabulary is a public contract.** If you need a new event, add an `EventSchema` to `event_vocabulary.py`, update the drift test's EXPECTED_* constants, and add a CHANGELOG entry. Never rename an existing event or remove a parameter without cutting a new vocabulary version.
+- **PII stays server-side.** The JS bus reads from `data-dz-*` attributes only. If a surface needs to emit entity IDs, the DSL author adds `analytics: include_entity_id=true` to the surface (future Phase 4b work) — the *template* decides what lands in `data-dz-entity-id`.
+- **Trials never pollute real GA.** `dazzle qa trial` sets `DAZZLE_MODE=trial` (will — Phase 4b), which routes through the disable gate. If you see analytics fire during a trial run, that's a bug — check the env.
+- **Debug via dataLayer.** `window.dataLayer` is the authoritative event log; there is no separate framework-proprietary buffer. Inspect in DevTools to verify events fire as expected.
+- **`data-dazzle-*` attrs predate Phase 4.** Detail view already had `data-dazzle-action` / `data-dazzle-entity`. Phase 4 adds `data-dz-*` alongside — both remain until a future cleanup cycle. Downstream consumers reading `data-dazzle-*` are not affected.
+
 ## [0.61.0rc3] - 2026-04-24
 
 Phase 3 of the **Analytics, Consent & Privacy** design: provider abstraction with GTM and Plausible as the first two framework-shipped providers. Authors declare `analytics:` in the DSL with per-provider parameters; the framework resolves active providers per request (consent-gated), unions their CSP origins, and renders their script snippets into `<head>` / `<body>` via Jinja. Cross-border transfer guidance surfaces automatically through the existing subprocessor registry.

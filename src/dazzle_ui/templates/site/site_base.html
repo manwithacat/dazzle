@@ -27,7 +27,10 @@
   {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
-<body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}" {% block body_attrs %}{% endblock %}>
+<body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}"
+  {% if tenant_slug %}data-dz-tenant="{{ tenant_slug }}"{% endif %}
+  {% if persona_class %}data-dz-persona-class="{{ persona_class }}"{% endif %}
+  {% block body_attrs %}{% endblock %}>
   {% if active_analytics_providers is defined and active_analytics_providers %}
     {% include "site/includes/analytics/body_scripts.html" %}
   {% endif %}
@@ -38,6 +41,9 @@
   <script src="/site.js"></script>
   {% if consent is defined and consent %}
   <script src="{{ 'js/dz-consent.js' | static_url }}"></script>
+  {% endif %}
+  {% if active_analytics_providers is defined and active_analytics_providers %}
+  <script src="{{ 'js/dz-analytics.js' | static_url }}"></script>
   {% endif %}
   {% block scripts_extra %}{% endblock %}
 </body>

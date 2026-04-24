@@ -23,6 +23,7 @@ Returns a list of dicts shaped for template iteration (see
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from dazzle.compliance.analytics.consent import ConsentState
@@ -37,6 +38,35 @@ logger = logging.getLogger(__name__)
 # Providers that must load with deny-by-default consent so Consent Mode v2
 # can signal the container when the user later grants. Listed by `name`.
 _CONSENT_MODE_BOOTSTRAP_PROVIDERS: frozenset[str] = frozenset({"gtm"})
+
+# Environment/mode values that hard-disable analytics. Overridable only
+# by the `DAZZLE_ANALYTICS_FORCE=1` env var, which is intended for use by
+# framework developers debugging the analytics stack itself.
+_DISABLED_ENVS: frozenset[str] = frozenset({"dev", "development", "test"})
+_DISABLED_MODES: frozenset[str] = frozenset({"trial", "qa"})
+
+
+def analytics_globally_disabled() -> bool:
+    """Return True when analytics must not emit on this process.
+
+    Rules (evaluated in order):
+        1. If ``DAZZLE_ANALYTICS_FORCE=1``, analytics runs regardless.
+           Used by framework devs to exercise the stack in dev.
+        2. If ``DAZZLE_ENV`` is in {dev, development, test}, disable.
+        3. If ``DAZZLE_MODE`` is in {trial, qa}, disable.
+        4. Otherwise enable.
+
+    Documented in the design spec §2.4 (dev/trial/qa disable semantics).
+    """
+    if os.environ.get("DAZZLE_ANALYTICS_FORCE") == "1":
+        return False
+    env = (os.environ.get("DAZZLE_ENV") or "").lower()
+    if env in _DISABLED_ENVS:
+        return True
+    mode = (os.environ.get("DAZZLE_MODE") or "").lower()
+    if mode in _DISABLED_MODES:
+        return True
+    return False
 
 
 def resolve_active_providers(
@@ -58,6 +88,15 @@ def resolve_active_providers(
         List of render dicts, ordered as declared in the DSL.
     """
     if analytics is None or not analytics.providers:
+        return []
+
+    # Global disable gate — dev/trial/qa modes never emit to real providers.
+    if analytics_globally_disabled():
+        logger.debug(
+            "Analytics providers suppressed (DAZZLE_ENV=%s, DAZZLE_MODE=%s).",
+            os.environ.get("DAZZLE_ENV"),
+            os.environ.get("DAZZLE_MODE"),
+        )
         return []
 
     granted_set = _consent_granted_categories(consent)

@@ -220,12 +220,45 @@ Adding a provider: define a `ProviderDefinition` in
 Jinja snippet templates, and update the `linked_subprocessor_name` to point
 at the matching subprocessor declaration.
 
+## Client event vocabulary (Phase 4)
+
+Dazzle auto-emits six structured events on `window.dataLayer` when analytics
+is enabled. The vocabulary is versioned (`dz/v1`); additive changes stay in
+v1, breaking changes cut a new version.
+
+| Event | Fires on | Core parameters |
+|---|---|---|
+| `dz_page_view` | htmx swap + initial load | workspace, surface |
+| `dz_action` | click on `[data-dz-action]` | action_name, entity, surface |
+| `dz_transition` | state-machine transition | entity, from_state, to_state, trigger |
+| `dz_form_submit` | form POST 2xx | form_name, entity, surface |
+| `dz_search` | filterable_table input / swap | surface, entity, result_count |
+| `dz_api_error` | htmx 4xx/5xx response | status_code, surface |
+
+Every event carries `dz_schema_version="1"` and (in multi-tenant apps)
+`dz_tenant`. Full schema in `src/dazzle/compliance/analytics/event_vocabulary.py`;
+drift is pinned by `tests/unit/test_event_vocabulary_v1.py`.
+
+### Disable semantics
+
+Analytics emission is suppressed when:
+
+- `DAZZLE_ENV` is `dev` / `development` / `test`
+- `DAZZLE_MODE` is `trial` / `qa`
+
+Override with `DAZZLE_ANALYTICS_FORCE=1` (for framework devs testing the
+stack). This keeps automated agent runs from polluting production
+analytics.
+
+### PII safety of events
+
+The JS bus reads from `data-dz-*` attributes only, never from input
+values. The server-side template layer decides what lands in those
+attributes, honouring `pii()` annotations. Entity IDs, user IDs, email
+addresses never appear in events unless a surface explicitly opts-in.
+
 ## What comes later
 
-Phase 1-3 (this release stream) ships the primitives + consent banner +
-provider abstraction. Subsequent phases:
-
-- **Phase 4** — event vocabulary + htmx integration.
 - **Phase 5** — server-side sinks via the event bus.
 - **Phase 6** — per-tenant analytics resolution.
 
