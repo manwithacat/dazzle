@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.11] - 2026-04-24
+
+Patch bump. Closes #867 — the v0.61.0 consent banner + analytics JS files were packaged under `src/dazzle_ui/static/js/`, but `site_base.html` references them via the `static_url` filter which resolves to `/static/*` served from `src/dazzle_ui/runtime/static/`. Every app declaring an `analytics:` block 404'd on `dz-consent.js` and `dz-analytics.js`, leaving the consent banner rendered but its buttons inert (no JS attached ⇒ clicks did nothing ⇒ GTM never initialised). Worse than no banner at all for visitors outside EEA who'd otherwise auto-grant.
+
+### Fixed
+- **Moved `src/dazzle_ui/static/js/dz-consent.js` and `dz-analytics.js` to `src/dazzle_ui/runtime/static/js/`** — same directory as every other framework JS file (`dz-alpine.js`, `dz-a11y.js`, `feedback-widget.js`, …). Site template references via `static_url` now resolve and the scripts serve correctly. No code changes; pure file relocation.
+
+### Tests
+- **`test_analytics_js_location.py`** — 4 regression tests pin the shape: `dz-consent.js` and `dz-analytics.js` live under the runtime static root, the legacy `dazzle_ui/static/js/` only carries `site.js` (which has a bespoke `/site.js` route handler), and `site_base.html` still references both scripts via `static_url`.
+
+### Agent Guidance
+- **Framework JS goes in `src/dazzle_ui/runtime/static/js/`** — that's the directory the runtime mounts at `/static/*`. The `src/dazzle_ui/static/` directory only exists for `site.js`, which is read by a custom route handler (`site_renderer.get_site_js`) and served at `/site.js` directly.
+- **When adding a new JS file referenced via `static_url`**: put it in `runtime/static/js/`. The source-grep test above now catches regressions.
+
 ## [0.61.10] - 2026-04-24
 
 Patch bump. Closes #858 — the `via EntityName(...)` scope-rule form required flat single-segment junction fields, so two-hop traversals like `teaching_group.teacher.user = current_user` errored at the first `.` with "Expected '=' or '!=' in via binding". AegisMark needed this shape for teacher-to-pupil visibility routed through `ClassEnrolment → TeachingGroup → StaffMember → User` and was working around it with denormalised FKs.
