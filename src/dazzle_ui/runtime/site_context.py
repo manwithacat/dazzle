@@ -112,6 +112,7 @@ def build_site_page_context(
     consent_state_json: str = "null",
     privacy_page_url: str | None = None,
     cookie_policy_url: str | None = None,
+    active_analytics_providers: list[dict[str, Any]] | None = None,
 ) -> SitePageContext:
     """Build a SitePageContext from sitespec data and page data.
 
@@ -188,6 +189,7 @@ def build_site_page_context(
         consent_state_json=consent_state_json,
         privacy_page_url=privacy_page_url,
         cookie_policy_url=cookie_policy_url,
+        active_analytics_providers=active_analytics_providers or [],
     )
 
 

@@ -1,0 +1,16 @@
+{# Plausible Analytics — head snippet (v0.61.0 Phase 3).
+
+   Plausible is cookieless and privacy-friendly by design. A single script
+   tag with `data-domain` attribute is enough; Plausible auto-detects
+   page views via history pushstate and htmx:afterSwap hooks downstream.
+
+   Parameters expected in `provider.params`:
+     - domain: site domain the events belong to (e.g. "example.com")
+     - script_origin: (optional) custom self-hosted script URL
+     - api_host: (optional) custom Plausible endpoint for self-hosted
+#}
+{% set plausible_script = provider.params.script_origin | default('https://plausible.io/js/script.js') %}
+<script defer
+  data-domain="{{ provider.params.domain }}"
+  {% if provider.params.api_host %}data-api="{{ provider.params.api_host }}"{% endif %}
+  src="{{ plausible_script }}"></script>

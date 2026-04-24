@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .analytics import AnalyticsSpec
 from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
 from .domain import DomainSpec, EntitySpec
@@ -195,6 +196,9 @@ class AppSpec(BaseModel):
 
     # Subprocessors (v0.61.0 Analytics / Privacy / Compliance)
     subprocessors: list[SubprocessorSpec] = Field(default_factory=list)
+
+    # Analytics block (v0.61.0 Phase 3)
+    analytics: AnalyticsSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

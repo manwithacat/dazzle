@@ -183,13 +183,48 @@ Produces two reports:
 The audit **never fails the build**. Treat it as advisory. Future phases
 will add enforcement (e.g. require SCC URL when transfer detected).
 
+## Analytics provider abstraction (Phase 3)
+
+Declare analytics providers in the DSL:
+
+```dsl
+analytics:
+  providers:
+    gtm:
+      id: "GTM-XXXXXX"
+    plausible:
+      domain: "example.com"
+  consent:
+    default_jurisdiction: EU
+    consent_override: denied
+```
+
+The framework resolves the registered `ProviderDefinition` for each provider
+name, unions its required CSP origins into the response's
+`Content-Security-Policy`, and renders its script snippets into the HTML —
+all gated on the current consent state. GTM bootstraps even under deny-
+defaults so Consent Mode v2 can signal the container on later grant;
+Plausible only loads when analytics consent is granted.
+
+### Provider registry
+
+Shipped in v0.61.0:
+
+| Name | Label | Consent category | Required params | Links to subprocessor |
+|---|---|---|---|---|
+| `gtm` | Google Tag Manager | analytics | `id` | `google_tag_manager` |
+| `plausible` | Plausible Analytics | analytics | `domain` | `plausible` |
+
+Adding a provider: define a `ProviderDefinition` in
+`src/dazzle/compliance/analytics/providers/registry.py`, add the matching
+Jinja snippet templates, and update the `linked_subprocessor_name` to point
+at the matching subprocessor declaration.
+
 ## What comes later
 
-Phase 1 (this release) ships the primitives. Subsequent phases of the
-analytics / privacy roadmap build on them:
+Phase 1-3 (this release stream) ships the primitives + consent banner +
+provider abstraction. Subsequent phases:
 
-- **Phase 2** — consent banner + Consent Mode v2 + privacy-page auto-generation.
-- **Phase 3** — provider abstraction (`analytics:` DSL block, GTM + Plausible).
 - **Phase 4** — event vocabulary + htmx integration.
 - **Phase 5** — server-side sinks via the event bus.
 - **Phase 6** — per-tenant analytics resolution.

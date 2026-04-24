@@ -118,12 +118,13 @@ class ConsentState:
         `gtag('consent','update',{...})`. Follows Google's published
         category-to-signal mapping.
         """
-        ad_linked = "granted" if self.advertising == "granted" else "denied"
-        ad_pers = (
+        ad_linked: ConsentChoice = "granted" if self.advertising == "granted" else "denied"
+        ad_pers: ConsentChoice = (
             "granted"
             if self.advertising == "granted" and self.personalization == "granted"
             else "denied"
         )
+        security_always: ConsentChoice = "granted"
         return {
             "analytics_storage": self.analytics,
             "ad_storage": ad_linked,
@@ -132,7 +133,7 @@ class ConsentState:
             "functionality_storage": self.functional,
             "personalization_storage": self.personalization,
             # Security storage is always granted — essential for the service.
-            "security_storage": "granted",
+            "security_storage": security_always,
         }
 
     def serialize(self) -> str:

@@ -166,6 +166,9 @@ class SymbolTable:
     # Subprocessor declarations (v0.61.0 Analytics / Privacy)
     subprocessors: dict[str, ir.SubprocessorSpec] = field(default_factory=dict)
 
+    # Analytics block (v0.61.0 Phase 3)
+    analytics: ir.AnalyticsSpec | None = None
+
     # --- Delegated properties for backward compatibility ---
 
     @property
@@ -543,6 +546,16 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
                 )
             symbols.subprocessors[sp.name] = sp
             symbols.symbol_sources[f"subprocessor:{sp.name}"] = module.name
+
+        # Analytics block (v0.61.0 Phase 3) — at most one across all modules.
+        if module.fragment.analytics is not None:
+            if symbols.analytics is not None:
+                raise LinkError(
+                    f"Duplicate analytics: block — already declared in "
+                    f"module {symbols.symbol_sources.get('analytics', '?')}."
+                )
+            symbols.analytics = module.fragment.analytics
+            symbols.symbol_sources["analytics"] = module.name
 
         # Add processes (v0.23.0)
         for process in module.fragment.processes:
@@ -1300,4 +1313,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0
+        analytics=symbols.analytics,  # v0.61.0 Phase 3
     )

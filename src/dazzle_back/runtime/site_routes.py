@@ -272,6 +272,7 @@ def create_site_page_routes(
     consent_override: str | None = None,
     privacy_page_url: str = "/privacy",
     cookie_policy_url: str | None = None,
+    analytics_spec: Any | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes that serve HTML pages directly.
@@ -350,10 +351,18 @@ def create_site_page_routes(
     _privacy_page_url = privacy_page_url
     _cookie_policy_url = cookie_policy_url
 
-    def _resolve_consent(request: Request) -> tuple[dict[str, Any], str]:
-        """Return (consent_dict, consent_state_json) for the current request."""
+    _analytics_spec = analytics_spec
+
+    def _resolve_consent(
+        request: Request,
+    ) -> tuple[dict[str, Any], str, list[dict[str, Any]]]:
+        """Return (consent_dict, consent_state_json, active_providers).
+
+        active_providers is empty when no analytics: block is declared.
+        """
         import json as _json
 
+        from dazzle.compliance.analytics import resolve_active_providers
         from dazzle.compliance.analytics.consent import (
             CONSENT_COOKIE_NAME,
             parse_consent_cookie,
@@ -369,7 +378,8 @@ def create_site_page_routes(
             "undecided": state.undecided,
             "decided_at": state.decided_at,
         }
-        return consent, _json.dumps(consent)
+        providers = resolve_active_providers(_analytics_spec, state) if _analytics_spec else []
+        return consent, _json.dumps(consent), providers
 
     def _resolve_auth(request: Request) -> tuple[bool, str]:
         """Check auth state and resolve the dashboard URL.
@@ -430,7 +440,7 @@ def create_site_page_routes(
                         }
                         for p in qa_persona_list
                     ]
-                consent_dict, consent_json = _resolve_consent(request)
+                consent_dict, consent_json, active_providers = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -441,6 +451,7 @@ def create_site_page_routes(
                     qa_personas=qa_personas,
                     consent=consent_dict,
                     consent_state_json=consent_json,
+                    active_analytics_providers=active_providers,
                     privacy_page_url=_privacy_page_url,
                     cookie_policy_url=_cookie_policy_url,
                 )
@@ -455,7 +466,7 @@ def create_site_page_routes(
             ) -> str:
                 """Serve a site page as HTML with SSR content."""
                 is_authed, dash_url = _resolve_auth(request)
-                consent_dict, consent_json = _resolve_consent(request)
+                consent_dict, consent_json, active_providers = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -465,6 +476,7 @@ def create_site_page_routes(
                     dashboard_url=dash_url,
                     consent=consent_dict,
                     consent_state_json=consent_json,
+                    active_analytics_providers=active_providers,
                     privacy_page_url=_privacy_page_url,
                     cookie_policy_url=_cookie_policy_url,
                 )
@@ -482,7 +494,7 @@ def create_site_page_routes(
         ) -> str:
             """Serve the terms of service page."""
             is_authed, dash_url = _resolve_auth(request)
-            consent_dict, consent_json = _resolve_consent(request)
+            consent_dict, consent_json, active_providers = _resolve_consent(request)
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -492,6 +504,7 @@ def create_site_page_routes(
                 dashboard_url=dash_url,
                 consent=consent_dict,
                 consent_state_json=consent_json,
+                active_analytics_providers=active_providers,
                 privacy_page_url=_privacy_page_url,
                 cookie_policy_url=_cookie_policy_url,
             )
@@ -508,7 +521,7 @@ def create_site_page_routes(
         ) -> str:
             """Serve the privacy policy page."""
             is_authed, dash_url = _resolve_auth(request)
-            consent_dict, consent_json = _resolve_consent(request)
+            consent_dict, consent_json, active_providers = _resolve_consent(request)
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -518,6 +531,7 @@ def create_site_page_routes(
                 dashboard_url=dash_url,
                 consent=consent_dict,
                 consent_state_json=consent_json,
+                active_analytics_providers=active_providers,
                 privacy_page_url=_privacy_page_url,
                 cookie_policy_url=_cookie_policy_url,
             )

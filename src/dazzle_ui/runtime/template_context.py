@@ -514,6 +514,10 @@ class SitePageContext(BaseModel):
     consent_state_json: str = "null"
     privacy_page_url: str | None = None
     cookie_policy_url: str | None = None
+    # Analytics providers (v0.61.0 Phase 3). Resolved server-side per request
+    # so consent gating is enforced in one place. Each entry is a dict shaped
+    # {name, consent_category, params, head_template, ...}.
+    active_analytics_providers: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SiteAuthContext(BaseModel):

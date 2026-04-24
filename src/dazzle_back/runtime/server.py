@@ -386,13 +386,24 @@ class DazzleBackendApp:
         services = RuntimeServices()
         self._app.state.services = services
 
-        # Security middleware (v0.11.0)
+        # Security middleware (v0.11.0). v0.61.0 Phase 3: resolve active
+        # analytics providers so their CSP origins are allow-listed.
         from dazzle_back.runtime.security_middleware import apply_security_middleware
+
+        _active_providers: list = []
+        if self._appspec.analytics is not None:
+            from dazzle.compliance.analytics import get_provider_definition
+
+            for inst in self._appspec.analytics.providers:
+                definition = get_provider_definition(inst.name)
+                if definition is not None:
+                    _active_providers.append(definition)
 
         apply_security_middleware(
             self._app,
             self._security_profile,
             cors_origins=self._cors_origins,
+            analytics_providers=_active_providers or None,
         )
 
         # Rate limiting (v1.0.0)

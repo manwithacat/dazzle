@@ -223,6 +223,8 @@ def _field_purpose(f: FieldSpec, category: PIICategory | None) -> str:
     # extension.
     if f.is_special_category:
         return "Processing under explicit consent (GDPR Art. 9 special category)"
+    if category is None:
+        return "See relevant service feature"
     return {
         PIICategory.CONTACT: "Communication and account management",
         PIICategory.IDENTITY: "User identification and account security",

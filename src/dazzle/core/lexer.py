@@ -518,6 +518,7 @@ class TokenType(Enum):
 
     # v0.61.0 Analytics / Privacy / Compliance
     SUBPROCESSOR = "subprocessor"
+    ANALYTICS = "analytics"
 
     # v0.46.0 Graph Semantics Keywords (#619)
     GRAPH_EDGE = "graph_edge"

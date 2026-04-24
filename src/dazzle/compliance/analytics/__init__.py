@@ -25,12 +25,21 @@ from .privacy_page import (
     merge_regenerated_into_existing,
     write_privacy_artefacts,
 )
+from .providers import (
+    FRAMEWORK_PROVIDERS,
+    ProviderCSPRequirements,
+    ProviderDefinition,
+    ProviderInstance,
+    get_provider_definition,
+    list_provider_definitions,
+)
 from .registry import (
     FRAMEWORK_SUBPROCESSORS,
     get_framework_subprocessor,
     list_framework_subprocessors,
     merge_app_subprocessors,
 )
+from .render import resolve_active_providers
 
 __all__ = [
     "CONSENT_COOKIE_MAX_AGE_SECONDS",
@@ -38,16 +47,23 @@ __all__ = [
     "CONSENT_COOKIE_VERSION",
     "ConsentDefaults",
     "ConsentState",
+    "FRAMEWORK_PROVIDERS",
     "FRAMEWORK_SUBPROCESSORS",
     "PIIFilterResult",
     "PrivacyPageArtefacts",
+    "ProviderCSPRequirements",
+    "ProviderDefinition",
+    "ProviderInstance",
     "build_decided_state",
     "generate_privacy_page_markdown",
     "get_framework_subprocessor",
+    "get_provider_definition",
     "list_framework_subprocessors",
+    "list_provider_definitions",
     "merge_app_subprocessors",
     "merge_regenerated_into_existing",
     "parse_consent_cookie",
+    "resolve_active_providers",
     "strip_pii",
     "write_privacy_artefacts",
 ]

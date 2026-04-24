@@ -309,7 +309,7 @@ channel notifications:
 module test
 app test "Test"
 
-channel analytics:
+channel analytics_stream:
   kind: stream
   provider: auto
 

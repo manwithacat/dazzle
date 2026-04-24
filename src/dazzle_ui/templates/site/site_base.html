@@ -22,9 +22,15 @@
   {# Lucide icons — self-hosted vendored copy. #}
   <script src="{{ 'vendor/lucide.min.js' | static_url }}"></script>
   {% block og_meta %}{% endblock %}
+  {% if active_analytics_providers is defined and active_analytics_providers %}
+    {% include "site/includes/analytics/head_scripts.html" %}
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}" {% block body_attrs %}{% endblock %}>
+  {% if active_analytics_providers is defined and active_analytics_providers %}
+    {% include "site/includes/analytics/body_scripts.html" %}
+  {% endif %}
   {% block body %}{% endblock %}
   {% if consent is defined and consent %}
     {% include "site/includes/consent_banner.html" %}

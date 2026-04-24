@@ -1,0 +1,47 @@
+{# Google Tag Manager — head snippet (v0.61.0 Phase 3).
+
+   Consent Mode v2 bootstrap runs BEFORE gtm.js loads so GTM receives the
+   user's current consent state on first call. The `wait_for_update` value
+   gives client-side JS 500ms to update consent after load (relevant when
+   the user has decided but the cookie parse runs late).
+
+   The gtag() function itself is defined before the GTM container loads.
+   GTM's own setup snippet then pushes 'gtm.js' and the container ID onto
+   dataLayer to start tag firing.
+
+   Parameters expected in `provider.params`:
+     - id: GTM container ID ("GTM-XXXXXX")
+
+   Context vars expected:
+     - consent: dict with analytics/advertising/personalization/functional booleans
+#}
+{% set cm = {
+  'analytics_storage': 'granted' if consent.analytics else 'denied',
+  'ad_storage': 'granted' if consent.advertising else 'denied',
+  'ad_user_data': 'granted' if consent.advertising else 'denied',
+  'ad_personalization': 'granted' if (consent.advertising and consent.personalization) else 'denied',
+  'functionality_storage': 'granted',
+  'personalization_storage': 'granted' if consent.personalization else 'denied',
+  'security_storage': 'granted'
+} %}
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    'analytics_storage': '{{ cm.analytics_storage }}',
+    'ad_storage': '{{ cm.ad_storage }}',
+    'ad_user_data': '{{ cm.ad_user_data }}',
+    'ad_personalization': '{{ cm.ad_personalization }}',
+    'functionality_storage': '{{ cm.functionality_storage }}',
+    'personalization_storage': '{{ cm.personalization_storage }}',
+    'security_storage': '{{ cm.security_storage }}',
+    'wait_for_update': 500
+  });
+</script>
+{# Google Tag Manager #}
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','{{ provider.params.id }}');</script>
+{# End Google Tag Manager #}

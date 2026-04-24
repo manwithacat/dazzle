@@ -1,0 +1,9 @@
+{# Analytics provider <body> / <noscript> block (v0.61.0 Phase 3). #}
+{% for provider in active_analytics_providers | default([]) %}
+  {% if provider.noscript_template %}
+    {% include provider.noscript_template %}
+  {% endif %}
+  {% if provider.body_template %}
+    {% include provider.body_template %}
+  {% endif %}
+{% endfor %}

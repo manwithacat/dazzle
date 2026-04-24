@@ -19,6 +19,7 @@ from pathlib import Path
 
 from .. import ir
 from ..lexer import tokenize
+from .analytics import AnalyticsParserMixin
 from .approval import ApprovalParserMixin
 from .base import BaseParser
 from .conditions import ConditionParserMixin
@@ -90,6 +91,7 @@ class Parser(
     ParamParserMixin,
     FeedbackWidgetParserMixin,
     SubprocessorParserMixin,
+    AnalyticsParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -583,6 +585,26 @@ class Parser(
             }
         )
 
+    def _dispatch_analytics(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        # parse_analytics consumes the ANALYTICS token itself.
+        if fragment.analytics is not None:
+            tok = self.current_token()
+            from ..errors import make_parse_error
+
+            raise make_parse_error(
+                "Only one `analytics:` block is allowed per module.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        spec = self.parse_analytics()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "analytics": spec,
+            }
+        )
+
     def _build_parse_dispatch(self) -> dict:  # type: ignore[type-arg]
         """Build the token-type → handler dispatch table."""
         from ..lexer import TokenType
@@ -636,6 +658,7 @@ class Parser(
             TokenType.PARAM: self._dispatch_param,
             TokenType.FEEDBACK_WIDGET: self._dispatch_feedback_widget,
             TokenType.SUBPROCESSOR: self._dispatch_subprocessor,
+            TokenType.ANALYTICS: self._dispatch_analytics,
         }
 
     def parse(self) -> ir.ModuleFragment:

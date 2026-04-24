@@ -90,7 +90,7 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `webhook`, `approval`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `webhook`, `approval`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`
 
 *(This is the user-facing subset. The parser also dispatches on `app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `project`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `grant_schema`, `param`, `question`. The drift test in `tests/unit/test_docs_drift.py` asserts every name listed above actually exists in the parser.)*
 

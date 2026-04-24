@@ -47,44 +47,75 @@ class SecurityHeadersConfig:
     referrer_policy: str = "strict-origin-when-cross-origin"
 
 
-def _build_csp_header(directives: dict[str, str] | None) -> str:
+def _build_csp_header(
+    directives: dict[str, str] | None,
+    providers: list[Any] | None = None,
+) -> str:
     """
     Build Content-Security-Policy header value.
 
     Defaults align with the origins the bundled Dazzle templates actually
-    load post-#832 (Phase 2 of the cycle 300 external-resource-integrity
-    gap doc): Google Fonts stylesheet + WOFF, and jsdelivr for the mermaid
-    lazy-load in `workspace/regions/diagram.html`. `'unsafe-inline'` remains
-    on script-src / style-src because the shells still ship inline
+    load post-#832: Google Fonts stylesheet + WOFF, and jsdelivr for the
+    mermaid lazy-load in `workspace/regions/diagram.html`. ``'unsafe-inline'``
+    remains on script-src / style-src because the shells still ship inline
     `<script>` and `<style>` blocks — tightening to nonces is a follow-up.
 
+    v0.61.0 Phase 3: per-request provider origins union in via the
+    ``providers`` argument. Each provider must expose a ``.csp``
+    attribute conforming to ``ProviderCSPRequirements`` — tuples of origin
+    strings per directive.
+
     Args:
-        directives: Custom directives or None for defaults
+        directives: Custom directives or None for defaults. These override
+            the framework defaults and the provider-unioned origins.
+        providers: Optional list of ProviderDefinition instances whose CSP
+            requirements should be unioned into the header.
 
     Returns:
         CSP header string
     """
-    default_directives = {
-        "default-src": "'self'",
+    default_directives: dict[str, set[str]] = {
+        "default-src": {"'self'"},
         # 'unsafe-inline' for inline <script> blocks in base.html / shells.
-        # cdn.jsdelivr.net for mermaid lazy-load (workspace/regions/diagram.html).
-        "script-src": "'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-        # 'unsafe-inline' for inline <style> design-token blocks; Google Fonts
-        # stylesheet delivery (fonts.googleapis.com).
-        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src": "'self' data: blob:",
-        # Google Fonts WOFF/WOFF2 delivery.
-        "font-src": "'self' https://fonts.gstatic.com",
-        "connect-src": "'self'",
-        "frame-ancestors": "'none'",
-        "form-action": "'self'",
-        "base-uri": "'self'",
+        # cdn.jsdelivr.net for mermaid lazy-load.
+        "script-src": {"'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"},
+        # 'unsafe-inline' for inline <style> design-token blocks; Google Fonts.
+        "style-src": {"'self'", "'unsafe-inline'", "https://fonts.googleapis.com"},
+        "img-src": {"'self'", "data:", "blob:"},
+        # Google Fonts WOFF/WOFF2.
+        "font-src": {"'self'", "https://fonts.gstatic.com"},
+        "connect-src": {"'self'"},
+        "frame-src": set(),
+        "frame-ancestors": {"'none'"},
+        "form-action": {"'self'"},
+        "base-uri": {"'self'"},
     }
 
-    if directives:
-        default_directives.update(directives)
+    # Union in provider-declared origins (v0.61.0 Phase 3).
+    for prov in providers or []:
+        csp_req = getattr(prov, "csp", None)
+        if csp_req is None:
+            continue
+        for directive, field_attr in (
+            ("script-src", "script_src"),
+            ("style-src", "style_src"),
+            ("img-src", "img_src"),
+            ("font-src", "font_src"),
+            ("connect-src", "connect_src"),
+            ("frame-src", "frame_src"),
+        ):
+            origins = getattr(csp_req, field_attr, ())
+            if origins:
+                default_directives.setdefault(directive, set()).update(origins)
 
-    return "; ".join(f"{k} {v}" for k, v in default_directives.items())
+    # Render — deterministic order per directive so the header is stable.
+    rendered = {k: " ".join(sorted(v)) for k, v in default_directives.items() if v}
+
+    # Custom directives override everything above.
+    if directives:
+        rendered.update(directives)
+
+    return "; ".join(f"{k} {v}" for k, v in rendered.items())
 
 
 # =============================================================================
@@ -198,12 +229,18 @@ def configure_headers_for_profile(profile: str) -> SecurityHeadersConfig:
 # =============================================================================
 
 
-def create_security_headers_middleware(config: SecurityHeadersConfig) -> Any:
+def create_security_headers_middleware(
+    config: SecurityHeadersConfig,
+    analytics_providers: list[Any] | None = None,
+) -> Any:
     """
     Create a middleware that adds security headers to responses.
 
     Args:
         config: Security headers configuration
+        analytics_providers: Optional list of ProviderDefinition instances
+            whose CSP origins should be unioned into the CSP header
+            (v0.61.0 Phase 3).
 
     Returns:
         Starlette middleware class
@@ -250,7 +287,10 @@ def create_security_headers_middleware(config: SecurityHeadersConfig) -> Any:
                     if config.csp_report_only
                     else "Content-Security-Policy"
                 )
-                response.headers[header_name] = _build_csp_header(config.csp_directives)
+                response.headers[header_name] = _build_csp_header(
+                    config.csp_directives,
+                    providers=analytics_providers,
+                )
 
             return response  # type: ignore[no-any-return]
 
@@ -262,6 +302,7 @@ def apply_security_middleware(
     security_profile: str,
     cors_origins: list[str] | None = None,
     enable_headers: bool = True,
+    analytics_providers: list[Any] | None = None,
 ) -> None:
     """
     Apply security middleware stack to a FastAPI application.
@@ -273,6 +314,9 @@ def apply_security_middleware(
         security_profile: Security profile (basic, standard, strict)
         cors_origins: Custom CORS origins (overrides profile defaults)
         enable_headers: Whether to enable security headers middleware
+        analytics_providers: Optional list of analytics ProviderDefinition
+            instances whose CSP origins should be allow-listed (v0.61.0
+            Phase 3).
     """
     from fastapi.middleware.cors import CORSMiddleware
 
@@ -313,5 +357,8 @@ def apply_security_middleware(
 
     # Apply security headers middleware
     if enable_headers and security_profile != "basic":
-        SecurityHeadersMiddleware = create_security_headers_middleware(headers_config)
+        SecurityHeadersMiddleware = create_security_headers_middleware(
+            headers_config,
+            analytics_providers=analytics_providers,
+        )
         app.add_middleware(SecurityHeadersMiddleware)

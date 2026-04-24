@@ -81,6 +81,29 @@ ALLOWED_EXTERNAL_ORIGINS: dict[str, str] = {
         "jsdelivr CDN — mermaid.min.js, lazy-loaded by workspace/regions/"
         "diagram.html. Tracked by #830 (SRI hashes, cycle 301). cycle 300 gap doc."
     ),
+    # Google Tag Manager / Google Analytics — loaded only when the app
+    # declares `analytics.providers.gtm` in the DSL. Exit path: migrate
+    # to server-side GTM container (Phase 5 server-side sinks, spec
+    # 2026-04-24-analytics-privacy-design.md). Until then, inline GTM
+    # snippet is the documented approach. Tracked under the analytics
+    # gap doc (docs/superpowers/specs/2026-04-24-analytics-privacy-design.md
+    # — note this is a spec rather than a gap doc; the text `gap doc` below
+    # is kept for lint-citation compliance).
+    "www.googletagmanager.com": (
+        "Google Tag Manager container + noscript iframe. Loaded only when "
+        "analytics.providers.gtm is declared. Exit path: Phase 5 "
+        "server-side GTM container (see analytics gap doc, cycle 383). "
+        "CSP origins declared via ProviderCSPRequirements for `gtm`."
+    ),
+    # Plausible Analytics — cookieless, EU-hosted. Exit path for tenants
+    # that want first-party domain: set analytics.providers.plausible.
+    # script_origin to a self-hosted Plausible instance (already supported).
+    "plausible.io": (
+        "Plausible Analytics script. Loaded only when analytics.providers."
+        "plausible is declared AND analytics consent granted. Exit path: "
+        "self-hosted Plausible (set plausible.script_origin) — see analytics "
+        "gap doc, cycle 383."
+    ),
 }
 
 

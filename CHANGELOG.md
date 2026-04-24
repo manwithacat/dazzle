@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0rc3] - 2026-04-24
+
+Phase 3 of the **Analytics, Consent & Privacy** design: provider abstraction with GTM and Plausible as the first two framework-shipped providers. Authors declare `analytics:` in the DSL with per-provider parameters; the framework resolves active providers per request (consent-gated), unions their CSP origins, and renders their script snippets into `<head>` / `<body>` via Jinja. Cross-border transfer guidance surfaces automatically through the existing subprocessor registry.
+
+### Added
+
+- **`ProviderDefinition`** + `ProviderCSPRequirements` — dataclasses describing an analytics provider's consent category, CSP origin requirements, Jinja template paths, and required/optional parameters. Lives in `dazzle.compliance.analytics.providers`.
+
+- **Framework provider registry** — ships **GTM** (`gtm`) and **Plausible** (`plausible`) out of the box. Each provider links to its matching subprocessor (e.g. `gtm` → `google_tag_manager`) so compliance docs stay coherent. Add providers via `FRAMEWORK_PROVIDERS` or by registering user-level definitions.
+
+- **`analytics:` DSL block** — new top-level construct. Syntax:
+  ```dsl
+  analytics:
+    providers:
+      gtm:
+        id: "GTM-XXXXXX"
+      plausible:
+        domain: "example.com"
+    consent:
+      default_jurisdiction: EU
+      consent_override: denied
+  ```
+  Parser validates known keys; unknown provider names are detected at render time with a warning log. At most one `analytics:` block per module.
+
+- **Script templates** — `gtm_head.html` (Consent Mode v2 bootstrap + container), `gtm_noscript.html` (iframe fallback), `plausible_head.html` (cookieless script). Rendered via `{% include %}` from `site_base.html` through `site/includes/analytics/head_scripts.html` and `body_scripts.html`.
+
+- **Consent-gated resolution** — `resolve_active_providers(analytics_spec, consent_state)` returns the list of providers that should actually emit scripts on this request. Plausible only loads when analytics consent is granted. GTM **always loads** even when analytics is denied — so Consent Mode v2 can signal the container when the user grants later. Documented in `dazzle.compliance.analytics.render`.
+
+- **CSP origin injection** — `_build_csp_header()` now accepts a `providers` argument; `apply_security_middleware()` / `create_security_headers_middleware()` thread this through. Each provider's declared origins union into `script-src`, `connect-src`, `img-src`, `font-src`, `frame-src`, `style-src`. Custom directives still override everything.
+
+- **DSL → runtime integration** — `app_factory.assemble_post_build_routes` reads `appspec.analytics`, resolves provider definitions, and passes them to the security middleware + site-page routes. DSL-declared consent settings override TOML defaults.
+
+### Changed
+
+- **`SitePageContext`** gains `active_analytics_providers` field — list of render-entry dicts populated per-request.
+- **`build_site_page_context()`** accepts an `active_analytics_providers` parameter.
+- **`site_base.html`** includes `analytics/head_scripts.html` in `<head>` and `analytics/body_scripts.html` after `<body>` opening tag, both guarded by the provider list being non-empty.
+- **`_resolve_consent()`** in `site_routes.py` now returns a 3-tuple including the active provider list.
+
+### Agent Guidance
+
+- **GTM's `'unsafe-inline'` stays.** The bootstrap snippet is inline; migrating to nonce-based CSP is a separate follow-up. Strict-CSP projects that can't tolerate inline scripts should use GTM's server-side container instead of the client-side one.
+- **Plausible is the privacy-preferred choice.** If you're starting fresh and don't need GA4's ad integration, prefer `plausible` — it's cookieless, EU-hosted, and adds no cross-border transfer concerns.
+- **`id`, `domain` are DSL strings.** Quote them (`id: "GTM-XXXXXX"`). The parser accepts bare identifiers too but string form is safer — future IDs may contain characters that clash with keywords.
+- **Provider rendering is consent-driven.** Don't try to bypass it by hardcoding script tags — the CSP header won't include the required origins unless the provider is registered, and the browser will block the load.
+- **Custom providers**: register a `ProviderDefinition` at module import time (before `create_app()`), add the matching Jinja templates, and reference by name in the DSL. Per-app registration (instead of framework-wide) lands in Phase 6 alongside per-tenant resolution.
+- **Phase 4 event vocabulary** will add `dz_page_view` / `dz_action` / etc. to the client-side bus. Don't hand-write events yet — the vocabulary becomes a stable contract and you'll want the auto-instrumentation.
+
 ## [0.61.0rc2] - 2026-04-24
 
 Phase 2 of the **Analytics, Consent & Privacy** design: consent banner, Consent Mode v2 bootstrap, and auto-generated privacy / cookie / ROPA documents. Site pages now render a banner on first visit (residency-driven default); user choices persist via the `dz_consent_v2` cookie; `dazzle compliance privacy` emits three markdown artefacts from the AppSpec.

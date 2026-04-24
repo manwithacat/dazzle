@@ -504,11 +504,22 @@ def assemble_post_build_routes(
                 create_site_page_routes,
             )
 
+            # Re-use the DSL/TOML-resolved defaults from the consent-router
+            # block (identical resolution keeps the site pages and /dz/consent
+            # endpoints in sync).
+            _site_consent = appspec.analytics.consent if appspec.analytics else None
+            _site_jurisdiction = (
+                _site_consent.default_jurisdiction if _site_consent else None
+            ) or "EU"
+            _site_override = _site_consent.consent_override if _site_consent else None
             site_page_router = create_site_page_routes(
                 sitespec_data=sitespec_data,
                 project_root=project_root,
                 get_auth_context=get_auth_context,
                 persona_routes=persona_routes,
+                analytics_spec=appspec.analytics,
+                consent_default_jurisdiction=_site_jurisdiction,
+                consent_override=_site_override,
             )
             app.include_router(site_page_router)
             logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
@@ -616,16 +627,26 @@ def assemble_post_build_routes(
     try:
         from dazzle_back.runtime.consent_routes import create_consent_routes
 
-        # Per-tenant resolution lands in Phase 6. Until then, app-wide defaults
-        # come from the manifest if a raw TOML section exists, else EU-safe.
+        # Precedence: DSL `analytics.consent:` block > TOML `[analytics]` >
+        # EU-safe default. Per-tenant resolution lands in Phase 6.
         _analytics_cfg: dict[str, Any] = {}
         _raw_manifest = getattr(builder, "manifest_raw", None)
         if isinstance(_raw_manifest, dict):
             _analytics_cfg = _raw_manifest.get("analytics", {}) or {}
 
+        _dsl_consent = appspec.analytics.consent if appspec.analytics else None
+        _jurisdiction = (
+            (_dsl_consent.default_jurisdiction if _dsl_consent else None)
+            or _analytics_cfg.get("default_jurisdiction")
+            or "EU"
+        )
+        _override = (_dsl_consent.consent_override if _dsl_consent else None) or _analytics_cfg.get(
+            "consent_override"
+        )
+
         consent_router = create_consent_routes(
-            default_jurisdiction=_analytics_cfg.get("default_jurisdiction", "EU"),
-            consent_override=_analytics_cfg.get("consent_override"),
+            default_jurisdiction=_jurisdiction,
+            consent_override=_override,
             privacy_page_url=_analytics_cfg.get("privacy_page_url", "/privacy"),
             cookie_policy_url=_analytics_cfg.get("cookie_policy_url"),
         )

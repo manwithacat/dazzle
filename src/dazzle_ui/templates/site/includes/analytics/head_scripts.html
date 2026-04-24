@@ -1,0 +1,18 @@
+{# Analytics provider <head> block (v0.61.0 Phase 3).
+
+   Iterates over `active_analytics_providers` — a list of dicts shaped as
+   {name, consent_category, params, head_template}. Consent gating is
+   pre-resolved server-side: a provider is only in the list when the
+   current consent state permits its category (or the user is in EU
+   undecided state AND the provider needs Consent Mode v2 bootstrap for
+   deny-by-default telemetry — GTM is the canonical example).
+
+   Context vars:
+     - active_analytics_providers: list of ProviderRenderEntry dicts
+     - consent: dict with category booleans (analytics/advertising/...)
+#}
+{% for provider in active_analytics_providers | default([]) %}
+  {% if provider.head_template %}
+    {% include provider.head_template %}
+  {% endif %}
+{% endfor %}
