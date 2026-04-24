@@ -582,6 +582,7 @@ async def _workspace_region_handler(
                         filters,
                         logger,
                         _auth_ctx_for_filters,
+                        context_id=_context_id,
                     )
                     if not filters:
                         filters = None
@@ -1066,6 +1067,7 @@ async def _fetch_region_json(
                         filters,
                         logger,
                         auth_context,
+                        context_id=(filter_context or {}).get("current_context"),
                     )
                     if not filters:
                         filters = None

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.8] - 2026-04-24
+
+Patch bump. Closes #857 — a workspace region declaring `filter: <fk> = current_context` silently misfired because `_extract_condition_filters` had no handling for the `current_context` sentinel. The selected-entity id was already wired from the URL query param into `_filter_context["current_context"]` in `workspace_rendering.py`, but never threaded into the SQL-filter extractor — so the literal string `"current_context"` fell through to the "plain literal" branch and was applied as the filter value verbatim, resulting in zero matches. Region queries ignored the selector entirely.
+
+### Fixed
+- **`src/dazzle_back/runtime/route_generator.py`** — `_extract_condition_filters` gains an optional `context_id: str | None = None` kwarg. Both the AccessConditionSpec path (line ~508) and the IR ConditionExpr path (line ~586) now recognise the `current_context` sentinel and resolve it to `context_id` when a selection is active. When the selector is cleared (`context_id is None`), the filter is skipped so the existing persona scope applies unfiltered — matching the intent from #857. The literal-string fallback now also excludes `"current_context"` so it can't collide with the new sentinel.
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — both `_extract_condition_filters` call sites (top-level region fetch + `fetch_region_data` batch path) now pass `context_id=_context_id` (or `filter_context.get("current_context")`), threading the query-param value through to the filter evaluator.
+
+### Tests
+- **`test_current_context_filter.py`** — 7 tests covering the new behaviour: AccessConditionSpec + IR ConditionExpr paths, context-present vs context-cleared, literal-string non-regression, combined `current_user` AND `current_context`, and backwards compatibility for callers that don't pass the new kwarg.
+
+### Agent Guidance
+- **`current_context` is a new filter sentinel** — same pattern as `current_user`. Use it in region `filter:` clauses on workspaces that declare a `context_selector`, e.g. `filter: teaching_group = current_context`. When the user picks a value in the selector, the FK filter activates; when they clear it, the persona scope runs unfiltered.
+- **Direct-FK only**: the sentinel resolves against whichever column you compare it to, so the source entity must have a direct FK to the selector entity. For indirect routes use a dotted path with a scope rule, not a region filter.
+
 ## [0.61.7] - 2026-04-24
 
 Patch bump. Closes #861 — a workspace region sourced from entity A declaring `action: <surface>` where that surface is bound to a different entity B silently misfired at runtime when the action URL expected the FK on A referencing B. Three symptoms in one: (1) row endpoints expanded FK dicts into `{id: ..., display: ...}` and `action_id_field` wasn't forwarded to the template, so `item[id]|string` produced `{'id': '...'}`; (2) template fragments hard-coded `item.id` instead of honouring the region's `action_id_field`; (3) `dazzle validate` produced no signal when the FK probe would return zero or multiple matches.

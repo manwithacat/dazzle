@@ -459,6 +459,7 @@ def _extract_condition_filters(
     _logger: Any,
     auth_context: "AuthContext | None" = None,
     ref_targets: dict[str, str] | None = None,
+    context_id: str | None = None,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
 
@@ -477,6 +478,11 @@ def _extract_condition_filters(
 
     Left-side dotted paths (e.g. ``manuscript.student``) are resolved via
     subquery JOINs when ``ref_targets`` provides FK→entity mapping (#556).
+
+    The ``current_context`` sentinel resolves to the workspace selector's
+    selected entity id when provided (#857).  If ``context_id`` is ``None``
+    (no selection), the condition is skipped so the existing persona scope
+    applies unfiltered.
     """
     kind = getattr(condition, "kind", "")
 
@@ -518,7 +524,18 @@ def _extract_condition_filters(
         ):
             attr_name = value[len("current_user.") :]
             _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
-        elif field and isinstance(value, str | int | float | bool) and value != "current_user":
+        elif field and value == "current_context" and op_val in ("=", "eq", "equals"):
+            # Context selector (#857): resolve to the selected entity id if
+            # a selection is active; skip the filter entirely when cleared
+            # so the existing persona scope applies unfiltered.
+            if context_id:
+                _set_filter(field, context_id)
+        elif (
+            field
+            and isinstance(value, str | int | float | bool)
+            and value != "current_user"
+            and value != "current_context"
+        ):
             if op_val in ("=", "eq", "equals"):
                 _set_filter(field, value)
             elif op_val in ("!=", "ne", "not_equals"):
@@ -545,11 +562,11 @@ def _extract_condition_filters(
             right = getattr(condition, "logical_right", None)
             if left:
                 _extract_condition_filters(
-                    left, user_id, filters, _logger, auth_context, ref_targets
+                    left, user_id, filters, _logger, auth_context, ref_targets, context_id
                 )
             if right:
                 _extract_condition_filters(
-                    right, user_id, filters, _logger, auth_context, ref_targets
+                    right, user_id, filters, _logger, auth_context, ref_targets, context_id
                 )
         return
 
@@ -596,10 +613,17 @@ def _extract_condition_filters(
         ):
             attr_name = raw_value[len("current_user.") :]
             _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
+        elif field and raw_value == "current_context" and op_val in ("=", "eq", "equals"):
+            # Context selector (#857): resolve to the selected entity id if
+            # a selection is active; skip the filter entirely when cleared
+            # so the existing persona scope applies unfiltered.
+            if context_id:
+                _set_filter(field, context_id)
         elif (
             field
             and isinstance(raw_value, str | int | float | bool)
             and raw_value != "current_user"
+            and raw_value != "current_context"
         ):
             if op_val in ("=", "eq", "equals"):
                 _set_filter(field, raw_value)
@@ -628,11 +652,11 @@ def _extract_condition_filters(
             right = getattr(condition, "right", None)
             if left:
                 _extract_condition_filters(
-                    left, user_id, filters, _logger, auth_context, ref_targets
+                    left, user_id, filters, _logger, auth_context, ref_targets, context_id
                 )
             if right:
                 _extract_condition_filters(
-                    right, user_id, filters, _logger, auth_context, ref_targets
+                    right, user_id, filters, _logger, auth_context, ref_targets, context_id
                 )
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already
