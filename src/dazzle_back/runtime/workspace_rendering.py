@@ -655,6 +655,7 @@ async def _workspace_region_handler(
                     filters=filters,
                     sort=sort_list,
                     include=include_rels or None,
+                    fk_display_only=True,
                 )
             if isinstance(result, dict):
                 _result: dict[str, Any] = result
@@ -1095,6 +1096,7 @@ async def _fetch_region_json(
                     filters=filters,
                     sort=sort_list,
                     include=include_rels,
+                    fk_display_only=True,
                 )
             if isinstance(result, dict):
                 _result: dict[str, Any] = result

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.9] - 2026-04-24
+
+Patch bump. Closes #865 — workspace list regions issued one follow-up `SELECT *` per FK relation via the batched `_load_to_one` path. For AegisMark's teacher workspace (14 regions × 3-5 FKs) that's ~50+ round-trips per page load. The FK-display fast path now collapses each region's FK display resolution into a single LEFT JOIN'd query, matching the single-SQL-statement approach the issue proposed.
+
+### Fixed
+- **`src/dazzle_back/runtime/relation_loader.py`** — new `build_display_join_plan(entity_name, include)` returns `(joins, extra_cols, fallback_relations)`: LEFT JOINs for each to-one relation whose target entity has a registered `display_field`, aliased select columns pulling `{target}.{display_field} AS "{rel}__display"`, and a fallback list for relations that didn't qualify. Paired with `apply_display_joins_to_rows` which folds the projected display columns into the same `{id: ..., __display__: ...}` FK-dict shape the batched path produces — downstream consumers (`_inject_display_names`) work unchanged.
+- **`src/dazzle_back/runtime/query_builder.py`** — `QueryBuilder` gains `extra_select_cols: list[str]` alongside the existing `joins: list[str]` field (which was declared but never emitted). `build_select` now appends joins between the FROM and WHERE clauses and merges `extra_select_cols` into the SELECT list. The base columns switch from `*` to `{table}.*` when JOINs are present so the aliased display columns don't collide with the base table's fields.
+- **`src/dazzle_back/runtime/repository.py`** — `Repository.list` gains an opt-in `fk_display_only: bool = False` parameter. When enabled with `include`, it invokes the new display-join plan and reshapes rows via `apply_display_joins_to_rows`; relations that didn't qualify (no display_field, to-many) fall through to the existing batched `_load_to_one` path. Other callers (nested entity endpoints that want full related rows) are unaffected.
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — both workspace-region call sites (`render_page` fetch + `fetch_region_data` batch path) pass `fk_display_only=True` so workspace lists consume the fast path.
+
+### Tests
+- **`test_fk_display_join.py`** — 9 tests pin the contract: JOIN plan emits correctly-quoted identifiers, no-display-field falls back, to-many falls back, mixed includes split correctly, row folding produces FK-dicts, null FKs become `None`, missing display columns pass through unchanged, QueryBuilder emits joins + extra cols, bare SELECT still uses `*`.
+
+### Performance
+- Typical list region: 1 main + N FK follow-ups ⇒ 1 JOIN query. For a region with 3 FKs this is a 4× reduction in database round-trips. AegisMark teacher workspace (profiled baseline: ~1.5s on ClassEnrolment × 40 rows) should see the FK-resolution component collapse from ~400-600ms to ~50-100ms.
+
+### Agent Guidance
+- **`repo.list(fk_display_only=True)` is the workspace list-region contract** — use it for any list view that only needs FK display strings, not full nested entities. Nested-entity endpoints that need relation bodies should leave it `False` (the default).
+- **To unlock the fast path for a new entity**: declare `display_field:` on the FK target entity. Without it, the relation silently falls back to the batched path — still correct, just no longer a single-query win. The existing `_lint_fk_targets_missing_display_field` check (#652) already nudges DSL authors toward this declaration.
+
 ## [0.61.8] - 2026-04-24
 
 Patch bump. Closes #857 — a workspace region declaring `filter: <fk> = current_context` silently misfired because `_extract_condition_filters` had no handling for the `current_context` sentinel. The selected-entity id was already wired from the URL query param into `_filter_context["current_context"]` in `workspace_rendering.py`, but never threaded into the SQL-filter extractor — so the literal string `"current_context"` fell through to the "plain literal" branch and was applied as the filter value verbatim, resulting in zero matches. Region queries ignored the selector entirely.

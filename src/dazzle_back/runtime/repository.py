@@ -429,6 +429,7 @@ class Repository(Generic[T]):
         search: str | None = None,
         select_fields: list[str] | None = None,
         search_fields: list[str] | None = None,
+        fk_display_only: bool = False,
     ) -> dict[str, Any]:
         """
         List entities with pagination, filtering, sorting, and relation loading.
@@ -468,6 +469,19 @@ class Repository(Generic[T]):
         if search:
             builder.set_search(search, fields=search_fields)
 
+        # v0.61.9 (#865): FK-display fast path — LEFT JOIN the display field
+        # instead of issuing one SELECT per FK relation. Only to-one relations
+        # with a registered display_field qualify; the rest fall back to the
+        # existing batched _load_to_one path.
+        display_join_fallback: list[str] = []
+        if fk_display_only and include and self._relation_loader:
+            joins, extra_cols, display_join_fallback = (
+                self._relation_loader.build_display_join_plan(self.entity_spec.name, include)
+            )
+            if joins:
+                builder.joins.extend(joins)
+                builder.extra_select_cols.extend(extra_cols)
+
         # Get total count
         count_sql, count_params = builder.build_count()
 
@@ -496,12 +510,29 @@ class Repository(Generic[T]):
 
         # Load relations if requested
         if include and self._relation_loader:
-            row_dicts = self._relation_loader.load_relations(
-                self.entity_spec.name,
-                row_dicts,
-                include,
-                conn=self.db.get_persistent_connection(),
-            )
+            if fk_display_only:
+                # Fold the `{rel}__display` JOIN columns into FK dicts so
+                # downstream consumers see the same shape as the batched
+                # path would have produced (#865).
+                row_dicts = self._relation_loader.apply_display_joins_to_rows(
+                    row_dicts, self.entity_spec.name, include
+                )
+                # Load any relations that couldn't use the JOIN path
+                # (no display_field, or to-many) via the batched fallback.
+                if display_join_fallback:
+                    row_dicts = self._relation_loader.load_relations(
+                        self.entity_spec.name,
+                        row_dicts,
+                        display_join_fallback,
+                        conn=self.db.get_persistent_connection(),
+                    )
+            else:
+                row_dicts = self._relation_loader.load_relations(
+                    self.entity_spec.name,
+                    row_dicts,
+                    include,
+                    conn=self.db.get_persistent_connection(),
+                )
 
         # Convert to models (or return dicts if relations/computed fields included)
         items: list[Any]

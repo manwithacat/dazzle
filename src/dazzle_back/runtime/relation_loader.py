@@ -422,6 +422,73 @@ class RelationLoader:
 
         return result
 
+    def build_display_join_plan(
+        self,
+        entity_name: str,
+        include: list[str],
+    ) -> tuple[list[str], list[str], list[str]]:
+        """Build LEFT JOIN clauses + SELECT columns for FK display resolution (#865).
+
+        For each to-one relation in ``include`` whose target entity has a known
+        ``display_field``, emit a LEFT JOIN and add ``target.{display_field}
+        AS "{fk}__display"`` to the SELECT list. Relations without a display
+        field are returned in ``fallback`` and must still be loaded via the
+        batched ``_load_to_one`` path.
+
+        Returns ``(joins, extra_cols, fallback_relations)``. All three lists
+        are empty when nothing qualifies for the fast path.
+        """
+        joins: list[str] = []
+        extra_cols: list[str] = []
+        fallback: list[str] = []
+        base = quote_identifier(entity_name)
+
+        for relation_name in include:
+            relation = self.registry.get_relation(entity_name, relation_name)
+            if not relation or not relation.is_to_one:
+                fallback.append(relation_name)
+                continue
+            display_field = self.registry.display_fields.get(relation.to_entity)
+            if not display_field:
+                fallback.append(relation_name)
+                continue
+            alias = f"_fkd_{relation_name}"
+            fk_col = quote_identifier(relation.foreign_key_field)
+            target = quote_identifier(relation.to_entity)
+            display_col = quote_identifier(display_field)
+            joins.append(f'LEFT JOIN {target} AS "{alias}" ON "{alias}".id = {base}.{fk_col}')
+            extra_cols.append(f'"{alias}".{display_col} AS "{relation_name}__display"')
+        return joins, extra_cols, fallback
+
+    def apply_display_joins_to_rows(
+        self,
+        rows: list[dict[str, Any]],
+        entity_name: str,
+        include: list[str],
+    ) -> list[dict[str, Any]]:
+        """Fold `{rel}__display` columns into FK dict shape (#865).
+
+        The JOIN path puts display values into sibling columns on each row;
+        this helper reshapes them into ``row[rel] = {id, __display__}`` dicts
+        matching what the batched ``_load_to_one`` path produces, so
+        downstream consumers (``_inject_display_names``) don't need changes.
+        """
+        for row in rows:
+            for relation_name in include:
+                relation = self.registry.get_relation(entity_name, relation_name)
+                if not relation or not relation.is_to_one:
+                    continue
+                display_key = f"{relation_name}__display"
+                if display_key not in row:
+                    continue
+                display_val = row.pop(display_key)
+                fk_id = row.get(relation.foreign_key_field)
+                if fk_id is None:
+                    row[relation_name] = None
+                else:
+                    row[relation_name] = {"id": fk_id, "__display__": display_val}
+        return rows
+
 
 # =============================================================================
 # Foreign Key Management

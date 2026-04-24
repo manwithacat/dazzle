@@ -327,6 +327,10 @@ class QueryBuilder:
     page_size: int = 20
     select_fields: list[str] = field(default_factory=list)
     joins: list[str] = field(default_factory=list)
+    # v0.61.9 (#865): extra SELECT columns (e.g. FK display-field aliases)
+    # appended to the base column list. Used by the FK-display JOIN path
+    # to pull `target.{display_field} AS {fk}__display` into one query.
+    extra_select_cols: list[str] = field(default_factory=list)
     search_query: str | None = None
     search_fields: list[str] = field(default_factory=list)
     # Raw SQL scope predicate from the predicate compiler (sql, params)
@@ -453,12 +457,14 @@ class QueryBuilder:
         if count_only:
             select = f"SELECT COUNT(*) FROM {table}"
         else:
-            fields = (
-                ", ".join(quote_identifier(f) for f in self.select_fields)
-                if self.select_fields
-                else "*"
-            )
-            select = f"SELECT {fields} FROM {table}"
+            if self.select_fields:
+                base_cols = [quote_identifier(f) for f in self.select_fields]
+            else:
+                base_cols = [f"{table}.*"] if self.joins else ["*"]
+            all_cols = base_cols + list(self.extra_select_cols)
+            select = f"SELECT {', '.join(all_cols)} FROM {table}"
+            if self.joins:
+                select = f"{select} {' '.join(self.joins)}"
 
         # WHERE clause
         where_clause, where_params = self.build_where_clause()
