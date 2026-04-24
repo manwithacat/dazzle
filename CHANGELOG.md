@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-04-24
+
+**Analytics, Consent & Privacy — stable release.** Completes the 6-phase design started in `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`. This release rolls up rc1-rc5 and adds Phase 6 (per-tenant analytics resolution).
+
+### Added (Phase 6)
+
+- **`TenantAnalyticsConfig`** — resolved per-tenant / per-request analytics config: `tenant_slug`, `providers` list, `data_residency`, `consent_override`, `privacy_page_url`, `cookie_policy_url`, `ga4_api_secret_env`, `extra`. Frozen dataclass.
+
+- **`TenantAnalyticsResolver`** protocol: `(request) → TenantAnalyticsConfig`. Apps plug in their own resolver via `set_tenant_analytics_resolver()` during startup. Single-tenant apps rely on the default `make_app_wide_resolver()` which returns the DSL-declared config for every request.
+
+- **Process-wide resolver registry** — `set/get/clear_tenant_analytics_resolvers`. App factory registers the default app-wide resolver at boot unless a custom one has already been installed.
+
+- **`resolve_for_request()`** — fail-closed single call-site that every consumer (site routes, consent routes, security middleware) uses. Resolver exceptions or wrong return types → strict empty config, not a crash.
+
+- **Per-request CSP resolution** — `_resolve_request_providers(request, fallback)` helper in `security_middleware`. CSP header now unions provider origins per-request from the resolver. Cross-tenant isolation enforced: tenant A's response never carries tenant B's script-src origins.
+
+- **`tenant_slug` in page context** — `SitePageContext.tenant_slug`. Populates `data-dz-tenant` on `<body>` so client-side analytics bus tags events with the correct tenant. Already referenced by Phase 4's `dz-analytics.js`.
+
+- **`_resolve_consent()` returns 6-tuple** (internal): consent dict, JSON, active providers, tenant_slug, privacy_url, cookie_url — all per-request, all from the resolver.
+
+- **20 new tests** (`tests/unit/test_tenant_analytics_resolver.py`) covering the config shape, app-wide resolver derivation from DSL, registry set/get/clear, fail-closed behaviour, and cross-tenant isolation (two tenants → two distinct CSP headers).
+
+### Changed
+
+- **`create_site_page_routes`** accepts new consent / analytics parameters but app_factory now derives them from the resolver rather than passing them through. Backward-compat — existing callers still work.
+
+- **`app_factory.assemble_post_build_routes`** registers the default tenant resolver alongside the consent router. Custom resolvers (set via startup hook) are respected; no auto-registration clobbers them.
+
+### Rolled-up from rc1-rc5
+
+- **rc1 (Phase 1)**: `pii()` field modifier + `subprocessor` construct + framework subprocessor registry (8 defaults) + `strip_pii()` + `dazzle analytics audit` CLI.
+- **rc2 (Phase 2)**: Consent state + `dz_consent_v2` cookie + banner + `/dz/consent` routes + privacy-page / cookie-policy / ROPA generators + `dazzle compliance privacy` CLI.
+- **rc3 (Phase 3)**: `ProviderDefinition` + GTM + Plausible providers + `analytics:` DSL block + CSP origin injection.
+- **rc4 (Phase 4)**: Event vocabulary `dz/v1` (6 events) + `dz-analytics.js` client bus + template `data-dz-*` injection + dev/trial/qa disable semantics.
+- **rc5 (Phase 5)**: Server-side sinks + GA4 Measurement Protocol + `analytics.server_side:` DSL subsection + event bus bridge.
+
+### Agent Guidance
+
+- **Apps with real tenants**: install a resolver at startup via `set_tenant_analytics_resolver(my_resolver)`. The resolver receives the Starlette Request and returns a `TenantAnalyticsConfig`. Look up your tenant from `request.url.hostname` / `request.state.tenant` / whatever your multi-tenancy convention is.
+- **Resolvers should cache**: the framework calls the resolver on every analytics-touching request. If your tenant lookup hits a database, add in-process / Redis caching with your own invalidation rules.
+- **Fail-closed is the contract**: the framework intentionally never raises from the resolver up to the publisher. Return a config with `providers=[]` to disable analytics for a tenant (freemium tier, trial account, etc.); don't rely on exceptions as signalling.
+- **Cross-tenant isolation**: the test suite pins that two tenants on the same process produce two distinct CSP headers. If you introduce caching, make sure it's keyed on the tenant, not the process.
+- **Phase 6 completes the design spec**. Further analytics work is user-initiated — adding providers (PostHog / Segment / Fathom), richer event schemas, or deeper tenant features.
+
 ## [0.61.0rc5] - 2026-04-24
 
 Phase 5 of the **Analytics, Consent & Privacy** design: server-side analytics sinks via the existing event bus. Business events (audit, state transitions, completed orders) can now forward to Google Analytics 4's Measurement Protocol from server code — ad-blocker-proof, PII-safe, and independent of client JS / consent state for business-critical signals.

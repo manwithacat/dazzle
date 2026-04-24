@@ -623,12 +623,19 @@ def assemble_post_build_routes(
         except ImportError as e:
             logger.warning("Island routes not available: %s", e)
 
-    # ---- 6b. Consent banner routes (v0.61.0 Phase 2) ----
+    # ---- 6b. Consent banner routes + default tenant resolver ----
+    # (v0.61.0 Phase 2 + Phase 6)
     try:
+        from dazzle.compliance.analytics import (
+            get_tenant_analytics_resolver,
+            make_app_wide_resolver,
+            set_tenant_analytics_resolver,
+        )
         from dazzle_back.runtime.consent_routes import create_consent_routes
 
         # Precedence: DSL `analytics.consent:` block > TOML `[analytics]` >
-        # EU-safe default. Per-tenant resolution lands in Phase 6.
+        # EU-safe default. Per-tenant resolution (Phase 6) replaces this
+        # via set_tenant_analytics_resolver() at app startup.
         _analytics_cfg: dict[str, Any] = {}
         _raw_manifest = getattr(builder, "manifest_raw", None)
         if isinstance(_raw_manifest, dict):
@@ -643,12 +650,27 @@ def assemble_post_build_routes(
         _override = (_dsl_consent.consent_override if _dsl_consent else None) or _analytics_cfg.get(
             "consent_override"
         )
+        _privacy_url = _analytics_cfg.get("privacy_page_url", "/privacy")
+        _cookie_url = _analytics_cfg.get("cookie_policy_url")
+
+        # Register the default app-wide resolver unless the application
+        # has already installed a custom tenant resolver (via startup hook).
+        if get_tenant_analytics_resolver() is None:
+            set_tenant_analytics_resolver(
+                make_app_wide_resolver(
+                    appspec.analytics,
+                    default_residency=_jurisdiction,
+                    default_override=_override,
+                    privacy_page_url=_privacy_url,
+                    cookie_policy_url=_cookie_url,
+                )
+            )
 
         consent_router = create_consent_routes(
             default_jurisdiction=_jurisdiction,
             consent_override=_override,
-            privacy_page_url=_analytics_cfg.get("privacy_page_url", "/privacy"),
-            cookie_policy_url=_analytics_cfg.get("cookie_policy_url"),
+            privacy_page_url=_privacy_url,
+            cookie_policy_url=_cookie_url,
         )
         app.include_router(consent_router)
         logger.info("  Consent banner: /dz/consent, /dz/consent/state, /dz/consent/banner")

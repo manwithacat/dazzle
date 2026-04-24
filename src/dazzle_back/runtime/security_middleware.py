@@ -229,6 +229,49 @@ def configure_headers_for_profile(profile: str) -> SecurityHeadersConfig:
 # =============================================================================
 
 
+def _resolve_request_providers(
+    request: Any,
+    fallback_providers: list[Any] | None,
+) -> list[Any]:
+    """Return the provider definitions active for the current request.
+
+    v0.61.0 Phase 6: calls the registered tenant analytics resolver and
+    maps the resulting provider instance names → ProviderDefinition via
+    the framework registry. Falls back to the app-wide provider list
+    (from Phase 3) when no resolver is registered or it fails closed.
+
+    Returning an empty list is fine — the CSP header just omits the
+    provider origins.
+    """
+    try:
+        from dazzle.compliance.analytics import (
+            get_provider_definition,
+            get_tenant_analytics_resolver,
+        )
+    except ImportError:
+        return fallback_providers or []
+
+    resolver = get_tenant_analytics_resolver()
+    if resolver is None:
+        return fallback_providers or []
+
+    try:
+        cfg = resolver(request)
+    except Exception:
+        # Fail closed — app-wide list still applies.
+        return fallback_providers or []
+
+    definitions: list[Any] = []
+    for instance in getattr(cfg, "providers", None) or []:
+        name = getattr(instance, "name", None)
+        if not name:
+            continue
+        definition = get_provider_definition(name)
+        if definition is not None:
+            definitions.append(definition)
+    return definitions
+
+
 def create_security_headers_middleware(
     config: SecurityHeadersConfig,
     analytics_providers: list[Any] | None = None,
@@ -281,15 +324,20 @@ def create_security_headers_middleware(
             # emit Content-Security-Policy-Report-Only so browsers surface
             # violations without blocking — graduate to enforcing mode by
             # switching the flag off (standard → strict).
+            #
+            # v0.61.0 Phase 6: per-request provider resolution via the
+            # tenant resolver. Cached app-wide providers (Phase 3) are
+            # used as fallback when no resolver is registered.
             if config.enable_csp:
                 header_name = (
                     "Content-Security-Policy-Report-Only"
                     if config.csp_report_only
                     else "Content-Security-Policy"
                 )
+                providers_for_request = _resolve_request_providers(request, analytics_providers)
                 response.headers[header_name] = _build_csp_header(
                     config.csp_directives,
-                    providers=analytics_providers,
+                    providers=providers_for_request,
                 )
 
             return response  # type: ignore[no-any-return]

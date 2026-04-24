@@ -303,9 +303,73 @@ event payloads pass through `strip_pii()` before the sink sees them.
 `pii()`-annotated fields are dropped; opt-in happens per-surface as in
 Phase 1.
 
-## What comes later
+## Per-tenant analytics resolution (Phase 6)
 
-- **Phase 6** — per-tenant analytics resolution (Tenant entity extension).
+Multi-tenant Dazzle apps can route analytics per tenant — tenant A fires to
+GTM-ABC, tenant B to GTM-DEF, tenant C has analytics disabled entirely.
+Every analytics-touching request flows through a single resolver call.
+
+### Register a resolver
+
+```python
+from dazzle.compliance.analytics import (
+    set_tenant_analytics_resolver,
+    TenantAnalyticsConfig,
+)
+from dazzle.core.ir import AnalyticsProviderInstance
+
+def resolve(request):
+    host = request.url.hostname
+    if host == "acme.example.com":
+        return TenantAnalyticsConfig(
+            tenant_slug="acme",
+            providers=[
+                AnalyticsProviderInstance(
+                    name="gtm", params={"id": "GTM-ACMEXX"}
+                ),
+            ],
+            data_residency="US",
+        )
+    # Default: no analytics for unknown tenants
+    return TenantAnalyticsConfig()
+
+set_tenant_analytics_resolver(resolve)
+```
+
+Call this once during app startup. The default app-wide resolver is
+installed automatically — your custom one wins.
+
+### Fail-closed contract
+
+If the resolver raises or returns a non-`TenantAnalyticsConfig`, the
+framework silently falls back to the strict default (no analytics,
+default consent defaults). It never propagates the error to the
+publisher. Use `TenantAnalyticsConfig(providers=[])` to explicitly
+disable analytics for a tenant.
+
+### Cross-tenant isolation
+
+The CSP header, script tags, consent cookie defaults, and
+`data-dz-tenant` body attribute are all resolved per-request. Two
+tenants on the same process receive independent configs — tenant A's
+response never leaks tenant B's GTM ID into the Content-Security-Policy
+header.
+
+### What's resolved per-tenant
+
+- **`providers`** — which analytics scripts load (+ CSP origins)
+- **`data_residency`** — EU/UK → denied defaults; else granted
+- **`consent_override`** — hard override for consent defaults
+- **`privacy_page_url`** / **`cookie_policy_url`** — banner link targets
+- **`tenant_slug`** — populates `data-dz-tenant` for event tagging
+
+### What's NOT in Phase 6
+
+Tenant-resolution is a **runtime** concern. The framework doesn't
+dictate your tenant entity shape, your hostname → tenant mapping, or
+your caching layer. The resolver callable is the boundary. If you add a
+database-backed tenant lookup, wrap it with your own cache — the
+framework calls the resolver on every analytics-touching request.
 
 See the design spec at `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`
 for the full roadmap.

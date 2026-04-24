@@ -67,6 +67,15 @@ from .sinks import (
     get_sink_factory,
     list_sink_names,
 )
+from .tenant_resolver import (
+    TenantAnalyticsConfig,
+    TenantAnalyticsResolver,
+    clear_tenant_analytics_resolvers,
+    get_tenant_analytics_resolver,
+    make_app_wide_resolver,
+    resolve_for_request,
+    set_tenant_analytics_resolver,
+)
 
 __all__ = [
     "CONSENT_COOKIE_MAX_AGE_SECONDS",
@@ -107,7 +116,14 @@ __all__ = [
     "GA4MeasurementProtocolSink",
     "SinkMetrics",
     "SinkResult",
+    "TenantAnalyticsConfig",
+    "TenantAnalyticsResolver",
     "TenantContext",
+    "clear_tenant_analytics_resolvers",
+    "get_tenant_analytics_resolver",
+    "make_app_wide_resolver",
+    "resolve_for_request",
+    "set_tenant_analytics_resolver",
     "analytics_globally_disabled",
     "get_sink_factory",
     "list_sink_names",

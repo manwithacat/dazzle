@@ -518,6 +518,8 @@ class SitePageContext(BaseModel):
     # so consent gating is enforced in one place. Each entry is a dict shaped
     # {name, consent_category, params, head_template, ...}.
     active_analytics_providers: list[dict[str, Any]] = Field(default_factory=list)
+    # Tenant slug (v0.61.0 Phase 6). Populates data-dz-tenant on <body>.
+    tenant_slug: str | None = None
 
 
 class SiteAuthContext(BaseModel):

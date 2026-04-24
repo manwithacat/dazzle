@@ -341,35 +341,55 @@ def create_site_page_routes(
     _auth_fn = get_auth_context
     _persona_routes: dict[str, str] = dict(persona_routes) if persona_routes else {}
 
-    # Consent banner setup (v0.61.0 Phase 2)
-    from dazzle.compliance.analytics.consent import ConsentDefaults
-
-    _consent_defaults = ConsentDefaults.for_jurisdiction(
-        consent_default_jurisdiction,
-        override=consent_override if consent_override in ("granted", "denied") else None,  # type: ignore[arg-type]
-    )
-    _privacy_page_url = privacy_page_url
-    _cookie_policy_url = cookie_policy_url
-
+    # Consent banner + per-tenant resolution (v0.61.0 Phase 2 + Phase 6)
+    _app_wide_privacy_url = privacy_page_url
+    _app_wide_cookie_url = cookie_policy_url
+    _app_wide_jurisdiction = consent_default_jurisdiction
+    _app_wide_override = consent_override
     _analytics_spec = analytics_spec
 
     def _resolve_consent(
         request: Request,
-    ) -> tuple[dict[str, Any], str, list[dict[str, Any]]]:
-        """Return (consent_dict, consent_state_json, active_providers).
+    ) -> tuple[dict[str, Any], str, list[dict[str, Any]], str | None, str, str | None]:
+        """Return (consent, consent_json, providers, tenant_slug, privacy_url, cookie_url).
 
-        active_providers is empty when no analytics: block is declared.
+        Runs through the tenant resolver (v0.61.0 Phase 6) — per-tenant
+        analytics IDs, residency, and banner link overrides are honoured.
+        Falls back to app-wide config when no resolver is registered.
         """
         import json as _json
 
-        from dazzle.compliance.analytics import resolve_active_providers
+        from dazzle.compliance.analytics import (
+            TenantAnalyticsConfig,
+            resolve_active_providers,
+            resolve_for_request,
+        )
         from dazzle.compliance.analytics.consent import (
             CONSENT_COOKIE_NAME,
+            ConsentDefaults,
             parse_consent_cookie,
         )
+        from dazzle.core.ir import AnalyticsSpec
 
+        # Resolve the tenant (or app-wide) config for this request.
+        fallback = TenantAnalyticsConfig(
+            providers=list(_analytics_spec.providers) if _analytics_spec else [],
+            data_residency=_app_wide_jurisdiction,
+            consent_override=_app_wide_override,
+            privacy_page_url=_app_wide_privacy_url,
+            cookie_policy_url=_app_wide_cookie_url,
+        )
+        tenant_cfg = resolve_for_request(request, fallback=fallback)
+
+        # Build consent defaults from the resolved tenant residency.
+        defaults = ConsentDefaults.for_jurisdiction(
+            tenant_cfg.data_residency,
+            override=tenant_cfg.consent_override
+            if tenant_cfg.consent_override in ("granted", "denied")
+            else None,  # type: ignore[arg-type]
+        )
         raw = request.cookies.get(CONSENT_COOKIE_NAME)
-        state = parse_consent_cookie(raw, _consent_defaults)
+        state = parse_consent_cookie(raw, defaults)
         consent = {
             "analytics": state.analytics == "granted",
             "advertising": state.advertising == "granted",
@@ -378,8 +398,23 @@ def create_site_page_routes(
             "undecided": state.undecided,
             "decided_at": state.decided_at,
         }
-        providers = resolve_active_providers(_analytics_spec, state) if _analytics_spec else []
-        return consent, _json.dumps(consent), providers
+
+        # Providers come from the tenant config (may be empty if the tenant
+        # opted out entirely).
+        if tenant_cfg.providers:
+            tenant_spec = AnalyticsSpec(providers=tenant_cfg.providers)
+            providers = resolve_active_providers(tenant_spec, state)
+        else:
+            providers = []
+
+        return (
+            consent,
+            _json.dumps(consent),
+            providers,
+            tenant_cfg.tenant_slug,
+            tenant_cfg.privacy_page_url,
+            tenant_cfg.cookie_policy_url,
+        )
 
     def _resolve_auth(request: Request) -> tuple[bool, str]:
         """Check auth state and resolve the dashboard URL.
@@ -440,7 +475,14 @@ def create_site_page_routes(
                         }
                         for p in qa_persona_list
                     ]
-                consent_dict, consent_json, active_providers = _resolve_consent(request)
+                (
+                    consent_dict,
+                    consent_json,
+                    active_providers,
+                    tenant_slug,
+                    privacy_url,
+                    cookie_url,
+                ) = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -452,8 +494,9 @@ def create_site_page_routes(
                     consent=consent_dict,
                     consent_state_json=consent_json,
                     active_analytics_providers=active_providers,
-                    privacy_page_url=_privacy_page_url,
-                    cookie_policy_url=_cookie_policy_url,
+                    tenant_slug=tenant_slug,
+                    privacy_page_url=privacy_url,
+                    cookie_policy_url=cookie_url,
                 )
                 return HTMLResponse(content=render_site_page("site/page.html", ctx))
         else:
@@ -466,7 +509,14 @@ def create_site_page_routes(
             ) -> str:
                 """Serve a site page as HTML with SSR content."""
                 is_authed, dash_url = _resolve_auth(request)
-                consent_dict, consent_json, active_providers = _resolve_consent(request)
+                (
+                    consent_dict,
+                    consent_json,
+                    active_providers,
+                    tenant_slug,
+                    privacy_url,
+                    cookie_url,
+                ) = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -477,8 +527,9 @@ def create_site_page_routes(
                     consent=consent_dict,
                     consent_state_json=consent_json,
                     active_analytics_providers=active_providers,
-                    privacy_page_url=_privacy_page_url,
-                    cookie_policy_url=_cookie_policy_url,
+                    tenant_slug=tenant_slug,
+                    privacy_page_url=privacy_url,
+                    cookie_policy_url=cookie_url,
                 )
                 return render_site_page("site/page.html", ctx)
 
@@ -494,7 +545,9 @@ def create_site_page_routes(
         ) -> str:
             """Serve the terms of service page."""
             is_authed, dash_url = _resolve_auth(request)
-            consent_dict, consent_json, active_providers = _resolve_consent(request)
+            consent_dict, consent_json, active_providers, tenant_slug, privacy_url, cookie_url = (
+                _resolve_consent(request)
+            )
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -505,8 +558,9 @@ def create_site_page_routes(
                 consent=consent_dict,
                 consent_state_json=consent_json,
                 active_analytics_providers=active_providers,
-                privacy_page_url=_privacy_page_url,
-                cookie_policy_url=_cookie_policy_url,
+                tenant_slug=tenant_slug,
+                privacy_page_url=privacy_url,
+                cookie_policy_url=cookie_url,
             )
             return render_site_page("site/page.html", ctx)
 
@@ -521,7 +575,9 @@ def create_site_page_routes(
         ) -> str:
             """Serve the privacy policy page."""
             is_authed, dash_url = _resolve_auth(request)
-            consent_dict, consent_json, active_providers = _resolve_consent(request)
+            consent_dict, consent_json, active_providers, tenant_slug, privacy_url, cookie_url = (
+                _resolve_consent(request)
+            )
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -532,8 +588,9 @@ def create_site_page_routes(
                 consent=consent_dict,
                 consent_state_json=consent_json,
                 active_analytics_providers=active_providers,
-                privacy_page_url=_privacy_page_url,
-                cookie_policy_url=_cookie_policy_url,
+                tenant_slug=tenant_slug,
+                privacy_page_url=privacy_url,
+                cookie_policy_url=cookie_url,
             )
             return render_site_page("site/page.html", ctx)
 
