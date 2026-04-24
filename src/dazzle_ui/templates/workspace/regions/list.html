@@ -88,7 +88,7 @@
             {{ attention_classes(attn, 'tint') }}
             {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
             {% if attn %}title="{{ attn.message }}"{% endif %}
-            {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+            {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
             hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           {% for col in columns %}
           <td class="text-[13px] text-[hsl(var(--foreground))] px-3 py-2">

@@ -2030,6 +2030,63 @@ def _lint_nav_group_icon_consistency(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Error when a region `action:` on a cross-entity surface has no valid FK path (#861).
+
+    When a region sourced from entity A declares `action: some_surface` and
+    `some_surface` is bound to a different entity B, the runtime looks for a
+    single FK field on A that references B to thread the row ID through to
+    the action URL. If zero or multiple FK candidates exist, the action URL
+    silently misfires at runtime. Flag both conditions at validate time.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not appspec.workspaces:
+        return errors, warnings
+
+    surfaces_by_name: dict[str, ir.SurfaceSpec] = {s.name: s for s in appspec.surfaces}
+    entities_by_name: dict[str, ir.EntitySpec] = {e.name: e for e in appspec.domain.entities}
+
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if not region.action or not region.source:
+                continue
+            action_surface = surfaces_by_name.get(region.action)
+            if action_surface is None:
+                continue  # unknown surface is caught elsewhere
+            target_entity = action_surface.entity_ref
+            if not target_entity or target_entity == region.source:
+                continue  # same-entity action — no FK needed
+            source_entity = entities_by_name.get(region.source)
+            if source_entity is None:
+                continue  # region sourced from a surface, not an entity
+            fk_candidates: list[str] = []
+            for f in source_entity.fields:
+                kind = getattr(f.type, "kind", None)
+                kind_val = kind.value if hasattr(kind, "value") else str(kind)  # type: ignore[union-attr]
+                if kind_val in ("ref", "belongs_to"):
+                    ref_target = getattr(f.type, "ref_entity", None)
+                    if ref_target == target_entity:
+                        fk_candidates.append(f.name)
+            if len(fk_candidates) == 0:
+                errors.append(
+                    f"Workspace '{workspace.name}' region '{region.name}' declares "
+                    f"`action: {region.action}` targeting entity '{target_entity}', "
+                    f"but source entity '{region.source}' has no FK field referencing "
+                    f"'{target_entity}'. Add a `ref {target_entity}` field or change "
+                    f"the action to a surface on '{region.source}'."
+                )
+            elif len(fk_candidates) > 1:
+                errors.append(
+                    f"Workspace '{workspace.name}' region '{region.name}' declares "
+                    f"`action: {region.action}` targeting entity '{target_entity}', "
+                    f"but source entity '{region.source}' has multiple FK fields "
+                    f"referencing '{target_entity}' ({', '.join(fk_candidates)}). "
+                    f"Ambiguous FK — the runtime cannot pick one automatically."
+                )
+    return errors, warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 

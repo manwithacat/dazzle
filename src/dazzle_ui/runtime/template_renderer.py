@@ -331,6 +331,31 @@ def _ref_display_filter(value: Any) -> str:
     return _ref_display_name(value)
 
 
+def _resolve_fk_id_filter(value: Any) -> str:
+    """Jinja filter: extract the id from a FK value that may be dict or scalar.
+
+    v0.61.7 (#861): when a region's ``action:`` points at a foreign entity,
+    the row's FK column (e.g. ``student_profile``) is used to parameterise
+    the detail URL. ``_inject_display_names`` may have expanded that column
+    into ``{"id": "<uuid>", "display": "Alice"}`` — in that case templates
+    rendering ``item[field] | string`` would emit the dict repr, producing
+    a broken URL. This filter resolves both shapes:
+
+        {"id": "abc"} | resolve_fk_id  → "abc"
+        "abc"         | resolve_fk_id  → "abc"
+        None          | resolve_fk_id  → ""
+    """
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        # Prefer explicit id; fall back to other identity keys.
+        for key in ("id", "ID", "uuid", "value"):
+            if key in value and value[key] is not None:
+                return str(value[key])
+        return ""
+    return str(value)
+
+
 def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
@@ -425,6 +450,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["slugify"] = _slugify_filter
     env.filters["basename_or_url"] = _basename_or_url_filter
     env.filters["ref_display"] = _ref_display_filter
+    env.filters["resolve_fk_id"] = _resolve_fk_id_filter
     env.filters["humanize"] = _humanize_filter
 
     return env

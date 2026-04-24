@@ -1,6 +1,7 @@
 # serializer version: 1
 # name: test_simple_dsl_to_ir_snapshot
   dict({
+    'analytics': None,
     'apis': list([
     ]),
     'approvals': list([
@@ -40,6 +41,7 @@
                 <FieldModifier.PK: 'pk'>,
               ]),
               'name': 'id',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -61,6 +63,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'title',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -81,6 +84,7 @@
               'modifiers': list([
               ]),
               'name': 'description',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -101,6 +105,7 @@
               'modifiers': list([
               ]),
               'name': 'status',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -126,6 +131,7 @@
                 <FieldModifier.AUTO_ADD: 'auto_add'>,
               ]),
               'name': 'created_at',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -215,6 +221,7 @@
                 <FieldModifier.PK: 'pk'>,
               ]),
               'name': 'id',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -236,6 +243,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'component',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -257,6 +265,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'status',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -281,6 +290,7 @@
               'modifiers': list([
               ]),
               'name': 'message',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -301,6 +311,7 @@
               'modifiers': list([
               ]),
               'name': 'latency_ms',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -321,6 +332,7 @@
               'modifiers': list([
               ]),
               'name': 'checked_at',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -408,6 +420,7 @@
                 <FieldModifier.PK: 'pk'>,
               ]),
               'name': 'id',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -429,6 +442,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'name',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -450,6 +464,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'value',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -470,6 +485,7 @@
               'modifiers': list([
               ]),
               'name': 'unit',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -490,6 +506,7 @@
               'modifiers': list([
               ]),
               'name': 'tags',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -510,6 +527,7 @@
               'modifiers': list([
               ]),
               'name': 'bucket_start',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -530,6 +548,7 @@
               'modifiers': list([
               ]),
               'name': 'resolution',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -617,6 +636,7 @@
                 <FieldModifier.PK: 'pk'>,
               ]),
               'name': 'id',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -638,6 +658,7 @@
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
               'name': 'version',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -658,6 +679,7 @@
               'modifiers': list([
               ]),
               'name': 'previous_version',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -678,6 +700,7 @@
               'modifiers': list([
               ]),
               'name': 'deployed_by',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -698,6 +721,7 @@
               'modifiers': list([
               ]),
               'name': 'deployed_at',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -718,6 +742,7 @@
               'modifiers': list([
               ]),
               'name': 'status',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -744,6 +769,7 @@
               'modifiers': list([
               ]),
               'name': 'rollback_of',
+              'pii': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -911,6 +937,8 @@
     'stories': list([
     ]),
     'streams': list([
+    ]),
+    'subprocessors': list([
     ]),
     'subscriptions': list([
     ]),

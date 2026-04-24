@@ -14,7 +14,7 @@
       <div class="space-y-2 max-h-[60vh] overflow-y-auto">
         {% for item in col_items %}
         <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]{% if action_url %} cursor-pointer hover:shadow-[0_2px_8px_rgb(0_0_0/0.06)] hover:border-[hsl(var(--primary)/0.5)] transition-all duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
-             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           <div class="p-2">
             {% set _dk_val = item[display_key] if display_key else none %}

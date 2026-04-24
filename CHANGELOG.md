@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.7] - 2026-04-24
+
+Patch bump. Closes #861 — a workspace region sourced from entity A declaring `action: <surface>` where that surface is bound to a different entity B silently misfired at runtime when the action URL expected the FK on A referencing B. Three symptoms in one: (1) row endpoints expanded FK dicts into `{id: ..., display: ...}` and `action_id_field` wasn't forwarded to the template, so `item[id]|string` produced `{'id': '...'}`; (2) template fragments hard-coded `item.id` instead of honouring the region's `action_id_field`; (3) `dazzle validate` produced no signal when the FK probe would return zero or multiple matches.
+
+### Fixed
+- **`src/dazzle_ui/runtime/template_renderer.py`** — new `resolve_fk_id` Jinja filter robustly extracts the id from a FK value regardless of whether it's been expanded into a dict by the FK joiner or left as a scalar UUID/string. Registered globally so every region template can use it.
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — `render_fragment(...)` now forwards `action_id_field` from the `RegionContext` into the per-item template render context; previously the field never crossed the render boundary.
+- **Region templates** (`list`, `grid`, `kanban`, `queue`, `activity_feed`, `timeline`, `metrics`, `tab_data`, `tree`) — switched from `item[action_id_field|default('id')]|string` (which breaks on dict-valued FKs) to `item[action_id_field|default('id')]|resolve_fk_id`. Tree template applies the same fix to `node[...]`.
+- **`src/dazzle/core/validator.py`** — new `validate_workspace_region_actions` check errors at validate time when a cross-entity `action:` has zero FK candidates ("no FK field referencing 'Target'") or multiple candidates ("ambiguous FK — runtime cannot pick one automatically"). Wired into the main `lint_appspec` flow so `dazzle validate` catches the misconfiguration before the app ships.
+
+### Tests
+- **`test_region_action_fk_validation.py`** — 5 tests pin the validator contract: same-entity action is allowed, single FK resolves cleanly, zero FK errors, ambiguous (2+) FKs error with both field names listed, check surfaces via the non-extended `lint_appspec` path.
+
+### Agent Guidance
+- **Cross-entity region actions require an unambiguous FK**. If you declare `source: A` + `action: <surface on B>`, entity A must have exactly one `ref B` field. Zero or multiple is now a `dazzle validate` error — fix by adding the FK, renaming one of the refs, or changing the action to a surface on A.
+- **Template fragment rendering**: when writing a new region template, use `|resolve_fk_id` (not `|string`) on any field that could be an FK. The filter handles both raw scalars and expanded FK dicts. Hard-coding `item.id` bypasses the region's `action_id_field` contract.
+
 ## [0.61.6] - 2026-04-24
 
 Patch bump. Closes #859 — feedback widget polled `GET /feedbackreports?reported_by=...&status=resolved&notification_sent=false` on every page load and got 403 for non-admin personas, so the "your feedback has been resolved" toast never fired for the users who actually submitted the feedback. Root cause: `allow_personas=["admin", "super_admin"]` on the auto-generated `feedback_admin` + `feedback_edit` surfaces leaked onto the shared entity endpoints (`GET /feedbackreports`, `PUT /feedbackreports/{id}`), gating them to admin-only before Cedar's entity-level check could consult the `scope: all for: *` rule.

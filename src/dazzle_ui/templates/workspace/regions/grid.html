@@ -18,7 +18,7 @@
       {{ attention_classes(attn, 'border') }}
       {% if action_url %} cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]{% endif %}"
          {% if attn %}title="{{ attn.message }}"{% endif %}
-         {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+         {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
          hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
       <h4 class="text-[13px] font-medium text-[hsl(var(--foreground))] mb-1.5">
         {% set _primary = item[display_key] %}

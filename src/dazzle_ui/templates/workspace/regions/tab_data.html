@@ -49,7 +49,7 @@
       {% set attn = item.get("_attention") if item.get is defined else none %}
       <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% elif attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% elif attn.level == 'notice' %}bg-[hsl(var(--info)/0.08)]{% endif %} {% endif %}{% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
           {% if attn %}title="{{ attn.message }}"{% endif %}
-          {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+          {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
           hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         {% for col in columns %}
         <td>

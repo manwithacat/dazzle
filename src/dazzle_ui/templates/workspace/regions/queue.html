@@ -56,7 +56,7 @@
 
       {# Main content — clickable to navigate to detail #}
       <div class="flex-1 min-w-0 {% if action_url %}cursor-pointer{% endif %}"
-           {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+           {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
            hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         <div class="flex items-center gap-2">
           {% set _display = item[display_key ~ "_display"] %}

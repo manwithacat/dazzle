@@ -20,7 +20,7 @@
            for visual grouping. #}
         <div class="flex-1 py-1 px-2 rounded-[4px] bg-[hsl(var(--muted)/0.3)] text-[13px] text-[hsl(var(--foreground))]
           {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
-             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           {% if item.actor or item.get('actor') %}
             <span class="font-medium">{{ item.actor or item.get('user', '') }}</span>

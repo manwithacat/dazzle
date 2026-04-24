@@ -23,6 +23,7 @@ from .validator import (
     validate_surfaces,
     validate_ux_specs,
     validate_webhooks,
+    validate_workspace_region_actions,
 )
 
 
@@ -89,6 +90,11 @@ def lint_appspec(
 
     # UX Semantic Layer validation
     errors, warnings = validate_ux_specs(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Cross-entity region action FK validation (#861)
+    errors, warnings = validate_workspace_region_actions(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

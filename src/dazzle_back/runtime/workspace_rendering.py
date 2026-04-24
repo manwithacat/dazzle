@@ -995,6 +995,10 @@ async def _workspace_region_handler(
         ),
         item=items[0] if items else None,
         action_url=ctx.ctx_region.action_url,
+        # v0.61.7 (#861): forward the FK field the action URL should key on.
+        # Templates use `item[action_id_field] | resolve_fk_id` to handle
+        # both scalar ids and FK dicts expanded by _inject_display_names.
+        action_id_field=ctx.ctx_region.action_id_field,
         sort_field=sort or "",
         sort_dir=dir,
         endpoint=ctx.ctx_region.endpoint,
