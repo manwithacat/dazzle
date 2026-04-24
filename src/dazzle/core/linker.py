@@ -461,9 +461,17 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
     ]
     # Sensible defaults so apps don't see "surface has no ux block" lint
     # warnings on every feedback-enabled project.
+    # v0.61.13 (#869): notification_sent + reported_by added to the filter
+    # list so the feedback widget's resolved-report poll can actually narrow
+    # server-side. Without them the ``notification_sent=false`` predicate
+    # was silently ignored — the widget re-fired its toast on every page
+    # load because GET /feedbackreports kept returning already-acknowledged
+    # rows. reported_by matters for admins (entity scope is ``all``); for
+    # non-admins the entity-level ``reported_by = current_user.email``
+    # scope already restricts rows, so adding it here is a no-op there.
     ux = ir.UXSpec(
         sort=[ir.SortSpec(field="created_at", direction="desc")],
-        filter=["category", "severity", "status"],
+        filter=["category", "severity", "status", "notification_sent", "reported_by"],
         search=["description", "reported_by"],
         empty_message="No feedback yet.",
     )

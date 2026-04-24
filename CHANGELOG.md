@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.13] - 2026-04-24
+
+Patch bump. Closes #869 — the feedback widget's "Your feedback has been resolved" toast re-fired on every page load for any non-admin user with a resolved `FeedbackReport`. Root cause was upstream of the widget's `_markNotified` PUT: the `GET /feedbackreports?notification_sent=false` poll was silently ignoring that predicate, because `notification_sent` wasn't in the admin list surface's `ux.filter` (and bare query-param filters are gated on that list). The server returned acknowledged rows anyway; the widget toasted every one; the PUT *did* persist but had no observable effect.
+
+### Fixed
+- **`src/dazzle/core/linker.py` — `_build_feedback_list_view`** — `notification_sent` and `reported_by` added to `ux.filter`. The route generator's bare query-param pathway (`route_generator.py:1558`) accepts `?field=value` only when `field ∈ filter_fields`, and that list is built from `ux.filter` via `build_entity_filter_fields`. Without the update, both predicates were dropped by `_reserved_params` filtering and never reached the repository's WHERE clause. `reported_by` is also newly respected: admins (entity scope: `all`) previously saw toasts for *every* resolved report, not just their own.
+
+### Tests
+- **`test_feedback_widget.py::test_admin_surface_filter_includes_notification_sent`** — pins the contract: both fields must appear in `feedback_admin.ux.filter`.
+
+### Agent Guidance
+- **Widget-driven API filters must be in `ux.filter`**. The route generator rejects bare `?field=value` query params unless `field` is declared in the list surface's `ux.filter`. This is a security feature (you can't filter on arbitrary columns), but it means *every* client-side filter the widget needs must have a matching DSL declaration. Filter chips are a side-effect — admins will see `notification_sent` and `reported_by` as filter options in the admin UI, which is harmless and arguably useful.
+- **When adding a new client-driven filter**: update `ux.filter` on the relevant list surface and add a test that pins both the DSL declaration and the route-generator behaviour. Don't try to work around the gate by routing through a headless endpoint — that just loses the filter audit trail.
+
 ## [0.61.12] - 2026-04-24
 
 Patch bump. Closes #868 — the consent banner served correctly after #867, but every button click (Accept all / Reject all / Save choices) 403'd on `POST /dz/consent` with `{"detail":"CSRF token missing or invalid"}`. Anonymous marketing-page visitors don't carry a `dazzle_csrf` cookie (the cookie is issued on first app-page visit, not on the site template), and `site_base.html` doesn't render a `<meta name="csrf-token">` tag, so there's no client-side token to forward. The banner rendered, looked interactive, and did nothing.

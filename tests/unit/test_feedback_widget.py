@@ -514,6 +514,20 @@ class TestFeedbackWidgetSurfaces:
         assert "page_url" in field_names
         assert "created_at" in field_names
 
+    def test_admin_surface_filter_includes_notification_sent(self) -> None:
+        """v0.61.13 (#869): notification_sent + reported_by must be in the
+        admin surface's ux.filter so the feedback widget's
+        ``GET /feedbackreports?notification_sent=false&reported_by=<email>``
+        poll narrows server-side. Without this, the server returns already-
+        acknowledged reports and the resolved-report toast re-fires on every
+        page load."""
+        app = self._link(self._DSL_ENABLED)
+        admin = next(s for s in app.surfaces if s.name == "feedback_admin")
+        assert admin.ux is not None
+        assert admin.ux.filter is not None
+        assert "notification_sent" in admin.ux.filter
+        assert "reported_by" in admin.ux.filter
+
     def test_admin_surface_auth_required_no_persona_gate(self) -> None:
         """feedback_admin requires authentication; non-admin restriction
         is now enforced at the entity-level scope (own rows only) instead
