@@ -701,7 +701,7 @@ class EntityParserMixin:
             )
         else:
             field_type = self.parse_type_spec()
-            modifiers, default, default_expr = self.parse_field_modifiers()
+            modifiers, default, default_expr, pii = self.parse_field_modifiers()
             ctx.fields.append(
                 ir.FieldSpec(
                     name=field_name,
@@ -709,6 +709,7 @@ class EntityParserMixin:
                     modifiers=modifiers,
                     default=default,
                     default_expr=default_expr,
+                    pii=pii,
                 )
             )
 
@@ -2301,7 +2302,7 @@ class EntityParserMixin:
                 )
             else:
                 field_type = self.parse_type_spec()
-                modifiers, default, default_expr = self.parse_field_modifiers()
+                modifiers, default, default_expr, pii = self.parse_field_modifiers()
 
                 fields.append(
                     ir.FieldSpec(
@@ -2310,6 +2311,7 @@ class EntityParserMixin:
                         modifiers=modifiers,
                         default=default,
                         default_expr=default_expr,
+                        pii=pii,
                     )
                 )
 

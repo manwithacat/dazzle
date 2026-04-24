@@ -766,15 +766,16 @@ Ship: **v0.62.x**.
 
 Used by the trial-cycle loop to qualitative-test the full flow.
 
-## Open questions (decide before Phase 2 kicks off)
+## Decisions (agreed 2026-04-24)
 
-These don't block Phase 1 (PII primitives) but need resolving before consent + banner work:
+1. **Consent-category naming**: **Dazzle-native** — `analytics`, `advertising`, `personalization`, `functional`. Docs table maps each to its Consent Mode v2 equivalents (`analytics_storage`, `ad_storage` + `ad_user_data` + `ad_personalization`, `personalization` across `ad_personalization` + `functionality_storage` where relevant, `functionality_storage` + `security_storage`). The framework shouldn't leak GA4 vocabulary into every app's consent model.
+2. **Default consent state**: **Residency-driven** — EU/UK/EEA tenants default `denied`; US/APAC/other default `granted`. Tenant-level override in the `TenantAnalyticsConfig.consent_default` field always wins.
+3. **Privacy page editability**: **Auto-gen with delimited override regions**. Generated markdown uses `<!-- DZ-AUTO:start name="subprocessors" -->` / `<!-- DZ-AUTO:end -->` markers. `dazzle compliance privacy --regenerate-facts` updates content inside auto blocks only; content outside is author-owned. Legal can freely edit intro/boilerplate without losing regeneration.
 
-1. **Consent-category naming**: Dazzle-native (`analytics`, `advertising`, `personalization`, `functional`) or GA4-native (`ad_storage`, `analytics_storage`, etc.)? Strong lean toward Dazzle-native with a docs mapping table — framework shouldn't leak GA4 vocabulary into every app's consent model.
-2. **Default consent state**: `denied` for EU tenants, `granted` for US? Or `denied` universally? Strong lean toward residency-driven defaults: EU/UK = denied, elsewhere = granted, with tenant-level override.
-3. **Privacy page editability**: fully auto-gen, or auto-gen-with-override? Legal requires copy control. Proposal: generate markdown with delimited `<!-- DZ-AUTO -->` blocks; the regenerate command touches only those blocks. Non-auto sections are author-owned.
-4. **GDPR special-category handling**: do `sensitivity=special_category` fields get automatic extra handling (audit log on read, restricted export, explicit-consent gate)? Likely yes, but defining "extra handling" crisply is a separate design discussion.
-5. **Multi-domain tenancy**: if tenant A serves `acme.com` and `portal.acme.com`, do they share a consent cookie? Probably yes within the same apex domain (set cookie with `Domain=.acme.com`), but this needs confirming against consent law.
+## Deferred questions
+
+- **GDPR special-category handling** — deferred to Phase 2 (consent work). `sensitivity=special_category` fields will trigger additional protections: mandatory audit-on-read, restricted export format, explicit-consent gate before first-time collection. Design the specifics when we start Phase 2; Phase 1 just needs the parser to accept and carry the value through to IR.
+- **Multi-domain tenancy cookie scoping** — deferred to Phase 6 (per-tenant resolution). Cookies need to work across `acme.com` + `portal.acme.com` without accidentally sharing with `competitor.com`. Likely means `Domain=.<apex>` detection with a TOML-configurable apex list. Needs legal confirmation; not urgent for Phases 1-5.
 
 ## Risks
 

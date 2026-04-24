@@ -45,6 +45,7 @@ from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
 from .sla import SLAParserMixin
 from .story import StoryParserMixin
+from .subprocessor import SubprocessorParserMixin
 from .surface import SurfaceParserMixin
 from .test import TestParserMixin
 from .types import TypeParserMixin
@@ -88,6 +89,7 @@ class Parser(
     GrantParserMixin,
     ParamParserMixin,
     FeedbackWidgetParserMixin,
+    SubprocessorParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -571,6 +573,16 @@ class Parser(
             }
         )
 
+    def _dispatch_subprocessor(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        # parse_subprocessor consumes the SUBPROCESSOR token itself.
+        spec = self.parse_subprocessor()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "subprocessors": [*fragment.subprocessors, spec],
+            }
+        )
+
     def _build_parse_dispatch(self) -> dict:  # type: ignore[type-arg]
         """Build the token-type → handler dispatch table."""
         from ..lexer import TokenType
@@ -623,6 +635,7 @@ class Parser(
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
             TokenType.PARAM: self._dispatch_param,
             TokenType.FEEDBACK_WIDGET: self._dispatch_feedback_widget,
+            TokenType.SUBPROCESSOR: self._dispatch_subprocessor,
         }
 
     def parse(self) -> ir.ModuleFragment:

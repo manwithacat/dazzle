@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 if TYPE_CHECKING:
     from .dates import DateArithmeticExpr, DateLiteral
     from .expressions import Expr
+    from .pii import PIIAnnotation
 
 
 class FieldTypeKind(StrEnum):
@@ -153,6 +154,8 @@ class FieldSpec(BaseModel):
     default: str | int | float | bool | DateLiteral | DateArithmeticExpr | None = None
     # v0.29.0: Typed expression default (evaluated at read time)
     default_expr: Expr | None = None
+    # v0.61.0: PII classification (category + sensitivity). See core/ir/pii.py.
+    pii: PIIAnnotation | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -180,6 +183,16 @@ class FieldSpec(BaseModel):
         return FieldModifier.SENSITIVE in self.modifiers
 
     @property
+    def is_pii(self) -> bool:
+        """True if the field carries a structured PII annotation (v0.61.0)."""
+        return self.pii is not None
+
+    @property
+    def is_special_category(self) -> bool:
+        """True for GDPR Article 9/10 special-category data (v0.61.0)."""
+        return self.pii is not None and self.pii.is_special_category
+
+    @property
     def is_searchable(self) -> bool:
         """Check if field is included in full-text search (v0.34.0)."""
         return FieldModifier.SEARCHABLE in self.modifiers
@@ -195,12 +208,14 @@ def _rebuild_field_spec() -> None:
     # Import here to avoid circular imports
     from .dates import DateArithmeticExpr, DateLiteral
     from .expressions import Expr
+    from .pii import PIIAnnotation
 
     FieldSpec.model_rebuild(
         _types_namespace={
             "DateLiteral": DateLiteral,
             "DateArithmeticExpr": DateArithmeticExpr,
             "Expr": Expr,
+            "PIIAnnotation": PIIAnnotation,
         }
     )
 

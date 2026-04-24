@@ -516,6 +516,9 @@ class TokenType(Enum):
     # Feedback Widget
     FEEDBACK_WIDGET = "feedback_widget"
 
+    # v0.61.0 Analytics / Privacy / Compliance
+    SUBPROCESSOR = "subprocessor"
+
     # v0.46.0 Graph Semantics Keywords (#619)
     GRAPH_EDGE = "graph_edge"
     GRAPH_NODE = "graph_node"

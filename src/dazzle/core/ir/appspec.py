@@ -70,6 +70,7 @@ from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
 from .sla import SLASpec
 from .stories import StorySpec
+from .subprocessors import SubprocessorSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .triples import VerifiableTriple
@@ -191,6 +192,9 @@ class AppSpec(BaseModel):
 
     # Verifiable triples (v0.50.0 IR Triple Enrichment)
     triples: list[VerifiableTriple] = Field(default_factory=list)
+
+    # Subprocessors (v0.61.0 Analytics / Privacy / Compliance)
+    subprocessors: list[SubprocessorSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

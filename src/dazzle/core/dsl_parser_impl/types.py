@@ -423,19 +423,21 @@ class TypeParserMixin:
 
     def parse_field_modifiers(
         self,
-    ) -> tuple[list[ir.FieldModifier], DefaultValue, "_Expr | None"]:
+    ) -> tuple[list[ir.FieldModifier], DefaultValue, "_Expr | None", "ir.PIIAnnotation | None"]:
         """
-        Parse field modifiers and default value.
+        Parse field modifiers, default value, and PII annotation.
 
         Returns:
-            Tuple of (modifiers, default_value, default_expr)
+            Tuple of (modifiers, default_value, default_expr, pii_annotation)
 
         v0.10.2: default can now be a date expression (DateLiteral, DateArithmeticExpr)
         v0.29.0: default_expr for typed expression defaults (e.g., = box1 + box2)
+        v0.61.0: pii_annotation for structured PII classification
         """
         modifiers: list[ir.FieldModifier] = []
         default: DefaultValue = None
         default_expr: _Expr | None = None
+        pii: ir.PIIAnnotation | None = None
 
         _modifier_map: dict[str, ir.FieldModifier] = {
             "required": ir.FieldModifier.REQUIRED,
@@ -468,6 +470,18 @@ class TypeParserMixin:
                     modifiers.append(ir.FieldModifier.UNIQUE)
                 continue
 
+            # pii / pii(category=..., sensitivity=...) — v0.61.0
+            if token.value == "pii":
+                if pii is not None:
+                    raise make_parse_error(
+                        "Duplicate `pii` modifier on field.",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                pii = self._parse_pii_annotation()
+                continue
+
             # default = <value>
             if self.match(TokenType.EQUALS):
                 self.advance()
@@ -476,7 +490,115 @@ class TypeParserMixin:
 
             break
 
-        return modifiers, default, default_expr
+        return modifiers, default, default_expr, pii
+
+    def _parse_pii_annotation(self) -> "ir.PIIAnnotation":
+        """Parse a pii modifier with optional parenthesised kwargs.
+
+        Forms:
+            pii
+            pii()
+            pii(category=contact)
+            pii(category=identity, sensitivity=high)
+        """
+        kw_token = self.advance()  # consume 'pii'
+        category: ir.PIICategory | None = None
+        sensitivity: ir.PIISensitivity = ir.PIISensitivity.STANDARD
+
+        if not self.match(TokenType.LPAREN):
+            return ir.PIIAnnotation(category=category, sensitivity=sensitivity)
+
+        self.advance()  # consume '('
+
+        # Empty: pii()
+        if self.match(TokenType.RPAREN):
+            self.advance()
+            return ir.PIIAnnotation(category=category, sensitivity=sensitivity)
+
+        seen_keys: set[str] = set()
+        while True:
+            key_tok = self.current_token()
+            # Accept IDENTIFIER or any keyword-shaped token whose value is
+            # category/sensitivity; reject everything else with a helpful error.
+            key = key_tok.value
+            if key not in ("category", "sensitivity"):
+                raise make_parse_error(
+                    f"Unknown pii keyword `{key}`. Expected `category` or `sensitivity`.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            if key in seen_keys:
+                raise make_parse_error(
+                    f"Duplicate `{key}` in pii(...).",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            seen_keys.add(key)
+            self.advance()
+
+            if not self.match(TokenType.EQUALS):
+                eq = self.current_token()
+                raise make_parse_error(
+                    f"Expected `=` after `{key}` in pii(...).",
+                    self.file,
+                    eq.line,
+                    eq.column,
+                )
+            self.advance()
+
+            val_tok = self.current_token()
+            if val_tok.type is not TokenType.IDENTIFIER:
+                raise make_parse_error(
+                    f"Expected identifier value for `{key}`, got {val_tok.value!r}.",
+                    self.file,
+                    val_tok.line,
+                    val_tok.column,
+                )
+            val = val_tok.value
+            self.advance()
+
+            if key == "category":
+                try:
+                    category = ir.PIICategory(val)
+                except ValueError:
+                    valid = ", ".join(c.value for c in ir.PIICategory)
+                    raise make_parse_error(
+                        f"Unknown pii category `{val}`. Valid categories: {valid}.",
+                        self.file,
+                        val_tok.line,
+                        val_tok.column,
+                    ) from None
+            else:  # sensitivity
+                try:
+                    sensitivity = ir.PIISensitivity(val)
+                except ValueError:
+                    valid = ", ".join(s.value for s in ir.PIISensitivity)
+                    raise make_parse_error(
+                        f"Unknown pii sensitivity `{val}`. Valid values: {valid}.",
+                        self.file,
+                        val_tok.line,
+                        val_tok.column,
+                    ) from None
+
+            if self.match(TokenType.COMMA):
+                self.advance()
+                continue
+            if self.match(TokenType.RPAREN):
+                self.advance()
+                break
+            err_tok = self.current_token()
+            raise make_parse_error(
+                f"Expected `,` or `)` after pii {key}, got {err_tok.value!r}.",
+                self.file,
+                err_tok.line,
+                err_tok.column,
+            )
+
+        # Suppress unused-variable warning for diagnostic token.
+        _ = kw_token
+        return ir.PIIAnnotation(category=category, sensitivity=sensitivity)
 
     def _parse_default_value(
         self,
@@ -599,13 +721,14 @@ class TypeParserMixin:
         field_name = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)
         field_type = self.parse_type_spec()
-        modifiers, default, default_expr = self.parse_field_modifiers()
+        modifiers, default, default_expr, pii = self.parse_field_modifiers()
         return ir.FieldSpec(
             name=field_name,
             type=field_type,
             modifiers=modifiers,
             default=default,
             default_expr=default_expr,
+            pii=pii,
         )
 
     def _parse_field_path(self) -> list[str]:

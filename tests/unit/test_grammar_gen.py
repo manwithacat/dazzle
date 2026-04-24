@@ -121,7 +121,13 @@ class TestVersion:
     """Version extraction."""
 
     def test_version_is_semantic(self) -> None:
+        import re
+
         version = get_version()
         parts = version.split(".")
         assert len(parts) >= 2, f"Version '{version}' should be semantic"
-        assert all(p.isdigit() for p in parts), "Version parts should be numeric"
+        # Allow PEP 440 prerelease suffixes on the patch component:
+        # 0.61.0, 0.61.0rc1, 0.61.0a2, 0.61.0b1, 0.61.0.dev1 all valid.
+        pep440_part = re.compile(r"^\d+([a-z]+\d+)?$")
+        for p in parts:
+            assert pep440_part.match(p), f"Version part {p!r} is not numeric or PEP-440"

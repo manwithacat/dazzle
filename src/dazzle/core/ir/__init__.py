@@ -470,6 +470,13 @@ from .personas import (
     PersonaSpec,
 )
 
+# PII annotations (v0.61.0)
+from .pii import (
+    PIIAnnotation,
+    PIICategory,
+    PIISensitivity,
+)
+
 # Predicate Algebra (Scope row-level security)
 from .predicates import (
     BoolComposite,
@@ -637,6 +644,14 @@ from .stories import (
     StoryTrigger,
 )
 
+# Subprocessor declarations (v0.61.0)
+from .subprocessors import (
+    ConsentCategory,
+    DataCategory,
+    LegalBasis,
+    SubprocessorSpec,
+)
+
 # Surfaces
 from .surfaces import (
     BusinessPriority,
@@ -765,6 +780,15 @@ __all__ = [
     "FieldModifier",
     "FieldSpec",
     "RelationshipBehavior",
+    # PII (v0.61.0)
+    "PIIAnnotation",
+    "PIICategory",
+    "PIISensitivity",
+    # Subprocessors (v0.61.0)
+    "ConsentCategory",
+    "DataCategory",
+    "LegalBasis",
+    "SubprocessorSpec",
     # Conditions
     "ComparisonOperator",
     "LogicalOperator",

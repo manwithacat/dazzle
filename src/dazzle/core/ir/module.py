@@ -66,6 +66,7 @@ from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
 from .sla import SLASpec
 from .stories import StorySpec
+from .subprocessors import SubprocessorSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .views import ViewSpec
@@ -193,6 +194,8 @@ class ModuleFragment(BaseModel):
     params: list[ParamSpec] = Field(default_factory=list)
     # Feedback Widget
     feedback_widget: FeedbackWidgetSpec | None = None
+    # Subprocessors (v0.61.0 Analytics / Privacy / Compliance)
+    subprocessors: list[SubprocessorSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

@@ -1,6 +1,6 @@
 # DSL Grammar Specification
 
-Formal EBNF grammar for DAZZLE DSL v0.25.0.
+Formal EBNF grammar for DAZZLE DSL v0.61.0rc1.
 
 > **Auto-generated** from parser source code by `grammar_gen.py`. Do not edit manually; run `dazzle grammar` to regenerate.
 
@@ -8,10 +8,10 @@ Formal EBNF grammar for DAZZLE DSL v0.25.0.
 
 This grammar defines the complete syntax for the DAZZLE Domain-Specific Language. The DSL supports the following construct categories:
 
-- **Core**: Field Types and Modifiers, Entity and Archetype Definitions, State Machines, Invariants, Access Rules and Governance, Example Data, Shared Enums
-- **Surface**: Surface Definitions, UX Semantic Layer, Workspace Definitions, Experience Definitions, Views
-- **Workflow**: Story Definitions, Process Workflows and Schedules, Approvals, SLAs
-- **Integration**: Service Definitions, Foreign Model Definitions, Integration Definitions, Webhooks
+- **Core**: Field Types and Modifiers, Entity and Archetype Definitions, State Machines, Invariants, Access Rules and Governance, Example Data
+- **Surface**: Surface Definitions, UX Semantic Layer, Workspace Definitions, Experience Definitions
+- **Workflow**: Story Definitions, Rule Definitions, Question Definitions, Process Workflows and Schedules
+- **Integration**: Service Definitions, Foreign Model Definitions, Integration Definitions
 - **Testing**: E2E Test Flows, API Contract Tests, Scenario and Demo Data
 - **Eventing**: Messaging Channels, Event-First Architecture, HLESS Event Semantics
 - **Financial**: TigerBeetle Ledgers and Transactions
@@ -28,7 +28,9 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 ## Keyword Inventory
 
-**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `with`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
+**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `related`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `with`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
+
+**Experience Orchestration Keywords**: `context`, `prefill`, `saves_to`, `creates`, `fields`
 
 **Integration Keywords**: `operation`, `mapping`, `rules`, `scheduled`, `event_driven`, `foreign`
 
@@ -36,15 +38,21 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Access Control Keywords**: `anonymous`, `permissions`, `access`, `read`, `write`, `permit`, `forbid`, `audit`
 
-**UX Semantic Layer Keywords**: `ux`, `purpose`, `show`, `sort`, `empty`, `attention`, `critical`, `warning`, `notice`, `info`, `message`, `for`, `scope`, `hide`, `show_aggregate`, `action_primary`, `read_only`, `all`, `workspace`, `source`, `limit`, `display`, `aggregate`, `list`, `grid`, `timeline`, `detail`
+**UX Semantic Layer Keywords**: `ux`, `purpose`, `show`, `sort`, `empty`, `attention`, `critical`, `warning`, `notice`, `info`, `message`, `for`, `scope`, `hide`, `show_aggregate`, `action_primary`, `read_only`, `search_first`, `all`, `workspace`, `source`, `limit`, `display`, `aggregate`, `list`, `grid`, `timeline`, `detail`
 
-**Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`
+**Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
+
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
+
+**v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
 **v0.3.1 keywords**: `engine_hint`, `stage`
 
 **v0.5.0 Domain Service Keywords**: `input`, `output`, `guarantees`, `stub`
 
-**v0.7.0 State Machine Keywords**: `transitions`, `requires`, `auto`, `after`, `role`, `manual`, `days`, `hours`, `minutes`
+**v0.7.0 State Machine Keywords**: `transitions`, `requires`, `auto`, `after`, `role`, `manual`
+
+**v0.29.0 Expression Guard Keywords**: `guard`, `days`, `hours`, `minutes`
 
 **v0.10.2 Date Arithmetic Keywords**: `today`, `now`, `weeks`, `months`, `years`
 
@@ -58,13 +66,21 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `cascade`, `restrict`, `nullify`, `readonly`, `deny`, `scenarios`, `given`, `then`
 
-**Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed_script`, `start_route`
+**Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed`, `seed_script`, `start_route`
 
-**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`, `status` (v0.40.0: added `status` field)
+**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`
+
+**v0.39.0 Rhythm DSL Keywords**: `rhythm`, `phase`, `scene`
+
+**v0.41.0 Convergent BDD Keywords**: `rule`, `question`
+
+**v0.42.0 Grant Schema Keywords**: `grant_schema`
+
+**v0.25.0 Top-Level Construct Keywords**: `enum`, `webhook`, `approval`, `sla`, `island`
 
 **v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
 
-**v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`
+**v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `effects`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`
 
 **v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `project`, `topic`, `retention`
 
@@ -72,15 +88,15 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.19.0 HLESS (High-Level Event Semantics) Keywords**: `FACT`, `OBSERVATION`, `DERIVATION`
 
-**Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`
+**Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`, `default_provider`, `budget_alert_usd`, `vision`
 
 **v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
 
-**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`, `in`, `not`, `is`, `and`, `or`, `asc`, `desc`
+**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`
 
-**v0.25.0 Construct Keywords**: `enum`, `webhook`, `approval`, `sla` (top-level keywords). Sub-keywords (`events`, `payload`, `approver_role`, `quorum`, `threshold`, `escalation`, `auto_approve`, `starts_when`, `pauses_when`, `completes_when`, `tiers`, `business_hours`, `on_breach`, `notify`) are matched as identifiers to avoid conflicts with existing DSL usage.
+**v0.38.0 Workspace Navigation Keywords**: `nav_group`, `icon`, `collapsed`, `context_selector`, `on_transition`, `lifecycle`, `fitness`, `external`, `param`, `feedback_widget`, `subprocessor`
 
-**Feedback Widget Keyword**: `feedback_widget` (top-level keyword). Sub-keys (`position`, `shortcut`, `categories`, `severities`, `capture`) are matched as identifiers.
+**v0.46.0 Graph Semantics Keywords (#619)**: `graph_edge`, `graph_node`, `target`, `weight`, `directed`, `acyclic`, `edges`, `in`, `not`, `is`, `and`, `or`, `asc`, `desc`, `$`
 
 ## Field Types
 
@@ -90,6 +106,7 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 - `text`
 - `int`
 - `decimal`
+- `float`
 - `bool`
 - `date`
 - `datetime`
@@ -111,7 +128,7 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 
 ```ebnf
 (*
-  DAZZLE DSL v0.25.0 -- EBNF Grammar
+  DAZZLE DSL v0.61.0rc1 -- EBNF Grammar
   ======================================
   Auto-generated by grammar_gen.py from parser source code.
   Do not edit manually; run `dazzle grammar` to regenerate.
@@ -171,6 +188,8 @@ statement     ::= entity_decl
                 | persona_decl
                 | scenario_decl
                 | story_decl
+                | rule_decl
+                | question_decl
                 | process_decl
                 | schedule_decl
                 | message_decl
@@ -192,11 +211,6 @@ statement     ::= entity_decl
                 | llm_intent_decl
                 | ledger_decl
                 | transaction_decl
-                | enum_decl
-                | view_decl
-                | webhook_decl
-                | approval_decl
-                | sla_decl
                 | use_decl
                 | comment ;
 
@@ -215,6 +229,7 @@ scalar_type   ::= "str" "(" NUMBER ")"
                 | "text"
                 | "int"
                 | "decimal" "(" NUMBER "," NUMBER ")"
+                | "float"
                 | "bool"
                 | "date"
                 | "datetime"
@@ -256,12 +271,9 @@ entity_decl   ::= "entity" IDENT STRING? ":" NEWLINE
                     access_block?
                     permit_block?
                     forbid_block?
-                    scope_block?
                     audit_directive?
                     examples_block?
                     publish_directive*
-                    graph_edge_block?
-                    graph_node_block?
                   DEDENT ;
 
 entity_metadata ::= "intent" ":" STRING NEWLINE
@@ -282,7 +294,6 @@ field_modifier ::= "required"
                  | "unique?"
                  | "auto_add"
                  | "auto_update"
-                 | "sensitive"
                  | "=" literal ;
 
 literal       ::= STRING | NUMBER | BOOLEAN ;
@@ -382,58 +393,6 @@ forbid_block  ::= "forbid" ":" NEWLINE
 
 policy_rule   ::= ("create" | "read" | "update" | "delete" | "list") ":" condition_expr NEWLINE ;
 
-(* Scope block — row-filtering rules separate from authorization.
-   Each rule carries a for: clause naming the personas it applies to.
-
-   scope_condition forms:
-     all                           — no row filter (every row passes)
-     via Entity(bindings)          — EXISTS subquery through junction table
-     not via Entity(bindings)      — NOT EXISTS subquery (negated junction check)
-     not (condition)               — general parenthesised negation
-     condition_expr                — arbitrary field comparison expression
-
-   Dotted paths in bindings support depth-N traversal, e.g.:
-     manuscript.assessment_event.school_id
-
-   Examples:
-     scope:
-       list: via AgentAssignment(agent = current_user.contact, contact = id)
-         for: agent
-       list: not via BlockList(blocker = current_user, blocked = id)
-         for: member
-       list: not (status = archived)
-         for: editor
-*)
-scope_block   ::= "scope" ":" NEWLINE
-                  INDENT
-                    scope_rule+
-                  DEDENT ;
-
-scope_rule    ::= ("create" | "read" | "update" | "delete" | "list") ":" scope_condition NEWLINE
-                  INDENT
-                    "for" ":" persona_list NEWLINE
-                  DEDENT ;
-
-scope_condition
-              ::= "all"
-                | via_clause
-                | "not" via_clause
-                | "not" "(" condition_expr ")"
-                | condition_expr ;
-
-via_clause    ::= "via" IDENT "(" via_binding ("," via_binding)* ")" ;
-
-via_binding   ::= IDENT ("=" | "!=") via_target ;
-
-via_target    ::= "current_user" ("." dotted_path)?
-                | "null"
-                | dotted_path ;
-
-(* dotted_path supports depth-N traversal, e.g. manuscript.assessment_event.school_id *)
-dotted_path   ::= IDENT ("." IDENT)* ;
-
-persona_list  ::= "*" | IDENT ("," IDENT)* ;
-
 audit_directive
               ::= "audit" ":" ("all" | BOOLEAN | "[" IDENT ("," IDENT)* "]") NEWLINE ;
 
@@ -486,34 +445,6 @@ examples_block ::= "examples" ":" NEWLINE
 example_entry ::= "-" key_value_list NEWLINE ;
 
 key_value_list ::= IDENT ":" literal ("," IDENT ":" literal)* ;
-
-(* =============================================================================
-   Graph Semantics (v0.46.0)
-   ============================================================================= *)
-
-graph_edge_block ::= "graph_edge" ":" NEWLINE
-                     INDENT
-                       graph_edge_field+
-                     DEDENT ;
-
-graph_edge_field ::= "source" ":" IDENT NEWLINE
-                   | "target" ":" IDENT NEWLINE
-                   | "type" ":" IDENT NEWLINE
-                   | "weight" ":" IDENT NEWLINE
-                   | "directed" ":" BOOLEAN NEWLINE
-                   | "acyclic" ":" BOOLEAN NEWLINE ;
-
-(* source and target are required; validator enforces this *)
-
-graph_node_block ::= "graph_node" ":" NEWLINE
-                     INDENT
-                       graph_node_field+
-                     DEDENT ;
-
-graph_node_field ::= "edges" ":" IDENT NEWLINE
-                   | "display" ":" IDENT NEWLINE ;
-
-(* edges is required; validator enforces this *)
 
 (* =============================================================================
    Surface Definitions
@@ -673,22 +604,15 @@ step_transition
 
 story_decl    ::= "story" IDENT STRING? ":" NEWLINE
                   INDENT
-                    ("status" ":" ("draft" | "accepted" | "rejected") NEWLINE)?
                     ("actor" ":" IDENT NEWLINE)?
                     ("trigger" ":" IDENT NEWLINE)?
                     ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
                     given_block?
-                    when_block?
                     then_block?
                     unless_block?
                   DEDENT ;
 
 given_block   ::= "given" ":" NEWLINE
-                  INDENT
-                    ("-" STRING NEWLINE)+
-                  DEDENT ;
-
-when_block    ::= "when" ":" NEWLINE
                   INDENT
                     ("-" STRING NEWLINE)+
                   DEDENT ;
@@ -704,32 +628,29 @@ unless_block  ::= "unless" ":" NEWLINE
                   DEDENT ;
 
 (* =============================================================================
-   Rhythm Definitions (v0.39.0)
+   Rule Definitions
    ============================================================================= *)
 
-rhythm_block  ::= "rhythm" IDENT STRING? ":" NEWLINE
+rule_decl     ::= "rule" IDENT STRING? ":" NEWLINE
                   INDENT
-                    "persona" ":" IDENT NEWLINE
-                    ("cadence" ":" STRING NEWLINE)?
-                    phase_block*
+                    ("kind" ":" IDENT NEWLINE)?
+                    ("origin" ":" IDENT NEWLINE)?
+                    ("invariant" ":" (STRING | TEXT) NEWLINE)?
+                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("status" ":" IDENT NEWLINE)?
                   DEDENT ;
 
-phase_block   ::= "phase" IDENT ":" NEWLINE
-                  INDENT
-                    scene_block*
-                  DEDENT ;
+(* =============================================================================
+   Question Definitions
+   ============================================================================= *)
 
-scene_block   ::= "scene" IDENT STRING? ":" NEWLINE
+question_decl ::= "question" IDENT STRING? ":" NEWLINE
                   INDENT
-                    "on" ":" IDENT NEWLINE
-                    ("action" ":" identifier_list NEWLINE)?
-                    ("entity" ":" IDENT NEWLINE)?
-                    ("expects" ":" STRING NEWLINE)?
-                    ("story" ":" IDENT NEWLINE)?
+                    ("blocks" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("raised_by" ":" IDENT NEWLINE)?
+                    ("status" ":" IDENT NEWLINE)?
+                    ("resolution" ":" (STRING | TEXT) NEWLINE)?
                   DEDENT ;
-
-identifier_list
-              ::= IDENT ("," IDENT)* ;
 
 (* =============================================================================
    Process Workflows and Schedules
@@ -1300,166 +1221,6 @@ pii_config    ::= ("scan" ":" BOOLEAN NEWLINE)?
                   ("action" ":" IDENT NEWLINE)?
                   ("fields" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)? ;
 
-(* =============================================================================
-   v0.25.0 Shared Enums
-   ============================================================================= *)
-
-enum_decl     ::= "enum" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    (IDENT STRING? NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   v0.25.0 Views (Read-Only Derived Data)
-   ============================================================================= *)
-
-view_decl     ::= "view" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    view_body_line+
-                  DEDENT ;
-
-view_body_line
-              ::= "source" ":" IDENT NEWLINE
-                | "filter" ":" condition_expr NEWLINE
-                | "group_by" ":" "[" view_group_item ("," view_group_item)* "]" NEWLINE
-                | view_fields_block ;
-
-view_group_item
-              ::= IDENT
-                | IDENT "(" IDENT ")" ;
-
-view_fields_block
-              ::= "fields" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (type_spec | AGGREGATE_FN "(" field_path? ")") NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   v0.25.0 Webhooks (Outbound HTTP Notifications)
-   ============================================================================= *)
-
-webhook_decl  ::= "webhook" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    webhook_body_line+
-                  DEDENT ;
-
-webhook_body_line
-              ::= "entity" ":" IDENT NEWLINE
-                | "events" ":" "[" WEBHOOK_EVENT ("," WEBHOOK_EVENT)* "]" NEWLINE
-                | "url" ":" (STRING | config_ref) NEWLINE
-                | webhook_auth_block
-                | webhook_payload_block
-                | webhook_retry_block ;
-
-WEBHOOK_EVENT ::= "created" | "updated" | "deleted" ;
-
-config_ref    ::= "config" "(" STRING ")" ;
-
-webhook_auth_block
-              ::= "auth" ":" NEWLINE
-                  INDENT
-                    ("method" ":" WEBHOOK_AUTH_METHOD NEWLINE)?
-                    ("secret" ":" (STRING | config_ref) NEWLINE)?
-                  DEDENT ;
-
-WEBHOOK_AUTH_METHOD
-              ::= "hmac_sha256" | "bearer" | "basic" ;
-
-webhook_payload_block
-              ::= "payload" ":" NEWLINE
-                  INDENT
-                    ("include" ":" "[" dotted_ident ("," dotted_ident)* "]" NEWLINE)?
-                    ("format" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-dotted_ident  ::= IDENT ("." IDENT)* ;
-
-webhook_retry_block
-              ::= "retry" ":" NEWLINE
-                  INDENT
-                    ("max_attempts" ":" NUMBER NEWLINE)?
-                    ("backoff" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-(* =============================================================================
-   v0.25.0 Approvals (First-Class Approval Gates)
-   ============================================================================= *)
-
-approval_decl ::= "approval" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    approval_body_line+
-                  DEDENT ;
-
-approval_body_line
-              ::= "entity" ":" IDENT NEWLINE
-                | "trigger" ":" IDENT "->" IDENT NEWLINE
-                | "approver_role" ":" IDENT NEWLINE
-                | "quorum" ":" NUMBER NEWLINE
-                | "threshold" ":" condition_expr NEWLINE
-                | approval_escalation_block
-                | approval_auto_block
-                | approval_outcomes_block ;
-
-approval_escalation_block
-              ::= "escalation" ":" NEWLINE
-                  INDENT
-                    ("after" ":" NUMBER TIME_UNIT NEWLINE)?
-                    ("to" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-approval_auto_block
-              ::= "auto_approve" ":" NEWLINE
-                  INDENT
-                    "when" ":" condition_expr NEWLINE
-                  DEDENT ;
-
-approval_outcomes_block
-              ::= "outcomes" ":" NEWLINE
-                  INDENT
-                    (IDENT "->" IDENT NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   v0.25.0 SLAs (Deadline Escalation)
-   ============================================================================= *)
-
-sla_decl      ::= "sla" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    sla_body_line+
-                  DEDENT ;
-
-sla_body_line ::= "entity" ":" IDENT NEWLINE
-                | "starts_when" ":" sla_condition NEWLINE
-                | "pauses_when" ":" sla_condition NEWLINE
-                | "completes_when" ":" sla_condition NEWLINE
-                | sla_tiers_block
-                | sla_business_hours_block
-                | sla_breach_block ;
-
-sla_condition ::= IDENT ("->" | "=") IDENT ;
-
-TIME_UNIT     ::= "minutes" | "hours" | "days" ;
-
-sla_tiers_block
-              ::= "tiers" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" NUMBER TIME_UNIT NEWLINE)+
-                  DEDENT ;
-
-sla_business_hours_block
-              ::= "business_hours" ":" NEWLINE
-                  INDENT
-                    ("schedule" ":" STRING NEWLINE)?
-                    ("timezone" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-sla_breach_block
-              ::= "on_breach" ":" NEWLINE
-                  INDENT
-                    ("notify" ":" IDENT NEWLINE)?
-                    ("set" ":" IDENT "=" IDENT NEWLINE)*
-                  DEDENT ;
-
 ```
 
 ## DSL Examples
@@ -1552,7 +1313,6 @@ workspace dashboard "Dashboard":
 
 ```dsl
 story ST-001 "User completes task":
-  status: accepted
   actor: StaffUser
   trigger: status_changed
   scope: [Task]
@@ -1591,66 +1351,6 @@ schedule daily_report "Daily Report":
   process: generate_report
   cron: "0 9 * * *"
   timezone: "Europe/London"
-```
-
-### Rhythm (v0.39.0)
-
-Rhythms define longitudinal persona journey maps through the app, organized into temporal phases containing scenes.
-
-```ebnf
-rhythm_block = "rhythm" IDENTIFIER [STRING] ":" NEWLINE INDENT
-    "persona" ":" IDENTIFIER NEWLINE
-    ["cadence" ":" STRING NEWLINE]
-    phase_block*
-  DEDENT
-
-phase_block = "phase" IDENTIFIER ":" NEWLINE INDENT
-    ["kind" ":" PHASE_KIND NEWLINE]
-    scene_block*
-  DEDENT
-
-PHASE_KIND = "onboarding" | "active" | "periodic" | "ambient" | "offboarding"
-
-scene_block = "scene" IDENTIFIER [STRING] ":" NEWLINE INDENT
-    "on" ":" IDENTIFIER NEWLINE
-    ["action" ":" identifier_list NEWLINE]
-    ["entity" ":" IDENTIFIER NEWLINE]
-    ["expects" ":" STRING NEWLINE]
-    ["story" ":" IDENTIFIER NEWLINE]
-  DEDENT
-
-identifier_list = IDENTIFIER ("," IDENTIFIER)*
-```
-
-**Properties:**
-- `persona` — references a defined persona (validated at link time)
-- `cadence` — free-form temporal frequency hint (agent-interpreted)
-- `kind` — phase kind classification (optional; one of `onboarding`, `active`, `periodic`, `ambient`, `offboarding`)
-- `on` — surface reference (validated at link time)
-- `action` — free-form action verbs (agent-interpreted)
-- `entity` — entity reference (validated at link time, optional)
-- `expects` — free-form expected outcome (agent-interpreted)
-- `story` — link to existing story (validated at link time, optional)
-
-**Example:**
-```dsl
-rhythm onboarding "New User Onboarding":
-  persona: new_user
-  cadence: "quarterly"
-
-  phase discovery:
-    kind: onboarding
-    scene browse_catalog "Browse Courses":
-      on: course_list
-      action: filter, browse
-
-  phase engagement:
-    kind: active
-    scene enroll "Enroll":
-      on: course_detail
-      action: submit
-      entity: Enrollment
-      expects: "enrollment_confirmed"
 ```
 
 ### Integration
@@ -1827,188 +1527,6 @@ llm_intent classify_ticket "Classify Support Ticket":
     backoff: exponential
 ```
 
-### Graph Semantics (v0.46.0)
-
-#### `graph_edge:` (on entity)
-
-Declares that this entity represents edges in a directed property graph.
-
-```dsl
-entity NodeEdge "Edge":
-  id: uuid pk
-  source_node: ref Node required
-  target_node: ref Node required
-  relationship: enum[sequel,fork,reference,adaptation]
-  importance: int optional
-
-  graph_edge:
-    source: source_node
-    target: target_node
-    type: relationship
-    weight: importance
-    directed: true
-    acyclic: false
-```
-
-| Property | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `source` | yes | — | ref field pointing to the source node entity |
-| `target` | yes | — | ref field pointing to the target node entity |
-| `type` | no | — | field used as edge type discriminator |
-| `weight` | no | — | numeric field (int or decimal) for graph algorithms |
-| `directed` | no | `true` | whether edges are directed |
-| `acyclic` | no | `false` | whether cycles are prohibited (advisory) |
-
-#### `graph_node:` (on entity)
-
-Optional annotation declaring this entity as a node in a graph.
-
-```dsl
-entity Node "Node":
-  id: uuid pk
-  title: str(200) required
-
-  graph_node:
-    edges: NodeEdge
-    display: title
-```
-
-| Property | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `edges` | yes | — | the edge entity (must declare `graph_edge:`) |
-| `display` | no | — | field used as the node label |
-
-### Lifecycle (Agent-Led Fitness)
-
-#### `lifecycle:` (on entity)
-
-Declares an entity's progress lifecycle for fitness evaluation. Ordered states + evidence predicates distinguish motion (status changes) from work (valid progress through the lifecycle). Orthogonal to the auto-derived `state_machine` (which handles runtime mechanics like triggers and guards).
-
-```dsl
-entity Ticket "Support Ticket":
-  id: uuid pk
-  status: enum[open, in_progress, resolved, closed] = open
-  assigned_to: ref User optional
-  resolution: text optional
-
-  lifecycle:
-    status_field: status
-    states:
-      - open        (order: 0)
-      - in_progress (order: 1)
-      - resolved    (order: 2)
-      - closed      (order: 3)
-    transitions:
-      - from: open
-        to: in_progress
-        evidence: assigned_to != null
-        role: agent
-      - from: in_progress
-        to: resolved
-        evidence: resolution != null
-        role: agent
-      - from: resolved
-        to: closed
-        evidence: true
-        role: agent
-```
-
-| Property | Required | Description |
-|----------|----------|-------------|
-| `status_field` | yes | field name holding the current state (usually an enum) |
-| `states` | yes | ordered list of lifecycle states, each tagged `(order: N)` |
-| `transitions` | yes | list of allowed progress transitions |
-| `transitions[].from` | yes | source state identifier |
-| `transitions[].to` | yes | destination state identifier |
-| `transitions[].evidence` | yes | predicate that must hold for the transition to count as real progress (`true` means no evidence required) |
-| `transitions[].role` / `roles` | no | persona(s) authorised to drive the transition |
-
-See [ADR-0020](../adr/ADR-0020-lifecycle-evidence-predicates.md) for the design rationale and the relationship to `state_machine`.
-
-### v0.25.0 Constructs
-
-```dsl
-enum OrderStatus "Order Status":
-  draft "Draft"
-  pending_review "Pending Review"
-  approved "Approved"
-  rejected "Rejected"
-
-view MonthlySales "Monthly Sales Summary":
-  source: Order
-  filter: status = completed
-  group_by: [customer, month(created_at)]
-  fields:
-    total_amount: sum(amount)
-    order_count: count()
-
-webhook OrderNotification "Order Status Webhook":
-  entity: Order
-  events: [created, updated, deleted]
-  url: config("ORDER_WEBHOOK_URL")
-  auth:
-    method: hmac_sha256
-    secret: config("WEBHOOK_SECRET")
-  payload:
-    include: [id, status, total, customer.name]
-    format: json
-  retry:
-    max_attempts: 3
-    backoff: exponential
-
-approval PurchaseApproval "Purchase Order Approval":
-  entity: PurchaseOrder
-  trigger: status -> pending_approval
-  approver_role: finance_manager
-  quorum: 1
-  threshold: amount > 1000
-  escalation:
-    after: 48 hours
-    to: finance_director
-  auto_approve:
-    when: amount <= 100
-  outcomes:
-    approved -> approved
-    rejected -> rejected
-
-sla TicketResponse "Ticket Response SLA":
-  entity: SupportTicket
-  starts_when: status -> open
-  pauses_when: status = on_hold
-  completes_when: status -> resolved
-  tiers:
-    warning: 4 hours
-    breach: 8 hours
-    critical: 24 hours
-  business_hours:
-    schedule: "Mon-Fri 09:00-17:00"
-    timezone: "Europe/London"
-  on_breach:
-    notify: support_lead
-    set: escalated = true
-```
-
-### Feedback Widget
-
-```dsl
-feedback_widget: enabled
-  position: bottom-right
-  shortcut: backtick
-  categories: [bug, ux, visual, behaviour, enhancement, other]
-  severities: [blocker, annoying, minor]
-  capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
-```
-
-All sub-keys are optional — `feedback_widget: enabled` with no configuration uses all defaults. When enabled, the framework auto-generates a `FeedbackReport` entity (unless one is explicitly declared) and injects a client-side widget into every authenticated page.
-
-| Sub-key | Default | Values |
-|---------|---------|--------|
-| `position` | `bottom-right` | Any hyphenated position string |
-| `shortcut` | `backtick` | Key name for toggle shortcut |
-| `categories` | `[bug, ux, visual, behaviour, enhancement, other]` | List of category values |
-| `severities` | `[blocker, annoying, minor]` | List of severity values |
-| `capture` | `[url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]` | List of auto-captured context fields |
-
 ## Parser Mixin Coverage
 
 The grammar above is derived from these parser mixin modules:
@@ -2019,25 +1537,21 @@ The grammar above is derived from these parser mixin modules:
 | `types.py` | `TypeParserMixin` | Core |
 | `conditions.py` | `ConditionParserMixin` | Core |
 | `entity.py` | `EntityParserMixin` | Core |
-| `enum.py` | `EnumParserMixin` | Core |
 | `surface.py` | `SurfaceParserMixin` | Surface |
 | `ux.py` | `UXParserMixin` | Surface |
 | `workspace.py` | `WorkspaceParserMixin` | Surface |
-| `view.py` | `ViewParserMixin` | Surface |
 | `service.py` | `ServiceParserMixin` | Integration |
 | `integration.py` | `IntegrationParserMixin` | Integration |
-| `webhook.py` | `WebhookParserMixin` | Integration |
 | `flow.py` | `FlowParserMixin` | Testing |
 | `test.py` | `TestParserMixin` | Testing |
 | `scenario.py` | `ScenarioParserMixin` | Testing |
 | `story.py` | `StoryParserMixin` | Workflow |
+| `rule.py` | `RuleParserMixin` | Workflow |
+| `question.py` | `QuestionParserMixin` | Workflow |
 | `process.py` | `ProcessParserMixin` | Workflow |
-| `approval.py` | `ApprovalParserMixin` | Workflow |
-| `sla.py` | `SLAParserMixin` | Workflow |
 | `messaging.py` | `MessagingParserMixin` | Eventing |
 | `eventing.py` | `EventingParserMixin` | Eventing |
 | `hless.py` | `HLESSParserMixin` | Eventing |
 | `ledger.py` | `LedgerParserMixin` | Financial |
 | `governance.py` | `GovernanceParserMixin` | Governance |
 | `llm.py` | `LLMParserMixin` | LLM |
-| `feedback_widget.py` | `FeedbackWidgetParserMixin` | Framework |

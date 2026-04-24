@@ -189,6 +189,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
         params=merged_fragment.params,  # v0.44.0 Runtime Parameters
         feedback_widget=merged_fragment.feedback_widget,  # Feedback Widget
+        subprocessors=merged_fragment.subprocessors,  # v0.61.0 Analytics / Privacy
         audit_trail=root_module.app_config.audit_trail if root_module.app_config else False,
         metadata={
             "modules": [m.name for m in sorted_modules],

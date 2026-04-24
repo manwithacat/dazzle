@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0rc1] - 2026-04-24
+
+First release of the **Analytics, Consent & Privacy** subsystem — Phase 1 of the design spec at `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`. Phase 1 ships the PII + subprocessor *primitives* without yet shipping analytics providers, consent banner, or privacy-page auto-generation. Those land in Phases 2-6. The primitives are independently valuable: the compliance pipeline already benefits from structured PII knowledge, and `dazzle analytics audit` flags likely-PII fields that haven't been classified.
+
+### Added
+
+- **`pii()` field modifier** — declarative personal-data classification on entity fields. Syntax: `email: str(200) pii(category=contact)` or `ssn: str(20) pii(category=identity, sensitivity=special_category)`. Categories (closed vocabulary): `contact`, `identity`, `location`, `biometric`, `financial`, `health`, `freeform`, `behavioral`. Sensitivities: `standard` (default), `high`, `special_category` (GDPR Art. 9/10). New IR types in `src/dazzle/core/ir/pii.py`; FieldSpec gains `.pii`, `.is_pii`, `.is_special_category`.
+
+- **`subprocessor` top-level construct** — DSL declaration of a third-party data processor with `handler`, `jurisdiction`, `data_categories`, `retention`, `legal_basis`, `consent_category`, `dpa_url`, `scc_url`, `cookies`, `purpose`. Required keys validated at parse time; closed-vocabulary values (`LegalBasis`, `ConsentCategory`, `DataCategory`) emit clear errors on typos. New IR types in `src/dazzle/core/ir/subprocessors.py`.
+
+- **Framework subprocessor registry** — default declarations for 8 common providers: `google_analytics`, `google_tag_manager`, `plausible`, `stripe`, `twilio`, `sendgrid`, `aws_ses`, `firebase_cloud_messaging`. App-level declarations override registry entries by matching `name`; unrecognised names are added. See `src/dazzle/compliance/analytics/registry.py`.
+
+- **PII stripping utility** — `strip_pii()` in `dazzle.compliance.analytics`. Drops values for `pii`-annotated fields unless the caller opts in per-field. Special-category fields require a second gate (`include_special_category=True`) even when opted-in. Returns a `PIIFilterResult` with diagnostic counters. Runtime boundary used by future Phase 3/5 analytics sinks.
+
+- **`dazzle analytics audit` CLI** — scans the linked AppSpec and reports: likely-PII fields missing `pii()` annotation (heuristic match on names like `email`, `dob`, `ssn`, `ip_address`); subprocessor collisions where an app-level declaration differs from the framework default in `consent_category` / `jurisdiction` / `legal_basis`; EU→non-EU transfers requiring SCCs. Warn-only — never fails the build. `--format json` for machine consumption.
+
+- **Docs**: new reference page `docs/reference/pii-privacy.md` covering `pii()`, `subprocessor`, the consent-category mapping to Consent Mode v2, and the audit command. `subprocessor` added to the construct list in `.claude/CLAUDE.md` and the grammar keyword inventory.
+
+### Changed
+
+- **`FieldSpec.pii`** — new optional field on the existing IR type (Pydantic frozen model). Coexists with the legacy `sensitive` modifier; `pii()` provides richer classification. Over time, framework code should read `.pii` for PII-aware behaviour.
+
+- **`parse_field_modifiers()`** — return tuple extended from 3-tuple to 4-tuple: `(modifiers, default, default_expr, pii_annotation)`. Internal parser API; all three call sites updated.
+
+### Agent Guidance
+
+- **Use `pii()` on any field that stores personal data.** Bare `pii` is fine when sensitivity/category aren't yet known; add kwargs when classifying. The audit command flags common PII-looking field names lacking the annotation — run it before shipping.
+- **Declare `subprocessor` for every third-party that handles user data.** The framework ships 8 defaults; you only need to declare the rest (custom CRMs, vertical-specific tools). App-declared names override registry entries of the same name — useful for customising retention periods.
+- **Do not emit PII to analytics events.** The Phase 3-5 emitters will automatically redact. For now: if you write code that builds event payloads manually, call `strip_pii()` before sending.
+- **`special_category` gates are strict.** A surface that needs to emit a special-category field must set both `include_pii=[field]` AND `include_special_category=True` — this is intentional friction for GDPR Art. 9/10 data.
+- **This is `rc1` of `0.61.0`.** The primitives are stable but Phase 2-6 may refine the DSL shape (e.g. add an `analytics:` app block). Treat any consuming code as experimental until the v0.61.0 stable ships.
+
 ## [0.60.9] - 2026-04-24
 
 Minor bump. Removes the `dazzle workshop` command, the Textual TUI backing it, and the Activity Explorer web UI. The feature stopped earning its keep — the knowledge-graph SQLite activity store and the `status.activity` MCP operation provide the same data through lighter paths. Net ~1750 lines of code plus the `textual>=1.0.0` dependency (via the `workshop` extra and the `dev` extras) deleted.

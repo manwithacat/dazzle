@@ -163,6 +163,9 @@ class SymbolTable:
     # Track feedback widget config
     feedback_widget: ir.FeedbackWidgetSpec | None = None
 
+    # Subprocessor declarations (v0.61.0 Analytics / Privacy)
+    subprocessors: dict[str, ir.SubprocessorSpec] = field(default_factory=dict)
+
     # --- Delegated properties for backward compatibility ---
 
     @property
@@ -530,6 +533,16 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Set feedback widget config if present
         if module.fragment.feedback_widget is not None:
             symbols.feedback_widget = module.fragment.feedback_widget
+
+        # Collect subprocessor declarations (v0.61.0 Analytics / Privacy)
+        for sp in module.fragment.subprocessors:
+            if sp.name in symbols.subprocessors:
+                raise LinkError(
+                    f"Duplicate subprocessor `{sp.name}` — "
+                    f"already declared in module {symbols.symbol_sources.get(f'subprocessor:{sp.name}', '?')}."
+                )
+            symbols.subprocessors[sp.name] = sp
+            symbols.symbol_sources[f"subprocessor:{sp.name}"] = module.name
 
         # Add processes (v0.23.0)
         for process in module.fragment.processes:
@@ -1286,4 +1299,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         islands=list(symbols.islands.values()),  # UI Islands
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
+        subprocessors=list(symbols.subprocessors.values()),  # v0.61.0
     )

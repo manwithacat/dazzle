@@ -76,6 +76,7 @@ nav:
       - Databases: reference/databases.md
       - Deployment: reference/deployment.md
       - Islands: reference/islands.md
+      - PII & Privacy: reference/pii-privacy.md
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
   - Guides:
