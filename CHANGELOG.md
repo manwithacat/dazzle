@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.4] - 2026-04-24
+
+Patch bump. Closes #860 — vendored minified libraries (tom-select, quill, pickr) shipped with trailing `//# sourceMappingURL=...` comments pointing at `.map` files that aren't part of the vendor directory. Any developer opening DevTools saw five 404s per page: `tom-select.complete.min.js.map`, `tom-select.min.css.map`, `quill.js.map`, `quill.snow.css.map`, `pickr.min.js.map`. Noisy in logs, distracting during debugging.
+
+### Fixed
+- Stripped the trailing `sourceMappingURL` comment from the five affected vendor files in `src/dazzle_ui/runtime/static/vendor/`. Files stay valid minified JS/CSS — the sourcemap reference was the only removed content. Node's `--check` parser confirms all three JS bundles still parse cleanly.
+
+### Tests
+- **`test_vendor_sourcemap_refs.py`** — regression guard: every file in `src/dazzle_ui/runtime/static/vendor/` is scanned for `sourceMappingURL` references, and any reference pointing at a `.map` file not shipped in the vendor dir fails the test. Catches regressions when a vendor library is re-fetched from upstream without running the strip step.
+
+### Agent Guidance
+- **Vendoring a new minified library**: strip `sourceMappingURL` comments from the bundled file, or commit the matching `.map` alongside it. The test catches both failure modes — don't work around it.
+
 ## [0.61.3] - 2026-04-24
 
 Patch bump. Closes #862 — Safari renders the CSV export inline instead of triggering a download. Root cause: `<a href="...?format=csv" download>` + `Content-Disposition: attachment` isn't enough on Safari for same-origin `text/csv` responses — Safari honours its own inline-render heuristic over the header. User loses their workspace context to a full tab navigation.
