@@ -14,7 +14,7 @@ Run `git diff --name-only HEAD` to get the list of modified files. Categorize:
 
 ### 2. Dispatch parallel checks
 
-**Dispatch ALL applicable checks as background subagents in a single message.** Use `model: "haiku"` for each — these are mechanical checks.
+**Dispatch ALL applicable checks as background subagents in a single message.** Use `model: "claude-haiku-4-5-20251001"` for each — these are mechanical checks and Haiku 4.5 is both cheapest and fast. (The bare `haiku` alias was retired when Haiku 3 shut down; reach for the explicit 4.5 id.)
 
 Always dispatch these two (they always apply):
 

@@ -374,13 +374,13 @@ event_model:
 
 subscribe ecommerce as cart_analytics:
   on CartCreated:
-    call service analytics.track_cart_created
+    call service tracking.track_cart_created
 
   on CartItemAdded:
-    call service analytics.track_item_added
+    call service tracking.track_item_added
 
   on CartItemRemoved:
-    call service analytics.track_item_removed
+    call service tracking.track_item_removed
 
   on CartAbandoned:
     call service remarketing.trigger_abandoned_cart_email
@@ -393,7 +393,7 @@ subscribe user_activity as user_tracking:
     call service session.end_session
 
   on PageViewed:
-    call service analytics.track_page_view
+    call service tracking.track_page_view
 
 subscribe system as ops_monitoring:
   on ServiceStarted:

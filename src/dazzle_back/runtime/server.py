@@ -390,7 +390,7 @@ class DazzleBackendApp:
         # analytics providers so their CSP origins are allow-listed.
         from dazzle_back.runtime.security_middleware import apply_security_middleware
 
-        _active_providers: list = []
+        _active_providers: list[Any] = []
         if self._appspec.analytics is not None:
             from dazzle.compliance.analytics import get_provider_definition
 

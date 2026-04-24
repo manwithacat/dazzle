@@ -228,7 +228,7 @@ entity TimeEntry "Time Entry":
 
 entity TeamStats "Team Stats":
   intent: "Demonstrates division in computed expressions"
-  domain: analytics
+  domain: team_metrics
 
   id: uuid pk
   team_name: str(100) required
