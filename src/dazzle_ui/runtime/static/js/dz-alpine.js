@@ -67,6 +67,55 @@ document.addEventListener("alpine:init", () => {
       el.dispatchEvent(new CustomEvent("toast", { detail: { message, type } }));
   };
 
+  /**
+   * Download a CSV export via fetch + Blob (v0.61.2, #862).
+   *
+   * `<a download>` is ignored by Safari for same-origin responses with
+   * `Content-Type: text/csv` — Safari treats the navigation as a document
+   * load and renders the CSV inline, losing the user's workspace context.
+   * The server-side `Content-Disposition: attachment` header is set
+   * correctly but Safari honours its own heuristic over the header in
+   * this case.
+   *
+   * This helper:
+   *   1. Fetches the endpoint with same-origin credentials.
+   *   2. Converts the response to a Blob (any Content-Type works).
+   *   3. Creates a transient object-URL + synthetic <a download> element.
+   *   4. Triggers a programmatic click (always a download, never a nav).
+   *   5. Revokes the URL on next tick to free memory.
+   *
+   * Errors surface via toast + console — callers don't need to wrap.
+   */
+  window.dz.downloadCsv = async (endpoint, filename) => {
+    const url = endpoint.includes("?")
+      ? endpoint + "&format=csv"
+      : endpoint + "?format=csv";
+    try {
+      const response = await fetch(url, { credentials: "same-origin" });
+      if (!response.ok) {
+        window.dz.toast(
+          "CSV export failed: " + response.status + " " + response.statusText,
+          "error",
+        );
+        return;
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename || "export.csv";
+      // Appending to body is required on some browsers before click() works.
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Revoke on next tick so the browser has time to begin the download.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (err) {
+      window.dz.toast("CSV export failed: network error", "error");
+      console.error("[dz.downloadCsv]", err);
+    }
+  };
+
   // ── Confirm Dialog ──────────────────────────────────────────────────
 
   Alpine.data("dzConfirm", () => ({

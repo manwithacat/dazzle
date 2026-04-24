@@ -21,13 +21,20 @@
               hx-swap="none">{{ act.label }}</button>
       {% endfor %}
       {% endif %}
-      <a href="{{ endpoint }}?format=csv" download
-         class="h-7 w-7 inline-flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-         title="Export CSV" aria-label="Export CSV">
+      {# v0.61.2 (#862): <a download> is ignored by Safari for same-origin
+         text/csv responses; the tab navigates and renders CSV inline.
+         dz.downloadCsv forces a fetch → Blob → click flow that works on
+         all browsers and preserves the user's workspace context. #}
+      <button type="button"
+              data-dz-csv-endpoint="{{ endpoint }}"
+              data-dz-csv-filename="{{ region_name | default('export') }}.csv"
+              onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)"
+              class="h-7 w-7 inline-flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              title="Export CSV" aria-label="Export CSV">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-      </a>
+      </button>
     </div>
   </div>
 

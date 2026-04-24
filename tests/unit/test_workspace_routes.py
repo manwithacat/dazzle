@@ -2721,8 +2721,14 @@ class TestListRegionTemplate:
         )
         assert "dz-list-region" in html
 
-    def test_csv_export_link_always_present(self) -> None:
-        """Gate 2: CSV export link is unconditional."""
+    def test_csv_export_button_always_present(self) -> None:
+        """Gate 2: CSV export control is unconditional.
+
+        v0.61.2 (#862): the <a download> anchor was replaced with a
+        button that calls window.dz.downloadCsv via fetch + Blob,
+        because Safari ignores the download attribute for same-origin
+        text/csv responses.
+        """
         # With items
         with_items = render_fragment(
             "workspace/regions/list.html",
@@ -2731,7 +2737,7 @@ class TestListRegionTemplate:
                 total=1,
             ),
         )
-        assert '?format=csv" download' in with_items
+        assert "window.dz.downloadCsv" in with_items
         assert 'aria-label="Export CSV"' in with_items
 
         # Even without items (empty state)
@@ -2739,7 +2745,7 @@ class TestListRegionTemplate:
             "workspace/regions/list.html",
             **self._list_kwargs(items=[], total=0),
         )
-        assert '?format=csv" download' in without_items
+        assert "window.dz.downloadCsv" in without_items
 
     def test_region_actions_when_configured(self) -> None:
         """Gate 3: hx-post buttons when region_actions is set."""

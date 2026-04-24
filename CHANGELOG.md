@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.3] - 2026-04-24
+
+Patch bump. Closes #862 — Safari renders the CSV export inline instead of triggering a download. Root cause: `<a href="...?format=csv" download>` + `Content-Disposition: attachment` isn't enough on Safari for same-origin `text/csv` responses — Safari honours its own inline-render heuristic over the header. User loses their workspace context to a full tab navigation.
+
+### Fixed
+- **`src/dazzle_ui/runtime/static/js/dz-alpine.js`** — new `window.dz.downloadCsv(endpoint, filename)` helper. Fetches via `credentials: "same-origin"`, converts response to a Blob, creates a transient object-URL + synthetic `<a download>`, programmatically clicks to force the download, then revokes the URL. Failures surface via `window.dz.toast` + console.error.
+- **`src/dazzle_ui/templates/workspace/regions/list.html`** — the CSV export anchor is now a button that calls `window.dz.downloadCsv` with the endpoint and filename from `data-dz-csv-*` attributes. Works on Safari + every other browser; the workspace context is preserved (no tab navigation).
+
+### Tests
+- **`test_dz_alpine_csv_download.py`** — new source-regression tests pin the helper's contract (fetch + Blob, download attribute, revoke URL, toast-on-error).
+- **`test_workspace_routes.py`** — `test_csv_export_link_always_present` renamed to `test_csv_export_button_always_present` and asserts the new `window.dz.downloadCsv` JS call.
+
+### Agent Guidance
+- **`<a download>` is not reliable on Safari** for server-generated file responses. Use `window.dz.downloadCsv` (or the same fetch-Blob-click pattern) for any file-download UX across the framework. The same helper will be extended to other content types if/when they need the same fix.
+
 ## [0.61.2] - 2026-04-24
 
 Patch bump. Closes #864 — every above-fold workspace region fetched twice on first paint because the template emitted `hx-trigger="load, intersect once"` for every card. `load` fires when HTMX processes the element; `intersect once` fires once the IntersectionObserver reports the element visible (which, for above-fold cards, happens in the same paint cycle). Result: ~20% wasted backend work per login on production workspaces.
