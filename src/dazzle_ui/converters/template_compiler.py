@@ -1399,6 +1399,47 @@ def compile_appspec_to_templates(
                 if entity_item not in persona_nav:
                     persona_nav.append(entity_item)
 
+    # v0.61.5 (#863): build nav_groups from each workspace's nav_group
+    # declarations — mirrors the logic in page_routes.py line 1676. Entity-
+    # list pages (/app/<entity>) then inherit the same collapsible groups
+    # the workspace pages show, so the sidebar stays continuous as users
+    # navigate between the two page types.
+    nav_groups_all: list[dict[str, Any]] = []
+    nav_groups_by_persona: dict[str, list[dict[str, Any]]] = {}
+    _seen_group_labels: set[str] = set()
+    for ws in appspec.workspaces:
+        ws_pids = _ws_personas.get(ws.name, [])
+        for ng in getattr(ws, "nav_groups", None) or []:
+            group: dict[str, Any] = {
+                "label": ng.label,
+                "icon": ng.icon,
+                "collapsed": ng.collapsed,
+                "children": [
+                    {
+                        "label": (
+                            _list_surfaces_by_entity[item.entity].title
+                            if item.entity in _list_surfaces_by_entity
+                            and _list_surfaces_by_entity[item.entity].title
+                            else item.entity.replace("_", " ").title()
+                        ),
+                        "route": (f"{app_prefix}/{item.entity.lower().replace('_', '-')}"),
+                        "icon": item.icon,
+                    }
+                    for item in ng.items
+                ],
+            }
+            # Dedup across workspaces by label: multiple workspaces declaring
+            # the same group ("Admin", say) should render once in the global
+            # nav (entity-list pages don't know which workspace the user came
+            # from — they show the union scoped by the persona-allow map).
+            if ng.label not in _seen_group_labels:
+                nav_groups_all.append(group)
+                _seen_group_labels.add(ng.label)
+            for pid in ws_pids:
+                persona_groups = nav_groups_by_persona.setdefault(pid, [])
+                if not any(g["label"] == ng.label for g in persona_groups):
+                    persona_groups.append(group)
+
     # Build reverse-ref map: for each entity, find other entities that have
     # ref fields pointing to it.  Used to populate related-entity tabs on
     # detail pages (hub-and-spoke pattern, issue #301).
@@ -1464,6 +1505,9 @@ def compile_appspec_to_templates(
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
         ctx.nav_by_persona = nav_by_persona
+        # v0.61.5 (#863): entity-list pages inherit workspace nav groups.
+        ctx.nav_groups = nav_groups_all
+        ctx.nav_groups_by_persona = nav_groups_by_persona
         ctx.view_name = surface.name
         ctx.entity_ref = surface.entity_ref or ""
 
@@ -1524,6 +1568,8 @@ def compile_appspec_to_templates(
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
             root_ctx.nav_items = nav_items
             root_ctx.nav_by_persona = nav_by_persona
+            root_ctx.nav_groups = nav_groups_all
+            root_ctx.nav_groups_by_persona = nav_groups_by_persona
             root_ctx.view_name = first_list.name
             root_ctx.entity_ref = first_list.entity_ref or ""
             root_ctx.current_route = "/"

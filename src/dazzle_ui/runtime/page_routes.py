@@ -521,6 +521,16 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
                         prc.ctx.nav_items = persona_nav
                         break
 
+            # v0.61.5 (#863): mirror the per-persona resolution for nav_groups
+            # so entity-list pages show the same collapsible groups workspace
+            # pages show, filtered to the user's persona.
+            if getattr(prc.ctx, "nav_groups_by_persona", None) and roles:
+                for role in roles:
+                    persona_groups = prc.ctx.nav_groups_by_persona.get(role.removeprefix("role_"))
+                    if persona_groups is not None:
+                        prc.ctx.nav_groups = persona_groups
+                        break
+
             # Filter out nav items for entities the user cannot LIST (#583).
             # This catches entities that appear in an allowed workspace but
             # whose permit: rules deny the user's role.

@@ -331,6 +331,12 @@ class PageContext(BaseModel):
     template: str = "components/filterable_table.html"
     nav_items: list[NavItemContext] = Field(default_factory=list)
     nav_by_persona: dict[str, list[NavItemContext]] = Field(default_factory=dict)
+    # v0.61.5 (#863): collapsible workspace-declared nav groups. Entity-list
+    # pages (/app/<entity>) now populate this the same way workspace pages do,
+    # so the sidebar stays continuous as the user navigates between them.
+    # Each entry is a dict shaped {label, icon, collapsed, children: [NavItemContext-like]}.
+    nav_groups: list[dict[str, Any]] = Field(default_factory=list)
+    nav_groups_by_persona: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     current_route: str = "/"
     design_tokens: dict[str, str] = Field(default_factory=dict)
     theme_css: str = ""

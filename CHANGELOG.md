@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.5] - 2026-04-24
+
+Patch bump. Closes #863 — entity-list pages (`/app/<entity>`) showed a reduced sidebar compared to workspace pages because the entity-list code path (`template_compiler.py`) never populated `PageContext.nav_groups`. `app_shell.html` was already rendering `nav_groups | default([])` — the field simply wasn't set, collapsing the sidebar's group structure whenever the user navigated between an entity and its workspace.
+
+### Fixed
+- **`src/dazzle_ui/runtime/template_context.py`** — `PageContext` gains `nav_groups` + `nav_groups_by_persona` fields (default empty list / dict).
+- **`src/dazzle_ui/converters/template_compiler.py`** — builds workspace `nav_group` declarations into the same dict shape `page_routes.py` already produces for workspace pages. Assigns them to every entity-surface context + the `/` fallback. Dedupes by label so two workspaces declaring the same group name don't produce sidebar duplicates.
+- **`src/dazzle_ui/runtime/page_routes.py`** — mirrors the per-persona resolution path: when a user's role matches a persona in `nav_groups_by_persona`, the request-scoped `nav_groups` is replaced with the persona's subset. Matches the existing `nav_items` / `nav_by_persona` pattern.
+
+### Tests
+- **`test_entity_page_nav_groups.py`** — 5 tests pin the contract: entity-list ctx inherits nav_groups, children have correct routes, workspace + entity pages share the same group structure, duplicates collapse, field always exists.
+
+### Agent Guidance
+- **Templates read `nav_groups` directly** — no conditional needed. Field is now always present on `PageContext`.
+- **New workspace code paths must populate `nav_groups`** alongside `nav_items` so the sidebar stays continuous. `page_routes.py:1676-1700` shows the canonical build pattern.
+- **Per-persona filtering is opt-in**: resolution only fires when `nav_groups_by_persona` has an entry for a role. Workspaces without persona restrictions publish to the global `nav_groups` so non-persona-tagged users still see the groups.
+
 ## [0.61.4] - 2026-04-24
 
 Patch bump. Closes #860 — vendored minified libraries (tom-select, quill, pickr) shipped with trailing `//# sourceMappingURL=...` comments pointing at `.map` files that aren't part of the vendor directory. Any developer opening DevTools saw five 404s per page: `tom-select.complete.min.js.map`, `tom-select.min.css.map`, `quill.js.map`, `quill.snow.css.map`, `pickr.min.js.map`. Noisy in logs, distracting during debugging.
