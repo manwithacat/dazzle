@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0rc2] - 2026-04-24
+
+Phase 2 of the **Analytics, Consent & Privacy** design: consent banner, Consent Mode v2 bootstrap, and auto-generated privacy / cookie / ROPA documents. Site pages now render a banner on first visit (residency-driven default); user choices persist via the `dz_consent_v2` cookie; `dazzle compliance privacy` emits three markdown artefacts from the AppSpec.
+
+### Added
+
+- **Consent state model** — `ConsentState` + `ConsentDefaults` in `dazzle.compliance.analytics.consent`. Four Dazzle-native categories (`analytics`, `advertising`, `personalization`, `functional`), mapped internally to Consent Mode v2 signals (`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`, `functionality_storage`, `personalization_storage`, `security_storage`). EU/UK/EEA tenants default to `denied`; others to `granted`; `functional` is always granted (essential for service). Cookie named `dz_consent_v2` with 13-month Max-Age.
+
+- **Consent banner** — `src/dazzle_ui/templates/site/includes/consent_banner.html` + `src/dazzle_ui/static/js/dz-consent.js` + `dz-consent-*` styles in `site-sections.css`. Accept-all / Reject-non-essential / Customise flow with focus trap, keyboard nav, ARIA landmarks. Reopen hook (`dzConsent.reopen()`) for footer "Manage cookies" links.
+
+- **Consent HTTP routes** — `POST /dz/consent` (write choices), `GET /dz/consent/state` (read resolved state), `GET /dz/consent/banner` (reopen). Wired into `app_factory.assemble_post_build_routes`. Configurable via `dazzle.toml` `[analytics]` section (`default_jurisdiction`, `consent_override`, `privacy_page_url`, `cookie_policy_url`).
+
+- **Site-page integration** — `create_site_page_routes` resolves per-request consent state and passes it to `build_site_page_context`, which drops it into `SitePageContext`. `site_base.html` conditionally renders the banner + loads `dz-consent.js`.
+
+- **Privacy-page + cookie-policy + ROPA generator** — `generate_privacy_page_markdown(appspec)` in `dazzle.compliance.analytics.privacy_page`. Produces three markdown documents from `pii()` annotations + `subprocessor` declarations + framework defaults. Auto-enumerated sections delimited with `<!-- DZ-AUTO:start name="..." -->` / `<!-- DZ-AUTO:end -->` markers. `merge_regenerated_into_existing()` preserves author-edited content outside auto blocks.
+
+- **`dazzle compliance privacy` CLI** — one command generates all three artefacts to `docs/privacy/`. `--regenerate-facts` refreshes only the DZ-AUTO sections in an existing `privacy_policy.md`, so legal can edit the header / footer / intro prose without losing work.
+
+### Changed
+
+- **`SitePageContext`** gains `consent`, `consent_state_json`, `privacy_page_url`, `cookie_policy_url` fields.
+- **`build_site_page_context()`** accepts the new consent parameters; all four site-page handlers (root, regular pages, terms, privacy) pass them through.
+
+### Agent Guidance
+
+- **EU defaults are denied by default.** If you override `[analytics].default_jurisdiction` to `US` or add `consent_override = "granted"`, make sure your legal review explicitly signs off — silent opt-in to analytics in EU traffic is a GDPR breach.
+- **Banner is only rendered on site pages (unauth + landing + legal) in rc2.** App/workspace integration lands in rc3 once the provider abstraction can gate analytics scripts. Users who only log in bypass the banner for now.
+- **Privacy-page output is meant to be committed.** Generate once, commit `docs/privacy/`, edit the non-auto parts freely. Re-run with `--regenerate-facts` when PII annotations change.
+- **`functional` consent is always granted.** Never expose a UI that suggests otherwise. Essential cookies (session, CSRF) don't require consent under GDPR Article 5(3) — don't create a UX that implies they do.
+- **Consent Mode v2 update is already wired in dz-consent.js.** When Phase 3 ships GTM, the `gtag('consent','update',{...})` call fires automatically on save. No action needed from authors.
+- **Cookie name is version-suffixed.** If you change the consent category vocabulary or legal contract in a future release, bump `CONSENT_COOKIE_VERSION` to force re-consent. The old cookie will then read as missing.
+
 ## [0.61.0rc1] - 2026-04-24
 
 First release of the **Analytics, Consent & Privacy** subsystem — Phase 1 of the design spec at `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`. Phase 1 ships the PII + subprocessor *primitives* without yet shipping analytics providers, consent banner, or privacy-page auto-generation. Those land in Phases 2-6. The primitives are independently valuable: the compliance pipeline already benefits from structured PII knowledge, and `dazzle analytics audit` flags likely-PII fields that haven't been classified.

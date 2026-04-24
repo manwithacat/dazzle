@@ -1,0 +1,150 @@
+{# Consent banner — v0.61.0 Phase 2.
+
+   Rendered only when the user hasn't interacted yet (`consent.undecided`).
+   Once dismissed, the footer "Manage cookies" link reopens it via
+   dzConsent.reopen().
+
+   Structure mirrors the Consent Mode v2 four-category model:
+     analytics, advertising, personalization, functional (always on).
+
+   Accessibility:
+     - role="dialog" + aria-labelledby/aria-describedby
+     - focus trap via dz-consent.js
+     - Esc key closes (treated as "save current")
+
+   Styling:
+     - site-sections.css `.dz-consent-*` custom properties
+     - No inline styles; uses CSS cascade layer `framework`
+
+   The banner posts choices to POST /dz/consent which sets the cookie.
+#}
+{% if consent and consent.undecided %}
+<div
+  id="dz-consent-banner"
+  class="dz-consent-banner"
+  role="dialog"
+  aria-labelledby="dz-consent-title"
+  aria-describedby="dz-consent-description"
+  data-consent-state='{{ consent_state_json | safe }}'>
+  <div class="dz-consent-panel">
+    <h2 id="dz-consent-title" class="dz-consent-title">
+      {{ consent_banner_title | default("Your privacy choices") }}
+    </h2>
+    <p id="dz-consent-description" class="dz-consent-description">
+      {{ consent_banner_description | default(
+        "We use cookies and similar technologies to run this service, measure how it's used, and improve it. You can choose which categories you're comfortable with. Functional cookies are required for the service to work."
+      ) }}
+    </p>
+
+    <div class="dz-consent-actions" data-consent-panel="summary">
+      <button
+        type="button"
+        class="dz-consent-btn dz-consent-btn-primary"
+        data-dz-consent-action="accept-all">
+        Accept all
+      </button>
+      <button
+        type="button"
+        class="dz-consent-btn dz-consent-btn-secondary"
+        data-dz-consent-action="reject-all">
+        Reject non-essential
+      </button>
+      <button
+        type="button"
+        class="dz-consent-btn dz-consent-btn-link"
+        data-dz-consent-action="customize">
+        Customise
+      </button>
+    </div>
+
+    <div
+      class="dz-consent-customize"
+      data-consent-panel="customize"
+      hidden>
+      <fieldset class="dz-consent-category">
+        <div class="dz-consent-category-header">
+          <label>
+            <input
+              type="checkbox"
+              name="functional"
+              checked
+              disabled
+              data-dz-consent-category="functional">
+            <span class="dz-consent-category-label">Functional (always on)</span>
+          </label>
+          <p class="dz-consent-category-hint">
+            Required for sign-in, session management, and security. Cannot be disabled.
+          </p>
+        </div>
+      </fieldset>
+      <fieldset class="dz-consent-category">
+        <div class="dz-consent-category-header">
+          <label>
+            <input
+              type="checkbox"
+              name="analytics"
+              data-dz-consent-category="analytics">
+            <span class="dz-consent-category-label">Analytics</span>
+          </label>
+          <p class="dz-consent-category-hint">
+            How you use the service, how long pages take to load, which features are useful.
+          </p>
+        </div>
+      </fieldset>
+      <fieldset class="dz-consent-category">
+        <div class="dz-consent-category-header">
+          <label>
+            <input
+              type="checkbox"
+              name="personalization"
+              data-dz-consent-category="personalization">
+            <span class="dz-consent-category-label">Personalization</span>
+          </label>
+          <p class="dz-consent-category-hint">
+            Remember preferences (theme, layout, saved filters) across sessions.
+          </p>
+        </div>
+      </fieldset>
+      <fieldset class="dz-consent-category">
+        <div class="dz-consent-category-header">
+          <label>
+            <input
+              type="checkbox"
+              name="advertising"
+              data-dz-consent-category="advertising">
+            <span class="dz-consent-category-label">Advertising</span>
+          </label>
+          <p class="dz-consent-category-hint">
+            Ad targeting and measurement with third-party advertising networks.
+          </p>
+        </div>
+      </fieldset>
+
+      {% if privacy_page_url %}
+      <p class="dz-consent-links">
+        <a href="{{ privacy_page_url }}">Privacy notice</a>
+        {% if cookie_policy_url %}
+        &nbsp;·&nbsp;
+        <a href="{{ cookie_policy_url }}">Cookie policy</a>
+        {% endif %}
+      </p>
+      {% endif %}
+
+      <div class="dz-consent-actions">
+        <button
+          type="button"
+          class="dz-consent-btn dz-consent-btn-primary"
+          data-dz-consent-action="save">
+          Save preferences
+        </button>
+        <button
+          type="button"
+          class="dz-consent-btn dz-consent-btn-link"
+          data-dz-consent-action="back">
+          Back
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

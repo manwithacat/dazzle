@@ -612,6 +612,28 @@ def assemble_post_build_routes(
         except ImportError as e:
             logger.warning("Island routes not available: %s", e)
 
+    # ---- 6b. Consent banner routes (v0.61.0 Phase 2) ----
+    try:
+        from dazzle_back.runtime.consent_routes import create_consent_routes
+
+        # Per-tenant resolution lands in Phase 6. Until then, app-wide defaults
+        # come from the manifest if a raw TOML section exists, else EU-safe.
+        _analytics_cfg: dict[str, Any] = {}
+        _raw_manifest = getattr(builder, "manifest_raw", None)
+        if isinstance(_raw_manifest, dict):
+            _analytics_cfg = _raw_manifest.get("analytics", {}) or {}
+
+        consent_router = create_consent_routes(
+            default_jurisdiction=_analytics_cfg.get("default_jurisdiction", "EU"),
+            consent_override=_analytics_cfg.get("consent_override"),
+            privacy_page_url=_analytics_cfg.get("privacy_page_url", "/privacy"),
+            cookie_policy_url=_analytics_cfg.get("cookie_policy_url"),
+        )
+        app.include_router(consent_router)
+        logger.info("  Consent banner: /dz/consent, /dz/consent/state, /dz/consent/banner")
+    except ImportError as e:
+        logger.warning("Consent routes not available: %s", e)
+
     # ---- 7. Schedule sync to process adapter ----
     if builder.process_adapter is not None and appspec.schedules:
         if hasattr(builder.process_adapter, "sync_schedules_from_appspec"):

@@ -108,6 +108,10 @@ def build_site_page_context(
     is_authenticated: bool = False,
     dashboard_url: str = "/app",
     qa_personas: list[dict[str, Any]] | None = None,
+    consent: dict[str, Any] | None = None,
+    consent_state_json: str = "null",
+    privacy_page_url: str | None = None,
+    cookie_policy_url: str | None = None,
 ) -> SitePageContext:
     """Build a SitePageContext from sitespec data and page data.
 
@@ -180,6 +184,10 @@ def build_site_page_context(
         is_authenticated=is_authenticated,
         dashboard_url=dashboard_url,
         qa_personas=persona_cards,
+        consent=consent,
+        consent_state_json=consent_state_json,
+        privacy_page_url=privacy_page_url,
+        cookie_policy_url=cookie_policy_url,
     )
 
 

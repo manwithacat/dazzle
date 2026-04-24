@@ -6,9 +6,24 @@ filtering utilities that downstream phases (consent, providers, privacy-page
 generation) depend on.
 """
 
+from .consent import (
+    CONSENT_COOKIE_MAX_AGE_SECONDS,
+    CONSENT_COOKIE_NAME,
+    CONSENT_COOKIE_VERSION,
+    ConsentDefaults,
+    ConsentState,
+    build_decided_state,
+    parse_consent_cookie,
+)
 from .pii_filter import (
     PIIFilterResult,
     strip_pii,
+)
+from .privacy_page import (
+    PrivacyPageArtefacts,
+    generate_privacy_page_markdown,
+    merge_regenerated_into_existing,
+    write_privacy_artefacts,
 )
 from .registry import (
     FRAMEWORK_SUBPROCESSORS,
@@ -18,10 +33,21 @@ from .registry import (
 )
 
 __all__ = [
+    "CONSENT_COOKIE_MAX_AGE_SECONDS",
+    "CONSENT_COOKIE_NAME",
+    "CONSENT_COOKIE_VERSION",
+    "ConsentDefaults",
+    "ConsentState",
     "FRAMEWORK_SUBPROCESSORS",
     "PIIFilterResult",
+    "PrivacyPageArtefacts",
+    "build_decided_state",
+    "generate_privacy_page_markdown",
     "get_framework_subprocessor",
     "list_framework_subprocessors",
     "merge_app_subprocessors",
+    "merge_regenerated_into_existing",
+    "parse_consent_cookie",
     "strip_pii",
+    "write_privacy_artefacts",
 ]

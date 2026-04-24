@@ -145,6 +145,79 @@ def render_cmd(
     console.print(f"[green]Rendered:[/green] {written}")
 
 
+@compliance_app.command(name="privacy")
+def privacy_cmd(
+    project_dir: Path = typer.Option(  # noqa: B008
+        Path.cwd(),
+        "--project-dir",
+        "-p",
+        help="Project root (default: current directory)",
+    ),
+    out_dir: Path = typer.Option(  # noqa: B008
+        Path("docs/privacy"),
+        "--out",
+        "-o",
+        help="Output directory for generated artefacts (default: docs/privacy/)",
+    ),
+    regenerate_facts: bool = typer.Option(
+        False,
+        "--regenerate-facts",
+        help=(
+            "Preserve author edits outside DZ-AUTO blocks; only refresh "
+            "auto-enumerated sections. Applies to privacy_policy.md if one "
+            "already exists at the output path."
+        ),
+    ),
+) -> None:
+    """Generate privacy policy, cookie policy, and ROPA from the AppSpec.
+
+    The three documents are derived from `pii()` field annotations and
+    `subprocessor` declarations. Output:
+
+        <out_dir>/privacy_policy.md
+        <out_dir>/cookie_policy.md
+        <out_dir>/ropa.md
+
+    Re-running overwrites the three files by default. With
+    ``--regenerate-facts``, any existing ``privacy_policy.md`` has only its
+    DZ-AUTO delimited sections refreshed — author-edited content outside
+    those blocks is preserved.
+    """
+    from dazzle.compliance.analytics import (
+        generate_privacy_page_markdown,
+        merge_regenerated_into_existing,
+    )
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    root = project_dir.resolve()
+    spec = load_project_appspec(root)
+    artefacts = generate_privacy_page_markdown(spec)
+
+    target_dir = (root / out_dir).resolve()
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    privacy_path = target_dir / "privacy_policy.md"
+    if regenerate_facts and privacy_path.exists():
+        merged = merge_regenerated_into_existing(
+            privacy_path.read_text(),
+            artefacts.privacy_policy,
+        )
+        privacy_path.write_text(merged)
+    else:
+        privacy_path.write_text(artefacts.privacy_policy)
+
+    (target_dir / "cookie_policy.md").write_text(artefacts.cookie_policy)
+    (target_dir / "ropa.md").write_text(artefacts.ropa)
+
+    console.print(
+        f"[green]Generated compliance artefacts at[/green] {target_dir}\n"
+        f"  [cyan]privacy_policy.md[/cyan] ({len(artefacts.privacy_policy)} chars)\n"
+        f"  [cyan]cookie_policy.md[/cyan] ({len(artefacts.cookie_policy)} chars)\n"
+        f"  [cyan]ropa.md[/cyan]           ({len(artefacts.ropa)} chars)\n"
+        f"  [dim]blocks: {', '.join(artefacts.block_names)}[/dim]"
+    )
+
+
 @compliance_app.command(name="validate-citations")
 def validate_citations_cmd(
     markdown_path: Path = typer.Argument(..., help="Markdown document to validate"),

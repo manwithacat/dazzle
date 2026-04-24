@@ -267,6 +267,11 @@ def create_site_page_routes(
     project_root: Path | None = None,
     get_auth_context: Callable[..., Any] | None = None,
     persona_routes: dict[str, str] | None = None,
+    *,
+    consent_default_jurisdiction: str = "EU",
+    consent_override: str | None = None,
+    privacy_page_url: str = "/privacy",
+    cookie_policy_url: str | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes that serve HTML pages directly.
@@ -335,6 +340,37 @@ def create_site_page_routes(
     _auth_fn = get_auth_context
     _persona_routes: dict[str, str] = dict(persona_routes) if persona_routes else {}
 
+    # Consent banner setup (v0.61.0 Phase 2)
+    from dazzle.compliance.analytics.consent import ConsentDefaults
+
+    _consent_defaults = ConsentDefaults.for_jurisdiction(
+        consent_default_jurisdiction,
+        override=consent_override if consent_override in ("granted", "denied") else None,  # type: ignore[arg-type]
+    )
+    _privacy_page_url = privacy_page_url
+    _cookie_policy_url = cookie_policy_url
+
+    def _resolve_consent(request: Request) -> tuple[dict[str, Any], str]:
+        """Return (consent_dict, consent_state_json) for the current request."""
+        import json as _json
+
+        from dazzle.compliance.analytics.consent import (
+            CONSENT_COOKIE_NAME,
+            parse_consent_cookie,
+        )
+
+        raw = request.cookies.get(CONSENT_COOKIE_NAME)
+        state = parse_consent_cookie(raw, _consent_defaults)
+        consent = {
+            "analytics": state.analytics == "granted",
+            "advertising": state.advertising == "granted",
+            "personalization": state.personalization == "granted",
+            "functional": state.functional == "granted",
+            "undecided": state.undecided,
+            "decided_at": state.decided_at,
+        }
+        return consent, _json.dumps(consent)
+
     def _resolve_auth(request: Request) -> tuple[bool, str]:
         """Check auth state and resolve the dashboard URL.
 
@@ -394,6 +430,7 @@ def create_site_page_routes(
                         }
                         for p in qa_persona_list
                     ]
+                consent_dict, consent_json = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -402,6 +439,10 @@ def create_site_page_routes(
                     is_authenticated=is_authed,
                     dashboard_url=dash_url,
                     qa_personas=qa_personas,
+                    consent=consent_dict,
+                    consent_state_json=consent_json,
+                    privacy_page_url=_privacy_page_url,
+                    cookie_policy_url=_cookie_policy_url,
                 )
                 return HTMLResponse(content=render_site_page("site/page.html", ctx))
         else:
@@ -414,6 +455,7 @@ def create_site_page_routes(
             ) -> str:
                 """Serve a site page as HTML with SSR content."""
                 is_authed, dash_url = _resolve_auth(request)
+                consent_dict, consent_json = _resolve_consent(request)
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -421,6 +463,10 @@ def create_site_page_routes(
                     custom_css=has_custom_css,
                     is_authenticated=is_authed,
                     dashboard_url=dash_url,
+                    consent=consent_dict,
+                    consent_state_json=consent_json,
+                    privacy_page_url=_privacy_page_url,
+                    cookie_policy_url=_cookie_policy_url,
                 )
                 return render_site_page("site/page.html", ctx)
 
@@ -436,6 +482,7 @@ def create_site_page_routes(
         ) -> str:
             """Serve the terms of service page."""
             is_authed, dash_url = _resolve_auth(request)
+            consent_dict, consent_json = _resolve_consent(request)
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -443,6 +490,10 @@ def create_site_page_routes(
                 custom_css=has_custom_css,
                 is_authenticated=is_authed,
                 dashboard_url=dash_url,
+                consent=consent_dict,
+                consent_state_json=consent_json,
+                privacy_page_url=_privacy_page_url,
+                cookie_policy_url=_cookie_policy_url,
             )
             return render_site_page("site/page.html", ctx)
 
@@ -457,6 +508,7 @@ def create_site_page_routes(
         ) -> str:
             """Serve the privacy policy page."""
             is_authed, dash_url = _resolve_auth(request)
+            consent_dict, consent_json = _resolve_consent(request)
             ctx = build_site_page_context(
                 sitespec,
                 r,
@@ -464,6 +516,10 @@ def create_site_page_routes(
                 custom_css=has_custom_css,
                 is_authenticated=is_authed,
                 dashboard_url=dash_url,
+                consent=consent_dict,
+                consent_state_json=consent_json,
+                privacy_page_url=_privacy_page_url,
+                cookie_policy_url=_cookie_policy_url,
             )
             return render_site_page("site/page.html", ctx)
 

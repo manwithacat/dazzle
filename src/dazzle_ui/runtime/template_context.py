@@ -509,6 +509,11 @@ class SitePageContext(BaseModel):
     is_authenticated: bool = False
     dashboard_url: str = "/app"
     qa_personas: list[QAPersonaCardContext] = Field(default_factory=list)
+    # Consent banner (v0.61.0 Phase 2). When None, banner is not rendered.
+    consent: dict[str, Any] | None = None
+    consent_state_json: str = "null"
+    privacy_page_url: str | None = None
+    cookie_policy_url: str | None = None
 
 
 class SiteAuthContext(BaseModel):

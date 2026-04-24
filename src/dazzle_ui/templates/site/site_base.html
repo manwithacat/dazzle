@@ -26,7 +26,13 @@
 </head>
 <body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}" {% block body_attrs %}{% endblock %}>
   {% block body %}{% endblock %}
+  {% if consent is defined and consent %}
+    {% include "site/includes/consent_banner.html" %}
+  {% endif %}
   <script src="/site.js"></script>
+  {% if consent is defined and consent %}
+  <script src="{{ 'js/dz-consent.js' | static_url }}"></script>
+  {% endif %}
   {% block scripts_extra %}{% endblock %}
 </body>
 </html>
