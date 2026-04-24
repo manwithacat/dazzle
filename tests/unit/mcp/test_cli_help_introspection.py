@@ -34,7 +34,7 @@ class TestIntrospectionCompleteness:
     # fmt: off
     TOP_LEVEL = [
         "serve", "init", "validate", "lint", "inspect", "layout-plan",
-        "analyze-spec", "example", "doctor", "workshop", "grammar",
+        "analyze-spec", "example", "doctor", "grammar",
         "build", "info", "stop", "rebuild", "logs", "status",
     ]
     # fmt: on

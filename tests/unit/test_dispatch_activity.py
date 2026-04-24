@@ -1,8 +1,8 @@
 """Tests that MCP tool dispatch writes activity events to SQLite.
 
 Verifies that when `dispatch_consolidated_tool` is invoked, the SQLite
-ActivityStore receives at least tool_start and tool_end events.  This is
-the integration test for the workshop observability pipeline.
+ActivityStore receives at least tool_start and tool_end events. Integration
+test for the observability pipeline read by status.activity.
 """
 
 from unittest.mock import patch

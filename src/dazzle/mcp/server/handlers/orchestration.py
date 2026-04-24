@@ -125,7 +125,7 @@ def run_step(
 
     if activity_store is not None:
         try:
-            # Build compact context_json for the workshop TUI
+            # Build compact context_json for status.activity consumers
             ctx: dict[str, Any] = {
                 "operation": step.name,
                 "status": result.get("status", "unknown"),

@@ -23,6 +23,32 @@ from .common import error_response, extract_progress, wrap_handler_errors
 logger = logging.getLogger(__name__)
 
 
+def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert an activity_events DB row to the entry shape used by ActivityLog formatting."""
+    entry: dict[str, Any] = {
+        "type": row["event_type"],
+        "tool": row["tool"],
+        "ts": row.get("ts", ""),
+    }
+    for src, dst in (
+        ("operation", "operation"),
+        ("duration_ms", "duration_ms"),
+        ("error", "error"),
+        ("warnings", "warnings"),
+        ("progress_current", "current"),
+        ("progress_total", "total"),
+        ("message", "message"),
+        ("level", "level"),
+        ("source", "source"),
+        ("context_json", "context_json"),
+    ):
+        if row.get(src) is not None and row.get(src) != "":
+            entry[dst] = row[src]
+    if row.get("success") is not None:
+        entry["success"] = bool(row["success"])
+    return entry
+
+
 @wrap_handler_errors
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
@@ -158,7 +184,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     except Exception:
         logger.debug("Browser gate not available", exc_info=True)
 
-    # Activity log path — useful for workshop / tail -f
+    # Activity log path — useful for tail -f during debugging
     try:
         from ..state import get_activity_log
 
@@ -233,9 +259,6 @@ def get_activity_handler(args: dict[str, Any]) -> str:
     since_id = args.get("cursor_seq", 0)
     events = activity_store.read_since(since_id=since_id, limit=count)
     last_id = events[-1]["id"] if events else since_id
-
-    # Convert DB rows to the entry format used by formatting
-    from dazzle.mcp.server.workshop import _db_row_to_entry
 
     entries = [_db_row_to_entry(e) for e in events]
 

@@ -534,8 +534,8 @@ async def run_server(project_root: Path | None = None) -> None:
 
     # Initialize activity log (JSONL + SQLite store).
     # Must run AFTER init_knowledge_graph so init_activity_store can
-    # attach to the KG.  Without this ordering the SQLite store stays None
-    # and `dazzle workshop` (which prefers SQLite) shows perpetual idle.
+    # attach to the KG. Without this ordering the SQLite store stays
+    # None and SQLite-backed readers (e.g. status.activity) see nothing.
     from .state import init_activity_log
 
     init_activity_log(get_project_root())

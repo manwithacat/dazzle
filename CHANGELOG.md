@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.9] - 2026-04-24
+
+Minor bump. Removes the `dazzle workshop` command, the Textual TUI backing it, and the Activity Explorer web UI. The feature stopped earning its keep — the knowledge-graph SQLite activity store and the `status.activity` MCP operation provide the same data through lighter paths. Net ~1750 lines of code plus the `textual>=1.0.0` dependency (via the `workshop` extra and the `dev` extras) deleted.
+
+### Removed
+- **`dazzle workshop`** CLI command (and `dazzle workshop --explore` alias) — no replacement command; read activity via `status` MCP tool with `operation="activity"` or tail `.dazzle/mcp-activity.log` directly.
+- **`src/dazzle/cli/workshop.py`** — CLI entrypoint.
+- **`src/dazzle/mcp/server/workshop.py`** — Textual app, `WorkshopData`, `ToolCall`, dashboard widgets.
+- **`src/dazzle/mcp/server/workshop_screens.py`** — drill-down `SessionScreen` + `CallDetailScreen`.
+- **`src/dazzle/mcp/server/explorer.py`** — HTTP Activity Explorer.
+- **`[project.optional-dependencies].workshop`** in `pyproject.toml` (textual dep).
+- **`textual>=1.0.0`** from `[dev]` extras.
+- **mypy override** for the workshop modules (no longer needed).
+- **Tests**: `tests/unit/test_workshop_data.py`, `tests/unit/test_workshop_screens.py`, `tests/unit/test_workshop_sqlite.py`, `tests/unit/test_explorer.py`, and the `TestWorkshopSourceDisplay` class in `tests/unit/test_cli_activity.py`.
+- **Docs**: `docs/reference/workshop.md` + the `dazzle workshop` section of `docs/reference/cli.md` + the architecture diagram entries in `docs/architecture/mcp-server.md`.
+
+### Changed
+- **`_db_row_to_entry`** was inlined into `src/dazzle/mcp/server/handlers/status.py` — the sole surviving caller. The function is a trivial DB-row-to-dict mapper; no reason to keep a separate module for it.
+- **`cli_help.py`** drops the `"workshop": "Project"` category entry.
+- Code comments throughout the MCP server that referenced "the workshop" were updated to point at `status.activity` instead.
+
+### Agent Guidance
+- Don't recommend `dazzle workshop` or `dazzle workshop --explore` to users — those commands no longer exist. To inspect MCP activity, use the `status` MCP tool with `operation="activity"` (structured JSON) or tail the JSONL log under `.dazzle/mcp-activity.log`.
+- `_db_row_to_entry` now lives in `status.py`, not the workshop module. Import from there if future code needs the same DB-row normaliser.
+- The kept planning docs `docs/superpowers/plans/2026-03-12-workshop-textual-rewrite.md` and the matching spec are historical context only — do not treat them as current guidance.
+
 ## [0.60.8] - 2026-04-24
 
 Patch bump. Closes four open CodeQL alerts (#63, #64, #65, #66) — all `py/incomplete-url-substring-sanitization` false positives in `tests/unit/test_security.py`. The tests verify CSP header contents; CodeQL couldn't distinguish that from URL sanitisation because the pattern `"literal-url" in some_string` is the same shape either way.

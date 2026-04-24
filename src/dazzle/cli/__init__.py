@@ -131,12 +131,6 @@ def version_command(
     print_version_info(full=full)
 
 
-# Workshop command
-from dazzle.cli.workshop import workshop_command  # noqa: E402
-
-app.command(name="workshop")(workshop_command)
-
-
 # Grammar command
 def grammar_command(
     output: Path | None = typer.Option(

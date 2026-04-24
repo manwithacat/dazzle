@@ -403,9 +403,7 @@ src/dazzle/mcp/server/
 │   └── ...
 ├── state.py                     # Project state management
 ├── progress.py                  # Progress reporting
-├── activity_log.py              # Activity logging (JSONL + SQLite)
-├── workshop.py                  # Workshop TUI (Rich Live display)
-└── explorer.py                  # Activity Explorer HTTP server
+└── activity_log.py              # Activity logging (JSONL + SQLite)
 ```
 
 ## Troubleshooting

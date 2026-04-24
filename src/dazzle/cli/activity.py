@@ -42,8 +42,9 @@ def cli_activity(
 
     The yielded :class:`ProgressContext` has a ``result_context`` dict that
     callers can populate before the block exits.  The dict is serialised as
-    ``context_json`` on the ``tool_end`` event so the workshop can display
-    structured result annotations (e.g. test pass/fail counts).
+    ``context_json`` on the ``tool_end`` event for structured result
+    annotations (e.g. test pass/fail counts) surfaced via the `status`
+    activity operation.
 
     Args:
         root: Project root directory (must contain ``dazzle.toml``).

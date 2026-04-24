@@ -82,7 +82,6 @@ CATEGORY_MAP: dict[str, str] = {
     "analyze-spec": "Validation",
     "example": "Project",
     "doctor": "Project",
-    "workshop": "Project",
     "grammar": "Validation",
 }
 
