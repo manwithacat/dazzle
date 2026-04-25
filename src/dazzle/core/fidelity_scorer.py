@@ -555,6 +555,51 @@ def _extract_field_from_path(field_path: str | None) -> tuple[str | None, str | 
     return None, parts[0]
 
 
+# Match a literal in a story expression: `is 'todo'`, `= "open"`, `== 'value'`.
+_LITERAL_VALUE_RE = re.compile(r"\b(?:is|==|=)\s+['\"]([^'\"]+)['\"]", re.IGNORECASE)
+# Detect transition verbs in then-outcome expressions:
+#   'becomes X', 'changes to/from X', 'transitions to/from/through/via X',
+#   bare 'transitions' (e.g. 'transitions through declared state machine').
+_TRANSITION_VERB_RE = re.compile(
+    r"\b(?:becomes?|changes?\s+(?:to|from)|transitions?(?:\s+(?:to|from|through|via))?)\b",
+    re.IGNORECASE,
+)
+
+
+def _entity_default_satisfies(
+    entity: EntitySpec | None,
+    field_name: str,
+    expression: str,
+) -> bool:
+    """Whether the entity's field default satisfies the literal in an expression.
+
+    Used by mode:create surfaces — a newly-created entity carries field
+    defaults, so a precondition like ``Task.status is 'todo'`` is implicitly
+    satisfied if ``Task.status`` defaults to ``'todo'`` without the surface
+    needing to expose the field.
+    """
+    if not entity:
+        return False
+    match = _LITERAL_VALUE_RE.search(expression)
+    if not match:
+        return False
+    expected_value = match.group(1)
+    fld = next((f for f in entity.fields if f.name == field_name), None)
+    if fld is None or fld.default is None:
+        return False
+    return str(fld.default) == expected_value
+
+
+def _is_transition_outcome(expression: str) -> bool:
+    """Whether a then-outcome expression describes a state transition.
+
+    Transitions ('becomes X', 'changes to Y') happen AFTER the action and
+    don't apply to ``mode: create`` surfaces — creation initialises state
+    via defaults, it doesn't transition between states.
+    """
+    return bool(_TRANSITION_VERB_RE.search(expression))
+
+
 def _check_story_embodiment(
     surface: SurfaceSpec,
     entity: EntitySpec | None,
@@ -600,6 +645,14 @@ def _check_story_embodiment(
             if field_entity and entity_name and field_entity != entity_name:
                 continue
             if field_name and field_name not in surface_field_names:
+                # Mode:create surfaces initialise entities with defaults — a
+                # precondition like "Task.status is 'todo'" is satisfied
+                # implicitly if Task.status defaults to 'todo'. No surface
+                # field needed. (#877 partial fix.)
+                if surface.mode == SurfaceMode.CREATE and _entity_default_satisfies(
+                    entity, field_name, cond.expression
+                ):
+                    continue
                 gaps.append(
                     FidelityGap(
                         category=FidelityGapCategory.STORY_PRECONDITION_MISSING,
@@ -676,6 +729,13 @@ def _check_story_embodiment(
             if field_entity and entity_name and field_entity != entity_name:
                 continue
             if field_name and field_name not in surface_field_names:
+                # Mode:create surfaces don't fire transitions — outcomes that
+                # describe a state change ('becomes X', 'changes to Y') happen
+                # AFTER the action, on edit/transition surfaces, not at create
+                # time. Skip the gap for transition outcomes on create surfaces.
+                # (#877 partial fix.)
+                if surface.mode == SurfaceMode.CREATE and _is_transition_outcome(cond.expression):
+                    continue
                 # Also check if the field appears in the rendered text
                 if field_name.lower() not in all_text_lower:
                     gaps.append(

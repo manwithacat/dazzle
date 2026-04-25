@@ -947,3 +947,143 @@ class TestSearchSelectErrorHandlerCheck:
         gaps = self._error_handler_gaps(html)
         assert len(gaps) == 1
         assert gaps[0].severity == "minor"
+
+
+class TestCreateModeStoryGapSuppression:
+    """Regression guard: mode:create surfaces don't generate story-precondition
+    gaps when the entity field default satisfies the precondition value, and
+    don't generate then-outcome gaps for transition-verb outcomes ('becomes X',
+    'changes to Y', 'transitions through Z'). Surfaced cycle 106 as Option B
+    fix to #877. The complementary Option A (transition-trigger exclusion)
+    remains a separate human-triage concern."""
+
+    def _make_task_entity(self, status_default: str = "todo"):
+        from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
+
+        ent = MagicMock()
+        ent.name = "Task"
+        ent.fields = [
+            FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR)),
+            FieldSpec(
+                name="status",
+                type=FieldType(kind=FieldTypeKind.ENUM),
+                default=status_default,
+            ),
+        ]
+        return ent
+
+    def _make_story(self, story_id: str, given: list[str] = (), then: list[str] = ()) -> StorySpec:
+        return StorySpec(
+            story_id=story_id,
+            title=f"Story {story_id}",
+            actor="admin",
+            scope=["Task"],
+            status=StoryStatus.ACCEPTED,
+            trigger=StoryTrigger.STATUS_CHANGED,
+            given=[StoryCondition(expression=g, field_path="Task.status") for g in given],
+            when=[],
+            then=[StoryCondition(expression=t, field_path="Task.status") for t in then],
+            unless=[],
+        )
+
+    def _gaps_for(self, surface, entity, stories):
+        return _check_story_embodiment(
+            surface,
+            entity,
+            parse_html("<form><input name='title'></form>"),
+            None,
+            stories,
+        )
+
+    def test_create_skips_precondition_when_default_matches(self) -> None:
+        """Task.status defaults to 'todo' → precondition 'is todo' satisfied implicitly."""
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity(status_default="todo")
+        story = self._make_story("ST-001", given=["Task.status is 'todo'"])
+        gaps = self._gaps_for(surface, entity, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
+        ]
+        assert precond_gaps == []
+
+    def test_create_still_flags_precondition_when_default_differs(self) -> None:
+        """Task.status defaults to 'todo' → precondition 'is in_progress' is NOT satisfied."""
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity(status_default="todo")
+        story = self._make_story("ST-009", given=["Task.status is 'in_progress'"])
+        gaps = self._gaps_for(surface, entity, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
+        ]
+        assert len(precond_gaps) == 1
+
+    def test_edit_still_flags_precondition_even_when_default_matches(self) -> None:
+        """Edit surfaces show current entity state — defaults don't apply, so
+        the gap is real if the field is missing from the surface."""
+        surface = _make_surface(
+            name="task_edit",
+            entity_ref="Task",
+            mode=SurfaceMode.EDIT,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity(status_default="todo")
+        story = self._make_story("ST-001", given=["Task.status is 'todo'"])
+        gaps = self._gaps_for(surface, entity, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
+        ]
+        assert len(precond_gaps) == 1
+
+    def test_create_skips_outcome_for_becomes_transition(self) -> None:
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity()
+        story = self._make_story("ST-008", then=["Task.status becomes 'in_progress'"])
+        gaps = self._gaps_for(surface, entity, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert outcome_gaps == []
+
+    def test_create_skips_outcome_for_transitions_through_phrase(self) -> None:
+        """Catches the simple_task ST-019 wording 'transitions through declared state machine'."""
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity()
+        story = self._make_story(
+            "ST-019", then=["Task.status transitions through declared state machine"]
+        )
+        gaps = self._gaps_for(surface, entity, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert outcome_gaps == []
+
+    def test_edit_still_flags_transition_outcome(self) -> None:
+        """Edit surfaces ARE where transitions fire — outcome gap is real if
+        the surface doesn't render the field that gets updated."""
+        surface = _make_surface(
+            name="task_edit",
+            entity_ref="Task",
+            mode=SurfaceMode.EDIT,
+            field_names=["title"],
+        )
+        entity = self._make_task_entity()
+        story = self._make_story("ST-008", then=["Task.status becomes 'in_progress'"])
+        gaps = self._gaps_for(surface, entity, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert len(outcome_gaps) == 1
