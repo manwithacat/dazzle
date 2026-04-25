@@ -359,7 +359,9 @@ class TestRendering:
         """Nav links should target #main-content with view transitions and preload."""
         html = render_page(self._make_list_page_context())
         assert 'hx-target="#main-content"' in html
-        assert 'hx-swap="morph:innerHTML transition:true"' in html
+        # v0.61.18 (#876) extended the swap string to scroll #main-content
+        # to top on morph; substring check survives future suffix changes.
+        assert 'hx-swap="morph:innerHTML transition:true' in html
         assert 'hx-push-url="true"' in html
         assert 'preload="mousedown"' in html
 

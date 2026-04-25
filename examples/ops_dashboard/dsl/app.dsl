@@ -245,6 +245,59 @@ workspace command_center "Command Center":
     action: alert_ack
     empty: "All alerts acknowledged"
 
+  # Histogram — distribution of response times across all systems with
+  # an SLA threshold reference line. Exercises the v0.61.27 (#882) bin +
+  # reference-line primitive: rows fetched via list query, binned in
+  # Python via Sturges' rule, vertical reference line at 500ms.
+  response_time_distribution:
+    source: System
+    display: histogram
+    value: response_time_ms
+    bins: auto
+    reference_lines:
+      - label: "SLA target", value: 500, style: dashed
+    empty: "No system metrics yet"
+
+  # Radar — service-type profile shape. Exercises the v0.61.28 (#879)
+  # polar-chart pipeline: one spoke per service_type, value = system
+  # count for that type. Single-series MVP works through the existing
+  # Strategy C count fast path.
+  service_type_profile:
+    source: System
+    display: radar
+    group_by: service_type
+    aggregate:
+      systems: count(System where service_type = current_bucket)
+    empty: "No systems registered"
+
+  # Box plot — response-time spread per service_type. Exercises the
+  # v0.61.29 (#881) per-group quartile pipeline: in-process Q1/median/
+  # Q3 + Tukey 1.5×IQR whiskers + outlier dots, no SQL percentile_cont.
+  response_time_spread:
+    source: System
+    display: box_plot
+    group_by: service_type
+    value: response_time_ms
+    show_outliers: true
+    reference_lines:
+      - label: "SLA target", value: 500, style: dashed
+    empty: "No system metrics yet"
+
+  # Bullet — per-system response time vs reference bands. Exercises
+  # the v0.61.30 (#880) Stephen Few primitive: one row per System,
+  # actual = response_time_ms, comparative bands behind the bar
+  # (positive < 250ms, warning 250–500ms, destructive > 500ms).
+  system_response_bullet:
+    source: System
+    display: bullet
+    bullet_label: name
+    bullet_actual: response_time_ms
+    reference_bands:
+      - label: "Healthy", from: 0, to: 250, color: positive
+      - label: "Watch",   from: 250, to: 500, color: warning
+      - label: "Breach",  from: 500, to: 1000, color: destructive
+    empty: "No system metrics yet"
+
   ux:
     for ops_engineer:
       scope: all

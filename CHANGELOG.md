@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.34] - 2026-04-25
+
+Patch bump. Restores the green CI badge after the v0.61.27 → v0.61.33 chart-feature run. Two distinct fixes:
+1. **Coverage gate**: the four new `DisplayMode` values (`histogram`, `radar`, `box_plot`, `bullet`) had no example-app consumer, tripping the `dazzle coverage --fail-on-uncovered` invariant.
+2. **Pre-existing nav-links test**: assertion pinned an `hx-swap` string that v0.61.18 (#876) widened — broken on `main` since that release.
+
+### Fixed
+- **`examples/ops_dashboard/dsl/app.dsl`** — added four chart regions exercising the new display modes against the existing `System` entity:
+  - `response_time_distribution` — `histogram` over `response_time_ms` with an "SLA target" reference line at 500ms
+  - `service_type_profile` — `radar` with one spoke per `service_type`, value = system count
+  - `response_time_spread` — `box_plot` with quartile spread per `service_type`, plus the SLA reference line
+  - `system_response_bullet` — `bullet` with per-system response time vs three reference bands (`positive` < 250ms, `warning` 250–500ms, `destructive` > 500ms)
+  Coverage rises from 63/67 (94%) to 67/67 (100%) so the gate passes.
+- **`tests/unit/test_template_rendering.py::test_nav_links_use_fragment_targeting`** — assertion now uses substring `'hx-swap="morph:innerHTML transition:true'` instead of pinning the full string. v0.61.18 (#876) appended ` scroll:#main-content:top` to the swap and the test wasn't updated then; the substring form survives future suffix tweaks.
+
+### Agent Guidance
+- **The framework artefact coverage gate (`dazzle coverage --fail-on-uncovered`) runs in CI's `lint` job.** Any new `DisplayMode` enum entry needs at least one region in an example app exercising it, otherwise the gate breaks the build. Run the command locally before shipping a new chart mode.
+- **Avoid pinning exact `hx-swap=` strings in template tests.** They evolve with idiomorph + scroll + transition tweaks; substring or attribute-presence checks are more durable.
+
 ## [0.61.33] - 2026-04-25
 
 Patch bump. Closes #883 (overlay_series scope) — line/area chart regions now support an `overlay_series:` block of additional named data series with their own `source` / `filter` / `aggregate`. Pulls e.g. a cohort-average comparison line on top of a per-pupil trajectory in one chart frame. Builds on the v0.61.32 multi-measure aggregate pipeline.
