@@ -257,6 +257,18 @@ class BlueprintDataGenerator:
 
         elif strategy == FieldStrategy.PERSON_NAME:
             if self.fake:
+                # Dispatch on the field name so a single PERSON_NAME
+                # strategy can serve `first_name` / `last_name` / `name`
+                # columns correctly. Without this, blueprints that mark
+                # both `first_name` and `last_name` as `person_name` (the
+                # default) get full names in BOTH columns — confusing
+                # row data ("Martin Smith" / "Albert Clark" for the
+                # same contact, with the email matching only the first).
+                fname = pattern.field_name.lower()
+                if fname in ("first_name", "firstname", "given_name"):
+                    return self.fake.first_name()
+                if fname in ("last_name", "lastname", "surname", "family_name"):
+                    return self.fake.last_name()
                 return self.fake.name()
             return f"Person {random.randint(1, 1000)}"
 

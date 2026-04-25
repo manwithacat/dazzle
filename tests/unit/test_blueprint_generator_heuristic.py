@@ -167,3 +167,77 @@ class TestEmailFromNameFallback:
         result = gen.generate_field_value(pattern, context)
         assert "@example.test" in result
         assert "user" in result.lower()
+
+
+class TestPersonNameFieldNameDispatch:
+    """``PERSON_NAME`` strategy must dispatch on ``field_name`` so the
+    same strategy can fill ``first_name`` / ``last_name`` / ``name``
+    columns with the right shape — fake.first_name() / fake.last_name()
+    / fake.name() respectively. Without this, blueprints that mark both
+    ``first_name`` and ``last_name`` as ``person_name`` (the default
+    inference) get full names in BOTH columns. Caught in cycle 108
+    trial of contact_manager: rendered "Martin Smith" / "Albert Clark"
+    in adjacent cells of the same row, with the email matching only the
+    first-cell name. Tom (the fake business-owner persona) read it as
+    misaligned data and rejected the app."""
+
+    def _make_generator(self):
+        from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
+        from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
+
+        return BlueprintDataGenerator(
+            blueprint=DemoDataBlueprint(project_id="t", domain_description="x", entities=[])
+        )
+
+    def test_first_name_field_returns_only_first_name(self) -> None:
+        """`fake.first_name()` returns a single token like 'William',
+        never a full name like 'William Jennings'."""
+        gen = self._make_generator()
+        pattern = FieldPattern(field_name="first_name", strategy=FieldStrategy.PERSON_NAME)
+        # Sample a few — Faker's first_name() returns ~1k options;
+        # 30 draws is enough to surface a multi-word leak if the
+        # dispatch regressed.
+        for _ in range(30):
+            value = gen.generate_field_value(pattern, context={})
+            assert isinstance(value, str)
+            # First-name draws can include a hyphen or apostrophe but
+            # NEVER a space (which is the join between given+family).
+            assert " " not in value, f"first_name should be single token; got {value!r}"
+
+    def test_last_name_field_returns_only_last_name(self) -> None:
+        gen = self._make_generator()
+        pattern = FieldPattern(field_name="last_name", strategy=FieldStrategy.PERSON_NAME)
+        for _ in range(30):
+            value = gen.generate_field_value(pattern, context={})
+            assert isinstance(value, str)
+            # en_GB last_name() can return double-barrelled like
+            # "Wilson-Newman" — that's hyphenated, not space-separated.
+            # A space indicates a multi-token leak from fake.name().
+            assert " " not in value, f"last_name should be single token; got {value!r}"
+
+    def test_generic_name_field_returns_full_name(self) -> None:
+        """`name` / `full_name` / `fullname` should still get the full
+        first+last shape (contains a space)."""
+        gen = self._make_generator()
+        pattern = FieldPattern(field_name="name", strategy=FieldStrategy.PERSON_NAME)
+        # Sample several — at least one should contain a space (full names
+        # are 'First Last' or 'Title First Last' in en_GB).
+        values = [gen.generate_field_value(pattern, context={}) for _ in range(30)]
+        assert any(" " in v for v in values), (
+            "generic `name` field should include a space-separated full name in some draws"
+        )
+
+    def test_aliases_dispatch_correctly(self) -> None:
+        """firstname / given_name / surname / family_name aliases route
+        to the right faker method."""
+        gen = self._make_generator()
+        for alias in ("firstname", "given_name"):
+            pattern = FieldPattern(field_name=alias, strategy=FieldStrategy.PERSON_NAME)
+            for _ in range(10):
+                value = gen.generate_field_value(pattern, context={})
+                assert " " not in value, f"{alias} alias should be single token; got {value!r}"
+        for alias in ("surname", "family_name"):
+            pattern = FieldPattern(field_name=alias, strategy=FieldStrategy.PERSON_NAME)
+            for _ in range(10):
+                value = gen.generate_field_value(pattern, context={})
+                assert " " not in value, f"{alias} alias should be single token; got {value!r}"
