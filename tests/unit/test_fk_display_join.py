@@ -188,3 +188,51 @@ class TestQueryBuilderJoinWiring:
         sql, _ = builder.build_select()
 
         assert sql.startswith("SELECT * FROM")
+
+
+class TestFilterTableQualification:
+    """Filter and search columns must be table-qualified when joins are
+    present, so they don't collide with same-named columns in joined
+    tables (#871)."""
+
+    def test_filter_qualified_when_joins_present(self) -> None:
+        from dazzle_back.runtime.query_builder import FilterCondition, QueryBuilder
+
+        builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
+        builder.joins = [
+            'LEFT JOIN "TeachingGroup" AS "_fkd_teaching_group" '
+            'ON "_fkd_teaching_group".id = "ClassEnrolment"."teaching_group_id"'
+        ]
+        builder.conditions = [FilterCondition.parse("is_current", True)]
+
+        where, _ = builder.build_where_clause()
+        assert '"ClassEnrolment"."is_current"' in where, (
+            f"filter column not qualified with source table alias: {where!r}"
+        )
+
+    def test_filter_unqualified_when_no_joins(self) -> None:
+        from dazzle_back.runtime.query_builder import FilterCondition, QueryBuilder
+
+        builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
+        builder.conditions = [FilterCondition.parse("is_current", True)]
+
+        where, _ = builder.build_where_clause()
+        # Without joins, the qualifier is unnecessary and previously absent;
+        # don't add noise that breaks existing call sites.
+        assert '"ClassEnrolment"."is_current"' not in where
+        assert '"is_current"' in where
+
+    def test_search_qualified_when_joins_present(self) -> None:
+        from dazzle_back.runtime.query_builder import QueryBuilder
+
+        builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
+        builder.joins = [
+            'LEFT JOIN "TeachingGroup" AS "_fkd_teaching_group" '
+            'ON "_fkd_teaching_group".id = "ClassEnrolment"."teaching_group_id"'
+        ]
+        builder.set_search("alice", ["name"])
+
+        where, _ = builder.build_where_clause()
+        assert '"ClassEnrolment"."name"' in where, (
+            f"search column not qualified with source table alias: {where!r}"
+        )

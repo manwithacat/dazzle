@@ -403,8 +403,18 @@ class QueryBuilder:
                 fragments.append(f"({scope_sql})")
                 params.extend(scope_params)
 
+        # When joins are present (e.g. FK display joins, scope-predicate
+        # FK traversals), bare column refs in user-authored filter and
+        # search clauses become ambiguous if any joined table also has a
+        # column of the same name. Qualify with the source table alias
+        # so Postgres always picks the source entity's column (#871).
+        source_alias = quote_identifier(self.table_name) if self.joins else None
+
         for condition in self.conditions:
-            sql, condition_params = condition.to_sql(placeholder_style=self.placeholder_style)
+            sql, condition_params = condition.to_sql(
+                table_alias=source_alias,
+                placeholder_style=self.placeholder_style,
+            )
             fragments.append(sql)
             params.extend(condition_params)
 
@@ -415,7 +425,8 @@ class QueryBuilder:
             pattern = f"%{self.search_query}%"
             for sf in self.search_fields:
                 col = quote_identifier(sf)
-                like_parts.append(f"CAST({col} AS TEXT) LIKE {ph}")
+                col_ref = f"{source_alias}.{col}" if source_alias else col
+                like_parts.append(f"CAST({col_ref} AS TEXT) LIKE {ph}")
                 params.append(pattern)
             if like_parts:
                 fragments.append(f"({' OR '.join(like_parts)})")

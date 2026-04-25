@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.16] - 2026-04-25
+
+Patch bump. Closes #871 — workspace region filters threw `psycopg.errors.AmbiguousColumn` on Postgres when the source entity had a scope rule that traversed FKs (so the compiled SQL JOINed in tables with same-named columns) AND the region's `filter:` named one of those columns. Affected combos included `is_current` (boolean on multiple joined tables), `teaching_group` (FK that shares its name with the joined target table), `status`, `school`, `department` etc. AegisMark's teacher_workspace lost all six `current_context`-filtered regions to this — fully empty landing page.
+
+### Fixed
+- **`src/dazzle_back/runtime/query_builder.py` — `build_where_clause`** — when `self.joins` is non-empty, qualify every user-authored filter and search column reference with the source table alias (`"ClassEnrolment"."is_current" = $1` instead of bare `"is_current" = $1`). The scope-predicate SQL was already qualified by the predicate compiler; the gap was specifically in the user-authored filter and search paths.
+
+### Tests
+- **`test_fk_display_join.py::TestFilterTableQualification`** — three cases: filter qualified when joins present; filter NOT qualified when no joins (no noise); search qualified when joins present.
+
+### Agent Guidance
+- **Bare column references in WHERE clauses are unsafe with JOINs.** When you add a code path that injects user-authored or DSL-authored column names into a query that may later acquire JOINs (FK display, scope-predicate FK traversals, future analytics enrichments), qualify with the source table alias from the start. The `quote_identifier(builder.table_name)` is the canonical alias.
+
 ## [0.61.15] - 2026-04-25
 
 Patch bump. Closes #870 — workspaces with a `context_selector` rendered fully empty on first load for users with no saved preference. The selector defaulted to the hard-coded "All" entry, and any region filtering on `current_context` rendered its empty state. AegisMark's teacher_workspace landed on six stacked empty states for fresh users — the selector wasn't communicated as the gate.
