@@ -16,6 +16,29 @@
          data-dz-metric-key="{{ metric.label | lower | replace(' ', '_') }}">
       <div class="text-[11px] text-[hsl(var(--muted-foreground))] tracking-tight">{{ metric.label }}</div>
       <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5 tabular-nums">{{ metric.value | metric_number }}</div>
+      {# v0.61.25 (#884): period-over-period delta. positive_up → up=good (green); positive_down → up=bad. #}
+      {% if metric.delta_direction is defined %}
+        {% set _is_good = (metric.delta_direction == 'up' and metric.delta_sentiment == 'positive_up')
+                       or (metric.delta_direction == 'down' and metric.delta_sentiment == 'positive_down') %}
+        {% set _is_bad = (metric.delta_direction == 'down' and metric.delta_sentiment == 'positive_up')
+                      or (metric.delta_direction == 'up' and metric.delta_sentiment == 'positive_down') %}
+        {% set _tone_class = 'text-[hsl(142_76%_36%)]' if _is_good
+                       else ('text-[hsl(var(--destructive))]' if _is_bad
+                       else 'text-[hsl(var(--muted-foreground))]') %}
+        {% set _arrow = '↑' if metric.delta_direction == 'up'
+                  else ('↓' if metric.delta_direction == 'down' else '→') %}
+        {% set _sign = '+' if metric.delta_direction == 'up' else '' %}
+        <div class="dz-metric-delta mt-1 text-[11px] {{ _tone_class }} tabular-nums"
+             data-dz-delta-direction="{{ metric.delta_direction }}"
+             data-dz-delta-sentiment="{{ metric.delta_sentiment }}">
+          <span aria-hidden="true">{{ _arrow }}</span>
+          <span class="font-medium">{{ _sign }}{{ metric.delta }}</span>
+          {% if metric.delta_pct is defined and metric.delta_pct != 0 %}
+          <span class="text-[hsl(var(--muted-foreground))]">({{ metric.delta_pct }}%)</span>
+          {% endif %}
+          <span class="text-[hsl(var(--muted-foreground))]">vs {{ metric.delta_period_label }}</span>
+        </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>

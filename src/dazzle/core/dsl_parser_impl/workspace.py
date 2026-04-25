@@ -82,6 +82,142 @@ class WorkspaceParserMixin:
         name: str = self.expect_identifier_or_keyword().value
         return name
 
+    # v0.61.25 (#884): supported relative-duration units for `delta.period`.
+    # Maps the unit name (singular OR plural) to seconds. Calendar-aligned
+    # periods (`current_week`, `current_month`) are deferred to a follow-up.
+    _DELTA_PERIOD_UNITS: dict[str, int] = {  # noqa: RUF012
+        "second": 1,
+        "seconds": 1,
+        "minute": 60,
+        "minutes": 60,
+        "hour": 3600,
+        "hours": 3600,
+        "day": 86400,
+        "days": 86400,
+        "week": 604800,
+        "weeks": 604800,
+        "month": 2592000,  # 30d approximation; calendar-aligned in follow-up
+        "months": 2592000,
+        "quarter": 7776000,  # 90d approximation
+        "quarters": 7776000,
+        "year": 31536000,  # 365d approximation
+        "years": 31536000,
+    }
+
+    # Human-readable label for a delta period — used in the rendered
+    # ``vs <label>`` suffix. Falls back to the period spec verbatim.
+    _DELTA_PERIOD_LABELS: dict[tuple[int, str], str] = {  # noqa: RUF012
+        (1, "day"): "yesterday",
+        (1, "week"): "last week",
+        (1, "month"): "last month",
+        (1, "quarter"): "last quarter",
+        (1, "year"): "last year",
+    }
+
+    _DELTA_VALID_SENTIMENTS: frozenset[str] = frozenset(  # noqa: RUF012
+        {"positive_up", "positive_down", "neutral"}
+    )
+
+    def _parse_delta_block(self) -> ir.DeltaSpec:
+        """Parse a ``delta:`` block inside a workspace region (#884).
+
+        Syntax (inside the indented body):
+            period: <int> <unit>          # required; e.g. 1 day, 7 days
+            sentiment: positive_up|positive_down|neutral   # default positive_up
+            field: <column>               # optional; defaults to created_at
+        """
+        period_seconds: int | None = None
+        period_label: str = "prior period"
+        sentiment: str = "positive_up"
+        date_field: str | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.expect_identifier_or_keyword()
+            key = key_tok.value
+            self.expect(TokenType.COLON)
+
+            if key == "period":
+                qty_tok = self.advance()
+                try:
+                    quantity = int(qty_tok.value)
+                except (TypeError, ValueError):
+                    raise make_parse_error(
+                        f"delta.period quantity must be an integer, got {qty_tok.value!r}",
+                        self.file,
+                        qty_tok.line,
+                        qty_tok.column,
+                    ) from None
+                unit_tok = self.expect_identifier_or_keyword()
+                unit = unit_tok.value
+                if unit not in self._DELTA_PERIOD_UNITS:
+                    raise make_parse_error(
+                        f"delta.period unit must be one of "
+                        f"{sorted(self._DELTA_PERIOD_UNITS)}; got {unit!r}",
+                        self.file,
+                        unit_tok.line,
+                        unit_tok.column,
+                    )
+                period_seconds = quantity * self._DELTA_PERIOD_UNITS[unit]
+                # Singularize the unit for the label key lookup
+                singular_unit = unit.rstrip("s") if unit not in {"weeks"} else "week"
+                # Re-map plurals back to canonical singular for label lookup
+                singular_unit = {
+                    "second": "second",
+                    "minute": "minute",
+                    "hour": "hour",
+                    "day": "day",
+                    "week": "week",
+                    "month": "month",
+                    "quarter": "quarter",
+                    "year": "year",
+                }.get(unit.rstrip("s"), unit.rstrip("s"))
+                period_label = self._DELTA_PERIOD_LABELS.get(
+                    (quantity, singular_unit),
+                    f"prior {quantity} {unit}",
+                )
+            elif key == "sentiment":
+                sentiment_tok = self.expect_identifier_or_keyword()
+                sentiment = sentiment_tok.value
+                if sentiment not in self._DELTA_VALID_SENTIMENTS:
+                    raise make_parse_error(
+                        f"delta.sentiment must be one of "
+                        f"{sorted(self._DELTA_VALID_SENTIMENTS)}; got {sentiment!r}",
+                        self.file,
+                        sentiment_tok.line,
+                        sentiment_tok.column,
+                    )
+            elif key == "field":
+                date_field = self.expect_identifier_or_keyword().value
+            else:
+                raise make_parse_error(
+                    f"Unknown delta block key {key!r}. Expected one of: period, sentiment, field.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+            self.skip_newlines()
+
+        if period_seconds is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                "delta block requires `period: <int> <unit>` (e.g. `period: 1 day`)",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+
+        return ir.DeltaSpec(
+            period_seconds=period_seconds,
+            sentiment=sentiment,
+            date_field=date_field,
+            period_label=period_label,
+        )
+
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """
         Parse workspace declaration.
@@ -377,6 +513,7 @@ class WorkspaceParserMixin:
         heatmap_thresholds: list[float] | ir.ParamRef = []
         progress_stages: list[str] = []
         progress_complete_at: str | None = None
+        delta: ir.DeltaSpec | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -610,6 +747,15 @@ class WorkspaceParserMixin:
                 progress_complete_at = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # delta: { period: 1 day, sentiment: positive_up, field: created_at } (#884)
+            elif self.match(TokenType.DELTA):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                delta = self._parse_delta_block()
+                self.expect(TokenType.DEDENT)
+
             else:
                 break
 
@@ -662,4 +808,5 @@ class WorkspaceParserMixin:
             heatmap_thresholds=heatmap_thresholds,
             progress_stages=progress_stages,
             progress_complete_at=progress_complete_at,
+            delta=delta,
         )

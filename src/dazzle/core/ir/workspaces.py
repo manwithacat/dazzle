@@ -94,6 +94,32 @@ class BucketRef(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class DeltaSpec(BaseModel):
+    """v0.61.25 (#884): period-over-period delta config for summary/metrics tiles.
+
+    Attributes:
+        period_seconds: Length of the comparison window in seconds. Computed
+            from the parsed period (`1 day` → 86400). Current window =
+            `[now() - period, now()]`; prior window =
+            `[now() - 2*period, now() - period]`.
+        sentiment: One of ``positive_up`` | ``positive_down`` | ``neutral``.
+            Drives the colour of the delta arrow at render time.
+        date_field: Entity column the windows filter on. Defaults to
+            ``created_at`` if the entity has it; otherwise must be set
+            explicitly.
+        period_label: Human-readable label for the prior-window comparison
+            (e.g. ``"yesterday"`` for `1 day`, ``"last week"`` for `7 days`).
+            Used in the rendered ``vs <label>`` suffix.
+    """
+
+    period_seconds: int = Field(..., ge=1)
+    sentiment: str = Field(default="positive_up")
+    date_field: str | None = None
+    period_label: str = Field(default="prior period")
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceRegion(BaseModel):
     """
     Named region within a workspace.
@@ -151,6 +177,10 @@ class WorkspaceRegion(BaseModel):
     # v0.44.0: Progress bar configuration
     progress_stages: list[str] = Field(default_factory=list)  # ordered status values
     progress_complete_at: str | None = None  # which stage means "done"
+    # v0.61.25 (#884): Period-over-period delta for summary/metrics tiles.
+    # When set, the runtime computes a prior-window aggregate alongside the
+    # current one and the metrics template renders an arrow + delta + pct.
+    delta: DeltaSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

@@ -135,6 +135,7 @@ class TokenType(Enum):
     LIMIT = "limit"
     DISPLAY = "display"
     AGGREGATE = "aggregate"
+    DELTA = "delta"  # v0.61.25: Period-over-period delta for summary tiles (#884)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

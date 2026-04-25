@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.25] - 2026-04-25
+
+Patch bump. Closes #884 — summary/metrics tiles can now declare a `delta:` block to render the period-over-period reading ("47 marked overnight ↑ +12 (34%) vs yesterday") without having to compute deltas in Python and pass them as separate fields. Surfaced from AegisMark's investor-demo dashboard requirement; companion to the chart-mode issues (#879-883).
+
+### Added
+- **DSL**: new `delta:` block on workspace regions with `display: summary` (or `metrics`).
+  ```dsl
+  manuscripts_marked:
+    aggregate:
+      count: count(Manuscript where status = marked)
+    display: summary
+    delta:
+      period: 1 day              # required; supports second/minute/hour/day/week/month/quarter/year (singular or plural)
+      sentiment: positive_up     # optional; positive_up (default) | positive_down | neutral
+      field: created_at          # optional; defaults to "created_at" on the source entity
+  ```
+- **IR**: `dazzle.core.ir.workspaces.DeltaSpec` (frozen Pydantic model) — `period_seconds: int`, `sentiment: str`, `date_field: str | None`, `period_label: str`. Exported from `dazzle.core.ir`.
+- **Lexer**: new `TokenType.DELTA = "delta"` keyword.
+- **Runtime**: `_compute_aggregate_metrics` (in `dazzle_back.runtime.workspace_rendering`) now accepts an optional `delta: DeltaSpec` parameter. When set, it fires a second aggregate query per metric over the prior window (`[now() - 2*period, now() - period]`) and decorates each metric dict with `delta`, `delta_pct`, `delta_direction` (up|down|flat), `delta_sentiment`, `delta_period_label`. Wired through the workspace handler at the main UI rendering path.
+- **Template**: `workspace/regions/metrics.html` renders an arrow + signed delta + percent + comparison-period label below the value when `delta_direction` is present. Sentiment maps `up + positive_up` (or `down + positive_down`) → green, the inverse → destructive red, flat → muted.
+
+### Tests
+- **`test_workspace_delta_metric.py`** — 16 cases across 3 layers:
+  - parser (7): minimal block; all keys; week unit; invalid unit raises; invalid sentiment raises; missing period raises; absent block remains None;
+  - IR (3): defaults, frozen, period_seconds > 0;
+  - runtime (6): positive delta up; negative delta down; flat; prior=0 → pct=0 (no div-by-zero); spec absent → no delta keys; sentiment flows through.
+
+### Agent Guidance
+- **Period-label heuristic is conservative.** Only canonical singular spellings (`1 day` / `1 week` / `1 month` / `1 quarter` / `1 year`) auto-collapse to friendly labels (`yesterday` / `last week` / etc.). `7 days` falls back to `"prior 7 days"`. If you need a custom label, follow-up work could surface a `label:` sub-key on the delta block; not in v1.
+- **Calendar-aligned periods deferred.** `period: current_week` / `current_month` (per the original issue body) NOT supported in v1 — only relative durations. Deferred because daylight-saving-aware boundaries pull in `dateutil` or platform-tz logic; want to land the rolling-window MVP first.
+- **`field:` defaults to `created_at`.** The runtime trusts the entity to have a `created_at` column (most do via `auto_add`). If your entity uses a different timestamp (e.g. `occurred_at`, `marked_at`), set `field:` explicitly. No auto-detect probes the entity's fields in v1.
+- **Delta runs an extra query per metric.** For dashboards with many summary tiles, the delta queries add latency. The implementation batches them via `asyncio.gather`, but each tile + delta = 2 queries. Watch the dashboard render latency if you light up >8 tiles with delta.
+
 ## [0.61.24] - 2026-04-25
 
 Patch bump. Closes #877 (Option A) — `dazzle dsl operation=fidelity` no longer attributes state-transition stories (those with `trigger: status_changed`) to `mode: create` surfaces. The Option B fix in v0.61.21+ partially closed this by skipping default-aware preconditions and transition-verb outcomes; Option A is the more principled cut: a story whose trigger IS a state transition cannot fire from a creation surface (the entity is being created, not transitioned), so the surface should never be matched in the first place.

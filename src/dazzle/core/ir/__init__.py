@@ -763,6 +763,7 @@ from .webhooks import (
 from .workspaces import (
     BucketRef,
     ContextSelectorSpec,
+    DeltaSpec,
     DisplayMode,
     NavGroupSpec,
     NavItemIR,
@@ -859,6 +860,7 @@ __all__ = [
     "NavItemIR",
     "WorkspaceAccessLevel",
     "WorkspaceAccessSpec",
+    "DeltaSpec",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences

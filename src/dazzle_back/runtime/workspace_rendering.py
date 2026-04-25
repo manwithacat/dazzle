@@ -733,6 +733,7 @@ async def _workspace_region_handler(
             total,
             items,
             scope_filters=_scope_only_filters,
+            delta=ctx.ctx_region.delta,  # #884
         )
 
     # Bucketed aggregates for bar_chart distributions (#847). When a
@@ -1904,8 +1905,18 @@ async def _compute_aggregate_metrics(
     total: int,
     items: list[dict[str, Any]],
     scope_filters: dict[str, Any] | None = None,
+    delta: Any | None = None,  # ir.DeltaSpec | None — see #884
 ) -> list[dict[str, Any]]:
-    """Compute aggregate metrics, batching independent DB queries concurrently."""
+    """Compute aggregate metrics, batching independent DB queries concurrently.
+
+    When ``delta`` is set (#884), each metric also gets a prior-period value
+    computed via a second aggregate query with date-range filters on
+    ``delta.date_field`` (defaults to ``created_at``). The metric dict gains
+    ``delta`` (current - prior), ``delta_pct``, ``delta_direction``
+    (up|down|flat), ``delta_sentiment`` (positive_up|positive_down|neutral),
+    and ``delta_period_label`` keys. Renderer uses these to emit the trend
+    arrow + comparison line on summary/metrics tiles.
+    """
     # Separate metrics into async (need DB query) and sync (computed from existing data)
     async_tasks: list[tuple[str, Any]] = []  # (metric_name, coroutine)
     sync_results: dict[str, Any] = {}  # metric_name -> value
@@ -1944,13 +1955,71 @@ async def _compute_aggregate_metrics(
                 logger.warning("Aggregate metric query failed: %s", result)
 
     # Build output in original order
-    return [
+    built_metrics = [
         {
             "label": name.replace("_", " ").title(),
             "value": sync_results.get(name, 0),
         }
         for name in metric_order
     ]
+
+    # v0.61.25 (#884): period-over-period delta. For each count() metric,
+    # fire a second aggregate over the prior window so the template can
+    # render the trend arrow + comparison line.
+    if delta is not None and aggregates and repositories:
+        from datetime import datetime, timedelta
+
+        period = timedelta(seconds=delta.period_seconds)
+        now = datetime.now(_dt.UTC)
+        prior_start = now - 2 * period
+        prior_end = now - period
+        date_field = delta.date_field or "created_at"
+
+        prior_tasks: list[Any] = []
+        prior_metric_names: list[str] = []
+        for metric_name, expr in aggregates.items():
+            agg_match = _AGGREGATE_RE.match(expr)
+            if not agg_match:
+                continue
+            func, entity_name, where_clause = agg_match.groups()
+            agg_repo = repositories.get(entity_name)
+            if func != "count" or not agg_repo:
+                continue
+            prior_filters: dict[str, Any] = {}
+            if where_clause:
+                prior_filters.update(_parse_simple_where(where_clause))
+            if scope_filters:
+                prior_filters.update(scope_filters)
+            prior_filters[f"{date_field}__gte"] = prior_start.isoformat()
+            prior_filters[f"{date_field}__lt"] = prior_end.isoformat()
+            prior_tasks.append(_fetch_count_metric(metric_name, agg_repo, None, prior_filters))
+            prior_metric_names.append(metric_name)
+
+        prior_map: dict[str, Any] = {}
+        if prior_tasks:
+            prior_results = await asyncio.gather(*prior_tasks, return_exceptions=True)
+            for result in prior_results:
+                if isinstance(result, tuple):
+                    prior_map[result[0]] = result[1]
+
+        for metric_name, m in zip(metric_order, built_metrics, strict=False):
+            if metric_name not in prior_map:
+                continue
+            try:
+                current_val = float(m["value"])
+                prior_val = float(prior_map[metric_name])
+            except (TypeError, ValueError):
+                continue
+            delta_val = current_val - prior_val
+            pct = (delta_val / prior_val * 100.0) if prior_val else 0.0
+            direction = "up" if delta_val > 0 else ("down" if delta_val < 0 else "flat")
+            m["delta"] = int(delta_val) if delta_val == int(delta_val) else round(delta_val, 2)
+            m["delta_pct"] = round(pct, 1)
+            m["delta_direction"] = direction
+            m["delta_sentiment"] = delta.sentiment
+            m["delta_period_label"] = delta.period_label
+
+    return built_metrics
 
 
 def _parse_simple_where(where_clause: str) -> dict[str, Any]:
