@@ -94,3 +94,78 @@ class TestDazzleParamsVerification:
 
         with pytest.raises(MigrationError, match="_dazzle_params table is missing"):
             verify_dazzle_params_table(db_manager)
+
+
+class TestFrameworkBaselineMigration:
+    """The framework ships an Alembic baseline that creates `_dazzle_params`,
+    so production startups (which call `verify_dazzle_params_table` instead of
+    `ensure_dazzle_params_table`) succeed after `dazzle db upgrade`.
+
+    The hint in `verify_dazzle_params_table`'s MigrationError points at this
+    migration — it's load-bearing and must not be deleted/renamed without
+    coordinated changes in `migrations.py`.
+    """
+
+    def test_baseline_migration_module_loads(self) -> None:
+        """Migration module imports cleanly and exports the expected shape."""
+        import importlib
+
+        mod = importlib.import_module("dazzle_back.alembic.versions.0001_framework_baseline")
+        assert mod.revision == "0001_framework_baseline"
+        assert mod.down_revision is None  # this is the root revision
+        assert callable(mod.upgrade)
+        assert callable(mod.downgrade)
+
+    def test_baseline_migration_creates_dazzle_params(self) -> None:
+        """upgrade() emits CREATE TABLE for _dazzle_params with the columns
+        the runtime expects. Mirrors `ensure_dazzle_params_table()` so dev
+        and production land on the same schema."""
+        import importlib
+
+        from alembic.operations import Operations
+        from alembic.runtime.migration import MigrationContext
+        from sqlalchemy import create_engine
+        from sqlalchemy.pool import StaticPool
+
+        mod = importlib.import_module("dazzle_back.alembic.versions.0001_framework_baseline")
+
+        # Use sqlite as a structural-validity sandbox — only verifies the
+        # migration module produces well-formed Alembic ops. PostgreSQL-only
+        # behaviour (JSONB, TIMESTAMPTZ default now()) is exercised by the
+        # real migration in any real db env (and by ensure_dazzle_params_table
+        # already, in dev).
+        engine = create_engine(
+            "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        )
+        with engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            op = Operations(ctx)
+
+            # Patch the module-level `op` reference so upgrade() uses our
+            # bound Operations instance instead of the global Alembic proxy
+            # (which only resolves inside an `alembic` command run).
+            with patch.object(mod, "op", op):
+                # JSONB doesn't exist on sqlite; substitute with a JSON-equivalent
+                # for this structural test. The real migration runs against
+                # PostgreSQL and uses the genuine JSONB type.
+                from sqlalchemy.dialects import postgresql
+
+                with patch.object(postgresql, "JSONB", lambda: __import__("sqlalchemy").JSON()):
+                    mod.upgrade()
+
+            # Inspect the table
+            from sqlalchemy import inspect
+
+            inspector = inspect(engine)
+            assert "_dazzle_params" in inspector.get_table_names()
+            cols = {c["name"] for c in inspector.get_columns("_dazzle_params")}
+            assert cols == {
+                "key",
+                "scope",
+                "scope_id",
+                "value_json",
+                "updated_by",
+                "updated_at",
+            }
+            pk = inspector.get_pk_constraint("_dazzle_params")
+            assert pk["constrained_columns"] == ["key", "scope", "scope_id"]

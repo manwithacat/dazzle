@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.21] - 2026-04-25
+
+Patch bump. Closes the production-startup gap introduced by `97ac3f65` ("gate startup schema creation on environment"). That commit correctly stopped `metadata.create_all()` and `CREATE TABLE IF NOT EXISTS _dazzle_params` from running when `DAZZLE_ENV=production`, but shipped the `verify_dazzle_params_table()` check without the corresponding Alembic baseline migration that creates the table — meaning every production startup raised `MigrationError("_dazzle_params table is missing. Run 'dazzle db upgrade' before startup.")` even AFTER running `dazzle db upgrade` (no-op against an empty `versions/` directory). The hint was misleading; following it didn't unblock the failure. ADR-0017 (Alembic owns schema in production) is now actually shippable.
+
+### Added
+- **`src/dazzle_back/alembic/versions/0001_framework_baseline.py`** — root Alembic revision that creates `_dazzle_params` (key TEXT, scope TEXT, scope_id TEXT default '', value_json JSONB, updated_by TEXT, updated_at TIMESTAMPTZ default now(), PK on key+scope+scope_id). DDL matches `ensure_dazzle_params_table()` in `runtime/migrations.py:127-141` exactly so dev (which still calls `CREATE TABLE IF NOT EXISTS`) and production (which runs this migration) land on the same schema.
+
+### Tests
+- **`test_runtime_schema_startup.py::TestFrameworkBaselineMigration`** — two cases: (1) migration module loads with the expected revision id + callable upgrade/downgrade; (2) `upgrade()` against a sqlite sandbox produces the expected table with the expected columns + PK constraint. JSONB is patched to JSON for the sandbox; PostgreSQL-specific behaviour is exercised in any real environment.
+
+### Agent Guidance
+- **Production startups now require migrations.** Downstream apps setting `DAZZLE_ENV=production` must run `dazzle db upgrade` to apply the framework baseline before first boot. Without it, startup raises `MigrationError` from `verify_dazzle_params_table()`.
+- **Don't rename or delete `_dazzle_params_pkey` / the `0001_framework_baseline` revision.** The hint string in `verify_dazzle_params_table` (`migrations.py:161`) points at this migration; renaming the revision id orphans existing production schemas.
+- **Entity-table baseline is still on the user.** This release does not auto-bootstrap migrations for app entity tables — those continue to be created via `metadata.create_all()` in dev, and downstream apps using `DAZZLE_ENV=production` are responsible for generating their own per-app baseline (e.g. `dazzle db revision --autogenerate -m "initial schema"`) before going live. A `dazzle db baseline` command that auto-generates this is tracked separately.
+
 ## [0.61.20] - 2026-04-25
 
 Patch bump. Closes #875 — clicking the active workspace nav link triggered an HTMX morph that landed `dzDashboardBuilder` in degraded state: empty card grid, "No widgets available" picker, and all five `saveState` labels rendered simultaneously. `alpine:init` only fires once per component instance, but idiomorph keeps the existing `x-data` element across same-route nav re-clicks — so `init()` doesn't re-run, and `cards` / `catalog` / `workspaceName` / `foldCount` stay stale while the data island below them has been replaced with fresh JSON. Compounded #866's cold-load fix by exposing the re-entry path.
