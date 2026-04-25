@@ -10,6 +10,12 @@ paths = ["dsl/"]
 [stack]
 name = "dnr"
 
+[ui]
+# v0.61.36: use the linear-dark app-shell theme — Linear-vocabulary
+# (cool slate ramp, cyan accent, dense, dark-first) for the operator
+# persona that lives in this dashboard.
+theme = "linear-dark"
+
 [auth]
 enabled = true
 provider = "session"

@@ -552,6 +552,12 @@ class SystemRoutesSubsystem:
                     get_jinja_env().globals["_use_cdn"] = mf.cdn
                     if mf.favicon:
                         get_jinja_env().globals["_favicon"] = mf.favicon
+                    # v0.61.36: app-shell theme — overrides default
+                    # shadcn-zinc tokens with an alternate :root block.
+                    # Loaded in base.html after the bundle. None means
+                    # use the default theme.
+                    if mf.app_theme:
+                        get_jinja_env().globals["_app_theme"] = mf.app_theme
 
                     # Build override registry if project has declaration headers
                     try:

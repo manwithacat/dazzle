@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.36] - 2026-04-26
+
+Patch bump. Phase A of the design-system formalisation work — adds an app-shell theme mechanism so projects can override the default shadcn-zinc tokens with an alternate `:root` block by setting `[ui] theme = "<name>"` in `dazzle.toml`. Ships **`linear-dark`** as the first preset (Linear-vocabulary cool slate ramp + cyan accent + dense type) applied to `examples/ops_dashboard` as the proof.
+
+### Added
+- **`[ui] theme = "<name>"`** field in `dazzle.toml` — resolves to `src/dazzle_ui/runtime/static/css/themes/<name>.css`. Loaded after `dazzle-bundle.css` so the theme's `@layer overrides` block wins over the default tokens. The alias `[ui] app_theme = "..."` also works (avoids the keyword overlap with the existing `[theme]` section that controls site/marketing-page tokens). `None` (the default) keeps the shipped shadcn-zinc tokens.
+- **`themes/linear-dark.css`** — first shipped preset. Borrows Linear's vocabulary (228° cool slate ramp, 205° cyan accent, dense 4px-base spacing, 100–150ms ease-out motion, minimal shadows + 1px borders, dark-first with a cooler-than-default light variant). Templates stay theme-agnostic — every `hsl(var(--*))` site picks up the new values automatically.
+- **`ProjectManifest.app_theme`** field on the dataclass.
+
+### Changed
+- **`base.html`** — conditionally emits `<link rel="stylesheet" href="themes/<name>.css">` after the bundle when `_app_theme` is set on the Jinja env. Asset-fingerprinted via the existing `static_url` filter.
+- **`subsystems/system_routes.py`** — sets `_app_theme` on the Jinja env globals at startup (same code path that already wires `_use_cdn` and `_favicon` from the manifest).
+- **`examples/ops_dashboard/dazzle.toml`** — opts into `theme = "linear-dark"` as the proof. Doesn't affect any other example app.
+
+### Tests
+- **`test_app_theme_loading.py`** — 11 cases across 3 layers:
+  - manifest (4): default is None; `[ui] theme` parses; `[ui] app_theme` alias parses; ops_dashboard pinned to `linear-dark` so a future rename fails CI rather than 404'ing the stylesheet.
+  - theme CSS (4): file exists; uses `@layer overrides`; overrides every load-bearing token (`--background` / `--foreground` / `--primary` / `--card` / `--muted` / `--border` / `--ring` / `--destructive`); ships both dark + light variants.
+  - base.html wiring (3): theme link present when `_app_theme` set; absent when not; renders AFTER the bundle (cascade order matters).
+
+### Agent Guidance
+- **Adding a new theme**: drop `<name>.css` in `src/dazzle_ui/runtime/static/css/themes/`, structured as a single `@layer overrides { :root, [data-theme="dark"] { ... } [data-theme="light"] { ... } }` block. Override the same shadcn-shape token names (`--background` / `--foreground` / `--primary` / etc.) that `design-system.css` defines. **Don't** introduce new token names — templates only know about the canonical set, so a new token wouldn't be consumed.
+- **Theme vs ThemeSpec**: the legacy `[theme]` section + `ThemeConfig` dataclass + `ThemeSpec` presets cover **site/marketing-page** tokens (`--dz-hero-*`, `--dz-section-*`, `--dz-footer-*`). The new `[ui] theme` field covers **app-shell** tokens (the shadcn-shape `--primary` / `--card` / etc.). They're orthogonal — a project can set both. Phase B will probably consolidate them once we've felt the shape with more themes.
+- **Cascade order is load-bearing**. The theme `<link>` MUST come after the bundle so `@layer overrides` resolves higher. If you add a new global stylesheet between them, audit the layer declarations.
+- **One-line rollback** — comment out `theme = "linear-dark"` in `examples/ops_dashboard/dazzle.toml` and the app reverts to default tokens. No template changes needed.
+
 ## [0.61.35] - 2026-04-25
 
 Patch bump. Two more CI-restoring fixes that surfaced once v0.61.34 unblocked the e2e jobs from running. Both are latent bugs from v0.61.25 (#884) that never got exercised because lint failures upstream had been masking them.
