@@ -9,6 +9,13 @@ dsl_paths = ["dsl"]
 [stack]
 name = "dnr"
 
+[ui]
+# v0.61.36: paper theme — Notion-warm vocabulary (cream surface, clay
+# accent, airy spacing, soft shadows) for the small-firm-owner persona
+# this app is built around. CRM data benefits from readability over
+# density.
+theme = "paper"
+
 [auth]
 enabled = true
 provider = "session"

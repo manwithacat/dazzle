@@ -1,0 +1,147 @@
+/* =============================================================================
+   Stripe — app-shell theme inspired by Stripe Dashboard
+
+   Professional, calm, light-first. Borrows the *vocabulary* (clean
+   white surface with cool slate text, indigo accent, generous spacing,
+   crisp borders, restrained shadows). Suits B2B SaaS / fintech /
+   support-tools apps where the user expects a "serious software" feel.
+
+   Loaded via [ui] theme = "stripe" in dazzle.toml.
+   Layer: overrides — wins over base/framework/app.
+
+   Default mode is light. Dark variant is a balanced nocturnal
+   (not full-Linear-dark — keeps the indigo identity).
+   ============================================================================= */
+
+@layer overrides {
+  /* ---------------------------------------------------------------------------
+     Default (light-first)
+     --------------------------------------------------------------------------- */
+  :root,
+  [data-theme="light"] {
+    /* Cool neutral slate ramp — 220° hue. Lower saturation than Linear
+       (avoids the cyan undertone) but still cooler than Notion's warm
+       paper. Reads as "calm professional". */
+    --background: 220 25% 99%;          /* near-white, slight cool tint */
+    --foreground: 220 30% 15%;          /* deep slate text */
+
+    --card: 0 0% 100%;                  /* pure white card surface */
+    --card-foreground: 220 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+
+    /* Indigo accent. ~245° hue, vivid but not loud. Stripe's signature.
+       Used for buttons, focus rings, link colour, primary CTAs. */
+    --primary: 245 70% 55%;
+    --primary-foreground: 0 0% 100%;    /* white on indigo */
+
+    --secondary: 220 18% 95%;           /* very pale slate for secondary buttons */
+    --secondary-foreground: 220 30% 15%;
+
+    --muted: 220 16% 96%;               /* table-stripe, disabled backgrounds */
+    --muted-foreground: 220 12% 42%;    /* slate-grey metadata text */
+
+    --accent: 220 18% 94%;              /* row hover, dropdown hover */
+    --accent-foreground: 220 30% 15%;
+
+    --destructive: 355 75% 50%;         /* warm red, slightly purple-leaning */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 16% 88%;              /* crisp slate hairlines */
+    --input: 220 16% 88%;
+    --ring: 245 70% 55%;                /* same as primary */
+
+    --success: 160 60% 38%;             /* teal-green, in family with indigo */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 90% 50%;              /* warm amber */
+    --warning-foreground: 220 30% 15%;
+
+    --info: 245 70% 55%;                /* same as primary — single brand colour */
+    --info-foreground: 0 0% 100%;
+
+    /* Inter is the practical default; Stripe internally uses "Söhne"
+       (proprietary). Inter Tight is a tighter sans-serif alternative
+       from the Inter family that gives a similar professional feel.
+       Mono uses iA Writer Mono / Geist Mono / SF Mono. */
+    --font-sans: 'Inter Tight', 'Inter', ui-sans-serif, system-ui,
+      -apple-system, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular,
+      'JetBrains Mono', 'Cascadia Code', monospace;
+
+    /* Generous spacing — Stripe pages breathe. */
+    --space-3: 0.875rem;                /* 14px */
+    --space-4: 1.125rem;                /* 18px (was 16) */
+    --space-6: 1.625rem;                /* 26px (was 24) */
+    --space-8: 2.25rem;                 /* 36px (was 32) */
+
+    /* Mid-size radii — crisper than paper, rounder than Linear. Stripe
+       uses 4–8px on most surfaces, 8–12px on cards. */
+    --radius-sm: 0.25rem;               /* 4px */
+    --radius: 0.375rem;                 /* 6px */
+    --radius-md: 0.5rem;                /* 8px */
+    --radius-lg: 0.625rem;              /* 10px — cards */
+    --radius-xl: 0.875rem;              /* 14px */
+    --radius-2xl: 1.125rem;             /* 18px */
+
+    /* Restrained shadows — Stripe leans on borders + faint ambient
+       lift, not drop shadows. Cooler shadow tint to match the slate
+       ramp. */
+    --shadow-xs: 0 1px 2px 0 hsl(220 30% 15% / 0.04);
+    --shadow-sm: 0 1px 3px 0 hsl(220 30% 15% / 0.06), 0 1px 2px -1px hsl(220 30% 15% / 0.04);
+    --shadow-md: 0 4px 8px -2px hsl(220 30% 15% / 0.08), 0 2px 4px -2px hsl(220 30% 15% / 0.05);
+    --shadow-lg: 0 10px 20px -5px hsl(220 30% 15% / 0.1), 0 4px 8px -4px hsl(220 30% 15% / 0.06);
+    --shadow-xl: 0 20px 40px -10px hsl(220 30% 15% / 0.12), 0 8px 16px -8px hsl(220 30% 15% / 0.08);
+
+    /* Mid-pace motion — between Linear's snap and Notion's deliberation. */
+    --duration-fast: 130ms;
+    --duration-normal: 200ms;
+    --duration-slow: 280ms;
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);  /* standard material ease */
+  }
+
+  /* ---------------------------------------------------------------------------
+     Dark variant — keeps the indigo identity. Cool slate dark surface
+     (vs Linear's almost-black slate); indigo lifts to a brighter shade
+     for AA contrast on the dark surface.
+     --------------------------------------------------------------------------- */
+  [data-theme="dark"] {
+    --background: 220 25% 10%;          /* deep slate */
+    --foreground: 220 15% 95%;
+
+    --card: 220 22% 13%;
+    --card-foreground: 220 15% 95%;
+
+    --popover: 220 22% 16%;
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 245 80% 68%;             /* lifted indigo for AA on dark */
+    --primary-foreground: 220 25% 10%;
+
+    --secondary: 220 16% 20%;
+    --secondary-foreground: 220 15% 95%;
+
+    --muted: 220 16% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 220 16% 22%;
+    --accent-foreground: 220 15% 95%;
+
+    --destructive: 355 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 16% 22%;
+    --input: 220 16% 22%;
+    --ring: 245 80% 68%;
+
+    --success: 160 60% 50%;
+    --success-foreground: 220 25% 10%;
+
+    --warning: 35 90% 60%;
+    --warning-foreground: 220 25% 10%;
+
+    --info: 245 80% 68%;
+    --info-foreground: 220 25% 10%;
+  }
+}

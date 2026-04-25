@@ -56,33 +56,53 @@ class TestManifestAppTheme:
         mf = load_manifest(repo_root / "examples/ops_dashboard/dazzle.toml")
         assert mf.app_theme == "linear-dark"
 
+    def test_contact_manager_uses_paper(self) -> None:
+        """v0.61.36 follow-up: contact_manager opts into the paper
+        theme (Notion-warm) since the small-firm-owner persona benefits
+        from readability over density."""
+        repo_root = Path(__file__).resolve().parents[2]
+        mf = load_manifest(repo_root / "examples/contact_manager/dazzle.toml")
+        assert mf.app_theme == "paper"
+
+    def test_support_tickets_uses_stripe(self) -> None:
+        """v0.61.36 follow-up: support_tickets opts into the stripe
+        theme (Stripe-formal) for the agent + manager personas."""
+        repo_root = Path(__file__).resolve().parents[2]
+        mf = load_manifest(repo_root / "examples/support_tickets/dazzle.toml")
+        assert mf.app_theme == "stripe"
+
 
 # ────────────────────────── theme CSS file ────────────────────────────
 
 
-class TestLinearDarkCSS:
-    """The linear-dark theme file ships with the framework — pin its
-    presence + key invariants so a refactor doesn't silently break it."""
+SHIPPED_THEMES = ["linear-dark", "paper", "stripe"]
 
-    @pytest.fixture
-    def css_path(self) -> Path:
+
+@pytest.mark.parametrize("theme_name", SHIPPED_THEMES)
+class TestShippedThemeCSS:
+    """Every theme file shipped with the framework must satisfy the same
+    structural invariants — `@layer overrides` block, every load-bearing
+    token re-defined, both dark + light variants."""
+
+    def _css_path(self, theme_name: str) -> Path:
         repo_root = Path(__file__).resolve().parents[2]
-        return repo_root / "src/dazzle_ui/runtime/static/css/themes/linear-dark.css"
+        return repo_root / f"src/dazzle_ui/runtime/static/css/themes/{theme_name}.css"
 
-    def test_css_file_exists(self, css_path: Path) -> None:
-        assert css_path.is_file(), f"Theme CSS missing at {css_path}"
+    def test_css_file_exists(self, theme_name: str) -> None:
+        path = self._css_path(theme_name)
+        assert path.is_file(), f"Theme CSS missing at {path}"
 
-    def test_uses_overrides_layer(self, css_path: Path) -> None:
+    def test_uses_overrides_layer(self, theme_name: str) -> None:
         """Theme CSS must declare `@layer overrides { ... }` so it wins
         over base/framework/app cascade layers (defined in base.html)."""
-        text = css_path.read_text()
+        text = self._css_path(theme_name).read_text()
         assert "@layer overrides" in text
 
-    def test_overrides_required_app_tokens(self, css_path: Path) -> None:
+    def test_overrides_required_app_tokens(self, theme_name: str) -> None:
         """Each token consumed by templates as `hsl(var(--<name>))` must
         be re-defined by the theme so swap is total. Spot-check the
         load-bearing ones."""
-        text = css_path.read_text()
+        text = self._css_path(theme_name).read_text()
         for token in [
             "--background",
             "--foreground",
@@ -95,12 +115,12 @@ class TestLinearDarkCSS:
         ]:
             assert f"{token}:" in text, f"Theme missing override for {token}"
 
-    def test_provides_both_dark_and_light_variants(self, css_path: Path) -> None:
-        """linear-dark is dark-first but ships a light variant for users
-        who flip data-theme — otherwise toggling theme on a Linear-themed
-        app would fall back to the bundle's default light tokens, which
-        would clash with the dark cyan accent."""
-        text = css_path.read_text()
+    def test_provides_both_dark_and_light_variants(self, theme_name: str) -> None:
+        """Each theme is opinionated about its default mode but ships
+        the other variant too — otherwise toggling data-theme would
+        fall back to the default bundle's tokens and clash with the
+        theme's accent."""
+        text = self._css_path(theme_name).read_text()
         assert '[data-theme="dark"]' in text
         assert '[data-theme="light"]' in text
 

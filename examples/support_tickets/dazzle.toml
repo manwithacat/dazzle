@@ -9,6 +9,13 @@ paths = ["./dsl"]
 [stack]
 name = "dnr"
 
+[ui]
+# v0.61.36: stripe theme — Stripe-formal vocabulary (cool slate
+# surface, indigo accent, generous spacing, restrained shadows) for
+# the agent + manager personas. Support tools benefit from a
+# "serious software" feel.
+theme = "stripe"
+
 [auth]
 enabled = true
 provider = "session"

@@ -1,0 +1,146 @@
+/* =============================================================================
+   Paper — app-shell theme inspired by Notion / iA Writer
+
+   Warm, airy, light-first. Borrows the *vocabulary* (warm cream surface,
+   muted clay accent, generous spacing, serif headings option, soft
+   shadows). Suits CRM / writing / personal-tools apps where readability
+   and warmth matter more than density.
+
+   Loaded via [ui] theme = "paper" in dazzle.toml.
+   Layer: overrides — wins over base/framework/app.
+
+   Default mode is light. Dark variant included as a low-warmth night-
+   mode rather than a true dark theme.
+   ============================================================================= */
+
+@layer overrides {
+  /* ---------------------------------------------------------------------------
+     Default (light-first)
+     --------------------------------------------------------------------------- */
+  :root,
+  [data-theme="light"] {
+    /* Warm cream ramp — 38° hue (warm beige), low saturation. The page
+       reads almost like paper rather than white; the card surface is a
+       half-step warmer still so layered surfaces feel layered. */
+    --background: 38 25% 98%;          /* warm cream — like quality paper */
+    --foreground: 25 15% 18%;          /* warm dark brown for body text */
+
+    --card: 38 30% 99%;                /* slightly warmer than background */
+    --card-foreground: 25 15% 18%;
+
+    --popover: 0 0% 100%;              /* pure white — menus pop above paper */
+    --popover-foreground: 25 15% 18%;
+
+    /* Single muted clay accent. ~22° hue (terracotta), saturation kept
+       low so the colour reads as warm rather than orange-loud. Used for
+       buttons, focus rings, links, active states. */
+    --primary: 22 50% 42%;
+    --primary-foreground: 38 25% 98%;  /* cream on clay — warm contrast */
+
+    --secondary: 38 20% 92%;           /* soft beige hover */
+    --secondary-foreground: 25 15% 18%;
+
+    --muted: 38 18% 94%;               /* table-stripe, disabled */
+    --muted-foreground: 25 12% 42%;    /* metadata text — warm gray */
+
+    --accent: 38 22% 90%;              /* row hover, dropdown hover */
+    --accent-foreground: 25 15% 18%;
+
+    --destructive: 0 60% 48%;          /* warm red, slightly desaturated */
+    --destructive-foreground: 38 25% 98%;
+
+    --border: 38 18% 86%;              /* warm stone-grey hairlines */
+    --input: 38 18% 86%;
+    --ring: 22 50% 42%;                /* same as primary */
+
+    --success: 145 40% 38%;            /* mossy green, warm-leaning */
+    --success-foreground: 38 25% 98%;
+
+    --warning: 35 75% 50%;             /* amber, in-family with the warm ramp */
+    --warning-foreground: 25 15% 18%;
+
+    --info: 200 50% 45%;               /* slate blue — cool counterpoint */
+    --info-foreground: 38 25% 98%;
+
+    /* Inter for the body, but headlines benefit from the warmer feel of
+       a humanist serif. iA Writer Quattro is Notion's writing-mode
+       choice; Source Serif 4 is the open-source alternative. Both are
+       free and load via Google Fonts; the framework currently only
+       preconnects Inter, so we fall back to a system serif when neither
+       is available. */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'iA Writer Mono S', ui-monospace, SFMono-Regular,
+      'JetBrains Mono', 'Cascadia Code', monospace;
+
+    /* More generous spacing than the default — paper apps feel airy. */
+    --space-3: 0.875rem;                /* 14px (was 12) */
+    --space-4: 1.125rem;                /* 18px (was 16) */
+    --space-6: 1.75rem;                 /* 28px (was 24) */
+    --space-8: 2.25rem;                 /* 36px (was 32) */
+
+    /* Rounder radii. Paper apps lean on softness for warmth. */
+    --radius-sm: 0.375rem;              /* 6px */
+    --radius: 0.5rem;                   /* 8px */
+    --radius-md: 0.625rem;              /* 10px */
+    --radius-lg: 0.875rem;              /* 14px — cards */
+    --radius-xl: 1.125rem;              /* 18px */
+    --radius-2xl: 1.5rem;               /* 24px */
+
+    /* Soft, warm-tinted shadows. More grounded than Linear's hairlines
+       — paper UIs benefit from a sense of physicality. */
+    --shadow-xs: 0 1px 2px 0 hsl(25 15% 18% / 0.05);
+    --shadow-sm: 0 1px 3px 0 hsl(25 15% 18% / 0.08), 0 1px 2px -1px hsl(25 15% 18% / 0.06);
+    --shadow-md: 0 4px 8px -2px hsl(25 15% 18% / 0.1), 0 2px 4px -2px hsl(25 15% 18% / 0.06);
+    --shadow-lg: 0 10px 20px -5px hsl(25 15% 18% / 0.12), 0 4px 8px -4px hsl(25 15% 18% / 0.06);
+    --shadow-xl: 0 20px 40px -10px hsl(25 15% 18% / 0.15), 0 8px 16px -8px hsl(25 15% 18% / 0.08);
+
+    /* Slower, more deliberate motion — paper feels considered. */
+    --duration-fast: 180ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+    --ease-default: cubic-bezier(0.32, 0.72, 0, 1);  /* gentle ease-out */
+  }
+
+  /* ---------------------------------------------------------------------------
+     Dark variant — low-warmth night mode. Not a true dark theme;
+     intended for low-light reading rather than full nocturnal use.
+     --------------------------------------------------------------------------- */
+  [data-theme="dark"] {
+    --background: 25 12% 12%;           /* warm dark brown, not black */
+    --foreground: 38 18% 92%;           /* warm cream text */
+
+    --card: 25 12% 14%;
+    --card-foreground: 38 18% 92%;
+
+    --popover: 25 12% 16%;
+    --popover-foreground: 38 18% 92%;
+
+    --primary: 22 60% 60%;              /* brighter clay for contrast */
+    --primary-foreground: 25 12% 12%;
+
+    --secondary: 25 10% 22%;
+    --secondary-foreground: 38 18% 92%;
+
+    --muted: 25 10% 20%;
+    --muted-foreground: 25 8% 60%;
+
+    --accent: 25 10% 22%;
+    --accent-foreground: 38 18% 92%;
+
+    --destructive: 0 55% 55%;
+    --destructive-foreground: 38 25% 98%;
+
+    --border: 25 10% 24%;
+    --input: 25 10% 24%;
+    --ring: 22 60% 60%;
+
+    --success: 145 40% 50%;
+    --success-foreground: 25 12% 12%;
+
+    --warning: 35 75% 60%;
+    --warning-foreground: 25 12% 12%;
+
+    --info: 200 50% 55%;
+    --info-foreground: 25 12% 12%;
+  }
+}

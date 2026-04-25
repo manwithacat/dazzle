@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.37] - 2026-04-26
+
+Patch bump. Phase A continued — adds the second and third app-shell themes (`paper` and `stripe`) and applies them to `contact_manager` and `support_tickets` respectively. Three example apps now demonstrate distinct visual identities while sharing the same DSL + templates.
+
+### Added
+- **`themes/paper.css`** — Notion-warm vocabulary. Warm cream surface (38° hue), muted clay accent (22°), generous spacing (~14–18px gaps), rounder radii (6–14px), soft warm-tinted shadows, slower motion (180–350ms with gentle ease). Light-first; dark variant is a low-warmth night-mode rather than a full dark theme.
+- **`themes/stripe.css`** — Stripe-formal vocabulary. Cool slate surface (220° hue, near-white), indigo accent (245°), generous spacing, mid-size radii (4–10px), restrained cool-tinted shadows, mid-pace motion (130–280ms). Light-first; dark variant lifts the indigo for AA contrast on dark slate.
+
+### Changed
+- **`examples/contact_manager/dazzle.toml`** — `[ui] theme = "paper"`. Suits the small-firm-owner persona (CRM data benefits from readability over density).
+- **`examples/support_tickets/dazzle.toml`** — `[ui] theme = "stripe"`. Suits the agent + manager personas (B2B support tools benefit from the "serious software" feel).
+
+### Tests
+- **`test_app_theme_loading.py`** — extended to 21 cases (was 11):
+  - `TestLinearDarkCSS` refactored to a parametrised `TestShippedThemeCSS` class running the same 3 structural invariants (overrides layer, every load-bearing token re-defined, both dark + light variants) against all three shipped themes — `linear-dark`, `paper`, `stripe`. Adding a fourth theme means listing it in `SHIPPED_THEMES` and dropping the CSS file.
+  - Two new manifest pinning tests that fail loudly if `contact_manager` or `support_tickets` rename their themes.
+
+### Agent Guidance
+- **Three themes is the minimum for confidence the mechanism scales.** With one theme, you can't tell if the architecture is right. With three differing in light/dark default + accent + spacing density + motion pace, the swap pathway is exercised across the meaningful axes. A future fourth theme should bring a different *vocabulary*, not just a colour shift — e.g. high-contrast / mono / brutalist would test corners the current three don't.
+- **Theme files cap at ~150 lines.** All three shipped themes are tight: only the tokens that actually change vs. the default belong in the override block. If a theme file approaches 300 lines, the design is wandering — refactor before merging.
+- **Per-theme custom fonts cost a Google-Fonts preconnect.** `paper` references iA Writer Mono; `stripe` references Inter Tight + Geist Mono. Neither is currently preconnected (only Inter is, in `base.html`'s `<head>`). The fonts fall back gracefully to system, so this is a polish item not a blocker. Phase B's theme-manifest TOML can declare which fonts to preconnect.
+
 ## [0.61.36] - 2026-04-26
 
 Patch bump. Phase A of the design-system formalisation work — adds an app-shell theme mechanism so projects can override the default shadcn-zinc tokens with an alternate `:root` block by setting `[ui] theme = "<name>"` in `dazzle.toml`. Ships **`linear-dark`** as the first preset (Linear-vocabulary cool slate ramp + cyan accent + dense type) applied to `examples/ops_dashboard` as the proof.
