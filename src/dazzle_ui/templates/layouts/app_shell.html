@@ -131,7 +131,7 @@
         <a href="{{ nav_item.route }}"
            hx-get="{{ nav_item.route }}"
            hx-target="#main-content"
-           hx-swap="morph:innerHTML transition:true"
+           hx-swap="morph:innerHTML transition:true scroll:#main-content:top"
            hx-push-url="true"
            preload="mousedown"
            class="flex items-center gap-2 px-3 py-1.5 rounded-[4px] text-[13px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
@@ -162,7 +162,7 @@
               <a href="{{ child.route }}"
                  hx-get="{{ child.route }}"
                  hx-target="#main-content"
-                 hx-swap="morph:innerHTML transition:true"
+                 hx-swap="morph:innerHTML transition:true scroll:#main-content:top"
                  hx-push-url="true"
                  preload="mousedown"
                  class="flex items-center {% if child.icon %}gap-2 {% endif %}px-3 py-1.5 rounded-[4px] text-[13px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]

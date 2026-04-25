@@ -648,6 +648,24 @@ class TestDashboardRegionCompositeShapes:
             "_DASHBOARD_SLOT_WITH_REGION in this test file to match."
         )
 
+    def test_sidebar_nav_scrolls_to_top_on_morph(self):
+        """#876: cross-page nav clicks must reset scroll on the morph
+        target. Without ``scroll:#main-content:top`` on hx-swap, the
+        idiomorph extension preserves the previous page's scroll offset,
+        landing the new content's heading above the viewport.
+        """
+        shell_template = TEMPLATES_DIR / "layouts" / "app_shell.html"
+        text = shell_template.read_text()
+        # Both ungrouped nav anchors and grouped child anchors must carry
+        # the scroll modifier — otherwise mixed nav surfaces would behave
+        # differently on click.
+        occurrences = text.count("scroll:#main-content:top")
+        assert occurrences >= 2, (
+            f"layouts/app_shell.html should have scroll:#main-content:top "
+            f"on both ungrouped and grouped nav anchors; found {occurrences} "
+            "occurrence(s) — #876 will regress."
+        )
+
     def test_context_selector_defaults_to_first_option(self):
         """#870: when no saved preference exists, the context selector
         falls through to ``sel.options[1]`` (the first real option after

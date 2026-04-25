@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.18] - 2026-04-25
+
+Patch bump. Closes #876 — clicking a sidebar nav entry triggered an HTMX morph that preserved the previous page's scroll offset, landing the new page's heading above the viewport. Users had to scroll back up after every cross-page nav. Idiomorph's `morph:innerHTML` strategy preserves DOM state including scroll position, but doesn't reset the document/main-content scroll for cross-route navigation.
+
+### Fixed
+- **`src/dazzle_ui/templates/layouts/app_shell.html`** — added `scroll:#main-content:top` to the `hx-swap` directive on both the ungrouped sidebar nav anchors and the grouped child anchors. HTMX scrolls `#main-content` to the top after the morph completes, so the new page's heading lands at the top of the viewport.
+
+### Tests
+- **`test_template_html.py::test_sidebar_nav_scrolls_to_top_on_morph`** — pins the modifier on both nav anchor variants in app_shell.html.
+
+### Agent Guidance
+- **Idiomorph preserves scroll position by default.** When using `hx-swap="morph:innerHTML"` for cross-route navigation, add `scroll:<target>:top` so users land at the top of the new page. Same applies to any new nav surface (mobile menu, command palette routes, breadcrumb anchors) — match the pattern in app_shell.html.
+
 ## [0.61.17] - 2026-04-25
 
 Patch bump. Closes #873 — workspaces auto-discovered ungrouped region sources into the sidebar nav even when the author explicitly declared a `nav_group`. Junction/admin entities used purely as data sources (e.g. `ClassEnrolment`, `QuestionTopic`, `BehaviourStudent`) leaked in as flat nav items, exposing schema-shaped vocabulary to personas (e.g. teachers) who shouldn't see those standalone list pages. Authors had no clean opt-out — drop the entity's list surface entirely (loses /app/<entity> for everyone) or accept the noisy nav.
