@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.28] - 2026-04-25
+
+Patch bump. Closes #882 — new `display: histogram` mode renders a continuous-variable distribution (raw marks, response times, scores) with vertical reference lines for grade boundaries, targets, and threshold markers. Pure SVG, server-rendered, no extra DB query (re-uses the rows already fetched for the region).
+
+### Added
+- **DSL**: new `display: histogram` mode + `value:` (column to bin) + `bins:` (positive int or `auto`) keys on workspace regions.
+  ```dsl
+  mark_distribution:
+    source: MarkingResult
+    display: histogram
+    value: scaled_mark
+    bins: auto                       # or e.g. 20
+    reference_lines:
+      - label: "Grade 4", value: 32
+      - label: "Grade 6 (target)", value: 56, style: dashed
+    scope: teaching_group = current_context
+    empty: "No marks yet."
+  ```
+  `bins: auto` selects bin count via Sturges' rule (`⌈log2(N) + 1⌉`, clamped to [1, 50]); explicit `bins: 20` forces 20 equal-width bins. The `value:` key reuses the legacy `heatmap_value` IR field as a generic "value column" — rename deferred to keep this patch focused.
+- **IR**: `WorkspaceRegion.bin_count: int | None = None` (None = Sturges) + new `DisplayMode.HISTOGRAM`. Exported from `dazzle.core.ir`.
+- **Lexer**: new `TokenType.BINS = "bins"` keyword.
+- **Runtime**: `_compute_histogram_bins(items, value_field, bin_count)` in `dazzle_back.runtime.workspace_rendering` bins raw values into equal-width buckets. Final bin is closed on the right so the global max isn't dropped. Skips items where the value is None or non-numeric. Returns `[{label, count, low, high}, ...]` to the template. Triggered when `display=HISTOGRAM` and `value:` is set.
+- **Template**: new `histogram.html` renders SVG bars with primary fill, vertical reference lines (`stroke-dasharray` per `style:`) clipped to the data range so out-of-range markers don't spill off the canvas. Each bin + ref line carries an `<svg:title>` for hover/screen-reader text. Sparse x-axis tick labels (first/last + every Nth) so dense binnings stay readable.
+
+### Tests
+- **`test_workspace_histogram.py`** — 18 cases across 3 layers:
+  - parser (6): minimal histogram; explicit `bins: 20`; `bins: auto`; `bins: 0` raises; `bins: many` raises; histogram + reference_lines coexist.
+  - runtime / `_compute_histogram_bins` (8): equal-width binning; global max lands in final bin; Sturges bin count for N=100; empty input → `[]`; no numeric values → `[]`; single distinct value → one degenerate bin; non-numeric items skipped; label uses `:g` format.
+  - template (4): one `<rect>` per bin; vertical reference line in range renders dashed; reference line outside range is skipped (not clipped + drawn off-canvas); empty `histogram_bins` shows `empty_message` and no SVG.
+
+### Agent Guidance
+- **Histograms re-use the already-fetched `items`**, not a separate aggregate query. That means the bin count reflects the page-size limit (default ~50–200 for chart modes — see `_single_dim_chart_modes` in `workspace_rendering.py`). For massive cohorts this under-samples; future work could push binning to PostgreSQL `width_bucket` to scale, but the in-process MVP is sufficient for school-scale + investor-demo dashboards.
+- **`heatmap_value` is overloaded.** It's the IR field for both heatmap cell-coloring (the original use) and histogram binning (this commit). The DSL keyword `value:` writes to it. The legacy name is kept to avoid scope creep — a future patch could rename to `value_field` (clean break — no shims).
+- **Reference lines on histograms are vertical** (x-axis = the binned value). Same `ReferenceLine` IR shape as line/area charts (#883), but the chart type drives the rendering axis. If you add another distribution chart (box plot, violin), reuse the same `reference_lines` IR field and pick the axis in the template.
+
 ## [0.61.27] - 2026-04-25
 
 Patch bump. Closes #883 (lines + bands portion) — `line_chart` and `area_chart` regions can now overlay reference lines (horizontal markers at a fixed y-value) and shaded reference bands (target zones, RAG ranges) on top of the data series. Pure SVG, server-rendered, no extra DB queries — turns a "raw values" trajectory into an "are we on target?" chart in one frame.

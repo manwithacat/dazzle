@@ -679,6 +679,7 @@ class WorkspaceParserMixin:
         delta: ir.DeltaSpec | None = None
         reference_lines: list[ir.ReferenceLine] = []
         reference_bands: list[ir.ReferenceBand] = []
+        bin_count: int | None = None  # None = "auto" (Sturges) when display=histogram
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -938,6 +939,32 @@ class WorkspaceParserMixin:
                 reference_bands = self._parse_reference_bands_block()
                 self.expect(TokenType.DEDENT)
 
+            # bins: auto | <int>  — histogram bin count (#882)
+            elif self.match(TokenType.BINS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.NUMBER):
+                    bin_count = int(self.advance().value)
+                    if bin_count < 1:
+                        token = self.current_token()
+                        raise make_parse_error(
+                            f"bins must be a positive integer or 'auto'; got {bin_count}",
+                            self.file,
+                            token.line,
+                            token.column,
+                        )
+                else:
+                    word_tok = self.expect_identifier_or_keyword()
+                    if word_tok.value != "auto":
+                        raise make_parse_error(
+                            f"bins must be 'auto' or a positive integer; got {word_tok.value!r}",
+                            self.file,
+                            word_tok.line,
+                            word_tok.column,
+                        )
+                    bin_count = None  # auto via Sturges
+                self.skip_newlines()
+
             else:
                 break
 
@@ -993,4 +1020,5 @@ class WorkspaceParserMixin:
             delta=delta,
             reference_lines=reference_lines,
             reference_bands=reference_bands,
+            bin_count=bin_count,
         )

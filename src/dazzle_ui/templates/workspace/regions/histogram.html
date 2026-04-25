@@ -1,0 +1,103 @@
+{# Histogram region — v0.61.27 (#882).
+
+   Server-rendered SVG bars over a continuous x-axis. Consumes
+   `histogram_bins` (computed by `_compute_histogram_bins` in
+   workspace_rendering.py from the already-fetched `items` — no extra
+   DB query). Each bin carries `label`, `count`, `low`, `high`.
+
+   Vertical reference lines (`reference_lines`) overlay the chart at
+   their `value:` x-position — used for grade boundaries, target marks,
+   etc.
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-histogram-region">
+  {% if histogram_bins and histogram_bins | length > 0 %}
+    {% set count = histogram_bins | length %}
+    {% set max_count = histogram_bins | map(attribute='count') | max %}
+    {% set max_count = max_count if max_count > 0 else 1 %}
+    {% set total = histogram_bins | map(attribute='count') | sum %}
+    {% set x_min = histogram_bins[0].low %}
+    {% set x_max = histogram_bins[-1].high %}
+    {% set x_range = x_max - x_min %}
+    {% set x_range = x_range if x_range > 0 else 1 %}
+
+    {# SVG 400×140, 8/8/28/8 padding (t/r/b/l). Bottom band reserved for
+       x-axis labels (rotated for collision tolerance on dense bins). #}
+    {% set w = 400 %}
+    {% set h = 140 %}
+    {% set pt = 8 %}
+    {% set pr = 8 %}
+    {% set pb = 28 %}
+    {% set pl = 8 %}
+    {% set plot_w = w - pl - pr %}
+    {% set plot_h = h - pt - pb %}
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 {{ w }} {{ h }}"
+         class="dz-histogram-svg w-full h-auto"
+         role="img"
+         aria-label="{{ title }} histogram — {{ count }} bins, {{ total }} samples, peak {{ max_count }}">
+      {# Baseline at the bottom of the plot area. #}
+      <line x1="{{ pl }}" y1="{{ pt + plot_h }}"
+            x2="{{ pl + plot_w }}" y2="{{ pt + plot_h }}"
+            stroke="hsl(var(--border))" stroke-width="1" />
+
+      {# Bars — equal-width, gap of 1px between adjacent bins for visual
+         separation. #}
+      {% set bar_w = plot_w / count %}
+      {% for bin in histogram_bins %}
+        {% set x = pl + (loop.index0 * bar_w) %}
+        {% set bar_h = (bin.count / max_count) * plot_h %}
+        {% set y = pt + plot_h - bar_h %}
+        <rect x="{{ x | round(2) }}" y="{{ y | round(2) }}"
+              width="{{ (bar_w - 1) | round(2) }}" height="{{ bar_h | round(2) }}"
+              fill="hsl(var(--primary))" fill-opacity="0.6">
+          <title>{{ bin.label }}: {{ bin.count }}</title>
+        </rect>
+      {% endfor %}
+
+      {# Vertical reference lines — overlay grade boundaries / targets.
+         The line's `value` is an x-axis coordinate (#882). #}
+      {% set _line_dasharray = {'solid': '', 'dashed': '4,3', 'dotted': '1,3'} %}
+      {% for ref in (reference_lines or []) %}
+        {% if ref.value >= x_min and ref.value <= x_max %}
+          {% set ref_x = pl + (((ref.value - x_min) / x_range) * plot_w) %}
+          <line x1="{{ ref_x | round(2) }}" y1="{{ pt }}"
+                x2="{{ ref_x | round(2) }}" y2="{{ pt + plot_h }}"
+                stroke="hsl(var(--muted-foreground))"
+                stroke-width="1"
+                stroke-dasharray="{{ _line_dasharray.get(ref.style, '') }}">
+            <title>{{ ref.label }}: {{ ref.value }}</title>
+          </line>
+          {# Label hugging the top of the line. #}
+          <text x="{{ ref_x | round(2) }}" y="{{ pt + 8 }}"
+                text-anchor="middle" font-size="9"
+                fill="hsl(var(--muted-foreground))"
+                font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ ref.label }}</text>
+        {% endif %}
+      {% endfor %}
+
+      {# X-axis tick labels — first, last, and a sparse middle set so the
+         range is readable on dense binnings. #}
+      {% set show_every = 1 if count <= 5 else ((count / 5) | round(0, 'ceil') | int) %}
+      {% for bin in histogram_bins %}
+        {% if loop.index0 == 0 or loop.last or (loop.index0 % show_every == 0) %}
+          {% set lx = pl + (loop.index0 * bar_w) + (bar_w / 2) %}
+          <text x="{{ lx | round(2) }}" y="{{ h - 8 }}"
+                text-anchor="middle" font-size="9"
+                fill="hsl(var(--muted-foreground))"
+                font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ bin.low | round(1) }}</text>
+        {% endif %}
+      {% endfor %}
+    </svg>
+
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+      {{ count }} bins · {{ total }} samples · peak {{ max_count }}
+    </p>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

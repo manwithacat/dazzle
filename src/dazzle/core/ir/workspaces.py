@@ -71,6 +71,7 @@ class DisplayMode(StrEnum):
     LINE_CHART = "line_chart"  # v0.60.0: Time-series line chart (cycle 28)
     AREA_CHART = "area_chart"  # v0.60.0: Stacked time-series area chart (cycle 28)
     SPARKLINE = "sparkline"  # v0.60.0: Compact line for KPI tiles (cycle 28)
+    HISTOGRAM = "histogram"  # v0.61.27 (#882): continuous-variable distribution
 
 
 class BucketRef(BaseModel):
@@ -231,6 +232,12 @@ class WorkspaceRegion(BaseModel):
     # Pure template overlay — no extra DB queries.
     reference_lines: list[ReferenceLine] = Field(default_factory=list)
     reference_bands: list[ReferenceBand] = Field(default_factory=list)
+    # v0.61.27 (#882): Histogram-mode bin count.
+    # ``None`` means "auto" (Sturges' rule: ⌈log2(N) + 1⌉). A positive int
+    # forces N equal-width bins. Histograms read ``heatmap_value`` for the
+    # value column to bin (it's a generic "the value to plot" field, just
+    # legacy-named — rename deferred to keep this patch focused).
+    bin_count: int | None = None
 
     model_config = ConfigDict(frozen=True)
 

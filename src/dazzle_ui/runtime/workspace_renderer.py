@@ -208,6 +208,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "AREA_CHART": "workspace/regions/area_chart.html",
     "SPARKLINE": "workspace/regions/sparkline.html",
     "DIAGRAM": "workspace/regions/diagram.html",
+    "HISTOGRAM": "workspace/regions/histogram.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)

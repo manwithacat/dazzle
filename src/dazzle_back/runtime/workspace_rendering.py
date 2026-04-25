@@ -837,6 +837,19 @@ async def _workspace_region_handler(
             source_entity=ctx.source,
         )
 
+    # Histogram (#882, v0.61.27): bin a continuous numeric column from the
+    # already-fetched ``items`` and pass per-bin counts to the template.
+    # No extra DB query — uses the rows already loaded for the region. The
+    # value column is read from ``heatmap_value`` (legacy-named generic
+    # "the value column" IR field). ``bin_count`` is the explicit bin count
+    # or None for Sturges' rule (⌈log2(N) + 1⌉).
+    histogram_bins: list[dict[str, Any]] = []
+    if ctx.ctx_region.display == "HISTOGRAM":
+        _value_field = (getattr(ctx.ctx_region, "heatmap_value", "") or "").strip()
+        _bin_count = getattr(ctx.ir_region, "bin_count", None)
+        if _value_field:
+            histogram_bins = _compute_histogram_bins(items, _value_field, _bin_count)
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1065,6 +1078,8 @@ async def _workspace_region_handler(
         # Line/area chart overlays (#883, v0.61.26)
         reference_lines=getattr(ctx.ctx_region, "reference_lines", []),
         reference_bands=getattr(ctx.ctx_region, "reference_bands", []),
+        # Histogram (#882, v0.61.27) — pre-computed bins from `items`
+        histogram_bins=histogram_bins,
     )
     return HTMLResponse(content=html)
 
@@ -1656,6 +1671,71 @@ async def _enumerate_distinct_buckets(
             break
         page += 1
     return out, True
+
+
+def _compute_histogram_bins(
+    items: list[dict[str, Any]],
+    value_field: str,
+    bin_count: int | None,
+) -> list[dict[str, Any]]:
+    """Bin numeric values from ``items`` into equal-width buckets (#882).
+
+    Returns one dict per bin in ascending order, each with:
+      ``label``    – ``"<lo>–<hi>"`` (rounded for display),
+      ``count``    – number of items whose ``value_field`` falls in [lo, hi),
+      ``low``      – numeric lower edge (inclusive),
+      ``high``     – numeric upper edge (exclusive, except final bin which
+                     is closed so the global max isn't dropped).
+
+    ``bin_count`` semantics:
+      ``None``  → Sturges' rule: ⌈log2(N) + 1⌉, clamped to [1, 50].
+      ``int``   → exact bin count (caller validates ≥ 1).
+
+    Returns ``[]`` for empty input or when no item has a numeric value at
+    ``value_field`` — the template falls back to its empty-state message.
+    """
+    import math
+
+    raw_values: list[float] = []
+    for item in items:
+        v = item.get(value_field)
+        if v is None:
+            continue
+        try:
+            raw_values.append(float(v))
+        except (TypeError, ValueError):
+            continue
+
+    if not raw_values:
+        return []
+
+    lo, hi = min(raw_values), max(raw_values)
+    if lo == hi:
+        # Single distinct value — one degenerate bin so the chart still
+        # renders something meaningful instead of a divide-by-zero.
+        return [
+            {"label": f"{lo:g}", "count": len(raw_values), "low": lo, "high": hi},
+        ]
+
+    if bin_count is None:
+        sturges = math.ceil(math.log2(len(raw_values)) + 1) if len(raw_values) > 1 else 1
+        bin_count = max(1, min(sturges, 50))
+
+    width = (hi - lo) / bin_count
+    buckets: list[dict[str, Any]] = [
+        {"low": lo + i * width, "high": lo + (i + 1) * width, "count": 0} for i in range(bin_count)
+    ]
+
+    for v in raw_values:
+        # Final bin is closed on the right so v == hi lands in the last
+        # bucket instead of falling through.
+        idx = min(int((v - lo) / width), bin_count - 1)
+        buckets[idx]["count"] += 1
+
+    for b in buckets:
+        b["label"] = f"{b['low']:g}–{b['high']:g}"
+
+    return buckets
 
 
 async def _compute_bucketed_aggregates(
