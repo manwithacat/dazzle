@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.22] - 2026-04-25
+
+Patch bump. Closes the JavaScript-warning class Aegismark's QA tester observed on teacher routes — recommendation rows containing names like `O'Brien` broke inline editing. Four templates were interpolating per-record values into single-quoted JS string literals via `'{{ value | e }}'`. The Jinja `| e` filter HTML-escapes apostrophes to `&#39;`, but the browser HTML-decodes the entity back to `'` before Alpine sees the attribute value — terminating the surrounding JS string mid-word and turning `:value="editing ? editing.originalValue : 'O'Brien'"` into a JS syntax error. Alpine bailed on the binding for those records; double-quote / backslash / newline values were already silently broken in the same way.
+
+### Fixed
+- **`src/dazzle_ui/templates/fragments/inline_edit.html`** — text-input branch (line 11) and date-input branch (line 75) — replaced `'{{ edit_value | e }}'` with `{{ edit_value | tojson }}` and switched the outer `:value` attribute to single-quoted so it doesn't clash with `tojson`'s `"` delimiters. Inline-cell editing now works for any value containing `'`, `"`, `\`, or control characters.
+- **`src/dazzle_ui/templates/macros/form_field.html`** — combobox `x-data` (line 74) `current:` initial value and file-upload `x-init` (line 471) `filename =` assignment — same fix applied. Combobox initialisation and file-upload preview no longer break for stored values containing apostrophes.
+
+### Tests
+- **`test_inline_js_quote_safety.py::TestInlineJsQuoteSafety`** — five source-grep cases: (1) parametrised over both fixed templates asserting the broken `'{{ X | e }}'` regex never reappears, (2) inline_edit's two `:value` lines both contain `tojson`, (3) combobox `x-data` `current` uses `tojson`, (4) file-upload filename `x-init` uses `tojson`. Source-level assertions (no rendering) so the test doesn't depend on a Jinja runtime in the test process.
+
+### Agent Guidance
+- **Never write `'{{ X | e }}'` inside a JS-evaluated HTML attribute.** Browser HTML-decodes the `&#39;` for apostrophes BEFORE Alpine evaluates the attribute as JS — the apostrophe terminates the surrounding string literal. Use `{{ X | tojson }}` (no surrounding quotes — `tojson` produces a properly JS-escaped quoted literal) and switch the outer attribute to single-quoted to avoid clashing with `tojson`'s `"` delimiters. Affects every Alpine-bound attribute (`:value`, `:class`, `@click`, `x-init`, `x-data`, etc.).
+- **`| e` is for HTML text/attribute safety, not JS-string safety.** They are different escape contexts. The browser un-escapes HTML entities before Alpine's expression evaluator runs, so HTML-escaped apostrophes flow through to JS unescaped.
+- **Other inline JS patterns to audit** (current call sites use schema-controlled values so the bug is latent, but the pattern is the same): `fragments/related_table_group.html` (`activeTab`), `fragments/toggle_group.html` (`toggle()`), `components/filterable_table.html` (`toggleSort()`). Switch to `| tojson` if any of those start receiving user-provided values.
+
 ## [0.61.21] - 2026-04-25
 
 Patch bump. Closes the production-startup gap introduced by `97ac3f65` ("gate startup schema creation on environment"). That commit correctly stopped `metadata.create_all()` and `CREATE TABLE IF NOT EXISTS _dazzle_params` from running when `DAZZLE_ENV=production`, but shipped the `verify_dazzle_params_table()` check without the corresponding Alembic baseline migration that creates the table — meaning every production startup raised `MigrationError("_dazzle_params table is missing. Run 'dazzle db upgrade' before startup.")` even AFTER running `dazzle db upgrade` (no-op against an empty `versions/` directory). The hint was misleading; following it didn't unblock the failure. ADR-0017 (Alembic owns schema in production) is now actually shippable.

@@ -71,7 +71,7 @@
             {% if field.required %}required aria-required="true"{% endif %}
             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
             class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-            x-data="{ options: [], loading: true, current: '{{ values.get(field.name) if values else '' }}' }"
+            x-data='{ options: [], loading: true, current: {{ (values.get(field.name) if values else "") | tojson }} }'
             x-init="
               fetch('{{ field.ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.json())
@@ -468,7 +468,7 @@
     {% elif field.type == "file" %}
       {# UX-027: file upload — Alpine dzFileUpload, pure Tailwind chrome #}
       <div x-data="dzFileUpload" data-dz-file="{{ field.name }}" class="dz-file-upload"
-           {% if value %}x-init="hasFile = true; filename = '{{ value | default('', true) | basename_or_url }}'"{% endif %}>
+           {% if value %}x-init='hasFile = true; filename = {{ (value | default("", true) | basename_or_url) | tojson }}'{% endif %}>
         <input type="hidden" name="{{ field.name }}" id="{{ field_id }}"
                data-dazzle-field="{{ field.name }}" data-dz-file-value
                value="{{ value | default('', true) }}"

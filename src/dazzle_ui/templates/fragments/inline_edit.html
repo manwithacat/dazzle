@@ -8,7 +8,7 @@
   {% if edit_col.type not in ["bool", "badge", "date"] %}
   <input type="text"
          name="{{ edit_col.key }}"
-         :value="editing ? editing.originalValue : '{{ edit_value | e }}'"
+         :value='editing ? editing.originalValue : {{ edit_value | tojson }}'
          :disabled="editing && editing.saving"
          x-init="$el.focus(); $el.select()"
          @keydown.enter.prevent="commitEdit($el.value)"
@@ -72,7 +72,7 @@
   {% elif edit_col.type == "date" %}
   <input type="date"
          name="{{ edit_col.key }}"
-         :value="editing ? editing.originalValue : '{{ edit_value | e }}'"
+         :value='editing ? editing.originalValue : {{ edit_value | tojson }}'
          :disabled="editing && editing.saving"
          x-init="$el.focus()"
          @keydown.enter.prevent="commitEdit($el.value)"
