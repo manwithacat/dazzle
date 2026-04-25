@@ -213,9 +213,9 @@ def deploy_command(
     ),
 ) -> None:
     """Deploy current DSL as new version."""
-    from dazzle.core.dsl_parser import parse_modules
     from dazzle.core.linker import build_appspec
     from dazzle.core.manifest import load_manifest
+    from dazzle.core.parser import parse_modules
     from dazzle.core.process import VersionManager, generate_version_id
 
     project_root = Path.cwd()

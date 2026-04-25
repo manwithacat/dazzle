@@ -46,10 +46,10 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
     """
     try:
         # Try to load entities from the project in CWD
-        from dazzle.core.dsl_parser import parse_modules
         from dazzle.core.fileset import discover_dsl_files
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
         from dazzle_back.runtime.sa_schema import build_metadata
 
         project_root = Path.cwd()

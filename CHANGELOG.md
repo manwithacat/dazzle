@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.26] - 2026-04-25
+
+Patch bump. Closes #885 — three runtime call sites still imported `parse_modules` from the removed `dazzle.core.dsl_parser` module (split into `dazzle.core.parser` + `dazzle.core.dsl_parser_impl/` package). Failures only surfaced when downstream users actually ran `dazzle db migrate`, the migrate CLI, or the Temporal worker — silently skipping the test suite. Restores schema-migration capability for v0.61.20+ users.
+
+### Fixed
+- **`src/dazzle_back/alembic/env.py`** — `_load_target_metadata()` now imports `parse_modules` from `dazzle.core.parser`. Restores `dazzle db migrate`, `dazzle db migrate --check`, and `dazzle db migrate --sql` for downstream projects.
+- **`src/dazzle/cli/migrate.py`** — `deploy_command()` now imports from `dazzle.core.parser`. Restores `dazzle migrate deploy`.
+- **`src/dazzle/process/worker.py`** — `main()` now imports from `dazzle.core.parser`. Restores `python -m dazzle.process.worker` (Temporal worker entry point).
+
+### Tests
+- **`test_parse_modules_imports.py`** — AST-based regression test: parametrised over the three runtime callers, asserts that none import from the removed `dazzle.core.dsl_parser` module. Catches future stale imports at unit-test time rather than in a downstream user's terminal.
+
+### Agent Guidance
+- **When renaming/splitting a `dazzle.core.*` module, grep for stale imports across `src/`** — the test suite mocks heavy dependencies in many places, so import errors in CLI/worker/alembic entry points won't surface in `pytest` unless explicitly pinned. The `test_parse_modules_imports.py` pattern (AST scan of known caller paths) is reusable for any other re-exported function.
+
 ## [0.61.25] - 2026-04-25
 
 Patch bump. Closes #884 — summary/metrics tiles can now declare a `delta:` block to render the period-over-period reading ("47 marked overnight ↑ +12 (34%) vs yesterday") without having to compute deltas in Python and pass them as separate fields. Surfaced from AegisMark's investor-demo dashboard requirement; companion to the chart-mode issues (#879-883).

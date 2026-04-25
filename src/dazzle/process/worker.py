@@ -52,10 +52,10 @@ async def main() -> None:
 
     # Load DSL and build AppSpec
     try:
-        from dazzle.core.dsl_parser import parse_modules
         from dazzle.core.fileset import discover_dsl_files
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
     except ImportError as e:
         logger.error("Failed to import DAZZLE core modules: %s", e)
         sys.exit(1)
