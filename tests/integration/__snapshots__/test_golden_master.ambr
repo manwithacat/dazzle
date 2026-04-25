@@ -1401,6 +1401,7 @@
             }),
             'date_field': None,
             'date_range': False,
+            'delta': None,
             'display': <DisplayMode.GRID: 'grid'>,
             'empty_message': None,
             'filter': None,
@@ -1416,6 +1417,10 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'reference_bands': list([
+            ]),
+            'reference_lines': list([
+            ]),
             'sort': list([
             ]),
             'source': 'SystemHealth',
@@ -1430,6 +1435,7 @@
             }),
             'date_field': None,
             'date_range': False,
+            'delta': None,
             'display': <DisplayMode.LIST: 'list'>,
             'empty_message': None,
             'filter': None,
@@ -1445,6 +1451,10 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'reference_bands': list([
+            ]),
+            'reference_lines': list([
+            ]),
             'sort': list([
             ]),
             'source': 'DeployHistory',
@@ -1459,6 +1469,7 @@
             }),
             'date_field': None,
             'date_range': False,
+            'delta': None,
             'display': <DisplayMode.DIAGRAM: 'diagram'>,
             'empty_message': None,
             'filter': None,
@@ -1473,6 +1484,10 @@
             'name': 'app_map',
             'progress_complete_at': None,
             'progress_stages': list([
+            ]),
+            'reference_bands': list([
+            ]),
+            'reference_lines': list([
             ]),
             'sort': list([
             ]),

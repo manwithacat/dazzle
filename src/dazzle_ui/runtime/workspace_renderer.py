@@ -97,6 +97,12 @@ class RegionContext(BaseModel):
     diagram_data: str = ""  # Mermaid diagram source for DIAGRAM regions
     # Region actions (v0.48.15: action buttons on region header)
     region_actions: list[dict[str, str]] = Field(default_factory=list)
+    # v0.61.26 (#883): line/area chart overlays. Server-rendered SVG primitives
+    # behind the data series — no extra DB queries, no JS. Each entry is a
+    # plain dict (label/value/style for lines, label/from/to/color for bands)
+    # so Jinja can read it without import dance.
+    reference_lines: list[dict[str, Any]] = Field(default_factory=list)
+    reference_bands: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class WorkspaceContext(BaseModel):
@@ -394,6 +400,19 @@ def build_workspace_context(
                 template=template,
                 diagram_data=_build_diagram_data(display_mode, app_spec),
                 region_actions=_get_admin_region_actions(workspace.name, region.name),
+                reference_lines=[
+                    {"label": rl.label, "value": rl.value, "style": rl.style}
+                    for rl in (getattr(region, "reference_lines", None) or [])
+                ],
+                reference_bands=[
+                    {
+                        "label": rb.label,
+                        "from": rb.from_value,
+                        "to": rb.to_value,
+                        "color": rb.color,
+                    }
+                    for rb in (getattr(region, "reference_bands", None) or [])
+                ],
             )
         )
 

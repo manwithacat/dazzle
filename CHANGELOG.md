@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.27] - 2026-04-25
+
+Patch bump. Closes #883 (lines + bands portion) — `line_chart` and `area_chart` regions can now overlay reference lines (horizontal markers at a fixed y-value) and shaded reference bands (target zones, RAG ranges) on top of the data series. Pure SVG, server-rendered, no extra DB queries — turns a "raw values" trajectory into an "are we on target?" chart in one frame.
+
+### Added
+- **DSL**: new `reference_lines:` and `reference_bands:` blocks on `line_chart` / `area_chart` regions.
+  ```dsl
+  ao3_trajectory:
+    source: MarkingResult
+    aggregate:
+      avg: avg(scaled_mark)
+    display: line_chart
+    group_by: bucket(assessed_at, week)
+    reference_lines:
+      - label: "Target (6)", value: 56, style: dashed
+      - label: "Boundary 5/6", value: 50, style: dotted
+    reference_bands:
+      - label: "Target band", from: 50, to: 56, color: target
+  ```
+  Entries are comma-separated single lines (same shape as `demo` records) so they parse cleanly under the INDENT/DEDENT lexer. `style:` ∈ {`solid` (default), `dashed`, `dotted`}; `color:` ∈ {`target` (default), `positive`, `warning`, `destructive`, `muted`} maps to design tokens at render time.
+- **IR**: `dazzle.core.ir.workspaces.ReferenceLine` (label, value, style) and `ReferenceBand` (label, from_value, to_value, color) — both frozen Pydantic models. `ReferenceBand` aliases `from`/`to` ↔ `from_value`/`to_value` since `from` is a Python keyword. Exported from `dazzle.core.ir`.
+- **Lexer**: new `TokenType.REFERENCE_LINES` / `TokenType.REFERENCE_BANDS` keywords.
+- **Renderer**: `RegionContext` carries overlays as plain dicts (DSL-facing keys, including `from`/`to`) so Jinja reads them with `band['from']` / `band.to` directly.
+- **Templates**: `line_chart.html` and `area_chart.html` render `<rect>` (bands, fill-opacity 0.12, token-driven colour) and `<line>` (reference lines, stroke-dasharray per `style:`) before the data series so the polyline/stack sits on top. Y-axis scale auto-expands when an overlay sits above the data peak so target lines stay inside the plot area. Each overlay carries an SVG `<title>` for hover/screen-reader text.
+
+### Tests
+- **`test_workspace_reference_overlays.py`** — 24 cases across 4 layers:
+  - parser / lines (6): minimal; multiple with mixed styles; decimal value; invalid `style` raises; unknown key raises; missing `value` raises.
+  - parser / bands (5): minimal; multiple colours; invalid `color` raises; missing `to` raises; unknown key raises.
+  - parser / coexistence (2): both blocks on one region; both empty by default.
+  - IR (5): defaults + frozen for both models; round-trip `from`/`to` aliases via `model_dump(by_alias=True)`.
+  - renderer wiring (2): `RegionContext.reference_lines` flattens to dicts; `RegionContext.reference_bands` keys use DSL-facing `from`/`to` (not Python `from_value`/`to_value`).
+  - template (4): dashed-style maps to `stroke-dasharray="4,3"`; band rect carries the token primary fill + tooltip; reference line above data peak expands the y-axis; absent overlays leave only the baseline grid line.
+
+### Agent Guidance
+- **`overlay_series:` deferred to a follow-up.** The original issue (#883) also asked for additional data series on the same axes (e.g. cohort-average line on top of a per-pupil trajectory). That requires a second `Repository.aggregate` call per series and a richer template loop — out of scope for this patch. The reference-line/band primitive lands first because it's the highest-value piece (target comparison) and ships without runtime changes. #883 stays open scoped to overlay_series only.
+- **`from` and `to` are accepted as keys here** even though they're reserved DSL keywords. The parser bypasses the strict identifier guard for `_parse_reference_entry` because `allowed_keys` already constrains what's legal — adding them to `KEYWORD_AS_IDENTIFIER_TYPES` globally would have wider parser implications.
+- **Y-axis auto-expansion is overlay-aware.** When a reference line/band sits above the data peak the line_chart `max_val` is widened to include it. If you add a third overlay primitive, it must also feed `_max_candidates` so the data series stays inside the plot area.
+
 ## [0.61.26] - 2026-04-25
 
 Patch bump. Closes #885 — three runtime call sites still imported `parse_modules` from the removed `dazzle.core.dsl_parser` module (split into `dazzle.core.parser` + `dazzle.core.dsl_parser_impl/` package). Failures only surfaced when downstream users actually ran `dazzle db migrate`, the migrate CLI, or the Temporal worker — silently skipping the test suite. Restores schema-migration capability for v0.61.20+ users.

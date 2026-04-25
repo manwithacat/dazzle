@@ -136,6 +136,8 @@ class TokenType(Enum):
     DISPLAY = "display"
     AGGREGATE = "aggregate"
     DELTA = "delta"  # v0.61.25: Period-over-period delta for summary tiles (#884)
+    REFERENCE_LINES = "reference_lines"  # v0.61.26: Horizontal markers on line/area charts (#883)
+    REFERENCE_BANDS = "reference_bands"  # v0.61.26: Shaded bands on line/area charts (#883)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

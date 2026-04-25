@@ -1062,6 +1062,9 @@ async def _workspace_region_handler(
         date_to=request.query_params.get("date_to", ""),
         # Tree context (#565)
         tree_items=tree_items,
+        # Line/area chart overlays (#883, v0.61.26)
+        reference_lines=getattr(ctx.ctx_region, "reference_lines", []),
+        reference_bands=getattr(ctx.ctx_region, "reference_bands", []),
     )
     return HTMLResponse(content=html)
 

@@ -94,6 +94,52 @@ class BucketRef(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ReferenceLine(BaseModel):
+    """v0.61.26 (#883): horizontal reference line on a line/area chart.
+
+    A flat horizontal marker at a fixed y-value. Used for target lines,
+    grade-boundary lines, threshold markers — anything the data series
+    should be read against.
+
+    Attributes:
+        label: Human-readable label for the line (rendered as a tooltip
+            on the line and as a legend entry).
+        value: Y-axis value where the line is drawn.
+        style: Stroke style — ``solid`` (default) | ``dashed`` | ``dotted``.
+    """
+
+    label: str
+    value: float
+    style: str = Field(default="solid")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ReferenceBand(BaseModel):
+    """v0.61.26 (#883): horizontal shaded band on a line/area chart.
+
+    A filled rectangle spanning a y-axis range. Used for target bands,
+    acceptable-range markers, RAG-style threshold zones.
+
+    Attributes:
+        label: Human-readable label for the band.
+        from_value: Lower y-axis value (alias ``from`` in DSL — Pydantic
+            field name uses ``from_value`` since ``from`` is a Python
+            keyword).
+        to_value: Upper y-axis value.
+        color: Token-driven colour — ``target`` (primary tint, default) |
+            ``positive`` (green) | ``warning`` (amber) | ``destructive``
+            (red) | ``muted`` (gray). Maps to design tokens at render time.
+    """
+
+    label: str
+    from_value: float = Field(alias="from")
+    to_value: float = Field(alias="to")
+    color: str = Field(default="target")
+
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+
 class DeltaSpec(BaseModel):
     """v0.61.25 (#884): period-over-period delta config for summary/metrics tiles.
 
@@ -181,6 +227,10 @@ class WorkspaceRegion(BaseModel):
     # When set, the runtime computes a prior-window aggregate alongside the
     # current one and the metrics template renders an arrow + delta + pct.
     delta: DeltaSpec | None = None
+    # v0.61.26 (#883): Reference lines + shaded bands on line/area charts.
+    # Pure template overlay — no extra DB queries.
+    reference_lines: list[ReferenceLine] = Field(default_factory=list)
+    reference_bands: list[ReferenceBand] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

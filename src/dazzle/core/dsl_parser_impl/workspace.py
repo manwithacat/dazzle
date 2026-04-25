@@ -218,6 +218,169 @@ class WorkspaceParserMixin:
             period_label=period_label,
         )
 
+    _REFERENCE_LINE_VALID_STYLES: frozenset[str] = frozenset(  # noqa: RUF012
+        {"solid", "dashed", "dotted"}
+    )
+    _REFERENCE_BAND_VALID_COLORS: frozenset[str] = frozenset(  # noqa: RUF012
+        {"target", "positive", "warning", "destructive", "muted"}
+    )
+
+    def _parse_reference_lines_block(self) -> list[ir.ReferenceLine]:
+        """Parse a list of reference lines for line/area charts (#883).
+
+        Syntax (one entry per line, comma-separated keys — same shape as
+        ``demo`` records):
+
+            reference_lines:
+              - label: "Target (6)", value: 56, style: dashed
+              - label: "Boundary",   value: 50
+
+        ``style:`` is optional and defaults to ``solid``. Other keys raise
+        a parse error so typos surface at validate time.
+        """
+        lines: list[ir.ReferenceLine] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "reference_lines entries must start with `- ` "
+                    '(e.g. `- label: "Target", value: 56`)',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            entry = self._parse_reference_entry({"label", "value", "style"})
+            if "label" not in entry or "value" not in entry:
+                tok = self.current_token()
+                raise make_parse_error(
+                    "reference_lines entry requires both `label:` and `value:`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            style = entry.get("style", "solid")
+            if style not in self._REFERENCE_LINE_VALID_STYLES:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"reference_lines.style must be one of "
+                    f"{sorted(self._REFERENCE_LINE_VALID_STYLES)}; got {style!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            lines.append(
+                ir.ReferenceLine(
+                    label=str(entry["label"]),
+                    value=float(entry["value"]),
+                    style=str(style),
+                )
+            )
+            self.skip_newlines()
+        return lines
+
+    def _parse_reference_bands_block(self) -> list[ir.ReferenceBand]:
+        """Parse a list of reference bands for line/area charts (#883).
+
+        Syntax (one entry per line, comma-separated keys):
+
+            reference_bands:
+              - label: "Target band", from: 50, to: 56, color: target
+
+        ``color:`` is optional and defaults to ``target``. Both ``from:``
+        and ``to:`` are required. Other keys raise a parse error.
+        """
+        bands: list[ir.ReferenceBand] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "reference_bands entries must start with `- ` "
+                    '(e.g. `- label: "Target", from: 50, to: 56`)',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            entry = self._parse_reference_entry({"label", "from", "to", "color"})
+            if "label" not in entry or "from" not in entry or "to" not in entry:
+                tok = self.current_token()
+                raise make_parse_error(
+                    "reference_bands entry requires `label:`, `from:`, and `to:`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            color = str(entry.get("color", "target"))
+            if color not in self._REFERENCE_BAND_VALID_COLORS:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"reference_bands.color must be one of "
+                    f"{sorted(self._REFERENCE_BAND_VALID_COLORS)}; got {color!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            bands.append(
+                ir.ReferenceBand.model_validate(
+                    {
+                        "label": str(entry["label"]),
+                        "from": float(entry["from"]),
+                        "to": float(entry["to"]),
+                        "color": color,
+                    }
+                )
+            )
+            self.skip_newlines()
+        return bands
+
+    def _parse_reference_entry(self, allowed_keys: set[str]) -> dict[str, str | int | float]:
+        """Parse one comma-separated `key: value` line for reference_lines/bands.
+
+        Stops at NEWLINE / DEDENT / EOF. Raises on unknown keys so authors
+        catch typos at validate time. Accepts reserved keywords (``from``,
+        ``to``) as keys here — the strict identifier guard would reject
+        them, but they're the natural user-facing names and the
+        ``allowed_keys`` set already constrains what's legal.
+        """
+        entry: dict[str, str | int | float] = {}
+        while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            key_tok = self.current_token()
+            key = key_tok.value
+            if key not in allowed_keys:
+                raise make_parse_error(
+                    f"Unknown key {key!r}. Expected one of: {sorted(allowed_keys)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.advance()
+            self.expect(TokenType.COLON)
+            entry[key] = self._parse_reference_value()
+            if self.match(TokenType.COMMA):
+                self.advance()
+            else:
+                break
+        return entry
+
+    def _parse_reference_value(self) -> str | int | float:
+        """Parse a single value token: STRING, NUMBER, or bare identifier/keyword."""
+        if self.match(TokenType.STRING):
+            return str(self.advance().value)
+        if self.match(TokenType.NUMBER):
+            raw = self.advance().value
+            try:
+                return float(raw) if "." in raw else int(raw)
+            except ValueError:
+                return str(raw)
+        return str(self.expect_identifier_or_keyword().value)
+
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """
         Parse workspace declaration.
@@ -514,6 +677,8 @@ class WorkspaceParserMixin:
         progress_stages: list[str] = []
         progress_complete_at: str | None = None
         delta: ir.DeltaSpec | None = None
+        reference_lines: list[ir.ReferenceLine] = []
+        reference_bands: list[ir.ReferenceBand] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -756,6 +921,23 @@ class WorkspaceParserMixin:
                 delta = self._parse_delta_block()
                 self.expect(TokenType.DEDENT)
 
+            # reference_lines / reference_bands — line/area chart overlays (#883)
+            elif self.match(TokenType.REFERENCE_LINES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                reference_lines = self._parse_reference_lines_block()
+                self.expect(TokenType.DEDENT)
+
+            elif self.match(TokenType.REFERENCE_BANDS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                reference_bands = self._parse_reference_bands_block()
+                self.expect(TokenType.DEDENT)
+
             else:
                 break
 
@@ -809,4 +991,6 @@ class WorkspaceParserMixin:
             progress_stages=progress_stages,
             progress_complete_at=progress_complete_at,
             delta=delta,
+            reference_lines=reference_lines,
+            reference_bands=reference_bands,
         )

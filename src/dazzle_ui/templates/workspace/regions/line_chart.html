@@ -14,8 +14,20 @@
 {% call region_card(title) %}
 <div class="dz-line-chart-region">
   {% if bucketed_metrics and bucketed_metrics | length > 1 %}
-    {% set max_val = bucketed_metrics | map(attribute='value') | max %}
+    {# y-axis upper bound includes any reference_lines / reference_bands so
+       overlays drawn above the data peak are still inside the plot area
+       (#883). Bands also widen the floor below 0 if needed. #}
+    {% set data_max = bucketed_metrics | map(attribute='value') | max %}
+    {% set _line_vals = (reference_lines or []) | map(attribute='value') | list %}
+    {% set _band_tops = (reference_bands or []) | map(attribute='to') | list %}
+    {% set _band_bottoms = (reference_bands or []) | map(attribute='from') | list %}
+    {% set _candidates = [data_max] + _line_vals + _band_tops %}
+    {% set max_val = _candidates | max %}
     {% set max_val = max_val if max_val > 0 else 1 %}
+    {% set min_val = (([0] + _band_bottoms) | min) %}
+    {% set min_val = min_val if min_val < 0 else 0 %}
+    {% set value_range = max_val - min_val %}
+    {% set value_range = value_range if value_range > 0 else 1 %}
     {% set count = bucketed_metrics | length %}
     {# SVG 400×120, 8/8/28/8 padding (t/r/b/l). Bottom band reserved for
        x-axis tick labels. #}
@@ -37,12 +49,50 @@
             x2="{{ pl + plot_w }}" y2="{{ pt + plot_h }}"
             stroke="hsl(var(--border))" stroke-width="1" />
 
+      {# Reference bands — render before the data so the line/area sit on top.
+         Token-driven colour (#883). Use a fill-opacity that doesn't drown the
+         data series. #}
+      {% set _band_colours = {
+        'target': 'hsl(var(--primary))',
+        'positive': 'hsl(145, 55%, 45%)',
+        'warning': 'hsl(40, 90%, 55%)',
+        'destructive': 'hsl(var(--destructive))',
+        'muted': 'hsl(var(--muted-foreground))',
+      } %}
+      {% for band in (reference_bands or []) %}
+        {% set band_top_y = pt + plot_h - (((band.to - min_val) / value_range) * plot_h) %}
+        {% set band_bot_y = pt + plot_h - (((band['from'] - min_val) / value_range) * plot_h) %}
+        {% set band_h = band_bot_y - band_top_y %}
+        {% if band_h > 0 %}
+          {% set band_colour = _band_colours.get(band.color, _band_colours['target']) %}
+          <rect x="{{ pl }}" y="{{ band_top_y | round(2) }}"
+                width="{{ plot_w }}" height="{{ band_h | round(2) }}"
+                fill="{{ band_colour }}" fill-opacity="0.12" stroke="none">
+            <title>{{ band.label }}: {{ band['from'] }}–{{ band.to }}</title>
+          </rect>
+        {% endif %}
+      {% endfor %}
+
+      {# Reference lines — render before the data so circles + line sit above.
+         style maps to stroke-dasharray (#883). #}
+      {% set _line_dasharray = {'solid': '', 'dashed': '4,3', 'dotted': '1,3'} %}
+      {% for ref in (reference_lines or []) %}
+        {% set ref_y = pt + plot_h - (((ref.value - min_val) / value_range) * plot_h) %}
+        <line x1="{{ pl }}" y1="{{ ref_y | round(2) }}"
+              x2="{{ pl + plot_w }}" y2="{{ ref_y | round(2) }}"
+              stroke="hsl(var(--muted-foreground))"
+              stroke-width="1"
+              stroke-dasharray="{{ _line_dasharray.get(ref.style, '') }}">
+          <title>{{ ref.label }}: {{ ref.value }}</title>
+        </line>
+      {% endfor %}
+
       {# Build the polyline points + area polygon. #}
       {% set step = plot_w / (count - 1) %}
       {% set line_points = [] %}
       {% for b in bucketed_metrics %}
         {% set x = pl + (loop.index0 * step) %}
-        {% set y = pt + plot_h - ((b.value / max_val) * plot_h) %}
+        {% set y = pt + plot_h - (((b.value - min_val) / value_range) * plot_h) %}
         {% set _ = line_points.append(x | round(2) ~ ',' ~ y | round(2)) %}
       {% endfor %}
 
@@ -68,7 +118,7 @@
       {# Data points + accessible <title> tooltips. #}
       {% for b in bucketed_metrics %}
         {% set x = pl + (loop.index0 * step) %}
-        {% set y = pt + plot_h - ((b.value / max_val) * plot_h) %}
+        {% set y = pt + plot_h - (((b.value - min_val) / value_range) * plot_h) %}
         <circle cx="{{ x | round(2) }}" cy="{{ y | round(2) }}" r="2.5"
                 fill="hsl(var(--primary))"
                 stroke="hsl(var(--card))"

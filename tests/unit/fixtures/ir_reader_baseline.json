@@ -139,7 +139,6 @@
   "module.ModuleFragment.hless_pragma",
   "money.MoneyWithScale.scale_override",
   "notifications.NotificationSpec.preference",
-  "notifications.NotificationTrigger.to_value",
   "process.HumanTaskOutcome.sets",
   "process.HumanTaskSpec.escalation_timeout_seconds",
   "rhythm.Gap.rhythm",

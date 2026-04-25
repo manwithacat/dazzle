@@ -767,6 +767,8 @@ from .workspaces import (
     DisplayMode,
     NavGroupSpec,
     NavItemIR,
+    ReferenceBand,
+    ReferenceLine,
     WorkspaceAccessLevel,
     WorkspaceAccessSpec,
     WorkspaceRegion,
@@ -861,6 +863,8 @@ __all__ = [
     "WorkspaceAccessLevel",
     "WorkspaceAccessSpec",
     "DeltaSpec",
+    "ReferenceBand",
+    "ReferenceLine",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences
