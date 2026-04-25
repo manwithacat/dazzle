@@ -681,6 +681,9 @@ class WorkspaceParserMixin:
         reference_bands: list[ir.ReferenceBand] = []
         bin_count: int | None = None  # None = "auto" (Sturges) when display=histogram
         show_outliers: bool = True  # box plot toggle (#881)
+        bullet_label: str | None = None  # bullet chart label column (#880)
+        bullet_actual: str | None = None  # bullet chart actual-value column (#880)
+        bullet_target: str | None = None  # bullet chart target column (#880)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -940,6 +943,27 @@ class WorkspaceParserMixin:
                 reference_bands = self._parse_reference_bands_block()
                 self.expect(TokenType.DEDENT)
 
+            # bullet_label / bullet_actual / bullet_target — bullet chart
+            # row column references (#880). Each names a column on the source
+            # entity that the bullet template reads off every item.
+            elif self.match(TokenType.BULLET_LABEL):
+                self.advance()
+                self.expect(TokenType.COLON)
+                bullet_label = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            elif self.match(TokenType.BULLET_ACTUAL):
+                self.advance()
+                self.expect(TokenType.COLON)
+                bullet_actual = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            elif self.match(TokenType.BULLET_TARGET):
+                self.advance()
+                self.expect(TokenType.COLON)
+                bullet_target = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # show_outliers: true|false  — box plot outlier toggle (#881)
             elif self.match(TokenType.SHOW_OUTLIERS):
                 self.advance()
@@ -1043,4 +1067,7 @@ class WorkspaceParserMixin:
             reference_bands=reference_bands,
             bin_count=bin_count,
             show_outliers=show_outliers,
+            bullet_label=bullet_label,
+            bullet_actual=bullet_actual,
+            bullet_target=bullet_target,
         )

@@ -74,6 +74,7 @@ class DisplayMode(StrEnum):
     HISTOGRAM = "histogram"  # v0.61.27 (#882): continuous-variable distribution
     RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
     BOX_PLOT = "box_plot"  # v0.61.29 (#881): per-group quartile spread
+    BULLET = "bullet"  # v0.61.30 (#880): actual-vs-target rows with bands
 
 
 class BucketRef(BaseModel):
@@ -244,6 +245,15 @@ class WorkspaceRegion(BaseModel):
     # Tukey fences [Q1 - 1.5*IQR, Q3 + 1.5*IQR]). Default True; set False
     # for a clean compact view that omits the dots.
     show_outliers: bool = True
+    # v0.61.30 (#880): Bullet chart — column names on each item that
+    # provide the row label, the actual bar length, and the target tick.
+    # The bullet template renders one row per item, with `reference_bands`
+    # (#883) drawn behind as comparative qualitative zones. Pre-computed
+    # MVP — extension to per-group_by aggregates deferred (would need
+    # multi-measure support in `_compute_bucketed_aggregates`).
+    bullet_label: str | None = None
+    bullet_actual: str | None = None
+    bullet_target: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

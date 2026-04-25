@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.31] - 2026-04-25
+
+Patch bump. Closes #880 (pre-computed MVP) — new `display: bullet` mode renders Stephen Few bullet rows: one row per item, each with an actual-value bar, an optional target tick, and `reference_bands` (#883) drawn behind as comparative qualitative zones (red/amber/green or any colour token). Compact actual-vs-target read for AO-style dashboards.
+
+### Added
+- **DSL**: new `display: bullet` mode + `bullet_label:` / `bullet_actual:` / `bullet_target:` column refs on workspace regions. Each names a column on the source entity that the bullet template reads off every row.
+  ```dsl
+  ao_bullets:
+    source: AOSummary
+    display: bullet
+    bullet_label: name
+    bullet_actual: actual
+    bullet_target: target
+    reference_bands:
+      - label: "On target", from: 60, to: 100, color: positive
+      - label: "Below", from: 0, to: 40, color: destructive
+  ```
+- **IR**: `DisplayMode.BULLET` enum entry + `WorkspaceRegion.bullet_label / bullet_actual / bullet_target: str | None`.
+- **Lexer**: new `TokenType.BULLET_LABEL` / `BULLET_ACTUAL` / `BULLET_TARGET` keywords.
+- **Renderer**: `RegionContext` carries the three column refs through to the template-facing context.
+- **Runtime**: when `display=BULLET`, builds `bullet_rows` from items by reading the three named columns, computes `bullet_max_value` as the max across actual + target + `reference_bands` extents so out-of-range values still fit on the shared scale.
+- **Template**: new `bullet.html` — one flex row per item with the label (left), a 100%-wide track (middle) carrying absolutely-positioned reference-band zones + the actual bar + the target tick, and the formatted `actual / target` value (right). Token-driven band colours; primary tint for the actual bar; foreground stroke for the target tick.
+
+### Tests
+- **`test_workspace_bullet.py`** — 10 cases across 3 layers:
+  - parser (3): minimal bullet; bullet + reference_bands; `bullet_target` optional.
+  - template (7): one row per item; target tick suppressed when `target=None`; reference bands render zones (4 rows × 2 bands = 8 zones); actual bar width is proportional to `bullet_max_value`; empty rows show empty_message; zero max falls back to empty state cleanly; `DISPLAY_TEMPLATE_MAP['BULLET']` routes correctly.
+
+### Agent Guidance
+- **Pre-computed MVP — no per-group_by aggregation.** The original issue (#880) sketched DSL with `group_by: ao` + `aggregate: { actual: avg(...), target: avg(...) }`. This patch ships the visual primitive (the actual user value — Stephen Few rendering with bands) by reading three columns off each item directly. Per-group aggregation requires extending `_compute_bucketed_aggregates` to handle multiple metrics (currently does `next(iter(aggregates.items()))` and drops the rest); also requires the aggregate-expression language to support `avg(<column>)` as well as `count(<Entity>)` (currently only the latter resolves through `_compute_aggregate_metrics`'s entity-name lookup). Tracked as separate follow-up scope.
+- **Use a pre-aggregated source entity** (e.g. `AOSummary`) when authoring bullet regions today. Materialise per-AO averages via a view, or compute them at insert time. AegisMark-style cohorts produce ~4–6 rows so a pre-aggregated entity is cheap.
+- **Reference bands map to the same shared scale** as the actual bar and target tick. The runtime widens `bullet_max_value` to include the largest band's `to:` value so an "On target: 60-100" zone fits even if no row has actual=100.
+
 ## [0.61.30] - 2026-04-25
 
 Patch bump. Closes #881 — new `display: box_plot` mode renders per-group quartile spread (Q1, median, Q3, IQR) with Tukey 1.5×IQR whiskers and outlier dots. Pure SVG, server-rendered, in-process stats over the already-fetched `items` — no extra DB query, no NumPy. Same in-process pattern as the histogram (#882) and the same `heatmap_value` legacy field for the value column.

@@ -140,6 +140,9 @@ class TokenType(Enum):
     REFERENCE_BANDS = "reference_bands"  # v0.61.26: Shaded bands on line/area charts (#883)
     BINS = "bins"  # v0.61.27: Histogram bin count — int or "auto" (#882)
     SHOW_OUTLIERS = "show_outliers"  # v0.61.29: Box plot outlier toggle (#881)
+    BULLET_LABEL = "bullet_label"  # v0.61.30: Bullet chart row label column (#880)
+    BULLET_ACTUAL = "bullet_actual"  # v0.61.30: Bullet chart bar value column (#880)
+    BULLET_TARGET = "bullet_target"  # v0.61.30: Bullet chart target tick column (#880)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

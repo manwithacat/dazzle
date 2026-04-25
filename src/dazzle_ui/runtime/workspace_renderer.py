@@ -103,6 +103,10 @@ class RegionContext(BaseModel):
     # so Jinja can read it without import dance.
     reference_lines: list[dict[str, Any]] = Field(default_factory=list)
     reference_bands: list[dict[str, Any]] = Field(default_factory=list)
+    # v0.61.30 (#880): Bullet chart row column references — read off each item.
+    bullet_label: str = ""
+    bullet_actual: str = ""
+    bullet_target: str = ""
 
 
 class WorkspaceContext(BaseModel):
@@ -211,6 +215,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "HISTOGRAM": "workspace/regions/histogram.html",
     "RADAR": "workspace/regions/radar.html",
     "BOX_PLOT": "workspace/regions/box_plot.html",
+    "BULLET": "workspace/regions/bullet.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -416,6 +421,9 @@ def build_workspace_context(
                     }
                     for rb in (getattr(region, "reference_bands", None) or [])
                 ],
+                bullet_label=getattr(region, "bullet_label", None) or "",
+                bullet_actual=getattr(region, "bullet_actual", None) or "",
+                bullet_target=getattr(region, "bullet_target", None) or "",
             )
         )
 

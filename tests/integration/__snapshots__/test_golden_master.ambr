@@ -1400,6 +1400,9 @@
             'aggregates': dict({
             }),
             'bin_count': None,
+            'bullet_actual': None,
+            'bullet_label': None,
+            'bullet_target': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
@@ -1436,6 +1439,9 @@
             'aggregates': dict({
             }),
             'bin_count': None,
+            'bullet_actual': None,
+            'bullet_label': None,
+            'bullet_target': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
@@ -1472,6 +1478,9 @@
             'aggregates': dict({
             }),
             'bin_count': None,
+            'bullet_actual': None,
+            'bullet_label': None,
+            'bullet_target': None,
             'date_field': None,
             'date_range': False,
             'delta': None,

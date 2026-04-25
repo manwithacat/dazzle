@@ -862,6 +862,51 @@ async def _workspace_region_handler(
                 items, _value_field, _bp_group_by, _show_outliers
             )
 
+    # Bullet chart (#880, v0.61.30): one row per item, reading three named
+    # columns (label, actual, target) directly off the item. Pre-computed
+    # MVP — per-group_by aggregation deferred (would need multi-measure
+    # support in `_compute_bucketed_aggregates`). Reference_bands (#883)
+    # render as comparative qualitative zones behind each bar.
+    bullet_rows: list[dict[str, Any]] = []
+    bullet_max_value: float = 0.0
+    if ctx.ctx_region.display == "BULLET":
+        _label_field = getattr(ctx.ir_region, "bullet_label", None)
+        _actual_field = getattr(ctx.ir_region, "bullet_actual", None)
+        _target_field = getattr(ctx.ir_region, "bullet_target", None)
+        if _label_field and _actual_field:
+            for item in items:
+                _actual_raw = item.get(_actual_field)
+                if _actual_raw is None:
+                    continue
+                try:
+                    _actual = float(_actual_raw)
+                except (TypeError, ValueError):
+                    continue
+                _target: float | None = None
+                if _target_field:
+                    _target_raw = item.get(_target_field)
+                    if _target_raw is not None:
+                        try:
+                            _target = float(_target_raw)
+                        except (TypeError, ValueError):
+                            _target = None
+                bullet_rows.append(
+                    {
+                        "label": str(item.get(_label_field, "") or ""),
+                        "actual": _actual,
+                        "target": _target,
+                    }
+                )
+            # Shared scale for all rows — max of actual values, target ticks,
+            # and the band extents so out-of-range values still fit.
+            _scale_candidates: list[float] = [r["actual"] for r in bullet_rows]
+            _scale_candidates.extend(r["target"] for r in bullet_rows if r["target"] is not None)
+            _scale_candidates.extend(
+                getattr(b, "to_value", 0.0)
+                for b in (getattr(ctx.ir_region, "reference_bands", None) or [])
+            )
+            bullet_max_value = max(_scale_candidates) if _scale_candidates else 0.0
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1094,6 +1139,9 @@ async def _workspace_region_handler(
         histogram_bins=histogram_bins,
         # Box plot (#881, v0.61.29) — per-group quartile stats from `items`
         box_plot_stats=box_plot_stats,
+        # Bullet chart (#880, v0.61.30) — per-row {label, actual, target} from `items`
+        bullet_rows=bullet_rows,
+        bullet_max_value=bullet_max_value,
     )
     return HTMLResponse(content=html)
 
