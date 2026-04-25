@@ -69,6 +69,31 @@ document.addEventListener("alpine:init", () => {
       window.addEventListener("pointermove", this._onPointerMove);
       window.addEventListener("pointerup", this._onPointerUp);
 
+      // Re-hydrate from the layout JSON island after any HTMX morph that
+      // replaces the workspace content (#875). alpine:init only fires
+      // once per component instance, but idiomorph keeps the existing
+      // x-data="dzDashboardBuilder()" element across same-route nav
+      // re-clicks — so init() doesn't re-run, and cards/catalog stay
+      // stale while the data island below has been replaced with fresh
+      // JSON. Listen for htmx:afterSwap globally and re-read the island
+      // when it lands inside the swap target.
+      this._onHtmxAfterSwap = (e) => {
+        const target = e && e.detail && e.detail.target;
+        if (!target) return;
+        // Only re-hydrate when the swap target contains our data island
+        // — avoids work on every region card swap.
+        const island = target.querySelector
+          ? target.querySelector("#dz-workspace-layout")
+          : null;
+        if (!island) return;
+        this._hydrateFromLayout();
+      };
+      document.body.addEventListener("htmx:afterSwap", this._onHtmxAfterSwap);
+
+      this._hydrateFromLayout();
+    },
+
+    _hydrateFromLayout() {
       const el = document.getElementById("dz-workspace-layout");
       if (!el) return;
       try {
@@ -79,6 +104,16 @@ document.addEventListener("alpine:init", () => {
         this.foldCount = Number.isInteger(data.fold_count)
           ? data.fold_count
           : 0;
+        // Reset transient UI state so the multi-state saveState labels
+        // don't stack visibly after a re-entry morph (#875). Any pending
+        // saved-banner timer is cancelled because the workspace just
+        // re-hydrated from server truth.
+        this.saveState = "clean";
+        this.undoStack = [];
+        if (this._savedTimer) {
+          clearTimeout(this._savedTimer);
+          this._savedTimer = null;
+        }
       } catch {
         // Leave listeners in place — the user can still drag / keyboard-
         // edit a stale layout even if the JSON payload was malformed.
@@ -97,6 +132,13 @@ document.addEventListener("alpine:init", () => {
       if (this._onPointerUp) {
         window.removeEventListener("pointerup", this._onPointerUp);
         this._onPointerUp = null;
+      }
+      if (this._onHtmxAfterSwap) {
+        document.body.removeEventListener(
+          "htmx:afterSwap",
+          this._onHtmxAfterSwap,
+        );
+        this._onHtmxAfterSwap = null;
       }
     },
 

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.20] - 2026-04-25
+
+Patch bump. Closes #875 — clicking the active workspace nav link triggered an HTMX morph that landed `dzDashboardBuilder` in degraded state: empty card grid, "No widgets available" picker, and all five `saveState` labels rendered simultaneously. `alpine:init` only fires once per component instance, but idiomorph keeps the existing `x-data` element across same-route nav re-clicks — so `init()` doesn't re-run, and `cards` / `catalog` / `workspaceName` / `foldCount` stay stale while the data island below them has been replaced with fresh JSON. Compounded #866's cold-load fix by exposing the re-entry path.
+
+### Fixed
+- **`src/dazzle_ui/runtime/static/js/dashboard-builder.js` — `init` + `_hydrateFromLayout` + `destroy`** — extracted the JSON-island read into `_hydrateFromLayout()` and called it from both `init()` and a new `htmx:afterSwap` listener that fires when the swap target contains the `#dz-workspace-layout` data island. The listener filter avoids re-hydration on every region-card swap. Reset `saveState = "clean"`, clear `undoStack`, cancel any pending `_savedTimer` on re-hydrate so the multi-state labels don't stack visibly. The listener is torn down in `destroy()` to match the `#797`/`#795` pattern (no leaks across navigations).
+
+### Tests
+- **`test_dashboard_builder_triggers.py::TestRehydrateOnHtmxAfterSwap`** — six source-grep cases pinning: helper extracted, init calls helper, htmx:afterSwap listener installed, swap filter targets the data island, listener torn down in destroy, saveState reset to clean inside the helper.
+
+### Agent Guidance
+- **Alpine `init()` does NOT re-run on idiomorph re-attach.** When a same-route nav click triggers an HTMX morph, the existing `x-data` element is preserved — Alpine never tears down or re-creates the component. Any state derived from a `<script>` data island elsewhere in the swap target needs an `htmx:afterSwap` listener to re-hydrate.
+- **Filter the listener narrowly.** `htmx:afterSwap` fires for every region card swap inside the workspace; check the swap target contains your specific data island (e.g. `#dz-workspace-layout`) before re-hydrating, or you'll thrash on every region load.
+- **Reset transient UI state on re-hydration.** `saveState`, `undoStack`, pending timers all assume continuity. When the server has just delivered a fresh layout, treat it as a clean slate and explicitly reset — don't carry forward.
+
 ## [0.61.19] - 2026-04-25
 
 Patch bump. Closes #874 — entity-list pages rendered duplicate sidebar items: every entity that appeared in a workspace's `nav_group` ALSO appeared as a flat auto-discovered item, producing the "Recommendations / Recommendations" stutter Tom Davies saw on /app/teachingrecommendation. Workspace pages already filtered via `_build_visible_nav` (#661); the entity-list path through `_inject_auth_context` had no equivalent dedup.

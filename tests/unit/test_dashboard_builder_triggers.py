@@ -70,3 +70,56 @@ class TestFoldCountHydration:
         source = _load()
         # The init reads fold_count from the layout data island.
         assert "data.fold_count" in source
+
+
+class TestRehydrateOnHtmxAfterSwap:
+    """#875 — re-clicking the active workspace nav link triggers an
+    HTMX morph that doesn't re-run init(). The component must listen for
+    htmx:afterSwap and re-hydrate cards/catalog/state from the data
+    island when the swap target contains it.
+    """
+
+    def test_helper_extracted(self) -> None:
+        source = _load()
+        assert "_hydrateFromLayout()" in source, (
+            "init/re-entry path expected to share a _hydrateFromLayout helper"
+        )
+
+    def test_init_calls_hydrate(self) -> None:
+        source = _load()
+        # init() should invoke the helper rather than inlining the JSON read.
+        assert "this._hydrateFromLayout();" in source
+
+    def test_listens_for_htmx_after_swap(self) -> None:
+        source = _load()
+        assert 'addEventListener("htmx:afterSwap"' in source, (
+            "component must listen for htmx:afterSwap to detect re-entry "
+            "morphs of the workspace content"
+        )
+
+    def test_filters_swap_to_layout_island(self) -> None:
+        source = _load()
+        # Only re-hydrate when the swap target actually contains our island
+        # — otherwise every region card swap would trigger a full reload.
+        assert '"#dz-workspace-layout"' in source
+
+    def test_destroy_removes_listener(self) -> None:
+        source = _load()
+        # The htmx:afterSwap listener must be torn down on destroy() to
+        # avoid leaking across navigations (#797 / #795 pattern).
+        assert 'removeEventListener(\n          "htmx:afterSwap"' in source or (
+            'removeEventListener("htmx:afterSwap"' in source
+        )
+
+    def test_resets_save_state_on_rehydrate(self) -> None:
+        source = _load()
+        # The "all five state labels stack vertically" symptom = saveState
+        # somewhere other than 'clean' on re-entry. Reset to clean when
+        # the data island is re-read.
+        # Find the body of _hydrateFromLayout: substring between its
+        # signature and the next bare-method definition.
+        idx = source.find("_hydrateFromLayout() {")
+        assert idx >= 0, "method definition missing"
+        # Bound the search to the helper body (next 1500 chars cover it).
+        body = source[idx : idx + 1500]
+        assert 'this.saveState = "clean";' in body
