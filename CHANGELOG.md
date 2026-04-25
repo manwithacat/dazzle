@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.38] - 2026-04-26
+
+Patch bump. Closes #886 — three runtime call sites passed the cwd Path as the second arg to `build_appspec` instead of the module name. Symptom: every `dazzle db revision`, `dazzle db upgrade`, and process-worker startup raised `LinkError: Root module '/abs/path/to/project' not found. Available modules: ['myapp.core', 'stories']`. Knock-on from #885 — once that fixed the import, this surfaced.
+
+### Fixed
+- **`src/dazzle_back/alembic/env.py`** — `_load_target_metadata()` now passes `manifest.project_root` (the module name string) instead of `str(project_root)` (the cwd Path). Restores `dazzle db revision -m`, `dazzle db upgrade`, autogenerate.
+- **`src/dazzle/cli/migrate.py`** — `deploy_command()` DSL validation step. Same fix.
+- **`src/dazzle/process/worker.py`** — Temporal worker startup. Same fix.
+
+### Tests
+- **`test_parse_modules_imports.py`** extended with `test_build_appspec_passes_module_name_not_filesystem_path` — AST-walks each runtime caller, finds every `build_appspec(modules, <expr>)` call, asserts the second arg isn't `str(project_root)` / `str(Path.cwd())` / `str(cwd)`. Catches the cwd-Path regression at unit-test time. 7 cases now pin the import + call shape.
+
+### Agent Guidance
+- **`ProjectManifest.project_root` is a misleading field name** — despite the name, it holds the module string from `[project] root` in `dazzle.toml` (e.g. `"myapp.core"`), NOT the filesystem path. The cwd Path is also called `project_root` in many call sites. When passing to anything that expects a module name, use `manifest.project_root`. The field could be renamed `root_module_name` for clarity in a future patch — out of scope here.
+- **The two-fix sequence (#885 → #886) is a class of bug**: an upstream module rename (`dsl_parser` → `parser`) silently masked a downstream API contract violation (passing wrong arg type) because the import error fired first. When fixing import errors, also audit the call sites for shape correctness — they may have been broken longer than the import.
+
 ## [0.61.37] - 2026-04-26
 
 Patch bump. Phase A continued — adds the second and third app-shell themes (`paper` and `stripe`) and applies them to `contact_manager` and `support_tickets` respectively. Three example apps now demonstrate distinct visual identities while sharing the same DSL + templates.

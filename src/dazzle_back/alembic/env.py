@@ -59,7 +59,13 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
             dsl_files = discover_dsl_files(project_root, manifest)
             if dsl_files:
                 modules = parse_modules(dsl_files)
-                appspec = build_appspec(modules, str(project_root))
+                # ``build_appspec`` wants the module name (e.g.
+                # "aegismark.core" from `[project] root` in dazzle.toml),
+                # NOT the filesystem path. ProjectManifest.project_root
+                # is misleadingly named — it holds the module string,
+                # not a Path. Passing the cwd here raises LinkError on
+                # every db migrate / revision (#886).
+                appspec = build_appspec(modules, manifest.project_root)
                 from dazzle_back.converters.entity_converter import convert_entities
 
                 entities = convert_entities(appspec.domain.entities)

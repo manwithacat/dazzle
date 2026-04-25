@@ -79,7 +79,9 @@ async def main() -> None:
     logger.info("Found %s DSL files", len(dsl_files))
 
     modules = parse_modules(dsl_files)
-    app_spec = build_appspec(modules, str(project_root))
+    # build_appspec wants the module name from manifest (e.g.
+    # "myapp.core"), NOT the filesystem path — see #886.
+    app_spec = build_appspec(modules, manifest.project_root)
 
     # Get process specs
     processes = app_spec.processes if hasattr(app_spec, "processes") else []

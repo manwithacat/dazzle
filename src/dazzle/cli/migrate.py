@@ -241,7 +241,9 @@ def deploy_command(
     console.print("Validating DSL...")
     try:
         modules = parse_modules(dsl_files)
-        build_appspec(modules, str(project_root))
+        # build_appspec wants the module name (e.g. "myapp.core") not
+        # the filesystem path — see #886.
+        build_appspec(modules, manifest.project_root)
     except Exception as e:
         console.print(f"[red]DSL validation failed: {e}[/red]")
         raise typer.Exit(1)
