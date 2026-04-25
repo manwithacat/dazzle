@@ -168,6 +168,63 @@ workspace teacher_workspace "Teacher":
 """
 
 
+class TestDedupeNavItemsAgainstGroups:
+    """Flat nav_items must not duplicate nav_group children on entity-list
+    pages — that produces the "Recommendations / Recommendations" stutter
+    Tom Davies saw on /app/teachingrecommendation (#874)."""
+
+    def test_dedupe_drops_overlapping_route(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle_ui.runtime.page_routes import _dedupe_nav_items_against_groups
+
+        nav_items = [
+            SimpleNamespace(route="/app/workspaces/teacher", label="Teacher"),
+            SimpleNamespace(route="/app/recommendation", label="Recommendations"),
+        ]
+        nav_groups = [
+            {
+                "label": "Insights",
+                "children": [
+                    {"route": "/app/recommendation", "label": "Recommendations"},
+                ],
+            }
+        ]
+        result = _dedupe_nav_items_against_groups(nav_items, nav_groups)
+        routes = [item.route for item in result]
+        assert "/app/recommendation" not in routes
+        assert "/app/workspaces/teacher" in routes
+
+    def test_dedupe_no_overlap_returns_unchanged(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle_ui.runtime.page_routes import _dedupe_nav_items_against_groups
+
+        nav_items = [
+            SimpleNamespace(route="/app/workspaces/teacher", label="Teacher"),
+            SimpleNamespace(route="/app/audit-log", label="Audit Log"),
+        ]
+        nav_groups = [
+            {
+                "label": "Insights",
+                "children": [
+                    {"route": "/app/recommendation", "label": "Recommendations"},
+                ],
+            }
+        ]
+        result = _dedupe_nav_items_against_groups(nav_items, nav_groups)
+        assert len(result) == len(nav_items)
+
+    def test_dedupe_empty_groups_returns_unchanged(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle_ui.runtime.page_routes import _dedupe_nav_items_against_groups
+
+        nav_items = [SimpleNamespace(route="/app/x", label="X")]
+        result = _dedupe_nav_items_against_groups(nav_items, [])
+        assert result is nav_items or len(result) == 1
+
+
 class TestNavGroupsSuppressAutoDiscovery:
     """When a workspace declares any nav_group, ungrouped region sources
     must NOT auto-populate the entity nav (#873)."""

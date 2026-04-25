@@ -538,8 +538,42 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
                 prc.ctx.nav_items = _filter_nav_by_entity_access(
                     prc.ctx.nav_items, prc.deps, prc.auth_ctx
                 )
+
+            # Deduplicate flat nav_items against nav_groups children (#874).
+            # Workspace pages already filter via _build_visible_nav, but
+            # entity-list pages render ctx.nav_items + ctx.nav_groups raw.
+            # Drop any flat item whose route also appears as a nav_group
+            # child so users don't see "Recommendations" twice (once flat,
+            # once under "Insights").
+            if prc.ctx.nav_items and prc.ctx.nav_groups:
+                prc.ctx.nav_items = _dedupe_nav_items_against_groups(
+                    prc.ctx.nav_items, prc.ctx.nav_groups
+                )
     except Exception:
         logger.debug("Failed to resolve auth context for page", exc_info=True)
+
+
+def _dedupe_nav_items_against_groups(
+    nav_items: list[Any], nav_groups: list[dict[str, Any]]
+) -> list[Any]:
+    """Drop flat nav items whose route also appears as a nav_group child.
+
+    Entity-list pages render ``ctx.nav_items`` and ``ctx.nav_groups``
+    side-by-side (#863). When the same route exists in both — e.g. an
+    entity that's auto-discovered as a flat item AND placed in a
+    nav_group — users see it twice. Workspace pages already do this
+    filter via ``_build_visible_nav``; this helper is the entity-page
+    parallel (#874).
+    """
+    grouped_routes = {
+        child.get("route")
+        for group in nav_groups
+        for child in group.get("children", [])
+        if child.get("route")
+    }
+    if not grouped_routes:
+        return nav_items
+    return [item for item in nav_items if getattr(item, "route", None) not in grouped_routes]
 
 
 def _check_surface_access(prc: _PageRequestContext) -> Response | None:

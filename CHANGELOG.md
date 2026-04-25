@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.19] - 2026-04-25
+
+Patch bump. Closes #874 — entity-list pages rendered duplicate sidebar items: every entity that appeared in a workspace's `nav_group` ALSO appeared as a flat auto-discovered item, producing the "Recommendations / Recommendations" stutter Tom Davies saw on /app/teachingrecommendation. Workspace pages already filtered via `_build_visible_nav` (#661); the entity-list path through `_inject_auth_context` had no equivalent dedup.
+
+### Fixed
+- **`src/dazzle_ui/runtime/page_routes.py` — `_inject_auth_context`** — after persona-filtering `nav_items` and `nav_groups`, drop any flat nav item whose route also appears as a child route in a `nav_group`. Extracted as `_dedupe_nav_items_against_groups` for testability — mirrors the same shape that `_build_visible_nav` already uses on the workspace-page path.
+
+### Tests
+- **`test_entity_page_nav_groups.py::TestDedupeNavItemsAgainstGroups`** — three cases: dedup drops overlapping routes; non-overlapping items pass through; empty groups pass through.
+
+### Agent Guidance
+- **Two nav rendering paths exist** — workspace-page (`_workspace_handler`) and entity-list (`_inject_auth_context`). Any future nav-shape change must touch both, or nav structure will diverge between the two page types. The `_dedupe_nav_items_against_groups` helper is the canonical entity-list dedup; use it (don't reimplement) when adjusting `_inject_auth_context`.
+
 ## [0.61.18] - 2026-04-25
 
 Patch bump. Closes #876 — clicking a sidebar nav entry triggered an HTMX morph that preserved the previous page's scroll offset, landing the new page's heading above the viewport. Users had to scroll back up after every cross-page nav. Idiomorph's `morph:innerHTML` strategy preserves DOM state including scroll position, but doesn't reset the document/main-content scroll for cross-route navigation.
