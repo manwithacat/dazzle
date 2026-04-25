@@ -59,7 +59,15 @@
           sel.appendChild(o);
         });
         var saved = window.dzPrefs ? window.dzPrefs.get(prefKey) : null;
-        if (saved) { sel.value = saved; sel.dispatchEvent(new Event('change')); }
+        if (saved) {
+          sel.value = saved;
+        } else if (sel.options.length > 1) {
+          // No saved preference: default to the first real option. The
+          // hard-coded "All" entry produces an empty landing page on
+          // workspaces whose regions filter by current_context (#870).
+          sel.value = sel.options[1].value;
+        }
+        sel.dispatchEvent(new Event('change'));
       });
     sel.addEventListener('change', function() {
       var val = sel.value;

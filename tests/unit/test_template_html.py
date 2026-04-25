@@ -648,6 +648,21 @@ class TestDashboardRegionCompositeShapes:
             "_DASHBOARD_SLOT_WITH_REGION in this test file to match."
         )
 
+    def test_context_selector_defaults_to_first_option(self):
+        """#870: when no saved preference exists, the context selector
+        falls through to ``sel.options[1]`` (the first real option after
+        the hard-coded "All" entry) so workspaces with regions filtering
+        on ``current_context`` don't render fully-empty on first load.
+        """
+        content_template = TEMPLATES_DIR / "workspace" / "_content.html"
+        text = content_template.read_text()
+        assert "sel.options[1]" in text, (
+            "workspace/_content.html no longer falls through to "
+            "sel.options[1] when no saved preference exists — #870 will "
+            "regress (workspaces with current_context filters render empty "
+            "on first load for fresh users)."
+        )
+
     def test_bare_region_card_macro_stays_bare(self):
         """Lock #794's fix: region_card emits no chrome classes.
 

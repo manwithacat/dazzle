@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.15] - 2026-04-25
+
+Patch bump. Closes #870 — workspaces with a `context_selector` rendered fully empty on first load for users with no saved preference. The selector defaulted to the hard-coded "All" entry, and any region filtering on `current_context` rendered its empty state. AegisMark's teacher_workspace landed on six stacked empty states for fresh users — the selector wasn't communicated as the gate.
+
+### Fixed
+- **`src/dazzle_ui/templates/workspace/_content.html`** — when no saved `workspace.<name>.context` preference exists, fall through to `sel.options[1]` (the first real option after the hard-coded "All" entry) instead of staying on "All". The change → dispatch logic is unchanged; only the default selection differs.
+
+### Tests
+- **`test_template_html.py::TestDashboardRegionCompositeShapes::test_context_selector_defaults_to_first_option`** — pins the `sel.options[1]` fallback in the template body.
+
+### Agent Guidance
+- **Behaviour change is backwards-compatible by design.** Apps that intentionally landed on "All" will see the change but every region-filter pattern degrades gracefully — the regions either render filtered (intended) or unfiltered for the rare workspace where `current_context` isn't used. If a future app needs the "All" default explicitly, add a `default: all` knob to `context_selector` (not implemented in this commit; current default is now `first`).
+
 ## [0.61.14] - 2026-04-25
 
 Patch bump. Closes #872 — workspace list region columns ignored field-level `visible:` predicates, so every persona saw the full column set regardless of role-gated visibility on the source surface. Detail surfaces honour `visible:` correctly via `ColumnContext.visible_condition` + per-request evaluation in `page_routes.py`; workspace regions never carried the predicate through `_build_surface_columns` (column dicts), so the per-request filter had nothing to evaluate. Result: admin-scoped fields (e.g. `academic_year`, `is_current`) leaked into teacher-persona workspace cards as columns with empty cells.
