@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.24] - 2026-04-25
+
+Patch bump. Closes #877 (Option A) — `dazzle dsl operation=fidelity` no longer attributes state-transition stories (those with `trigger: status_changed`) to `mode: create` surfaces. The Option B fix in v0.61.21+ partially closed this by skipping default-aware preconditions and transition-verb outcomes; Option A is the more principled cut: a story whose trigger IS a state transition cannot fire from a creation surface (the entity is being created, not transitioned), so the surface should never be matched in the first place.
+
+### Fixed
+- **`src/dazzle/core/fidelity_scorer.py`** — `_match_stories_to_surfaces` filters stories whose `trigger.value ∈ _TRANSITION_STORY_TRIGGERS = {"status_changed"}` from `mode: create` surfaces. Other surface modes (edit, list, view) continue to match — edit fires the transition, list/view show the lifecycle, but create can't.
+
+### Tests
+- **`test_fidelity_scorer.py::TestStatusChangedTriggerExclusion`** — five cases: status_changed excluded from create; user_click still matches create; form_submitted still matches create (THE creation trigger); status_changed still matches edit; status_changed still matches list + view (lifecycle visibility).
+- **`test_fidelity_scorer.py::TestCreateModeStoryGapSuppression`** — switched fixture default trigger from `STATUS_CHANGED` to `USER_CLICK` so the Option B (default-aware / transition-verb) tests still exercise their logic without being pre-filtered by Option A.
+
+### Cross-app verification
+Total fidelity gaps across all 5 example apps: 17 → 7 (Option A closes 10 false positives on top of cycle 105+106's 31). simple_task is now fully clean (was 7). Remaining 7 gaps: contact_manager 1 (ST-007 `is_favorite` toggle, `trigger: user_click` — Option B handles defaults but the precondition value differs), support_tickets 1, ops_dashboard 4, fieldtest_hub 1 — all genuinely lifecycle-related on edit / detail surfaces or non-default-value preconditions.
+
+### Agent Guidance
+- **Add new `StoryTrigger` enum values to `_TRANSITION_STORY_TRIGGERS`** if they describe state changes that can't fire at creation time. Current set is conservative: only `STATUS_CHANGED`. Candidates worth review when added: any future `STATE_CHANGED`, `PHASE_CHANGED`, `LIFECYCLE_TRANSITION`. Don't add `USER_CLICK`, `FORM_SUBMITTED`, `EXTERNAL_EVENT`, `TIMER_ELAPSED`, `CRON_*` — those legitimately can fire from a creation surface (form submit, click "Save", external trigger creating an entity).
+- **Three independent fidelity-scorer suppressions now exist for `mode: create`** — (a) Option A trigger filter (this release), (b) Option B default-aware preconditions (v0.61.22), (c) Option B transition-verb outcomes (v0.61.22). Each closes a different false-positive class. Maintain all three; they don't subsume each other.
+
 ## [0.61.23] - 2026-04-25
 
 Patch bump. Closes #878 — `dazzle dsl operation=fidelity` flagged every search_select-rendered field as `incorrect_input_type` (severity major) because the wrapper template lacked a widget marker AND the scorer had no equivalence entry for the widget. The hidden value carrier is intentional (it pairs with a visible search input), but the structural check only saw `<input type="hidden">` against a `str` field and reported it as a mismatch. Practical impact: every `field X "..." source=...` declaration in any DSL produced 2 false-positive gaps per surface (×2 across create + edit). fieldtest_hub's `manufacturer` field (declared via `source=companies_house_lookup.search_companies`) was the canonical repro.

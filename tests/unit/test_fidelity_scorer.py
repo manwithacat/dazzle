@@ -1040,13 +1040,18 @@ class TestCreateModeStoryGapSuppression:
         return ent
 
     def _make_story(self, story_id: str, given: list[str] = (), then: list[str] = ()) -> StorySpec:
+        # Use USER_CLICK so Option A's status_changed pre-filter (in
+        # `_match_stories_to_surfaces`) doesn't suppress the story before
+        # Option B's default-aware / transition-verb logic gets a chance to
+        # run. Option A and Option B are independent suppressions; this test
+        # class exercises Option B specifically.
         return StorySpec(
             story_id=story_id,
             title=f"Story {story_id}",
             actor="admin",
             scope=["Task"],
             status=StoryStatus.ACCEPTED,
-            trigger=StoryTrigger.STATUS_CHANGED,
+            trigger=StoryTrigger.USER_CLICK,
             given=[StoryCondition(expression=g, field_path="Task.status") for g in given],
             when=[],
             then=[StoryCondition(expression=t, field_path="Task.status") for t in then],
@@ -1154,3 +1159,98 @@ class TestCreateModeStoryGapSuppression:
         gaps = self._gaps_for(surface, entity, [story])
         outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
         assert len(outcome_gaps) == 1
+
+
+class TestStatusChangedTriggerExclusion:
+    """Closes #877 Option A: stories with `trigger: status_changed` describe
+    state transitions and cannot fire from a `mode: create` surface (the
+    entity is being created, not transitioned). `_match_stories_to_surfaces`
+    filters such stories out of create-surface matches so the precondition /
+    outcome checks never see them.
+
+    Edit / detail / list surfaces continue to match status_changed stories
+    so the lifecycle is visible somewhere in the fidelity report — the bug
+    is the create-surface attribution specifically."""
+
+    def _story(self, story_id: str, trigger: StoryTrigger, *, scope=None) -> StorySpec:
+        return StorySpec(
+            story_id=story_id,
+            title=f"Story {story_id}",
+            actor="admin",
+            scope=scope or ["Task"],
+            status=StoryStatus.ACCEPTED,
+            trigger=trigger,
+            given=[StoryCondition(expression="Task.status is 'todo'", field_path="Task.status")],
+            when=[],
+            then=[
+                StoryCondition(
+                    expression="Task.status becomes 'in_progress'", field_path="Task.status"
+                )
+            ],
+            unless=[],
+        )
+
+    def test_status_changed_excluded_from_create(self) -> None:
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
+        matched = _match_stories_to_surfaces(surface, [story])
+        assert matched == []
+
+    def test_user_click_still_matches_create(self) -> None:
+        """user_click stories DO apply to create surfaces (e.g. 'user
+        clicks Save to create Task'). Trigger filter is narrow."""
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        story = self._story("ST-100", StoryTrigger.USER_CLICK)
+        matched = _match_stories_to_surfaces(surface, [story])
+        assert matched == [story]
+
+    def test_form_submitted_still_matches_create(self) -> None:
+        """form_submitted is THE creation trigger — must continue to match."""
+        surface = _make_surface(
+            name="task_create",
+            entity_ref="Task",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        story = self._story("ST-101", StoryTrigger.FORM_SUBMITTED)
+        matched = _match_stories_to_surfaces(surface, [story])
+        assert matched == [story]
+
+    def test_status_changed_still_matches_edit(self) -> None:
+        """Edit surfaces are exactly where transitions fire — they must
+        continue to match status_changed stories so missing-field gaps on
+        the edit form are still surfaced."""
+        surface = _make_surface(
+            name="task_edit",
+            entity_ref="Task",
+            mode=SurfaceMode.EDIT,
+            field_names=["title"],
+        )
+        story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
+        matched = _match_stories_to_surfaces(surface, [story])
+        assert matched == [story]
+
+    def test_status_changed_still_matches_list_and_detail(self) -> None:
+        """List and detail surfaces continue to match — they show transition
+        OUTCOMES (the new state) which is part of the lifecycle reading
+        even though they don't fire the transition themselves."""
+        for mode in (SurfaceMode.LIST, SurfaceMode.VIEW):
+            surface = _make_surface(
+                name=f"task_{mode.value}",
+                entity_ref="Task",
+                mode=mode,
+                field_names=["title", "status"],
+            )
+            story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
+            matched = _match_stories_to_surfaces(surface, [story])
+            assert matched == [story], f"mode={mode} should still match"

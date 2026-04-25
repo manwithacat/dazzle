@@ -520,6 +520,14 @@ def _check_semantic_fidelity(
 # ── Story embodiment checks ───────────────────────────────────────────
 
 
+# Story triggers that describe state transitions — these stories cannot fire
+# from a creation surface (the entity doesn't exist yet, or is in default
+# state via entity defaults). #877 Option A: filter such stories out of the
+# create-surface match so the precondition/outcome checks don't generate
+# misattributed gaps.
+_TRANSITION_STORY_TRIGGERS = {"status_changed"}
+
+
 def _match_stories_to_surfaces(
     surface: SurfaceSpec,
     stories: list[StorySpec],
@@ -529,8 +537,15 @@ def _match_stories_to_surfaces(
     if not entity_name:
         return []
 
+    is_create = surface.mode == SurfaceMode.CREATE
+
     relevant: list[StorySpec] = []
     for s in stories:
+        # #877 Option A: state-transition stories don't apply to mode:create
+        # surfaces. Compare the trigger by name (StoryTrigger is a StrEnum).
+        trigger_name = s.trigger.value if hasattr(s.trigger, "value") else str(s.trigger)
+        if is_create and trigger_name in _TRANSITION_STORY_TRIGGERS:
+            continue
         # Match by scope (preferred) or title fallback
         if s.scope and entity_name in s.scope:
             relevant.append(s)
