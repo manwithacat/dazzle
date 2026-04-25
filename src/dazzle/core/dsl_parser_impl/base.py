@@ -517,6 +517,10 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.LIMIT,
     TokenType.DISPLAY,
     TokenType.AGGREGATE,
+    # v0.61.25 (#884) added DELTA as a region-block keyword. It must
+    # remain usable as an enum value / field name elsewhere — adding it
+    # here lets `enum[alpha, beta, delta]` and `delta_field: …` parse.
+    TokenType.DELTA,
     TokenType.LIST,
     TokenType.GRID,
     TokenType.TIMELINE,

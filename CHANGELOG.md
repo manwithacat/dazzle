@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.35] - 2026-04-25
+
+Patch bump. Two more CI-restoring fixes that surfaced once v0.61.34 unblocked the e2e jobs from running. Both are latent bugs from v0.61.25 (#884) that never got exercised because lint failures upstream had been masking them.
+
+### Fixed
+- **`delta` keyword now usable as identifier**. The v0.61.25 (#884) `TokenType.DELTA` made `enum[alpha, beta, gamma, delta]` fail to parse anywhere it appeared (`fixtures/component_showcase/dsl/app.dsl:20:35` was the first to surface). Added `TokenType.DELTA` to `KEYWORD_AS_IDENTIFIER_TYPES` in `dsl_parser_impl/base.py` so it remains usable as a field/enum value while still functioning as the region-block keyword. Same pattern as `update`, `delete`, `count` etc.
+- **`RegionContext.delta` field added**. v0.61.25 (#884) wired `_compute_aggregate_metrics(delta=ctx.ctx_region.delta, …)` into `workspace_rendering.py:736` but never extended the template-facing `RegionContext` Pydantic model to carry the field. Result: any workspace region with `aggregates:` 500'd at runtime with `AttributeError: 'RegionContext' object has no attribute 'delta'`. Surfaced in CI when the `INTERACTION_WALK` + `UX Contracts (support_tickets)` jobs hit `/api/workspaces/ticket_queue/regions/queue_metrics` and returned 500. Added `delta: Any | None = None` to `RegionContext` and threaded `delta=getattr(region, "delta", None)` through `build_workspace_context`.
+
+### Agent Guidance
+- **When adding a new region-block field that the runtime reads via `ctx.ctx_region.<name>`, extend `RegionContext` AND `build_workspace_context`**. The IR `WorkspaceRegion` model is parser-facing; `RegionContext` is template/runtime-facing. They aren't the same object — the latter is built from the former in `dazzle_ui/runtime/workspace_renderer.py`. Unit tests typically exercise the IR path, so a missing thread-through silently passes pytest and only blows up at e2e time.
+- **Adding a new lexer keyword**: always check whether it could appear as an identifier elsewhere (enum values, field names). If so, add to `KEYWORD_AS_IDENTIFIER_TYPES` in `src/dazzle/core/dsl_parser_impl/base.py`. Today's reserved-as-strict list is `{from, to, into}` and a handful of operators — most other keywords double as identifiers.
+
 ## [0.61.34] - 2026-04-25
 
 Patch bump. Restores the green CI badge after the v0.61.27 → v0.61.33 chart-feature run. Two distinct fixes:

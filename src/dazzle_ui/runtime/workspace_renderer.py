@@ -107,6 +107,10 @@ class RegionContext(BaseModel):
     bullet_label: str = ""
     bullet_actual: str = ""
     bullet_target: str = ""
+    # v0.61.25 (#884): Period-over-period delta config for summary tiles.
+    # Threaded through so `_compute_aggregate_metrics(delta=...)` resolves
+    # without AttributeError. Forward-ref since IR import would cycle.
+    delta: Any | None = None
 
 
 class WorkspaceContext(BaseModel):
@@ -424,6 +428,7 @@ def build_workspace_context(
                 bullet_label=getattr(region, "bullet_label", None) or "",
                 bullet_actual=getattr(region, "bullet_actual", None) or "",
                 bullet_target=getattr(region, "bullet_target", None) or "",
+                delta=getattr(region, "delta", None),
             )
         )
 
