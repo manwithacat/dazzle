@@ -889,3 +889,61 @@ class TestRenderedPagesCompositeKey:
 
         report = score_appspec_fidelity(appspec, rendered)
         assert len(report.surface_scores) == 1
+
+
+class TestSearchSelectErrorHandlerCheck:
+    """Regression guard: the search_select interaction-fidelity error-handler
+    check accepts the design-token / ARIA wiring used by the post-DaisyUI
+    template, not just the legacy ``text-error`` class. Surfaced cycle 105
+    via contract_audit on widget-search-select.md."""
+
+    def _make_search_select_surface(self):
+        return _make_surface(
+            name="contact_create",
+            entity_ref="Contact",
+            mode=SurfaceMode.CREATE,
+            field_names=["company"],
+        )
+
+    def _make_search_select_html(self, error_marker: str) -> str:
+        # Mirrors the real fragments/search_select.html shape — the only
+        # variable bit is which error-marker class/attribute is present.
+        return f"""
+        <div class="relative w-full" x-data="{{{{ open: false }}}}">
+          <input type="hidden" name="company" id="field-company" {error_marker} />
+          <input type="text" id="search-input-company" role="combobox"
+                 hx-get="/api/_fragments/search"
+                 hx-trigger="keyup changed delay:400ms"
+                 hx-target="#search-results-company"
+                 hx-indicator="#search-spinner-company" />
+          <div id="search-results-company" role="listbox">
+            Type at least 3 characters to search...
+          </div>
+        </div>
+        """
+
+    def _error_handler_gaps(self, html: str) -> list:
+        from dazzle.core.fidelity_scorer import _check_interaction_fidelity, parse_html
+
+        root = parse_html(html)
+        gaps = _check_interaction_fidelity(self._make_search_select_surface(), root, html)
+        return [g for g in gaps if g.category == FidelityGapCategory.MISSING_ERROR_HANDLER]
+
+    def test_aria_invalid_satisfies_error_handler_check(self) -> None:
+        html = self._make_search_select_html('aria-invalid="true"')
+        assert self._error_handler_gaps(html) == []
+
+    def test_destructive_token_satisfies_error_handler_check(self) -> None:
+        html = self._make_search_select_html('class="border-[hsl(var(--destructive))]"')
+        assert self._error_handler_gaps(html) == []
+
+    def test_legacy_text_error_class_still_satisfies_check(self) -> None:
+        # Backwards compat — apps not yet migrated off DaisyUI keep passing.
+        html = self._make_search_select_html('class="text-error"')
+        assert self._error_handler_gaps(html) == []
+
+    def test_no_error_marker_still_flagged(self) -> None:
+        html = self._make_search_select_html("")
+        gaps = self._error_handler_gaps(html)
+        assert len(gaps) == 1
+        assert gaps[0].severity == "minor"

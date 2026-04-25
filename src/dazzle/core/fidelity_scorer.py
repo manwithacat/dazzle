@@ -803,8 +803,11 @@ def _check_interaction_fidelity(
             )
         )
 
-    # Check for error handling elements
-    if "text-error" not in html:
+    # Check for error handling elements. Accept any of:
+    #   - DaisyUI legacy class `text-error`
+    #   - Design-token destructive class (post-DaisyUI migration)
+    #   - ARIA invalid wiring (the canonical a11y signal for input errors)
+    if "text-error" not in html and "destructive" not in html and "aria-invalid" not in html:
         gaps.append(
             FidelityGap(
                 category=FidelityGapCategory.MISSING_ERROR_HANDLER,
