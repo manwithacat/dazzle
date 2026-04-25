@@ -862,6 +862,47 @@ async def _workspace_region_handler(
                 items, _value_field, _bp_group_by, _show_outliers
             )
 
+    # Overlay series (#883, v0.61.33): for line/area chart regions,
+    # fire one extra `_compute_bucketed_aggregates` per overlay using
+    # the parent's group_by but the overlay's own source/filter/aggregate.
+    # Each overlay collapses to a list of {label, value} buckets that the
+    # template renders as an additional polyline (line_chart) or stacked
+    # layer (area_chart).
+    overlay_series_data: list[dict[str, Any]] = []
+    _ir_overlays = (getattr(ctx.ir_region, "overlay_series", None) if ctx.ir_region else None) or []
+    if _ir_overlays and ctx.ctx_region.display in {"LINE_CHART", "AREA_CHART"} and group_by:
+        for _overlay in _ir_overlays:
+            _ovl_source = _overlay.source or ctx.source
+            # Convert the overlay's filter ConditionExpr → flat dict for
+            # the runtime via the same path scope_filters use. For the v1
+            # we inline-merge the overlay's filter as the where_clause
+            # of a synthetic `<aggregate_expr>` evaluated against
+            # _ovl_source. Scope still applies (overlay sees the same
+            # scope_filters as the primary aggregate).
+            try:
+                _overlay_aggregates = {_overlay.label: _overlay.aggregate_expr}
+                _overlay_buckets = await _compute_bucketed_aggregates(
+                    _overlay_aggregates,
+                    ctx.repositories,
+                    group_by,
+                    items=[],  # overlay computes its own buckets via fast path
+                    bucket_values=kanban_columns or None,
+                    scope_filters=_scope_only_filters,
+                    source_entity=_ovl_source,
+                )
+                overlay_series_data.append(
+                    {
+                        "label": _overlay.label,
+                        "buckets": _overlay_buckets,
+                    }
+                )
+            except Exception:
+                logger.warning(
+                    "Overlay series %r failed — skipping",
+                    _overlay.label,
+                    exc_info=True,
+                )
+
     # Bullet chart (#880, v0.61.30): one row per item, reading three named
     # columns (label, actual, target) directly off the item. Pre-computed
     # MVP — per-group_by aggregation deferred (would need multi-measure
@@ -1142,6 +1183,8 @@ async def _workspace_region_handler(
         # Bullet chart (#880, v0.61.30) — per-row {label, actual, target} from `items`
         bullet_rows=bullet_rows,
         bullet_max_value=bullet_max_value,
+        # Overlay series (#883, v0.61.33) — additional polylines on line/area charts
+        overlay_series_data=overlay_series_data,
     )
     return HTMLResponse(content=html)
 

@@ -381,6 +381,109 @@ class WorkspaceParserMixin:
                 return str(raw)
         return str(self.expect_identifier_or_keyword().value)
 
+    def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
+        """Parse the indented body of an ``overlay_series:`` block (#883).
+
+        Syntax (each entry uses YAML-style indented sub-keys — the
+        leading dash carries the inline ``label:``, then an INDENT
+        block holds source/filter/aggregate)::
+
+            overlay_series:
+              - label: "Cohort average"
+                source: MarkingResult
+                filter: assessment_objective = ao3 and tg = current_context
+                aggregate: avg(scaled_mark)
+
+        ``source:`` is optional (defaults to the parent region's source
+        at runtime). ``filter:`` is optional. ``aggregate:`` is required.
+        """
+        series: list[ir.OverlaySeriesSpec] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'overlay_series entries must start with `- label: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            # Inline `label: "..."` on the dash line
+            label_kw = self.expect_identifier_or_keyword().value
+            if label_kw != "label":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"overlay_series entry must start with `label:`, got {label_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            label_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            source_name: str | None = None
+            filter_expr: ir.ConditionExpr | None = None
+            aggregate_expr: str = ""
+
+            # Sub-block — INDENT after the dash line carries source /
+            # filter / aggregate keys.
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "source":
+                        source_name = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    elif key == "filter":
+                        filter_expr = self.parse_condition_expr()
+                        self.skip_newlines()
+                    elif key == "aggregate":
+                        # Capture as joined token string until newline —
+                        # same shape as the region-level `aggregate:` parser.
+                        parts: list[str] = []
+                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                            parts.append(self.advance().value)
+                        aggregate_expr = " ".join(parts)
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown overlay_series key {key!r}. "
+                            f"Expected one of: source, filter, aggregate.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            if not aggregate_expr:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"overlay_series entry {label_str!r} requires `aggregate:`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+
+            series.append(
+                ir.OverlaySeriesSpec(
+                    label=label_str,
+                    source=source_name,
+                    filter=filter_expr,
+                    aggregate_expr=aggregate_expr,
+                )
+            )
+        return series
+
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """
         Parse workspace declaration.
@@ -684,6 +787,7 @@ class WorkspaceParserMixin:
         bullet_label: str | None = None  # bullet chart label column (#880)
         bullet_actual: str | None = None  # bullet chart actual-value column (#880)
         bullet_target: str | None = None  # bullet chart target column (#880)
+        overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -964,6 +1068,17 @@ class WorkspaceParserMixin:
                 bullet_target = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # overlay_series: indented dash-list of {label, source?,
+            # filter?, aggregate} entries — additional line/area chart
+            # series with their own scope (#883).
+            elif self.match(TokenType.OVERLAY_SERIES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                overlay_series = self._parse_overlay_series_block()
+                self.expect(TokenType.DEDENT)
+
             # show_outliers: true|false  — box plot outlier toggle (#881)
             elif self.match(TokenType.SHOW_OUTLIERS):
                 self.advance()
@@ -1070,4 +1185,5 @@ class WorkspaceParserMixin:
             bullet_label=bullet_label,
             bullet_actual=bullet_actual,
             bullet_target=bullet_target,
+            overlay_series=overlay_series,
         )

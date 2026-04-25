@@ -14,14 +14,22 @@
 {% call region_card(title) %}
 <div class="dz-line-chart-region">
   {% if bucketed_metrics and bucketed_metrics | length > 1 %}
-    {# y-axis upper bound includes any reference_lines / reference_bands so
-       overlays drawn above the data peak are still inside the plot area
+    {# y-axis upper bound includes reference_lines / reference_bands AND
+       overlay_series so all visual elements stay inside the plot area
        (#883). Bands also widen the floor below 0 if needed. #}
     {% set data_max = bucketed_metrics | map(attribute='value') | max %}
     {% set _line_vals = (reference_lines or []) | map(attribute='value') | list %}
     {% set _band_tops = (reference_bands or []) | map(attribute='to') | list %}
     {% set _band_bottoms = (reference_bands or []) | map(attribute='from') | list %}
-    {% set _candidates = [data_max] + _line_vals + _band_tops %}
+    {# Overlay series values too — pull each bucket's `value` so the
+       y-axis can fit a cohort-average line above the primary series. #}
+    {% set ns_overlay = namespace(vals=[]) %}
+    {% for ovl in (overlay_series_data or []) %}
+      {% for b in (ovl.buckets or []) %}
+        {% set _ = ns_overlay.vals.append(b.value) %}
+      {% endfor %}
+    {% endfor %}
+    {% set _candidates = [data_max] + _line_vals + _band_tops + ns_overlay.vals %}
     {% set max_val = _candidates | max %}
     {% set max_val = max_val if max_val > 0 else 1 %}
     {% set min_val = (([0] + _band_bottoms) | min) %}
@@ -115,6 +123,40 @@
         stroke-linejoin="round"
         stroke-linecap="round" />
 
+      {# Overlay series (#883) — render BEFORE the primary line so the
+         primary stays visually dominant. Each overlay aligns to the
+         primary's bucket order by index (the overlay computes its own
+         buckets from the same group_by, so order matches when they
+         share enum/state-machine source values). Cycle through a small
+         palette so multiple overlays stay distinguishable. #}
+      {% set _ovl_palette = [
+        'hsl(145, 55%, 45%)',
+        'hsl(40, 90%, 55%)',
+        'hsl(290, 55%, 55%)',
+        'hsl(210, 80%, 55%)',
+      ] %}
+      {% for ovl in (overlay_series_data or []) %}
+        {% if ovl.buckets and ovl.buckets | length > 1 %}
+          {% set ovl_colour = _ovl_palette[loop.index0 % (_ovl_palette | length)] %}
+          {% set ovl_step = plot_w / (count - 1) %}
+          {% set ovl_points = [] %}
+          {% for ob in ovl.buckets[:count] %}
+            {% set ox = pl + (loop.index0 * ovl_step) %}
+            {% set oy = pt + plot_h - (((ob.value - min_val) / value_range) * plot_h) %}
+            {% set _ = ovl_points.append(ox | round(2) ~ ',' ~ oy | round(2)) %}
+          {% endfor %}
+          <polyline points="{{ ovl_points | join(' ') }}"
+                    fill="none"
+                    stroke="{{ ovl_colour }}"
+                    stroke-width="1.25"
+                    stroke-dasharray="3,2"
+                    stroke-linejoin="round"
+                    stroke-linecap="round">
+            <title>{{ ovl.label }}</title>
+          </polyline>
+        {% endif %}
+      {% endfor %}
+
       {# Data points + accessible <title> tooltips. #}
       {% for b in bucketed_metrics %}
         {% set x = pl + (loop.index0 * step) %}
@@ -142,8 +184,26 @@
       {% endfor %}
     </svg>
 
+    {# Overlay legend (#883) — only when there's more than one polyline.
+       Primary series + each overlay get a swatch + label. #}
+    {% if overlay_series_data and overlay_series_data | length > 0 %}
+      <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+        <span class="inline-flex items-center gap-1">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: hsl(var(--primary))"></span>
+          <span class="font-mono">{{ title }}</span>
+        </span>
+        {% for ovl in overlay_series_data %}
+          {% set ovl_colour = _ovl_palette[loop.index0 % (_ovl_palette | length)] %}
+          <span class="inline-flex items-center gap-1">
+            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ ovl_colour }}"></span>
+            <span class="font-mono">{{ ovl.label }}</span>
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
-      {{ count }} buckets · peak {{ max_val }}
+      {{ count }} buckets · peak {{ max_val }}{% if overlay_series_data %} · {{ overlay_series_data | length + 1 }} series{% endif %}
     </p>
   {% elif bucketed_metrics and bucketed_metrics | length == 1 %}
     {# Single-point series — fall back to a tall KPI tile rather than draw

@@ -144,6 +144,37 @@ class ReferenceBand(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 
 
+class OverlaySeriesSpec(BaseModel):
+    """v0.61.33 (#883): an additional data series on a line/area chart.
+
+    Each overlay series is fully specified — its own ``source`` (defaults
+    to the parent region's source when omitted), its own ``filter`` (a
+    parsed ``ConditionExpr``), and its own single aggregate expression
+    (e.g. ``avg(scaled_mark)``). The runtime fires ONE extra
+    ``_compute_bucketed_aggregates`` call per overlay using the parent
+    region's ``group_by``, then the chart template renders the result as
+    an additional polyline / stacked layer.
+
+    Attributes:
+        label: Human-readable series name shown in the legend.
+        source: Optional source entity override. ``None`` means "use the
+            parent region's source".
+        filter: Optional ``ConditionExpr`` for the overlay's own scope
+            (e.g. cohort vs individual student).
+        aggregate_expr: A single aggregate expression string —
+            ``count(<Entity>)`` / ``avg(<col>)`` / ``sum(<col>)`` etc.
+            Same vocabulary as the region's ``aggregate:`` block; one
+            measure per overlay series.
+    """
+
+    label: str
+    source: str | None = None
+    filter: ConditionExpr | None = None
+    aggregate_expr: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class DeltaSpec(BaseModel):
     """v0.61.25 (#884): period-over-period delta config for summary/metrics tiles.
 
@@ -254,6 +285,10 @@ class WorkspaceRegion(BaseModel):
     bullet_label: str | None = None
     bullet_actual: str | None = None
     bullet_target: str | None = None
+    # v0.61.33 (#883): line/area chart overlay series — additional
+    # polylines/stacked layers driven by their own source/filter/aggregate.
+    # Each overlay fires one extra `_compute_bucketed_aggregates` call.
+    overlay_series: list[OverlaySeriesSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

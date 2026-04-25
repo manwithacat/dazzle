@@ -1418,6 +1418,8 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'health',
+            'overlay_series': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
@@ -1457,6 +1459,8 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'deploys',
+            'overlay_series': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
@@ -1496,6 +1500,8 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'app_map',
+            'overlay_series': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),

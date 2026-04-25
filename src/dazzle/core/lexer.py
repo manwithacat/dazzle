@@ -138,6 +138,7 @@ class TokenType(Enum):
     DELTA = "delta"  # v0.61.25: Period-over-period delta for summary tiles (#884)
     REFERENCE_LINES = "reference_lines"  # v0.61.26: Horizontal markers on line/area charts (#883)
     REFERENCE_BANDS = "reference_bands"  # v0.61.26: Shaded bands on line/area charts (#883)
+    OVERLAY_SERIES = "overlay_series"  # v0.61.33: Additional series on line/area charts (#883)
     BINS = "bins"  # v0.61.27: Histogram bin count — int or "auto" (#882)
     SHOW_OUTLIERS = "show_outliers"  # v0.61.29: Box plot outlier toggle (#881)
     BULLET_LABEL = "bullet_label"  # v0.61.30: Bullet chart row label column (#880)

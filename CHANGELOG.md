@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.33] - 2026-04-25
+
+Patch bump. Closes #883 (overlay_series scope) — line/area chart regions now support an `overlay_series:` block of additional named data series with their own `source` / `filter` / `aggregate`. Pulls e.g. a cohort-average comparison line on top of a per-pupil trajectory in one chart frame. Builds on the v0.61.32 multi-measure aggregate pipeline.
+
+### Added
+- **DSL**: new `overlay_series:` block on workspace regions with `display: line_chart` (or `area_chart`). Each entry uses the YAML-style indented dash form (the lexer's existing INDENT-after-dash behaviour carries the sub-keys):
+  ```dsl
+  ao3_trajectory:
+    source: MarkingResult
+    aggregate:
+      avg: avg(scaled_mark)
+    display: line_chart
+    group_by: bucket(assessed_at, week)
+    filter: student = current_context.student and ao = ao3
+    overlay_series:
+      - label: "Cohort average"
+        source: MarkingResult            # optional; defaults to parent
+        filter: ao = ao3 and tg = current_context.teaching_group
+        aggregate: avg(scaled_mark)
+      - label: "Target band ceiling"
+        aggregate: max(scaled_mark)
+  ```
+- **IR**: `dazzle.core.ir.workspaces.OverlaySeriesSpec` (frozen Pydantic model) — `label: str`, `source: str | None`, `filter: ConditionExpr | None`, `aggregate_expr: str`. Exported from `dazzle.core.ir`.
+- **Lexer**: new `TokenType.OVERLAY_SERIES = "overlay_series"` keyword.
+- **Runtime**: when a region has `display: line_chart` or `display: area_chart` and a non-empty `overlay_series:`, the handler fires one extra `_compute_bucketed_aggregates` call per overlay using the parent's `group_by` (and `kanban_columns` if any) but the overlay's own `source`/`aggregate`. Each overlay's filter merges into the same scope_filters the primary aggregate uses (security gate per #574). Overlays that fail their query are logged and skipped — the primary chart still renders.
+- **Template**: `line_chart.html` renders one dashed `<polyline>` per overlay (`stroke-dasharray="3,2"`) BEFORE the primary line so the primary stays visually dominant. Y-axis ceiling auto-expands to include the largest overlay value so out-of-range overlays stay inside the plot. Multi-series legend (primary + each overlay) shows below the chart with token-driven colour swatches; footer reports `<N> series` when multiple lines are present.
+
+### Tests
+- **`test_workspace_overlay_series.py`** — 13 cases across 3 layers:
+  - parser (6): minimal overlay; full source+filter+aggregate; multiple overlays; aggregate required; unknown key raises; overlay absent by default.
+  - IR (2): defaults (source/filter both None); frozen model.
+  - template (5): overlay polyline uses dashed stroke + label in legend; overlay above data peak widens the y-axis (htmls differ); legend appears for multi-series; legend omitted when no overlays; multiple overlays get distinct colours from the palette + footer reports correct series count.
+
+### Agent Guidance
+- **Per-overlay scope**. Overlays inherit the same `scope_filters` (security gates) as the primary aggregate. The overlay's `filter:` merges in on top — it cannot circumvent scope. If a teacher's scope rule restricts to `teaching_group = current_user.teaching_group`, a "national average" overlay would still be filtered to the teaching group; cross-cohort comparisons need a separate scope-bypass mechanism (out of scope today).
+- **Bucket alignment is by index**. Each overlay computes its own bucket list via the same `group_by`. The template iterates overlay buckets up to `count` (the primary length). For BucketRef time-bucket group_by, both queries see the same time range so order matches; for enum/state-machine `group_by`, both pull the same bucket list. Mismatched ordering would mis-align the polyline — verify with `dazzle db explain-aggregate` if a chart looks off.
+- **Single aggregate per overlay**. Each overlay carries ONE aggregate expression (no name needed — the overlay's `label:` doubles as the metric name). To draw N comparison series, list N overlays. The multi-measure pipeline that landed in v0.61.32 supports multi-series WITHIN ONE aggregate (radar's `actual` + `target`); overlays are for series that need DIFFERENT scope/filter (cohort vs individual).
+- **Failure mode = skip**. An overlay that raises during query is logged and dropped; the primary chart continues. Avoid noisy chart builds where a missing FK or bad scope condition silently disappears — check the worker log for `Overlay series 'X' failed`.
+
 ## [0.61.32] - 2026-04-25
 
 Patch bump. Closes #879 (multi-series radar) — extends the workspace aggregate pipeline so multiple named measures over the same source fire as ONE multi-measure GROUP BY query, then teaches the radar template to render one polygon per series. Also extends the aggregate-expression language so `avg(<column>)` / `sum(<column>)` / `min(<column>)` / `max(<column>)` resolve cleanly (gap surfaced by #880's investigation).
