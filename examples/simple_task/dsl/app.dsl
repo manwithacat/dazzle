@@ -40,15 +40,15 @@ entity User "Team Member":
   created_at: datetime auto_add
 
   permit:
-    list: role(admin) or role(manager) or role(member)
-    read: role(admin) or role(manager) or role(member)
+    list: role(admin) or role(manager)
+    read: role(admin) or role(manager)
     create: role(admin)
     update: role(admin)
     delete: role(admin)
 
   scope:
     list: all
-      for: admin, manager, member
+      for: admin, manager
 
   fitness:
     repr_fields: [name, email, role, department, is_active]
