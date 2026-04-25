@@ -1587,7 +1587,7 @@ async def _compute_pivot_buckets(
 async def _aggregate_via_groupby(
     agg_repo: Any,
     *,
-    metric_name: str,
+    measures: dict[str, str],
     group_by: Any,  # str | BucketRef
     where_clause: str | None,
     scope_filters: dict[str, Any] | None,
@@ -1603,9 +1603,21 @@ async def _aggregate_via_groupby(
     + counts in a single round-trip. No enumeration phase, no per-bucket
     queries, no possibility of the two paths producing different scoped
     row sets.
+
+    v0.61.32 (#879/#883 enabling): ``measures`` is a dict of
+    ``{metric_name: spec}`` where spec is ``"count"`` or
+    ``"<op>:<column>"`` (avg/sum/min/max) — enables multi-series charts
+    by firing ALL measures in one query. Each returned bucket carries
+    ``value`` (first measure, legacy alias) plus ``metrics: {<name>:
+    <value>, ...}`` for templates that want all of them.
     """
     from dazzle.core.ir import BucketRef
     from dazzle_back.runtime.aggregate import Dimension, resolve_fk_display_field
+
+    if not measures:
+        return []
+
+    first_metric_name = next(iter(measures))
 
     # Merge any author-supplied where clause into the filter dict via
     # _parse_simple_where — same semantics the slow path used to apply
@@ -1616,12 +1628,15 @@ async def _aggregate_via_groupby(
     if scope_filters:
         merged_filters = {**scope_filters, **merged_filters}
 
+    def _build_metrics_dict(b: Any) -> dict[str, Any]:
+        return {name: b.measures.get(name, 0) for name in measures}
+
     # Time-bucketed single-dim path — no FK join, date_trunc in SQL.
     if isinstance(group_by, BucketRef):
         bucket_dim = Dimension(name=group_by.field, truncate=group_by.unit)  # type: ignore[arg-type]
         buckets = await agg_repo.aggregate(
             dimensions=[bucket_dim],
-            measures={metric_name: "count"},
+            measures=measures,
             filters=merged_filters or None,
         )
         out: list[dict[str, Any]] = []
@@ -1631,10 +1646,12 @@ async def _aggregate_via_groupby(
                 continue
             label = _format_bucket_label(raw, group_by.unit)
             iso = raw.isoformat() if isinstance(raw, _dt.datetime | _dt.date) else str(raw)
+            metrics = _build_metrics_dict(b)
             out.append(
                 {
                     "label": label,
-                    "value": b.measures.get(metric_name, 0),
+                    "value": metrics[first_metric_name],
+                    "metrics": metrics,
                     "bucket": iso,
                 }
             )
@@ -1648,7 +1665,7 @@ async def _aggregate_via_groupby(
     dim = Dimension(name=group_by, fk_table=fk_table, fk_display_field=fk_display_field)
     buckets = await agg_repo.aggregate(
         dimensions=[dim],
-        measures={metric_name: "count"},
+        measures=measures,
         filters=merged_filters or None,
     )
 
@@ -1659,7 +1676,14 @@ async def _aggregate_via_groupby(
             continue
         label_key = f"{group_by}_label"
         label = b.dimensions.get(label_key) or str(bucket_id)
-        out.append({"label": str(label), "value": b.measures.get(metric_name, 0)})
+        metrics = _build_metrics_dict(b)
+        out.append(
+            {
+                "label": str(label),
+                "value": metrics[first_metric_name],
+                "metrics": metrics,
+            }
+        )
     return out
 
 
@@ -1957,59 +1981,104 @@ async def _compute_bucketed_aggregates(
     if not aggregates:
         return []
 
-    metric_name, expr = next(iter(aggregates.items()))
-    agg_match = _AGGREGATE_RE.match(expr)
-    if not agg_match or agg_match.group(1) != "count":
+    # v0.61.32 (#879/#883 enabling): parse ALL aggregates upfront so the
+    # fast path can fire them as one multi-measure GROUP BY. Each entry
+    # becomes (name, func, arg, where) where ``arg`` is an entity name
+    # for ``count(...)`` and a column name for ``avg/sum/min/max(...)``.
+    parsed_aggs: list[tuple[str, str, str, str | None]] = []
+    for name, expr in aggregates.items():
+        m = _AGGREGATE_RE.match(expr)
+        if not m:
+            continue
+        func, arg, where = m.groups()
+        parsed_aggs.append((name, func, arg, where))
+    if not parsed_aggs:
         return []
-    func, entity_name, where_clause = agg_match.groups()
-    agg_repo = repositories.get(entity_name) if repositories else None
+
+    first_name, first_func, first_arg, first_where = parsed_aggs[0]
+    # The "count entity" the legacy single-measure code resolved against —
+    # used as the fallback for the slow per-bucket path. For multi-measure
+    # the source entity drives the agg_repo (since avg/sum apply to columns
+    # on that entity, not a separate entity).
+    legacy_entity_name = first_arg if first_func == "count" else (source_entity or "")
+    agg_repo = repositories.get(legacy_entity_name) if repositories else None
     if not agg_repo:
         return []
 
-    # ---- Fast path: count(<source_entity>) with no current_bucket ----
-    # This is the bar-chart distribution case (#847–#851) — replace the
-    # enumerate-then-N+1-count pipeline with a single GROUP BY query
-    # via Repository.aggregate. One SQL statement, one scope evaluation,
-    # no possibility of enumeration/per-bucket divergence. The slow
-    # sentinel path below stays for `count(OtherEntity where ... =
-    # current_bucket)` expressions that need true per-bucket queries.
+    # ---- Fast path: ALL aggregates against `source_entity` with no
+    # current_bucket — fire them as one multi-measure GROUP BY query.
+    # Originally bar-chart's count(source) case (#847–#851); generalised
+    # in v0.61.32 to support multiple measures so radar / line / area can
+    # render multi-series profiles (#879, #883). The slow sentinel path
+    # below stays for `count(OtherEntity where ... = current_bucket)`
+    # expressions that need true per-bucket queries.
     from dazzle.core.ir import BucketRef as _BucketRef
 
     is_bucket_ref = isinstance(group_by, _BucketRef)
-    is_simple_distribution = (
-        not bucket_values  # caller didn't pre-supply enum/state buckets
-        and source_entity is not None
-        and entity_name == source_entity
-        and (not where_clause or "current_bucket" not in (where_clause or ""))
+
+    def _fast_path_eligible(name: str, func: str, arg: str, where: str | None) -> bool:
+        if where and "current_bucket" in where:
+            return False
+        if func == "count":
+            # count(<X>) is fast-path-eligible only when X is the source
+            return source_entity is not None and arg == source_entity
+        # avg/sum/min/max apply to a column on the source entity
+        return func in {"sum", "avg", "min", "max"} and source_entity is not None
+
+    all_fast = bool(parsed_aggs) and all(_fast_path_eligible(*a) for a in parsed_aggs)
+    is_simple_distribution = not bucket_values and all_fast
+
+    if is_simple_distribution or (is_bucket_ref and all_fast):
+        # Build measures dict for the multi-measure GROUP BY call.
+        measures: dict[str, str] = {}
+        for name, func, arg, _w in parsed_aggs:
+            measures[name] = "count" if func == "count" else f"{func}:{arg}"
+        # When multiple aggregates share a where clause they must all be
+        # the same; otherwise the fast path can't represent it. Fall back
+        # to slow path if they diverge.
+        unique_wheres = {w for _n, _f, _a, w in parsed_aggs}
+        if len(unique_wheres) == 1:
+            shared_where = next(iter(unique_wheres))
+            try:
+                fk_target = None
+                if not is_bucket_ref:
+                    fk_target = _resolve_fk_target_spec(agg_repo, group_by, repositories)
+                return await _aggregate_via_groupby(
+                    agg_repo,
+                    measures=measures,
+                    group_by=group_by,
+                    where_clause=shared_where,
+                    scope_filters=scope_filters,
+                    source_entity_spec=getattr(agg_repo, "entity_spec", None),
+                    fk_target_spec=fk_target,
+                )
+            except Exception:
+                logger.warning(
+                    "GROUP BY aggregate failed for %s.%r — falling back to N+1",
+                    legacy_entity_name,
+                    group_by,
+                    exc_info=True,
+                )
+                # fall through to the old loop on exception. Time buckets have
+                # no N+1 fallback — they'll just return [] below.
+                if is_bucket_ref:
+                    return []
+
+    # Below this point: slow per-bucket path. Multi-measure not yet
+    # supported here — only the first parsed aggregate is evaluated.
+    metric_name, func, entity_name, where_clause = (
+        first_name,
+        first_func,
+        first_arg,
+        first_where,
     )
-    # Time-bucketed distributions always take the GROUP BY path — there's no
-    # per-bucket substitution to fall back to (current_bucket only makes sense
-    # for enum / categorical group_by).
-    if is_simple_distribution or is_bucket_ref:
-        try:
-            fk_target = None
-            if not is_bucket_ref:
-                fk_target = _resolve_fk_target_spec(agg_repo, group_by, repositories)
-            return await _aggregate_via_groupby(
-                agg_repo,
-                metric_name=metric_name,
-                group_by=group_by,
-                where_clause=where_clause,
-                scope_filters=scope_filters,
-                source_entity_spec=getattr(agg_repo, "entity_spec", None),
-                fk_target_spec=fk_target,
-            )
-        except Exception:
-            logger.warning(
-                "GROUP BY aggregate failed for %s.%r — falling back to N+1",
-                entity_name,
-                group_by,
-                exc_info=True,
-            )
-            # fall through to the old loop on exception. Time buckets have
-            # no N+1 fallback — they'll just return [] below.
-            if is_bucket_ref:
-                return []
+    if func != "count":
+        # Slow path is count-only today; non-count aggregates that didn't
+        # qualify for the fast path drop out silently.
+        return []
+    agg_repo = repositories.get(entity_name) if repositories else None
+    if not agg_repo:
+        return []
 
     # ---- Slow path: per-bucket loop (enumeration + per-bucket count) ----
     # Used when the aggregate expression has a current_bucket sentinel
@@ -2115,7 +2184,16 @@ async def _compute_bucketed_aggregates(
             logger.warning("Bucketed aggregate query failed: %s", r)
             continue
         bucket_label, value = r
-        out.append({"label": bucket_label, "value": value})
+        # Slow path is single-measure only — mirror the fast path's
+        # ``metrics`` sub-dict so multi-series templates can iterate
+        # uniformly (they'll just see one entry).
+        out.append(
+            {
+                "label": bucket_label,
+                "value": value,
+                "metrics": {metric_name: value},
+            }
+        )
     return out
 
 

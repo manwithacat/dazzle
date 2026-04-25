@@ -58,9 +58,9 @@ class TestBucketedAggregates:
             [{"computed_grade": "9"}, {"computed_grade": "8"}, {"computed_grade": "7"}],
         )
         assert result == [
-            {"label": "9", "value": 12},
-            {"label": "8", "value": 7},
-            {"label": "7", "value": 3},
+            {"label": "9", "value": 12, "metrics": {"students": 12}},
+            {"label": "8", "value": 7, "metrics": {"students": 7}},
+            {"label": "7", "value": 3, "metrics": {"students": 3}},
         ]
         # One DB query per bucket.
         assert repo.list.await_count == 3
@@ -171,8 +171,8 @@ class TestBucketedAggregatesWithFK:
             items,
         )
         assert result == [
-            {"label": "Knowledge", "value": 7},
-            {"label": "Application", "value": 4},
+            {"label": "Knowledge", "value": 7, "metrics": {"count": 7}},
+            {"label": "Application", "value": 4, "metrics": {"count": 4}},
         ]
         # The filter passed to repo.list must be `assessment_objective: ao-N`,
         # not the dict-repr Python string.
@@ -389,7 +389,7 @@ class TestPerBucketFilterShape:
             "assessment_objective",
             items=[{"assessment_objective": {"id": "ao-1"}}],
         )
-        assert result == [{"label": "ao-1", "value": 0}]
+        assert result == [{"label": "ao-1", "value": 0, "metrics": {"count": 0}}]
 
 
 # ---------------------------------------------------------------------------
@@ -453,7 +453,7 @@ class TestSourceEnumerationSuccessFlag:
             items=[{"criterion": {"id": "fallback", "label": "FB"}}],
             source_entity="Source",
         )
-        assert result == [{"label": "FB", "value": 8}]
+        assert result == [{"label": "FB", "value": 8, "metrics": {"count": 8}}]
 
 
 class TestSourceEnumerationFKExpansion:
@@ -630,8 +630,8 @@ class TestStrategyCGroupByFastPath:
             source_entity="MarkingResult",
         )
         assert result == [
-            {"label": "Knowledge", "value": 1560},
-            {"label": "Application", "value": 720},
+            {"label": "Knowledge", "value": 1560, "metrics": {"count": 1560}},
+            {"label": "Application", "value": 720, "metrics": {"count": 720}},
         ]
         # The fast path must call .aggregate exactly once — no enumeration,
         # no per-bucket loop.
@@ -891,7 +891,7 @@ class TestTimeBucketedAggregates:
 
         rows = await _aggregate_via_groupby(
             agg_repo,
-            metric_name="count",
+            measures={"count": "count"},
             group_by=BucketRef(field="created_at", unit="day"),
             where_clause=None,
             scope_filters=None,
@@ -899,8 +899,18 @@ class TestTimeBucketedAggregates:
             fk_target_spec=None,
         )
         assert rows == [
-            {"label": "2026-04-21", "value": 3, "bucket": "2026-04-21T00:00:00"},
-            {"label": "2026-04-22", "value": 7, "bucket": "2026-04-22T00:00:00"},
+            {
+                "label": "2026-04-21",
+                "value": 3,
+                "metrics": {"count": 3},
+                "bucket": "2026-04-21T00:00:00",
+            },
+            {
+                "label": "2026-04-22",
+                "value": 7,
+                "metrics": {"count": 7},
+                "bucket": "2026-04-22T00:00:00",
+            },
         ]
 
         # Aggregate call used a single time-bucket Dimension.

@@ -17,8 +17,35 @@
 <div class="dz-radar-region">
   {% if bucketed_metrics and bucketed_metrics | length >= 3 %}
     {% set count = bucketed_metrics | length %}
-    {% set max_val = bucketed_metrics | map(attribute='value') | max %}
+    {# v0.61.32: multi-series support (#879). Each bucket carries a
+       `metrics` sub-dict from `_compute_bucketed_aggregates` —
+       iterate ALL metric names so each becomes its own polygon. The
+       legacy single-series case (templates that only supplied
+       `value`) still works because we fall back to `[bucket.value]`
+       when `metrics` is absent. #}
+    {% set _series_names = (bucketed_metrics[0].metrics.keys() | list) if bucketed_metrics[0].metrics is defined else [] %}
+    {% if not _series_names %}{% set _series_names = ['value'] %}{% endif %}
+    {# Y-axis max = global max across ALL series so polygons stay on
+       the same scale. #}
+    {% set _all_vals = [] %}
+    {% for b in bucketed_metrics %}
+      {% if b.metrics is defined %}
+        {% for s in _series_names %}{% set _ = _all_vals.append(b.metrics[s]) %}{% endfor %}
+      {% else %}
+        {% set _ = _all_vals.append(b.value) %}
+      {% endif %}
+    {% endfor %}
+    {% set max_val = _all_vals | max %}
     {% set max_val = max_val if max_val > 0 else 1 %}
+    {# Series colour palette — same vocabulary as area_chart so a
+       Dazzle dashboard reads consistently across chart types. #}
+    {% set _palette = [
+      'hsl(var(--primary))',
+      'hsl(145, 55%, 45%)',
+      'hsl(40, 90%, 55%)',
+      'hsl(290, 55%, 55%)',
+      'hsl(210, 80%, 55%)',
+    ] %}
 
     {# SVG geometry: square viewBox so spokes don't squash. Centre +
        radius leave 32px padding for spoke labels around the edge. #}
@@ -33,21 +60,21 @@
        Starting angle -π/2 puts spoke 0 at 12 o'clock; going clockwise
        matches the natural reading order. #}
     {% set ns = namespace(spokes=[]) %}
-    {% set _pi = 3.141592653589793 %}
     {% for b in bucketed_metrics %}
-      {% set angle = (-_pi / 2) + (2 * _pi * loop.index0 / count) %}
-      {# Manual cos/sin via Taylor series would be brittle in Jinja —
-         instead compute via the SVG transform indirectly: emit each
-         spoke as a `<line>` with `transform="rotate(deg)"` from the
-         centre, then place the polygon by hand using the same rotation
-         per vertex via a `<g transform="rotate(deg)">` wrapper. #}
       {% set deg = (loop.index0 / count) * 360 - 90 %}
-      {% set normalised = b.value / max_val %}
+      {# Per-series normalised radius for this spoke. Index by series
+         name so the multi-polygon loop below can pull the right one. #}
+      {% set per_series = {} %}
+      {% for s in _series_names %}
+        {% set v = (b.metrics[s] if b.metrics is defined else b.value) %}
+        {% set _ = per_series.update({s: v / max_val}) %}
+      {% endfor %}
       {% set _ = ns.spokes.append({
         'label': b.label,
         'value': b.value,
+        'metrics': b.metrics if b.metrics is defined else {'value': b.value},
         'deg': deg,
-        'normalised': normalised,
+        'per_series': per_series,
       }) %}
     {% endfor %}
 
@@ -108,43 +135,39 @@
         </g>
       {% endfor %}
 
-      {# Data polygon — connect each spoke endpoint at its normalised
-         radius. Render as N rotated <line> segments forming the
-         polygon outline plus N rotated <circle> markers at the
-         vertices. Fill is approximated by a single <polygon> built
-         via... we still need explicit (x, y) per vertex.
-
-         Pure-SVG cheat: render each vertex as a <g transform> wrapping
-         a tiny circle, and connect adjacent vertices with rotated
-         <line> segments. The fill is omitted because we'd need
-         coordinates — for v1 we ship the outline + vertex markers,
-         which is the readable shape. Filled polygon deferred to a
-         follow-up that pre-computes vertex coords server-side. #}
-      {% for s in ns.spokes %}
-        {% set vertex_r = r_max * s.normalised %}
-        {# Vertex marker. #}
-        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-          <circle cx="{{ cx }}" cy="{{ cy - vertex_r }}" r="3"
-                  fill="hsl(var(--primary))"
-                  stroke="hsl(var(--card))"
-                  stroke-width="1">
-            <title>{{ s.label }}: {{ s.value }}</title>
-          </circle>
-        </g>
-        {# Line from this vertex to the next (rotation deltas). Inserts
-           one segment per spoke so the outline is closed. #}
-        {% set step_deg = 360 / count %}
-        {% set next_normalised = ns.spokes[(loop.index0 + 1) % count].normalised %}
-        {% set next_r = r_max * next_normalised %}
-        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-          <line x1="{{ cx }}" y1="{{ cy - vertex_r }}"
-                x2="{{ cx }}" y2="{{ cy - next_r }}"
-                transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
-                stroke="hsl(var(--primary))"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"/>
-        </g>
+      {# Data polygons — one per series. Render each as N rotated
+         <line> segments forming the outline plus N rotated <circle>
+         markers at the vertices. Pure-SVG cheat: Jinja can't compute
+         cos/sin, so each vertex is wrapped in <g transform="rotate">.
+         Fill is omitted (would need explicit (x,y) coords); the
+         outline + vertex markers are the readable shape, and an
+         opacity gradient differentiates overlapping series. #}
+      {% set step_deg = 360 / count %}
+      {% for series_name in _series_names %}
+        {% set series_colour = _palette[loop.index0 % (_palette | length)] %}
+        {% for s in ns.spokes %}
+          {% set vertex_r = r_max * s.per_series[series_name] %}
+          {% set next_r = r_max * ns.spokes[(loop.index0 + 1) % count].per_series[series_name] %}
+          {# Vertex marker. #}
+          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+            <circle cx="{{ cx }}" cy="{{ cy - vertex_r }}" r="3"
+                    fill="{{ series_colour }}"
+                    stroke="hsl(var(--card))"
+                    stroke-width="1">
+              <title>{{ s.label }} {{ series_name }}: {{ s.metrics[series_name] }}</title>
+            </circle>
+          </g>
+          {# Line from this vertex to the next (rotation deltas). #}
+          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+            <line x1="{{ cx }}" y1="{{ cy - vertex_r }}"
+                  x2="{{ cx }}" y2="{{ cy - next_r }}"
+                  transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
+                  stroke="{{ series_colour }}"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+          </g>
+        {% endfor %}
       {% endfor %}
 
       {# Spoke labels — placed slightly outside r_max so they don't
@@ -166,8 +189,21 @@
       {% endfor %}
     </svg>
 
+    {# Series legend — one swatch + name per series. Multi-series only
+       needs this; single-series matches the previous "peak X" line. #}
+    {% if _series_names | length > 1 %}
+      <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+        {% for series_name in _series_names %}
+          {% set series_colour = _palette[loop.index0 % (_palette | length)] %}
+          <span class="inline-flex items-center gap-1">
+            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ series_colour }}; opacity: 0.85"></span>
+            <span class="font-mono">{{ series_name }}</span>
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
     <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
-      {{ count }} spokes · peak {{ max_val }}
+      {{ count }} spokes · {{ _series_names | length }} {{ 'series' if _series_names | length > 1 else 'series' }} · peak {{ max_val }}
     </p>
   {% elif bucketed_metrics and bucketed_metrics | length > 0 %}
     {# Fewer than 3 spokes is a degenerate radar (line or point); fall

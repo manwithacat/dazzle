@@ -378,6 +378,7 @@
               'date_range': False,
               'display': 'list',
               'name': 'sidebar',
+              'show_outliers': True,
               'source': 'Task',
             }),
             dict({
@@ -393,6 +394,7 @@
                 }),
               }),
               'name': 'main',
+              'show_outliers': True,
               'source': 'Task',
             }),
           ]),
@@ -420,6 +422,7 @@
                 }),
               }),
               'name': 'main',
+              'show_outliers': True,
               'source': 'Task',
             }),
           ]),

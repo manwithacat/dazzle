@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.32] - 2026-04-25
+
+Patch bump. Closes #879 (multi-series radar) — extends the workspace aggregate pipeline so multiple named measures over the same source fire as ONE multi-measure GROUP BY query, then teaches the radar template to render one polygon per series. Also extends the aggregate-expression language so `avg(<column>)` / `sum(<column>)` / `min(<column>)` / `max(<column>)` resolve cleanly (gap surfaced by #880's investigation).
+
+### Added
+- **DSL**: aggregate expressions now accept `avg(<column>)`, `sum(<column>)`, `min(<column>)`, `max(<column>)` against a column on the region's `source:` entity (in addition to the existing `count(<Entity> [where ...])` form).
+  ```dsl
+  ao_profile:
+    source: MarkingResult
+    display: radar
+    group_by: assessment_objective
+    aggregate:
+      actual: avg(scaled_mark)        # ← was rejected pre-0.61.32
+      target: avg(target_mark)        # second series → second polygon
+  ```
+
+### Changed
+- **`_aggregate_via_groupby`** signature: `metric_name: str` → `measures: dict[str, str]`. Callers pass `{"<name>": "count"}` or `{"<name>": "<op>:<col>"}` — the aggregate primitive already supported multi-measure dicts, so the SQL change is zero. Each result bucket now carries `value` (legacy alias for the FIRST measure, preserves single-series template compat) plus `metrics: {<name>: <value>, ...}` for templates that want all of them. **Breaking**: callers using `metric_name=` kwarg need to migrate (only the unit tests called this directly; the in-tree `_compute_bucketed_aggregates` is the only production caller).
+- **`_compute_bucketed_aggregates`** parses ALL aggregate expressions from the DSL block upfront and fires them as one multi-measure GROUP BY when they all qualify for the fast path (same source entity, no `current_bucket` sentinel, same `where:` clause). The slow per-bucket path stays single-measure for now (only the FIRST aggregate is evaluated) — a future patch can extend it if needed. Each returned bucket carries the new `metrics` sub-dict for shape uniformity.
+- **`radar.html`** renders one polygon + vertex-marker set per series, cycling through a 5-colour palette. Shared y-axis radius scales to the global max across ALL series. Single-series mode still works (legacy `b.value` consumers) — the template falls back to `[b.value]` as a one-element series list when `b.metrics` is absent. Multi-series adds a colour-swatch legend below the chart and an `<svg:title>` per vertex carrying `<spoke> <series>: <value>`.
+
+### Tests
+- **`test_multi_measure_aggregates.py`** — 7 cases: two-measures-in-one-query; first-measure drives legacy `value`; empty measures → empty result; `avg(<column>)` resolves through fast path; two aggregates same source → one query; mixed `count` + `avg`; `sum/min/max(<column>)` measure spec mapping.
+- **`test_workspace_radar.py`** — extended with 5 multi-series cases: two-series renders 2× polygons; per-series tooltip carries the series name; legend appears for multi-series; legend omitted for single-series; y-axis max spans all series.
+- **`test_bar_chart_bucketed_aggregate.py`** — 6 result-shape assertions updated to include the new `metrics` sub-dict (no behaviour change, legacy `value` field preserved).
+
+### Agent Guidance
+- **The fast path requires homogeneity across aggregates.** All measures in a single `aggregate:` block must (a) target the same source entity, (b) share the same `where:` clause (or all have none), and (c) avoid the `current_bucket` sentinel. If any one diverges, the runtime falls back to the slow per-bucket path which evaluates only the first aggregate. To force per-bucket-per-aggregate evaluation we'd need to fan out to N×M queries — deferred until a real consumer needs it.
+- **`_compute_bucketed_aggregates` return shape now includes `metrics`** — single-measure callers can still read `b.value` (FIRST aggregate's value); multi-series callers should iterate `b.metrics.items()`. Templates that destructure each bucket via `{label, value}` only continue working unchanged.
+- **Aggregate-expression language remains conservative.** `avg(at_or_above_target * 100)` (arithmetic inside the aggregate) is still NOT supported — the regex captures bare column names. Materialise computed columns at insert time when this matters. The full SQL-expression case isn't worth the parser complexity until a real DSL consumer asks for it.
+
 ## [0.61.31] - 2026-04-25
 
 Patch bump. Closes #880 (pre-computed MVP) — new `display: bullet` mode renders Stephen Few bullet rows: one row per item, each with an actual-value bar, an optional target tick, and `reference_bands` (#883) drawn behind as comparative qualitative zones (red/amber/green or any colour token). Compact actual-vs-target read for AO-style dashboards.
