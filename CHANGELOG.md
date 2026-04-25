@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.17] - 2026-04-25
+
+Patch bump. Closes #873 — workspaces auto-discovered ungrouped region sources into the sidebar nav even when the author explicitly declared a `nav_group`. Junction/admin entities used purely as data sources (e.g. `ClassEnrolment`, `QuestionTopic`, `BehaviourStudent`) leaked in as flat nav items, exposing schema-shaped vocabulary to personas (e.g. teachers) who shouldn't see those standalone list pages. Authors had no clean opt-out — drop the entity's list surface entirely (loses /app/<entity> for everyone) or accept the noisy nav.
+
+### Fixed
+- **`src/dazzle_ui/runtime/page_routes.py` — `ws_entity_nav` builder** — when a workspace declares any `nav_group`, skip auto-discovery of its region sources entirely. The author has explicitly curated the entity nav by hand; ungrouped sources stay out.
+- **`src/dazzle_ui/converters/template_compiler.py` — `_entity_nav_items` builder** — mirror the same guard so entity-list pages (`/app/<entity>`) inherit the same nav shape as workspace pages. Workspaces with no `nav_groups` keep the legacy zero-config auto-discovery path.
+
+### Tests
+- **`test_entity_page_nav_groups.py::TestNavGroupsSuppressAutoDiscovery`** — two cases: ungrouped region source NOT in entity nav when `nav_group` declared; zero-config workspace still auto-discovers (regression guard).
+
+### Agent Guidance
+- **`nav_group` is now an explicit "I curated this" signal.** When migrating an existing workspace to `nav_group`, you must list every entity that should appear in the nav — pre-existing flat auto-discovery items disappear. This is the intended ergonomics: it lets authors scope a teacher workspace to the 2-3 entities the persona actually navigates to, instead of fighting the framework's auto-add behaviour.
+- **Zero-config workspaces (no `nav_groups`) keep auto-discovery as before.** No migration needed for apps that haven't adopted `nav_group` yet.
+
 ## [0.61.16] - 2026-04-25
 
 Patch bump. Closes #871 — workspace region filters threw `psycopg.errors.AmbiguousColumn` on Postgres when the source entity had a scope rule that traversed FKs (so the compiled SQL JOINed in tables with same-named columns) AND the region's `filter:` named one of those columns. Affected combos included `is_current` (boolean on multiple joined tables), `teaching_group` (FK that shares its name with the joined target table), `status`, `school`, `department` etc. AegisMark's teacher_workspace lost all six `current_context`-filtered regions to this — fully empty landing page.

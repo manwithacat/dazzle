@@ -1375,6 +1375,12 @@ def compile_appspec_to_templates(
 
     _entity_nav_items: dict[str, Any] = {}  # entity name -> NavItemContext
     for ws in appspec.workspaces:
+        # Skip auto-discovery for workspaces that declare nav_groups —
+        # the author has explicitly curated the entity nav and ungrouped
+        # region sources (e.g. ClassEnrolment, QuestionTopic) shouldn't
+        # leak in as flat nav items (#873). Mirror page_routes.py.
+        if getattr(ws, "nav_groups", None):
+            continue
         ws_pids = _ws_personas.get(ws.name, [])
         for region in getattr(ws, "regions", []) or []:
             source = getattr(region, "source", None)

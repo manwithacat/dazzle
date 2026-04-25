@@ -131,3 +131,86 @@ surface task_list "Tasks":
             # with their own nav_groups, so we only assert the attribute
             # is present and is a list.
             assert isinstance(ctx.nav_groups, list)
+
+
+_DSL_AUTO_DISCOVERY_873 = """module t
+app T "T"
+
+entity User "User":
+  id: uuid pk
+  email: str(200)
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+entity ClassEnrolment "Class Enrolment":
+  id: uuid pk
+  student: ref User required
+
+surface user_list "Users":
+  uses entity User
+  mode: list
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+surface class_enrolment_list "Class Enrolments":
+  uses entity ClassEnrolment
+  mode: list
+
+workspace teacher_workspace "Teacher":
+  nav_group "My Classes" icon=users:
+    Task
+  my_class_pupils:
+    source: ClassEnrolment
+"""
+
+
+class TestNavGroupsSuppressAutoDiscovery:
+    """When a workspace declares any nav_group, ungrouped region sources
+    must NOT auto-populate the entity nav (#873)."""
+
+    def test_ungrouped_region_source_not_in_entity_nav(self, tmp_path: Path) -> None:
+        """ClassEnrolment is a region source but not in any nav_group; it
+        should not appear as a flat entity nav item on entity-list pages."""
+        spec = _appspec(_DSL_AUTO_DISCOVERY_873, tmp_path)
+        contexts = compile_appspec_to_templates(spec, app_prefix="/app")
+        # Inspect any contextual nav_items list — they're shared across pages.
+        all_nav_routes: set[str] = set()
+        for ctx in contexts.values():
+            for item in getattr(ctx, "nav_items", []) or []:
+                all_nav_routes.add(getattr(item, "route", ""))
+        assert "/app/class-enrolment" not in all_nav_routes, (
+            "ClassEnrolment leaked into auto-discovered entity nav even "
+            "though teacher_workspace declared a nav_group — #873 regressed"
+        )
+
+    def test_zero_config_workspace_still_auto_discovers(self, tmp_path: Path) -> None:
+        """Workspaces with no nav_group still get the legacy auto-discovery
+        (so apps that haven't adopted nav_groups don't lose nav)."""
+        dsl = """module t
+app T "T"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+workspace dashboard "Dashboard":
+  tasks:
+    source: Task
+"""
+        spec = _appspec(dsl, tmp_path)
+        contexts = compile_appspec_to_templates(spec, app_prefix="/app")
+        all_nav_routes: set[str] = set()
+        for ctx in contexts.values():
+            for item in getattr(ctx, "nav_items", []) or []:
+                all_nav_routes.add(getattr(item, "route", ""))
+        assert "/app/task" in all_nav_routes, (
+            "zero-config workspace lost auto-discovery — fix overshot"
+        )

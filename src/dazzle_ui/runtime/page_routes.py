@@ -1636,12 +1636,21 @@ def create_page_routes(
                     grouped.add(item.entity)
             ws_grouped_entities[ws.name] = grouped
 
-        # Per-workspace nav: workspace links + entity surfaces from regions
+        # Per-workspace nav: workspace links + entity surfaces from regions.
+        # When the author declared at least one nav_group, skip auto-discovery
+        # of region sources entirely — nav_group is an explicit signal that
+        # the author has curated the entity nav by hand and doesn't want
+        # admin-shaped junctions (e.g. ClassEnrolment, QuestionTopic) leaking
+        # in via region source: lines (#873). Zero-config workspaces (no
+        # nav_groups) keep auto-discovery as before.
         ws_entity_nav: dict[str, list[dict[str, Any]]] = {}
         for ws in workspaces:
             entity_items: list[dict[str, Any]] = []
-            seen_entities: set[str] = set()
             grouped = ws_grouped_entities.get(ws.name, set())
+            if grouped:
+                ws_entity_nav[ws.name] = entity_items
+                continue
+            seen_entities: set[str] = set()
             for region in ws.regions:
                 # Collect all source entities (single + multi-source)
                 region_sources: list[str] = []
@@ -1649,7 +1658,7 @@ def create_page_routes(
                     region_sources.append(region.source)
                 region_sources.extend(getattr(region, "sources", []) or [])
                 for src in region_sources:
-                    if src not in seen_entities and src not in grouped:
+                    if src not in seen_entities:
                         seen_entities.add(src)
                         list_surface = _list_surfaces_by_entity.get(src)
                         if list_surface:
