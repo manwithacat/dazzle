@@ -58,6 +58,11 @@ _WIDGET_TYPE_EQUIVALENCES: dict[str, dict[str, set[str]]] = {
     "range-tooltip": {"range": {"number"}},
     "richtext": {"hidden": {"text", "textarea", "select"}},
     "tags": {"text": {"text"}},
+    # search_select renders the value as <input type="hidden"> alongside a
+    # visible <input type="text"> search box (#878). The hidden input is
+    # the form-submission carrier, so a str field rendered through this
+    # widget legitimately appears as type="hidden".
+    "search_select": {"hidden": {"text"}},
 }
 
 # ── Composite score weights ───────────────────────────────────────────

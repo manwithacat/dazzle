@@ -796,6 +796,73 @@ class TestWidgetRenderedInputTypes:
         ]
         assert len(type_gaps) == 1
 
+    def test_search_select_widget_satisfies_str_field(self) -> None:
+        """Closes #878: search_select renders the str value as an
+        ``<input type="hidden">`` form-submission carrier alongside a visible
+        ``<input type="text">`` search box. The hidden input is intentional;
+        a str field rendered through this widget must NOT generate an
+        INCORRECT_INPUT_TYPE gap. Equivalence depends on the wrapper div
+        carrying ``data-dz-widget="search_select"`` (cf. the actual fragment
+        at ``src/dazzle_ui/templates/fragments/search_select.html``)."""
+        surface = _make_surface(
+            name="device_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["manufacturer"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="manufacturer",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
+                )
+            ],
+        )
+        html = """
+        <form hx-post="/devices">
+            <div class="relative w-full" x-data="{ open: false }" data-dz-widget="search_select">
+                <input type="hidden" name="manufacturer" id="field-manufacturer" />
+                <input type="text" id="search-input-manufacturer" role="combobox" />
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_search_select_without_widget_marker_still_flags(self) -> None:
+        """Counter-test: a str field rendered as <input type="hidden"> with no
+        widget marker remains a real defect — equivalence is gated on the
+        ``data-dz-widget="search_select"`` decorator on the wrapper. If the
+        decorator goes missing during a refactor, the false-positive flag
+        returns and surfaces the regression."""
+        surface = _make_surface(
+            name="device_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["manufacturer"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="manufacturer",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
+                )
+            ],
+        )
+        html = """
+        <form hx-post="/devices">
+            <input type="hidden" name="manufacturer" />
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert len(type_gaps) == 1
+
 
 class TestRenderedPagesCompositeKey:
     """Regression guard for #828 — rendered_pages keyed by ``(view_name, entity_ref)``.

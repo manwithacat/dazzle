@@ -13,7 +13,7 @@
   {% set init_display = value %}
 {% endif %}
 
-<div class="relative w-full" x-data="{ open: false }">
+<div class="relative w-full" x-data="{ open: false }" data-dz-widget="search_select">
   {# Hidden input — form submission carrier #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
          data-dazzle-field="{{ field.name }}"

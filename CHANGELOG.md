@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.23] - 2026-04-25
+
+Patch bump. Closes #878 — `dazzle dsl operation=fidelity` flagged every search_select-rendered field as `incorrect_input_type` (severity major) because the wrapper template lacked a widget marker AND the scorer had no equivalence entry for the widget. The hidden value carrier is intentional (it pairs with a visible search input), but the structural check only saw `<input type="hidden">` against a `str` field and reported it as a mismatch. Practical impact: every `field X "..." source=...` declaration in any DSL produced 2 false-positive gaps per surface (×2 across create + edit). fieldtest_hub's `manufacturer` field (declared via `source=companies_house_lookup.search_companies`) was the canonical repro.
+
+### Fixed
+- **`src/dazzle_ui/templates/fragments/search_select.html`** — added `data-dz-widget="search_select"` to the wrapper div so `_iter_inputs_with_widget_context` (in `dazzle.core.fidelity_scorer`) can attribute the widget kind to the inner hidden input. Mirrors the existing convention used by `combobox`, `datepicker`, `daterange`, etc. in `macros/form_field.html`.
+- **`src/dazzle/core/fidelity_scorer.py`** — added `"search_select": {"hidden": {"text"}}` to `_WIDGET_TYPE_EQUIVALENCES`. Mirrors the existing `richtext: {"hidden": {"text", "textarea", "select"}}` entry — both widgets render as a hidden form-submission carrier alongside a separate visible editor.
+
+### Tests
+- **`test_fidelity_scorer.py::TestWidgetRenderedInputTypes::test_search_select_widget_satisfies_str_field`** — full happy path: wrapper carries `data-dz-widget="search_select"`, scorer accepts the hidden input as satisfying the str field.
+- **`test_fidelity_scorer.py::TestWidgetRenderedInputTypes::test_search_select_without_widget_marker_still_flags`** — counter-test: equivalence is gated on the marker. If the decorator goes missing during a refactor, the false-positive returns and surfaces the regression.
+- **`test_inline_js_quote_safety.py::TestInlineJsQuoteSafety::test_search_select_wrapper_carries_widget_decorator`** — source-grep guard: the `data-dz-widget="search_select"` marker is load-bearing and must not be deleted by template refactors.
+
+### Cross-app verification
+fieldtest_hub fidelity gaps drop 7 → 5 (the 2 `incorrect_input_type` false positives on `device_create` + `device_edit` are gone). Total across all 5 example apps drops 19 → 17. The remaining gaps are legitimate: 13 `story_precondition_missing` (preconditions on non-default state values — Option A territory for #877) + 4 `story_outcome_missing` (edit surfaces with genuine missing fields).
+
+### Agent Guidance
+- **New widget templates must self-tag with `data-dz-widget="<kind>"` on their outer wrapper.** The fidelity scorer's `_iter_inputs_with_widget_context` walks ancestors to attribute widget kind to inner inputs — without the marker, every input falls through to the literal type check and produces false-positive gaps. Convention is set by `macros/form_field.html` (combobox, datepicker, daterange, etc.). Fragments included via `{% include %}` from `form_field.html` (like `search_select.html`) need to self-tag because the include site doesn't see the inner inputs.
+- **Add a corresponding entry to `_WIDGET_TYPE_EQUIVALENCES`** in `dazzle/core/fidelity_scorer.py` whenever a new widget renders an input type different from the underlying field's expected type (e.g. hidden carrier for ref/source widgets, text carrier for date pickers).
+
 ## [0.61.22] - 2026-04-25
 
 Patch bump. Closes the JavaScript-warning class Aegismark's QA tester observed on teacher routes — recommendation rows containing names like `O'Brien` broke inline editing. Four templates were interpolating per-record values into single-quoted JS string literals via `'{{ value | e }}'`. The Jinja `| e` filter HTML-escapes apostrophes to `&#39;`, but the browser HTML-decodes the entity back to `'` before Alpine sees the attribute value — terminating the surrounding JS string mid-word and turning `:value="editing ? editing.originalValue : 'O'Brien'"` into a JS syntax error. Alpine bailed on the binding for those records; double-quote / backslash / newline values were already silently broken in the same way.
