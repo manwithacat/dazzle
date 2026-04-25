@@ -72,6 +72,7 @@ class DisplayMode(StrEnum):
     AREA_CHART = "area_chart"  # v0.60.0: Stacked time-series area chart (cycle 28)
     SPARKLINE = "sparkline"  # v0.60.0: Compact line for KPI tiles (cycle 28)
     HISTOGRAM = "histogram"  # v0.61.27 (#882): continuous-variable distribution
+    RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
 
 
 class BucketRef(BaseModel):

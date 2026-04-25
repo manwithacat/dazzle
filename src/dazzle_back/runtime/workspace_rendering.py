@@ -825,7 +825,7 @@ async def _workspace_region_handler(
     # Compute bucketed aggregates for bar_chart / line_chart / sparkline —
     # single-dim distributions or time-series. Multi-dim (area_chart /
     # pivot_table) runs through _compute_pivot_buckets below.
-    _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE"}
+    _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR"}
     if ctx.ctx_region.display in _single_dim_chart_modes and group_by and ctx.ctx_region.aggregates:
         bucketed_metrics = await _compute_bucketed_aggregates(
             ctx.ctx_region.aggregates,

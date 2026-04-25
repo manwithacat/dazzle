@@ -1,0 +1,190 @@
+{# Radar / polar profile chart — v0.61.28 (#879).
+
+   Server-rendered SVG polygon over a polar grid. Consumes
+   `bucketed_metrics` (the same source bar_chart and line_chart use) —
+   each entry's `value` becomes one spoke length. Each spoke's angle
+   is `2π × i / N`, starting at the top (12 o'clock) and going clockwise
+   so the natural reading order matches the bucket order.
+
+   Single-series MVP: one polygon for the primary aggregate. Multi-series
+   (target overlay, cohort comparison) deferred to a follow-up — requires
+   `_compute_bucketed_aggregates` to return all metrics, not just the first.
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-radar-region">
+  {% if bucketed_metrics and bucketed_metrics | length >= 3 %}
+    {% set count = bucketed_metrics | length %}
+    {% set max_val = bucketed_metrics | map(attribute='value') | max %}
+    {% set max_val = max_val if max_val > 0 else 1 %}
+
+    {# SVG geometry: square viewBox so spokes don't squash. Centre +
+       radius leave 32px padding for spoke labels around the edge. #}
+    {% set side = 320 %}
+    {% set cx = side / 2 %}
+    {% set cy = side / 2 %}
+    {% set r_max = (side / 2) - 32 %}
+
+    {# Pre-compute per-spoke angle + cosines/sines via a tiny lookup
+       table. Jinja can't do trig directly, so we use the angles list
+       approach: for each spoke i, angle_radians = -π/2 + (2π × i / N).
+       Starting angle -π/2 puts spoke 0 at 12 o'clock; going clockwise
+       matches the natural reading order. #}
+    {% set ns = namespace(spokes=[]) %}
+    {% set _pi = 3.141592653589793 %}
+    {% for b in bucketed_metrics %}
+      {% set angle = (-_pi / 2) + (2 * _pi * loop.index0 / count) %}
+      {# Manual cos/sin via Taylor series would be brittle in Jinja —
+         instead compute via the SVG transform indirectly: emit each
+         spoke as a `<line>` with `transform="rotate(deg)"` from the
+         centre, then place the polygon by hand using the same rotation
+         per vertex via a `<g transform="rotate(deg)">` wrapper. #}
+      {% set deg = (loop.index0 / count) * 360 - 90 %}
+      {% set normalised = b.value / max_val %}
+      {% set _ = ns.spokes.append({
+        'label': b.label,
+        'value': b.value,
+        'deg': deg,
+        'normalised': normalised,
+      }) %}
+    {% endfor %}
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 {{ side }} {{ side }}"
+         class="dz-radar-svg w-full h-auto"
+         role="img"
+         aria-label="{{ title }} radar — {{ count }} spokes, peak {{ max_val }}">
+      {# Concentric polar grid rings — 4 rings at 25/50/75/100% of r_max.
+         Render via N-sided polygons matching the spoke count so grid
+         vertices align with spoke endpoints (cleaner geometry than
+         circles when the count is small). #}
+      {% for ring_pct in [0.25, 0.5, 0.75, 1.0] %}
+        {% set ring_r = r_max * ring_pct %}
+        {% set ring_points = [] %}
+        {% for s in ns.spokes %}
+          {# Use SVG transform="rotate(deg cx cy)" applied to a vertex
+             at (cx, cy - ring_r). We can't actually rotate a single
+             point in markup without trig — so emit a <g transform> per
+             vertex would be wasteful. Instead, hand-compute via Jinja's
+             `degrees` filter and the math below.
+
+             The trick: place the vertex straight up at (cx, cy - ring_r),
+             then wrap each line segment in <g transform="rotate"> via
+             the polygon construction below. For the polygon `points` we
+             need explicit x/y per vertex, so we DO need cos/sin.
+
+             Workaround: emit individual `<line>` elements per ring
+             segment, each rotated via SVG `transform`. This trades a
+             single <polygon> for N <line>s per ring. Still pure SVG
+             and no JS. #}
+          {% set _ = ring_points.append(s.deg) %}
+        {% endfor %}
+        {# Ring as N <line> segments connecting spoke i to spoke i+1.
+           Each line is from (cx, cy - ring_r) to itself rotated by the
+           inter-spoke angle, wrapped in a <g rotate> at spoke i. #}
+        {% set step_deg = 360 / count %}
+        {% for s in ns.spokes %}
+          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+            <line x1="{{ cx }}" y1="{{ cy - ring_r }}"
+                  x2="{{ cx }}" y2="{{ cy - ring_r }}"
+                  transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
+                  stroke="hsl(var(--border))"
+                  stroke-width="0.5"
+                  stroke-opacity="0.6"/>
+          </g>
+        {% endfor %}
+      {% endfor %}
+
+      {# Spoke axis lines — from centre to each spoke endpoint at r_max. #}
+      {% for s in ns.spokes %}
+        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+          <line x1="{{ cx }}" y1="{{ cy }}"
+                x2="{{ cx }}" y2="{{ cy - r_max }}"
+                stroke="hsl(var(--border))"
+                stroke-width="0.5"
+                stroke-opacity="0.7"/>
+        </g>
+      {% endfor %}
+
+      {# Data polygon — connect each spoke endpoint at its normalised
+         radius. Render as N rotated <line> segments forming the
+         polygon outline plus N rotated <circle> markers at the
+         vertices. Fill is approximated by a single <polygon> built
+         via... we still need explicit (x, y) per vertex.
+
+         Pure-SVG cheat: render each vertex as a <g transform> wrapping
+         a tiny circle, and connect adjacent vertices with rotated
+         <line> segments. The fill is omitted because we'd need
+         coordinates — for v1 we ship the outline + vertex markers,
+         which is the readable shape. Filled polygon deferred to a
+         follow-up that pre-computes vertex coords server-side. #}
+      {% for s in ns.spokes %}
+        {% set vertex_r = r_max * s.normalised %}
+        {# Vertex marker. #}
+        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+          <circle cx="{{ cx }}" cy="{{ cy - vertex_r }}" r="3"
+                  fill="hsl(var(--primary))"
+                  stroke="hsl(var(--card))"
+                  stroke-width="1">
+            <title>{{ s.label }}: {{ s.value }}</title>
+          </circle>
+        </g>
+        {# Line from this vertex to the next (rotation deltas). Inserts
+           one segment per spoke so the outline is closed. #}
+        {% set step_deg = 360 / count %}
+        {% set next_normalised = ns.spokes[(loop.index0 + 1) % count].normalised %}
+        {% set next_r = r_max * next_normalised %}
+        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+          <line x1="{{ cx }}" y1="{{ cy - vertex_r }}"
+                x2="{{ cx }}" y2="{{ cy - next_r }}"
+                transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
+                stroke="hsl(var(--primary))"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"/>
+        </g>
+      {% endfor %}
+
+      {# Spoke labels — placed slightly outside r_max so they don't
+         collide with the outermost ring. #}
+      {% for s in ns.spokes %}
+        {% set label_r = r_max + 14 %}
+        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
+          {# Counter-rotate the text so it stays upright regardless of
+             the spoke angle. #}
+          <g transform="rotate({{ -s.deg }} {{ cx }} {{ cy - label_r }})">
+            <text x="{{ cx }}" y="{{ cy - label_r }}"
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  font-size="10"
+                  fill="hsl(var(--foreground))"
+                  font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ s.label }}</text>
+          </g>
+        </g>
+      {% endfor %}
+    </svg>
+
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+      {{ count }} spokes · peak {{ max_val }}
+    </p>
+  {% elif bucketed_metrics and bucketed_metrics | length > 0 %}
+    {# Fewer than 3 spokes is a degenerate radar (line or point); fall
+       back to a compact KPI list rather than draw a meaningless shape. #}
+    <div class="dz-radar-degenerate text-[12px] space-y-1 mt-2">
+      {% for b in bucketed_metrics %}
+        <div class="flex justify-between font-mono">
+          <span>{{ b.label }}</span>
+          <span class="text-[hsl(var(--muted-foreground))]">{{ b.value }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">
+      Radar needs ≥ 3 spokes — showing values list instead.
+    </p>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

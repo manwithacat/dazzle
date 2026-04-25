@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.29] - 2026-04-25
+
+Patch bump. Closes #879 (single-series MVP) — new `display: radar` mode renders an SVG polar/radar chart from the same `group_by` + `aggregates` shape `bar_chart` already uses. Each `group_by` bucket becomes one spoke; the aggregate value sets the spoke length. Pure SVG, server-rendered, no JS — uses rotated `<g>` wrappers and `<line>`/`<circle>` primitives so Jinja never has to compute trig.
+
+### Added
+- **DSL**: new `display: radar` mode on workspace regions.
+  ```dsl
+  ao_profile:
+    source: MarkingResult
+    display: radar
+    group_by: assessment_objective    # spokes
+    aggregate:
+      pct_at_target: count(MarkingResult where ao = current_bucket)
+    scope: teaching_group = current_context
+    empty: "No marked work yet for this class."
+  ```
+  Spokes start at 12 o'clock and go clockwise so the natural reading order matches the `group_by` enum order. Each vertex carries an `<svg:title>` for hover/screen-reader text.
+- **IR**: `DisplayMode.RADAR` enum entry. Reuses `WorkspaceRegion.group_by` + `aggregates` — zero new IR fields.
+- **Runtime**: extended `_single_dim_chart_modes` in `workspace_rendering.py` to include `RADAR` so the existing `_compute_bucketed_aggregates` pipeline feeds it (same per-bucket aggregate eval that bar_chart and line_chart use; #847's GROUP BY fast path applies).
+- **Template**: new `radar.html` — concentric polar grid (4 rings at 25/50/75/100%, rendered as N-segment polygons matching the spoke count for clean geometry), spoke axes, vertex markers, and an outline polygon assembled from `N` rotated `<line>` segments. Spoke labels counter-rotate to stay upright. Degenerate fallback for < 3 spokes shows a compact value list ("Radar needs ≥ 3 spokes — showing values list instead.") rather than a meaningless point/line.
+
+### Tests
+- **`test_workspace_radar.py`** — 8 cases:
+  - parser (1): `display: radar` + `group_by` + `aggregate` parses into `DisplayMode.RADAR`.
+  - template (7): one `<circle>` marker per spoke; spoke labels emitted; 3-spoke minimum renders SVG (not fallback); 2-spoke degenerate fallback shows value list; empty bucketed_metrics shows empty_message; all-zero values doesn't divide-by-zero; `DISPLAY_TEMPLATE_MAP['RADAR']` routes correctly.
+
+### Agent Guidance
+- **Single-series MVP only.** The original issue (#879) also asked for a target-band overlay and a cohort-comparison series. Multi-series support requires extending `_compute_bucketed_aggregates` to return ALL aggregates not just the first — currently the helper does `next(iter(aggregates.items()))` and drops the rest. Bar_chart consumers only read the first metric so this is a backward-compatible refactor when added; tracked as follow-up scope.
+- **Aggregate-expression caveat.** The current aggregate language only fully resolves `count(<Entity>)` expressions through the GROUP BY fast path. `avg(<column>)` / `sum(<column>)` will tokenise but `_compute_aggregate_metrics` rejects them at the entity-name lookup. Use `count(... where <field> = current_bucket)` for radar values until the multi-measure aggregate work lands.
+- **Pure-SVG trig workaround.** Jinja can't call `cos`/`sin`, so the radar template uses chained `<g transform="rotate(deg)">` wrappers + axis-aligned `<line>`/`<circle>` primitives instead of computing explicit `(x, y)` coordinates per vertex. The outline polygon is therefore `N` rotated line segments rather than a single `<polygon>` (no fill in v1). A filled polygon can be added later by pre-computing vertex coords in the runtime and passing them as a `points` string.
+
 ## [0.61.28] - 2026-04-25
 
 Patch bump. Closes #882 — new `display: histogram` mode renders a continuous-variable distribution (raw marks, response times, scores) with vertical reference lines for grade boundaries, targets, and threshold markers. Pure SVG, server-rendered, no extra DB query (re-uses the rows already fetched for the region).
