@@ -1,197 +1,184 @@
-Autonomous improvement loop for Dazzle example apps. Each cycle: find a gap, fix it, verify, commit, move on.
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: pick the highest-leverage lane based on signals and actionable rows, hand off to its playbook, record outcome, repeat.
 
-Adapted from the BDD improvement loop pattern (Penny Dreadful, 2026-03-22).
+Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, signal bus, log, /loop).
 
 ARGUMENTS: $ARGUMENTS
 
-## Overview
+If `$ARGUMENTS` is empty: driver picks the lane.
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge`): force that lane.
+If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
+If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 
-```
-OBSERVE → ENHANCE → BUILD → VERIFY → REPORT
-    ↑                         │
-    │  ┌── green ─────────────┤
-    │  │                      │
-    │  │    red (≤3): fix → retry from BUILD
-    │  │    red (>3) → DIAGNOSE → file issue → next gap
-    └──┘──────────────────────┘
-```
+## Lanes
 
-One cycle per invocation (~15 minutes). Run with `/loop 15m /improve` for continuous improvement.
+| Lane | Targets | Backlog section | Playbook |
+|------|---------|-----------------|----------|
+| framework-ux | Dazzle's UI layer (templates, contracts, fitness walks) | `## Lane: framework-ux` | `improve/lanes/framework-ux.md` |
+| example-apps | example apps (DSL gaps, lint, conformance, fidelity, visual) | `## Lane: example-apps` | `improve/lanes/example-apps.md` |
+| trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
+| ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
 
-## State Files
+## State files
 
 | File | Purpose |
 |------|---------|
-| `dev_docs/improve-backlog.md` | Gap status: PENDING / IN_PROGRESS / DONE / BLOCKED |
-| `dev_docs/improve-log.md` | Append-only cycle log |
+| `dev_docs/improve-backlog.md` | All four lanes' backlog tables, one `## Lane:` section each |
+| `dev_docs/improve-log.md` | Append-only cycle log (single source of truth across all lanes) |
+| `.dazzle/improve.lock` | PID + timestamp; 15-min TTL |
+| `.dazzle/improve-explore-count` | Single counter shared across all lanes' explore phases (cap 100) |
+| `.dazzle/signals/` | Cross-lane signal bus (existing `ux_cycle_signals` infrastructure) |
 
-Both in `dev_docs/` (gitignored).
+All gitignored.
 
-## Step 0: INIT (first run only)
+## Cycle
 
-If `dev_docs/improve-backlog.md` does not exist:
+### Step 0a: Lock
 
-1. Create `dev_docs/` directory if needed
-2. Discover all example apps: `ls examples/*/dazzle.toml`
-3. For each app, run gap analysis to seed the backlog:
-   - `cd examples/{app} && dazzle validate 2>&1` — record any validation errors
-   - `cd examples/{app} && dazzle lint 2>&1` — record lint violations
-   - Use `mcp__dazzle__conformance` with `operation=summary` — record conformance gaps
-   - Use `mcp__dazzle__dsl` with `operation=fidelity` — record fidelity gaps
-   - If LLM available: `cd examples/{app} && dazzle qa visual --json 2>&1` — record visual quality findings
-4. Write `dev_docs/improve-backlog.md` with all discovered gaps as PENDING items
-5. Write `dev_docs/improve-log.md` with header
-6. Continue to OBSERVE
+1. If `.dazzle/improve.lock` exists and is < 15 min old → abort with the lock contents.
+2. If older → delete as stale.
+3. Create lock with `PID ISO-timestamp`.
 
-**Backlog format:**
+### Step 0b: Preflight (always)
 
-```markdown
-| # | App | Gap Type | Description | Status | Attempts | Notes |
-|---|-----|----------|-------------|--------|----------|-------|
-| 1 | simple_task | lint | Missing search_fields on task_list | PENDING | 0 | |
+```bash
+make test-ux-preflight
 ```
 
-If `$ARGUMENTS` is provided, filter to only that app name.
+If red, **STOP and fix before continuing** — same rule as old /ux-cycle, applies to every lane now.
 
-## Step 1: OBSERVE
+### Step 0c: Read signals
 
-1. Read `dev_docs/improve-backlog.md`
-2. If a gap is IN_PROGRESS with attempts < 3: resume it
-3. If a gap is IN_PROGRESS with attempts >= 3: mark BLOCKED, file issue if framework-related, pick next PENDING
-4. If all gaps DONE or BLOCKED:
-   a. Re-scan for new gaps (DSL may have changed), update backlog
-   b. If new PENDING gaps found: pick the first one and continue
-   c. **If still no PENDING gaps: fall through to TRIAGE (Step 6)**
-5. Pick next PENDING gap (priority: critical > warning > info, then by app alphabetical)
-6. Mark IN_PROGRESS
+```python
+from dazzle.cli.runtime_impl.ux_cycle_signals import since_last_run
+signals = since_last_run(source="improve")
+```
 
-### Tiered Gap Discovery
+Categorise:
+- `dazzle-updated` / `fix-deployed` → mark affected backlog rows for re-verification (delegated to each lane)
+- `trial-friction` → bias next lane selection toward `framework-ux` (qualitative finding may need a contract)
+- `ux-component-shipped` → bias toward `example-apps` (re-verify apps using that component)
+- `ux-regression` → priority signal; jump straight to the relevant lane regardless of selection algorithm
 
-When all existing backlog gaps are DONE or BLOCKED and re-scanning DSL finds no new PENDING gaps:
+### Step 1: Pick a lane
 
-**Tier 1 (every cycle, free):** Re-scan DSL gaps
-- Already handled above: `dazzle validate`, `dazzle lint`, conformance, fidelity
+If `$ARGUMENTS` forces a lane, skip to Step 2.
 
-**Tier 2 (when Tier 1 exhausted, medium cost):** Visual quality assessment
-- For each example app, run: `cd examples/{app} && dazzle qa visual --json 2>&1`
-- Parse JSON output for findings
-- Add each finding to the backlog as gap type `visual_quality` with:
-  - Description: `[{category}] {description} at {location}`
-  - Severity: high → critical, medium → warning, low → info
-- Skip if `dazzle qa visual` is not available (missing LLM dependency)
+For each lane, compute two numbers from the unified backlog:
 
-**Tier 3 (future):** Story verification — reserved for story sidecar integration.
+| Number | Method |
+|--------|--------|
+| `actionable_count(lane)` | Count rows in the lane's section with status ∈ {`REGRESSION`, `PENDING`, `IN_PROGRESS`, `DRAFT`, or qa:`PENDING`} |
+| `last_run_at(lane)` | Most recent `improve-log.md` entry for that lane that wasn't a housekeeping idle tick |
 
-## Step 2: ENHANCE
+Selection priority:
 
-Based on gap type:
+1. **Any lane with REGRESSION rows** → that lane (most urgent — it shipped broken)
+2. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
+3. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
+4. **All counts zero** → pick lane with oldest `last_run_at` and run its **explore phase**
+5. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit
 
-**Lint violation** → Fix the DSL in `examples/{app}/dsl/*.dsl`
-**Validation error** → Fix the DSL syntax/structure
-**Conformance gap** → Add missing `scope:` or `permit:` blocks
-**Fidelity gap** → Add missing surface fields, entity fields, or UX blocks
-**Missing surface** → Add a new surface definition
+Record the choice. Bias from signals must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N") so future operators can audit.
 
-**Visual quality finding** → Determine fix type from finding category and suggestion:
-- `data_quality` → Template or filter fix in `src/dazzle_ui/` (raw UUIDs, None values, dict display)
-- `title_formatting` → Template HTML structure fix (heading hierarchy)
-- `alignment`/`column_layout` → CSS or Tailwind class fix
-- `empty_state` → Add empty state messaging to template fragments
-- If the fix requires a framework-level change (not app-specific DSL), file a GitHub issue and mark the gap BLOCKED
+### Step 2: Hand off to lane
 
-**Gate:** Run `cd examples/{app} && dazzle validate 2>&1`. Must pass with zero new errors/warnings beyond the known baseline.
+Read `improve/lanes/{name}.md` and follow its playbook end-to-end. The lane:
 
-## Step 3: BUILD
+- Operates only on its own section of `improve-backlog.md`
+- Returns an outcome: `{status: PASS|FAIL|BLOCKED|EXPLORED|HOUSEKEEPING, summary: str, signals_to_emit: list, budget_consumed: int}`
+- Does **not** touch the lock, the preflight, the log, or other lanes' state
 
-For most gaps, ENHANCE is sufficient — the DSL change IS the fix. But for gaps that require code changes:
+If the lane requires sub-strategy dispatch (framework-ux explore phase has 5: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
 
-1. Update test fixtures if DSL changes affect conformance cases
-2. Update template expectations if surface structure changed
-3. Run `ruff check src/ tests/ --fix && ruff format src/ tests/`
+### Step 3: Apply outcome
 
-**Gate:** `python -m pytest tests/unit/ -m "not e2e" -x -q --timeout=60` — must pass. Only run tests relevant to the changed app/code, not the full suite (speed matters in the loop).
-
-## Step 4: VERIFY
-
-Run verification appropriate to the gap type:
-
-| Gap Type | Verification |
-|----------|-------------|
-| Lint | `cd examples/{app} && dazzle lint 2>&1` — violation should be gone |
-| Validation | `cd examples/{app} && dazzle validate 2>&1` — must pass |
-| Conformance | `mcp__dazzle__conformance operation=summary` — case count should increase or gap should close |
-| Fidelity | `mcp__dazzle__dsl operation=fidelity` — gap should be resolved |
-| Surface | `mcp__dazzle__dsl operation=inspect_surface entity_name={entity}` — surface should exist |
-| Visual quality | `cd examples/{app} && dazzle qa visual --json 2>&1` — finding should not reappear |
-
-If verification fails: increment attempts, log the failure, retry from ENHANCE (if < 3 attempts).
-
-## Step 5: REPORT
-
-1. Update `dev_docs/improve-backlog.md` — mark DONE or increment attempts
-2. Append to `dev_docs/improve-log.md`:
+1. **Increment explore budget** by `outcome.budget_consumed`
+2. **Append log entry** to `improve-log.md`:
    ```
-   ## Cycle {N} — {timestamp}
-   **App:** {app_name}
-   **Gap:** {description}
-   **Action:** {what was done}
-   **Result:** PASS / FAIL ({details})
+   ## Cycle N — YYYY-MM-DD — lane: {name} — outcome: {status}
+   {outcome.summary}
    ```
-3. If verified green:
-   - `git add examples/{app}/` (and any changed src/ files)
-   - Commit: `fix({app}): {description} — auto-verified`
-   - Do NOT push — accumulate commits for human review
-4. **Check for new issues:**
-   - Run `gh issue list --state open --limit 5 --json number,title,labels --jq '.[] | "#\(.number) \(.title)"'`
-   - If new issues exist that weren't there at cycle start:
-     - Log them in `dev_docs/improve-log.md` under a `### New Issues Detected` section
-     - If any are labelled `needs-triage` or look like bugs from the three teams (CyFuture, AegisMark, Penny Dreadful), **interrupt the backlog** and switch to `/issues` mode: investigate, implement, ship, close — then resume the improvement backlog
-     - If they're feature requests or discussion issues, note them and continue the backlog
-5. Move to next gap (return to OBSERVE)
+3. **Emit signals**:
+   ```python
+   from dazzle.cli.runtime_impl.ux_cycle_signals import emit
+   for sig in outcome.signals_to_emit:
+       emit(source="improve", kind=sig.kind, payload=sig.payload)
+   ```
+4. **Mark run**:
+   ```python
+   from dazzle.cli.runtime_impl.ux_cycle_signals import mark_run
+   mark_run(source="improve")
+   ```
+5. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
 
-## Step 6: TRIAGE (when backlog is clean)
+### Step 4: Release lock
 
-When all backlog gaps are DONE or BLOCKED and no new gaps found from re-scan, automatically check for open GitHub issues and handle them:
+```bash
+rm -f .dazzle/improve.lock
+```
 
-1. Run `gh issue list --state open --limit 20 --json number,title,labels,author`
-2. If **open issues exist**: invoke the `/issues` skill to triage and resolve them
-   - The `/issues` skill handles the full cycle: investigate, implement, ship, close
-   - After `/issues` completes, continue to step 3
-3. **After issues are resolved (or if none existed):**
-   - Check if a `/loop` cron is active for `/improve`. If so, report "Backlog clean, issues resolved. Waiting for next cycle." and stop — the loop scheduler will re-invoke `/improve` which will re-check for new issues.
-   - If NO loop is active (manual `/improve` invocation), report "All clear — backlog clean, no open issues. Run `/loop 5m /improve` to watch for new issues automatically." and stop.
+### Step 5: Report
 
-This makes `/improve` a unified maintenance command: fix example app gaps first, then handle reported issues, then wait for more work.
+One-paragraph summary: lane chosen, outcome, what changed, budget remaining, next-cycle hint (which lane is likely next based on current backlog state).
 
-## Failure Policy
+## Cross-lane signal contract
 
-| Condition | Action |
-|-----------|--------|
-| `dazzle validate` fails | Fix DSL, retry from ENHANCE |
-| Tests fail on changed code | Fix code, retry from BUILD |
-| Verification still shows gap | Check if gap definition is stale, retry |
-| Same failure 3 times | DIAGNOSE: root-cause analysis. If framework bug → file at manwithacat/dazzle. Mark BLOCKED. |
-| All gaps done, no issues | Report "all clear", wait for next loop cycle |
-| All gaps done, issues exist | Fall through to TRIAGE → `/issues` → wait for next cycle |
+| Kind | Emitted by | Consumed by |
+|------|-----------|-------------|
+| `ux-component-shipped` | framework-ux | example-apps (re-verify), ux-converge (refresh contracts) |
+| `ux-regression` | framework-ux | driver (priority pick) |
+| `trial-friction` | trials | framework-ux (consider contract), driver (lane bias) |
+| `gap-doc-written` | framework-ux | driver (informational; logged) |
+| `app-fixed` | example-apps | framework-ux (re-walk if contract relates), trials (re-trial scenarios) |
+| `convergence-clean` | ux-converge | example-apps (clear stale rows for that app) |
+| `dazzle-updated` | (external — releases) | all lanes (mark affected rows) |
+| `fix-deployed` | (external — /issues, /ship) | all lanes (mark affected rows) |
 
-## Scope
+Lanes declare which kinds they emit and consume in their own files. Driver wires the consumption side.
 
-**What this command improves:**
-- DSL quality in example apps (lint, validation, fidelity)
-- RBAC completeness (conformance gaps — missing scope/permit blocks)
-- Surface coverage (entities without surfaces)
-- UX completeness (missing search/filter/sort/empty directives)
-- **Open GitHub issues** (when backlog is clean — delegates to `/issues`)
+## Hard rules
 
-**What it does NOT do:**
-- Create new example apps
-- Make changes that require human judgment (architecture decisions, new features)
+- **One lane per cycle.** Don't chain across lanes — the next /improve invocation handles that.
+- **Lock is mandatory.** No cycle without `.dazzle/improve.lock` held.
+- **Always preflight.** Even for lanes whose strict checks don't seem relevant — preflight is the floor.
+- **Commit every cycle that modifies tracked files.** Even failure cycles commit if they updated notes.
+- **Explore budget is global.** A lane's explore phase always increments the shared counter.
 
-## Success Criteria
+## Status mode
 
-After a full `/loop` run:
-- At least 5-10 gaps resolved per hour
-- All example apps pass `dazzle validate`
-- Conformance coverage increases
-- Open issues triaged and resolved where possible
-- `dev_docs/improve-log.md` has a clear audit trail of every change
+When invoked with `--status`, skip the cycle and emit:
+
+```
+## /improve status — YYYY-MM-DD HH:MM
+
+Budget: X/100
+Lock: free | held by PID since TIME
+Last cycle: N — lane: {name} — outcome: {status}
+
+Lane:           Actionable    Last run     Likely next?
+framework-ux    N             cycle M      yes/no
+example-apps    N             cycle M      yes/no
+trials          N             cycle M      yes/no
+ux-converge     N             cycle M      yes/no
+
+Recent signals (last 24h):
+- {kind} from {source} at TIME
+```
+
+Read-only — does not modify state, log, or lock.
+
+## Usage
+
+```bash
+/improve                                # driver picks the lane
+/improve framework-ux                   # force a lane
+/improve framework-ux contract_audit    # force lane + sub-strategy
+/improve --status                       # status report, no cycle
+/loop 30m /improve                      # recurring; lane-pickup auto each fire
+```
+
+## Migration note
+
+This driver is currently shipping **alongside** the old /improve, /ux-cycle, /trial-cycle, /ux-converge skills. The old skills still work; this driver is opt-in via `/improve` (the old `/improve` skill has been moved to `improve/lanes/example-apps.md` body). When operator confirms the new driver is solid, the old commands will be removed.
+
+See `dev_docs/2026-04-25-improve-consolidation-design.md` for the consolidation rationale.

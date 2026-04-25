@@ -37,10 +37,11 @@ Long-running commands persist their state in the repo under `dev_docs/`:
 
 | File                              | Owner         | Purpose                                  |
 |-----------------------------------|---------------|------------------------------------------|
-| `dev_docs/improve-backlog.md`     | `/improve`    | PENDING / IN_PROGRESS / DONE / BLOCKED   |
-| `dev_docs/improve-log.md`         | `/improve`    | Append-only cycle log (audit trail)      |
-| `dev_docs/ux-backlog.md`          | `/ux-cycle`   | Per-component contract + impl + QA state |
-| `dev_docs/ux-cycle-log.md`        | `/ux-cycle`   | Append-only cycle log                    |
+| `dev_docs/improve-backlog.md`     | `/improve`    | Unified backlog: one `## Lane:` section per lane (framework-ux, example-apps, trials, ux-converge) |
+| `dev_docs/improve-log.md`         | `/improve`    | Append-only cycle log across all lanes   |
+| `.dazzle/improve.lock`            | `/improve`    | PID + timestamp; 15-min TTL              |
+| `.dazzle/improve-explore-count`   | `/improve`    | Shared explore budget (cap 100)          |
+| `.dazzle/signals/`                | `ux_cycle_signals` | Cross-lane signal bus (JSON files)  |
 | `dev_docs/fitness-queue.md`       | `dazzle fitness triage` | Clustered coverage findings    |
 | `agent/smells-report.md`          | `/smells`     | Code-smell analysis snapshot             |
 
@@ -124,24 +125,29 @@ label, and the next loop cycle picks it up.
 
 Commands that advance state and may commit.
 
-#### `/improve [app-name]`
+#### `/improve [lane] [strategy]`
 **Source:** `.claude/commands/improve.md`
 
-Example-app and framework-hygiene loop. Each cycle picks the next gap
-from the backlog:
+Single agent-first entrypoint for autonomous investigation, improvement, refactoring, and remediation. Replaced /improve, /ux-cycle, /trial-cycle, /ux-converge in the consolidation of 2026-04-25 — see `dev_docs/2026-04-25-improve-consolidation-design.md`.
 
-1. **Tier 1** — DSL-level gaps from `dazzle validate`, `dazzle lint`,
-   conformance (MCP), fidelity (MCP).
-2. **Tier 2** — visual-quality findings from `dazzle qa visual --json`
-   (needs an LLM API key).
-3. **Tier 3** — reserved for story-sidecar verification.
+The driver picks the highest-leverage **lane** each cycle based on actionable rows + signals, then hands off to that lane's playbook. Cycle shape: lock → preflight (`make test-ux-preflight`) → read signals → pick lane → run lane playbook → log + emit signals + commit → release lock.
 
-When the backlog is clean, it falls through to **TRIAGE**: if open GitHub
-issues exist it delegates to `/issues`; otherwise it reports "clean" and
-stops. Designed to run under `/loop 15m /improve`.
+Lanes (`.claude/commands/improve/lanes/*.md`):
 
-Scope: only quality gaps that are mechanically detectable. Does not add
-features, create new example apps, or make architecture decisions.
+| Lane | Targets | Cycle action |
+|------|---------|--------------|
+| `framework-ux` | Dazzle UI templates, contracts, fitness walks | SPECIFY (ux-architect contract) → REFACTOR → QA (HTTP + fitness-engine) |
+| `example-apps` | Example app DSL gaps (lint, scope, fidelity, conformance, visual) | Pick gap → fix → verify → commit |
+| `trials` | Qualitative persona scenarios via `dazzle qa trial` | Rotate (app, scenario) → trial --fresh-db → triage findings |
+| `ux-converge` | Example apps with nonzero contract failures | Pick app → RUN→CLASSIFY→FIX→RE-RUN to convergence (cap 5 inner iterations) |
+
+Sub-strategies for `framework-ux` explore phase: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`. The driver respects `$ARGUMENTS` to force a specific lane and strategy.
+
+Cross-lane signals wired into the driver: `ux-component-shipped` from framework-ux triggers re-verification in example-apps + ux-converge; `trial-friction` from trials biases the driver toward framework-ux next cycle; `app-fixed` from example-apps re-eligible apps for trials.
+
+Selection priority: REGRESSION rows first → signal-biased pick → highest actionable_count > 0 → oldest-run lane's explore phase → housekeeping idle if explore budget at cap.
+
+Designed to run under `/loop 30m /improve` for recurring; `/improve --status` for read-only state.
 
 #### `/issues`
 **Source:** `.claude/commands/issues.md`
@@ -157,33 +163,6 @@ implement → test → commit → push → close → repeat. Author-routed:
 When 2+ open owner-issues exist, it dispatches one sonnet subagent per
 issue in parallel to produce structured investigation reports, then picks
 the best next issue based on priority × complexity × momentum.
-
-#### `/ux-cycle`
-**Source:** `.claude/commands/ux-cycle.md`
-
-UX-architect governance loop. Each cycle picks the highest-priority row
-from `dev_docs/ux-backlog.md` by row-state precedence
-(REGRESSION > PENDING > DRAFT > DONE-but-unverified > VERIFIED), goes
-through SPECIFY (generate ux-architect contract) → REFACTOR (apply to
-templates + Alpine + backend) → QA (two-phase: HTTP contracts then
-fitness-engine walk) → REPORT. Holds a `.dazzle/ux-cycle.lock` to
-prevent concurrent runs.
-
-The most elaborate loop in the harness — 530 lines — because it
-composes three separate skills (ux-architect, stack-adapter,
-fitness-engine) and owns a subprocess lifecycle.
-
-#### `/ux-converge`
-**Source:** `.claude/commands/ux-converge.md`
-
-A narrower loop focused on one measurable: DSL-driven UX contract
-failures. Against a running Dazzle app, it runs `dazzle ux verify
---contracts`, classifies each failure via the reconciler, applies the
-suggested DSL levers, re-runs, and stops when the failure count hits
-zero or is unchanged for two cycles.
-
-Complements `/ux-cycle` — `/ux-cycle` builds new contracts;
-`/ux-converge` drives existing contracts to green.
 
 ### 2.2 One-shot commands
 

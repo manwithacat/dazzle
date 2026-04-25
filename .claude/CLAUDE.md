@@ -104,18 +104,31 @@ surface task_list "Tasks":
 
 Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
 
-## UX Improvement Loop
+## Autonomous Improvement Loop
 
-Dazzle has an autonomous UX improvement loop at `/ux-cycle`. It iterates over the backlog in `dev_docs/ux-backlog.md`, applies ux-architect contracts to components that lack them, refactors code to match, and validates via agent-driven Playwright QA against example apps. See `docs/superpowers/specs/2026-04-12-ux-cycle-design.md` for the full design.
+Dazzle has a single agent-first entrypoint for autonomous investigation, improvement, refactoring, and remediation: `/improve`. The driver picks the highest-leverage **lane** each cycle based on actionable rows and signals, then hands off to that lane's playbook:
+
+| Lane | Targets |
+|------|---------|
+| `framework-ux` | Dazzle's UI layer (templates, contracts, fitness walks). ux-architect-driven; was `/ux-cycle` |
+| `example-apps` | Example app DSL gaps (lint, scope, fidelity, conformance). Tiered gap discovery |
+| `trials` | Qualitative persona scenarios via `dazzle qa trial`. ~5 min/cycle, burns tokens — was `/trial-cycle` |
+| `ux-converge` | Example apps with nonzero contract failures; runs converge-to-zero per app — was `/ux-converge` |
+
+**State:**
+- `dev_docs/improve-backlog.md` — unified backlog with one `## Lane:` section per lane
+- `dev_docs/improve-log.md` — append-only cycle log across all lanes
+- `.dazzle/improve.lock`, `.dazzle/improve-explore-count` — driver state (cap 100, shared across lanes)
+- `.dazzle/signals/` — cross-loop signal bus (`ux_cycle_signals`); lanes emit `ux-component-shipped`, `trial-friction`, `convergence-clean` etc.
 
 **Common invocations:**
-- `/ux-cycle` — one cycle
-- `/loop 30m /ux-cycle` — recurring with 30-min intervals
-- `/loop /ux-cycle` — self-paced
+- `/improve` — driver picks the lane
+- `/improve framework-ux` — force a specific lane
+- `/improve framework-ux contract_audit` — force lane + sub-strategy
+- `/improve --status` — read-only status across all lanes
+- `/loop 30m /improve` — recurring; lane-pickup auto each fire
 
-## Qualitative Trial Loop
-
-Sibling to `/ux-cycle` — where ux-cycle checks *shape* (contracts, DOM, card safety) deterministically, `/trial-cycle` checks *substance* (did the user achieve the task, was the RBAC sensible, did the error page help) qualitatively. Each cycle picks an `(example_app, trial.toml scenario)` pair, runs `dazzle qa trial --fresh-db`, and triages findings into `dev_docs/trial-backlog.md` or GitHub issues. ~5 min/cycle; burns tokens — prefer `/loop 60m /trial-cycle` or manual.
+**Files:** driver at `.claude/commands/improve.md`; lanes at `.claude/commands/improve/lanes/*.md`; sub-strategies at `.claude/commands/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`.
 
 Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.claude/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
 
