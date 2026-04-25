@@ -539,30 +539,41 @@ class DazzleBackendApp:
         from dazzle_back.runtime.pg_backend import PostgresBackend
 
         self._db_manager = PostgresBackend(self._database_url)
+        may_create_schema = self._should_create_schema_on_startup()
 
-        # Auto-migrate: create tables from SA metadata (idempotent).
-        # Alembic handles incremental migrations via `dazzle db migrate`.
-        try:
-            from sqlalchemy import create_engine as _sa_create_engine
+        if may_create_schema:
+            # Development/test convenience only. Production schema changes must
+            # go through Alembic so broken migration state is not hidden.
+            try:
+                from sqlalchemy import create_engine as _sa_create_engine
 
-            from dazzle_back.runtime.sa_schema import build_metadata
+                from dazzle_back.runtime.sa_schema import build_metadata
 
-            metadata = build_metadata(self._entities)
-            sa_url = self._database_url
-            if sa_url.startswith("postgresql://"):
-                sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
-            engine = _sa_create_engine(sa_url)
-            metadata.create_all(engine)
-            engine.dispose()
-        except Exception as exc:
-            import logging
+                metadata = build_metadata(self._entities)
+                sa_url = self._database_url
+                if sa_url.startswith("postgresql://"):
+                    sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
+                engine = _sa_create_engine(sa_url)
+                try:
+                    metadata.create_all(engine)
+                finally:
+                    engine.dispose()
+            except Exception as exc:
+                logger.warning("Development schema create_all failed: %s", exc)
+        else:
+            logger.info("Skipping startup schema creation in production; Alembic owns schema.")
 
-            logging.getLogger(__name__).warning("Auto-migrate create_all: %s", exc)
+        # Development may initialize the framework params table. Production
+        # verifies it instead, so Alembic remains the schema owner.
+        from dazzle_back.runtime.migrations import (
+            ensure_dazzle_params_table,
+            verify_dazzle_params_table,
+        )
 
-        # Create _dazzle_params framework table (#572)
-        from dazzle_back.runtime.migrations import ensure_dazzle_params_table
-
-        ensure_dazzle_params_table(self._db_manager)
+        if may_create_schema:
+            ensure_dazzle_params_table(self._db_manager)
+        else:
+            verify_dazzle_params_table(self._db_manager)
 
         # Build param resolver from AppSpec (#572)
         from dazzle_back.runtime.param_store import ParamResolver
@@ -610,6 +621,12 @@ class DazzleBackendApp:
             relation_loader=relation_loader,
         )
         self._repositories = repo_factory.create_all_repositories(self._entities)
+
+    def _should_create_schema_on_startup(self) -> bool:
+        """Return whether startup may create entity tables directly."""
+        from dazzle.core.environment import is_production
+
+        return not is_production()
 
     def _setup_services(self) -> None:
         """Create CRUD services and wire them to repositories."""

@@ -139,3 +139,25 @@ def ensure_dazzle_params_table(db_manager: DatabaseBackend) -> None:
                 PRIMARY KEY (key, scope, scope_id)
             )
         """)
+
+
+def verify_dazzle_params_table(db_manager: DatabaseBackend) -> None:
+    """Verify the _dazzle_params framework table exists."""
+    with db_manager.connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = '_dazzle_params'
+            )
+            """
+        )
+        row = cursor.fetchone()
+        exists = row[0] if not isinstance(row, dict) else row.get("exists")
+        if not exists:
+            raise MigrationError(
+                "_dazzle_params table is missing. Run 'dazzle db upgrade' before startup."
+            )
