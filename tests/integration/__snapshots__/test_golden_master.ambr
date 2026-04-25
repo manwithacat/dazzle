@@ -1422,6 +1422,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'show_outliers': True,
             'sort': list([
             ]),
             'source': 'SystemHealth',
@@ -1457,6 +1458,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'show_outliers': True,
             'sort': list([
             ]),
             'source': 'DeployHistory',
@@ -1492,6 +1494,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'show_outliers': True,
             'sort': list([
             ]),
             'source': None,

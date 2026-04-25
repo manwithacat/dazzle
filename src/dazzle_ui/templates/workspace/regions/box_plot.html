@@ -1,0 +1,151 @@
+{# Box plot region — v0.61.29 (#881).
+
+   Server-rendered SVG quartile boxes per `group_by` bucket. Consumes
+   `box_plot_stats` (computed by `_compute_box_plot_stats` in
+   workspace_rendering.py from the already-fetched `items` — no extra
+   DB query). Each entry carries label/n/min/q1/median/q3/max/iqr/
+   whisker_low/whisker_high/outliers.
+
+   Layout: vertical SVG, one column per bucket. Y-axis is the value
+   range (shared across all boxes for direct comparability). Box from
+   Q1 to Q3, median line inside, whiskers to whisker_low/whisker_high
+   (Tukey 1.5×IQR fences), outliers as small dots beyond the whiskers.
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-box-plot-region">
+  {% if box_plot_stats and box_plot_stats | length > 0 %}
+    {% set count = box_plot_stats | length %}
+    {# Y-axis range = global min/max across boxes (including outliers
+       so they fit inside the plot area). Build flat lists rather than
+       using `default=` on min/max which Jinja's do_min/do_max in this
+       version doesn't accept. #}
+    {% set ns_yr = namespace(lo=[], hi=[]) %}
+    {% for s in box_plot_stats %}
+      {% set _ = ns_yr.lo.append(s.whisker_low) %}
+      {% set _ = ns_yr.hi.append(s.whisker_high) %}
+      {% for ov in (s.outliers or []) %}
+        {% set _ = ns_yr.lo.append(ov) %}
+        {% set _ = ns_yr.hi.append(ov) %}
+      {% endfor %}
+    {% endfor %}
+    {% set y_min = ns_yr.lo | min %}
+    {% set y_max = ns_yr.hi | max %}
+    {% set y_range = y_max - y_min %}
+    {% set y_range = y_range if y_range > 0 else 1 %}
+
+    {# SVG geometry — wider for many boxes, capped at 460px. #}
+    {% set w = (count * 56 + 64) if (count * 56 + 64) < 460 else 460 %}
+    {% set h = 200 %}
+    {% set pt = 8 %}
+    {% set pr = 8 %}
+    {% set pb = 32 %}
+    {% set pl = 32 %}
+    {% set plot_w = w - pl - pr %}
+    {% set plot_h = h - pt - pb %}
+    {% set col_w = plot_w / count %}
+    {% set box_w = (col_w * 0.6) if (col_w * 0.6) < 36 else 36 %}
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 {{ w }} {{ h }}"
+         class="dz-box-plot-svg w-full h-auto"
+         role="img"
+         aria-label="{{ title }} box plot — {{ count }} groups, range {{ y_min | round(1) }}–{{ y_max | round(1) }}">
+      {# Baseline + axis. #}
+      <line x1="{{ pl }}" y1="{{ pt + plot_h }}"
+            x2="{{ pl + plot_w }}" y2="{{ pt + plot_h }}"
+            stroke="hsl(var(--border))" stroke-width="1"/>
+      <line x1="{{ pl }}" y1="{{ pt }}"
+            x2="{{ pl }}" y2="{{ pt + plot_h }}"
+            stroke="hsl(var(--border))" stroke-width="1"/>
+
+      {# Y-axis tick labels — min, max, and median of all boxes. #}
+      <text x="{{ pl - 4 }}" y="{{ pt + plot_h + 4 }}"
+            text-anchor="end" font-size="9"
+            fill="hsl(var(--muted-foreground))"
+            font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ y_min | round(1) }}</text>
+      <text x="{{ pl - 4 }}" y="{{ pt + 4 }}"
+            text-anchor="end" font-size="9"
+            fill="hsl(var(--muted-foreground))"
+            font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ y_max | round(1) }}</text>
+
+      {# Per-group box. #}
+      {% for s in box_plot_stats %}
+        {% set col_x = pl + (loop.index0 + 0.5) * col_w %}
+        {% set q1_y = pt + plot_h - (((s.q1 - y_min) / y_range) * plot_h) %}
+        {% set q3_y = pt + plot_h - (((s.q3 - y_min) / y_range) * plot_h) %}
+        {% set median_y = pt + plot_h - (((s.median - y_min) / y_range) * plot_h) %}
+        {% set whisker_low_y = pt + plot_h - (((s.whisker_low - y_min) / y_range) * plot_h) %}
+        {% set whisker_high_y = pt + plot_h - (((s.whisker_high - y_min) / y_range) * plot_h) %}
+
+        {# Whisker stem — vertical line from low to high. #}
+        <line x1="{{ col_x | round(2) }}" y1="{{ whisker_low_y | round(2) }}"
+              x2="{{ col_x | round(2) }}" y2="{{ whisker_high_y | round(2) }}"
+              stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+        {# Whisker caps — short horizontal lines at the ends. #}
+        <line x1="{{ (col_x - box_w / 4) | round(2) }}" y1="{{ whisker_low_y | round(2) }}"
+              x2="{{ (col_x + box_w / 4) | round(2) }}" y2="{{ whisker_low_y | round(2) }}"
+              stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+        <line x1="{{ (col_x - box_w / 4) | round(2) }}" y1="{{ whisker_high_y | round(2) }}"
+              x2="{{ (col_x + box_w / 4) | round(2) }}" y2="{{ whisker_high_y | round(2) }}"
+              stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+
+        {# Box body — Q1 to Q3, primary tint fill. #}
+        {% set box_h = q1_y - q3_y %}
+        <rect x="{{ (col_x - box_w / 2) | round(2) }}" y="{{ q3_y | round(2) }}"
+              width="{{ box_w | round(2) }}" height="{{ box_h | round(2) }}"
+              fill="hsl(var(--primary))" fill-opacity="0.18"
+              stroke="hsl(var(--primary))" stroke-width="1">
+          <title>{{ s.label }}: Q1 {{ s.q1 | round(1) }}, median {{ s.median | round(1) }}, Q3 {{ s.q3 | round(1) }}, n={{ s.n }}</title>
+        </rect>
+
+        {# Median line — bold horizontal stroke inside the box. #}
+        <line x1="{{ (col_x - box_w / 2) | round(2) }}" y1="{{ median_y | round(2) }}"
+              x2="{{ (col_x + box_w / 2) | round(2) }}" y2="{{ median_y | round(2) }}"
+              stroke="hsl(var(--primary))" stroke-width="1.5"/>
+
+        {# Outlier dots — small circles for points outside the fences. #}
+        {% for ov in (s.outliers or []) %}
+          {% set ov_y = pt + plot_h - (((ov - y_min) / y_range) * plot_h) %}
+          <circle cx="{{ col_x | round(2) }}" cy="{{ ov_y | round(2) }}" r="2"
+                  fill="hsl(var(--muted-foreground))"
+                  fill-opacity="0.7">
+            <title>{{ s.label }} outlier: {{ ov | round(1) }}</title>
+          </circle>
+        {% endfor %}
+
+        {# Group label below the axis. #}
+        <text x="{{ col_x | round(2) }}" y="{{ h - 8 }}"
+              text-anchor="middle" font-size="10"
+              fill="hsl(var(--foreground))"
+              font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ s.label }}</text>
+      {% endfor %}
+
+      {# Reference lines — horizontal markers (target/boundary), reused
+         from #883 (line/area) since they map naturally to the y-axis
+         here too. #}
+      {% set _line_dasharray = {'solid': '', 'dashed': '4,3', 'dotted': '1,3'} %}
+      {% for ref in (reference_lines or []) %}
+        {% if ref.value >= y_min and ref.value <= y_max %}
+          {% set ref_y = pt + plot_h - (((ref.value - y_min) / y_range) * plot_h) %}
+          <line x1="{{ pl }}" y1="{{ ref_y | round(2) }}"
+                x2="{{ pl + plot_w }}" y2="{{ ref_y | round(2) }}"
+                stroke="hsl(var(--muted-foreground))"
+                stroke-width="1"
+                stroke-dasharray="{{ _line_dasharray.get(ref.style, '') }}">
+            <title>{{ ref.label }}: {{ ref.value }}</title>
+          </line>
+        {% endif %}
+      {% endfor %}
+    </svg>
+
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+      {{ count }} groups · {{ box_plot_stats | sum(attribute='n') }} samples
+    </p>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

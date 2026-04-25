@@ -139,6 +139,7 @@ class TokenType(Enum):
     REFERENCE_LINES = "reference_lines"  # v0.61.26: Horizontal markers on line/area charts (#883)
     REFERENCE_BANDS = "reference_bands"  # v0.61.26: Shaded bands on line/area charts (#883)
     BINS = "bins"  # v0.61.27: Histogram bin count — int or "auto" (#882)
+    SHOW_OUTLIERS = "show_outliers"  # v0.61.29: Box plot outlier toggle (#881)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

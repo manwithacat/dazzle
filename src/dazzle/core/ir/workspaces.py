@@ -73,6 +73,7 @@ class DisplayMode(StrEnum):
     SPARKLINE = "sparkline"  # v0.60.0: Compact line for KPI tiles (cycle 28)
     HISTOGRAM = "histogram"  # v0.61.27 (#882): continuous-variable distribution
     RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
+    BOX_PLOT = "box_plot"  # v0.61.29 (#881): per-group quartile spread
 
 
 class BucketRef(BaseModel):
@@ -239,6 +240,10 @@ class WorkspaceRegion(BaseModel):
     # value column to bin (it's a generic "the value to plot" field, just
     # legacy-named — rename deferred to keep this patch focused).
     bin_count: int | None = None
+    # v0.61.29 (#881): Box plot — render outlier dots (points outside
+    # Tukey fences [Q1 - 1.5*IQR, Q3 + 1.5*IQR]). Default True; set False
+    # for a clean compact view that omits the dots.
+    show_outliers: bool = True
 
     model_config = ConfigDict(frozen=True)
 

@@ -850,6 +850,18 @@ async def _workspace_region_handler(
         if _value_field:
             histogram_bins = _compute_histogram_bins(items, _value_field, _bin_count)
 
+    # Box plot (#881, v0.61.29): per-group quartile/whisker stats from the
+    # already-fetched ``items``. Same in-process pattern as histogram.
+    box_plot_stats: list[dict[str, Any]] = []
+    if ctx.ctx_region.display == "BOX_PLOT":
+        _value_field = (getattr(ctx.ctx_region, "heatmap_value", "") or "").strip()
+        _bp_group_by = group_by if isinstance(group_by, str) else None
+        _show_outliers = bool(getattr(ctx.ir_region, "show_outliers", True))
+        if _value_field:
+            box_plot_stats = _compute_box_plot_stats(
+                items, _value_field, _bp_group_by, _show_outliers
+            )
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1080,6 +1092,8 @@ async def _workspace_region_handler(
         reference_bands=getattr(ctx.ctx_region, "reference_bands", []),
         # Histogram (#882, v0.61.27) — pre-computed bins from `items`
         histogram_bins=histogram_bins,
+        # Box plot (#881, v0.61.29) — per-group quartile stats from `items`
+        box_plot_stats=box_plot_stats,
     )
     return HTMLResponse(content=html)
 
@@ -1671,6 +1685,119 @@ async def _enumerate_distinct_buckets(
             break
         page += 1
     return out, True
+
+
+def _compute_box_plot_stats(
+    items: list[dict[str, Any]],
+    value_field: str,
+    group_by: str | None,
+    show_outliers: bool = True,
+) -> list[dict[str, Any]]:
+    """Compute per-group quartile statistics for the box plot display (#881).
+
+    Returns one dict per group_by bucket (or one global bucket if
+    ``group_by`` is empty), each with:
+      ``label``    – the group_by value (str),
+      ``n``        – sample count,
+      ``min``      – minimum value,
+      ``q1``       – 25th percentile (linear-interp / "type 7"),
+      ``median``   – 50th percentile,
+      ``q3``       – 75th percentile,
+      ``max``      – maximum value,
+      ``iqr``      – Q3 − Q1,
+      ``whisker_low``  – furthest data point ≥ Q1 − 1.5*IQR (Tukey fence),
+      ``whisker_high`` – furthest data point ≤ Q3 + 1.5*IQR,
+      ``outliers`` – list of values outside the fences (empty when
+                     ``show_outliers=False``).
+
+    Uses NumPy-default linear interpolation (R "type 7" / numpy.percentile
+    default) — Q at position ``(n-1)*p``, fractional positions interpolate
+    linearly between adjacent order statistics. Pure stdlib; no NumPy
+    needed.
+
+    Skips items where ``value_field`` is None or non-numeric. Groups
+    with ``n < 2`` are returned with degenerate stats (q1 = median = q3
+    = the single value, iqr = 0, no whiskers, no outliers) so the
+    template can render a single-point marker rather than crash.
+    """
+
+    def _percentile(sorted_vals: list[float], p: float) -> float:
+        n = len(sorted_vals)
+        if n == 1:
+            return sorted_vals[0]
+        pos = (n - 1) * p
+        lo_idx = int(pos)
+        hi_idx = min(lo_idx + 1, n - 1)
+        frac = pos - lo_idx
+        return sorted_vals[lo_idx] + frac * (sorted_vals[hi_idx] - sorted_vals[lo_idx])
+
+    # Bucket values by group_by (or one global bucket if absent).
+    buckets: dict[str, list[float]] = {}
+    order: list[str] = []
+    for item in items:
+        v = item.get(value_field)
+        if v is None:
+            continue
+        try:
+            v_num = float(v)
+        except (TypeError, ValueError):
+            continue
+        key = "" if not group_by else str(item.get(group_by, "") or "")
+        if key not in buckets:
+            buckets[key] = []
+            order.append(key)
+        buckets[key].append(v_num)
+
+    stats: list[dict[str, Any]] = []
+    for key in order:
+        vals = sorted(buckets[key])
+        n = len(vals)
+        if n == 0:
+            continue
+        if n == 1:
+            stats.append(
+                {
+                    "label": key,
+                    "n": 1,
+                    "min": vals[0],
+                    "q1": vals[0],
+                    "median": vals[0],
+                    "q3": vals[0],
+                    "max": vals[0],
+                    "iqr": 0.0,
+                    "whisker_low": vals[0],
+                    "whisker_high": vals[0],
+                    "outliers": [],
+                }
+            )
+            continue
+        q1 = _percentile(vals, 0.25)
+        median = _percentile(vals, 0.5)
+        q3 = _percentile(vals, 0.75)
+        iqr = q3 - q1
+        fence_lo = q1 - 1.5 * iqr
+        fence_hi = q3 + 1.5 * iqr
+        in_fence = [v for v in vals if fence_lo <= v <= fence_hi]
+        whisker_low = in_fence[0] if in_fence else vals[0]
+        whisker_high = in_fence[-1] if in_fence else vals[-1]
+        outliers = [v for v in vals if v < fence_lo or v > fence_hi] if show_outliers else []
+        stats.append(
+            {
+                "label": key,
+                "n": n,
+                "min": vals[0],
+                "q1": q1,
+                "median": median,
+                "q3": q3,
+                "max": vals[-1],
+                "iqr": iqr,
+                "whisker_low": whisker_low,
+                "whisker_high": whisker_high,
+                "outliers": outliers,
+            }
+        )
+
+    return stats
 
 
 def _compute_histogram_bins(

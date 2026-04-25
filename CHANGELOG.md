@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.30] - 2026-04-25
+
+Patch bump. Closes #881 — new `display: box_plot` mode renders per-group quartile spread (Q1, median, Q3, IQR) with Tukey 1.5×IQR whiskers and outlier dots. Pure SVG, server-rendered, in-process stats over the already-fetched `items` — no extra DB query, no NumPy. Same in-process pattern as the histogram (#882) and the same `heatmap_value` legacy field for the value column.
+
+### Added
+- **DSL**: new `display: box_plot` mode + `show_outliers: true|false` toggle on workspace regions.
+  ```dsl
+  ao_spread:
+    source: MarkingResult
+    display: box_plot
+    group_by: assessment_objective
+    value: scaled_mark
+    show_outliers: true            # default
+    scope: teaching_group = current_context
+  ```
+  Reuses the legacy `heatmap_value` IR field as the value column (same overload as histogram). `group_by` enumerates one box per bucket.
+- **IR**: `DisplayMode.BOX_PLOT` enum entry + `WorkspaceRegion.show_outliers: bool = True`.
+- **Lexer**: new `TokenType.SHOW_OUTLIERS = "show_outliers"` keyword.
+- **Runtime**: `_compute_box_plot_stats(items, value_field, group_by, show_outliers)` in `dazzle_back.runtime.workspace_rendering`. Quartiles via NumPy-default linear interpolation (R "type 7": Q at position `(n-1)*p`, fractional positions interpolate linearly between adjacent order statistics). Whiskers terminate at the furthest data point inside `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`; everything outside that fence is an outlier (Tukey). Skips items where the value is None or non-numeric. Returns `{label, n, min, q1, median, q3, max, iqr, whisker_low, whisker_high, outliers}` per group.
+- **Template**: new `box_plot.html` — SVG with shared y-axis across boxes for direct comparability, primary-tint Q1–Q3 box, bold median line, whisker stem + caps, outlier dots, group labels below the axis. Reuses `reference_lines` from #883 as horizontal markers (target/grade-boundary lines map naturally to the y-axis here).
+
+### Tests
+- **`test_workspace_box_plot.py`** — 16 cases across 3 layers:
+  - parser (3): minimal box_plot; `show_outliers: false`; invalid value raises.
+  - runtime / `_compute_box_plot_stats` (8): standard Q1/median/Q3 math for 1..10 (3.25 / 5.5 / 7.75); outlier detection via Tukey fences (value 100 lands in outliers, not whisker_high); `show_outliers: false` returns empty list; groups preserve first-seen order; single-value group → degenerate flat box (no divide-by-zero); `group_by: None` returns one global bucket; non-numeric items skipped; empty input → `[]`.
+  - template (5): one box rect per group; outlier renders as `<circle>` with tooltip; horizontal reference line renders dashed; empty stats shows empty_message; `DISPLAY_TEMPLATE_MAP['BOX_PLOT']` routes correctly.
+
+### Agent Guidance
+- **In-process stats (no NumPy, no SQL `PERCENTILE_CONT`).** Box-plot quartiles are computed from the already-fetched `items` (same approach as histogram #882). For massive cohorts the page-size limit on `items` (default ~50–200 for chart modes) under-samples; future work could push percentile calc to PostgreSQL `percentile_cont`. Pure stdlib is fine for school-scale + investor-demo dashboards and avoids a hard NumPy dependency.
+- **Linear-interpolation quartiles match NumPy `np.percentile` defaults** (R "type 7" / inclusive method). If you wire a different chart that needs the same quartiles, reuse `_compute_box_plot_stats` rather than rolling another calculator — the test vectors pin the convention.
+- **Single-value groups render a degenerate flat box** (Q1 = median = Q3 = the value, IQR = 0, no whiskers). This is preferable to skipping the group silently — the user sees that "AO4 has only one mark" rather than wondering where AO4 went.
+- **`reference_lines` works on box plots too** — the existing #883 primitive maps cleanly to the y-axis. Vertical reference lines on a box plot would need a new key (and aren't a common pattern); skip unless explicitly requested.
+
 ## [0.61.29] - 2026-04-25
 
 Patch bump. Closes #879 (single-series MVP) — new `display: radar` mode renders an SVG polar/radar chart from the same `group_by` + `aggregates` shape `bar_chart` already uses. Each `group_by` bucket becomes one spoke; the aggregate value sets the spoke length. Pure SVG, server-rendered, no JS — uses rotated `<g>` wrappers and `<line>`/`<circle>` primitives so Jinja never has to compute trig.

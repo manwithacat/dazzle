@@ -680,6 +680,7 @@ class WorkspaceParserMixin:
         reference_lines: list[ir.ReferenceLine] = []
         reference_bands: list[ir.ReferenceBand] = []
         bin_count: int | None = None  # None = "auto" (Sturges) when display=histogram
+        show_outliers: bool = True  # box plot toggle (#881)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -939,6 +940,26 @@ class WorkspaceParserMixin:
                 reference_bands = self._parse_reference_bands_block()
                 self.expect(TokenType.DEDENT)
 
+            # show_outliers: true|false  — box plot outlier toggle (#881)
+            elif self.match(TokenType.SHOW_OUTLIERS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    show_outliers = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    show_outliers = False
+                else:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"show_outliers must be true or false; got {token.value!r}",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
             # bins: auto | <int>  — histogram bin count (#882)
             elif self.match(TokenType.BINS):
                 self.advance()
@@ -1021,4 +1042,5 @@ class WorkspaceParserMixin:
             reference_lines=reference_lines,
             reference_bands=reference_bands,
             bin_count=bin_count,
+            show_outliers=show_outliers,
         )
