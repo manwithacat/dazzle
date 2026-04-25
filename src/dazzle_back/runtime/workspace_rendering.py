@@ -155,13 +155,22 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return []
 
-    # Collect field names from surface sections (preserving order)
+    # Collect field names from surface sections (preserving order). Carry the
+    # element-level (or fallback section-level) visible: predicate so the
+    # request handler can hide columns the persona shouldn't see (#872).
     surface_fields: list[str] = []
+    field_visible_conditions: dict[str, dict[str, Any] | None] = {}
     for section in surface_spec.sections:
+        _sec_vis = getattr(section, "visible", None)
+        _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
         for element in section.elements:
             fn = element.field_name
             if fn and fn != "id" and fn not in surface_fields:
                 surface_fields.append(fn)
+                _el_vis = getattr(element, "visible", None)
+                field_visible_conditions[fn] = (
+                    _el_vis.model_dump() if _el_vis else _section_vis_cond
+                )
 
     if not surface_fields:
         return _build_entity_columns(entity_spec)
@@ -174,6 +183,7 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
         f = field_map.get(fn)
         if not f:
             continue
+        _vis_cond = field_visible_conditions.get(fn)
         ft = f.type
         kind = ft.kind
         kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
@@ -182,15 +192,16 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
             ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
-            columns.append(
-                {
-                    "key": rel_name,
-                    "label": rel_name.replace("_", " ").title(),
-                    "type": "ref",
-                    "sortable": False,
-                    "ref_route": ref_route,
-                }
-            )
+            ref_col: dict[str, Any] = {
+                "key": rel_name,
+                "label": rel_name.replace("_", " ").title(),
+                "type": "ref",
+                "sortable": False,
+                "ref_route": ref_route,
+            }
+            if _vis_cond:
+                ref_col["visible_condition"] = _vis_cond
+            columns.append(ref_col)
             continue
         # Skip non-displayable types
         if kind_val in ("uuid", "has_many", "has_one", "embeds"):
@@ -203,6 +214,8 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
             "type": col_type,
             "sortable": True,
         }
+        if _vis_cond:
+            col["visible_condition"] = _vis_cond
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
@@ -675,9 +688,25 @@ async def _workspace_region_handler(
         except Exception:
             logger.warning("Failed to list items for workspace region", exc_info=True)
 
-    # Use pre-computed columns from startup (constant-folded from IR)
+    # Use pre-computed columns from startup (constant-folded from IR).
+    # Filter out columns whose visible: predicate fails for the current
+    # persona (#872). Build a fresh list — never mutate the shared one.
     if ctx.precomputed_columns:
-        columns = ctx.precomputed_columns
+        if any(c.get("visible_condition") for c in ctx.precomputed_columns):
+            from dazzle_ui.utils.condition_eval import evaluate_condition as _eval_vis
+
+            _request_roles = list(_auth_ctx_for_filters.roles) if _auth_ctx_for_filters else []
+            _role_ctx = {
+                "user_roles": [r.removeprefix("role_") for r in _request_roles],
+            }
+            columns = [
+                c
+                for c in ctx.precomputed_columns
+                if not c.get("visible_condition")
+                or _eval_vis(c["visible_condition"], {}, _role_ctx)
+            ]
+        else:
+            columns = ctx.precomputed_columns
     elif items:
         columns = [
             {

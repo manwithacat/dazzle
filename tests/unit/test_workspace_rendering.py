@@ -780,6 +780,104 @@ class TestBuildSurfaceColumns:
         assert col_map["completed"]["type"] == "bool"
 
 
+def _make_visible_role(role_name: str) -> SimpleNamespace:
+    """Build a ConditionExpr-shaped object whose model_dump() yields a role check."""
+    payload = {
+        "role_check": {"role_name": role_name},
+        "operator": None,
+        "left": None,
+        "right": None,
+        "comparison": None,
+        "grant_check": None,
+    }
+    return SimpleNamespace(model_dump=lambda p=payload: p)
+
+
+class TestSurfaceColumnsVisibleCondition:
+    """_build_surface_columns() should carry visible: predicates onto columns (#872)."""
+
+    def test_element_visible_attached_to_column(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("priority", FieldTypeKind.STR),
+            ],
+        )
+        section = SimpleNamespace(
+            visible=None,
+            elements=[
+                SimpleNamespace(field_name="title", visible=None),
+                SimpleNamespace(field_name="priority", visible=_make_visible_role("admin")),
+            ],
+        )
+        surface = SimpleNamespace(sections=[section])
+        columns = _build_surface_columns(entity, surface)
+
+        col_map = {c["key"]: c for c in columns}
+        assert "visible_condition" not in col_map["title"]
+        assert col_map["priority"]["visible_condition"] == {
+            "role_check": {"role_name": "admin"},
+            "operator": None,
+            "left": None,
+            "right": None,
+            "comparison": None,
+            "grant_check": None,
+        }
+
+    def test_section_visible_falls_through_to_columns(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("priority", FieldTypeKind.STR),
+            ],
+        )
+        section = SimpleNamespace(
+            visible=_make_visible_role("school_admin"),
+            elements=[
+                SimpleNamespace(field_name="title", visible=None),
+                SimpleNamespace(field_name="priority", visible=None),
+            ],
+        )
+        surface = SimpleNamespace(sections=[section])
+        columns = _build_surface_columns(entity, surface)
+
+        for col in columns:
+            assert col["visible_condition"]["role_check"]["role_name"] == "school_admin"
+
+    def test_element_visible_overrides_section_visible(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("priority", FieldTypeKind.STR),
+            ],
+        )
+        section = SimpleNamespace(
+            visible=_make_visible_role("school_admin"),
+            elements=[
+                SimpleNamespace(field_name="title", visible=None),
+                SimpleNamespace(field_name="priority", visible=_make_visible_role("teacher")),
+            ],
+        )
+        surface = SimpleNamespace(sections=[section])
+        columns = _build_surface_columns(entity, surface)
+
+        col_map = {c["key"]: c for c in columns}
+        assert col_map["title"]["visible_condition"]["role_check"]["role_name"] == "school_admin"
+        assert col_map["priority"]["visible_condition"]["role_check"]["role_name"] == "teacher"
+
+
 # ---------------------------------------------------------------------------
 # Surface UX Metadata on WorkspaceRegionContext (#362)
 # ---------------------------------------------------------------------------

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.14] - 2026-04-25
+
+Patch bump. Closes #872 — workspace list region columns ignored field-level `visible:` predicates, so every persona saw the full column set regardless of role-gated visibility on the source surface. Detail surfaces honour `visible:` correctly via `ColumnContext.visible_condition` + per-request evaluation in `page_routes.py`; workspace regions never carried the predicate through `_build_surface_columns` (column dicts), so the per-request filter had nothing to evaluate. Result: admin-scoped fields (e.g. `academic_year`, `is_current`) leaked into teacher-persona workspace cards as columns with empty cells.
+
+### Fixed
+- **`src/dazzle_back/runtime/workspace_rendering.py` — `_build_surface_columns`** — capture each surface element's `visible:` predicate (falling back to the section-level predicate, matching `template_compiler.py`) and store it as `visible_condition` on the column dict.
+- **`src/dazzle_back/runtime/workspace_rendering.py` — `_workspace_region_handler`** — when any precomputed column carries a `visible_condition`, evaluate it per-request against the current persona's roles via `dazzle_ui.utils.condition_eval.evaluate_condition` and produce a fresh filtered list (never mutate the shared startup list).
+
+### Tests
+- **`test_workspace_rendering.py::TestSurfaceColumnsVisibleCondition`** — three cases pinning the contract: element-level `visible:` attaches; section-level `visible:` falls through to columns; element overrides section.
+
+### Agent Guidance
+- **Workspace columns are dicts, detail columns are `ColumnContext` objects.** Both paths now carry `visible_condition`, but in different shapes — workspace regions filter by removing the entry; detail surfaces flip `_col.hidden = True`. The condition payload is the same `ConditionExpr.model_dump()` shape in both, so `evaluate_condition` is shared.
+- **Pre-computed column metadata is shared across requests.** When you need per-persona shaping at request time, copy the list — never mutate the entry in `ctx.precomputed_columns` or you'll see cross-request leakage between personas.
+
 ## [0.61.13] - 2026-04-24
 
 Patch bump. Closes #869 — the feedback widget's "Your feedback has been resolved" toast re-fired on every page load for any non-admin user with a resolved `FeedbackReport`. Root cause was upstream of the widget's `_markNotified` PUT: the `GET /feedbackreports?notification_sent=false` poll was silently ignoring that predicate, because `notification_sent` wasn't in the admin list surface's `ux.filter` (and bare query-param filters are gated on that list). The server returned acknowledged rows anyway; the widget toasted every one; the PUT *did* persist but had no observable effect.
