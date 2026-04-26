@@ -1,0 +1,13 @@
+# App-shell theme manifest — sibling of stripe.css.
+
+name = "stripe"
+description = "Stripe-formal cool slate + indigo + generous spacing for B2B SaaS"
+inspired_by = "Stripe Dashboard"
+
+default_color_scheme = "light"
+
+# Future: stripe.css references Inter Tight + Geist Mono — both available
+# via Google Fonts. Empty for now (fallback fonts).
+font_preconnect = []
+
+tags = ["light", "formal", "b2b", "fintech", "saas"]

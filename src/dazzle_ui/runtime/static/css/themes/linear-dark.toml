@@ -1,0 +1,18 @@
+# App-shell theme manifest — read by `dazzle_ui.themes.app_theme_registry`.
+# Sibling of linear-dark.css.
+
+name = "linear-dark"
+description = "Linear-vocabulary cool slate ramp + cyan accent + dense type"
+inspired_by = "Linear (linear.app)"
+
+# One of "light" | "dark" | "auto".
+# "auto" honours the OS prefers-color-scheme; "light" / "dark" force a
+# default for first-visit users (returning users keep their last
+# preference via dzPrefs).
+default_color_scheme = "dark"
+
+# Google Fonts to preconnect alongside Inter (always preconnected).
+# Empty list = use system-fallback fonts only.
+font_preconnect = []
+
+tags = ["dark", "dense", "professional", "saas"]

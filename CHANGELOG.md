@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.39] - 2026-04-26
+
+Patch bump. Phase B Patch 1 of the design-system formalisation work — adds a theme manifest TOML format and registry loader. Each shipped theme (`linear-dark` / `paper` / `stripe`) now has a sibling `<name>.toml` declaring `description`, `inspired_by`, `default_color_scheme`, `font_preconnect`, `tags`. Foundation for Patches 2–6 (DSL field, linker validation, `dazzle theme list/preview/init` CLI, font preconnect consumption).
+
+### Added
+- **`themes/<name>.toml`** for the three shipped themes — declarative metadata sibling to the CSS file. Loader synthesises sensible defaults when a TOML is absent so legacy / quick-iteration CSS-only themes still load.
+- **`dazzle_ui.themes.app_theme_registry`** module with:
+  - `AppThemeManifest` (frozen dataclass): `name`, `description`, `inspired_by`, `default_color_scheme` (light/dark/auto), `font_preconnect` (tuple of Google Fonts URLs), `tags` (tuple), `css_path`, `source` (framework/project)
+  - `discover_themes(project_root: Path | None = None)` — returns dict keyed by theme name; framework themes first, then project-local themes from `<project>/themes/` (which override shipped themes of the same name so projects can tweak `linear-dark` without forking)
+  - `get_theme(name, project_root=None)` — single-theme lookup, returns None when not found
+  - `list_theme_names(project_root=None)` — sorted name list
+
+### Tests
+- **`test_app_theme_registry.py`** — 17 cases across 4 layers:
+  - shipped-theme discovery (6): each of linear-dark / paper / stripe loads with parsed manifest; list contains all three; unknown returns None; every css_path resolves to a real file
+  - manifest parsing (4): invalid `default_color_scheme` raises; manifest `name` mismatch with filename raises; CSS-only theme synthesises defaults; `font_preconnect` parses as tuple
+  - project-local override (4): project theme loads alongside framework; project overrides framework of same name; `project_root=None` skips project discovery; missing `themes/` directory is safe
+  - registry shape (3): manifest is frozen dataclass; list is sorted; dict keys match `manifest.name`
+
+### Agent Guidance
+- **`AppThemeManifest` is the contract** — Patches 2 (DSL theme field), 3 (`dazzle theme list`), and 6 (font preconnect consumption) all consume this dataclass. Adding a field to it is a coordinated change; deferred fields (e.g. `extends` for theme inheritance, `template_overrides` for component-level overrides) are explicitly listed in the Phase B doc as Phase C scope.
+- **Project-local themes live at `<project>/themes/<name>.css` (+ optional `<name>.toml`)** — same flat layout as the framework `themes/` directory. The Phase B doc proposed a directory form (`themes/<name>/<name>.css`) but the flat form is simpler today and migrates later when component-level overrides land. **Decision**: ship the flat form; reconsider when Phase C component-overrides need a sibling `templates/` dir.
+- **CSS-only themes still work** — drop a `<name>.css` in `themes/` without a TOML and the registry synthesises defaults (`color_scheme=auto`, empty tags / preconnect / description). Lets contributors prototype themes quickly without manifest authoring.
+- **TOML name mismatch is a hard error**, not a warning — silent renames are exactly the bug class that bit #885 / #886. The loader fails loudly when a manifest's `name` field doesn't match the CSS file stem.
+
 ## [0.61.38] - 2026-04-26
 
 Patch bump. Closes #886 — three runtime call sites passed the cwd Path as the second arg to `build_appspec` instead of the module name. Symptom: every `dazzle db revision`, `dazzle db upgrade`, and process-worker startup raised `LinkError: Root module '/abs/path/to/project' not found. Available modules: ['myapp.core', 'stories']`. Knock-on from #885 — once that fixed the import, this surfaced.

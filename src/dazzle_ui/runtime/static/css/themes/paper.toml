@@ -1,0 +1,13 @@
+# App-shell theme manifest — sibling of paper.css.
+
+name = "paper"
+description = "Notion-warm cream + clay + airy spacing for readability-first apps"
+inspired_by = "Notion / iA Writer"
+
+default_color_scheme = "light"
+
+# Future: paper.css references iA Writer Mono — preconnecting iA Writer
+# fonts requires Google Fonts URL. Empty for now (fallback fonts).
+font_preconnect = []
+
+tags = ["light", "warm", "airy", "cms", "personal-tools"]
