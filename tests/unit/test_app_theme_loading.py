@@ -279,3 +279,51 @@ class TestShippedThemeFontPreconnect:
         assert m is not None
         assert any("Inter+Tight" in u for u in m.font_preconnect)
         assert any("Geist+Mono" in u for u in m.font_preconnect)
+
+
+class TestThemeChainRendering:
+    """Phase C Patch 1: base.html emits one <link> per stylesheet in
+    the inheritance chain so parent CSS loads before child CSS. Single-
+    parent themes have a length-1 chain and render identically."""
+
+    def _render_base(self, *, chain: list[str] | None) -> str:
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        if chain is not None:
+            env.globals["_app_theme_url_chain"] = chain
+        tmpl = env.get_template("base.html")
+        return tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "dark")
+
+    def test_chain_with_two_themes_emits_two_links(self) -> None:
+        html = self._render_base(
+            chain=[
+                "/static/css/themes/linear-dark.css",
+                "/static/themes/cyan-tweak.css",
+            ]
+        )
+        # Both links present
+        assert 'href="/static/css/themes/linear-dark.css"' in html
+        assert 'href="/static/themes/cyan-tweak.css"' in html
+        # Parent loads BEFORE child (cascade order matters — child's
+        # @layer overrides must win)
+        parent_pos = html.find("linear-dark.css")
+        child_pos = html.find("cyan-tweak.css")
+        assert parent_pos < child_pos
+
+    def test_single_chain_renders_one_link(self) -> None:
+        html = self._render_base(chain=["/static/css/themes/linear-dark.css"])
+        assert html.count("themes/linear-dark.css") == 1
+
+    def test_chain_takes_precedence_over_legacy_url(self) -> None:
+        """When _app_theme_url_chain is set, it wins over the legacy
+        single-URL _app_theme_url path."""
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        env.globals["_app_theme_url_chain"] = ["/static/themes/new-chain.css"]
+        env.globals["_app_theme_url"] = "/static/css/themes/legacy.css"
+        tmpl = env.get_template("base.html")
+        html = tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "dark")
+        assert "new-chain.css" in html
+        assert "legacy.css" not in html

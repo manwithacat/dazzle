@@ -39,8 +39,18 @@
      theme registry — `_app_theme_url` is set whether the theme is
      framework-shipped (`/static/css/themes/<name>.css`) or project-local
      (`/static/themes/<name>.css`). Falls back to the legacy inline path
-     when only `_app_theme` is set (older deployments). #}
-  {% if _app_theme_url is defined and _app_theme_url %}
+     when only `_app_theme` is set (older deployments).
+
+     v0.61.45 (Phase C Patch 1): if the active theme has an `extends`
+     chain, _app_theme_url_chain holds [parent...child] URLs in cascade
+     order. Emit ALL of them so the parent's tokens load first and
+     the child's @layer overrides wins. Single-parent themes have a
+     length-1 chain and render identically to Phase B. #}
+  {% if _app_theme_url_chain is defined and _app_theme_url_chain %}
+    {% for url in _app_theme_url_chain %}
+  <link rel="stylesheet" href="{{ url }}">
+    {% endfor %}
+  {% elif _app_theme_url is defined and _app_theme_url %}
   <link rel="stylesheet" href="{{ _app_theme_url }}">
   {% elif _app_theme is defined and _app_theme %}
   <link rel="stylesheet" href="{{ ('css/themes/' + _app_theme + '.css') | static_url }}">

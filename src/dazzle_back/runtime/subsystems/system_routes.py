@@ -579,31 +579,54 @@ class SystemRoutesSubsystem:
                     if resolved_theme:
                         get_jinja_env().globals["_app_theme"] = resolved_theme
                         try:
-                            from dazzle_ui.themes.app_theme_registry import get_theme
+                            from dazzle_ui.themes.app_theme_registry import (
+                                resolve_inheritance_chain,
+                            )
 
-                            theme = get_theme(resolved_theme, project_root=ctx.project_root)
-                            if theme is None:
-                                logger.warning(
-                                    "Theme %r (DSL=%r, toml=%r) not found in registry — "
-                                    "link will 404",
-                                    resolved_theme,
-                                    dsl_theme,
-                                    mf.app_theme,
-                                )
-                            elif theme.source == "framework":
-                                get_jinja_env().globals["_app_theme_url"] = (
-                                    f"/static/css/themes/{resolved_theme}.css"
-                                )
-                                get_jinja_env().globals["_app_theme_font_preconnect"] = list(
-                                    theme.font_preconnect
-                                )
-                            else:  # project
-                                get_jinja_env().globals["_app_theme_url"] = (
-                                    f"/static/themes/{resolved_theme}.css"
-                                )
-                                get_jinja_env().globals["_app_theme_font_preconnect"] = list(
-                                    theme.font_preconnect
-                                )
+                            # Phase C Patch 1: walk the `extends` chain
+                            # so a theme that extends `linear-dark` gets
+                            # both stylesheets emitted (parent first,
+                            # child wins via @layer overrides). Single-
+                            # parent themes have a length-1 chain and
+                            # behave exactly as Phase B.
+                            chain = resolve_inheritance_chain(
+                                resolved_theme, project_root=ctx.project_root
+                            )
+                            urls: list[str] = []
+                            preconnects: list[str] = []
+                            for theme in chain:
+                                if theme.source == "framework":
+                                    urls.append(f"/static/css/themes/{theme.name}.css")
+                                else:
+                                    urls.append(f"/static/themes/{theme.name}.css")
+                                preconnects.extend(theme.font_preconnect)
+                            # Leaf theme (last in chain) supplies the
+                            # legacy single-URL global so existing
+                            # consumers keep working unchanged.
+                            get_jinja_env().globals["_app_theme_url"] = urls[-1]
+                            # Phase C Patch 1: full inheritance chain
+                            # for templates that want to emit all links.
+                            get_jinja_env().globals["_app_theme_url_chain"] = urls
+                            # Font preconnects collapse to unique entries
+                            # preserving order (parent's first).
+                            seen: set[str] = set()
+                            unique_preconnects: list[str] = []
+                            for u in preconnects:
+                                if u not in seen:
+                                    seen.add(u)
+                                    unique_preconnects.append(u)
+                            get_jinja_env().globals["_app_theme_font_preconnect"] = (
+                                unique_preconnects
+                            )
+                        except ValueError:
+                            logger.warning(
+                                "Theme %r (DSL=%r, toml=%r) inheritance resolution failed — "
+                                "link will 404",
+                                resolved_theme,
+                                dsl_theme,
+                                mf.app_theme,
+                                exc_info=True,
+                            )
                         except Exception:
                             logger.warning(
                                 "Theme registry lookup failed for %r — falling back to "

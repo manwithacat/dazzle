@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.45] - 2026-04-26
+
+Patch bump. **Phase C Patch 1** — theme inheritance via `extends = "<parent>"` in the manifest TOML. A project variant can now ship just its delta on top of a baseline theme without copy-pasting the full token set.
+
+### Added
+- **`AppThemeManifest.extends: str | None`** — manifest field naming the parent theme.
+  ```toml
+  # themes/cyan-tweak.toml
+  name = "cyan-tweak"
+  extends = "linear-dark"
+  default_color_scheme = "dark"
+  ```
+- **`resolve_inheritance_chain(name, project_root)`** — walks the chain root→leaf so the runtime can emit CSS links in cascade order. Validates: depth cap at 4 (deeper indicates design smell); cycle detection (`a→b→a` raises); missing parent raises; self-reference raises.
+- **`_app_theme_url_chain` Jinja global** — list of stylesheet URLs in cascade order. `base.html` iterates and emits one `<link>` per chain entry. Parent loads first; child's `@layer overrides` wins via standard CSS cascade.
+- **Font preconnect dedup** — when a chain inherits `font_preconnect`, the runtime collapses to unique entries preserving parent-first order.
+
+### Changed
+- **`base.html`** — prefers `_app_theme_url_chain` (Phase C) over the legacy single-URL `_app_theme_url` (Phase B). Single-parent themes have a length-1 chain so they render identically. The legacy `_app_theme_url` global still gets set to the leaf URL for older consumers.
+
+### Tests
+- **`test_app_theme_registry.py`** extended to 28 cases (was 17): 11 new cases across `TestThemeInheritance` (4 — extends parses; default None; must be string; cannot extend self) and `TestResolveInheritanceChain` (7 — no extends returns self; 2-level chain; 3-level chain; unknown theme raises; missing parent raises; cycle raises; depth cap of 4 enforced).
+- **`test_app_theme_loading.py`** extended to 33 cases (was 30): 3 new TestThemeChainRendering cases — chain with 2 themes emits 2 links in cascade order; single chain renders one link; chain takes precedence over legacy URL.
+
+### Agent Guidance
+- **Inheritance is RUNTIME ONLY, not bundled at build time.** Each chain entry ships its own `<link>` tag. Browser handles the cascade — no concatenation logic, no extra build step. Cost: one HTTP round-trip per chain entry. For depth ≤ 4 (the cap) that's ≤ 5 stylesheet fetches total — tiny vs the ~100kb bundled framework CSS already there.
+- **Inherited fields don't fall through automatically.** The child manifest's `default_color_scheme`, `font_preconnect`, `tags` are independent of the parent's. To inherit values, the child either omits them (gets defaults — `auto` / `[]` / `[]`) or copies the parent's verbatim. A future patch could add explicit fall-through (`default_color_scheme = "inherit"`); deferred until a real consumer asks.
+- **Depth cap of 4 is intentional.** Deeper than 4 indicates a design smell — likely the child should extend a closer ancestor. Raise the cap only when a real consumer hits it AND the use case is legitimate.
+
 ## [0.61.44] - 2026-04-26
 
 Patch bump. **Phase B complete** — Patch 4 ships `dazzle theme preview` and the corresponding `DAZZLE_OVERRIDE_THEME` env var override. All six Phase B patches now landed.

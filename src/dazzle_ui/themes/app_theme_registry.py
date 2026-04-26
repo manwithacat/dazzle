@@ -46,6 +46,11 @@ class AppThemeManifest:
         tags: Free-form tags for ``dazzle theme list --tag``.
         css_path: Resolved absolute path to the theme's CSS file.
         source: ``framework`` (shipped) or ``project`` (local override).
+        extends: Parent theme name (Phase C Patch 1). When set, the
+            parent's CSS is loaded BEFORE this theme's so the child's
+            ``@layer overrides`` block wins. Inherited fields
+            (default_color_scheme, font_preconnect, tags) fall through
+            to the parent when this theme leaves them unset.
     """
 
     name: str
@@ -56,6 +61,7 @@ class AppThemeManifest:
     tags: tuple[str, ...]
     css_path: Path
     source: Literal["framework", "project"]
+    extends: str | None = None
 
 
 def _parse_manifest(
@@ -81,6 +87,14 @@ def _parse_manifest(
                 f"Theme manifest name {manifest_name!r} doesn't match "
                 f"CSS filename {name!r} ({css_path})"
             )
+        extends = data.get("extends")
+        if extends is not None and not isinstance(extends, str):
+            raise ValueError(
+                f"Theme {name!r}: `extends` must be a string (parent theme name); "
+                f"got {type(extends).__name__}"
+            )
+        if extends == name:
+            raise ValueError(f"Theme {name!r} cannot extend itself")
         return AppThemeManifest(
             name=name,
             description=str(data.get("description", "")),
@@ -90,6 +104,7 @@ def _parse_manifest(
             tags=tuple(data.get("tags", []) or []),
             css_path=css_path,
             source=source,
+            extends=extends,
         )
     # No manifest — synthesise defaults so CSS-only themes still load.
     return AppThemeManifest(
@@ -149,3 +164,64 @@ def get_theme(name: str, project_root: Path | None = None) -> AppThemeManifest |
 def list_theme_names(project_root: Path | None = None) -> list[str]:
     """Return shipped + project theme names in deterministic order."""
     return sorted(discover_themes(project_root).keys())
+
+
+# Phase C Patch 1: theme inheritance — chain resolution.
+# Cap depth at 4 to prevent runaway chains; deeper than 4 is a design
+# smell and should fail loudly at validation time.
+_MAX_INHERITANCE_DEPTH = 4
+
+
+def resolve_inheritance_chain(
+    name: str,
+    project_root: Path | None = None,
+) -> list[AppThemeManifest]:
+    """Walk a theme's `extends` chain, returning manifests root → leaf.
+
+    For a theme `cyan-tweak` that `extends = "linear-dark"`, returns
+    ``[<linear-dark>, <cyan-tweak>]`` so the runtime can emit the CSS
+    links in cascade order (parent loads first; child's
+    ``@layer overrides`` wins).
+
+    Phase C Patch 1 — implements the design-system Phase C inheritance
+    feature. See ``dev_docs/2026-04-26-design-system-phase-c.md``.
+
+    Raises:
+        ValueError: When the chain exceeds depth 4, contains a cycle,
+            or references a missing parent.
+    """
+    registry = discover_themes(project_root=project_root)
+    if name not in registry:
+        raise ValueError(f"Theme {name!r} not found in registry")
+
+    chain: list[AppThemeManifest] = []
+    visited: set[str] = set()
+    current: str | None = name
+
+    while current is not None:
+        if current in visited:
+            cycle = " → ".join([*[m.name for m in chain], current])
+            raise ValueError(f"Theme inheritance cycle detected: {cycle}")
+        visited.add(current)
+
+        if current not in registry:
+            parent_chain = " → ".join(m.name for m in chain)
+            raise ValueError(
+                f"Theme {current!r} (extended by {parent_chain}) not found in registry"
+            )
+
+        manifest = registry[current]
+        chain.append(manifest)
+
+        if len(chain) > _MAX_INHERITANCE_DEPTH:
+            chain_repr = " → ".join(m.name for m in chain)
+            raise ValueError(
+                f"Theme inheritance chain exceeds max depth {_MAX_INHERITANCE_DEPTH}: {chain_repr}"
+            )
+
+        current = manifest.extends
+
+    # chain currently leaf → root because we appended each ancestor
+    # AFTER its child. Reverse so callers can iterate root → leaf and
+    # emit CSS in cascade order.
+    return list(reversed(chain))
