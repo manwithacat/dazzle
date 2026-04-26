@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.48] - 2026-04-26
+
+Patch bump. **Phase C Patch 4** — unified site + app-shell theme manifest. An app theme can now declare a `[site]` section in its TOML to set the legacy `ThemeSpec` preset and per-token overrides for site/marketing-page rendering. One theme file → both layers configured.
+
+### Added
+- **`AppThemeManifest.site_preset: str | None`** — legacy `ThemeSpec` preset name (one of saas-default, minimal, corporate, startup, docs) used for site-page rendering when this theme is active.
+- **`AppThemeManifest.site_overrides: dict[str, Any]`** — token overrides applied on top of `site_preset`. Mirrors the structure of legacy `[theme.colors]` etc. blocks. Supported categories: `colors`, `shadows`, `spacing`, `radii`, `custom`.
+- **`[site]` table parsing** in `app_theme_registry._parse_manifest` — reads optional `preset` plus per-category overrides, validates types and rejects unknown keys. Themes that omit `[site]` get `(None, {})` and the runtime falls back to `[theme]` from `dazzle.toml` as before.
+- **`resolve_site_config(name, project_root)`** — walks the inheritance chain (Phase C Patch 1) so a child theme inherits its parent's `[site]` config without restating it. Cascade: parent values fill in first, child shallow-merges on top (child preset wins; per-category dicts merge by key).
+- **Runtime wiring** in `serve.py` — when an app theme is active (env / DSL / `[ui] app_theme`), `resolve_site_config` overlays its preset + token categories on the `theme_overrides` baseline derived from `dazzle.toml`'s `[theme]` block.
+
+### Tests
+- **`test_app_theme_registry.py`** extended to 47 cases (was 35): 6 new `TestSiteSection` cases covering parsing (no section / preset only / per-category overrides) and validation (`[site]` must be table, `preset` must be string, unknown category rejected); 6 new `TestResolveSiteConfig` cases covering resolution (None name, unknown theme, no section, single theme, parent inheritance, child override).
+
+### Agent Guidance
+- **One theme file, two layers.** Authors of new themes can configure both the app shell (`<name>.css` shadcn-shape tokens) and the site/marketing pages (`[site]` block in `<name>.toml`) in one place. Existing legacy `[theme]` blocks in `dazzle.toml` keep working — they're the baseline that any active app theme's `[site]` overlays.
+- **Site overrides are shallow-merge per category.** When parent and child both declare `[site.colors]`, the result is the parent's colors with child's keys overlaid — not a wholesale replacement. Same for `spacing`, `radii`, `shadows`, `custom`. The preset is replaced (not blended); a child can switch the parent's `corporate` to `minimal` cleanly.
+- **Backwards compat**: every existing project + theme keeps working. The 3 shipped themes (linear-dark / paper / stripe) ship without `[site]` so they don't disturb anyone's existing site config. `[theme]` in `dazzle.toml` is still the canonical site config when no app theme is active or when the active theme has no `[site]` section.
+- **Phase D leftovers**: per-theme Tailwind plugin support remains deferred. Phase C is now complete (Patches 1–4 shipped: extends, template overrides, live switching, unified manifest).
+
 ## [0.61.47] - 2026-04-26
 
 Patch bump. **Phase C Patch 3** — live theme switching via the `dzThemeSwitcher` Alpine component. Users can switch between any installed theme at runtime without a page reload; the choice persists across sessions via `dzPrefs` (server-backed) with `localStorage` fallback.

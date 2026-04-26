@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import tomllib
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 ColorScheme = Literal["light", "dark", "auto"]
 _VALID_SCHEMES: frozenset[str] = frozenset({"light", "dark", "auto"})
@@ -56,6 +56,17 @@ class AppThemeManifest:
             Jinja loader prepends it so this theme can override
             individual templates (e.g. ship a paper-stack
             ``card_wrapper.html``). ``None`` means CSS-only theme.
+        site_preset: Phase C Patch 4 — name of a legacy site/marketing
+            ``ThemeSpec`` preset (one of saas-default, minimal,
+            corporate, startup, docs) to use for site-page rendering
+            when this theme is active. ``None`` falls back to the
+            project's ``[theme] preset`` in ``dazzle.toml``.
+        site_overrides: Phase C Patch 4 — token overrides applied on
+            top of ``site_preset``. Mirrors the structure of legacy
+            ``[theme.colors]`` etc. blocks. Empty dict means no
+            overrides. Keys are token categories (``colors``,
+            ``shadows``, ``spacing``, ``radii``, ``custom``); values
+            are the per-token mappings.
     """
 
     name: str
@@ -68,6 +79,8 @@ class AppThemeManifest:
     source: Literal["framework", "project"]
     extends: str | None = None
     templates_dir: Path | None = None
+    site_preset: str | None = None
+    site_overrides: dict[str, Any] = field(default_factory=dict)
 
 
 def _parse_manifest(
@@ -101,6 +114,7 @@ def _parse_manifest(
             )
         if extends == name:
             raise ValueError(f"Theme {name!r} cannot extend itself")
+        site_preset, site_overrides = _parse_site_section(name, data.get("site"))
         return AppThemeManifest(
             name=name,
             description=str(data.get("description", "")),
@@ -112,6 +126,8 @@ def _parse_manifest(
             source=source,
             extends=extends,
             templates_dir=_resolve_templates_dir(css_path),
+            site_preset=site_preset,
+            site_overrides=site_overrides,
         )
     # No manifest — synthesise defaults so CSS-only themes still load.
     return AppThemeManifest(
@@ -125,6 +141,51 @@ def _parse_manifest(
         source=source,
         templates_dir=_resolve_templates_dir(css_path),
     )
+
+
+# Phase C Patch 4: site-section keys recognised in the unified manifest.
+# Mirrors the categories the legacy `ThemeConfig` accepts so the runtime
+# can pass them through `resolve_theme(...)` unchanged.
+_SITE_OVERRIDE_KEYS: frozenset[str] = frozenset({"colors", "shadows", "spacing", "radii", "custom"})
+
+
+def _parse_site_section(theme_name: str, site_data: Any) -> tuple[str | None, dict[str, Any]]:
+    """Parse the optional ``[site]`` table — Phase C Patch 4.
+
+    Returns ``(site_preset, site_overrides)`` where ``site_preset`` is
+    a legacy ``ThemeSpec`` preset name (or ``None`` when only inline
+    overrides are supplied) and ``site_overrides`` is the structured
+    overrides dict suitable for ``resolve_theme(manifest_overrides=...)``.
+
+    A theme that omits ``[site]`` returns ``(None, {})`` and the runtime
+    falls back to ``[theme]`` in ``dazzle.toml`` as before.
+    """
+    if site_data is None:
+        return None, {}
+    if not isinstance(site_data, dict):
+        raise ValueError(
+            f"Theme {theme_name!r}: `[site]` must be a table; got {type(site_data).__name__}"
+        )
+    preset = site_data.get("preset")
+    if preset is not None and not isinstance(preset, str):
+        raise ValueError(
+            f"Theme {theme_name!r}: `[site] preset` must be a string; got {type(preset).__name__}"
+        )
+    overrides: dict[str, Any] = {}
+    for key, value in site_data.items():
+        if key == "preset":
+            continue
+        if key not in _SITE_OVERRIDE_KEYS:
+            raise ValueError(
+                f"Theme {theme_name!r}: unknown `[site]` key {key!r}; "
+                f"expected one of {sorted(_SITE_OVERRIDE_KEYS)} or `preset`"
+            )
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"Theme {theme_name!r}: `[site.{key}]` must be a table; got {type(value).__name__}"
+            )
+        overrides[key] = dict(value)
+    return preset, overrides
 
 
 def _resolve_templates_dir(css_path: Path) -> Path | None:
@@ -246,3 +307,42 @@ def resolve_inheritance_chain(
     # AFTER its child. Reverse so callers can iterate root → leaf and
     # emit CSS in cascade order.
     return list(reversed(chain))
+
+
+# Phase C Patch 4: resolve site-page config from the active app theme.
+
+
+def resolve_site_config(
+    name: str | None,
+    project_root: Path | None = None,
+) -> tuple[str | None, dict[str, Any]]:
+    """Look up the site-page config declared by the active app theme.
+
+    When ``name`` is set and the matching manifest declares a ``[site]``
+    section, returns that theme's site preset + overrides. Falls back to
+    the inheritance chain — if the leaf doesn't override either field,
+    walk parents (root → leaf order) so a child can inherit the parent's
+    site config without restating it. Returns ``(None, {})`` when no
+    chain entry declares a site config or when ``name`` is ``None`` /
+    not in the registry. The caller blends those defaults with the
+    legacy ``[theme]`` block from ``dazzle.toml`` (which always supplies
+    a baseline preset).
+
+    See ``dev_docs/2026-04-26-design-system-phase-c.md`` Patch 4.
+    """
+    if not name:
+        return None, {}
+    try:
+        chain = resolve_inheritance_chain(name, project_root=project_root)
+    except ValueError:
+        return None, {}
+    preset: str | None = None
+    overrides: dict[str, Any] = {}
+    for manifest in chain:
+        if manifest.site_preset is not None:
+            preset = manifest.site_preset
+        for key, value in manifest.site_overrides.items():
+            existing = overrides.setdefault(key, {})
+            if isinstance(value, dict):
+                existing.update(value)
+    return preset, overrides

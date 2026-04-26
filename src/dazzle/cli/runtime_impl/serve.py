@@ -601,6 +601,33 @@ def _serve_combined(ctx: _ServeContext) -> None:
     if mf.theme.custom:
         theme_overrides["custom"] = mf.theme.custom
 
+    # Phase C Patch 4: when the active app theme declares a `[site]`
+    # section, blend its preset + overrides onto the legacy `[theme]`
+    # baseline so a single theme file can configure both layers.
+    # Precedence: env DAZZLE_OVERRIDE_THEME > DSL `app: theme:` >
+    # `[ui] app_theme` in dazzle.toml. The site config from the matched
+    # theme overlays the manifest-supplied baseline (preset is replaced;
+    # token categories are merged shallowly).
+    _env_override_theme = os.environ.get("DAZZLE_OVERRIDE_THEME") or None
+    _dsl_theme = (
+        getattr(appspec.app_config, "theme", None)
+        if getattr(appspec, "app_config", None) is not None
+        else None
+    )
+    _active_theme = _env_override_theme or _dsl_theme or mf.app_theme
+    _theme_preset = mf.theme.preset
+    if _active_theme:
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        _site_preset, _site_overrides = resolve_site_config(
+            _active_theme, project_root=ctx.project_root
+        )
+        if _site_preset is not None:
+            _theme_preset = _site_preset
+        for _category, _values in _site_overrides.items():
+            existing = theme_overrides.setdefault(_category, {})
+            existing.update(_values)
+
     # Resolve local_assets
     if ctx.local_assets is None:
         env_val = os.environ.get("DAZZLE_LOCAL_ASSETS")
@@ -631,7 +658,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
         personas=personas,
         scenarios=scenarios,
         sitespec_data=ctx.sitespec_data,
-        theme_preset=mf.theme.preset,
+        theme_preset=_theme_preset,
         theme_overrides=theme_overrides if theme_overrides else None,
         redis_url=ctx.redis_url,
         workers=ctx.workers,

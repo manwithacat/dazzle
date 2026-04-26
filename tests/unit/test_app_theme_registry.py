@@ -436,3 +436,193 @@ class TestAddThemeTemplateDirs:
         assert "PARENT" not in rendered
 
         tr._env = create_jinja_env()
+
+
+# ─────────────────────── site config (Phase C Patch 4) ──────────────────────
+
+
+class TestSiteSection:
+    """Phase C Patch 4 — themes can declare a ``[site]`` section that
+    configures the legacy ThemeSpec-based site/marketing pipeline.
+    Allows a single theme file to carry both app-shell and site tokens."""
+
+    def test_no_site_section_yields_defaults(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "plain.css").write_text("/* placeholder */")
+        (themes_dir / "plain.toml").write_text('name = "plain"\ndefault_color_scheme = "light"\n')
+        m = discover_themes(project_root=tmp_path)["plain"]
+        assert m.site_preset is None
+        assert m.site_overrides == {}
+
+    def test_site_preset_only_parses(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "preset-only.css").write_text("/* placeholder */")
+        (themes_dir / "preset-only.toml").write_text(
+            'name = "preset-only"\ndefault_color_scheme = "light"\n[site]\npreset = "minimal"\n'
+        )
+        m = discover_themes(project_root=tmp_path)["preset-only"]
+        assert m.site_preset == "minimal"
+        assert m.site_overrides == {}
+
+    def test_site_overrides_parse_per_category(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "branded.css").write_text("/* placeholder */")
+        (themes_dir / "branded.toml").write_text(
+            'name = "branded"\n'
+            'default_color_scheme = "dark"\n'
+            "[site]\n"
+            'preset = "corporate"\n'
+            "[site.colors]\n"
+            'hero-bg-from = "hsl(228, 8%, 8%)"\n'
+            'hero-bg-to = "hsl(228, 6%, 18%)"\n'
+            "[site.spacing]\n"
+            "section-y = 96\n"
+        )
+        m = discover_themes(project_root=tmp_path)["branded"]
+        assert m.site_preset == "corporate"
+        assert m.site_overrides["colors"]["hero-bg-from"] == "hsl(228, 8%, 8%)"
+        assert m.site_overrides["spacing"]["section-y"] == 96
+
+    def test_site_must_be_table(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "bad.css").write_text("/* placeholder */")
+        (themes_dir / "bad.toml").write_text(
+            'name = "bad"\ndefault_color_scheme = "light"\nsite = "minimal"\n'
+        )
+        with pytest.raises(ValueError, match=r"`\[site\]` must be a table"):
+            discover_themes(project_root=tmp_path)
+
+    def test_site_preset_must_be_string(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "bad.css").write_text("/* placeholder */")
+        (themes_dir / "bad.toml").write_text(
+            'name = "bad"\ndefault_color_scheme = "light"\n[site]\npreset = 42\n'
+        )
+        with pytest.raises(ValueError, match=r"`\[site\] preset` must be a string"):
+            discover_themes(project_root=tmp_path)
+
+    def test_unknown_site_key_rejected(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "bad.css").write_text("/* placeholder */")
+        (themes_dir / "bad.toml").write_text(
+            'name = "bad"\n'
+            'default_color_scheme = "light"\n'
+            "[site]\n"
+            "[site.typography]\n"  # not in _SITE_OVERRIDE_KEYS
+            'body = "Inter"\n'
+        )
+        with pytest.raises(ValueError, match=r"unknown `\[site\]` key 'typography'"):
+            discover_themes(project_root=tmp_path)
+
+
+class TestResolveSiteConfig:
+    """``resolve_site_config`` looks up the active app theme's site
+    config and walks the inheritance chain so a child can inherit a
+    parent's site preset / overrides without restating them."""
+
+    def test_none_name_returns_defaults(self) -> None:
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        preset, overrides = resolve_site_config(None)
+        assert preset is None
+        assert overrides == {}
+
+    def test_unknown_theme_returns_defaults(self, tmp_path: Path) -> None:
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        preset, overrides = resolve_site_config("does-not-exist", project_root=tmp_path)
+        assert preset is None
+        assert overrides == {}
+
+    def test_theme_without_site_section_returns_defaults(self, tmp_path: Path) -> None:
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "plain.css").write_text("/* placeholder */")
+        (themes_dir / "plain.toml").write_text('name = "plain"\ndefault_color_scheme = "light"\n')
+        preset, overrides = resolve_site_config("plain", project_root=tmp_path)
+        assert preset is None
+        assert overrides == {}
+
+    def test_theme_with_site_section_resolves(self, tmp_path: Path) -> None:
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "branded.css").write_text("/* placeholder */")
+        (themes_dir / "branded.toml").write_text(
+            'name = "branded"\n'
+            'default_color_scheme = "light"\n'
+            "[site]\n"
+            'preset = "corporate"\n'
+            "[site.colors]\n"
+            'hero-bg-from = "hsl(0,0%,5%)"\n'
+        )
+        preset, overrides = resolve_site_config("branded", project_root=tmp_path)
+        assert preset == "corporate"
+        assert overrides == {"colors": {"hero-bg-from": "hsl(0,0%,5%)"}}
+
+    def test_chain_inherits_parent_site_config(self, tmp_path: Path) -> None:
+        """A child theme that omits ``[site]`` inherits the parent's
+        site preset + overrides via the inheritance chain. Cascade:
+        parent values fill in first, child values shallow-merge on top."""
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "parent.css").write_text("/* parent */")
+        (themes_dir / "parent.toml").write_text(
+            'name = "parent"\n'
+            'default_color_scheme = "light"\n'
+            "[site]\n"
+            'preset = "minimal"\n'
+            "[site.colors]\n"
+            'hero-bg-from = "PARENT_FROM"\n'
+            'hero-bg-to = "PARENT_TO"\n'
+        )
+        (themes_dir / "child.css").write_text("/* child */")
+        (themes_dir / "child.toml").write_text(
+            'name = "child"\nextends = "parent"\ndefault_color_scheme = "light"\n'
+        )
+
+        preset, overrides = resolve_site_config("child", project_root=tmp_path)
+        # Inherited from parent
+        assert preset == "minimal"
+        assert overrides == {"colors": {"hero-bg-from": "PARENT_FROM", "hero-bg-to": "PARENT_TO"}}
+
+    def test_child_overrides_parent_site_values(self, tmp_path: Path) -> None:
+        """When both parent and child declare the same site token, the
+        child wins (cascade leaf wins)."""
+        from dazzle_ui.themes.app_theme_registry import resolve_site_config
+
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "parent.css").write_text("/* parent */")
+        (themes_dir / "parent.toml").write_text(
+            'name = "parent"\n'
+            'default_color_scheme = "light"\n'
+            "[site]\n"
+            'preset = "minimal"\n'
+            "[site.colors]\n"
+            'hero-bg-from = "PARENT"\n'
+        )
+        (themes_dir / "child.css").write_text("/* child */")
+        (themes_dir / "child.toml").write_text(
+            'name = "child"\n'
+            'extends = "parent"\n'
+            'default_color_scheme = "light"\n'
+            "[site]\n"
+            'preset = "corporate"\n'
+            "[site.colors]\n"
+            'hero-bg-from = "CHILD"\n'
+        )
+        preset, overrides = resolve_site_config("child", project_root=tmp_path)
+        assert preset == "corporate"  # child preset wins
+        assert overrides == {"colors": {"hero-bg-from": "CHILD"}}  # child color wins
