@@ -163,3 +163,49 @@ class TestBaseTemplateThemeLink:
         theme_pos = html.find("themes/linear-dark")
         assert bundle_pos > -1 and theme_pos > -1
         assert theme_pos > bundle_pos, "theme link must come AFTER bundle"
+
+
+class TestThemeURLResolution:
+    """v0.61.41 (Phase B Patch 5): the resolved theme URL is set on
+    the Jinja env at startup, distinct from the theme name. base.html
+    prefers ``_app_theme_url`` over the legacy inline path so framework
+    and project themes use different URL spaces (`/static/css/themes/`
+    vs `/static/themes/`)."""
+
+    def _render_base(self, *, app_theme: str | None, app_theme_url: str | None) -> str:
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        if app_theme is not None:
+            env.globals["_app_theme"] = app_theme
+        if app_theme_url is not None:
+            env.globals["_app_theme_url"] = app_theme_url
+        tmpl = env.get_template("base.html")
+        return tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "dark")
+
+    def test_resolved_url_wins_over_legacy_inline_path(self) -> None:
+        """When ``_app_theme_url`` is set, base.html uses it verbatim
+        and skips the legacy `('css/themes/' + name + '.css') | static_url`
+        construction. Lets the registry decide the URL — framework
+        themes get `/static/css/themes/<name>.css`, project themes get
+        `/static/themes/<name>.css`."""
+        html = self._render_base(
+            app_theme="linear-dark",
+            app_theme_url="/static/themes/my-brand.css",
+        )
+        # Resolved URL is rendered verbatim
+        assert 'href="/static/themes/my-brand.css"' in html
+        # Legacy fingerprinted framework path is NOT rendered (the
+        # `elif` branch is skipped)
+        assert "themes/linear-dark." not in html
+
+    def test_legacy_inline_path_still_works_when_url_unset(self) -> None:
+        """Backwards compat: deployments that only set ``_app_theme``
+        (without ``_app_theme_url``) still get a working framework
+        theme link via the fingerprinted static_url filter."""
+        html = self._render_base(app_theme="paper", app_theme_url=None)
+        assert "themes/paper" in html
+
+    def test_neither_set_renders_no_theme_link(self) -> None:
+        html = self._render_base(app_theme=None, app_theme_url=None)
+        assert "themes/" not in html

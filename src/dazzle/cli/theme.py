@@ -86,3 +86,92 @@ def list_command(
 
     typer.echo()
     typer.echo(f"{len(rows)} theme(s).")
+
+
+@theme_app.command(name="init")
+def init_command(
+    name: str = typer.Argument(
+        ...,
+        help="New theme name. Lowercase + hyphens (e.g. 'my-brand', 'fintech-pro').",
+    ),
+    inspired_by: str = typer.Option(
+        "linear-dark",
+        "--inspired-by",
+        "-i",
+        help="Existing theme to copy as a starting point. Defaults to linear-dark.",
+    ),
+    project_root: Path = typer.Option(
+        Path.cwd(),
+        "--project-root",
+        help="Project directory; the new theme lands under <project>/themes/.",
+    ),
+) -> None:
+    """Scaffold a new project-local theme as <project>/themes/<name>.css + .toml.
+
+    Copies an existing theme (default: linear-dark) so you start from a
+    working baseline. Edit the resulting CSS to customise; activate via
+    [ui] theme = "<name>" in dazzle.toml.
+    """
+    from dazzle_ui.themes.app_theme_registry import discover_themes
+
+    # Validate name
+    if not name or not name.replace("-", "").replace("_", "").isalnum():
+        typer.echo(
+            f"Invalid theme name {name!r}. Use lowercase letters, digits, "
+            f"and hyphens only (e.g. 'my-brand').",
+            err=True,
+        )
+        raise typer.Exit(2)
+    if name != name.lower():
+        typer.echo(
+            f"Theme name {name!r} should be lowercase (e.g. {name.lower()!r}).",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    # Source theme to copy from
+    registry = discover_themes(project_root=project_root)
+    source = registry.get(inspired_by)
+    if source is None:
+        available = sorted(registry.keys())
+        typer.echo(
+            f"Source theme {inspired_by!r} not found. Available: {available}",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    target_dir = project_root / "themes"
+    target_css = target_dir / f"{name}.css"
+    target_toml = target_dir / f"{name}.toml"
+
+    if target_css.exists() or target_toml.exists():
+        typer.echo(
+            f"Theme {name!r} already exists at {target_dir}. Delete it first to "
+            f"re-init from a different source.",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy CSS verbatim — the override layer is identical, just the
+    # values differ. User edits to taste.
+    target_css.write_text(source.css_path.read_text())
+
+    # Boilerplate TOML — user owns the metadata; we just give them the
+    # right keys.
+    target_toml.write_text(
+        f'name = "{name}"\n'
+        f'description = "Project-local theme (scaffolded from {inspired_by})"\n'
+        f'inspired_by = "{source.inspired_by or inspired_by}"\n'
+        f'default_color_scheme = "{source.default_color_scheme}"\n'
+        f"font_preconnect = []\n"
+        f'tags = ["project-local"]\n'
+    )
+
+    typer.echo(f"Created theme {name!r}:")
+    typer.echo(f"  CSS:  {target_css.relative_to(project_root)}")
+    typer.echo(f"  TOML: {target_toml.relative_to(project_root)}")
+    typer.echo()
+    typer.echo(f"Edit {target_css.name} to customise the token values.")
+    typer.echo(f'Activate by adding `theme = "{name}"` to the [ui] block in dazzle.toml.')

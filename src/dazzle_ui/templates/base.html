@@ -23,8 +23,16 @@
      design-system.css's default shadcn-zinc tokens; this <link> loads
      an alternate :root block (e.g. linear-dark) AFTER the bundle so
      `@layer overrides` takes precedence. Set [ui] theme = "<name>"
-     in dazzle.toml. #}
-  {% if _app_theme is defined and _app_theme %}
+     in dazzle.toml.
+
+     v0.61.41 (Phase B Patch 5): URL is now resolved at startup via the
+     theme registry — `_app_theme_url` is set whether the theme is
+     framework-shipped (`/static/css/themes/<name>.css`) or project-local
+     (`/static/themes/<name>.css`). Falls back to the legacy inline path
+     when only `_app_theme` is set (older deployments). #}
+  {% if _app_theme_url is defined and _app_theme_url %}
+  <link rel="stylesheet" href="{{ _app_theme_url }}">
+  {% elif _app_theme is defined and _app_theme %}
   <link rel="stylesheet" href="{{ ('css/themes/' + _app_theme + '.css') | static_url }}">
   {% endif %}
 

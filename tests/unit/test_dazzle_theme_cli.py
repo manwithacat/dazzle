@@ -22,7 +22,7 @@ runner = CliRunner()
 
 class TestListDefault:
     def test_lists_all_three_shipped_themes(self) -> None:
-        result = runner.invoke(theme_app, ["--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--project-root", "/tmp"])
         assert result.exit_code == 0, result.output
         assert "linear-dark" in result.output
         assert "paper" in result.output
@@ -31,7 +31,7 @@ class TestListDefault:
         assert "3 theme(s)" in result.output
 
     def test_table_header_present(self) -> None:
-        result = runner.invoke(theme_app, ["--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--project-root", "/tmp"])
         assert result.exit_code == 0
         assert "Name" in result.output
         assert "Scheme" in result.output
@@ -44,7 +44,7 @@ class TestListDefault:
 
 class TestFilters:
     def test_filter_by_tag(self) -> None:
-        result = runner.invoke(theme_app, ["--tag", "dark", "--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--tag", "dark", "--project-root", "/tmp"])
         assert result.exit_code == 0
         assert "linear-dark" in result.output
         assert "paper" not in result.output
@@ -52,7 +52,7 @@ class TestFilters:
         assert "1 theme(s)" in result.output
 
     def test_filter_by_light_scheme(self) -> None:
-        result = runner.invoke(theme_app, ["--scheme", "light", "--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--scheme", "light", "--project-root", "/tmp"])
         assert result.exit_code == 0
         assert "linear-dark" not in result.output
         assert "paper" in result.output
@@ -60,20 +60,22 @@ class TestFilters:
         assert "2 theme(s)" in result.output
 
     def test_filter_by_dark_scheme(self) -> None:
-        result = runner.invoke(theme_app, ["--scheme", "dark", "--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--scheme", "dark", "--project-root", "/tmp"])
         assert result.exit_code == 0
         assert "linear-dark" in result.output
         assert "1 theme(s)" in result.output
 
     def test_invalid_scheme_exits_2(self) -> None:
-        result = runner.invoke(theme_app, ["--scheme", "rainbow", "--project-root", "/tmp"])
+        result = runner.invoke(theme_app, ["list", "--scheme", "rainbow", "--project-root", "/tmp"])
         assert result.exit_code == 2
         assert "Invalid --scheme" in result.output
 
     def test_filter_returning_zero_themes_exits_0(self) -> None:
         """A filter that matches no themes is a normal empty-result, not
         an error. CLI exits 0 with a friendly message."""
-        result = runner.invoke(theme_app, ["--tag", "nonexistent-tag", "--project-root", "/tmp"])
+        result = runner.invoke(
+            theme_app, ["list", "--tag", "nonexistent-tag", "--project-root", "/tmp"]
+        )
         assert result.exit_code == 0
         assert "No themes match the filter" in result.output
 
@@ -94,7 +96,7 @@ class TestProjectLocalDiscovery:
             'tags = ["internal", "brand"]\n'
         )
 
-        result = runner.invoke(theme_app, ["--project-root", str(tmp_path)])
+        result = runner.invoke(theme_app, ["list", "--project-root", str(tmp_path)])
         assert result.exit_code == 0
         assert "my-brand" in result.output
         # Project source flagged in the Src column
@@ -111,7 +113,7 @@ class TestProjectLocalDiscovery:
         themes_dir.mkdir()
         (themes_dir / "paper.css").write_text("/* project paper */")
 
-        result = runner.invoke(theme_app, ["--project-root", str(tmp_path)])
+        result = runner.invoke(theme_app, ["list", "--project-root", str(tmp_path)])
         assert result.exit_code == 0
         # paper line should now show source=project
         paper_line = next(line for line in result.output.splitlines() if line.startswith("paper"))
@@ -124,19 +126,107 @@ class TestProjectLocalDiscovery:
 
 
 class TestHelp:
-    def test_no_args_lists_all_themes(self) -> None:
-        """v0.61.40 ships only ``list`` as the single subcommand under
-        ``theme_app`` — typer collapses single-command apps to the
-        command itself, so ``dazzle theme`` (no args) lists themes.
-        When Patches 4 (``preview``) and 5 (``init``) land, ``no_args``
-        will route to help instead."""
+    def test_no_args_shows_help(self) -> None:
+        """With multiple subcommands (``list`` + ``init``), `dazzle theme`
+        with no args triggers ``no_args_is_help`` and shows the
+        subcommand list — restored from v0.61.40's single-command
+        collapse behaviour."""
         result = runner.invoke(theme_app, [])
-        assert result.exit_code == 0
-        assert "linear-dark" in result.output
+        # no_args_is_help exits 2 (usage); both `list` and `init` should
+        # appear in the subcommand listing
+        assert result.exit_code == 2
+        assert "list" in result.output
+        assert "init" in result.output
 
     def test_list_help_mentions_filters(self) -> None:
-        result = runner.invoke(theme_app, ["--help"])
+        result = runner.invoke(theme_app, ["list", "--help"])
         assert result.exit_code == 0
         assert "--tag" in result.output
         assert "--scheme" in result.output
         assert "--project-root" in result.output
+
+
+# ────────────────────── init subcommand ────────────────────────
+
+
+class TestThemeInit:
+    """``dazzle theme init <name>`` scaffolds a project-local theme by
+    copying an existing one. v0.61.41 (Phase B Patch 5)."""
+
+    def test_init_creates_css_and_toml(self, tmp_path: Path) -> None:
+        result = runner.invoke(theme_app, ["init", "my-brand", "--project-root", str(tmp_path)])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "themes" / "my-brand.css").is_file()
+        assert (tmp_path / "themes" / "my-brand.toml").is_file()
+        assert "Created theme 'my-brand'" in result.output
+
+    def test_init_copies_default_source_linear_dark(self, tmp_path: Path) -> None:
+        """Without --inspired-by, init copies linear-dark as the
+        starting point."""
+        runner.invoke(theme_app, ["init", "test-theme", "--project-root", str(tmp_path)])
+        toml_text = (tmp_path / "themes" / "test-theme.toml").read_text()
+        assert "Linear" in toml_text  # inspired_by inherited from linear-dark
+        assert 'name = "test-theme"' in toml_text
+        assert 'default_color_scheme = "dark"' in toml_text  # linear-dark's default
+
+    def test_init_inspired_by_flag(self, tmp_path: Path) -> None:
+        runner.invoke(
+            theme_app,
+            [
+                "init",
+                "warm-brand",
+                "--inspired-by",
+                "paper",
+                "--project-root",
+                str(tmp_path),
+            ],
+        )
+        toml_text = (tmp_path / "themes" / "warm-brand.toml").read_text()
+        assert "Notion" in toml_text  # paper's inspired_by
+        assert 'default_color_scheme = "light"' in toml_text  # paper's default
+
+    def test_init_unknown_inspired_by_exits_2(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            theme_app,
+            [
+                "init",
+                "x",
+                "--inspired-by",
+                "doesnt-exist",
+                "--project-root",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 2
+        assert "not found" in result.output
+
+    def test_init_invalid_name_exits_2(self, tmp_path: Path) -> None:
+        # Name with a space — invalid
+        result = runner.invoke(theme_app, ["init", "Bad Name", "--project-root", str(tmp_path)])
+        assert result.exit_code == 2
+        assert "Invalid theme name" in result.output
+
+    def test_init_uppercase_name_exits_2(self, tmp_path: Path) -> None:
+        result = runner.invoke(theme_app, ["init", "MyBrand", "--project-root", str(tmp_path)])
+        assert result.exit_code == 2
+        assert "should be lowercase" in result.output
+
+    def test_init_existing_theme_exits_2(self, tmp_path: Path) -> None:
+        """Init refuses to overwrite — user must delete first."""
+        # Create the theme once
+        runner.invoke(theme_app, ["init", "duplicate", "--project-root", str(tmp_path)])
+        # Try to create again
+        result = runner.invoke(theme_app, ["init", "duplicate", "--project-root", str(tmp_path)])
+        assert result.exit_code == 2
+        assert "already exists" in result.output
+
+    def test_init_then_list_shows_new_theme(self, tmp_path: Path) -> None:
+        """End-to-end: init scaffolds → list discovers immediately."""
+        init_result = runner.invoke(
+            theme_app, ["init", "scaffolded", "--project-root", str(tmp_path)]
+        )
+        assert init_result.exit_code == 0
+        list_result = runner.invoke(theme_app, ["list", "--project-root", str(tmp_path)])
+        assert list_result.exit_code == 0
+        assert "scaffolded" in list_result.output
+        assert "project" in list_result.output  # source flagged correctly

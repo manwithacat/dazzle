@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.41] - 2026-04-26
+
+Patch bump. Phase B Patch 5 — closes the project-local rendering loop and adds `dazzle theme init` for scaffolding new themes from an existing one. Project-local themes now actually render (not just discoverable in `dazzle theme list`).
+
+### Added
+- **`dazzle theme init <name> [--inspired-by <theme>]`** — scaffolds `<project>/themes/<name>.css` (copied from the source theme; `linear-dark` by default) plus a `<name>.toml` boilerplate with the source's metadata. Validates: name must be lowercase + hyphens/underscores/digits; source theme must exist; target name must not already exist (refuses to overwrite). Prints next-step instructions.
+- **`/static/themes/<name>.css` mount** — when `<project>/themes/` exists, the server mounts it at `/static/themes/` so project-local theme CSS is HTTP-reachable. Distinct from `/static/css/themes/` (framework themes) so the URL space stays clean.
+- **`_app_theme_url` Jinja global** — resolved at startup via the registry. `base.html` prefers it over the legacy inline `('css/themes/' + name + '.css') | static_url` construction. Framework themes get `/static/css/themes/<name>.css`; project themes get `/static/themes/<name>.css`. Backwards-compat: when only `_app_theme` is set (no URL), the legacy inline path still works for framework themes.
+
+### Tests
+- **`test_dazzle_theme_cli.py`** extended to 19 cases (was 11): 8 new TestThemeInit cases — creates CSS + TOML; default source is linear-dark; `--inspired-by` honoured; unknown source / invalid name / uppercase name → exit 2; existing target refuses to overwrite; init-then-list end-to-end loop.
+- **`test_app_theme_loading.py`** extended to 24 cases (was 21): 3 new TestThemeURLResolution cases — `_app_theme_url` wins over legacy path; legacy path still works when URL unset; neither set renders no link.
+
+### Agent Guidance
+- **Two URL spaces by design.** Framework themes at `/static/css/themes/<name>.css` (under the existing static mount); project themes at `/static/themes/<name>.css` (under a separate mount). The CombinedStaticFiles class doesn't support per-dir URL prefix remapping; rather than extend it, this patch just adds a second mount. The registry returns the right URL via `theme.source`, so callers don't need to know about the split.
+- **`init` doesn't validate the resulting CSS** — it copies the source verbatim. If a user edits the CSS into something that breaks the cascade, the framework won't catch it. Future patch could add a `dazzle theme validate <name>` that asserts the override structure (e.g. `@layer overrides` block present).
+- **Patch 4 (`preview`) and Patch 6 (`font_preconnect`) still pending.** Preview wraps `dazzle serve` with an env-var theme override so operators can A/B without committing. Font preconnect threads each theme's `font_preconnect` list into base.html as additional `<link rel="preconnect">` elements.
+
 ## [0.61.40] - 2026-04-26
 
 Patch bump. Phase B Patch 3 — adds the `dazzle theme list` CLI subcommand. Wraps the v0.61.39 registry to give operators a fast way to discover shipped + project-local themes without reading source.

@@ -556,8 +556,37 @@ class SystemRoutesSubsystem:
                     # shadcn-zinc tokens with an alternate :root block.
                     # Loaded in base.html after the bundle. None means
                     # use the default theme.
+                    # v0.61.41 (Phase B Patch 5): also resolve via the
+                    # registry so project-local themes get the right
+                    # URL (`/static/themes/<name>.css` vs framework's
+                    # `/static/css/themes/<name>.css`).
                     if mf.app_theme:
                         get_jinja_env().globals["_app_theme"] = mf.app_theme
+                        try:
+                            from dazzle_ui.themes.app_theme_registry import get_theme
+
+                            theme = get_theme(mf.app_theme, project_root=ctx.project_root)
+                            if theme is None:
+                                logger.warning(
+                                    "Theme %r declared in dazzle.toml not found "
+                                    "in registry — link will 404",
+                                    mf.app_theme,
+                                )
+                            elif theme.source == "framework":
+                                get_jinja_env().globals["_app_theme_url"] = (
+                                    f"/static/css/themes/{mf.app_theme}.css"
+                                )
+                            else:  # project
+                                get_jinja_env().globals["_app_theme_url"] = (
+                                    f"/static/themes/{mf.app_theme}.css"
+                                )
+                        except Exception:
+                            logger.warning(
+                                "Theme registry lookup failed for %r — falling back to "
+                                "framework path",
+                                mf.app_theme,
+                                exc_info=True,
+                            )
 
                     # Build override registry if project has declaration headers
                     try:
@@ -612,6 +641,23 @@ class SystemRoutesSubsystem:
                     dirs.append(ctx.project_root / "static")
                 dirs.append(framework_static)
                 ctx.app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
+
+                # v0.61.41 (Phase B Patch 5): mount project-local themes
+                # under /static/themes/ so `<project>/themes/<name>.css`
+                # is served without nesting under `/static/css/themes/`.
+                # Theme authors get a clean discoverable location at the
+                # project root; the URL split keeps framework + project
+                # themes distinct (resolved by the registry at startup).
+                if ctx.project_root:
+                    project_themes_dir = ctx.project_root / "themes"
+                    if project_themes_dir.is_dir():
+                        from starlette.staticfiles import StaticFiles
+
+                        ctx.app.mount(
+                            "/static/themes",
+                            StaticFiles(directory=str(project_themes_dir)),
+                            name="project_themes",
+                        )
         except ImportError:
             pass  # dazzle_ui not installed — static files served externally
         except Exception:
