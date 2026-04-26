@@ -615,6 +615,39 @@ class SystemRoutesSubsystem:
                                 )
 
                                 add_theme_template_dirs(template_dirs)
+
+                            # Phase C Patch 3: build the full theme map
+                            # for live switching. Each entry maps
+                            # `<theme_name>` → list of CSS URLs in
+                            # cascade order (parent → leaf). The
+                            # dzThemeSwitcher Alpine component reads
+                            # this from a `<script type="application/
+                            # json" id="dz-app-themes">` element and
+                            # swaps the <link data-theme-link> chain
+                            # without a page reload.
+                            from dazzle_ui.themes.app_theme_registry import (
+                                discover_themes,
+                            )
+
+                            theme_map: dict[str, list[str]] = {}
+                            for tname in sorted(discover_themes(project_root=ctx.project_root)):
+                                try:
+                                    sub_chain = resolve_inheritance_chain(
+                                        tname, project_root=ctx.project_root
+                                    )
+                                except ValueError:
+                                    # Skip themes whose inheritance is
+                                    # broken; logged but not fatal —
+                                    # other themes stay switchable.
+                                    continue
+                                sub_urls: list[str] = []
+                                for sub in sub_chain:
+                                    if sub.source == "framework":
+                                        sub_urls.append(f"/static/css/themes/{sub.name}.css")
+                                    else:
+                                        sub_urls.append(f"/static/themes/{sub.name}.css")
+                                theme_map[tname] = sub_urls
+                            get_jinja_env().globals["_app_theme_map"] = theme_map
                             # Leaf theme (last in chain) supplies the
                             # legacy single-URL global so existing
                             # consumers keep working unchanged.

@@ -327,3 +327,69 @@ class TestThemeChainRendering:
         html = tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "dark")
         assert "new-chain.css" in html
         assert "legacy.css" not in html
+
+
+class TestThemeSwitcherWiring:
+    """Phase C Patch 3: live theme switching needs the server to emit
+    (a) `data-theme-name` on `<html>`, (b) `data-theme-link` on each
+    theme `<link>`, and (c) a JSON map of all switchable themes. The
+    dzThemeSwitcher Alpine component reads these to swap themes
+    without a page reload."""
+
+    def _render(self, **globals_overrides: object) -> str:
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        for k, v in globals_overrides.items():
+            env.globals[k] = v
+        tmpl = env.get_template("base.html")
+        return tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "dark")
+
+    def test_html_carries_theme_name_attribute(self) -> None:
+        html = self._render(_app_theme="paper")
+        # The component reads `document.documentElement.dataset.themeName`
+        # to know what's currently active.
+        assert 'data-theme-name="paper"' in html
+
+    def test_html_omits_attribute_when_no_theme(self) -> None:
+        html = self._render()
+        assert "data-theme-name" not in html
+
+    def test_theme_link_marked_for_switcher(self) -> None:
+        """Each theme `<link>` carries `data-theme-link="<name>"` so
+        the JS can find + replace it on switch."""
+        html = self._render(
+            _app_theme="paper",
+            _app_theme_url_chain=["/static/css/themes/paper.css"],
+        )
+        assert 'data-theme-link="paper"' in html
+
+    def test_theme_map_emitted_as_json_script(self) -> None:
+        """All available themes ship as inline JSON for the switcher to read."""
+        theme_map = {
+            "linear-dark": ["/static/css/themes/linear-dark.css"],
+            "paper": ["/static/css/themes/paper.css"],
+        }
+        html = self._render(_app_theme="paper", _app_theme_map=theme_map)
+        assert 'id="dz-app-themes"' in html
+        assert 'type="application/json"' in html
+        assert "linear-dark" in html
+        assert "/static/css/themes/paper.css" in html
+
+    def test_no_map_when_empty(self) -> None:
+        """Empty/missing map → no <script> element. Component init
+        early-returns when the map is missing."""
+        html = self._render(_app_theme="paper")
+        assert 'id="dz-app-themes"' not in html
+
+    def test_chain_links_share_theme_link_marker(self) -> None:
+        """A multi-link chain still gets the marker on every <link> so
+        the switcher removes them all on swap."""
+        html = self._render(
+            _app_theme="cyan-tweak",
+            _app_theme_url_chain=[
+                "/static/css/themes/linear-dark.css",
+                "/static/themes/cyan-tweak.css",
+            ],
+        )
+        assert html.count('data-theme-link="cyan-tweak"') == 2

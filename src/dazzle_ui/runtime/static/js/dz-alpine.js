@@ -1120,4 +1120,103 @@ document.addEventListener("alpine:init", () => {
       this.$dispatch("dz:select", { value: this.value });
     },
   }));
+
+  // ── Theme Switcher ──────────────────────────────────────────────────
+  //
+  // Phase C Patch 3: live app-shell theme switching.
+  //
+  // Server emits a `<script type="application/json" id="dz-app-themes">`
+  // map of `{<theme_name>: [<url>, ...]}` (chain order, parent → leaf)
+  // covering every theme discovered at startup. The component reads
+  // the active theme from `<html data-theme-name>` (server-set), then
+  // on `setTheme(name)` swaps the `<link data-theme-link>` chain to
+  // the new theme's URLs and persists the choice via `dzPrefs` (or
+  // localStorage as fallback for unauthenticated users).
+  //
+  // Usage in a template:
+  //   <div x-data="dzThemeSwitcher">
+  //     <template x-for="t in themes" :key="t">
+  //       <button @click="setTheme(t)" :aria-pressed="active === t"
+  //               x-text="t"></button>
+  //     </template>
+  //   </div>
+  Alpine.data("dzThemeSwitcher", () => ({
+    /** @type {string[]} */
+    themes: [],
+    /** @type {string} */
+    active: "",
+
+    init() {
+      // Active theme = server-rendered `<html data-theme-name="...">`.
+      this.active = document.documentElement.dataset.themeName || "";
+      // Theme map shipped as inline JSON.
+      const mapEl = document.getElementById("dz-app-themes");
+      if (!mapEl) return;
+      try {
+        const map = JSON.parse(mapEl.textContent || "{}");
+        this.themes = Object.keys(map).sort();
+        this._urls = map; // { name: ['/static/css/themes/x.css', ...] }
+      } catch (e) {
+        /* malformed JSON — leave themes empty */
+      }
+      // Restore persisted choice (overrides server-rendered default
+      // for THIS request only — server still honours its own resolution
+      // for first-paint flash prevention on next navigation).
+      const persisted = this._readPersisted();
+      if (persisted && persisted !== this.active && this._urls[persisted]) {
+        this.setTheme(persisted);
+      }
+    },
+
+    setTheme(name) {
+      if (!this._urls[name]) return; // unknown — silently ignore
+      // Remove existing theme links
+      document
+        .querySelectorAll("link[data-theme-link]")
+        .forEach((el) => el.parentNode && el.parentNode.removeChild(el));
+      // Inject the new chain in cascade order (parent first → leaf last)
+      const head = document.head;
+      this._urls[name].forEach((url) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = url;
+        link.dataset.themeLink = name;
+        head.appendChild(link);
+      });
+      this.active = name;
+      document.documentElement.dataset.themeName = name;
+      this._persist(name);
+      // Notify any listeners (e.g. data-island re-renders) that the
+      // theme changed. Alpine bridges `dz:` events naturally.
+      window.dispatchEvent(
+        new CustomEvent("dz:theme-changed", { detail: { name } }),
+      );
+    },
+
+    _persist(name) {
+      // Prefer server-backed prefs (auth users); fall back to localStorage.
+      if (window.dzPrefs && typeof window.dzPrefs.set === "function") {
+        window.dzPrefs.set("app_theme", name);
+      } else {
+        try {
+          localStorage.setItem("dz.app_theme", name);
+        } catch (e) {
+          /* private browsing — ignore */
+        }
+      }
+    },
+
+    _readPersisted() {
+      // Try server prefs first (instant for auth users)
+      if (window.dzPrefs && typeof window.dzPrefs.get === "function") {
+        const v = window.dzPrefs.get("app_theme", null);
+        if (v) return v;
+      }
+      try {
+        return localStorage.getItem("dz.app_theme") || null;
+      } catch (e) {
+        return null;
+      }
+    },
+  }));
 });

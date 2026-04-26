@@ -1,6 +1,6 @@
 {% if not _htmx_partial | default(false) %}
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme_variant() }}">
+<html lang="en" data-theme="{{ theme_variant() }}"{% if _app_theme is defined and _app_theme %} data-theme-name="{{ _app_theme }}"{% endif %}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,12 +48,21 @@
      length-1 chain and render identically to Phase B. #}
   {% if _app_theme_url_chain is defined and _app_theme_url_chain %}
     {% for url in _app_theme_url_chain %}
-  <link rel="stylesheet" href="{{ url }}">
+  <link rel="stylesheet" href="{{ url }}" data-theme-link="{{ _app_theme }}">
     {% endfor %}
   {% elif _app_theme_url is defined and _app_theme_url %}
-  <link rel="stylesheet" href="{{ _app_theme_url }}">
+  <link rel="stylesheet" href="{{ _app_theme_url }}" data-theme-link="{{ _app_theme }}">
   {% elif _app_theme is defined and _app_theme %}
   <link rel="stylesheet" href="{{ ('css/themes/' + _app_theme + '.css') | static_url }}">
+  {% endif %}
+
+  {# v0.61.47 (Phase C Patch 3): theme map for live switching.
+     Inline JSON consumed by dzThemeSwitcher Alpine component. Maps
+     each available theme name to its inheritance-chain CSS URLs (in
+     cascade order). Component swaps the <link data-theme-link>
+     elements without a page reload. #}
+  {% if _app_theme_map is defined and _app_theme_map %}
+  <script type="application/json" id="dz-app-themes">{{ _app_theme_map | tojson }}</script>
   {% endif %}
 
   {# HTMX + extensions (vendored) #}

@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.47] - 2026-04-26
+
+Patch bump. **Phase C Patch 3** — live theme switching via the `dzThemeSwitcher` Alpine component. Users can switch between any installed theme at runtime without a page reload; the choice persists across sessions via `dzPrefs` (server-backed) with `localStorage` fallback.
+
+### Added
+- **`_app_theme_map` Jinja global** — built at startup in `system_routes.py` from `discover_themes()`, mapping every available theme name to its full cascade-order URL chain (resolves each theme's `extends` chain individually). Emitted as `<script type="application/json" id="dz-app-themes">` in `base.html`.
+- **`<html data-theme-name="...">` attribute + `<link data-theme-link="...">` markers** — give the switcher a stable target for swapping out the active chain's `<link>` elements.
+- **`dzThemeSwitcher` Alpine component** in `dz-alpine.js` — exposes `setTheme(name)` which removes the existing `data-theme-link` elements, injects the new chain in cascade order, updates `<html data-theme-name>`, persists, and dispatches a `dz:theme-changed` window event for downstream observers. `init()` restores the persisted choice on load.
+- **Persistence layer** — prefers `window.dzPrefs.set("ui.theme", name)` (already wired for other prefs); falls back to `localStorage["dz:theme"]`. Symmetric read order in `_readPersisted()`.
+
+### Tests
+- **`test_app_theme_loading.py`** extended to 39 cases (was 33): 6 new `TestThemeSwitcherWiring` cases — `<html>` carries `data-theme-name`; attribute omitted when no theme; theme `<link>` carries `data-theme-link` marker; theme map emitted as JSON script with full registry; map omitted when empty; chain links share the marker so the switcher swaps the entire chain.
+
+### Agent Guidance
+- **Theme switching is live — no reload, no rebuild.** The full per-theme URL chain is precomputed server-side at startup and shipped inline as JSON. The switcher just rewrites `<head>` `<link>` elements; browser handles the cascade. Cost is one HTTP round-trip per chain entry on switch (cached after first switch); zero cost when the user doesn't switch.
+- **Persistence priority is `dzPrefs` first, then `localStorage`.** This matches existing pref handling in dz-alpine.js (e.g. tone, motion). When `dzPrefs` isn't on the page (anonymous routes, error pages), `localStorage` keeps the choice for the current browser. Reading goes the same direction so a logged-in user's server pref always wins over a stale anon localStorage value.
+- **`dz:theme-changed` event is the integration point for theme-aware components.** Any component that needs to recompute layout or recolor (e.g. canvas-based widgets, dynamically-styled SVGs) should subscribe to `window.addEventListener("dz:theme-changed", ...)`. The event detail carries `{name, chain}` so subscribers don't have to re-query.
+- **Switcher only swaps app theme, not site theme.** Two separate concerns: `<link data-theme-link>` is the app-shell theme (Phase B/C); `<link data-site-theme>` (if any) is the legacy site preset. The switcher targets only `data-theme-link`.
+
 ## [0.61.46] - 2026-04-26
 
 Patch bump. **Phase C Patch 2** — component-level template overrides. Themes can now ship `<theme-name>/templates/<path>.html` overrides alongside their CSS to change template SHAPE (not just tokens). E.g. paper-theme can ship a `card_wrapper.html` with double border for paper-stack effect that no token shift can produce.
