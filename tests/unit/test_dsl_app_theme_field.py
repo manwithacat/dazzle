@@ -204,3 +204,32 @@ class TestThemePrecedence:
         toml_theme = None
         resolved = dsl_theme or toml_theme
         assert resolved is None
+
+
+class TestEnvOverrideTakesPrecedence:
+    """v0.61.44 (Phase B Patch 4): DAZZLE_OVERRIDE_THEME env var (set
+    by ``dazzle theme preview <name>``) wins over BOTH DSL and toml.
+    Lets operators A/B without mutating either source."""
+
+    def _resolve(self, env: str | None, dsl: str | None, toml: str | None) -> str | None:
+        """Mirror of the selector in
+        ``subsystems/system_routes.py:_AppShellThemeSubsystem``."""
+        return env or dsl or toml
+
+    def test_env_wins_over_dsl(self) -> None:
+        assert self._resolve(env="paper", dsl="stripe", toml=None) == "paper"
+
+    def test_env_wins_over_toml(self) -> None:
+        assert self._resolve(env="paper", dsl=None, toml="linear-dark") == "paper"
+
+    def test_env_wins_over_both(self) -> None:
+        assert self._resolve(env="paper", dsl="stripe", toml="linear-dark") == "paper"
+
+    def test_dsl_used_when_env_unset(self) -> None:
+        assert self._resolve(env=None, dsl="paper", toml="stripe") == "paper"
+
+    def test_toml_used_when_env_and_dsl_unset(self) -> None:
+        assert self._resolve(env=None, dsl=None, toml="stripe") == "stripe"
+
+    def test_all_unset_resolves_to_none(self) -> None:
+        assert self._resolve(env=None, dsl=None, toml=None) is None

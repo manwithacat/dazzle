@@ -563,12 +563,19 @@ class SystemRoutesSubsystem:
                     # v0.61.43 (Phase B Patch 2): DSL `app foo: theme:`
                     # wins over `[ui] theme` in dazzle.toml — spec is
                     # the source of truth, toml is a deployment override.
+                    # v0.61.44 (Phase B Patch 4): DAZZLE_OVERRIDE_THEME
+                    # env var wins over BOTH — set by `dazzle theme
+                    # preview <name>` so operators can A/B without
+                    # mutating either source.
+                    import os as _os
+
+                    env_theme = _os.environ.get("DAZZLE_OVERRIDE_THEME") or None
                     dsl_theme = (
                         getattr(ctx.appspec.app_config, "theme", None)
                         if ctx.appspec is not None and ctx.appspec.app_config is not None
                         else None
                     )
-                    resolved_theme = dsl_theme or mf.app_theme
+                    resolved_theme = env_theme or dsl_theme or mf.app_theme
                     if resolved_theme:
                         get_jinja_env().globals["_app_theme"] = resolved_theme
                         try:

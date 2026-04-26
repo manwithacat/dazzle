@@ -230,3 +230,50 @@ class TestThemeInit:
         assert list_result.exit_code == 0
         assert "scaffolded" in list_result.output
         assert "project" in list_result.output  # source flagged correctly
+
+
+# ────────────────────── preview subcommand ────────────────────────
+
+
+class TestThemePreview:
+    """``dazzle theme preview <name>`` validates the theme exists then
+    execs ``dazzle serve --local`` with DAZZLE_OVERRIDE_THEME set.
+    Tests cover the validation path (the actual exec is not testable
+    without a real dev server)."""
+
+    def test_unknown_theme_exits_2(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            theme_app, ["preview", "does-not-exist", "--project-root", str(tmp_path)]
+        )
+        assert result.exit_code == 2
+        assert "not found" in result.output
+        # Lists available themes for guidance
+        assert "linear-dark" in result.output
+        assert "paper" in result.output
+
+    def test_unknown_project_theme_also_exits_2(self, tmp_path: Path) -> None:
+        """Even with a project-local theme directory, an unknown name
+        still exits 2 — preview validates against the full registry."""
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "actual.css").write_text("/* placeholder */")
+        result = runner.invoke(
+            theme_app, ["preview", "wrong-name", "--project-root", str(tmp_path)]
+        )
+        assert result.exit_code == 2
+        assert "wrong-name" in result.output
+        # Project theme appears in the available list
+        assert "actual" in result.output
+
+    def test_help_describes_override_mechanism(self) -> None:
+        """`--help` should make clear this is non-mutating — operators
+        worry about preview commands silently committing config changes."""
+        result = runner.invoke(theme_app, ["preview", "--help"])
+        assert result.exit_code == 0
+        # Hint that the override is via env var, not toml mutation
+        assert (
+            "DAZZLE_OVERRIDE_THEME" in result.output
+            or "no commit needed" in result.output.lower()
+            or "no project files" in result.output.lower()
+            or "override" in result.output.lower()
+        )

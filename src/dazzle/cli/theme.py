@@ -175,3 +175,53 @@ def init_command(
     typer.echo()
     typer.echo(f"Edit {target_css.name} to customise the token values.")
     typer.echo(f'Activate by adding `theme = "{name}"` to the [ui] block in dazzle.toml.')
+
+
+@theme_app.command(name="preview")
+def preview_command(
+    name: str = typer.Argument(
+        ...,
+        help="Theme to preview. Must exist in the registry (use `dazzle theme list`).",
+    ),
+    project_root: Path = typer.Option(
+        Path.cwd(),
+        "--project-root",
+        help="Project directory. Defaults to cwd.",
+    ),
+) -> None:
+    """Boot the project with a theme override, no commit needed.
+
+    Sets ``DAZZLE_OVERRIDE_THEME=<name>`` in the environment and execs
+    ``dazzle serve --local``. The override wins over both DSL
+    ``theme:`` and ``[ui] theme`` in dazzle.toml — restoring the
+    original theme is just exiting the preview (no toml mutation, no
+    DSL edit).
+    """
+    import os
+    import sys
+
+    from dazzle_ui.themes.app_theme_registry import discover_themes
+
+    # Validate theme exists before exec'ing — otherwise the user gets a
+    # 404 mid-session and won't know why.
+    registry = discover_themes(project_root=project_root)
+    if name not in registry:
+        available = sorted(registry.keys())
+        typer.echo(
+            f"Theme {name!r} not found. Available: {available}",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    typer.echo(f"Previewing theme {name!r} via DAZZLE_OVERRIDE_THEME env var.")
+    typer.echo("Press Ctrl-C to exit; no project files will be modified.")
+    typer.echo()
+
+    # Hand off to `dazzle serve --local` with the override env var set.
+    env = {**os.environ, "DAZZLE_OVERRIDE_THEME": name}
+    # Resolve the dazzle entrypoint from sys.executable so we use the
+    # same interpreter (don't trust PATH order — venv awareness).
+    cmd = [sys.executable, "-m", "dazzle", "serve", "--local"]
+    # execvpe replaces this process — we don't need to track the child
+    # or proxy signals. Ctrl-C cleans up the server directly.
+    os.execvpe(cmd[0], cmd, env)

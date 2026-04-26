@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.44] - 2026-04-26
+
+Patch bump. **Phase B complete** — Patch 4 ships `dazzle theme preview` and the corresponding `DAZZLE_OVERRIDE_THEME` env var override. All six Phase B patches now landed.
+
+### Added
+- **`dazzle theme preview <name>`** — boots the project with a theme override, no commit needed. Validates the theme name against the registry then `execvpe`s `dazzle serve --local` with `DAZZLE_OVERRIDE_THEME=<name>` set in the environment. Operators can A/B between themes by exiting and re-running with a different name; no toml or DSL mutation involved.
+- **`DAZZLE_OVERRIDE_THEME` env var** — checked by the runtime BEFORE the DSL `theme:` field and `[ui] theme` toml setting. Three-level precedence: env > DSL > toml. Lets the preview command override both sources without mutating either.
+
+### Tests
+- **`test_dazzle_theme_cli.py`** extended to 22 cases (was 19): 3 new TestThemePreview cases — unknown theme exits 2; unknown name with project-local theme also exits 2 (full registry lookup); `--help` text describes the override mechanism.
+- **`test_dsl_app_theme_field.py`** extended to 20 cases (was 14): 6 new TestEnvOverrideTakesPrecedence cases — env wins over DSL; env wins over toml; env wins over both; DSL used when env unset; toml used when env+DSL unset; all unset → None.
+
+### Phase B summary
+
+| # | Patch | Version | Status |
+|---|---|---|---|
+| 1 | Theme manifest TOML + registry | v0.61.39 | ✅ |
+| 2 | DSL `theme:` field on `app` | v0.61.43 | ✅ |
+| 3 | `dazzle theme list` | v0.61.40 | ✅ |
+| 4 | `dazzle theme preview` | v0.61.44 | ✅ |
+| 5 | `dazzle theme init` + project-local rendering | v0.61.41 | ✅ |
+| 6 | `font_preconnect` consumption | v0.61.42 | ✅ |
+
+End-to-end author flow now works:
+1. `dazzle theme list` — see what's available
+2. `dazzle theme init my-brand --inspired-by stripe` — scaffold from a baseline
+3. Edit `<project>/themes/my-brand.css` and `my-brand.toml` to taste
+4. `dazzle theme preview my-brand` — boot with the override, no commit
+5. When happy: `app foo "Title": theme: my-brand` in the DSL OR `[ui] theme = "my-brand"` in toml
+
+### Agent Guidance
+- **Three-level precedence is `env or dsl or toml`.** If you add a fourth level (e.g. per-tenant theme), pick its place in the chain explicitly — operators rely on knowing what wins. Document it in `dev_docs/2026-04-26-design-system-phase-b.md` (the Phase B doc has an "Open questions" section for exactly this).
+- **`dazzle theme preview` uses `os.execvpe`** — the CLI process is REPLACED by the dev server, not forked. No subprocess to track, no signal proxying needed. Ctrl-C goes straight to uvicorn. Works because `dazzle serve --local` is itself a long-running foreground process.
+- **The env var override is a pure read** — the runtime never sets it itself. If you write a different "override theme" mechanism (e.g. a query string `?_theme=stripe`), don't tunnel it through `DAZZLE_OVERRIDE_THEME` — that env var has a specific contract (preview-only, ops-set). Add a separate parameter.
+
 ## [0.61.43] - 2026-04-26
 
 Patch bump. Phase B Patch 2 — DSL `theme:` field on the `app` declaration. Themes can now live in the spec alongside `description:` / `multi_tenant:` / `security_profile:`. DSL value wins over `[ui] theme` in `dazzle.toml` (spec is source of truth, toml is deployment override). Closes the Phase B doc's open precedence question.
