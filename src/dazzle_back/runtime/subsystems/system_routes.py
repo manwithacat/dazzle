@@ -560,28 +560,39 @@ class SystemRoutesSubsystem:
                     # registry so project-local themes get the right
                     # URL (`/static/themes/<name>.css` vs framework's
                     # `/static/css/themes/<name>.css`).
-                    if mf.app_theme:
-                        get_jinja_env().globals["_app_theme"] = mf.app_theme
+                    # v0.61.43 (Phase B Patch 2): DSL `app foo: theme:`
+                    # wins over `[ui] theme` in dazzle.toml — spec is
+                    # the source of truth, toml is a deployment override.
+                    dsl_theme = (
+                        getattr(ctx.appspec.app_config, "theme", None)
+                        if ctx.appspec is not None and ctx.appspec.app_config is not None
+                        else None
+                    )
+                    resolved_theme = dsl_theme or mf.app_theme
+                    if resolved_theme:
+                        get_jinja_env().globals["_app_theme"] = resolved_theme
                         try:
                             from dazzle_ui.themes.app_theme_registry import get_theme
 
-                            theme = get_theme(mf.app_theme, project_root=ctx.project_root)
+                            theme = get_theme(resolved_theme, project_root=ctx.project_root)
                             if theme is None:
                                 logger.warning(
-                                    "Theme %r declared in dazzle.toml not found "
-                                    "in registry — link will 404",
+                                    "Theme %r (DSL=%r, toml=%r) not found in registry — "
+                                    "link will 404",
+                                    resolved_theme,
+                                    dsl_theme,
                                     mf.app_theme,
                                 )
                             elif theme.source == "framework":
                                 get_jinja_env().globals["_app_theme_url"] = (
-                                    f"/static/css/themes/{mf.app_theme}.css"
+                                    f"/static/css/themes/{resolved_theme}.css"
                                 )
                                 get_jinja_env().globals["_app_theme_font_preconnect"] = list(
                                     theme.font_preconnect
                                 )
                             else:  # project
                                 get_jinja_env().globals["_app_theme_url"] = (
-                                    f"/static/themes/{mf.app_theme}.css"
+                                    f"/static/themes/{resolved_theme}.css"
                                 )
                                 get_jinja_env().globals["_app_theme_font_preconnect"] = list(
                                     theme.font_preconnect

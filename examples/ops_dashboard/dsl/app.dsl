@@ -9,6 +9,9 @@ module ops_dashboard.core
 
 app ops_dashboard "Operations Dashboard":
   security_profile: basic
+  # v0.61.43 (Phase B Patch 2): app-shell theme via the DSL.
+  # Wins over [ui] theme in dazzle.toml — spec is the source of truth.
+  theme: linear-dark
 
 # =============================================================================
 # Entities with v0.7.0 Business Logic

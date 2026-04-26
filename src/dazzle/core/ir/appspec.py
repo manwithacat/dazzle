@@ -56,6 +56,7 @@ from .messaging import (
     MessageSpec,
     TemplateSpec,
 )
+from .module import AppConfigSpec
 from .notifications import NotificationSpec
 from .params import ParamSpec
 from .personas import PersonaSpec
@@ -139,6 +140,10 @@ class AppSpec(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
     security: SecurityConfig | None = None  # Security configuration (v0.11.0)
+    # v0.61.43 (Phase B Patch 2): mirror the root module's app_config so
+    # runtime consumers can read DSL-level theme / multi_tenant / etc.
+    # without re-loading the source module.
+    app_config: AppConfigSpec | None = None
     # Event-First Architecture (v0.18.0)
     event_model: EventModelSpec | None = None
     subscriptions: list[SubscribeSpec] = Field(default_factory=list)

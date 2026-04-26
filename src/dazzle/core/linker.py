@@ -156,6 +156,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         name=app_name,
         title=app_title,
         version="0.1.0",
+        app_config=root_module.app_config,
         domain=ir.DomainSpec(entities=entities),
         fk_graph=fk_graph,
         triples=triples,

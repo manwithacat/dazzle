@@ -232,6 +232,7 @@ class TokenType(Enum):
     MULTI_TENANT = "multi_tenant"
     AUDIT_TRAIL = "audit_trail"
     SECURITY_PROFILE = "security_profile"  # v0.11.0
+    THEME = "theme"  # v0.61.43: app-shell theme name (#design-system Phase B Patch 2)
 
     # v0.9.5 Field Type Keywords
     MONEY = "money"

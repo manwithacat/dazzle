@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.43] - 2026-04-26
+
+Patch bump. Phase B Patch 2 — DSL `theme:` field on the `app` declaration. Themes can now live in the spec alongside `description:` / `multi_tenant:` / `security_profile:`. DSL value wins over `[ui] theme` in `dazzle.toml` (spec is source of truth, toml is deployment override). Closes the Phase B doc's open precedence question.
+
+### Added
+- **DSL `theme:` field** on the `app` declaration:
+  ```dsl
+  app contact_manager "Contact Manager":
+    theme: paper
+    security_profile: basic
+  ```
+  Quoted form (`theme: "linear-dark"`) and unquoted hyphenated form (`theme: linear-dark`) both work — the parser rejoins lexer-split `IDENT-MINUS-IDENT` tokens.
+- **`AppConfigSpec.theme: str | None = None`** — IR field on the existing app-config dataclass.
+- **`AppSpec.app_config`** — new field mirroring the root module's `app_config` so runtime consumers can read DSL values without re-loading source. Linker populates it.
+- **`TokenType.THEME`** lexer keyword + parser branch in `parse_module_header`. Added to `KEYWORD_AS_IDENTIFIER_TYPES` so `theme` remains usable as a field/enum name elsewhere (e.g. `Setting.theme: enum[light,dark,auto]`).
+
+### Changed
+- **`subsystems/system_routes.py`** — runtime resolution now reads `appspec.app_config.theme` first, falls back to `mf.app_theme` from `dazzle.toml`. The selector is `dsl_theme or mf.app_theme` — pinned in tests.
+- **`examples/ops_dashboard/dsl/app.dsl`** — moved theme declaration from `dazzle.toml [ui] theme` to DSL `theme: linear-dark` as the v0.61.43 proof. The toml setting still works (and still tested by `test_app_theme_loading.py`) but the DSL form now drives the example.
+
+### Tests
+- **`test_dsl_app_theme_field.py`** — 14 cases across 4 layers:
+  - parser (6): theme parses; quoted form; unquoted hyphenated rejoin; multi-hyphen rejoin; optional default None; coexists with other app fields
+  - identifier reuse (2): theme as entity field name; theme as enum value
+  - IR (3): field on dataclass; default None; frozen
+  - precedence (3): DSL wins; toml fallback; neither → None
+
+### Agent Guidance
+- **Spec wins over toml is the precedence rule.** When both `app foo: theme:` (DSL) and `[ui] theme = "..."` (toml) are set, the DSL value is used. Rationale: the spec is the source of truth for the application's design intent; the toml is a deployment override slot (e.g. for staging environments). Inverting this would let a deploy-time toml accidentally override the author's stated design choice.
+- **Hyphenated theme names need rejoining at the parser level.** The lexer treats `linear-dark` as `IDENT(linear) MINUS IDENT(dark)`. The parser's `theme:` branch loops on `MINUS` to rejoin. Same trick is used in `_parse_model_id_value` for LLM model IDs — there's no shared helper because the surrounding context is too different. If a third such case appears, extract a shared `parse_hyphenated_identifier()`.
+- **`AppSpec.app_config` is a mirror, not the source of truth.** The IR's authoritative `app_config` lives on the root `ModuleIR`. We mirror it onto AppSpec for runtime ergonomics. If you mutate `appspec.app_config`, you're modifying a frozen Pydantic clone — the original module's value is unchanged. (This isn't a real risk because the IR is frozen end-to-end, but worth knowing.)
+
 ## [0.61.42] - 2026-04-26
 
 Patch bump. Phase B Patch 6 — `font_preconnect` consumption in `base.html`. Themes can now declare additional Google Fonts to preconnect; the `<link>` elements ship in the `<head>` so first-paint can fetch the theme's fonts in parallel with the bundle.

@@ -4,6 +4,7 @@
     'analytics': None,
     'apis': list([
     ]),
+    'app_config': None,
     'approvals': list([
     ]),
     'archetypes': list([

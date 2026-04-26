@@ -370,6 +370,7 @@ class BaseParser:
                 multi_tenant = False
                 audit_trail = False
                 security_profile = "basic"  # v0.11.0
+                theme: str | None = None  # v0.61.43 (Phase B Patch 2)
                 features: dict[str, str | bool] = {}
 
                 while not self.match(TokenType.DEDENT):
@@ -412,6 +413,28 @@ class BaseParser:
                             security_profile = token.value
                         self.skip_newlines()
 
+                    # theme: <name>  (v0.61.43, #design-system Phase B Patch 2)
+                    # Resolves via the registry at link time. DSL value
+                    # wins over [ui] theme in dazzle.toml. Theme names
+                    # commonly contain hyphens (linear-dark, my-brand)
+                    # which the lexer splits into IDENT-MINUS-IDENT —
+                    # rejoin them here so unquoted hyphenated names work.
+                    elif self.match(TokenType.THEME):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        token = self.advance()
+                        if token.type == TokenType.STRING:
+                            theme = token.value
+                        else:
+                            parts = [token.value]
+                            while self.match(TokenType.MINUS):
+                                self.advance()
+                                parts.append("-")
+                                next_tok = self.advance()
+                                parts.append(next_tok.value)
+                            theme = "".join(parts)
+                        self.skip_newlines()
+
                     # Any other identifier: value (for extensibility)
                     elif self.match(TokenType.IDENTIFIER):
                         key = self.advance().value
@@ -438,6 +461,7 @@ class BaseParser:
                     multi_tenant=multi_tenant,
                     audit_trail=audit_trail,
                     security_profile=security_profile,
+                    theme=theme,
                     features=features,
                 )
             else:
@@ -521,6 +545,11 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # remain usable as an enum value / field name elsewhere — adding it
     # here lets `enum[alpha, beta, delta]` and `delta_field: …` parse.
     TokenType.DELTA,
+    # v0.61.43 (Phase B Patch 2) added THEME as an app-block keyword.
+    # Same reasoning — `theme` is a common field/enum name (e.g.
+    # `enum[light, dark, theme_a]`) so it must remain usable as an
+    # identifier outside the app block.
+    TokenType.THEME,
     TokenType.LIST,
     TokenType.GRID,
     TokenType.TIMELINE,

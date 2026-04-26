@@ -99,6 +99,13 @@ class AppConfigSpec(BaseModel):
     audit_trail: bool = False
     security_profile: str = "basic"  # basic | standard | strict
     features: dict[str, Any] = Field(default_factory=dict)
+    # v0.61.43 (Phase B Patch 2): app-shell theme name. Resolves via
+    # the registry (framework themes shipped under
+    # src/dazzle_ui/runtime/static/css/themes/, plus optional
+    # <project>/themes/). When set, takes precedence over `[ui] theme`
+    # in dazzle.toml — the spec is the source of truth, the toml is a
+    # deployment override slot. None = use the toml value (or default).
+    theme: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
