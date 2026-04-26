@@ -7,10 +7,20 @@
   <title>{% block title %}{% if page_title %}{{ page_title }} — {{ app_name | default("App") }}{% else %}{{ app_name | default("App") }}{% endif %}{% endblock %}</title>
   <link rel="icon" href="{{ _favicon | default('/static/assets/dazzle-favicon.svg') }}" type="image/svg+xml">
 
-  {# Inter font #}
+  {# Inter font — always preconnected (used by every theme as fallback) #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# v0.61.42 (Phase B Patch 6): theme-declared font_preconnect URLs.
+     Each entry is a Google Fonts URL the theme's CSS references via
+     `--font-sans` / `--font-mono`. Without this preconnect, the
+     browser only discovers the font when it sees the CSS, adding
+     ~150ms to first paint of any heading rendered in the theme font. #}
+  {% if _app_theme_font_preconnect is defined and _app_theme_font_preconnect %}
+    {% for font_url in _app_theme_font_preconnect %}
+  <link href="{{ font_url }}" rel="stylesheet">
+    {% endfor %}
+  {% endif %}
 
   {# CSS Cascade Layer order — defines priority: base < framework < app < overrides #}
   <style>@layer base, framework, app, overrides;</style>

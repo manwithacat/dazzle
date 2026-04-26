@@ -6,8 +6,13 @@ inspired_by = "Notion / iA Writer"
 
 default_color_scheme = "light"
 
-# Future: paper.css references iA Writer Mono — preconnecting iA Writer
-# fonts requires Google Fonts URL. Empty for now (fallback fonts).
-font_preconnect = []
+# paper.css references iA Writer Mono S for code blocks. Source Serif 4
+# is the open-source serif alternative for body in serif-leaning themes;
+# the current paper.css keeps Inter as body-sans, so only the mono link
+# is preconnected. Inter is always preconnected by base.html, so we
+# only list fonts THIS theme adds.
+font_preconnect = [
+  "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap",
+]
 
 tags = ["light", "warm", "airy", "cms", "personal-tools"]

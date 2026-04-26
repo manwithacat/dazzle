@@ -209,3 +209,73 @@ class TestThemeURLResolution:
     def test_neither_set_renders_no_theme_link(self) -> None:
         html = self._render_base(app_theme=None, app_theme_url=None)
         assert "themes/" not in html
+
+
+class TestFontPreconnect:
+    """v0.61.42 (Phase B Patch 6): each theme can declare a list of
+    Google Fonts URLs in `font_preconnect`. base.html threads them in
+    after Inter so first-paint can fetch the theme's actual fonts in
+    parallel with the bundle."""
+
+    def _render_base(self, *, font_preconnect: list[str] | None) -> str:
+        from dazzle_ui.runtime.template_renderer import create_jinja_env
+
+        env = create_jinja_env()
+        if font_preconnect is not None:
+            env.globals["_app_theme_font_preconnect"] = font_preconnect
+        tmpl = env.get_template("base.html")
+        return tmpl.render(page_title="t", app_name="t", theme_variant=lambda: "light")
+
+    def test_each_url_renders_as_link(self) -> None:
+        urls = [
+            "https://fonts.googleapis.com/css2?family=Source+Serif+4&display=swap",
+            "https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap",
+        ]
+        html = self._render_base(font_preconnect=urls)
+        # Jinja autoescapes & → &amp; in attribute values; the browser
+        # decodes back so the URL is functionally correct. Assert the
+        # escaped form here so we pin the actual rendered output.
+        for url in urls:
+            assert url.replace("&", "&amp;") in html
+
+    def test_inter_always_present(self) -> None:
+        """Inter is always preconnected as the universal fallback —
+        themes only declare ADDITIONAL fonts."""
+        html = self._render_base(font_preconnect=None)
+        assert "fonts.googleapis.com/css2?family=Inter" in html
+
+    def test_empty_list_renders_no_extra_links(self) -> None:
+        """linear-dark uses Inter only → empty font_preconnect → no
+        extra <link> elements beyond the always-present Inter one."""
+        html = self._render_base(font_preconnect=[])
+        # Only the Inter line should match
+        family_links = [line for line in html.splitlines() if "fonts.googleapis.com/css2" in line]
+        assert len(family_links) == 1
+        assert "family=Inter" in family_links[0]
+
+
+class TestShippedThemeFontPreconnect:
+    """The three shipped themes have specific fonts declared in their
+    manifests — pin them so a refactor doesn't drop them silently."""
+
+    def test_linear_dark_uses_inter_only(self) -> None:
+        from dazzle_ui.themes.app_theme_registry import get_theme
+
+        m = get_theme("linear-dark")
+        assert m is not None
+        assert m.font_preconnect == ()
+
+    def test_paper_preconnects_source_serif(self) -> None:
+        from dazzle_ui.themes.app_theme_registry import get_theme
+
+        m = get_theme("paper")
+        assert m is not None
+        assert any("Source+Serif" in u for u in m.font_preconnect)
+
+    def test_stripe_preconnects_inter_tight_and_geist_mono(self) -> None:
+        from dazzle_ui.themes.app_theme_registry import get_theme
+
+        m = get_theme("stripe")
+        assert m is not None
+        assert any("Inter+Tight" in u for u in m.font_preconnect)
+        assert any("Geist+Mono" in u for u in m.font_preconnect)

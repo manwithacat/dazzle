@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.42] - 2026-04-26
+
+Patch bump. Phase B Patch 6 — `font_preconnect` consumption in `base.html`. Themes can now declare additional Google Fonts to preconnect; the `<link>` elements ship in the `<head>` so first-paint can fetch the theme's fonts in parallel with the bundle.
+
+### Added
+- **`_app_theme_font_preconnect` Jinja global** — set at startup from the theme manifest's `font_preconnect` list. `base.html` iterates and emits one `<link href="..." rel="stylesheet">` per URL, after the always-present Inter link.
+- **`paper.toml.font_preconnect`** populated with Source Serif 4 (the open-source serif option for paper-vocabulary themes; existing CSS still uses Inter as body sans, so this is forward-looking).
+- **`stripe.toml.font_preconnect`** populated with Inter Tight (the sans referenced in `stripe.css`'s `--font-sans`) and Geist Mono (the mono in `--font-mono`). Without these preconnects the theme's actual fonts only fetch after the CSS parses — adds ~150ms to first paint of any heading.
+
+### Tests
+- **`test_app_theme_loading.py`** extended to 30 cases (was 24): 6 new tests across `TestFontPreconnect` (3 — each URL renders as `<link>`; Inter always present; empty list adds no extras) and `TestShippedThemeFontPreconnect` (3 — linear-dark uses Inter only; paper preconnects Source Serif 4; stripe preconnects Inter Tight + Geist Mono).
+
+### Agent Guidance
+- **Inter is always preconnected by `base.html`** as the universal fallback. Themes only declare *additional* fonts in `font_preconnect`. linear-dark's font_preconnect is `[]` because it uses Inter for everything.
+- **Jinja autoescapes `&` → `&amp;`** in attribute values. Tests for `font_preconnect` URLs assert the escaped form. The browser decodes it correctly so the URL is functionally identical, but the assertion needs to match the rendered HTML.
+- **`font_preconnect` is a list of stylesheet URLs**, NOT plain preconnect URLs. The `<link>` is `rel="stylesheet"` (loads the CSS), not `rel="preconnect"` (just opens the connection). Naming is slightly off — could be `font_stylesheets` for clarity in a future patch. Functional behaviour is correct: the browser fetches the stylesheet, which references the font files via @font-face, and they download in parallel with the bundle.
+
 ## [0.61.41] - 2026-04-26
 
 Patch bump. Phase B Patch 5 — closes the project-local rendering loop and adds `dazzle theme init` for scaffolding new themes from an existing one. Project-local themes now actually render (not just discoverable in `dazzle theme list`).

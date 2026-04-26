@@ -6,8 +6,12 @@ inspired_by = "Stripe Dashboard"
 
 default_color_scheme = "light"
 
-# Future: stripe.css references Inter Tight + Geist Mono — both available
-# via Google Fonts. Empty for now (fallback fonts).
-font_preconnect = []
+# stripe.css references Inter Tight (sans) + Geist Mono (code).
+# Inter (regular) is always preconnected by base.html as the universal
+# fallback; we only add the theme-specific extras here.
+font_preconnect = [
+  "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap",
+  "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap",
+]
 
 tags = ["light", "formal", "b2b", "fintech", "saas"]

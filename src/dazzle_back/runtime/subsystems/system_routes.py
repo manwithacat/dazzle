@@ -576,9 +576,15 @@ class SystemRoutesSubsystem:
                                 get_jinja_env().globals["_app_theme_url"] = (
                                     f"/static/css/themes/{mf.app_theme}.css"
                                 )
+                                get_jinja_env().globals["_app_theme_font_preconnect"] = list(
+                                    theme.font_preconnect
+                                )
                             else:  # project
                                 get_jinja_env().globals["_app_theme_url"] = (
                                     f"/static/themes/{mf.app_theme}.css"
+                                )
+                                get_jinja_env().globals["_app_theme_font_preconnect"] = list(
+                                    theme.font_preconnect
                                 )
                         except Exception:
                             logger.warning(
