@@ -304,3 +304,135 @@ class TestResolveInheritanceChain:
             (themes_dir / f"{n}.toml").write_text(f'name = "{n}"\nextends = "{parent}"\n')
         with pytest.raises(ValueError, match="exceeds max depth"):
             resolve_inheritance_chain("p5", project_root=tmp_path)
+
+
+# ─────────────────────── templates_dir (Phase C Patch 2) ──────────────────────
+
+
+class TestThemeTemplatesDir:
+    """A theme can ship template overrides at ``<theme>/templates/``
+    alongside its CSS. The registry resolves the path so the runtime
+    knows where to point the Jinja loader."""
+
+    def test_templates_dir_none_when_absent(self) -> None:
+        """All three shipped themes are CSS-only — none has a sibling
+        templates/ directory."""
+        for name in ("linear-dark", "paper", "stripe"):
+            m = get_theme(name)
+            assert m is not None
+            assert m.templates_dir is None
+
+    def test_templates_dir_resolved_when_present(self, tmp_path: Path) -> None:
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "shaped.css").write_text("/* */")
+        # Sibling directory matching the CSS file stem
+        shaped_dir = themes_dir / "shaped"
+        shaped_dir.mkdir()
+        (shaped_dir / "templates").mkdir()
+        (shaped_dir / "templates" / "card_wrapper.html").write_text(
+            '<div class="theme-card">override</div>'
+        )
+
+        m = discover_themes(project_root=tmp_path)["shaped"]
+        assert m.templates_dir == shaped_dir / "templates"
+
+    def test_templates_dir_skipped_when_dir_exists_but_no_templates_subdir(
+        self, tmp_path: Path
+    ) -> None:
+        """A bare `<theme>/` dir without a `templates/` subdir resolves
+        to None — only the conventional layout enables overrides."""
+        themes_dir = tmp_path / "themes"
+        themes_dir.mkdir()
+        (themes_dir / "named.css").write_text("/* */")
+        (themes_dir / "named").mkdir()  # no templates/ subdir
+        m = discover_themes(project_root=tmp_path)["named"]
+        assert m.templates_dir is None
+
+
+class TestAddThemeTemplateDirs:
+    """``add_theme_template_dirs`` mutates the Jinja loader chain so
+    theme templates win over project + framework. Phase C Patch 2."""
+
+    def test_theme_template_overrides_framework(self, tmp_path: Path) -> None:
+        import dazzle_ui.runtime.template_renderer as tr
+        from dazzle_ui.runtime.template_renderer import (
+            add_theme_template_dirs,
+            create_jinja_env,
+        )
+
+        # Reset env so this test is hermetic
+        tr._env = create_jinja_env()
+
+        # Create a theme override for `base.html`
+        theme_templates = tmp_path / "themes" / "shaped" / "templates"
+        theme_templates.mkdir(parents=True)
+        (theme_templates / "base.html").write_text("<html>THEME WINS</html>")
+
+        add_theme_template_dirs([theme_templates])
+
+        from dazzle_ui.runtime.template_renderer import get_jinja_env
+
+        tmpl = get_jinja_env().get_template("base.html")
+        rendered = tmpl.render()
+        assert "THEME WINS" in rendered
+
+        # Restore env so the rest of the suite gets the framework default
+        tr._env = create_jinja_env()
+
+    def test_empty_list_is_noop(self) -> None:
+        import dazzle_ui.runtime.template_renderer as tr
+        from dazzle_ui.runtime.template_renderer import (
+            add_theme_template_dirs,
+            create_jinja_env,
+        )
+
+        tr._env = create_jinja_env()
+        loader_before = tr._env.loader
+        add_theme_template_dirs([])
+        assert tr._env.loader is loader_before
+
+    def test_nonexistent_dirs_skipped(self, tmp_path: Path) -> None:
+        import dazzle_ui.runtime.template_renderer as tr
+        from dazzle_ui.runtime.template_renderer import (
+            add_theme_template_dirs,
+            create_jinja_env,
+        )
+
+        tr._env = create_jinja_env()
+        loader_before = tr._env.loader
+        # All-nonexistent dirs → loader unchanged
+        add_theme_template_dirs([tmp_path / "nope1", tmp_path / "nope2"])
+        assert tr._env.loader is loader_before
+
+    def test_chain_order_leaf_wins(self, tmp_path: Path) -> None:
+        """When a chain has multiple template dirs, the LEAF (last in
+        the cascade order list) wins for same-name templates. The
+        helper reverses internally so ChoiceLoader's first-match
+        semantics match the cascade intent."""
+        import dazzle_ui.runtime.template_renderer as tr
+        from dazzle_ui.runtime.template_renderer import (
+            add_theme_template_dirs,
+            create_jinja_env,
+        )
+
+        tr._env = create_jinja_env()
+
+        parent_dir = tmp_path / "parent" / "templates"
+        parent_dir.mkdir(parents=True)
+        (parent_dir / "base.html").write_text("PARENT")
+
+        leaf_dir = tmp_path / "leaf" / "templates"
+        leaf_dir.mkdir(parents=True)
+        (leaf_dir / "base.html").write_text("LEAF")
+
+        # Cascade order: root → leaf
+        add_theme_template_dirs([parent_dir, leaf_dir])
+
+        from dazzle_ui.runtime.template_renderer import get_jinja_env
+
+        rendered = get_jinja_env().get_template("base.html").render()
+        assert "LEAF" in rendered
+        assert "PARENT" not in rendered
+
+        tr._env = create_jinja_env()

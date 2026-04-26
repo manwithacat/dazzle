@@ -579,27 +579,42 @@ class SystemRoutesSubsystem:
                     if resolved_theme:
                         get_jinja_env().globals["_app_theme"] = resolved_theme
                         try:
-                            from dazzle_ui.themes.app_theme_registry import (
-                                resolve_inheritance_chain,
-                            )
-
                             # Phase C Patch 1: walk the `extends` chain
                             # so a theme that extends `linear-dark` gets
                             # both stylesheets emitted (parent first,
                             # child wins via @layer overrides). Single-
                             # parent themes have a length-1 chain and
                             # behave exactly as Phase B.
+                            from pathlib import Path as _Path
+
+                            from dazzle_ui.themes.app_theme_registry import (
+                                resolve_inheritance_chain,
+                            )
+
                             chain = resolve_inheritance_chain(
                                 resolved_theme, project_root=ctx.project_root
                             )
                             urls: list[str] = []
                             preconnects: list[str] = []
+                            template_dirs: list[_Path] = []
                             for theme in chain:
                                 if theme.source == "framework":
                                     urls.append(f"/static/css/themes/{theme.name}.css")
                                 else:
                                     urls.append(f"/static/themes/{theme.name}.css")
                                 preconnects.extend(theme.font_preconnect)
+                                if theme.templates_dir is not None:
+                                    template_dirs.append(theme.templates_dir)
+                            # Phase C Patch 2: prepend any theme-template
+                            # dirs to the Jinja loader chain so theme
+                            # templates win over project + framework. Pass
+                            # in cascade order (root → leaf, leaf wins).
+                            if template_dirs:
+                                from dazzle_ui.runtime.template_renderer import (
+                                    add_theme_template_dirs,
+                                )
+
+                                add_theme_template_dirs(template_dirs)
                             # Leaf theme (last in chain) supplies the
                             # legacy single-URL global so existing
                             # consumers keep working unchanged.

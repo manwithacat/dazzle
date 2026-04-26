@@ -51,6 +51,11 @@ class AppThemeManifest:
             ``@layer overrides`` block wins. Inherited fields
             (default_color_scheme, font_preconnect, tags) fall through
             to the parent when this theme leaves them unset.
+        templates_dir: Optional path to a ``<theme>/templates/``
+            directory (Phase C Patch 2). When present, the framework's
+            Jinja loader prepends it so this theme can override
+            individual templates (e.g. ship a paper-stack
+            ``card_wrapper.html``). ``None`` means CSS-only theme.
     """
 
     name: str
@@ -62,6 +67,7 @@ class AppThemeManifest:
     css_path: Path
     source: Literal["framework", "project"]
     extends: str | None = None
+    templates_dir: Path | None = None
 
 
 def _parse_manifest(
@@ -105,6 +111,7 @@ def _parse_manifest(
             css_path=css_path,
             source=source,
             extends=extends,
+            templates_dir=_resolve_templates_dir(css_path),
         )
     # No manifest — synthesise defaults so CSS-only themes still load.
     return AppThemeManifest(
@@ -116,7 +123,21 @@ def _parse_manifest(
         tags=(),
         css_path=css_path,
         source=source,
+        templates_dir=_resolve_templates_dir(css_path),
     )
+
+
+def _resolve_templates_dir(css_path: Path) -> Path | None:
+    """Return ``<themes_dir>/<name>/templates/`` when present, else None.
+
+    Phase C Patch 2: themes that need template overrides ship them
+    alongside the CSS. Convention: a sibling directory named for the
+    theme containing a ``templates/`` subdir matching the framework's
+    template path layout. Themes that just override tokens leave this
+    out and the helper returns None.
+    """
+    candidate = css_path.parent / css_path.stem / "templates"
+    return candidate if candidate.is_dir() else None
 
 
 def _discover_in(

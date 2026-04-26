@@ -483,6 +483,42 @@ def configure_project_templates(project_templates_dir: Path) -> None:
         _env = create_jinja_env(project_templates_dir)
 
 
+def add_theme_template_dirs(theme_template_dirs: list[Path]) -> None:
+    """Prepend theme-template directories to the Jinja loader chain.
+
+    Phase C Patch 2: when a theme ships templates at
+    ``themes/<name>/templates/<path>.html``, those overrides win over
+    project + framework templates. Pass the dirs in cascade order
+    (root → leaf, so the leaf wins for same-name templates).
+
+    Idempotent — safe to call multiple times during startup. Skips
+    directories that don't exist on disk so opt-in themes (no
+    ``templates/`` subdir) cost nothing.
+    """
+    global _env  # noqa: PLW0603
+    if not theme_template_dirs:
+        return
+    valid = [d for d in theme_template_dirs if d.is_dir()]
+    if not valid:
+        return
+    with _env_lock:
+        if _env is None:
+            _env = create_jinja_env()
+        # Prepend a new ChoiceLoader-of-themes to the existing loader.
+        # Theme templates win over project + framework. Within the
+        # themes list, LATER directories win (because of how the
+        # caller orders them: root → leaf). ChoiceLoader picks the
+        # FIRST match, so we reverse to get leaf-first matching.
+        theme_loader = ChoiceLoader([FileSystemLoader(str(d)) for d in reversed(valid)])
+        # Defensive: env.loader is always set when the env is constructed
+        # via create_jinja_env above; the cast satisfies mypy.
+        existing = _env.loader
+        if existing is None:
+            existing = create_jinja_env().loader  # pragma: no cover — unreachable
+        assert existing is not None
+        _env.loader = ChoiceLoader([theme_loader, existing])
+
+
 def render_page(
     context: PageContext,
     *,

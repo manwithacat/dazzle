@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.46] - 2026-04-26
+
+Patch bump. **Phase C Patch 2** — component-level template overrides. Themes can now ship `<theme-name>/templates/<path>.html` overrides alongside their CSS to change template SHAPE (not just tokens). E.g. paper-theme can ship a `card_wrapper.html` with double border for paper-stack effect that no token shift can produce.
+
+### Added
+- **`AppThemeManifest.templates_dir: Path | None`** — resolved at registry-load time. Convention: a sibling directory matching the CSS filename stem with a `templates/` subdir. CSS-only themes leave it `None` and cost zero (the loader chain stays unchanged).
+- **`add_theme_template_dirs(dirs)`** in `template_renderer.py` — prepends theme template dirs to the Jinja loader chain so theme templates win over project + framework. Idempotent; skips non-existent dirs; orders dirs leaf-wins (matches the cascade-order intent of the chain resolver).
+- **Runtime wiring** — when the inheritance chain resolves, `system_routes.py` collects each theme's `templates_dir` and calls `add_theme_template_dirs` once at startup.
+
+### Tests
+- **`test_app_theme_registry.py`** extended to 35 cases (was 28): 7 new cases across `TestThemeTemplatesDir` (3 — None when absent for shipped themes; resolved when present in the conventional layout; bare `<theme>/` dir without `templates/` resolves to None) and `TestAddThemeTemplateDirs` (4 — theme template overrides framework; empty list is no-op; non-existent dirs skipped; chain order leaf-wins).
+
+### Agent Guidance
+- **Theme template directory convention** — `<themes_dir>/<name>/templates/<framework_path>.html`. Sibling to the CSS file, directory named for the theme. The framework template at `workspace/regions/card_wrapper.html` is overridden by `<themes_dir>/paper/templates/workspace/regions/card_wrapper.html`. The `templates/` subdir is required (not just `<themes_dir>/<name>/`) so the registry can distinguish theme-template themes from theme-asset themes (Phase D may add `assets/` for fonts, images, etc.).
+- **Theme template overrides participate in the same precedence as project templates.** Cascade order: theme (leaf) → theme (root) → ... → project → framework. Within a theme chain, the leaf wins for same-name templates (the CSS cascade analogue).
+- **Adding a `templates/` dir to an existing theme is safe** — registry picks it up at next startup; no migration. The 3 shipped themes (linear-dark/paper/stripe) ship CSS-only; future patches could add template overrides where tokens aren't enough (e.g. paper-stack card edge).
+- **Loader cache** — `add_theme_template_dirs` mutates the singleton env. Tests that assert specific loader behaviour need to reset `tr._env = create_jinja_env()` before AND after to keep the suite hermetic — the `TestAddThemeTemplateDirs` cases follow this pattern.
+
 ## [0.61.45] - 2026-04-26
 
 Patch bump. **Phase C Patch 1** — theme inheritance via `extends = "<parent>"` in the manifest TOML. A project variant can now ship just its delta on top of a baseline theme without copy-pasting the full token set.
