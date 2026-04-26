@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.40] - 2026-04-26
+
+Patch bump. Phase B Patch 3 — adds the `dazzle theme list` CLI subcommand. Wraps the v0.61.39 registry to give operators a fast way to discover shipped + project-local themes without reading source.
+
+### Added
+- **`dazzle theme list`** — prints a table of every discovered theme (framework + project-local) with columns: Name / Scheme / Src / Tags / Inspired by. Filters: `--tag <name>` (tag must appear in the theme's `tags` list), `--scheme <light|dark|auto>` (matches the theme's `default_color_scheme`), `--project-root <path>` (where to look for `<project>/themes/`; defaults to cwd). An empty result set is treated as a friendly empty-state, not an error (exit 0 with "No themes match the filter."). Invalid `--scheme` exits 2.
+- **`src/dazzle/cli/theme.py`** — new `theme_app` typer group registered under `dazzle theme`. Skipped Patches 4 (`preview`) and 5 (`init`) for now — they're scaffolded as separate commits.
+
+### Tests
+- **`test_dazzle_theme_cli.py`** — 11 cases across 4 layers:
+  - default behaviour (2): lists all three shipped themes; table header columns present
+  - filtering (5): by tag; by light/dark scheme; invalid scheme → exit 2; zero-result filter exits 0 with friendly message
+  - project-local discovery (2): project theme appears alongside framework; project paper overrides framework paper in listing
+  - help / no-args (2): no-args lists themes (single-command typer collapse — will route to help when Patches 4/5 add siblings); `--help` mentions filter flags
+
+### Agent Guidance
+- **Single-command typer apps collapse to the command itself.** `theme_app` ships only `list` in v0.61.40 — typer treats it as the root command, so `dazzle theme` (no args) lists themes and `dazzle theme list` errors with "Got unexpected extra argument (list)". When Patches 4/5 add `preview` and `init`, this collapses back to standard subcommand routing automatically. Tests use `runner.invoke(theme_app, [...])` without the `list` prefix.
+- **`--project-root` defaults to cwd** so `dazzle theme list` from any project directory shows that project's themes alongside framework ones. Tests pass `/tmp` as the project root to keep the framework-only baseline (3 themes) deterministic — passing `tmp_path` with a populated `themes/` subdir tests the project-local discovery path.
+
 ## [0.61.39] - 2026-04-26
 
 Patch bump. Phase B Patch 1 of the design-system formalisation work — adds a theme manifest TOML format and registry loader. Each shipped theme (`linear-dark` / `paper` / `stripe`) now has a sibling `<name>.toml` declaring `description`, `inspired_by`, `default_color_scheme`, `font_preconnect`, `tags`. Foundation for Patches 2–6 (DSL field, linker validation, `dazzle theme list/preview/init` CLI, font preconnect consumption).

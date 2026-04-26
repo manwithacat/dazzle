@@ -294,6 +294,7 @@ from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
 from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
+from dazzle.cli.theme import theme_app  # noqa: E402
 from dazzle.cli.ux import ux_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
@@ -316,6 +317,7 @@ app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")
 app.add_typer(tenant_app, name="tenant")
+app.add_typer(theme_app, name="theme")
 app.add_typer(test_app, name="test")
 app.add_typer(e2e_app, name="e2e")
 app.add_typer(specs_app, name="specs")
