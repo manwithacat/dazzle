@@ -97,6 +97,26 @@ entity Alert "Alert":
   fitness:
     repr_fields: [system, severity, message, acknowledged, triggered_at]
 
+# v0.61.72 (#6) — single-row Integration entity for the
+# confirm_action_panel demo. AegisMark UX patterns roadmap item #6
+# uses this shape for the SIMS-sync opt-in: one record per tenant,
+# state-machine drives the panel mode, audit tracks the transition.
+entity Integration "Integration":
+  id: uuid pk
+  name: str(100) required
+  status: enum[off,pending,live,revoked] = off
+  enabled_at: datetime
+  notes: str(500)
+
+  audit: all
+
+  permit:
+    list: role(ops_engineer) or role(admin)
+    read: role(ops_engineer) or role(admin)
+    create: role(admin)
+    update: role(admin)
+    delete: role(admin)
+
 # =============================================================================
 # Persona
 # =============================================================================
@@ -466,6 +486,31 @@ workspace incident_review "Incident Review":
         caption: "Document any new mitigation steps"
         icon: "book-open"
         state: warning
+
+  # v0.61.72 (#6): confirm_action_panel demo. Single-row Integration
+  # entity narrowed via filter; the panel reads `status` to switch
+  # between off (checklist + dual-button), live (revoke), and
+  # revoked (re-enable) modes. Audit footer auto-renders because
+  # Integration has `audit: all`.
+  integration_authorise:
+    source: Integration
+    display: confirm_action_panel
+    state_field: status
+    eyebrow: "Final authorisation"
+    title: "Enable read-only telemetry sync"
+    notice:
+      title: "Switching on starts the first read cycle"
+      body: "All access is logged with your account, IP address, and timestamp."
+      tone: warning
+    confirmations:
+      - title: "I confirm I am authorised by the platform owner"
+        caption: "Recorded in the audit log against my account"
+      - title: "I authorise read-only access to the telemetry stream"
+      - title: "I have reviewed the data scopes listed above"
+        required: false
+    primary_action: integration_enable
+    secondary_action: integration_save_draft
+    revoke: integration_revoke
 
   ux:
     for ops_engineer:

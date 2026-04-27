@@ -191,6 +191,22 @@ class RegionContext(BaseModel):
     # The dashboard panel template branches on truthy `card.notice` to
     # emit the band.
     notice: dict[str, str] = Field(default_factory=dict)
+    # v0.61.72 (#6): confirm_action_panel — irreversible-action consent
+    # primitive. confirmations is a list of {title, caption, required}
+    # dicts. state_field names the entity column whose value drives the
+    # panel's visual mode (off/pending/live/revoked); state_value is
+    # resolved at request time from the fetched row. The action URLs
+    # are pre-resolved from the IR's surface refs so the template
+    # never needs to know about routing. audit_enabled auto-detects
+    # from the entity's `audit:` block — when True the template emits
+    # the "recorded in audit log" footer.
+    confirmations: list[dict[str, Any]] = Field(default_factory=list)
+    state_field: str = ""
+    state_value: str = ""
+    revoke_url: str = ""
+    primary_action_url: str = ""
+    secondary_action_url: str = ""
+    audit_enabled: bool = False
 
 
 class WorkspaceContext(BaseModel):
@@ -315,6 +331,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "PROFILE_CARD": "workspace/regions/profile_card.html",  # #892
     "PIPELINE_STEPS": "workspace/regions/pipeline_steps.html",  # #890
     "STATUS_LIST": "workspace/regions/status_list.html",  # #3, v0.61.69
+    "CONFIRM_ACTION_PANEL": "workspace/regions/confirm_action_panel.html",  # #6, v0.61.72
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -375,9 +392,13 @@ def build_workspace_context(
 
     # Build entity name → display title lookup from app spec (#358)
     _entity_titles: dict[str, str] = {}
+    # v0.61.72 (#6): entity name → entity spec, so confirm_action_panel
+    # can auto-detect `audit:` and emit the audit footer when present.
+    _entities_by_name: dict[str, Any] = {}
     if app_spec:
         for _e in app_spec.domain.entities:
             _entity_titles[_e.name] = getattr(_e, "title", "") or _e.name
+            _entities_by_name[_e.name] = _e
 
     regions: list[RegionContext] = []
     ws_regions = workspace.regions
@@ -577,6 +598,23 @@ def build_workspace_context(
                     }
                     for e in (getattr(region, "status_entries", None) or [])
                 ],  # v0.61.69 #3
+                confirmations=[
+                    {
+                        "title": c.title,
+                        "caption": c.caption,
+                        "required": c.required,
+                    }
+                    for c in (getattr(region, "confirmations", None) or [])
+                ],  # v0.61.72 #6
+                state_field=getattr(region, "state_field", None) or "",
+                revoke_url=_action_to_url(getattr(region, "revoke", None) or ""),
+                primary_action_url=_action_to_url(getattr(region, "primary_action", None) or ""),
+                secondary_action_url=_action_to_url(
+                    getattr(region, "secondary_action", None) or ""
+                ),
+                audit_enabled=(
+                    getattr(_entities_by_name.get(source_name or ""), "audit", None) is not None
+                ),
             )
         )
 

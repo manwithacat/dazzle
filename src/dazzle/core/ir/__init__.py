@@ -763,6 +763,7 @@ from .webhooks import (
 from .workspaces import (
     ActionCardSpec,
     BucketRef,
+    ConfirmationItemSpec,
     ContextSelectorSpec,
     DeltaSpec,
     DisplayMode,
@@ -870,6 +871,7 @@ __all__ = [
     "WorkspaceAccessSpec",
     "DeltaSpec",
     "ActionCardSpec",
+    "ConfirmationItemSpec",
     "NoticeSpec",
     "OverlaySeriesSpec",
     "PipelineStageSpec",

@@ -1,0 +1,144 @@
+{# Confirm action panel — v0.61.72 (#6, AegisMark UX patterns roadmap).
+
+   Irreversible-action consent primitive. Renders the canonical
+   "Final authorisation" shape from AegisMark's SIMS-sync-opt-in
+   prototype: a checklist of obligations the actor must affirm
+   before the primary commit action becomes available, plus an
+   optional secondary draft action and a revoke action shown only
+   in the live state.
+
+   The panel reads `state_value` (resolved at request time from the
+   entity field named by `state_field`) and branches its visual
+   mode:
+     - off / pending / draft  → checklist + primary commit + secondary draft
+     - live / active / on     → "Currently live" summary + revoke
+     - revoked / disabled     → audit + (optional) re-enable
+     - empty / unknown        → assume off (safest default)
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. Tone tints are NOT used here —
+   this panel's emphasis comes from the dual-button asymmetry, not
+   from a band tint.
+
+   The audit footer auto-renders when the source entity has an
+   `audit:` block declared (audit_enabled=true upstream). Authors
+   don't need to write the disclosure copy by hand. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-confirm-panel" data-dz-state-value="{{ state_value | default('off') }}">
+  {% set _state = (state_value | default('off') or 'off') | lower %}
+  {% set _is_live = _state in ('live', 'active', 'on', 'enabled') %}
+  {% set _is_revoked = _state in ('revoked', 'disabled', 'off-revoked') %}
+
+  {% if _is_live %}
+    {# ── Live state: summary + revoke action ────────────────────── #}
+    <div class="dz-confirm-summary p-3 rounded-[6px] border border-[hsl(var(--success)/0.4)] bg-[hsl(var(--success)/0.06)] mb-3">
+      <div class="text-[13px] font-medium text-[hsl(var(--foreground))]">
+        Currently live.
+      </div>
+      <div class="text-[12px] text-[hsl(var(--muted-foreground))] mt-0.5">
+        Action recorded; further changes require a new authorisation.
+      </div>
+    </div>
+    {% if revoke_url %}
+      <div class="dz-confirm-actions flex justify-end">
+        <a href="{{ revoke_url }}"
+           class="dz-confirm-revoke inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium border border-[hsl(var(--destructive)/0.5)] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.08)] transition-colors duration-[80ms]">
+          Revoke
+        </a>
+      </div>
+    {% endif %}
+  {% elif _is_revoked %}
+    {# ── Revoked state: audit + (optional) re-enable ──────────────── #}
+    <div class="dz-confirm-summary p-3 rounded-[6px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.4)] mb-3">
+      <div class="text-[13px] font-medium text-[hsl(var(--foreground))]">
+        Authorisation revoked.
+      </div>
+      <div class="text-[12px] text-[hsl(var(--muted-foreground))] mt-0.5">
+        Re-authorise to enable the integration again.
+      </div>
+    </div>
+    {% if primary_action_url %}
+      <div class="dz-confirm-actions flex justify-end">
+        <a href="{{ primary_action_url }}"
+           class="dz-confirm-primary inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary)/0.9)] transition-colors duration-[80ms]">
+          Re-enable
+        </a>
+      </div>
+    {% endif %}
+  {% else %}
+    {# ── Off / pending / draft: checklist + dual button ────────────── #}
+    {% if confirmations and confirmations | length > 0 %}
+      <ul x-data="dzConfirmGate({{ confirmations | length }})"
+          class="dz-confirm-checklist flex flex-col gap-2 list-none mb-4"
+          data-dz-required-count="{{ confirmations | selectattr('required', 'equalto', true) | list | length }}">
+        {% for item in confirmations %}
+          <li class="dz-confirm-row flex items-start gap-2"
+              data-dz-required="{{ 'true' if item.required else 'false' }}">
+            <input type="checkbox"
+                   class="dz-confirm-checkbox mt-0.5 shrink-0 w-4 h-4 rounded-[3px] border-[hsl(var(--border))] accent-[hsl(var(--primary))]"
+                   {% if item.required %}@change="onToggle($event)"
+                                          data-dz-required="true"{% endif %}
+                   id="dz-confirm-{{ loop.index }}">
+            <label for="dz-confirm-{{ loop.index }}"
+                   class="flex-1 cursor-pointer">
+              <div class="dz-confirm-title text-[13px] leading-snug text-[hsl(var(--foreground))]">
+                {{ item.title }}
+              </div>
+              {% if item.caption %}
+                <div class="dz-confirm-caption text-[12px] leading-snug text-[hsl(var(--muted-foreground))] mt-0.5">
+                  {{ item.caption }}
+                </div>
+              {% endif %}
+            </label>
+          </li>
+        {% endfor %}
+
+        {# ── Dual button ───────────────────────────────────────────── #}
+        <li class="dz-confirm-actions flex justify-end gap-2 mt-2 list-none">
+          {% if secondary_action_url %}
+            <a href="{{ secondary_action_url }}"
+               class="dz-confirm-secondary inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[80ms]">
+              Save as draft
+            </a>
+          {% endif %}
+          {% if primary_action_url %}
+            <a :href="enabled ? '{{ primary_action_url }}' : null"
+               :aria-disabled="!enabled"
+               :class="enabled
+                   ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary)/0.9)] cursor-pointer'
+                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] cursor-not-allowed pointer-events-none'"
+               class="dz-confirm-primary inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors duration-[80ms]">
+              Confirm and enable
+            </a>
+          {% endif %}
+        </li>
+      </ul>
+    {% else %}
+      {# No confirmations declared — show the dual button alone, primary
+         enabled (no gate to satisfy). Useful for low-friction flows. #}
+      <div class="dz-confirm-actions flex justify-end gap-2 mt-2">
+        {% if secondary_action_url %}
+          <a href="{{ secondary_action_url }}"
+             class="dz-confirm-secondary inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[80ms]">
+            Save as draft
+          </a>
+        {% endif %}
+        {% if primary_action_url %}
+          <a href="{{ primary_action_url }}"
+             class="dz-confirm-primary inline-flex items-center justify-center px-3 py-2 rounded-[4px] text-[13px] font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary)/0.9)] transition-colors duration-[80ms]">
+            Confirm
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {# ── Audit footer (auto-detected from entity.audit) ────────────── #}
+  {% if audit_enabled %}
+    <p class="dz-confirm-audit text-[11px] text-[hsl(var(--muted-foreground))] mt-3 leading-snug">
+      This action is recorded in the audit log with your account, IP address, and timestamp.
+    </p>
+  {% endif %}
+</div>
+{% endcall %}

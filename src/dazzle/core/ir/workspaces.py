@@ -80,6 +80,9 @@ class DisplayMode(StrEnum):
     PROFILE_CARD = "profile_card"  # v0.61.55 (#892): single-record identity panel
     PIPELINE_STEPS = "pipeline_steps"  # v0.61.56 (#890): sequential-stage workflow
     STATUS_LIST = "status_list"  # v0.61.69 (#7): vertical icon + title + copy + state-pill list
+    CONFIRM_ACTION_PANEL = (
+        "confirm_action_panel"  # v0.61.72 (#6): irreversible-action consent panel
+    )
 
 
 class BucketRef(BaseModel):
@@ -315,6 +318,31 @@ class StatusListEntrySpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ConfirmationItemSpec(BaseModel):
+    """v0.61.72 (#6): one row in a confirm_action_panel `confirmations:` block.
+
+    The AegisMark "Final authorisation" panel uses a checklist of
+    obligations the actor must affirm before the irreversible action
+    (e.g. ``Enable live SIMS sync``) becomes available. Required
+    items must all be ticked for the primary action to enable;
+    optional items are advisory.
+
+    Attributes:
+        title: The check-row's strong line (e.g.
+            ``"I confirm the school has signed the DPA"``).
+        caption: Optional secondary line for context. Empty omits.
+        required: When True (default), the primary action stays
+            disabled until this row is ticked. When False, the row
+            is informational only.
+    """
+
+    title: str
+    caption: str = ""
+    required: bool = True
+
+    model_config = ConfigDict(frozen=True)
+
+
 class NoticeSpec(BaseModel):
     """v0.61.68: prominent notice band rendered above the region body
     inside the dashboard slot. AegisMark's SIMS-sync-opt-in prototype
@@ -497,6 +525,17 @@ class WorkspaceRegion(BaseModel):
     # + state-pill list. Authored shape (source-bound variant deferred).
     # Empty list = legacy behaviour (no entries).
     status_entries: list[StatusListEntrySpec] = Field(default_factory=list)
+    # v0.61.72 (#6): confirm_action_panel — irreversible-action consent
+    # primitive. AegisMark UX patterns roadmap item #6. The panel reads
+    # the entity's `state_field` to decide its visual mode (off/pending
+    # → checklist + primary; live/active → summary + revoke; revoked →
+    # audit + re-enable). All five fields default to empty so non-
+    # confirm_action_panel regions are unaffected.
+    confirmations: list[ConfirmationItemSpec] = Field(default_factory=list)
+    state_field: str | None = None  # entity column driving panel mode
+    revoke: str | None = None  # action surface shown when state is "live"
+    primary_action: str | None = None  # primary action surface (typically the commit)
+    secondary_action: str | None = None  # optional draft / cancel surface
 
     model_config = ConfigDict(frozen=True)
 

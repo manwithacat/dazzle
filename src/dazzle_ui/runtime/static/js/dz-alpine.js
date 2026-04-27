@@ -894,6 +894,48 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
+  // ── Confirm gate ──────────────────────────────────────────────────────
+  // v0.61.72 (#6) — confirm_action_panel checklist gate. Tracks the
+  // count of required checkboxes that have been ticked; the primary
+  // action enables only when `tickedRequired === requiredCount`. The
+  // template binds via `enabled` (computed from the count).
+  Alpine.data("dzConfirmGate", (totalRows) => ({
+    total: totalRows,
+    tickedRequired: 0,
+    requiredCount: 0,
+
+    init() {
+      // Count required rows from the data-dz-required-count attribute
+      // on the gate's root element. Falls back to scanning if absent.
+      const declared = parseInt(
+        this.$el.getAttribute("data-dz-required-count") || "0",
+        10,
+      );
+      if (declared > 0) {
+        this.requiredCount = declared;
+      } else {
+        const reqInputs = this.$el.querySelectorAll(
+          'input[type="checkbox"][data-dz-required="true"]',
+        );
+        this.requiredCount = reqInputs.length;
+      }
+    },
+
+    onToggle(event) {
+      const target = event.target;
+      if (!target || target.dataset.dzRequired !== "true") return;
+      this.tickedRequired += target.checked ? 1 : -1;
+      if (this.tickedRequired < 0) this.tickedRequired = 0;
+    },
+
+    get enabled() {
+      // No required rows = always enabled (low-friction flow with
+      // only optional checkboxes or no checkboxes at all).
+      if (this.requiredCount === 0) return true;
+      return this.tickedRequired >= this.requiredCount;
+    },
+  }));
+
   // ── Popover ───────────────────────────────────────────────────────────
 
   Alpine.data("dzPopover", () => ({

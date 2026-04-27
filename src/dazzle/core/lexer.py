@@ -160,6 +160,9 @@ class TokenType(Enum):
     TONES = "tones"  # v0.61.65: per-metric tone palette tokens for `display: metrics`
     ENTRIES = "entries"  # v0.61.69 (#3): status_list entry block keyword
     STATE = "state"  # v0.61.69 (#3): status_list entry pill state token
+    CONFIRMATIONS = "confirmations"  # v0.61.72 (#6): confirm_action_panel checklist block
+    STATE_FIELD = "state_field"  # v0.61.72 (#6): entity field driving panel visual mode
+    REVOKE = "revoke"  # v0.61.72 (#6): action surface for revoke / disable transition
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

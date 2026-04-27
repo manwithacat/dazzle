@@ -797,6 +797,101 @@ class WorkspaceParserMixin:
             )
         return entries
 
+    def _parse_confirmations_block(self) -> list[ir.ConfirmationItemSpec]:
+        """Parse the indented body of a confirm_action_panel
+        ``confirmations:`` block (#6).
+
+        Each entry is a dash-list dict with ``title:`` (required) plus
+        optional ``caption:`` / ``required:`` (defaults to True)::
+
+            confirmations:
+              - title: "I confirm the school has signed the DPA"
+                caption: "Recorded with my account, IP, timestamp"
+              - title: "I authorise reviewed write-backs"
+                required: true
+              - title: "Audit trail will be visible to school admins"
+                required: false
+
+        v0.61.72 (AegisMark UX patterns roadmap item #6).
+        """
+        items: list[ir.ConfirmationItemSpec] = []
+        _VALID_KEYS = {"title", "caption", "required"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'confirmations entries must start with `- title: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            title_kw = self.expect_identifier_or_keyword().value
+            if title_kw != "title":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"confirmations entry must start with `title:`, got {title_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            title_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            caption_str = ""
+            required_bool = True
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "caption":
+                        caption_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    elif key == "required":
+                        # Accept `true` / `false` as bare identifiers
+                        # (lexer doesn't emit BOOLEAN tokens here).
+                        bool_val = self.expect_identifier_or_keyword().value
+                        if bool_val not in ("true", "false"):
+                            raise make_parse_error(
+                                f"confirmations entry {title_str!r}: required must be "
+                                f"`true` or `false`; got {bool_val!r}",
+                                self.file,
+                                key_tok.line,
+                                key_tok.column,
+                            )
+                        required_bool = bool_val == "true"
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown confirmations entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            items.append(
+                ir.ConfirmationItemSpec(
+                    title=title_str,
+                    caption=caption_str,
+                    required=required_bool,
+                )
+            )
+        return items
+
     def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
         """Parse the indented body of an ``overlay_series:`` block (#883).
 
@@ -1213,6 +1308,11 @@ class WorkspaceParserMixin:
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
         status_entries: list[ir.StatusListEntrySpec] = []  # status_list entries (#3, v0.61.69)
+        confirmations: list[ir.ConfirmationItemSpec] = []  # confirm_action_panel (#6, v0.61.72)
+        state_field: str | None = None  # confirm_action_panel state-binding column
+        revoke: str | None = None  # confirm_action_panel revoke action surface
+        primary_action: str | None = None  # confirm_action_panel primary action
+        secondary_action: str | None = None  # confirm_action_panel secondary action
         avatar_field: str | None = None  # profile_card avatar source (#892)
         primary: str | None = None  # profile_card primary identity (#892)
         secondary: str | None = None  # profile_card meta line (#892)
@@ -1667,6 +1767,64 @@ class WorkspaceParserMixin:
                 status_entries = self._parse_status_entries_block()
                 self.expect(TokenType.DEDENT)
 
+            # confirmations: indented dash-list of confirm_action_panel
+            # checklist items (#6, v0.61.72).
+            elif self.match(TokenType.CONFIRMATIONS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                confirmations = self._parse_confirmations_block()
+                self.expect(TokenType.DEDENT)
+
+            # state_field: <field> — entity column driving the
+            # confirm_action_panel render mode (#6).
+            elif self.match(TokenType.STATE_FIELD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                state_field = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # revoke: <surface> — action surface shown when the panel
+            # is in `live`/`active` state (#6).
+            elif self.match(TokenType.REVOKE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    revoke = self.advance().value
+                else:
+                    revoke = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # primary_action: <surface> / secondary_action: <surface>
+            # — confirm_action_panel commit + draft buttons (#6).
+            # String-matched on IDENTIFIER (not lexer keyword) to avoid
+            # clashing with profile_card's `primary:` / `secondary:`
+            # which mean entity-field names there. Same dodge as #903's
+            # `title:` handling.
+            elif (
+                self.match(TokenType.IDENTIFIER) and self.current_token().value == "primary_action"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    primary_action = self.advance().value
+                else:
+                    primary_action = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "secondary_action"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    secondary_action = self.advance().value
+                else:
+                    secondary_action = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # avatar_field: <field> — profile_card avatar source (#892)
             elif self.match(TokenType.AVATAR_FIELD):
                 self.advance()
@@ -1778,6 +1936,9 @@ class WorkspaceParserMixin:
         # (each stage carries its own aggregate).
         # v0.61.69 (#3): status_list — `entries:` IS the body (authored
         # list, no source/aggregate required).
+        # v0.61.72 (#6): confirm_action_panel — `confirmations:` IS the
+        # body. The panel may bind to an entity field via state_field
+        # but doesn't require source/aggregate at the region level.
         if (
             source is None
             and not sources
@@ -1785,6 +1946,7 @@ class WorkspaceParserMixin:
             and not action_cards
             and not pipeline_stages
             and not status_entries
+            and not confirmations
         ):
             token = self.current_token()
             raise make_parse_error(
@@ -1854,4 +2016,9 @@ class WorkspaceParserMixin:
             tones=tones,
             notice=notice,
             status_entries=status_entries,
+            confirmations=confirmations,
+            state_field=state_field,
+            revoke=revoke,
+            primary_action=primary_action,
+            secondary_action=secondary_action,
         )

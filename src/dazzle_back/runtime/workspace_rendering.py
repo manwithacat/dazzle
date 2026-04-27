@@ -1342,6 +1342,19 @@ async def _workspace_region_handler(
                 "facts": [_interpolate_card_template(_fact, _item) for _fact in _fact_tmpls],
             }
 
+    # v0.61.72 (#6): confirm_action_panel reads state_value from the
+    # entity field named by `state_field` so the template can branch
+    # between off / live / revoked render modes. Reads from the first
+    # fetched item (callers typically narrow with `filter:`). Empty
+    # string when no field configured or no item — template falls
+    # through to the safe default ("off").
+    confirm_state_value: str = ""
+    if ctx.ctx_region.display == "CONFIRM_ACTION_PANEL":
+        _state_field = getattr(ctx.ctx_region, "state_field", None)
+        if _state_field and items:
+            _val = _resolve_path(items[0], _state_field)
+            confirm_state_value = str(_val or "")
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1591,6 +1604,17 @@ async def _workspace_region_handler(
         profile_card_data=profile_card_data,
         # Pipeline steps (#890, v0.61.56) — per-stage {label, caption, value}
         pipeline_stage_data=pipeline_stage_data,
+        # Confirm action panel (#6, v0.61.72) — checklist + dual button.
+        # IR-level fields (confirmations, action URLs, audit_enabled)
+        # were resolved upstream during build_workspace_context and
+        # live on the RegionContext. Only state_value is request-time
+        # because it depends on the fetched item.
+        confirmations=getattr(ctx.ctx_region, "confirmations", []),
+        state_value=confirm_state_value,
+        primary_action_url=getattr(ctx.ctx_region, "primary_action_url", ""),
+        secondary_action_url=getattr(ctx.ctx_region, "secondary_action_url", ""),
+        revoke_url=getattr(ctx.ctx_region, "revoke_url", ""),
+        audit_enabled=getattr(ctx.ctx_region, "audit_enabled", False),
     )
     return HTMLResponse(content=html)
 

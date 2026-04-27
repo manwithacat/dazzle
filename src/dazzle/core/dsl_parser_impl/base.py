@@ -577,6 +577,15 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # the pipeline_steps work.)
     TokenType.ENTRIES,
     TokenType.STATE,
+    # v0.61.72 added confirm_action_panel keywords (AegisMark UX patterns
+    # roadmap item #6). `state_field` could be a column name, `revoke`
+    # could be an action name. (`required` deliberately NOT promoted —
+    # it's a field modifier and must remain IDENTIFIER for the field
+    # parser; the confirm_action_panel parser string-matches `required`
+    # via its IDENTIFIER value instead.)
+    TokenType.CONFIRMATIONS,
+    TokenType.STATE_FIELD,
+    TokenType.REVOKE,
     # v0.61.54 (#891) added action_grid keywords. ACTIONS is an
     # existing identifier-shaped name people commonly use for fields
     # and entity attributes. TONE is also a likely color/voice field
