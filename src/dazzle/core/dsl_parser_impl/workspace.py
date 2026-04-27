@@ -1086,6 +1086,7 @@ class WorkspaceParserMixin:
         overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
         css_class: str | None = None  # region wrapper CSS class hook (#894)
         eyebrow: str | None = None  # kicker line above region title (v0.61.60)
+        title_override: str | None = None  # explicit region title override (v0.61.63 #903)
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
@@ -1409,6 +1410,19 @@ class WorkspaceParserMixin:
                 eyebrow = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # title: "<text>" — explicit region title override (#903).
+            # `title` is intentionally NOT a lexer keyword (would break
+            # every `expect(IDENTIFIER)` site that expects `title` as a
+            # plain identifier — flow assertions, demo blocks, etc.).
+            # Instead we string-match the IDENTIFIER value here. When
+            # omitted, runtime auto-derives from the snake_case region
+            # key. Empty string treated as omitted (falls back).
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "title":
+                self.advance()
+                self.expect(TokenType.COLON)
+                title_override = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
             # track_max: <number> — bar_track fill denominator (#893).
             # When omitted, runtime computes `auto` (max of bucketed values).
             elif self.match(TokenType.TRACK_MAX):
@@ -1618,4 +1632,5 @@ class WorkspaceParserMixin:
             facts=facts,
             pipeline_stages=pipeline_stages,
             eyebrow=eyebrow,
+            title=title_override or None,  # #903: empty string → None for fallback
         )

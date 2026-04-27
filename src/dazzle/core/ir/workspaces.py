@@ -376,6 +376,11 @@ class WorkspaceRegion(BaseModel):
     # presentation; no impact on data or semantics. See
     # `dev_docs/2026-04-27-aegismark-ux-patterns.md` item #1.
     eyebrow: str | None = None
+    # v0.61.63 (#903): explicit region title override. When set, replaces
+    # the auto-derived title from the region key (e.g. `hero_marked` →
+    # "Hero Marked"). Empty string is treated as None — the runtime
+    # falls back to the auto-derived title. Pure presentation hook.
+    title: str | None = None
     # v0.61.53 (#893): bar_track display config — per-row horizontal
     # value bar. Reuses `group_by` for the row dimension and
     # `aggregates` for the bar value (single-dim chart pipeline). These

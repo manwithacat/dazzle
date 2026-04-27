@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.63] - 2026-04-27
+
+Patch bump. **Fix #903** — region-level `title:` field for explicit title override (vs auto-derived from snake_case region key). Closes the cosmetic-finish gap for prototype-fidelity dashboards: AegisMark's teacher_workspace had eight cards rendering with PascalCase titles like "Hero Marked Overnight" / "Pupil Ao Heatmap" — every other gap (palette, typography, hero strip, journey-row, action band) was closed but cards still read as raw IDs. Pairs with `eyebrow:` (v0.61.60) to complete the AegisMark "eyebrow / title / copy" panel header trio.
+
+### Added
+- **`WorkspaceRegion.title: str | None`** — explicit title override. When `None`/empty, runtime falls back to auto-derived title from snake_case region key (e.g. `hero_marked_overnight` → "Hero Marked Overnight"). Pure presentation hook.
+- **Parser branch** in `src/dazzle/core/dsl_parser_impl/workspace.py` — string-matches `IDENTIFIER` value `"title"` instead of promoting `title` to a lexer keyword. **This is deliberate**: making `title` a keyword would break every `expect(IDENTIFIER)` site that expected `title` as a literal identifier (flow assertions, demo blocks, persona scenarios, etc.). String-matching scopes the new region behaviour without altering the global identifier vocabulary.
+- **Empty-string fallback** — `title: ""` parses to `None` (per #903 edge-case spec) so the runtime falls back to auto-derived rather than rendering an empty title.
+
+### Tests
+- **`tests/unit/test_workspace_region_title_override.py`** (new) — 13 cases:
+  - `TestTitleParser` (5): default-None, override parses, both `title:` + `eyebrow:` together (the #903 repro DSL), empty-string-treated-as-None, must-be-quoted enforcement
+  - `TestTitleAsIdentifier` (3): `title` as entity field name (most common case), as enum value, **and a guard test pinning that `title` is NOT a lexer keyword** (catches the wrong-fix attempt)
+  - `TestTitleRenderingFallback` (3): explicit title wins, missing title auto-derives, empty title falls back
+  - `TestTitleIsPresentationOnly` (1): scope/data/aggregate fields unaffected
+
+### Agent Guidance
+- **Don't promote ultra-common identifiers like `title`, `name`, `id` to lexer keywords.** Even with `KEYWORD_AS_IDENTIFIER_TYPES` registration (the #899 escape hatch), every parser site that does `expect(TokenType.IDENTIFIER)` would need to convert to `expect_identifier_or_keyword()`. That's hundreds of sites for the most common identifiers. The string-match-on-IDENTIFIER pattern in the workspace region parser scopes the new keyword to the one context it's needed in. Apply the same pattern when adding region-level fields whose name is a common identifier.
+- **`KEYWORD_AS_IDENTIFIER_TYPES` is for keywords that are NEEDED elsewhere as keywords AND occasionally appear as identifiers.** Adding to that list is the right escape hatch when the keyword's primary use is its keyword form (e.g. `display`, `aggregate`, `class`). When the new "keyword" is overwhelmingly used as an identifier in the wild (`title`, `name`, `id`), keep it as IDENTIFIER and string-match in the parser.
+- **AegisMark UX patterns roadmap progress:** `eyebrow:` (v0.61.60) + `title:` (v0.61.63) complete item #1 (panel header trio). Items #2-7 remain queued — see `dev_docs/2026-04-27-aegismark-ux-patterns.md`.
+
 ## [0.61.62] - 2026-04-27
 
 Patch bump. **Fix #902** — multi-section `mode: create` surfaces emitted Alpine bindings (`isCurrent(N)`, `isActive(N)`, `step > N`, `goToStep(N)`) outside any `x-data` scope, throwing 20+ ReferenceErrors per page render and leaving step indicators stuck grey instead of highlighting the current step. Form chrome still functioned (Next/Cancel worked) but UX was degraded and the browser console was flooded.
