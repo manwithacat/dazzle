@@ -1085,6 +1085,7 @@ class WorkspaceParserMixin:
         bullet_target: str | None = None  # bullet chart target column (#880)
         overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
         css_class: str | None = None  # region wrapper CSS class hook (#894)
+        eyebrow: str | None = None  # kicker line above region title (v0.61.60)
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
@@ -1398,6 +1399,16 @@ class WorkspaceParserMixin:
                     css_class = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # eyebrow: "<text>" — kicker line above region title.
+            # Quoted string only (typically a short label like "Data flow"
+            # or "Legal basis" — likely contains spaces).
+            # See dev_docs/2026-04-27-aegismark-ux-patterns.md item #1.
+            elif self.match(TokenType.EYEBROW):
+                self.advance()
+                self.expect(TokenType.COLON)
+                eyebrow = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
             # track_max: <number> — bar_track fill denominator (#893).
             # When omitted, runtime computes `auto` (max of bucketed values).
             elif self.match(TokenType.TRACK_MAX):
@@ -1606,4 +1617,5 @@ class WorkspaceParserMixin:
             profile_stats=profile_stats,
             facts=facts,
             pipeline_stages=pipeline_stages,
+            eyebrow=eyebrow,
         )

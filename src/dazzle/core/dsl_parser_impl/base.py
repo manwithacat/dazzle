@@ -563,6 +563,9 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # v0.61.56 (#890) added pipeline_steps `caption:` keyword. Same
     # rationale — `caption` is a common field name.
     TokenType.CAPTION,
+    # v0.61.60 added region-level `eyebrow:` keyword (AegisMark UX patterns
+    # roadmap item #1). Common field name; must remain usable as identifier.
+    TokenType.EYEBROW,
     # v0.61.54 (#891) added action_grid keywords. ACTIONS is an
     # existing identifier-shaped name people commonly use for fields
     # and entity attributes. TONE is also a likely color/voice field

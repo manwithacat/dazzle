@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.60] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap — item #1 (`eyebrow:` field on regions).** Every panel in AegisMark's SIMS-sync-opt-in prototype has a kicker line ("Data flow", "Legal basis", "Approved data scopes") above the title. Promoting this to a first-class region field gives DSL authors the eyebrow / title / copy header trio without forking templates. First of six items in the AegisMark roadmap (see `dev_docs/2026-04-27-aegismark-ux-patterns.md`).
+
+### Added
+- **`WorkspaceRegion.eyebrow: str | None`** — kicker line rendered above the region title in the dashboard slot's panel header. Default `None`. Pure presentation hook — no impact on data, scope, or aggregates.
+- **Lexer token** `EYEBROW = "eyebrow"` in `src/dazzle/core/lexer.py`. Added to `KEYWORD_AS_IDENTIFIER_TYPES` per the #899 fix pattern so `eyebrow` remains usable as a field name (e.g. `entity Article: eyebrow: str(60)`) and enum value (e.g. `enum[heading, eyebrow, body, caption]`).
+- **Parser branch** in `src/dazzle/core/dsl_parser_impl/workspace.py` — quoted-string-only (eyebrow text typically contains spaces). Sibling pattern to `purpose:` and other meta-text fields.
+- **`RegionContext.eyebrow: str = ""`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows IR to render context.
+- **`cards_for_json` payload extension** in `src/dazzle_ui/runtime/page_routes.py` — each card carries `eyebrow` so the Alpine card-grid template binds it via `x-text`.
+- **Template binding** in `src/dazzle_ui/templates/workspace/_content.html` — `<span x-show="card.eyebrow" x-text="card.eyebrow">` rendered above the title `<h3>`. Empty eyebrow → no element, so existing dashboards render unchanged.
+
+### Tests
+- **`tests/unit/test_workspace_region_eyebrow.py`** (new) — 13 cases:
+  - `TestEyebrowParser` (5): default-None, quoted string, special chars (em-dash / slash), no-clobber-other-fields, must-be-quoted enforcement
+  - `TestEyebrowAsIdentifier` (3): enum value round-trip, field name round-trip, static guard pinning EYEBROW in `KEYWORD_AS_IDENTIFIER_TYPES`
+  - `TestEyebrowRuntimeWiring` (3): RegionContext default, carries value, cards_for_json payload includes the field
+  - `TestEyebrowTemplateBinding` (1): static check that the template binds `card.eyebrow` and gates on `x-show` so empty doesn't render
+  - `TestEyebrowIsPresentationOnly` (1): scope/aggregate/data-shape fields unaffected
+
+### Agent Guidance
+- **AegisMark UX patterns roadmap is in `dev_docs/2026-04-27-aegismark-ux-patterns.md`.** Six items prioritised; this ships #1. Phase 1 (small, high-impact): #1 eyebrow, #2 metric tile tones, #4 pipeline_steps.value generalisation, #7 notice band. Phase 2: #3 status_list (~250 LOC). Phase 3: #5 layout pair-strip, #6 consent archetype — both deferred until 2-3 example apps anchor the API and AegisMark conversation continues.
+- **`eyebrow:` is the first of two "panel header trio" fields.** `purpose:` already exists as the explanatory copy below the title. With `eyebrow:` above and `title:` in the middle, every workspace region can express the AegisMark "kicker / heading / copy" three-line pattern that's foundational to their visual language.
+- **Adding a new region-block keyword? Follow the established three-step pattern:** (1) lexer token, (2) parser branch, (3) `KEYWORD_AS_IDENTIFIER_TYPES` registration. The static-guard test from #899 catches missing step 3 before it ships.
+- **Pure-presentation fields don't need scope-deny gating.** `eyebrow:` (like `class:` from #894) doesn't read or render data — just author-supplied text in the header chrome. The `TestEyebrowIsPresentationOnly` invariant pins this. Contrast with aggregate fields which need the #887 scope-deny gate.
+
 ## [0.61.59] - 2026-04-27
 
 Patch bump. **Fix #900** — region `class:` field landed in card data JSON but Alpine binding silently dropped the string element on the rendered DOM. AegisMark's `class: "action-band"` and `class: "journey-row"` weren't applying to the actual element classNames despite being on the wire.

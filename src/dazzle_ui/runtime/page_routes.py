@@ -1362,6 +1362,10 @@ async def _workspace_handler(
                 # the region didn't declare `class:` — Alpine binding then
                 # contributes nothing.
                 "css_class": getattr(r, "css_class", "") or "",
+                # v0.61.60: kicker line above the region title in the
+                # dashboard panel header. Empty string when omitted —
+                # template's `x-show` hides the kicker element.
+                "eyebrow": getattr(r, "eyebrow", "") or "",
             }
         )
 

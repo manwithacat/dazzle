@@ -370,6 +370,12 @@ class WorkspaceRegion(BaseModel):
     # space-separated. Pure presentation hook — no impact on data,
     # scope, or semantics.
     css_class: str | None = None
+    # v0.61.60: kicker line rendered ABOVE the region's title in the
+    # dashboard-slot panel header. Establishes the AegisMark "eyebrow /
+    # title / copy" header convention as a first-class field. Pure
+    # presentation; no impact on data or semantics. See
+    # `dev_docs/2026-04-27-aegismark-ux-patterns.md` item #1.
+    eyebrow: str | None = None
     # v0.61.53 (#893): bar_track display config — per-row horizontal
     # value bar. Reuses `group_by` for the row dimension and
     # `aggregates` for the bar value (single-dim chart pipeline). These

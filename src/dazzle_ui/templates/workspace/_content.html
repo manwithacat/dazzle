@@ -188,9 +188,17 @@
                :class="{ 'cursor-grabbing': isDragging(card.id) }"
                data-test-id="dz-card-drag-handle"
                @pointerdown="startDrag(card.id, $event)">
-            <h3 :id="'card-title-' + card.id"
-                class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
-                x-text="card.title"></h3>
+            {# v0.61.60: optional kicker line above the title (AegisMark
+               UX patterns roadmap item #1). Hidden when card.eyebrow
+               is empty so existing dashboards render unchanged. #}
+            <div class="flex flex-col">
+              <span x-show="card.eyebrow"
+                    x-text="card.eyebrow"
+                    class="text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))] leading-none"></span>
+              <h3 :id="'card-title-' + card.id"
+                  class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
+                  x-text="card.title"></h3>
+            </div>
             {# Primary actions stay visible (issue #799): opacity-60 at rest so
                they're discoverable on touch and via keyboard focus, fading up
                to full on mouse hover or any focus within the card. The old

@@ -144,6 +144,10 @@ class RegionContext(BaseModel):
     # `cards_for_json` payload so the Alpine card-grid binds it on the
     # `<div :data-card-id>` element.
     css_class: str = ""
+    # v0.61.60: kicker line rendered above the region title in the
+    # dashboard slot's panel header. Empty string when not set —
+    # template branches on truthy value.
+    eyebrow: str = ""
     # v0.61.53 (#893): bar_track display config — fill denominator and
     # value format string. Defaults preserve the legacy "raw" rendering
     # for non-bar_track displays.
@@ -492,6 +496,7 @@ def build_workspace_context(
                 bullet_target=getattr(region, "bullet_target", None) or "",
                 delta=getattr(region, "delta", None),
                 css_class=getattr(region, "css_class", None) or "",  # #894
+                eyebrow=getattr(region, "eyebrow", None) or "",  # v0.61.60
                 track_max=getattr(region, "track_max", None),  # #893
                 track_format=getattr(region, "track_format", None) or "",  # #893
                 action_cards=[
