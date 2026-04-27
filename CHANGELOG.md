@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.51] - 2026-04-27
+
+Patch bump. **Fix #888 (Phase 1)** — reporting predicate algebra unification. Aggregate where-clauses now route through the same structured predicate algebra used by RBAC scope rules, closing three long-standing gaps: column-vs-column comparisons, OR clauses, and proper sum/avg/min/max with where-clauses.
+
+### Added
+- **`ColumnRefCheck` predicate node** in `src/dazzle/core/ir/predicates.py` — same-row column-vs-column comparison (e.g. `latest_grade >= target_grade`). Distinct from `ColumnCheck` (column vs literal) and `UserAttrCheck` (column vs subject attribute) — neither covers same-row column pairs. Not used by RBAC scope rules; reporting-only.
+- **`_compile_column_ref_check` in the predicate compiler** — emits `"f1" op "f2"` with no parameters (both sides are quoted identifiers — same SQL safety as `ColumnCheck`).
+- **`src/dazzle_back/runtime/aggregate_where_parser.py`** — recursive-descent parser. Grammar: `expr := or_expr; or_expr := and_expr ('or' and_expr)*; and_expr := not_expr ('and' not_expr)*; not_expr := 'not' atom | atom; atom := '(' expr ')' | comparison`. Disambiguates column-vs-column from column-vs-literal by checking the RHS identifier against known entity columns.
+- **`_build_aggregate_filters` helper** in `workspace_rendering.py` — orchestrator: parse → compile → AND-compose with existing `__scope_predicate` → return filter dict ready for `Repository.list` / `Repository.aggregate`. Falls back to legacy `_parse_simple_where` for clauses the new grammar doesn't accept (e.g. hyphenated UUIDs from `current_bucket` substitution), preserving all pre-existing behaviour.
+- **`_fetch_scalar_metric`** — routes `sum/avg/min/max` aggregates through `Repository.aggregate` with no dimensions and a single non-count measure. Pre-fix, scalar aggregates with where-clauses silently produced 0 in `_compute_aggregate_metrics`.
+
+### Fixed
+- **`count(StudentProfile where latest_grade >= target_grade)`** now returns the correct count instead of always-zero (the legacy parser produced `WHERE latest_grade >= 'target_grade'` — literal string comparison).
+- **`count(X where flagged = true or confidence < 0.7)`** now honours the OR (legacy parser silently dropped the `or` because it split by ` and `).
+- **`avg(field where ...)` / `sum(field where ...)`** now compute against the DB instead of resolving to 0.
+- **Range predicates** (`field >= a and field < b`) now keep numeric type in parameters instead of stringifying.
+
+### Tests
+- **`tests/unit/test_aggregate_where_parser.py`** (new) — 27 cases covering the parser (literals, identifiers, AND/OR/NOT, parens, precedence), error paths (unbalanced parens, unknown ops, garbage RHS), SQL round-trip per #888 sub-feature, and `_build_aggregate_filters` integration (scope merge, column-vs-column, fallback to legacy parser).
+
+### Agent Guidance
+- **One predicate algebra, two consumers.** RBAC scope rules and reporting where-clauses now share the same `ScopePredicate` algebra, the same `compile_predicate` SQL emitter, and the same composition rules at the QueryBuilder boundary. When adding a new aggregate/predicate feature, extend the algebra rather than the parser-of-the-day. See `dev_docs/2026-04-27-reporting-predicate-algebra.md` for the unification design.
+- **`__scope_predicate` is the single composition slot.** When two predicates need to apply (RBAC scope + aggregate where), AND-compose them at the SQL fragment level inside `_build_aggregate_filters` and emit one combined `__scope_predicate` tuple. Don't extend QueryBuilder to stack predicate slots — composition at the algebra/SQL level keeps QueryBuilder's contract simple.
+- **Legacy fallback is intentional.** `_build_aggregate_filters` falls back to `_parse_simple_where` when the new algebra grammar can't tokenise the input. This handles edge cases like hyphenated UUIDs from `current_bucket` substitution without forcing every existing call site to migrate. Phase 2 may revisit if the legacy parser becomes maintenance burden.
+- **Phase 2 is a follow-up, not a blocker.** Phase 1 closes #888 by enabling the predicate forms in the issue's repros. Phase 2 (migrate the DSL `scope:` block parser to share the same text→algebra parser) and Phase 3 (static where-clause validation against the FK graph) are pure consolidation — same SQL output either way.
+
 ## [0.61.50] - 2026-04-27
 
 Patch bump. **Fix #889** — `box_plot` with `group_by: <fk_column>` now renders one bucket per FK value (labelled with the resolved display name) instead of collapsing to one bucket whose label is the FK dict's `str()` repr.

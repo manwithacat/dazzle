@@ -124,6 +124,30 @@ class ColumnCheck(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ColumnRefCheck(BaseModel):
+    """
+    Compare an entity column to another column on the same row.
+
+    Example DSL (used in reporting aggregate where-clauses)::
+
+        count(StudentProfile where latest_grade >= target_grade)
+
+    Distinct from :class:`ColumnCheck` (column vs literal) and
+    :class:`UserAttrCheck` (column vs subject attribute) — neither of
+    those compares two columns on the same row. Added in Phase 1 of
+    the reporting predicate algebra unification (see
+    ``dev_docs/2026-04-27-reporting-predicate-algebra.md``); not used
+    by RBAC scope rules.
+    """
+
+    kind: Literal["column_ref_check"] = "column_ref_check"
+    field: str
+    op: CompOp
+    other_field: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class UserAttrCheck(BaseModel):
     """
     Compare an entity column to an attribute on the current user.
@@ -275,6 +299,7 @@ class BoolComposite(BaseModel):
 
 ScopePredicate = Annotated[
     ColumnCheck
+    | ColumnRefCheck
     | UserAttrCheck
     | PathCheck
     | ExistsCheck

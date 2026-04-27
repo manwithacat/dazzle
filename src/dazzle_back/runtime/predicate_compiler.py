@@ -21,6 +21,7 @@ from dazzle.core.ir.predicates import (
     BoolComposite,
     BoolOp,
     ColumnCheck,
+    ColumnRefCheck,
     CompOp,
     Contradiction,
     ExistsCheck,
@@ -157,6 +158,18 @@ def _compile_user_attr_check(predicate: UserAttrCheck) -> tuple[str, list[Any]]:
     col = quote_identifier(predicate.field)
     op_sql = _op_to_sql(predicate.op)
     return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
+
+
+def _compile_column_ref_check(predicate: ColumnRefCheck) -> tuple[str, list[Any]]:
+    """Compile a same-row column-vs-column comparison.
+
+    Both sides are column identifiers — no parameters, no risk of literal
+    coercion. Used by reporting aggregate where-clauses (#888); not used
+    by RBAC scope rules.
+    """
+    f1 = quote_identifier(predicate.field)
+    f2 = quote_identifier(predicate.other_field)
+    return f"{f1} {_op_to_sql(predicate.op)} {f2}", []
 
 
 def _qualify_table(name: str, schema: str | None) -> str:
@@ -459,6 +472,9 @@ def compile_predicate(
 
         case ColumnCheck():
             return _compile_column_check(predicate)
+
+        case ColumnRefCheck():
+            return _compile_column_ref_check(predicate)
 
         case UserAttrCheck():
             return _compile_user_attr_check(predicate)

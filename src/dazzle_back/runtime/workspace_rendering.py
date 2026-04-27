@@ -747,6 +747,7 @@ async def _workspace_region_handler(
             items,
             scope_filters=_scope_only_filters,
             delta=ctx.ctx_region.delta,  # #884
+            source_entity=ctx.source,  # #888 Phase 1
         )
 
     # Bucketed aggregates for bar_chart distributions (#847). When a
@@ -1319,6 +1320,7 @@ async def _fetch_region_json(
             total,
             items,
             scope_filters=_scope_only_filters_batch,
+            source_entity=ctx.source,  # #888 Phase 1
         )
 
     return {
@@ -1479,10 +1481,81 @@ async def _workspace_stats_handler(
             ctx.repositories,
             total=0,
             items=[],
+            source_entity=ctx.source,  # #888 Phase 1
         )
         stats[region_name] = {m["label"]: m["value"] for m in metrics}
 
     return {"workspace": workspace_name, "stats": stats}
+
+
+def _build_aggregate_filters(
+    where_clause: str | None,
+    scope_filters: dict[str, Any] | None,
+    agg_repo: Any,
+    source_entity: str,
+) -> dict[str, Any] | None:
+    """Compose aggregate where-clause + scope into a filter dict for
+    ``Repository.list`` / ``Repository.aggregate``.
+
+    Phase 1 of the reporting predicate algebra unification (#888) — the
+    where-clause is parsed via the structured ``parse_aggregate_where``
+    and compiled to SQL via the existing ``compile_predicate``. When
+    ``scope_filters`` already carries a ``__scope_predicate`` (from the
+    route generator's RBAC compiler), the two SQL fragments are
+    AND-combined into a single slot — QueryBuilder needs zero changes.
+
+    On parse failure, returns a sentinel always-false filter so the
+    metric resolves to 0 rather than (worse) running the query without
+    the where-clause and producing a misleading larger number.
+    """
+    base: dict[str, Any] = dict(scope_filters) if scope_filters else {}
+    if not where_clause:
+        return base or None
+
+    from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
+    from dazzle_back.runtime.aggregate_where_parser import parse_aggregate_where
+    from dazzle_back.runtime.predicate_compiler import compile_predicate
+
+    spec = getattr(agg_repo, "entity_spec", None)
+    known_cols: frozenset[str] = (
+        frozenset(f.name for f in getattr(spec, "fields", [])) if spec is not None else frozenset()
+    )
+
+    try:
+        pred = parse_aggregate_where(where_clause, known_columns=known_cols)
+    except ValueError as exc:
+        # Fall back to the legacy `_parse_simple_where` for clauses the
+        # new algebra grammar doesn't accept — most commonly hyphenated
+        # UUIDs (e.g. `target = t-1` from `current_bucket` substitution)
+        # which the new tokeniser splits as IDENT-OP-NUMBER. The legacy
+        # parser treats RHS as a string literal token, so it round-trips
+        # those values correctly. Logged at debug since this is the
+        # expected path for substituted current_bucket clauses.
+        logger.debug(
+            "Aggregate where-clause %r didn't parse via algebra (%s) — "
+            "falling back to legacy _parse_simple_where",
+            where_clause,
+            exc,
+        )
+        legacy = _parse_simple_where(where_clause)
+        base.update(legacy)
+        return base or None
+
+    where_sql, where_params = compile_predicate(pred, source_entity, _FKGraph())
+    if not where_sql:
+        # Tautology — predicate always true, no extra filter needed.
+        return base or None
+
+    existing_pred = base.get("__scope_predicate")
+    if existing_pred is None:
+        base["__scope_predicate"] = (where_sql, where_params)
+    else:
+        existing_sql, existing_params = existing_pred
+        base["__scope_predicate"] = (
+            f"({existing_sql}) AND ({where_sql})",
+            list(existing_params) + list(where_params),
+        )
+    return base
 
 
 async def _fetch_count_metric(
@@ -1490,18 +1563,47 @@ async def _fetch_count_metric(
     agg_repo: Any,
     where_clause: str | None,
     scope_filters: dict[str, Any] | None = None,
+    *,
+    source_entity: str = "",
 ) -> tuple[str, Any]:
     """Fetch a single count aggregate metric from a repository."""
     try:
-        agg_filters: dict[str, Any] | None = None
-        if where_clause:
-            agg_filters = _parse_simple_where(where_clause)
-        # SECURITY: merge scope predicates into aggregate filters (#574)
-        if scope_filters:
-            agg_filters = {**(agg_filters or {}), **scope_filters}
+        agg_filters = _build_aggregate_filters(where_clause, scope_filters, agg_repo, source_entity)
         agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
         if isinstance(agg_result, dict):
             return metric_name, agg_result.get("total", 0)
+    except Exception:
+        logger.warning("Failed to compute aggregate metric %s", metric_name, exc_info=True)
+    return metric_name, 0
+
+
+async def _fetch_scalar_metric(
+    metric_name: str,
+    func: str,
+    field_name: str,
+    agg_repo: Any,
+    where_clause: str | None,
+    scope_filters: dict[str, Any] | None = None,
+    *,
+    source_entity: str = "",
+) -> tuple[str, Any]:
+    """Fetch a sum/avg/min/max aggregate metric (#888 Phase 1).
+
+    Routes through ``Repository.aggregate`` with no dimensions and a
+    single non-count measure. Pre-fix, sum/avg/min/max with a where
+    clause silently resolved to 0 in ``_compute_aggregate_metrics``.
+    """
+    try:
+        agg_filters = _build_aggregate_filters(where_clause, scope_filters, agg_repo, source_entity)
+        buckets = await agg_repo.aggregate(
+            dimensions=[],
+            measures={metric_name: f"{func}:{field_name}"},
+            filters=agg_filters,
+            limit=1,
+        )
+        if buckets:
+            value = buckets[0].measures.get(metric_name, 0)
+            return metric_name, value
     except Exception:
         logger.warning("Failed to compute aggregate metric %s", metric_name, exc_info=True)
     return metric_name, 0
@@ -2346,6 +2448,8 @@ async def _compute_aggregate_metrics(
     items: list[dict[str, Any]],
     scope_filters: dict[str, Any] | None = None,
     delta: Any | None = None,  # ir.DeltaSpec | None — see #884
+    *,
+    source_entity: str | None = None,  # #888 Phase 1 — for scalar aggregates
 ) -> list[dict[str, Any]]:
     """Compute aggregate metrics, batching independent DB queries concurrently.
 
@@ -2372,9 +2476,48 @@ async def _compute_aggregate_metrics(
                 async_tasks.append(
                     (
                         metric_name,
-                        _fetch_count_metric(metric_name, agg_repo, where_clause, scope_filters),
+                        _fetch_count_metric(
+                            metric_name,
+                            agg_repo,
+                            where_clause,
+                            scope_filters,
+                            source_entity=entity_name,
+                        ),
                     )
                 )
+            elif func in ("sum", "avg", "min", "max"):
+                # #888 Phase 1: route scalar aggregates (sum/avg/min/max)
+                # to `_fetch_scalar_metric`. The regex's second capture
+                # (`entity_name`) is actually the *field* on the region's
+                # source entity for these forms — the language is
+                # `avg(<field>)`, not `avg(<Entity>)`. Disambiguation:
+                # if the captured token matches a known repository it's
+                # treated as an entity (and dropped to 0 — the author
+                # should use `avg(<column>)` instead); otherwise it's a
+                # column on `source_entity`.
+                if agg_repo is not None or source_entity is None:
+                    # Author wrote `avg(EntityName)` (unsupported) or
+                    # we have no source_entity to evaluate against.
+                    sync_results[metric_name] = 0
+                else:
+                    src_repo = repositories.get(source_entity) if repositories else None
+                    if src_repo is None:
+                        sync_results[metric_name] = 0
+                    else:
+                        async_tasks.append(
+                            (
+                                metric_name,
+                                _fetch_scalar_metric(
+                                    metric_name,
+                                    func,
+                                    entity_name,  # actually the field name here
+                                    src_repo,
+                                    where_clause,
+                                    scope_filters,
+                                    source_entity=source_entity,
+                                ),
+                            )
+                        )
             else:
                 sync_results[metric_name] = 0
         elif expr == "count":
