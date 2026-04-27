@@ -173,11 +173,17 @@ def build_aggregate_sql(
     FK dimensions referencing the same target table don't collide.
 
     Returns ``(sql, params)`` ready for ``cursor.execute``. Empty SQL
-    when no measures resolved or no dimensions supplied.
-    """
-    if not dimensions:
-        return "", []
+    when no measures resolved.
 
+    Two shapes supported:
+      - **With dimensions**: standard GROUP BY query — one row per
+        bucket combination, with measures aggregated per group.
+      - **Without dimensions** (#904): scalar aggregate over the whole
+        table — one row, no GROUP BY. ``rows_to_buckets`` produces a
+        single bucket with empty `dimensions` and the measure values.
+        This is the path `_fetch_scalar_metric` uses for region-level
+        ``avg/sum/min/max`` summary tiles.
+    """
     src = quote_identifier(table_name)
 
     # WHERE via QueryBuilder so __scope_predicate + standard filters
@@ -197,6 +203,18 @@ def build_aggregate_sql(
         measure_sql_parts.append(f"{sql} AS {quote_identifier(metric_name)}")
     if not measure_sql_parts:
         return "", []
+
+    # Scalar aggregate path — no dimensions, no GROUP BY (#904). One
+    # row containing the measure values for the whole filtered table.
+    if not dimensions:
+        sql_parts = [
+            f"SELECT {', '.join(measure_sql_parts)}",
+            f"FROM {src}",
+        ]
+        if where_sql:
+            sql_parts.append(where_sql)
+        sql_parts.append(f"LIMIT {int(limit)}")
+        return " ".join(sql_parts), where_params
 
     # Per-dimension SELECT + GROUP BY + ORDER BY parts. Indexed aliases
     # for FK joins guard against duplicate-target collisions.
@@ -292,7 +310,23 @@ def rows_to_buckets(
         meas: dict[str, int | float] = {}
         for k in measure_keys:
             v = row_dict.get(k, 0)
-            meas[k] = v if isinstance(v, int | float) else int(v or 0)
+            # `avg(int_col)` in Postgres returns Decimal which is neither
+            # int nor float. Casting to int truncates fractional means
+            # like 6.8 → 6 (and 0.8 → 0 — the symptom in #904).
+            # Decimal → float preserves the value for the renderer (which
+            # JSON-serialises) without losing precision in the typical
+            # display range.
+            if isinstance(v, int | float):
+                meas[k] = v
+            elif v is None:
+                meas[k] = 0
+            else:
+                # Decimal, str, or any other numeric — go through float()
+                # so fractional means render correctly.
+                try:
+                    meas[k] = float(v)
+                except (TypeError, ValueError):
+                    meas[k] = 0
 
         out.append(AggregateBucket(dimensions=dims, measures=meas))
     return out

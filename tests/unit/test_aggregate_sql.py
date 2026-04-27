@@ -215,12 +215,53 @@ class TestBuildAggregateSQLSingleDim:
         assert sql == ""
         assert params == []
 
-    def test_no_dimensions_returns_empty(self) -> None:
+    def test_no_dimensions_emits_scalar_aggregate(self) -> None:
+        """#904: scalar aggregate path — no dimensions, no GROUP BY.
+        Produces a single SELECT row with measure values for the
+        whole filtered table. Pre-fix this returned empty SQL,
+        causing every `display: summary` + `aggregate: avg(field)`
+        tile to render 0."""
         sql, params = build_aggregate_sql(
             table_name="Manuscript",
             placeholder_style="%s",
             dimensions=[],
             measures={"count": "count"},
+            filters=None,
+        )
+        # Scalar SELECT, no GROUP BY
+        assert sql.startswith("SELECT")
+        assert "COUNT" in sql.upper()
+        assert "GROUP BY" not in sql
+        assert "ORDER BY" not in sql
+        assert "LIMIT" in sql
+        assert 'FROM "Manuscript"' in sql
+        assert params == []
+
+    def test_no_dimensions_avg_field_emits_correct_sql(self) -> None:
+        """#904 canonical repro — `avg(score)` over a column with no
+        dimensions must produce `SELECT AVG("score") FROM "MarkingResult"`."""
+        sql, params = build_aggregate_sql(
+            table_name="MarkingResult",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"avg_score": "avg:score"},
+            filters=None,
+        )
+        assert "AVG" in sql.upper()
+        assert '"score"' in sql.lower() or '"score"' in sql
+        assert "GROUP BY" not in sql
+        # Must have the AS alias for the measure
+        assert '"avg_score"' in sql
+        assert params == []
+
+    def test_no_dimensions_no_measures_returns_empty(self) -> None:
+        """When BOTH dimensions and measures are empty, still empty SQL —
+        nothing to compute."""
+        sql, params = build_aggregate_sql(
+            table_name="Manuscript",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={},
             filters=None,
         )
         assert sql == ""
@@ -327,6 +368,49 @@ class TestBuildAggregateSQLMultiDim:
 
 
 class TestRowsToBuckets:
+    def test_decimal_avg_value_preserved_as_float(self) -> None:
+        """#904: `avg(int_col)` in Postgres returns Decimal which is
+        neither int nor float. Pre-fix this got `int(Decimal("6.8"))`
+        truncated to 6 — and `int(Decimal("0.8"))` truncated to 0
+        (the symptom in #904: "Avg Score 0" for a column with
+        non-zero values whose mean was sub-1)."""
+        from decimal import Decimal
+
+        rows = [{"avg_score": Decimal("6.8")}]
+        buckets = rows_to_buckets(
+            rows,
+            dimensions=[],
+            measures={"avg_score": "avg:score"},
+        )
+        assert len(buckets) == 1
+        assert buckets[0].measures["avg_score"] == 6.8
+        assert isinstance(buckets[0].measures["avg_score"], float)
+
+    def test_decimal_sub_one_avg_does_not_truncate_to_zero(self) -> None:
+        """The exact #904 symptom: `avg` returns Decimal('0.834'),
+        old `int(...)` cast → 0. New float() cast → 0.834."""
+        from decimal import Decimal
+
+        rows = [{"avg_score": Decimal("0.834")}]
+        buckets = rows_to_buckets(
+            rows,
+            dimensions=[],
+            measures={"avg_score": "avg:score"},
+        )
+        assert buckets[0].measures["avg_score"] == 0.834
+
+    def test_none_measure_value_renders_as_zero(self) -> None:
+        """When the aggregate is over an empty filtered set, Postgres
+        returns NULL for AVG/SUM. Render as 0 — the template can show
+        `—` or `0` per its own preference."""
+        rows = [{"avg_score": None}]
+        buckets = rows_to_buckets(
+            rows,
+            dimensions=[],
+            measures={"avg_score": "avg:score"},
+        )
+        assert buckets[0].measures["avg_score"] == 0
+
     def test_scalar_single_dim(self) -> None:
         rows = [
             {"dim_0_id": "draft", "count": 5},

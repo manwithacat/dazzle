@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.64] - 2026-04-27
+
+Patch bump. **Fix #904** — `display: summary` + `aggregate: avg(field)` rendered "Avg Score 0" because the scalar-aggregate path through `Repository.aggregate` was broken in two compounding ways. AegisMark's class-average tile showed 0 despite ~82,000 visible MarkingResult rows with non-zero scores.
+
+### Fixed
+- **`build_aggregate_sql` no-dimension path** (`src/dazzle_back/runtime/aggregate.py`) — pre-fix, `if not dimensions: return "", []` short-circuited to empty SQL, which `_fetch_scalar_metric` saw as `buckets=[]` and returned 0. Now emits `SELECT <measures> FROM <table> [WHERE...] LIMIT N` (no GROUP BY) for the scalar-aggregate path. The `_fetch_scalar_metric` helper that #888 Phase 1 introduced for region-level avg/sum/min/max tiles now actually fires its query.
+- **`rows_to_buckets` Decimal handling** — pre-fix: `int(Decimal("0.834"))` truncated to 0 (the secondary half of the #904 symptom). Now `Decimal` / `str` numeric values cast through `float()` so fractional means render correctly. `None` → 0 (empty filtered set).
+
+### Tests
+- **`test_aggregate_sql.py`** extended:
+  - `test_no_dimensions_emits_scalar_aggregate` (replaces `test_no_dimensions_returns_empty` which pinned the broken behaviour)
+  - `test_no_dimensions_avg_field_emits_correct_sql` — canonical #904 repro: `avg(score)` on MarkingResult emits `SELECT AVG("score") FROM "MarkingResult" LIMIT N` with no GROUP BY
+  - `test_no_dimensions_no_measures_returns_empty` — empty-on-both still gives empty SQL
+  - `test_decimal_avg_value_preserved_as_float` (#904): `Decimal("6.8")` round-trips as `6.8`, not `6`
+  - `test_decimal_sub_one_avg_does_not_truncate_to_zero` (#904): `Decimal("0.834")` → `0.834`, not `0`
+  - `test_none_measure_value_renders_as_zero`: NULL aggregate over empty filtered set → 0
+
+### Agent Guidance
+- **Two compounding bugs producing one symptom.** The user's report ("Avg Score 0") was caused by the SQL never firing AT ALL. But even if the SQL had fired and returned `Decimal("0.834")`, the truncation-to-int would have converted it back to 0 — same symptom, different root cause. When investigating "always 0" reports for scalar aggregates, check both the SQL emission path AND the result-type conversion. Pin both with separate regression tests.
+- **Repository.aggregate has TWO valid input shapes**, not one. With dimensions → multi-row GROUP BY result. Without dimensions → single-row scalar aggregate over the whole filtered table. Both shapes share the same WHERE / scope-predicate plumbing; only the SELECT body differs.
+- **Decimal/numeric type handling: `float()` not `int()` for measures.** Postgres returns `Decimal` for `AVG(int_col)`, `SUM(int_col)`, etc. — never `int` or `float` directly. Use `float()` to preserve the value through JSON serialisation. `int()` truncates toward zero, which is destructive for any sub-1 mean (the #904 symptom).
+- **Test the type contract, not just the value.** `test_decimal_avg_value_preserved_as_float` asserts both the value AND the type — catches the regression class even if a future refactor produces the right value through a wrong-typed path (e.g. returning `Decimal` directly which JSON-serialises differently).
+
 ## [0.61.63] - 2026-04-27
 
 Patch bump. **Fix #903** — region-level `title:` field for explicit title override (vs auto-derived from snake_case region key). Closes the cosmetic-finish gap for prototype-fidelity dashboards: AegisMark's teacher_workspace had eight cards rendering with PascalCase titles like "Hero Marked Overnight" / "Pupil Ao Heatmap" — every other gap (palette, typography, hero strip, journey-row, action band) was closed but cards still read as raw IDs. Pairs with `eyebrow:` (v0.61.60) to complete the AegisMark "eyebrow / title / copy" panel header trio.
