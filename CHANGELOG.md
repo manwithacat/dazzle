@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.75] - 2026-04-27
+
+Patch bump. **Fix #907** — `WorkspaceRouteBuilder.init_workspace_routes` short-circuited via `if not ctx_region.source: continue`, silently skipping route registration for any sourceless region. The four bodyless authored display modes (action_grid #891, pipeline_steps #890, status_list #3, confirm_action_panel #6) all hit this — their HTMX endpoints 404'd, the skeleton placeholder never got replaced, the entries never rendered. AegisMark hit it on three consecutive `status_list` regions in the SIMS sync settings workspace before reporting it.
+
+The parser-level bodyless-region exemption (added in #891 for action_grid and extended through each subsequent bodyless mode) made the regions *parse* without a source, but the route-builder kept its source-required check unchanged. Two parallel exemption surfaces, only one was kept in sync.
+
+### Fixed
+- **`src/dazzle_back/runtime/workspace_route_builder.py`** — bodyless display modes now register routes even with no source. Allowlist is the four named modes (`ACTION_GRID`, `PIPELINE_STEPS`, `STATUS_LIST`, `CONFIRM_ACTION_PANEL`); other display modes still require a source as before. The downstream handler short-circuits the items fetch when source is None and renders the template from the IR's authored config.
+
+### Tests
+- **`test_workspace_route_builder_bodyless.py`** — 6 new tests: one per bodyless display mode (action_grid, pipeline_steps, status_list, confirm_action_panel) parsing a sourceless DSL and asserting the route exists in `app.routes`; one positive guard (sourced LIST still registers); one negative guard (sourceless LIST is still skipped — only the four named modes are exempt).
+
+### Agent Guidance
+- **Two parallel exemption surfaces drift.** When the parser says "this construct is allowed in shape X", the runtime must also accept shape X — and these are usually different files maintained by different mental models. The bodyless-region exemption was added to the parser five times across #891, #890, #3, #6 — and zero times across the route-builder. Anytime you add a parser exemption for a structural pattern, grep for the inverse runtime check (in this case, `if not ctx_region.source`) and add the matching exemption. The unit-test suite passed because tests called the renderer directly with hand-built contexts, never the route-builder.
+- **The "I have no users so this code path is never exercised" trap.** action_grid and pipeline_steps shipped sourceless variants ages before AegisMark first declared a sourceless region in production. The bug was latent for months. Whenever a feature has an authored variant (data declared in the IR, not fetched from a source), add at least one integration-tier test that exercises the full route registration → handler → template render path with realistic input. Unit tests that mock the route layer don't surface this class of bug.
+
 ## [0.61.74] - 2026-04-27
 
 Patch bump. **#906 cleanup pass** — completed an audit of all 30 region templates for the buried-dynamic-class pattern that bit AegisMark in #906. Found two remaining instances missed in the v0.61.70 fix: `action_grid` (per-card tone tints + count-badge tints) and `metrics` (period-over-period delta arrow tone). Both migrated to `data-dz-*` attributes styled by `dz-tones.css`. The audit also surfaced 5 hardcoded HSL literals (positive=145,55%,45%; warning=40,90%,55%; specific shades) in those templates — all replaced with design-system slot references.

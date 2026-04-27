@@ -179,10 +179,27 @@ class WorkspaceRouteBuilder:
                             )(_make_src_route(_src_region_ctx))
                         continue
 
-                    if not ctx_region.source:
+                    # v0.61.75 (#907): bodyless authored display modes
+                    # — action_grid (#891), pipeline_steps (#890),
+                    # status_list (#3), confirm_action_panel (#6) —
+                    # render entirely from the IR's authored config and
+                    # don't require a source. The route still needs to
+                    # be registered so the HTMX endpoint serves the
+                    # rendered template; the handler short-circuits the
+                    # items fetch when source is None. The parser-level
+                    # bodyless-region exemption already lets these
+                    # parse without a source; this is the matching
+                    # exemption at the route-builder level.
+                    _BODYLESS_DISPLAYS = (
+                        "ACTION_GRID",
+                        "PIPELINE_STEPS",
+                        "STATUS_LIST",
+                        "CONFIRM_ACTION_PANEL",
+                    )
+                    if not ctx_region.source and ctx_region.display not in _BODYLESS_DISPLAYS:
                         continue
 
-                    _source = ctx_region.source
+                    _source = ctx_region.source or ""
 
                     _entity_spec = None
                     for _e in entities:
