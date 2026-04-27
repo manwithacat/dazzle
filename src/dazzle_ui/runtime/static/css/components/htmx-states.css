@@ -1,0 +1,87 @@
+/*
+ * htmx-states.css — HTMX runtime-class styling.
+ *
+ * HTMX applies these classes to elements during request lifecycles:
+ *
+ *   .htmx-request          — element has an in-flight request
+ *   .htmx-indicator        — visibility-toggled spinner / loader
+ *   .htmx-swapping         — element is about to be swapped out (300ms)
+ *   .htmx-settling         — element was just swapped in (settle phase)
+ *   .htmx-added            — newly-inserted element (highlight transition)
+ *
+ * Migrated from dz.css during the v0.62 CSS refactor. All values
+ * route through design tokens. Wrapped in @layer components.
+ */
+
+/* ── Row swap animations ─────────────────────────────────────────── */
+/* Row fades out during delete swap (swap:300ms on hx-swap). */
+
+tr.htmx-swapping {
+  opacity: 0;
+  transform: translateX(var(--space-lg));
+  transition:
+    opacity var(--duration-slow) var(--ease-out),
+    transform var(--duration-slow) var(--ease-out);
+}
+
+/* Row highlights briefly after creation or update. */
+
+tr.htmx-added,
+tr.htmx-settling {
+  animation: dz-row-highlight 600ms var(--ease-out);
+}
+
+@keyframes dz-row-highlight {
+  from {
+    background-color: var(--colour-success-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+/* ── Submit button feedback ─────────────────────────────────────── */
+/* Form button shows an in-flight state on submit. */
+
+button.htmx-request,
+.dz-button.htmx-request {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ── Indicator visibility ───────────────────────────────────────── */
+/* Override HTMX's built-in opacity-based hiding with display:none —
+ * hidden indicators must not occupy layout space (opacity:0 still
+ * reserves vertical space for the element). */
+
+.htmx-indicator {
+  display: none;
+}
+
+/* Descendant case: indicator is a child of the requesting element. */
+.htmx-request .htmx-indicator {
+  display: inline-block;
+}
+
+/* Same-element case: hx-indicator="#id" adds htmx-request to the
+ * indicator itself rather than its parent. */
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
+/* ── Reduced-motion accommodation ───────────────────────────────── */
+/* Skip the row-highlight + slide-out animations when the user has
+ * set prefers-reduced-motion. The reset already does the global
+ * disable; this override is here so the comment explains *why* —
+ * row highlights are pure decoration for status feedback. */
+
+@media (prefers-reduced-motion: reduce) {
+  tr.htmx-swapping {
+    transform: none;
+  }
+
+  tr.htmx-added,
+  tr.htmx-settling {
+    animation: none;
+  }
+}

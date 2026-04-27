@@ -8,6 +8,7 @@
  *
  * Layer order (DO NOT REORDER):
  *   reset      — modern element reset (Andy Bell + Open Props normalise)
+ *   vendor     — vendored widget CSS (Tom Select, Flatpickr, Quill, Pickr)
  *   tokens     — custom property declarations (the design system)
  *   base       — element defaults (typography, links, form controls)
  *   utilities  — small semantic utility layer (.row, .stack, etc.)
@@ -18,14 +19,18 @@
  * See dev_docs/css-refactor-2026-04-27.md for the migration rationale.
  */
 
-@layer reset, tokens, base, utilities, components, overrides;
+@layer reset, vendor, tokens, base, utilities, components, overrides;
 
 @import url("reset.css") layer(reset);
+@import url("../vendor/tom-select.css") layer(vendor);
+@import url("../vendor/flatpickr.css") layer(vendor);
+@import url("../vendor/quill.snow.css") layer(vendor);
+@import url("../vendor/pickr.css") layer(vendor);
 @import url("tokens.css") layer(tokens);
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);
+@import url("components/badge.css") layer(components);
+@import url("components/htmx-states.css") layer(components);
 
-/* Component imports land here as components migrate, one per family.
- * Until then this section stays empty and the existing
- * `dazzle-framework.css` / `dz-tones.css` continue serving the live
- * pages from the legacy entry point. */
+/* Additional component imports land here as families migrate.
+ * Track migration status in dev_docs/css-refactor-phase-0-notes.md. */
