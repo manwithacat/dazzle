@@ -1134,12 +1134,35 @@ async def _workspace_region_handler(
                     # Per-card scalar aggregates not yet supported —
                     # skip; card renders without a count.
                     continue
+                # #901: scope_filters were resolved against the region's
+                # source entity. They reference columns that only exist
+                # on the source entity. Passing them to a different-
+                # entity repo causes silent SQL errors (caught and
+                # swallowed in `_fetch_count_metric`) and the card
+                # renders 0. Gate on entity match: pass scope_filters
+                # only when the per-card entity equals the region
+                # source. Cross-entity counts run unscoped — log a
+                # warning so operators can audit. Resolving the
+                # destination entity's own scope here would require
+                # threading appspec.surfaces lookups; deferred until a
+                # consumer needs scoped cross-entity counts.
+                _card_scope = _scope_only_filters if _entity_name == ctx.source else None
+                if _card_scope is None and _scope_only_filters is not None:
+                    logger.warning(
+                        "action_grid card %d (entity=%s, source=%s): cross-entity "
+                        "count is unscoped — destination entity's own RBAC at "
+                        "navigation time still applies, but the count badge "
+                        "shows ALL rows the runtime can read",
+                        _idx,
+                        _entity_name,
+                        ctx.source,
+                    )
                 _count_tasks.append(
                     _fetch_count_metric(
                         f"action_card_{_idx}",
                         _agg_repo,
                         _where,
-                        _scope_only_filters,
+                        _card_scope,
                         source_entity=_entity_name,
                     )
                 )
@@ -1206,12 +1229,29 @@ async def _workspace_region_handler(
                     # MVP: only count aggregates per stage. avg/sum/min/
                     # max/median deferred; render `—` for now.
                     continue
+                # #901: same gate as action_grid above — scope_filters
+                # were resolved against the region's source entity and
+                # cause silent SQL failure when applied to a different-
+                # entity repo. Pass scope_filters only when the stage
+                # entity matches the source. Cross-entity stages run
+                # unscoped — log a warning so operators can audit.
+                _stage_scope = _scope_only_filters if _entity_name == ctx.source else None
+                if _stage_scope is None and _scope_only_filters is not None:
+                    logger.warning(
+                        "pipeline_steps stage %d (entity=%s, source=%s): cross-entity "
+                        "count is unscoped — destination entity's own RBAC at "
+                        "navigation time still applies, but the stage value shows "
+                        "ALL rows the runtime can read",
+                        _sidx,
+                        _entity_name,
+                        ctx.source,
+                    )
                 _stage_tasks.append(
                     _fetch_count_metric(
                         f"pipeline_stage_{_sidx}",
                         _agg_repo,
                         _where,
-                        _scope_only_filters,
+                        _stage_scope,
                         source_entity=_entity_name,
                     )
                 )

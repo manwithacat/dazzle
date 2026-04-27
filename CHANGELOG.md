@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.61] - 2026-04-27
+
+Patch bump. **Fix #901** — `action_grid` and `pipeline_steps` per-card / per-stage `count_aggregate` queries silently returned 0 when the per-card entity differed from the region's `source:` entity. AegisMark's cross-entity action cards (e.g. an `action_grid` whose source is `MarkingResult` but with a card counting `AssessmentEvent`) were all showing zero counts.
+
+### Fixed
+- **`action_grid` per-card scope gate** in `src/dazzle_back/runtime/workspace_rendering.py` — `_card_scope = _scope_only_filters if _entity_name == ctx.source else None`. Pre-fix, `_scope_only_filters` (resolved against the source entity's columns) was unconditionally passed to a different-entity repo, causing silent SQL failures (caught + swallowed) and 0 counts.
+- **`pipeline_steps` per-stage scope gate** — same shape: `_stage_scope = _scope_only_filters if _entity_name == ctx.source else None`. The user verified empirically that all 4 stages of AegisMark's `ingestion_journey` showed 0 because of this same root cause.
+- **Operator audit signal** — both branches now log a warning when scope is dropped: "cross-entity count is unscoped — destination entity's own RBAC at navigation time still applies, but the count badge shows ALL rows the runtime can read". Operators see this in their server logs and can choose to add explicit per-entity scoping if needed.
+
+### Tests
+- **`tests/unit/test_cross_entity_aggregate_scope_regression.py`** (new) — 7 cases:
+  - `TestCrossEntityScopeGate` (4): static-source guards pinning the entity-match gate in both branches, the warning log calls, and the `#901` comment annotations
+  - `TestSimulatedScopeGateBehaviour` (3): pure-function simulation of the `_card_scope = ... if ... else None` decision rule covering same-entity (passes through), different-entity (drops to None), and no-scope (no-op)
+
+### Security
+- **Cross-entity counts are now unscoped** (with operator warning). This is a known UX cost: the count badge for a card targeting a different entity than the region source shows ALL rows the runtime can read, not just rows the user would see if they navigated to the destination. The destination entity's RBAC still applies at click-time, so users can't access data they shouldn't — but the count itself becomes a coarse signal. **Resolving the destination entity's own scope predicate** at aggregation time would require threading `app_spec.surfaces` lookups; deferred until a real consumer needs scoped cross-entity counts. The operator warning makes this audit-visible.
+
+### Agent Guidance
+- **Per-card / per-stage aggregates can target ANY entity**, not just the region source. The action_grid plan-stated story is "things the user can do next" — those naturally span entities. The pipeline_steps "ingestion → review → output" pattern often crosses entities too. The runtime now handles this correctly; authors don't need to constrain all cards/stages to the source entity.
+- **`_scope_only_filters` is entity-specific.** It carries column references that only resolve against the entity it was computed for. When passing to a different-entity repo, it MUST be dropped (or the destination entity's own scope must be re-resolved). The gate `if entity_name == ctx.source` is the load-bearing check; do not strip it without also wiring the per-destination scope resolution.
+- **Silent SQL failures are an anti-pattern.** Pre-fix, `_fetch_count_metric` swallowed the exception and returned 0 — operators saw "0 cards" with no signal anything was wrong. The fix adds a per-call warning log so cross-entity unscoped queries are audit-visible. When adding new per-card/per-stage paths, mirror this pattern.
+- **Future improvement: scoped cross-entity counts.** To make cross-entity per-card/per-stage queries fully scoped, the runtime would need to look up the destination entity's `cedar_access_spec` (via `app_spec.surfaces` matching `entity_ref + mode=list`) and re-run `_apply_workspace_scope_filters` per per-card-entity. Deferred until a real consumer asks; current behaviour is correct + audit-visible.
+
 ## [0.61.60] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap — item #1 (`eyebrow:` field on regions).** Every panel in AegisMark's SIMS-sync-opt-in prototype has a kicker line ("Data flow", "Legal basis", "Approved data scopes") above the title. Promoting this to a first-class region field gives DSL authors the eyebrow / title / copy header trio without forking templates. First of six items in the AegisMark roadmap (see `dev_docs/2026-04-27-aegismark-ux-patterns.md`).
