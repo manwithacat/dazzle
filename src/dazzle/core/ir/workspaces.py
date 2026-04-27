@@ -78,6 +78,7 @@ class DisplayMode(StrEnum):
     BAR_TRACK = "bar_track"  # v0.61.53 (#893): per-row label + filled track + value
     ACTION_GRID = "action_grid"  # v0.61.54 (#891): CTA cards on dashboards
     PROFILE_CARD = "profile_card"  # v0.61.55 (#892): single-record identity panel
+    PIPELINE_STEPS = "pipeline_steps"  # v0.61.56 (#890): sequential-stage workflow
 
 
 class BucketRef(BaseModel):
@@ -174,6 +175,30 @@ class OverlaySeriesSpec(BaseModel):
     source: str | None = None
     filter: ConditionExpr | None = None
     aggregate_expr: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class PipelineStageSpec(BaseModel):
+    """v0.61.56 (#890): one stage in a pipeline_steps region.
+
+    Each stage has a label (the kicker), an optional caption (sub-text
+    under the headline number), and an aggregate expression that fires
+    independently — RBAC scope rules apply per-stage. Stages are
+    ordered left-to-right (or top-to-bottom on mobile).
+
+    Attributes:
+        label: Human-readable stage name (e.g. "Scanned", "Rubric pass").
+        caption: Optional sub-text describing what's at this stage.
+        aggregate_expr: A single aggregate expression — same vocabulary
+            as region-level ``aggregate:``: ``count(<Entity> where <pred>)``,
+            ``avg(<col>)``, etc. Empty string means no value (renders as
+            ``—``).
+    """
+
+    label: str
+    caption: str = ""
+    aggregate_expr: str = ""
 
     model_config = ConfigDict(frozen=True)
 
@@ -371,6 +396,11 @@ class WorkspaceRegion(BaseModel):
     secondary: str | None = None
     profile_stats: list[ProfileCardStatSpec] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
+    # v0.61.56 (#890): pipeline_steps sequential-stage display.
+    # Each stage fires its own aggregate query; renders as a left-to-right
+    # row of stage cards with arrow connectors. Empty list = legacy
+    # behaviour (no stages).
+    pipeline_stages: list[PipelineStageSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

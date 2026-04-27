@@ -155,6 +155,7 @@ class TokenType(Enum):
     SECONDARY = "secondary"  # v0.61.55 (#892): profile_card meta line (interpolated)
     STATS = "stats"  # v0.61.55 (#892): profile_card stat grid block
     FACTS = "facts"  # v0.61.55 (#892): profile_card key-facts list (interpolated)
+    CAPTION = "caption"  # v0.61.56 (#890): pipeline_steps stage sub-text
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

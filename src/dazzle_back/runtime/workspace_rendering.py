@@ -1179,6 +1179,77 @@ async def _workspace_region_handler(
                     }
                 )
 
+    # Pipeline steps (#890, v0.61.56): sequential-stage workflow.
+    # Each stage has its own aggregate_expr that fires independently
+    # via the existing `_fetch_count_metric` machinery — RBAC scope
+    # rules apply per-stage. Stages without aggregates render `—`.
+    # Median and other not-yet-supported aggregates also render `—`
+    # (the issue's example uses `median(Manuscript.computed_grade)`
+    # which isn't in the count/sum/avg/min/max vocabulary today).
+    # Mirrors the action_grid pattern (#891).
+    pipeline_stage_data: list[dict[str, Any]] = []
+    if ctx.ctx_region.display == "PIPELINE_STEPS":
+        _stages = ctx.ctx_region.pipeline_stages or []
+        if _stages and not _scope_denied:
+            _stage_tasks: list[Any] = []
+            _stage_indices: list[int] = []
+            for _sidx, _stage in enumerate(_stages):
+                _expr = _stage.get("aggregate_expr") or ""
+                if not _expr:
+                    continue
+                _m = _AGGREGATE_RE.match(_expr)
+                if not _m:
+                    continue
+                _func, _entity_name, _where = _m.groups()
+                _agg_repo = ctx.repositories.get(_entity_name) if ctx.repositories else None
+                if _func != "count" or _agg_repo is None:
+                    # MVP: only count aggregates per stage. avg/sum/min/
+                    # max/median deferred; render `—` for now.
+                    continue
+                _stage_tasks.append(
+                    _fetch_count_metric(
+                        f"pipeline_stage_{_sidx}",
+                        _agg_repo,
+                        _where,
+                        _scope_only_filters,
+                        source_entity=_entity_name,
+                    )
+                )
+                _stage_indices.append(_sidx)
+            _stage_results: dict[int, Any] = {}
+            if _stage_tasks:
+                import asyncio as _asyncio
+
+                _sresults = await _asyncio.gather(*_stage_tasks, return_exceptions=True)
+                for _sridx, _srresult in zip(_stage_indices, _sresults, strict=True):
+                    if isinstance(_srresult, tuple):
+                        _stage_results[_sridx] = _srresult[1]
+                    else:
+                        logger.warning(
+                            "pipeline_steps stage %d count query failed: %s",
+                            _sridx,
+                            _srresult,
+                        )
+            for _sidx, _stage in enumerate(_stages):
+                _val = _stage_results.get(_sidx)
+                pipeline_stage_data.append(
+                    {
+                        "label": _stage.get("label", ""),
+                        "caption": _stage.get("caption", ""),
+                        "value": _val,
+                    }
+                )
+        elif _stages:
+            # scope denied — render stages with no values (—)
+            for _stage in _stages:
+                pipeline_stage_data.append(
+                    {
+                        "label": _stage.get("label", ""),
+                        "caption": _stage.get("caption", ""),
+                        "value": None,
+                    }
+                )
+
     # Profile card (#892, v0.61.55): single-record identity panel.
     # Resolves the avatar, primary, secondary, stats, and facts from
     # the first item already fetched (the region's `filter:` should
@@ -1467,6 +1538,8 @@ async def _workspace_region_handler(
         action_card_data=action_card_data,
         # Profile card (#892, v0.61.55) — single-record identity panel
         profile_card_data=profile_card_data,
+        # Pipeline steps (#890, v0.61.56) — per-stage {label, caption, value}
+        pipeline_stage_data=pipeline_stage_data,
     )
     return HTMLResponse(content=html)
 

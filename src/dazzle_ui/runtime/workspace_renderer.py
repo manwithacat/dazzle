@@ -164,6 +164,11 @@ class RegionContext(BaseModel):
     secondary: str = ""
     profile_stats: list[dict[str, str]] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
+    # v0.61.56 (#890): pipeline_steps stages — each entry is a plain
+    # dict (label/caption/aggregate_expr) so the runtime branch can fire
+    # one count query per stage. The render-ready list with resolved
+    # values is built at request time as `pipeline_stage_data`.
+    pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
 
 
 class WorkspaceContext(BaseModel):
@@ -276,6 +281,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "BAR_TRACK": "workspace/regions/bar_track.html",  # #893
     "ACTION_GRID": "workspace/regions/action_grid.html",  # #891
     "PROFILE_CARD": "workspace/regions/profile_card.html",  # #892
+    "PIPELINE_STEPS": "workspace/regions/pipeline_steps.html",  # #890
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -506,6 +512,14 @@ def build_workspace_context(
                     for s in (getattr(region, "profile_stats", None) or [])
                 ],  # #892
                 facts=list(getattr(region, "facts", None) or []),  # #892
+                pipeline_stages=[
+                    {
+                        "label": s.label,
+                        "caption": s.caption,
+                        "aggregate_expr": s.aggregate_expr,
+                    }
+                    for s in (getattr(region, "pipeline_stages", None) or [])
+                ],  # #890
             )
         )
 

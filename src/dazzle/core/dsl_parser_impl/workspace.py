@@ -381,6 +381,91 @@ class WorkspaceParserMixin:
                 return str(raw)
         return str(self.expect_identifier_or_keyword().value)
 
+    def _parse_pipeline_stages_block(self) -> list[ir.PipelineStageSpec]:
+        """Parse the indented body of a pipeline_steps ``stages:`` block (#890).
+
+        Same dash-list shape as ``actions:``. Each entry leads with
+        ``label:`` and carries optional ``caption:`` + ``aggregate:``::
+
+            stages:
+              - label: "Scanned"
+                caption: "complete pupil scripts"
+                aggregate: count(Manuscript where status = uploaded)
+
+        Distinct from the legacy ``stages: [a, b, c]`` bracketed list
+        used by ``progress`` mode — the calling parser branch shape-
+        detects on the next token (LBRACKET → progress, INDENT →
+        pipeline_steps).
+        """
+        stages: list[ir.PipelineStageSpec] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'pipeline stages entries must start with `- label: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()
+            label_kw = self.expect_identifier_or_keyword().value
+            if label_kw != "label":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"pipeline stages entry must start with `label:`, got {label_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            label_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            caption_str = ""
+            aggregate_expr = ""
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "caption":
+                        caption_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    elif key == "aggregate":
+                        # Same shape as region-level `aggregate:` parser.
+                        parts: list[str] = []
+                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                            parts.append(self.advance().value)
+                        aggregate_expr = " ".join(parts)
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown pipeline stages key {key!r}. "
+                            f"Expected one of: caption, aggregate.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            stages.append(
+                ir.PipelineStageSpec(
+                    label=label_str,
+                    caption=caption_str,
+                    aggregate_expr=aggregate_expr,
+                )
+            )
+        return stages
+
     def _parse_profile_stats_block(self) -> list[ir.ProfileCardStatSpec]:
         """Parse the indented body of a profile_card ``stats:`` block (#892).
 
@@ -1008,6 +1093,7 @@ class WorkspaceParserMixin:
         secondary: str | None = None  # profile_card meta line (#892)
         profile_stats: list[ir.ProfileCardStatSpec] = []  # profile_card stats (#892)
         facts: list[str] = []  # profile_card key-facts list (#892)
+        pipeline_stages: list[ir.PipelineStageSpec] = []  # pipeline_steps (#890)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1218,21 +1304,31 @@ class WorkspaceParserMixin:
                     heatmap_thresholds = thresh_list
                 self.skip_newlines()
 
-            # stages: [uploaded, queued, processing, marked, reviewed, flagged]
+            # stages: shape-dispatch
+            #   - bracketed list (`stages: [a, b, c]`) → progress mode (legacy)
+            #   - indented dash-list                     → pipeline_steps (#890)
             elif self.match(TokenType.STAGES):
                 self.advance()
                 self.expect(TokenType.COLON)
-                self.expect(TokenType.LBRACKET)
-                while not self.match(TokenType.RBRACKET):
+                if self.match(TokenType.LBRACKET):
+                    # Legacy progress shape — bracketed list of identifiers
+                    self.advance()  # consume [
+                    while not self.match(TokenType.RBRACKET):
+                        self.skip_newlines()
+                        if self.match(TokenType.RBRACKET):
+                            break
+                        progress_stages.append(self.expect_identifier_or_keyword().value)
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                        self.skip_newlines()
+                    self.expect(TokenType.RBRACKET)
                     self.skip_newlines()
-                    if self.match(TokenType.RBRACKET):
-                        break
-                    progress_stages.append(self.expect_identifier_or_keyword().value)
-                    if self.match(TokenType.COMMA):
-                        self.advance()
+                else:
+                    # pipeline_steps shape — indented dash-list of stage dicts
                     self.skip_newlines()
-                self.expect(TokenType.RBRACKET)
-                self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    pipeline_stages = self._parse_pipeline_stages_block()
+                    self.expect(TokenType.DEDENT)
 
             # complete_at: reviewed
             elif self.match(TokenType.COMPLETE_AT):
@@ -1438,7 +1534,15 @@ class WorkspaceParserMixin:
         # Traditional regions require source, but pure metric regions don't
         # v0.61.54 (#891): action_grid regions are also bodyless from the
         # source/aggregate perspective — `actions:` IS the body.
-        if source is None and not sources and not aggregates and not action_cards:
+        # v0.61.56 (#890): pipeline_steps similarly — `stages:` IS the body
+        # (each stage carries its own aggregate).
+        if (
+            source is None
+            and not sources
+            and not aggregates
+            and not action_cards
+            and not pipeline_stages
+        ):
             token = self.current_token()
             raise make_parse_error(
                 f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
@@ -1501,4 +1605,5 @@ class WorkspaceParserMixin:
             secondary=secondary,
             profile_stats=profile_stats,
             facts=facts,
+            pipeline_stages=pipeline_stages,
         )

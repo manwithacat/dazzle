@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.56] - 2026-04-27
+
+Patch bump. **Fix #890** — `display: pipeline_steps`. Sequential-stage workflow visualisation: a row of stage cards with arrow connectors. Each stage carries an independent aggregate query (RBAC scope rules apply per-stage). **Closes the AegisMark display-mode batch** — all 5 issues (#890–#894) shipped.
+
+### Added
+- **`DisplayMode.PIPELINE_STEPS = "pipeline_steps"`** in `src/dazzle/core/ir/workspaces.py`.
+- **`PipelineStageSpec`** IR — frozen Pydantic model with `label` (required), `caption`, `aggregate_expr`.
+- **`WorkspaceRegion.pipeline_stages: list[PipelineStageSpec]`** — empty list by default.
+- **Lexer token** `CAPTION` in `src/dazzle/core/lexer.py`.
+- **`_parse_pipeline_stages_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — same dash-list shape as `actions:`. Each entry leads with `label:`; `caption:` and `aggregate:` are optional.
+- **`stages:` shape dispatch** — the existing `STAGES` lexer token now triggers two parser paths based on the next token: `LBRACKET` → legacy progress-mode bracketed list (`stages: [a, b, c]`), `INDENT` → new pipeline_steps indented dash-list. **Backwards compatible** with all existing `progress` regions.
+- **`RegionContext.pipeline_stages`** — list of dicts (`{label, caption, aggregate_expr}`) for the runtime branch to consume.
+- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per stage with non-empty `aggregate_expr` via `asyncio.gather`. Honours the #887 scope-deny gate. Stages with unsupported aggregates (median, avg, sum, min, max) render `—` in the MVP — only `count(...)` is wired through. Mirrors the action_grid pattern (#891).
+- **Template** `src/dazzle_ui/templates/workspace/regions/pipeline_steps.html` — flex row of stage cards with SVG chevron connectors between (desktop) / vertical chevrons (mobile). Token-coloured. `region_card` macro wrapper for card safety.
+- **Region-bodyless validation exemption** extended — `pipeline_stages` joins `action_cards` as a region body (no `source:`/`aggregate:` required at the top level when the region has its own stage-level aggregates).
+- **`PipelineStageSpec`** exported from `dazzle.core.ir.__init__`.
+
+### Tests
+- **`tests/unit/test_workspace_pipeline_steps.py`** (new) — 15 cases:
+  - `TestPipelineStepsParser` (5): minimal pipeline, label-only stage, multiple stages order, unknown key rejected, full repro DSL from issue
+  - `TestStagesShapeDispatch` (2): legacy `stages: [...]` for progress mode still works AFTER the dispatch refactor; pipeline indented form parses as pipeline_stages (NOT progress_stages)
+  - `TestPipelineStageSpec` (2): construct minimal, construct full
+  - `TestPipelineStepsTemplateWiring` (5): template map, file existence, `region_card` macro, RegionContext default empty, RegionContext carries stages
+  - `TestPipelineStepsBodyless` (1): no source/aggregate required at region level when stages provide the body
+
+### Changed
+- **`stages:` keyword is now polymorphic** — bracketed list for progress mode (legacy), indented dash-list for pipeline_steps (new). The shape detector keeps `progress` regions parsing identically to before.
+
+### Agent Guidance
+- **Per-stage aggregates fire concurrently.** Stages are independent; the runtime uses `asyncio.gather` so a 4-stage pipeline runs 4 parallel count queries. Single-batched query is a future optimisation; concurrency is fine for typical pipeline_steps scale (≤ 6 stages).
+- **MVP supports `count(...)` per stage only.** The issue's example uses `median(Manuscript.computed_grade)` — that aggregate isn't in the count/sum/avg/min/max vocabulary today and renders `—`. Adding median is a separate scope-of-work; sum/avg/min/max would route through `_fetch_scalar_metric` (already exists from #888 Phase 1) but isn't wired through the pipeline_steps branch yet — small follow-up if a real consumer asks.
+- **Region-bodyless validation now covers two display modes.** action_grid (#891) and pipeline_steps (#890) both populate the region's "body" via stage/card lists rather than `source:` or `aggregate:`. When adding a third such display mode, extend the exemption check at `workspace.py:_parse_workspace_region` to include the new field.
+- **Reserved-keyword footgun for region names.** `flow`, `class`, `scope`, etc. are reserved tokens — don't use them as region names. Tests should use unambiguous names like `pipeline`, `cards`, `metrics`. (Discovered while writing pipeline_steps tests; the parser error "Expected DEDENT, got <keyword>" is the symptom.)
+- **AegisMark display-mode batch complete.** v0.61.52–v0.61.56 deliver region `class:` (#894) + bar_track (#893) + action_grid (#891) + profile_card (#892) + pipeline_steps (#890). Combined: a project can compose AegisMark-style teacher dashboards (pupil-identity sidebar + journey-row pipeline + action-band CTAs + per-AO confidence-stack) using only DSL primitives — no template forking needed.
+
 ## [0.61.55] - 2026-04-27
 
 Patch bump. **Fix #892** — `display: profile_card`. Single-record identity panel: avatar (img or initials fallback) + primary name + secondary meta line + 3-up stat grid + bulleted facts list. Resolves a single record (typically via `filter: id = current_context`) and supports tiny `{{ field }}` / `{{ field.path }}` interpolation in `secondary` and `facts` strings — server-side, no Jinja eval.
