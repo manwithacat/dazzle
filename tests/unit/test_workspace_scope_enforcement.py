@@ -307,7 +307,9 @@ class TestAggregateScopeGate:
         # where someone removes the default-deny init.
         from pathlib import Path
 
-        src = Path("/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py").read_text()
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+        ).read_text()
         # The pre-init must default-deny; explicit `True` is the contract.
         assert "_scope_denied: bool = True" in src, (
             "Default-deny init missing — #887 regression risk"
@@ -321,7 +323,9 @@ class TestAggregateScopeGate:
         loudly before the bypass reaches production."""
         from pathlib import Path
 
-        src = Path("/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py").read_text()
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+        ).read_text()
         # Count gate uses in `_workspace_region_handler` — there are
         # 4 aggregate call sites in that handler (metrics / bucketed /
         # overlays / pivot) plus 1 in `_fetch_region_json`. Every one

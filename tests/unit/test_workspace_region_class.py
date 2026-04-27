@@ -136,7 +136,9 @@ class TestCssClassTemplateBinding:
         """Static check on the template — the `:class` array must
         contain `card.css_class || ''` so the project hook composes
         with the framework-supplied transition class."""
-        path = Path("/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/_content.html")
+        path = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
+        )
         contents = path.read_text()
         # The :class binding must include the css_class read.
         assert "card.css_class || ''" in contents, (

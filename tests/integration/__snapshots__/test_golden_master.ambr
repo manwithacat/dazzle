@@ -1398,17 +1398,23 @@
         'regions': list([
           dict({
             'action': None,
+            'action_cards': list([
+            ]),
             'aggregates': dict({
             }),
+            'avatar_field': None,
             'bin_count': None,
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.GRID: 'grid'>,
             'empty_message': None,
+            'facts': list([
+            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
@@ -1421,6 +1427,11 @@
             'name': 'health',
             'overlay_series': list([
             ]),
+            'pipeline_stages': list([
+            ]),
+            'primary': None,
+            'profile_stats': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
@@ -1428,6 +1439,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'secondary': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1436,20 +1448,28 @@
             }),
             'sources': list([
             ]),
+            'track_format': None,
+            'track_max': None,
           }),
           dict({
             'action': None,
+            'action_cards': list([
+            ]),
             'aggregates': dict({
             }),
+            'avatar_field': None,
             'bin_count': None,
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.LIST: 'list'>,
             'empty_message': None,
+            'facts': list([
+            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
@@ -1462,6 +1482,11 @@
             'name': 'deploys',
             'overlay_series': list([
             ]),
+            'pipeline_stages': list([
+            ]),
+            'primary': None,
+            'profile_stats': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
@@ -1469,6 +1494,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'secondary': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1477,20 +1503,28 @@
             }),
             'sources': list([
             ]),
+            'track_format': None,
+            'track_max': None,
           }),
           dict({
             'action': None,
+            'action_cards': list([
+            ]),
             'aggregates': dict({
             }),
+            'avatar_field': None,
             'bin_count': None,
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.DIAGRAM: 'diagram'>,
             'empty_message': None,
+            'facts': list([
+            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
@@ -1503,6 +1537,11 @@
             'name': 'app_map',
             'overlay_series': list([
             ]),
+            'pipeline_stages': list([
+            ]),
+            'primary': None,
+            'profile_stats': list([
+            ]),
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
@@ -1510,6 +1549,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'secondary': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1518,6 +1558,8 @@
             }),
             'sources': list([
             ]),
+            'track_format': None,
+            'track_max': None,
           }),
         ]),
         'source': None,

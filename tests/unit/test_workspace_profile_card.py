@@ -277,14 +277,16 @@ class TestProfileCardTemplateWiring:
         assert DISPLAY_TEMPLATE_MAP["PROFILE_CARD"] == "workspace/regions/profile_card.html"
 
     def test_template_file_exists(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/profile_card.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/profile_card.html"
         )
         assert path.is_file()
 
     def test_template_uses_region_card_macro(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/profile_card.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/profile_card.html"
         )
         contents = path.read_text()
         assert "{% call region_card" in contents
@@ -323,10 +325,8 @@ class TestProfileCardSafety:
         `test_unsafe_expression_left_as_literal` case above. This test
         is the static-source guard: the implementation must NOT import
         jinja2 inside `_interpolate_card_template`'s module path."""
-        from pathlib import Path as _Path
-
-        src = _Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py"
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
         ).read_text()
         # The interpolator function should appear in the source
         assert "def _interpolate_card_template" in src

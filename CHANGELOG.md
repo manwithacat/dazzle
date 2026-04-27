@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.57] - 2026-04-27
+
+Patch bump. **CI fixes + security defence-in-depth + framework artefact coverage**. Closes the four CI failures introduced by the v0.61.52–v0.61.56 display-mode batch (absolute paths in tests, snapshot drift, ANSI in help text, framework coverage gate) plus a CodeQL XSS-through-DOM warning on the live theme switcher.
+
+### Fixed
+- **Absolute path in 6 test files** — `Path("/Volumes/SSD/Dazzle/...")` replaced with `Path(__file__).resolve().parents[2] / "..."` so tests pass on CI runners where the repo is at `/home/runner/work/dazzle/dazzle/`. Affected: `test_workspace_action_grid.py`, `test_workspace_pipeline_steps.py`, `test_workspace_profile_card.py`, `test_workspace_bar_track.py`, `test_workspace_region_class.py`, `test_workspace_scope_enforcement.py`.
+- **Golden-master snapshot drift** — regenerated `test_simple_dsl_to_ir_snapshot.ambr` to reflect the new `WorkspaceRegion` fields landed across v0.61.52–v0.61.56 (`css_class`, `track_max`, `track_format`, `action_cards`, `avatar_field`, `primary`, `secondary`, `profile_stats`, `facts`, `pipeline_stages`).
+- **`test_list_help_mentions_filters`** — Typer's help formatter inserts ANSI escape codes that split flag names across format runs in CI environments. Test now strips ANSI codes (`re.sub(r"\x1b\[[0-9;]*m", "", result.output)`) before substring assertion.
+
+### Added
+- **Framework artefact coverage to 100%** — added 4 region examples to `examples/ops_dashboard` so each new display mode (action_grid, bar_track, profile_card, pipeline_steps) has at least one live consumer in an example app:
+  - `system_response_track` — bar_track of avg(response_time_ms) per system
+  - `ops_actions` — action_grid with 2 CTAs (active alerts, add system)
+  - `alert_pipeline` — 3-stage pipeline_steps for Alert lifecycle
+  - `system_identity` — profile_card narrowed by `current_context`
+- The framework artefact coverage gate at `src/dazzle/cli/coverage.py` was the source of CI's lint failure; coverage now reports 71/71 (100%) across display_modes, dsl_constructs, and fragment_templates.
+
+### Security
+- **CodeQL #81 (`js/xss-through-dom`)** — `dz-alpine.js`'s `dzThemeSwitcher.setTheme()` assigns server-emitted theme URLs to `link.href`. Even though the URL list comes from a server-rendered `<script type="application/json">` payload (not user input), CodeQL flagged the DOM sink. Added a defence-in-depth whitelist regex (`SAFE_THEME_URL = /^\/(?:static\/)?(?:css\/)?themes\/[\w-]+\.css$/`) that rejects any value not matching the expected theme-CSS shape — including `javascript:` / `data:` payloads that would otherwise reach the sink if the server-side payload were ever compromised.
+- **CodeQL #78 dismissed** — `py/clear-text-logging-sensitive-data` in `ga4.py` was a false positive. The variable `_API_SECRET_ENV = "DAZZLE_GA4_API_SECRET"` is the env-var NAME (the string told to operators), not the secret VALUE. CodeQL matched on the lexical "SECRET" token in the variable name.
+- **CodeQL #71-77, #79-80 dismissed** (9 alerts) — `py/incomplete-url-substring-sanitization` warnings in `tests/unit/test_analytics_*.py` and `test_tenant_analytics_resolver.py`. All test-only substring assertions checking that generated CSP/script-src URLs include known domains. Same rationale as previously-dismissed #66-70 for the same rule.
+
+### Agent Guidance
+- **Use `Path(__file__).resolve().parents[2]` for repo-root references in tests, not absolute paths.** The pattern derives the project root from the test file location, so tests pass on local dev (`/Volumes/SSD/Dazzle/`) and CI runners (`/home/runner/work/dazzle/dazzle/`) alike. When writing source-code-grep tests (static checks on the implementation), use this idiom.
+- **Strip ANSI escape codes before substring-asserting on Typer help output.** Typer's formatter wraps flag names with colour/wrap escapes in CI environments. The pattern `re.sub(r"\x1b\[[0-9;]*m", "", output)` converts the help text to plain text for assertions.
+- **Framework artefact coverage gate gates new display modes.** Any new `DisplayMode` enum value, DSL construct, or fragment template that lands without at least one example app exercising it fails CI at `python -m dazzle coverage --fail-on-uncovered`. When shipping a new display mode, add at least a minimal region in one of the example apps in the same commit.
+- **Defence-in-depth whitelist for any DOM sink fed from server-emitted JSON.** Even when the source is server-rendered (and therefore not directly user-controlled), a tight regex at the assignment site closes both real attacks (server-side compromise) and CodeQL alerts. The pattern: parse → validate against shape → assign. The whitelist regex is part of the security contract; document the expected shape in a comment.
+- **`_API_SECRET_ENV` naming guidance.** When a constant holds an env-var NAME for a secret (not the secret value itself), CodeQL's lexical pattern matcher will flag any log line that includes the constant. Two options: (a) rename the constant to drop "SECRET" from the local identifier, or (b) dismiss as false positive with a clear rationale. We chose (b) here because the constant name is meaningful to operators reading log messages.
+
 ## [0.61.56] - 2026-04-27
 
 Patch bump. **Fix #890** — `display: pipeline_steps`. Sequential-stage workflow visualisation: a row of stage cards with arrow connectors. Each stage carries an independent aggregate query (RBAC scope rules apply per-stage). **Closes the AegisMark display-mode batch** — all 5 issues (#890–#894) shipped.

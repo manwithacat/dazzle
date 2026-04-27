@@ -139,11 +139,17 @@ class TestHelp:
         assert "init" in result.output
 
     def test_list_help_mentions_filters(self) -> None:
+        import re
+
         result = runner.invoke(theme_app, ["list", "--help"])
         assert result.exit_code == 0
-        assert "--tag" in result.output
-        assert "--scheme" in result.output
-        assert "--project-root" in result.output
+        # Strip ANSI escape codes — Typer's help formatter inserts
+        # colour/wrap escapes in CI environments that split flag names
+        # across format runs (e.g. `--\x1b[0m\x1b[1;36m-tag`).
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--tag" in plain
+        assert "--scheme" in plain
+        assert "--project-root" in plain
 
 
 # ────────────────────── init subcommand ────────────────────────

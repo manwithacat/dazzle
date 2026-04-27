@@ -213,14 +213,16 @@ class TestPipelineStepsTemplateWiring:
         assert DISPLAY_TEMPLATE_MAP["PIPELINE_STEPS"] == "workspace/regions/pipeline_steps.html"
 
     def test_template_file_exists(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/pipeline_steps.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/pipeline_steps.html"
         )
         assert path.is_file()
 
     def test_template_uses_region_card_macro(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/pipeline_steps.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/pipeline_steps.html"
         )
         contents = path.read_text()
         assert "{% call region_card" in contents

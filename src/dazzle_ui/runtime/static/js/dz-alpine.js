@@ -1174,9 +1174,17 @@ document.addEventListener("alpine:init", () => {
       document
         .querySelectorAll("link[data-theme-link]")
         .forEach((el) => el.parentNode && el.parentNode.removeChild(el));
-      // Inject the new chain in cascade order (parent first → leaf last)
+      // Inject the new chain in cascade order (parent first → leaf last).
+      // Defence in depth: even though the server emits the URL list as
+      // inline JSON (see init()), validate each URL matches the
+      // expected theme-CSS shape before assigning to `link.href`.
+      // Closes CodeQL js/xss-through-dom (#81) — and rejects any
+      // `javascript:` / `data:` payload that would otherwise reach the
+      // DOM sink.
+      const SAFE_THEME_URL = /^\/(?:static\/)?(?:css\/)?themes\/[\w-]+\.css$/;
       const head = document.head;
       this._urls[name].forEach((url) => {
+        if (typeof url !== "string" || !SAFE_THEME_URL.test(url)) return;
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = url;

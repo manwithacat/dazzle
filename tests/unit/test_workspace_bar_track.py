@@ -260,14 +260,20 @@ class TestBarTrackTemplateWiring:
         assert DISPLAY_TEMPLATE_MAP["BAR_TRACK"] == "workspace/regions/bar_track.html"
 
     def test_template_file_exists(self) -> None:
-        path = Path("/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/bar_track.html")
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/bar_track.html"
+        )
         assert path.is_file(), "bar_track.html template missing"
 
     def test_template_uses_region_card_macro(self) -> None:
         """Card-safety invariant — every region template wraps content
         in the `region_card` macro so chrome lives in the dashboard
         slot, not the region itself."""
-        path = Path("/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/bar_track.html")
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/bar_track.html"
+        )
         contents = path.read_text()
         assert "region_card" in contents, "bar_track.html missing region_card wrapper"
         assert "{% call region_card" in contents, "region_card not invoked"
@@ -292,7 +298,9 @@ class TestBarTrackTemplateWiring:
         Static check on the source — if a future edit drops BAR_TRACK
         from the set, the bar_track region would silently render
         with zero buckets."""
-        src = Path("/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py").read_text()
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+        ).read_text()
         # The set literal must mention BAR_TRACK as a single-dim mode.
         assert '"BAR_TRACK"' in src, "BAR_TRACK missing from single-dim chart modes"
         # Spot-check the surrounding _single_dim_chart_modes context.

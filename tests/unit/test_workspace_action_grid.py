@@ -261,14 +261,16 @@ class TestActionGridTemplateWiring:
         assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/action_grid.html"
 
     def test_template_file_exists(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/action_grid.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/action_grid.html"
         )
         assert path.is_file()
 
     def test_template_uses_region_card_macro(self) -> None:
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/action_grid.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/action_grid.html"
         )
         contents = path.read_text()
         assert "{% call region_card" in contents
@@ -278,8 +280,9 @@ class TestActionGridTemplateWiring:
         literal `<a>` and `<div>` tags, never `<{{ _Tag }}>` style
         interpolation. Semgrep flagged the original draft for the
         latter; this test pins the safer pattern."""
-        path = Path(
-            "/Volumes/SSD/Dazzle/src/dazzle_ui/templates/workspace/regions/action_grid.html"
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/action_grid.html"
         )
         contents = path.read_text()
         assert "<{{" not in contents, (

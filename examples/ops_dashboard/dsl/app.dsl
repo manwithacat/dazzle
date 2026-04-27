@@ -301,6 +301,65 @@ workspace command_center "Command Center":
       - label: "Breach",  from: 500, to: 1000, color: destructive
     empty: "No system metrics yet"
 
+  # Bar track — per-system response-time as a horizontal track. Same
+  # data as the bullet above, different visual idiom. Exercises the
+  # v0.61.53 (#893) bar_track display mode.
+  system_response_track:
+    source: System
+    display: bar_track
+    group_by: name
+    aggregate:
+      value: avg(response_time_ms)
+    track_max: 1000
+    track_format: "{:.0f}ms"
+    empty: "No system metrics yet"
+
+  # Action grid — operator CTAs surfacing common next-steps. Exercises
+  # the v0.61.54 (#891) action_grid display mode. Each card carries an
+  # independent count_aggregate that fires per-card.
+  ops_actions:
+    display: action_grid
+    actions:
+      - label: "Active alerts"
+        icon: "alert-triangle"
+        count_aggregate: count(Alert where status = active)
+        action: alert_list
+        tone: warning
+      - label: "Add system"
+        icon: "plus"
+        action: system_create
+        tone: positive
+
+  # Pipeline steps — incident triage workflow. Exercises the v0.61.56
+  # (#890) pipeline_steps display mode with per-stage count aggregates.
+  alert_pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "Active"
+        caption: "currently firing"
+        aggregate: count(Alert where status = active)
+      - label: "Acknowledged"
+        caption: "an engineer is on it"
+        aggregate: count(Alert where status = acknowledged)
+      - label: "Resolved"
+        caption: "closed in this window"
+        aggregate: count(Alert where status = resolved)
+
+  # Profile card — single-system identity panel. Exercises the v0.61.55
+  # (#892) profile_card display mode with `filter: id = current_context`
+  # narrowing to one row.
+  system_identity:
+    source: System
+    display: profile_card
+    filter: id = current_context
+    primary: name
+    secondary: "{{ service_type }}"
+    stats:
+      - label: "Status"
+        value: status
+      - label: "Response"
+        value: response_time_ms
+
   ux:
     for ops_engineer:
       scope: all
