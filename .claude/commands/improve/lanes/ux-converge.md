@@ -77,7 +77,7 @@ If reconciler doesn't produce useful diagnosis (empty levers for non-template is
 
 Apply fixes. Re-run `dazzle ux verify --contracts`. Compare new `failure_count` to `current_failure_count`:
 
-- **Zero failures** → mark `CLEAN`, update baseline (`dazzle ux baseline --update`), commit, emit `convergence-clean`. Exit cycle.
+- **Zero failures** → mark `CLEAN`, update baseline (`dazzle ux verify --contracts --update-baseline`), commit, emit `convergence-clean`. Exit cycle.
 - **Count dropped** → continue: classify remaining, fix, re-run. Repeat.
 - **Count unchanged for 2 inner iterations** → mark `STUCK`, file GitHub issues for genuine remaining failures (per reconciler kind), emit `convergence-stuck`. Exit cycle.
 - **All remaining classified as "genuine"** → file issues, update baseline, mark `STUCK` (or `CLEAN` if baseline reflects the genuine state).
