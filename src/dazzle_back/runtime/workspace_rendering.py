@@ -659,9 +659,11 @@ async def _workspace_region_handler(
             # Use pre-computed auto_include from entity_auto_includes (#272, #423)
             include_rels = ctx.auto_include
 
-            # Grouped views need enough items to distribute across columns
+            # Grouped views need enough items to distribute across columns.
+            # BOX_PLOT (#889) added so a paginated default still surfaces
+            # all FK-distinct buckets when `group_by: <fk_column>`.
             if (
-                ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART")
+                ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART", "BOX_PLOT")
                 and not ctx.ctx_region.limit
             ):
                 limit = min(page_size, 200) if page_size > 20 else 50
@@ -1905,7 +1907,18 @@ def _compute_box_plot_stats(
             v_num = float(v)
         except (TypeError, ValueError):
             continue
-        key = "" if not group_by else str(item.get(group_by, "") or "")
+        # FK columns: prefer the `{field}_display` sibling injected by
+        # `_inject_display_names()` so the bucket label is the resolved
+        # display name (e.g. "AO1") rather than the dict repr (#889).
+        # Mirrors heatmap's resolution at lines 1058-1074.
+        if not group_by:
+            key = ""
+        else:
+            display = item.get(f"{group_by}_display")
+            if display:
+                key = str(display)
+            else:
+                key = _resolve_display_name(item.get(group_by)) or ""
         if key not in buckets:
             buckets[key] = []
             order.append(key)

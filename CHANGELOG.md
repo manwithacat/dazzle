@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.50] - 2026-04-27
+
+Patch bump. **Fix #889** — `box_plot` with `group_by: <fk_column>` now renders one bucket per FK value (labelled with the resolved display name) instead of collapsing to one bucket whose label is the FK dict's `str()` repr.
+
+### Fixed
+- **`_compute_box_plot_stats`** — bucket key resolution now follows the same pattern as heatmap (lines 1058-1074): prefer the `{group_by}_display` sibling injected by `_inject_display_names()`, fall back to `_resolve_display_name(item.get(group_by))`. Pre-fix the code did `str(item.get(group_by, ""))` which produced `"{'id': 'uuid…', '__display__': 'AO1'}"` for FK fields — one bucket, dict-repr label.
+- **`BOX_PLOT` added to the limit-boost set** in `_workspace_region_handler` — joins KANBAN / BAR_CHART / FUNNEL_CHART so a paginated default fetches up to 200 items rather than the standard page size, ensuring all FK-distinct values surface as buckets.
+
+### Tests
+- **`test_workspace_box_plot.py`** extended to 19 cases (was 16): three new `TestComputeBoxPlotStats` cases — `test_fk_dict_uses_display_sibling_for_bucket_label` (the canonical pre-fix repro), `test_fk_dict_falls_back_to_resolve_display_name_without_sibling` (defensive path when display sibling absent), `test_scalar_group_by_still_works` (scalar `group_by: status` regression guard).
+
+### Agent Guidance
+- **Bucket-label resolution for FK columns is a shared pattern.** Heatmap (1058-1074) had it right; box_plot didn't. Any new chart with `group_by: <fk_column>` must consult `{group_by}_display` first and fall back to `_resolve_display_name()` — never rely on `str(item.get(group_by))` for FK columns. If a future chart mode ships, audit it for the same probe order.
+- **Limit-boost belongs to any chart that distributes across buckets.** KANBAN / BAR_CHART / FUNNEL_CHART / BOX_PLOT all need ≥200 items to surface all FK values without pagination dropping buckets. New chart modes that bucket on a categorical column (RADAR is debatable, single-dim charts that LIMIT 20 implicitly) should be added to this set.
+
 ## [0.61.49] - 2026-04-27
 
 Patch bump. **Security fix #887** — chart aggregations were bypassing the workspace scope-deny gate, leaking cross-tenant counts / sums / averages from `_compute_aggregate_metrics`, `_compute_bucketed_aggregates`, `_compute_pivot_buckets`, and the line/area overlay loop. The list-items path correctly returned an empty result on denial; the parallel aggregate paths ran unfiltered SQL and exposed totals across all tenants.

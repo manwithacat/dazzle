@@ -144,6 +144,64 @@ class TestComputeBoxPlotStats:
     def test_empty_input_returns_empty(self) -> None:
         assert self.bp([], "v", "g", show_outliers=True) == []
 
+    # ─────────── FK display resolution (#889) ────────────
+
+    def test_fk_dict_uses_display_sibling_for_bucket_label(self) -> None:
+        """Pre-fix: `group_by: <fk_column>` produced ONE bucket whose
+        label was the dict repr (e.g. ``"{'id': 'uuid…', '__display__':
+        'AO1'}"``). Fix: `_compute_box_plot_stats` now reads the
+        ``{group_by}_display`` sibling injected by
+        `_inject_display_names()` first — same pattern as heatmap."""
+        items = [
+            {
+                "v": 50.0,
+                "ao": {"id": "u-1", "__display__": "AO1"},
+                "ao_display": "AO1",
+            },
+            {
+                "v": 70.0,
+                "ao": {"id": "u-1", "__display__": "AO1"},
+                "ao_display": "AO1",
+            },
+            {
+                "v": 40.0,
+                "ao": {"id": "u-2", "__display__": "AO2"},
+                "ao_display": "AO2",
+            },
+        ]
+        stats = self.bp(items, "v", "ao", show_outliers=True)
+        assert len(stats) == 2  # NOT one bucket
+        labels = sorted(s["label"] for s in stats)
+        assert labels == ["AO1", "AO2"]
+
+    def test_fk_dict_falls_back_to_resolve_display_name_without_sibling(
+        self,
+    ) -> None:
+        """When `_inject_display_names()` hasn't run (e.g. partial item
+        construction), fall back to `_resolve_display_name()` so the
+        bucket label is still a string, not a dict repr."""
+        items = [
+            {"v": 50.0, "ao": {"id": "u-1", "__display__": "AO1"}},
+            {"v": 70.0, "ao": {"id": "u-2", "__display__": "AO2"}},
+        ]
+        stats = self.bp(items, "v", "ao", show_outliers=True)
+        labels = sorted(s["label"] for s in stats)
+        assert labels == ["AO1", "AO2"]
+        # Crucially: no dict repr in the labels
+        assert not any("{" in label for label in labels)
+
+    def test_scalar_group_by_still_works(self) -> None:
+        """The FK fix must NOT break the existing scalar `group_by` case
+        (e.g. `group_by: status` where status is an enum value)."""
+        items = [
+            {"v": 1.0, "status": "open"},
+            {"v": 2.0, "status": "closed"},
+            {"v": 3.0, "status": "open"},
+        ]
+        stats = self.bp(items, "v", "status", show_outliers=True)
+        labels = sorted(s["label"] for s in stats)
+        assert labels == ["closed", "open"]
+
 
 # ─────────────────────── template rendering ─────────────────────
 
