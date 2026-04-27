@@ -155,6 +155,15 @@ class RegionContext(BaseModel):
     # of dicts (not the IR type) avoids importing core.ir into the UI
     # render context.
     action_cards: list[dict[str, Any]] = Field(default_factory=list)
+    # v0.61.55 (#892): profile_card single-record display config. The
+    # avatar/primary fields hold raw column names; secondary + facts
+    # carry user-template strings interpolated against the fetched item
+    # at request time. profile_stats is a list of {label, value-field}.
+    avatar_field: str = ""
+    primary: str = ""
+    secondary: str = ""
+    profile_stats: list[dict[str, str]] = Field(default_factory=list)
+    facts: list[str] = Field(default_factory=list)
 
 
 class WorkspaceContext(BaseModel):
@@ -266,6 +275,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "BULLET": "workspace/regions/bullet.html",
     "BAR_TRACK": "workspace/regions/bar_track.html",  # #893
     "ACTION_GRID": "workspace/regions/action_grid.html",  # #891
+    "PROFILE_CARD": "workspace/regions/profile_card.html",  # #892
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -488,6 +498,14 @@ def build_workspace_context(
                     }
                     for c in (getattr(region, "action_cards", None) or [])
                 ],  # #891
+                avatar_field=getattr(region, "avatar_field", None) or "",  # #892
+                primary=getattr(region, "primary", None) or "",  # #892
+                secondary=getattr(region, "secondary", None) or "",  # #892
+                profile_stats=[
+                    {"label": s.label, "value": s.value}
+                    for s in (getattr(region, "profile_stats", None) or [])
+                ],  # #892
+                facts=list(getattr(region, "facts", None) or []),  # #892
             )
         )
 

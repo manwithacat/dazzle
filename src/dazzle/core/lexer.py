@@ -150,6 +150,11 @@ class TokenType(Enum):
     ACTIONS = "actions"  # v0.61.54 (#891): action_grid card list
     TONE = "tone"  # v0.61.54 (#891): action_grid card palette token
     COUNT_AGGREGATE = "count_aggregate"  # v0.61.54 (#891): action_grid per-card count
+    AVATAR_FIELD = "avatar_field"  # v0.61.55 (#892): profile_card avatar source
+    PRIMARY = "primary"  # v0.61.55 (#892): profile_card primary identity field
+    SECONDARY = "secondary"  # v0.61.55 (#892): profile_card meta line (interpolated)
+    STATS = "stats"  # v0.61.55 (#892): profile_card stat grid block
+    FACTS = "facts"  # v0.61.55 (#892): profile_card key-facts list (interpolated)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

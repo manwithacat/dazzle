@@ -77,6 +77,7 @@ class DisplayMode(StrEnum):
     BULLET = "bullet"  # v0.61.30 (#880): actual-vs-target rows with bands
     BAR_TRACK = "bar_track"  # v0.61.53 (#893): per-row label + filled track + value
     ACTION_GRID = "action_grid"  # v0.61.54 (#891): CTA cards on dashboards
+    PROFILE_CARD = "profile_card"  # v0.61.55 (#892): single-record identity panel
 
 
 class BucketRef(BaseModel):
@@ -173,6 +174,22 @@ class OverlaySeriesSpec(BaseModel):
     source: str | None = None
     filter: ConditionExpr | None = None
     aggregate_expr: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ProfileCardStatSpec(BaseModel):
+    """v0.61.55 (#892): one stat in a profile_card's stat grid.
+
+    Attributes:
+        label: Human-readable stat label (e.g. "Target", "Projected").
+        value: Field name (or dotted path) on the source row to render.
+            The runtime resolves the path against the fetched item dict
+            and renders the resulting value verbatim.
+    """
+
+    label: str
+    value: str
 
     model_config = ConfigDict(frozen=True)
 
@@ -344,6 +361,16 @@ class WorkspaceRegion(BaseModel):
     # runtime fires one count query per card with a non-empty
     # `count_aggregate`. Empty list = legacy behaviour (no cards).
     action_cards: list[ActionCardSpec] = Field(default_factory=list)
+    # v0.61.55 (#892): profile_card single-record display config. All
+    # fields default to empty/None so non-profile_card regions are
+    # unaffected. The `secondary` and `facts` strings support tiny
+    # `{{ field }}` / `{{ field.path }}` interpolation against the
+    # fetched item dict — no Jinja eval, no expressions.
+    avatar_field: str | None = None
+    primary: str | None = None
+    secondary: str | None = None
+    profile_stats: list[ProfileCardStatSpec] = Field(default_factory=list)
+    facts: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

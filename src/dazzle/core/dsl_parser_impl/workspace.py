@@ -381,6 +381,103 @@ class WorkspaceParserMixin:
                 return str(raw)
         return str(self.expect_identifier_or_keyword().value)
 
+    def _parse_profile_stats_block(self) -> list[ir.ProfileCardStatSpec]:
+        """Parse the indented body of a profile_card ``stats:`` block (#892).
+
+        Same dash-list shape as ``actions:``. Each entry leads with
+        ``label:`` and carries one ``value:`` field reference::
+
+            stats:
+              - label: "Target"
+                value: target_grade
+              - label: "Projected"
+                value: projected_grade
+        """
+        stats: list[ir.ProfileCardStatSpec] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'stats entries must start with `- label: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()
+            label_kw = self.expect_identifier_or_keyword().value
+            if label_kw != "label":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"stats entry must start with `label:`, got {label_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            label_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            value_str = ""
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "value":
+                        # Value is a field name or dotted path —
+                        # capture as joined identifier-stream.
+                        parts: list[str] = []
+                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                            parts.append(self.advance().value)
+                        value_str = "".join(parts)
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown stats key {key!r}. Expected: value.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+            stats.append(ir.ProfileCardStatSpec(label=label_str, value=value_str))
+        return stats
+
+    def _parse_facts_block(self) -> list[str]:
+        """Parse the indented body of a profile_card ``facts:`` block (#892).
+
+        Each entry is a single quoted string supporting `{{ field }}`
+        interpolation (resolved at runtime, not here)::
+
+            facts:
+              - "Tutor: {{ tutor.full_name }}"
+              - "EAL: {{ eal_status }}"
+        """
+        facts: list[str] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "facts entries must be quoted strings led by `- `",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()
+            facts.append(self.expect(TokenType.STRING).value)
+            self.skip_newlines()
+        return facts
+
     def _parse_action_cards_block(self) -> list[ir.ActionCardSpec]:
         """Parse the indented body of an ``actions:`` block (#891).
 
@@ -906,6 +1003,11 @@ class WorkspaceParserMixin:
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
+        avatar_field: str | None = None  # profile_card avatar source (#892)
+        primary: str | None = None  # profile_card primary identity (#892)
+        secondary: str | None = None  # profile_card meta line (#892)
+        profile_stats: list[ir.ProfileCardStatSpec] = []  # profile_card stats (#892)
+        facts: list[str] = []  # profile_card key-facts list (#892)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1229,6 +1331,47 @@ class WorkspaceParserMixin:
                 action_cards = self._parse_action_cards_block()
                 self.expect(TokenType.DEDENT)
 
+            # avatar_field: <field> — profile_card avatar source (#892)
+            elif self.match(TokenType.AVATAR_FIELD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                avatar_field = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # primary: <field> — profile_card primary identity field (#892)
+            elif self.match(TokenType.PRIMARY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                primary = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # secondary: "<template>" — profile_card meta line (#892).
+            # Quoted-string only — supports `{{ field }}` interpolation
+            # which doesn't tokenise as a bare identifier.
+            elif self.match(TokenType.SECONDARY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                secondary = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # stats: indented dash-list of {label, value} (#892)
+            elif self.match(TokenType.STATS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                profile_stats = self._parse_profile_stats_block()
+                self.expect(TokenType.DEDENT)
+
+            # facts: indented dash-list of "<template>" strings (#892)
+            elif self.match(TokenType.FACTS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                facts = self._parse_facts_block()
+                self.expect(TokenType.DEDENT)
+
             # overlay_series: indented dash-list of {label, source?,
             # filter?, aggregate} entries — additional line/area chart
             # series with their own scope (#883).
@@ -1353,4 +1496,9 @@ class WorkspaceParserMixin:
             track_max=track_max,
             track_format=track_format,
             action_cards=action_cards,
+            avatar_field=avatar_field,
+            primary=primary,
+            secondary=secondary,
+            profile_stats=profile_stats,
+            facts=facts,
         )

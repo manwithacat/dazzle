@@ -21,6 +21,74 @@ logger = logging.getLogger(__name__)
 # Tolerates whitespace around parens and entity name (DSL parser joins tokens with spaces).
 _AGGREGATE_RE = re.compile(r"\s*(count|sum|avg|min|max)\s*\(\s*(\w+)\s*(?:where\s+(.+?))?\s*\)")
 
+# v0.61.55 (#892): profile_card template-string interpolation. Matches
+# `{{ field }}` and `{{ field.path.with.dots }}` only — no expressions,
+# no filters, no Jinja eval. Anything that doesn't match the strict
+# IDENT(.IDENT)* shape is left as a literal `{{ ... }}` placeholder so
+# the author notices.
+_CARD_TEMPLATE_RE = re.compile(r"\{\{\s*([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)\s*\}\}")
+
+
+def _resolve_path(item: Any, path: str) -> Any:
+    """Walk a dotted path against an item dict (#892).
+
+    Used by profile_card to resolve `{{ tutor.full_name }}` against the
+    fetched item. Returns ``None`` for any segment that's missing or
+    not a dict. FK fields are dicts (with `__display__`/`name`/etc.) so
+    a single-segment path on an FK column returns the dict; the caller
+    can then `_resolve_display_name` it. For multi-segment paths the
+    walk descends into the FK dict directly.
+    """
+    if not path:
+        return None
+    cur: Any = item
+    for segment in path.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(segment)
+        if cur is None:
+            return None
+    return cur
+
+
+def _initials_from(name: str) -> str:
+    """Compute initials from a name string for the avatar fallback (#892).
+
+    Takes the first letter of up to the first 2 whitespace-separated
+    words, uppercased. Empty / None input returns empty string.
+    """
+    if not name:
+        return ""
+    words = name.split()[:2]
+    return "".join(w[0].upper() for w in words if w)
+
+
+def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
+    """Substitute `{{ field }}` / `{{ field.path }}` against an item (#892).
+
+    The grammar is intentionally minimal — see ``_CARD_TEMPLATE_RE``.
+    Unresolved paths render as empty string (graceful degradation —
+    profile_card cards with one missing field still render the rest).
+    The output is a plain string the template emits via the standard
+    Jinja autoescape pipeline, so any HTML in the resolved values is
+    escaped. No template injection surface.
+    """
+    if not template:
+        return ""
+
+    def _sub(m: re.Match[str]) -> str:
+        path = m.group(1)
+        value = _resolve_path(item, path)
+        if isinstance(value, dict):
+            # FK dict — resolve to display name (mirrors heatmap/box_plot)
+            for key in ("__display__", "name", "title", "code", "label"):
+                if key in value and value[key] is not None:
+                    return str(value[key])
+            return ""
+        return "" if value is None else str(value)
+
+    return _CARD_TEMPLATE_RE.sub(_sub, template)
+
 
 def _format_bucket_label(value: Any, unit: str) -> str:
     """Render a time-bucket SQL value as a human-readable string.
@@ -1111,6 +1179,47 @@ async def _workspace_region_handler(
                     }
                 )
 
+    # Profile card (#892, v0.61.55): single-record identity panel.
+    # Resolves the avatar, primary, secondary, stats, and facts from
+    # the first item already fetched (the region's `filter:` should
+    # narrow to one record — typically `id = current_context`).
+    # Secondary + facts strings support tiny `{{ field }}` /
+    # `{{ field.path }}` interpolation against the item dict — handled
+    # server-side by `_interpolate_card_template` so the template is
+    # logic-less. No Jinja eval, no expressions.
+    profile_card_data: dict[str, Any] = {}
+    if ctx.ctx_region.display == "PROFILE_CARD":
+        _item = items[0] if items else None
+        if _item is not None:
+            _avatar_field = ctx.ctx_region.avatar_field
+            _primary_field = ctx.ctx_region.primary
+            _secondary_tmpl = ctx.ctx_region.secondary
+            _stats_specs = ctx.ctx_region.profile_stats or []
+            _fact_tmpls = ctx.ctx_region.facts or []
+            _avatar_url = ""
+            if _avatar_field:
+                _av = _resolve_path(_item, _avatar_field)
+                _avatar_url = str(_av or "")
+            _primary_str = ""
+            if _primary_field:
+                _pv = _resolve_path(_item, _primary_field)
+                _primary_str = str(_pv or "")
+            _initials = _initials_from(_primary_str)
+            profile_card_data = {
+                "avatar_url": _avatar_url,
+                "initials": _initials,
+                "primary": _primary_str,
+                "secondary": _interpolate_card_template(_secondary_tmpl or "", _item),
+                "stats": [
+                    {
+                        "label": _stat.label,
+                        "value": str(_resolve_path(_item, _stat.value) or ""),
+                    }
+                    for _stat in _stats_specs
+                ],
+                "facts": [_interpolate_card_template(_fact, _item) for _fact in _fact_tmpls],
+            }
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1356,6 +1465,8 @@ async def _workspace_region_handler(
         bar_track_max=bar_track_max,
         # Action grid (#891, v0.61.54) — per-card {label, icon, url, tone, count}
         action_card_data=action_card_data,
+        # Profile card (#892, v0.61.55) — single-record identity panel
+        profile_card_data=profile_card_data,
     )
     return HTMLResponse(content=html)
 

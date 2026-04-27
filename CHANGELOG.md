@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.55] - 2026-04-27
+
+Patch bump. **Fix #892** — `display: profile_card`. Single-record identity panel: avatar (img or initials fallback) + primary name + secondary meta line + 3-up stat grid + bulleted facts list. Resolves a single record (typically via `filter: id = current_context`) and supports tiny `{{ field }}` / `{{ field.path }}` interpolation in `secondary` and `facts` strings — server-side, no Jinja eval.
+
+### Added
+- **`DisplayMode.PROFILE_CARD = "profile_card"`** in `src/dazzle/core/ir/workspaces.py`.
+- **`ProfileCardStatSpec`** IR — frozen Pydantic model with `label` + `value` (field name or dotted path).
+- **`WorkspaceRegion`** new fields:
+  - `avatar_field: str | None` — column name for the avatar URL
+  - `primary: str | None` — column name for the primary identity heading
+  - `secondary: str | None` — quoted-string template (interpolated)
+  - `profile_stats: list[ProfileCardStatSpec]` — stat grid entries
+  - `facts: list[str]` — bulleted-list templates (interpolated)
+- **Lexer tokens** `AVATAR_FIELD`, `PRIMARY`, `SECONDARY`, `STATS`, `FACTS` in `src/dazzle/core/lexer.py`.
+- **`_parse_profile_stats_block`** + **`_parse_facts_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — same dash-list shape as `actions:`.
+- **Tiny safe interpolator** in `src/dazzle_back/runtime/workspace_rendering.py`:
+  - `_resolve_path(item, path)` — walks dotted paths against an item dict
+  - `_initials_from(name)` — first-letter-of-up-to-2-words fallback for the avatar
+  - `_interpolate_card_template(tmpl, item)` — `re.sub` over `{{ IDENT(.IDENT)* }}` only. **No Jinja eval, no expressions, no filters.** FK dicts auto-resolve via the `__display__` chain (mirrors heatmap/box_plot). Unresolved paths render empty.
+- **Runtime branch** for `display == "PROFILE_CARD"` — takes the first item from the standard fetch, builds `profile_card_data` dict (avatar_url, initials, primary, secondary, stats, facts) for the template.
+- **Template** `src/dazzle_ui/templates/workspace/regions/profile_card.html` — flex identity row + grid stats (1 col mobile / 3 col desktop) + bulleted facts list, all design-token colours, `region_card` wrapper for card safety.
+- **`ProfileCardStatSpec`** exported from `dazzle.core.ir.__init__` for downstream consumers.
+
+### Tests
+- **`tests/unit/test_workspace_profile_card.py`** (new) — 31 cases:
+  - `TestProfileCardParser` (6): minimal, secondary template, stats block, dotted-path stat values, facts block, full repro DSL from issue
+  - `TestInterpolateCardTemplate` (9): simple field, dotted path, multiple fields, missing field renders empty, missing dotted-path renders empty, FK dict resolves via `__display__`, empty template, no-placeholders pass-through, **unsafe-expression-left-as-literal** (key safety invariant)
+  - `TestInitialsFrom` (5): two-word, three-word caps at two, single-word, empty, lowercase uppercased
+  - `TestResolvePath` (5): single-segment, dotted path, missing segment, descend into non-dict, empty path
+  - `TestProfileCardTemplateWiring` (5): template map, file existence, `region_card` macro, RegionContext fields, ProfileCardStatSpec construct
+  - `TestProfileCardSafety` (1): static-source guard pinning that the interpolator uses `re.sub`, never Jinja eval
+
+### Agent Guidance
+- **Logic-less template by design.** The template renders pre-resolved strings via the standard Jinja autoescape pipeline. All `{{ ... }}` expansion happens server-side in `_interpolate_card_template` via a strict `IDENT(.IDENT)*` regex — never Jinja's expression parser. Pipe filters (`{{ a | upper }}`), arithmetic (`{{ a + 1 }}`), and function calls aren't supported and are left as literal placeholders so authors notice. **Critically: never eval'd**, so the surface for template injection from author DSL is zero.
+- **FK dict resolution is automatic in interpolation.** A single-segment path like `{{ tutor }}` against an FK dict resolves via the `__display__` → `name` → `title` → `code` → `label` chain (same precedence as heatmap/box_plot). Authors can write `{{ tutor }}` for the display name OR `{{ tutor.full_name }}` for an explicit field — both work.
+- **Unresolved paths render empty, not "None" or error.** A missing path renders an empty string, so cards with one missing field still render the rest. This trades visibility-of-bugs for graceful degradation; combined with the literal-passthrough for unsafe expressions, authors get clear feedback on syntax errors but smooth handling of optional fields.
+- **Single-record fetch.** profile_card uses the standard region fetch path with `filter:` narrowing to one row. The runtime takes `items[0]`. Authors should pair `display: profile_card` with `filter: id = current_context` (or another single-record predicate) — pagination doesn't apply.
+- **Foundation chain complete.** v0.61.52 (#894 region `class:`) + v0.61.53 (#893 bar_track) + v0.61.54 (#891 action_grid) + v0.61.55 (#892 profile_card) deliver the four AegisMark-prototype primitives. Combined: a project can compose a per-pupil dashboard from a `profile_card` sidebar, an `action_grid` CTA strip, multiple `bar_track` confidence rows, all branded via region-level `class:` hooks. Only #890 (pipeline_steps) remains in this batch.
+
 ## [0.61.54] - 2026-04-27
 
 Patch bump. **Fix #891** — `display: action_grid`. CTA cards on dashboards: each card has a label, optional icon (Lucide), optional count badge driven by an aggregate, and a click target resolved to a URL. Tone tokens (positive/warning/destructive/neutral/accent) map to design palette. Foundation pattern for "things the user can do next" surfaces.
