@@ -570,6 +570,13 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # roadmap item #2). `tones` is an unlikely field name but reserve the
     # escape hatch for parity with other keyword-shaped identifiers.
     TokenType.TONES,
+    # v0.61.69 added status_list `entries:` / `state:` keywords (AegisMark
+    # UX patterns roadmap item #3). Both are common field names —
+    # `state` especially could clash with state machines, `entries`
+    # with collection counters. (`caption` already in this list from
+    # the pipeline_steps work.)
+    TokenType.ENTRIES,
+    TokenType.STATE,
     # v0.61.54 (#891) added action_grid keywords. ACTIONS is an
     # existing identifier-shaped name people commonly use for fields
     # and entity attributes. TONE is also a likely color/voice field

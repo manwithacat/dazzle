@@ -774,6 +774,7 @@ from .workspaces import (
     ProfileCardStatSpec,
     ReferenceBand,
     ReferenceLine,
+    StatusListEntrySpec,
     WorkspaceAccessLevel,
     WorkspaceAccessSpec,
     WorkspaceRegion,
@@ -875,6 +876,7 @@ __all__ = [
     "ProfileCardStatSpec",
     "ReferenceBand",
     "ReferenceLine",
+    "StatusListEntrySpec",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences

@@ -694,6 +694,109 @@ class WorkspaceParserMixin:
             )
         return cards
 
+    def _parse_status_entries_block(self) -> list[ir.StatusListEntrySpec]:
+        """Parse the indented body of a status_list ``entries:`` block (#3).
+
+        Each entry is a dash-list dict with ``title`` (required) plus
+        optional ``copy`` / ``icon`` / ``state``::
+
+            entries:
+              - title: "Verified"
+                copy: "Identity confirmed via SSO"
+                icon: "check-circle"
+                state: positive
+              - title: "Pending review"
+                copy: "Awaiting school admin sign-off"
+                icon: "clock"
+                state: warning
+
+        ``state`` reuses the action_grid + metrics + notice tone
+        vocabulary (positive / warning / destructive / accent / neutral).
+        v0.61.69 (AegisMark UX patterns roadmap item #3). Source-bound
+        variant deferred to a later cycle.
+        """
+        entries: list[ir.StatusListEntrySpec] = []
+        _VALID_STATES = {"positive", "warning", "destructive", "neutral", "accent"}
+        _VALID_KEYS = {"title", "caption", "icon", "state"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'status_list entries must start with `- title: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            title_kw = self.expect_identifier_or_keyword().value
+            if title_kw != "title":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"status_list entry must start with `title:`, got {title_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            title_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            caption_str = ""
+            icon_str = ""
+            state_str = "neutral"
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "caption":
+                        caption_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    elif key == "icon":
+                        icon_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    elif key == "state":
+                        state_val = self.expect_identifier_or_keyword().value
+                        if state_val not in _VALID_STATES:
+                            raise make_parse_error(
+                                f"status_list entry {title_str!r}: state must be one of "
+                                f"{sorted(_VALID_STATES)}; got {state_val!r}",
+                                self.file,
+                                key_tok.line,
+                                key_tok.column,
+                            )
+                        state_str = state_val
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown status_list entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            entries.append(
+                ir.StatusListEntrySpec(
+                    title=title_str,
+                    caption=caption_str,
+                    icon=icon_str,
+                    state=state_str,
+                )
+            )
+        return entries
+
     def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
         """Parse the indented body of an ``overlay_series:`` block (#883).
 
@@ -1109,6 +1212,7 @@ class WorkspaceParserMixin:
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
+        status_entries: list[ir.StatusListEntrySpec] = []  # status_list entries (#3, v0.61.69)
         avatar_field: str | None = None  # profile_card avatar source (#892)
         primary: str | None = None  # profile_card primary identity (#892)
         secondary: str | None = None  # profile_card meta line (#892)
@@ -1552,6 +1656,17 @@ class WorkspaceParserMixin:
                 action_cards = self._parse_action_cards_block()
                 self.expect(TokenType.DEDENT)
 
+            # entries: indented dash-list of status_list entries (#3).
+            # Each entry: title/copy/icon/state. v0.61.69 (AegisMark UX
+            # patterns roadmap item #3).
+            elif self.match(TokenType.ENTRIES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                status_entries = self._parse_status_entries_block()
+                self.expect(TokenType.DEDENT)
+
             # avatar_field: <field> — profile_card avatar source (#892)
             elif self.match(TokenType.AVATAR_FIELD):
                 self.advance()
@@ -1661,12 +1776,15 @@ class WorkspaceParserMixin:
         # source/aggregate perspective — `actions:` IS the body.
         # v0.61.56 (#890): pipeline_steps similarly — `stages:` IS the body
         # (each stage carries its own aggregate).
+        # v0.61.69 (#3): status_list — `entries:` IS the body (authored
+        # list, no source/aggregate required).
         if (
             source is None
             and not sources
             and not aggregates
             and not action_cards
             and not pipeline_stages
+            and not status_entries
         ):
             token = self.current_token()
             raise make_parse_error(
@@ -1735,4 +1853,5 @@ class WorkspaceParserMixin:
             title=title_override or None,  # #903: empty string → None for fallback
             tones=tones,
             notice=notice,
+            status_entries=status_entries,
         )

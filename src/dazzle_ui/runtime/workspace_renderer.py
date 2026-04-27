@@ -174,6 +174,11 @@ class RegionContext(BaseModel):
     # verbatim (v0.61.66 #4). The render-ready list with resolved
     # values is built at request time as `pipeline_stage_data`.
     pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
+    # v0.61.69 (#3): status_list entries — vertical icon + title + copy +
+    # state-pill list. Each entry is a plain dict (title/copy/icon/state)
+    # so the template iterates without IR-import dance. Empty list = no
+    # entries (template renders the empty-state fallback).
+    status_entries: list[dict[str, str]] = Field(default_factory=list)
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
     # name → tone token (positive / warning / destructive / accent /
     # neutral). The metrics template surfaces the tone as a per-tile
@@ -299,6 +304,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "ACTION_GRID": "workspace/regions/action_grid.html",  # #891
     "PROFILE_CARD": "workspace/regions/profile_card.html",  # #892
     "PIPELINE_STEPS": "workspace/regions/pipeline_steps.html",  # #890
+    "STATUS_LIST": "workspace/regions/status_list.html",  # #3, v0.61.69
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -548,6 +554,15 @@ def build_workspace_context(
                     if getattr(region, "notice", None)
                     else {}
                 ),  # v0.61.68 #7
+                status_entries=[
+                    {
+                        "title": e.title,
+                        "caption": e.caption,
+                        "icon": e.icon,
+                        "state": e.state,
+                    }
+                    for e in (getattr(region, "status_entries", None) or [])
+                ],  # v0.61.69 #3
             )
         )
 

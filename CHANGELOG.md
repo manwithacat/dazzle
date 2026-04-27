@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.69] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap item #3** — `display: status_list` mode renders a vertical list of icon + title + caption + state-pill entries. The canonical row shape from AegisMark's "agreement card", "schedule grid", and "scope grid" prototype patterns. Authored variant only this cycle (DSL `entries:` dash-list); the source-bound variant that maps entity rows to entries is deferred to a later cycle per the roadmap.
+
+This completes Phase 2's largest single piece. Phases 1+2 of the roadmap are now complete except the deliberately deferred items (#5 pair_strip and #6 consent archetype, both pending more example-app data).
+
+### Added
+- **`DisplayMode.STATUS_LIST`** + `workspace/regions/status_list.html` template. State pill colours route through design-system HSL slots (`var(--success)`, `var(--warning)`, etc.) — five tone tokens reuse the action_grid + metrics + notice vocabulary. Neutral-state entries omit the pill so the row reads as plain info rather than a status row.
+- **`StatusListEntrySpec` IR type** (`src/dazzle/core/ir/workspaces.py`) — frozen Pydantic model with `title: str`, `caption: str = ""`, `icon: str = ""`, `state: str = "neutral"`. Field is `caption` (not `copy`) to dodge the `BaseModel.copy()` shadow and stay consistent with `PipelineStageSpec.caption`.
+- **DSL `entries:` block parser** (`src/dazzle/core/dsl_parser_impl/workspace.py`) — mirrors the action_grid `actions:` parser. Each entry is a dash-list dict with `title:` (required) plus optional `caption:` / `icon:` / `state:`. Validates state token against the five-token palette at parse time. status_list joins action_grid and pipeline_steps in the bodyless-region exemption (no `source:` / `aggregate:` required when `entries:` IS the body).
+- **New tokens** `ENTRIES`, `STATE` (and an existing `CAPTION` reuse). Both new tokens added to `KEYWORD_AS_IDENTIFIER_TYPES` so authors can still use `state` / `entries` as field names elsewhere.
+- **`examples/ops_dashboard`** `ops_readiness` region demonstrates four entries spanning all the relevant tones (positive on-call rotation, positive runbook coverage, warning pager test, accent audit window).
+
+### Tests
+- **`test_workspace_status_list.py`** — 23 tests across parser (minimal pair, title-only entry, state defaults to neutral, invalid state raises, unknown key raises, entry must start with title, each valid state token parses), bodyless exemption, `StatusListEntrySpec` (minimal/full/`copy`-shadow check), runtime wiring (display map, template file exists, RegionContext default + carries entries), template binding (iterates `status_entries`, renders each field, Lucide icon attribute, design-system tokens for all five tones, region_card macro, canonical class markers, neutral-state pill omission), and empty-state.
+
+### Agent Guidance
+- **Don't name a Pydantic field `copy`.** `BaseModel.copy()` is a deprecated method — a field with that name shadows it and triggers a `UserWarning` on every parse. Use `caption` (consistent with `PipelineStageSpec`), `body` (consistent with `NoticeSpec`), or `description`. The `copy`-shadow check (`callable(spec.copy)`) is a useful regression guard.
+- **Bodyless region exemption is now a 3-component contract.** action_grid (`actions:`), pipeline_steps (`stages:`), and status_list (`entries:`) all sidestep the "source: or aggregate: required" check because their indented dash-list IS the body. When adding a new authored-list display mode, add the corresponding `and not <new_field>` to the exemption check in `parse_workspace`. Forgetting this surfaces as `Workspace region 'X' requires 'source:' or 'aggregate:' block` even though the DSL is correct.
+- **One entry parser shape, three components.** action_grid, pipeline_steps, and status_list all use the same dash-list-of-dicts shape with one required leading key (`label:` for the first two, `title:` for status_list). This consistency lets authors transfer mental model between components — and makes the parser implementation almost copy-paste. When adding a fourth entry-shaped component, mirror the same shape rather than inventing a new one.
+
 ## [0.61.68] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap item #7** — region-level `notice:` field renders a prominent banner band above the data body in the dashboard slot. AegisMark's SIMS-sync-opt-in prototype uses notices for legal-basis disclosure, opt-in context, and status banners — strong line + secondary copy with tone tinting. Phase 1 of the roadmap is now complete (items #1, #2, #4, #7).

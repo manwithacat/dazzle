@@ -158,6 +158,8 @@ class TokenType(Enum):
     CAPTION = "caption"  # v0.61.56 (#890): pipeline_steps stage sub-text
     EYEBROW = "eyebrow"  # v0.61.60: region kicker line above the title
     TONES = "tones"  # v0.61.65: per-metric tone palette tokens for `display: metrics`
+    ENTRIES = "entries"  # v0.61.69 (#3): status_list entry block keyword
+    STATE = "state"  # v0.61.69 (#3): status_list entry pill state token
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

@@ -79,6 +79,7 @@ class DisplayMode(StrEnum):
     ACTION_GRID = "action_grid"  # v0.61.54 (#891): CTA cards on dashboards
     PROFILE_CARD = "profile_card"  # v0.61.55 (#892): single-record identity panel
     PIPELINE_STEPS = "pipeline_steps"  # v0.61.56 (#890): sequential-stage workflow
+    STATUS_LIST = "status_list"  # v0.61.69 (#7): vertical icon + title + copy + state-pill list
 
 
 class BucketRef(BaseModel):
@@ -283,6 +284,37 @@ class DeltaSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class StatusListEntrySpec(BaseModel):
+    """v0.61.69 (#3): one entry in a status_list region.
+
+    Each entry is an icon + title + secondary copy + state pill —
+    the canonical row shape for AegisMark's "agreement card",
+    "schedule grid", and "scope grid" patterns. Authored as a static
+    list (this initial cycle); a source-bound variant that maps
+    entity rows to entries is deferred per the roadmap.
+
+    Attributes:
+        title: Strong primary line — the entry headline.
+        caption: Secondary descriptive line. Empty string omits the
+            line. Field name matches `PipelineStageSpec.caption` for
+            consistency across components — and dodges `copy` which
+            shadows Pydantic's deprecated `BaseModel.copy()` method.
+        icon: Lucide icon name (e.g. "check-circle", "clock"). Empty
+            string omits the icon column.
+        state: Pill state token — same vocabulary as action_grid /
+            metrics / notice tones (``positive`` / ``warning`` /
+            ``destructive`` / ``accent`` / ``neutral``). Defaults to
+            ``neutral``. Empty string also resolves to ``neutral``.
+    """
+
+    title: str
+    caption: str = ""
+    icon: str = ""
+    state: str = "neutral"
+
+    model_config = ConfigDict(frozen=True)
+
+
 class NoticeSpec(BaseModel):
     """v0.61.68: prominent notice band rendered above the region body
     inside the dashboard slot. AegisMark's SIMS-sync-opt-in prototype
@@ -461,6 +493,10 @@ class WorkspaceRegion(BaseModel):
     # row of stage cards with arrow connectors. Empty list = legacy
     # behaviour (no stages).
     pipeline_stages: list[PipelineStageSpec] = Field(default_factory=list)
+    # v0.61.69 (#3): status_list entries — vertical icon + title + copy
+    # + state-pill list. Authored shape (source-bound variant deferred).
+    # Empty list = legacy behaviour (no entries).
+    status_entries: list[StatusListEntrySpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

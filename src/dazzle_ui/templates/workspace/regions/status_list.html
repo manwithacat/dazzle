@@ -1,0 +1,75 @@
+{# Status list region — v0.61.69 (#3, AegisMark UX patterns roadmap).
+
+   Vertical list of icon + title + secondary copy + state pill. The
+   canonical row shape for AegisMark's "agreement card", "schedule
+   grid", and "scope grid" patterns. Authored shape only this cycle
+   (`entries:` dash-list); source-bound variant deferred.
+
+   State tokens reuse the action_grid + metrics + notice palette
+   (positive / warning / destructive / accent / neutral). All tints
+   route through design-system HSL slots so theming applies.
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-status-list-region">
+  {% if status_entries and status_entries | length > 0 %}
+    {% set _pill_classes = {
+      'positive': 'bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]',
+      'warning': 'bg-[hsl(var(--warning)/0.18)] text-[hsl(var(--warning))]',
+      'destructive': 'bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]',
+      'accent': 'bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))]',
+      'neutral': 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+    } %}
+    {% set _icon_classes = {
+      'positive': 'text-[hsl(var(--success))]',
+      'warning': 'text-[hsl(var(--warning))]',
+      'destructive': 'text-[hsl(var(--destructive))]',
+      'accent': 'text-[hsl(var(--primary))]',
+      'neutral': 'text-[hsl(var(--muted-foreground))]',
+    } %}
+    <ul class="dz-status-list flex flex-col divide-y divide-[hsl(var(--border))] list-none"
+        data-dz-entry-count="{{ status_entries | length }}">
+      {% for entry in status_entries %}
+        {% set _state = entry.state | default('neutral') or 'neutral' %}
+        {% set _pill_bg = _pill_classes.get(_state, _pill_classes['neutral']) %}
+        {% set _icon_color = _icon_classes.get(_state, _icon_classes['neutral']) %}
+        <li class="dz-status-list-entry flex items-start gap-3 py-3 first:pt-1 last:pb-1"
+            data-dz-state="{{ _state }}">
+          {% if entry.icon %}
+            <span class="dz-status-list-icon flex items-center justify-center w-5 h-5 mt-0.5 shrink-0 {{ _icon_color }}"
+                  data-lucide="{{ entry.icon }}"
+                  aria-hidden="true"></span>
+          {% else %}
+            {# Reserve the icon column so titles align even when some
+               entries lack an icon. #}
+            <span class="w-5 shrink-0" aria-hidden="true"></span>
+          {% endif %}
+          <div class="dz-status-list-text flex-1 min-w-0">
+            <div class="dz-status-list-title text-[13px] font-medium leading-tight text-[hsl(var(--foreground))]">
+              {{ entry.title }}
+            </div>
+            {% if entry.caption %}
+              <div class="dz-status-list-caption text-[12px] leading-snug text-[hsl(var(--muted-foreground))] mt-0.5">
+                {{ entry.caption }}
+              </div>
+            {% endif %}
+          </div>
+          {# Pill renders only for non-neutral states; neutral entries
+             omit the pill so the row reads as plain info rather than a
+             status row. Authors who explicitly want a "Pending"-style
+             muted pill can use a different state token (e.g. accent). #}
+          {% if _state != 'neutral' %}
+            <span class="dz-status-list-pill shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide {{ _pill_bg }}">
+              {{ _state }}
+            </span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No status entries.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

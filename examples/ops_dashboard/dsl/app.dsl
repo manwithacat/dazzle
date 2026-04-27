@@ -359,6 +359,29 @@ workspace command_center "Command Center":
         caption: "external compliance log"
         value: "Daily 02:00 UTC"
 
+  # Status list — surface ops-readiness checks in a vertical row of
+  # icon + title + copy + state-pill entries. Exercises the v0.61.69
+  # (#3) status_list display mode (AegisMark UX patterns roadmap).
+  ops_readiness:
+    display: status_list
+    entries:
+      - title: "On-call rotation"
+        caption: "Verified for the next 24h"
+        icon: "user-check"
+        state: positive
+      - title: "Runbook coverage"
+        caption: "All P1 alerts have linked runbooks"
+        icon: "book-open"
+        state: positive
+      - title: "Pager test"
+        caption: "Last weekly test 3 days ago"
+        icon: "clock"
+        state: warning
+      - title: "Audit window"
+        caption: "External SOC 2 evidence freeze in effect"
+        icon: "shield"
+        state: accent
+
   # Profile card — single-system identity panel. Exercises the v0.61.55
   # (#892) profile_card display mode with `filter: id = current_context`
   # narrowing to one row.
