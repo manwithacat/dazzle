@@ -75,6 +75,7 @@ class DisplayMode(StrEnum):
     RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
     BOX_PLOT = "box_plot"  # v0.61.29 (#881): per-group quartile spread
     BULLET = "bullet"  # v0.61.30 (#880): actual-vs-target rows with bands
+    BAR_TRACK = "bar_track"  # v0.61.53 (#893): per-row label + filled track + value
 
 
 class BucketRef(BaseModel):
@@ -295,6 +296,17 @@ class WorkspaceRegion(BaseModel):
     # space-separated. Pure presentation hook — no impact on data,
     # scope, or semantics.
     css_class: str | None = None
+    # v0.61.53 (#893): bar_track display config — per-row horizontal
+    # value bar. Reuses `group_by` for the row dimension and
+    # `aggregates` for the bar value (single-dim chart pipeline). These
+    # two fields are bar_track-specific:
+    #   track_max — denominator for the fill ratio. None means "auto"
+    #     (max of the bucketed values).
+    #   track_format — Python format spec applied to the value for the
+    #     right-side numeric (e.g. "{:.0%}", "{:,.0f}"). None means raw
+    #     str() of the value.
+    track_max: float | None = None
+    track_format: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

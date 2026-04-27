@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.53] - 2026-04-27
+
+Patch bump. **Fix #893** — `display: bar_track`. Compact horizontal value bars (per-row label + filled track + numeric) — pill-shaped tracks ideal for "AO score per pupil" or "feature adoption per cohort" cards. Reuses the existing single-dim chart pipeline for data, so existing `group_by` + `aggregate:` vocabulary works unchanged; only `track_max:` and `track_format:` are bar_track-specific.
+
+### Added
+- **`DisplayMode.BAR_TRACK = "bar_track"`** in `src/dazzle/core/ir/workspaces.py`.
+- **`WorkspaceRegion.track_max: float | None`** — fill denominator. `None` means auto (max of bucketed values, falls back to 1.0 for the all-zero edge case to avoid div-by-zero).
+- **`WorkspaceRegion.track_format: str | None`** — Python format spec applied server-side via `format()` or `str.format()`. Accepts both styles transparently: `".0%"` (bare spec, passed to `format()`) and `"{:.0%}"` (str.format template, used as-is). Authors can copy from f-string code without re-learning vocabulary.
+- **Lexer tokens** `TRACK_MAX` + `TRACK_FORMAT` in `src/dazzle/core/lexer.py`. Parser branches accept numeric for `track_max:` and quoted-string-only for `track_format:` (format specs commonly contain `:` and `{}` that don't tokenise as bare identifiers).
+- **`RegionContext.track_max` / `track_format`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows IR → render context.
+- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — adds `BAR_TRACK` to `_single_dim_chart_modes` so the existing `_compute_bucketed_aggregates` machinery fires unchanged. Post-processes `bucketed_metrics` into `bar_track_rows` with `fill_pct` (clamped to [0, 100] — values above max clamp; negatives clamp to 0) and `formatted_value` (format spec applied with graceful fallback to raw `str()` on malformed spec).
+- **Template** `src/dazzle_ui/templates/workspace/regions/bar_track.html` — pill-shaped track using design tokens (`hsl(var(--muted))` + `hsl(var(--primary))`), ARIA `progressbar` semantics, server-rendered formatted values. Card safety: zero chrome + zero title — wrapped in the `region_card` macro per the dashboard slot contract.
+
+### Tests
+- **`tests/unit/test_workspace_bar_track.py`** (new) — 23 cases across 3 classes:
+  - `TestBarTrackParser` (6 cases): minimal DSL, `track_max:` parses, int → float coercion, `track_format:` parses, must-be-quoted enforcement, full repro DSL from the issue
+  - `TestBarTrackPostProcessing` (11 cases): explicit max → fill_pct, auto-max scaling, format spec applied (both `{:.0%}` and bare `.0%` styles), thousands separator, no-format default, malformed spec falls back, value > max clamps to 100%, negative → 0%, empty buckets, zero value, non-numeric coerces to 0
+  - `TestBarTrackTemplateWiring` (6 cases): template map registration, file existence, `region_card` macro use, RegionContext fields, single-dim mode set membership
+
+### Agent Guidance
+- **Bar_track reuses bar_chart's data path.** When adding similar single-dim chart modes, prefer extending the existing `_compute_bucketed_aggregates` pipeline with a new template + post-processing step over building a parallel data path. The split is intentional: data shape is shared (`bucketed_metrics`); presentation is per-template.
+- **Format specs accept both styles.** `track_format: ".0%"` and `track_format: "{:.0%}"` produce identical output. The runtime detects `{` in the spec and routes to `str.format()` if present; otherwise to `format()`. Authors can copy from f-strings without translation.
+- **Server-side formatting, not Jinja.** `formatted_value` is computed in Python before the template renders so author intent (`"{:,.0f}"`, `"{:.0%}"`) works without Jinja filter gymnastics. Side benefit: a malformed format spec logs a warning + falls back to raw `str()` rather than crashing the dashboard.
+- **Foundation chain.** Combined with #894 (region `class:` hook), authors can ship a "kpi-strip" cluster of bar_track regions with project-specific styling: `display: bar_track` + `class: "kpi-strip dense"` for a tight, branded layout.
+
 ## [0.61.52] - 2026-04-27
 
 Patch bump. **Fix #894** — region-level `class:` field. DSL authors can now attach a project-supplied CSS hook to any workspace region's outer card wrapper without forking templates or relying on heuristic class hooks.

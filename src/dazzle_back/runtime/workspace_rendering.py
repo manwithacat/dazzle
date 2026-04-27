@@ -842,7 +842,7 @@ async def _workspace_region_handler(
     # SECURITY (#887): same gating as `metrics` above — bucketed
     # aggregates run their own SQL GROUP BY query and would leak
     # cross-tenant rows when scope is denied.
-    _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR"}
+    _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK"}
     if (
         ctx.ctx_region.display in _single_dim_chart_modes
         and group_by
@@ -976,6 +976,66 @@ async def _workspace_region_handler(
                 for b in (getattr(ctx.ir_region, "reference_bands", None) or [])
             )
             bullet_max_value = max(_scale_candidates) if _scale_candidates else 0.0
+
+    # Bar track (#893, v0.61.53): per-row label + filled track + value.
+    # Reuses the single-dim chart pipeline — `bucketed_metrics` is
+    # already populated above. Post-process into row dicts with a
+    # computed `fill_pct` (value / track_max) and `formatted_value`
+    # (Python format spec applied). The format spec runs in Python via
+    # `format()` rather than Jinja so the template stays simple and we
+    # don't risk template injection from an author-supplied format
+    # string.
+    bar_track_rows: list[dict[str, Any]] = []
+    bar_track_max: float = 0.0
+    if ctx.ctx_region.display == "BAR_TRACK" and bucketed_metrics:
+        _explicit_max = ctx.ctx_region.track_max
+        _format_spec = ctx.ctx_region.track_format or ""
+        _values: list[float] = []
+        for _bucket in bucketed_metrics:
+            try:
+                _values.append(float(_bucket.get("value") or 0))
+            except (TypeError, ValueError):
+                _values.append(0.0)
+        # Auto-max when not explicitly set: use the largest bucketed
+        # value so all bars fit in [0, 1] of the track. Falls back to
+        # 1.0 when all values are zero/negative to avoid div-by-zero.
+        bar_track_max = (
+            float(_explicit_max)
+            if _explicit_max is not None
+            else (max(_values) if _values and max(_values) > 0 else 1.0)
+        )
+        for _bucket, _value in zip(bucketed_metrics, _values, strict=True):
+            _fill_pct = (
+                max(0.0, min(100.0, (_value / bar_track_max) * 100.0)) if bar_track_max else 0.0
+            )
+            # Accept both str.format-template syntax (`"{:.0%}"` — what the
+            # issue example shows; matches f-string convention) and bare
+            # format-spec syntax (`".0%"`). Detect by looking for the
+            # `{` wrapper.
+            try:
+                if not _format_spec:
+                    _formatted = str(_value)
+                elif "{" in _format_spec:
+                    _formatted = _format_spec.format(_value)
+                else:
+                    _formatted = format(_value, _format_spec)
+            except (ValueError, TypeError, KeyError, IndexError):
+                # Malformed format spec → fall back to raw str. Logged so
+                # authors notice; doesn't crash the dashboard.
+                logger.warning(
+                    "bar_track region %r: invalid track_format %r — rendering raw value",
+                    ctx.ctx_region.name,
+                    _format_spec,
+                )
+                _formatted = str(_value)
+            bar_track_rows.append(
+                {
+                    "label": str(_bucket.get("label") or ""),
+                    "value": _value,
+                    "fill_pct": _fill_pct,
+                    "formatted_value": _formatted,
+                }
+            )
 
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
@@ -1217,6 +1277,9 @@ async def _workspace_region_handler(
         bullet_max_value=bullet_max_value,
         # Overlay series (#883, v0.61.33) — additional polylines on line/area charts
         overlay_series_data=overlay_series_data,
+        # Bar track (#893, v0.61.53) — per-row {label, value, fill_pct, formatted_value}
+        bar_track_rows=bar_track_rows,
+        bar_track_max=bar_track_max,
     )
     return HTMLResponse(content=html)
 

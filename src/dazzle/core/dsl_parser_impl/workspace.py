@@ -789,6 +789,8 @@ class WorkspaceParserMixin:
         bullet_target: str | None = None  # bullet chart target column (#880)
         overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
         css_class: str | None = None  # region wrapper CSS class hook (#894)
+        track_max: float | None = None  # bar_track fill denominator (#893)
+        track_format: str | None = None  # bar_track value format string (#893)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1083,6 +1085,25 @@ class WorkspaceParserMixin:
                     css_class = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # track_max: <number> — bar_track fill denominator (#893).
+            # When omitted, runtime computes `auto` (max of bucketed values).
+            elif self.match(TokenType.TRACK_MAX):
+                self.advance()
+                self.expect(TokenType.COLON)
+                num_token = self.expect(TokenType.NUMBER)
+                track_max = float(num_token.value)
+                self.skip_newlines()
+
+            # track_format: "<python-format-spec>" — bar_track value
+            # format string (#893). Quoted string only — format specs
+            # commonly contain `:` and `{}` that don't tokenise as bare
+            # identifiers.
+            elif self.match(TokenType.TRACK_FORMAT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                track_format = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
             # overlay_series: indented dash-list of {label, source?,
             # filter?, aggregate} entries — additional line/area chart
             # series with their own scope (#883).
@@ -1202,4 +1223,6 @@ class WorkspaceParserMixin:
             bullet_target=bullet_target,
             overlay_series=overlay_series,
             css_class=css_class,
+            track_max=track_max,
+            track_format=track_format,
         )

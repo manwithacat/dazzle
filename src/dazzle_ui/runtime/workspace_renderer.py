@@ -116,6 +116,11 @@ class RegionContext(BaseModel):
     # `cards_for_json` payload so the Alpine card-grid binds it on the
     # `<div :data-card-id>` element.
     css_class: str = ""
+    # v0.61.53 (#893): bar_track display config — fill denominator and
+    # value format string. Defaults preserve the legacy "raw" rendering
+    # for non-bar_track displays.
+    track_max: float | None = None
+    track_format: str = ""
 
 
 class WorkspaceContext(BaseModel):
@@ -225,6 +230,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "RADAR": "workspace/regions/radar.html",
     "BOX_PLOT": "workspace/regions/box_plot.html",
     "BULLET": "workspace/regions/bullet.html",
+    "BAR_TRACK": "workspace/regions/bar_track.html",  # #893
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -435,6 +441,8 @@ def build_workspace_context(
                 bullet_target=getattr(region, "bullet_target", None) or "",
                 delta=getattr(region, "delta", None),
                 css_class=getattr(region, "css_class", None) or "",  # #894
+                track_max=getattr(region, "track_max", None),  # #893
+                track_format=getattr(region, "track_format", None) or "",  # #893
             )
         )
 

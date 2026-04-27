@@ -1,0 +1,47 @@
+{# Bar track region — v0.61.53 (#893).
+
+   Compact horizontal value bars: per-row label + filled track + value.
+   One row per bucket; bucket comes from the standard `group_by` +
+   `aggregates` single-dim chart pipeline (same data shape as
+   bar_chart). Differences from bar_chart:
+
+   - Horizontal track (vs vertical bar)
+   - Value pre-formatted server-side via `track_format` Python format
+     spec (so author intent like `"{:.0%}"` works without Jinja
+     filter gymnastics)
+   - Fill computed from `value / track_max` (or auto-max when
+     `track_max:` is omitted)
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-bar-track-region">
+  {% if bar_track_rows and bar_track_rows | length > 0 %}
+    <div class="dz-bar-track-rows space-y-1.5 mt-2">
+      {% for row in bar_track_rows %}
+        <div class="dz-bar-track-row flex items-center gap-2 text-[12px]">
+          <span class="dz-bar-track-label w-28 truncate text-right text-[hsl(var(--foreground))]"
+                title="{{ row.label }}">{{ row.label }}</span>
+          <div class="dz-bar-track flex-1 relative h-4 bg-[hsl(var(--muted))] rounded-full overflow-hidden"
+               role="progressbar"
+               aria-valuemin="0"
+               aria-valuemax="{{ bar_track_max }}"
+               aria-valuenow="{{ row.value }}"
+               aria-label="{{ row.label }}: {{ row.formatted_value }}">
+            <span class="dz-bar-track-fill absolute top-0 bottom-0 left-0 bg-[hsl(var(--primary))] rounded-full transition-[width] duration-200"
+                  style="width: {{ row.fill_pct | round(2) }}%;"
+                  title="{{ row.label }}: {{ row.formatted_value }}"></span>
+          </div>
+          <span class="dz-bar-track-value w-16 text-right font-mono text-[hsl(var(--muted-foreground))]">{{ row.formatted_value }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+      {{ bar_track_rows | length }} rows · scale 0–{{ bar_track_max | round(2) }}
+    </p>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}
