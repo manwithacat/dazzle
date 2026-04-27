@@ -575,6 +575,15 @@ async def _workspace_region_handler(
     total = 0
     columns: list[dict[str, Any]] = []
 
+    # SECURITY (#887): default-deny scope state before evaluating
+    # `_apply_workspace_scope_filters`. The aggregate / bucketed /
+    # pivot / overlay code paths downstream gate on `_scope_denied`,
+    # so any failure path that skips scope evaluation (no repo, early
+    # exception) MUST surface as a denial — otherwise unfiltered SQL
+    # aggregates leak cross-tenant data.
+    _scope_only_filters: dict[str, Any] | None = None
+    _scope_denied: bool = True
+
     repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
     if repo:
         try:
@@ -724,9 +733,11 @@ async def _workspace_region_handler(
     if format_param == "csv":
         return _render_csv_response(items, columns, ctx.ctx_region.name)
 
-    # Build aggregate metrics if configured
+    # Build aggregate metrics if configured. SECURITY (#887): suppress
+    # when scope is denied — unfiltered aggregates would leak counts /
+    # sums / averages across tenants.
     metrics: list[dict[str, Any]] = []
-    if ctx.ctx_region.aggregates:
+    if ctx.ctx_region.aggregates and not _scope_denied:
         metrics = await _compute_aggregate_metrics(
             ctx.ctx_region.aggregates,
             ctx.repositories,
@@ -825,8 +836,16 @@ async def _workspace_region_handler(
     # Compute bucketed aggregates for bar_chart / line_chart / sparkline —
     # single-dim distributions or time-series. Multi-dim (area_chart /
     # pivot_table) runs through _compute_pivot_buckets below.
+    # SECURITY (#887): same gating as `metrics` above — bucketed
+    # aggregates run their own SQL GROUP BY query and would leak
+    # cross-tenant rows when scope is denied.
     _single_dim_chart_modes = {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR"}
-    if ctx.ctx_region.display in _single_dim_chart_modes and group_by and ctx.ctx_region.aggregates:
+    if (
+        ctx.ctx_region.display in _single_dim_chart_modes
+        and group_by
+        and ctx.ctx_region.aggregates
+        and not _scope_denied
+    ):
         bucketed_metrics = await _compute_bucketed_aggregates(
             ctx.ctx_region.aggregates,
             ctx.repositories,
@@ -870,7 +889,14 @@ async def _workspace_region_handler(
     # layer (area_chart).
     overlay_series_data: list[dict[str, Any]] = []
     _ir_overlays = (getattr(ctx.ir_region, "overlay_series", None) if ctx.ir_region else None) or []
-    if _ir_overlays and ctx.ctx_region.display in {"LINE_CHART", "AREA_CHART"} and group_by:
+    # SECURITY (#887): overlays each fire a fresh `_compute_bucketed_aggregates`
+    # against `_ovl_source` — same scope gate as the primary buckets above.
+    if (
+        _ir_overlays
+        and ctx.ctx_region.display in {"LINE_CHART", "AREA_CHART"}
+        and group_by
+        and not _scope_denied
+    ):
         for _overlay in _ir_overlays:
             _ovl_source = _overlay.source or ctx.source
             # Convert the overlay's filter ConditionExpr → flat dict for
@@ -954,6 +980,8 @@ async def _workspace_region_handler(
     # is a column on the source entity or a BucketRef for time-bucketed
     # dims; FK columns auto-LEFT JOIN their target so the bucket carries
     # the resolved display field.
+    # SECURITY (#887): same gating — `_compute_pivot_buckets` runs a
+    # multi-dim GROUP BY query and would expose unscoped tenant rows.
     pivot_buckets: list[dict[str, Any]] = []
     pivot_dim_specs: list[dict[str, Any]] = []
     _multi_dim_modes = {"PIVOT_TABLE", "AREA_CHART"}
@@ -962,6 +990,7 @@ async def _workspace_region_handler(
         ctx.ctx_region.display in _multi_dim_modes
         and _ir_group_by_dims
         and ctx.ctx_region.aggregates
+        and not _scope_denied
     ):
         pivot_buckets, pivot_dim_specs = await _compute_pivot_buckets(
             ctx.ctx_region.aggregates,
@@ -1204,6 +1233,12 @@ async def _fetch_region_json(
     items: list[dict[str, Any]] = []
     total = 0
 
+    # SECURITY (#887): mirror `_workspace_region_handler` — default-deny
+    # scope state so a missing repo or early exception doesn't bypass
+    # the gate on `_compute_aggregate_metrics` below.
+    _scope_only_filters_batch: dict[str, Any] | None = None
+    _scope_denied: bool = True
+
     if repo:
         try:
             filters: dict[str, Any] | None = None
@@ -1233,10 +1268,16 @@ async def _fetch_region_json(
             if ir_sort:
                 sort_list = [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
 
-            # SECURITY: apply entity-level scope predicates (#574)
-            filters, _scope_denied = _apply_workspace_scope_filters(
-                ctx, auth_context, user_id, filters
+            # SECURITY: apply entity-level scope predicates (#574).
+            # Capture scope-only filters (without other request filters
+            # mixed in) so `_compute_aggregate_metrics` below can run a
+            # scope-aware aggregate query — unfiltered aggregates leak
+            # cross-tenant counts (#887).
+            _scope_only_filters_batch, _scope_denied = _apply_workspace_scope_filters(
+                ctx, auth_context, user_id, None
             )
+            if _scope_only_filters_batch:
+                filters = {**(filters or {}), **_scope_only_filters_batch}
 
             limit = ctx.ctx_region.limit or page_size
             include_rels = ctx.auto_include or None
@@ -1265,10 +1306,17 @@ async def _fetch_region_json(
                 "Batch: failed to list items for region %s", ctx.ctx_region.name, exc_info=True
             )
 
+    # SECURITY (#887): suppress aggregates when scope is denied AND
+    # propagate the scope-only filters so the aggregate query stays
+    # tenant-bounded for the legitimate case.
     metrics: list[dict[str, Any]] = []
-    if ctx.ctx_region.aggregates:
+    if ctx.ctx_region.aggregates and not _scope_denied:
         metrics = await _compute_aggregate_metrics(
-            ctx.ctx_region.aggregates, ctx.repositories, total, items
+            ctx.ctx_region.aggregates,
+            ctx.repositories,
+            total,
+            items,
+            scope_filters=_scope_only_filters_batch,
         )
 
     return {

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.49] - 2026-04-27
+
+Patch bump. **Security fix #887** — chart aggregations were bypassing the workspace scope-deny gate, leaking cross-tenant counts / sums / averages from `_compute_aggregate_metrics`, `_compute_bucketed_aggregates`, `_compute_pivot_buckets`, and the line/area overlay loop. The list-items path correctly returned an empty result on denial; the parallel aggregate paths ran unfiltered SQL and exposed totals across all tenants.
+
+### Security
+- **Default-deny scope state in `_workspace_region_handler`** — `_scope_only_filters` and `_scope_denied` are now initialized to `(None, True)` BEFORE the `if repo:` block, so any failure path that skips scope evaluation (no repo, early exception) surfaces as a denial rather than silently dropping into unfiltered aggregates.
+- **Aggregate gate at every call site** — `_compute_aggregate_metrics`, `_compute_bucketed_aggregates` (single-dim), the `_ir_overlays` loop's `_compute_bucketed_aggregates` (overlays), and `_compute_pivot_buckets` (multi-dim) all now check `not _scope_denied` before firing. Each comment cites #887 so future edits don't strip the guard accidentally.
+- **`_fetch_region_json` (batch handler) parity fix** — pre-init mirrors the primary handler, scope-only filters captured separately and propagated to `_compute_aggregate_metrics(scope_filters=...)`. Pre-fix, the batch handler ran aggregates with no filter at all AND no denial check.
+
+### Tests
+- **`test_workspace_scope_enforcement.py`** extended to 15 cases (was 12): new `TestAggregateScopeGate` class — `test_default_deny_initial_state_blocks_aggregates` (source-level invariant pinning the default-deny pre-init), `test_aggregate_call_sites_gated_on_scope_denied` (counts ≥4 `not _scope_denied` guards across the handler), and `test_apply_workspace_scope_filters_returns_denied_for_unmatched_role` (upstream signal the gates depend on). Pure source / boolean checks — fast and don't depend on the full handler stub stack.
+
+### Agent Guidance
+- **Aggregate paths must gate on `_scope_denied`, not just merge `_scope_only_filters`.** Pre-fix, the contract was "if scope produces a filter, merge it; else run unfiltered" — that conflates "no scope rule needed" (legitimate admin) with "scope rule didn't match" (default-deny). The fix makes denial a separate boolean. When adding new chart / metric / aggregate code paths, the contract is: **no aggregate fires unless `_scope_denied is False`**.
+- **Default-deny is the safe init.** The pre-init for `_scope_denied` is `True` so any failure path before scope evaluation defaults to "no aggregates ran" rather than NameError-or-silent-bypass. New helper functions that compute aggregates from `ctx` should mirror this init pattern.
+- **Static-source invariant tests are cheap and effective for security gates.** When a fix is "guard X must be present at call sites Y", a regex/substring check on the source catches future edits that strip the guard. Faster than building a stub stack and avoids the testing-the-mock anti-pattern.
+
 ## [0.61.48] - 2026-04-26
 
 Patch bump. **Phase C Patch 4** — unified site + app-shell theme manifest. An app theme can now declare a `[site]` section in its TOML to set the legacy `ThemeSpec` preset and per-token overrides for site/marketing-page rendering. One theme file → both layers configured.

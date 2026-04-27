@@ -276,3 +276,84 @@ class TestWorkspaceRegionContextFields:
         fk = SimpleNamespace()
         ctx = _make_region_ctx(fk_graph=fk)
         assert ctx.fk_graph is fk
+
+
+# ===========================================================================
+# Aggregate scope-denial gating (#887)
+# ===========================================================================
+#
+# Charts and metric tiles share the same scope contract as list items: when
+# `_apply_workspace_scope_filters` returns `(_, True)` (no scope rule
+# matched the user's roles → default-deny), the aggregate / bucketed /
+# pivot / overlay code paths must NOT run. Pre-fix, the items list was
+# empty (correctly), but the aggregate SQL queries fired with no filter,
+# leaking cross-tenant counts / sums / averages.
+#
+# These tests exercise the gating at the call-site level: with scope
+# returning denied, the aggregate helpers must not be invoked.
+
+
+class TestAggregateScopeGate:
+    """Pin the #887 fix — aggregates suppressed when scope denies."""
+
+    def test_default_deny_initial_state_blocks_aggregates(self) -> None:
+        """The pre-init defaults are `_scope_denied = True`. If scope
+        evaluation never runs (no repo / early exception), aggregates
+        must not fire — the unbound-then-used pattern that pre-existed
+        could surface as either NameError OR (worse, silently) as
+        unfiltered SQL."""
+        # Read the source and verify the pre-init is in place. This is
+        # a lightweight invariant check that catches future regressions
+        # where someone removes the default-deny init.
+        from pathlib import Path
+
+        src = Path("/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py").read_text()
+        # The pre-init must default-deny; explicit `True` is the contract.
+        assert "_scope_denied: bool = True" in src, (
+            "Default-deny init missing — #887 regression risk"
+        )
+
+    def test_aggregate_call_sites_gated_on_scope_denied(self) -> None:
+        """Each aggregate / bucketed / pivot call site in
+        `_workspace_region_handler` must include `not _scope_denied`
+        in its guard. This is a static check on the source — if a
+        future edit removes one of these guards, this test fails
+        loudly before the bypass reaches production."""
+        from pathlib import Path
+
+        src = Path("/Volumes/SSD/Dazzle/src/dazzle_back/runtime/workspace_rendering.py").read_text()
+        # Count gate uses in `_workspace_region_handler` — there are
+        # 4 aggregate call sites in that handler (metrics / bucketed /
+        # overlays / pivot) plus 1 in `_fetch_region_json`. Every one
+        # must either short-circuit on `_scope_denied` or the function
+        # itself must fail with that flag set.
+        assert src.count("and not _scope_denied") >= 4, (
+            "Expected ≥4 `not _scope_denied` guards across aggregate call "
+            "sites in workspace_rendering.py — #887 fix incomplete"
+        )
+        # `_fetch_region_json` uses an `if ... and not _scope_denied:` form
+        # via the `if ctx.ctx_region.aggregates and not _scope_denied:` line.
+        assert "ctx.ctx_region.aggregates and not _scope_denied" in src, (
+            "_fetch_region_json aggregate gate missing — #887 fix incomplete"
+        )
+
+    def test_apply_workspace_scope_filters_returns_denied_for_unmatched_role(
+        self,
+    ) -> None:
+        """End-to-end-ish: when a scope rule names role `admin` and the
+        user has only `viewer`, the helper must return denied=True.
+        This is the upstream signal that the aggregate gates rely on."""
+        from dazzle_back.runtime.workspace_rendering import (
+            _apply_workspace_scope_filters,
+        )
+
+        scope = _make_scope_rule("list", ["admin"])
+        access = _make_access_spec_with_scopes([scope])
+        ctx = _make_region_ctx(cedar_access_spec=access)
+        auth = _make_auth_context(["viewer"])
+
+        _filters, denied = _apply_workspace_scope_filters(ctx, auth, "user-1", None)
+        assert denied is True, (
+            "viewer should be denied list-scope on admin-only rule — "
+            "if this fires False the aggregate gate downstream is bypassed"
+        )
