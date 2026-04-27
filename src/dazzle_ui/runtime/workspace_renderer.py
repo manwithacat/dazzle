@@ -180,6 +180,12 @@ class RegionContext(BaseModel):
     # background tint via the `dz-tone-*` class. AegisMark UX patterns
     # roadmap item #2.
     tones: dict[str, str] = Field(default_factory=dict)
+    # v0.61.68: optional notice band rendered above the region body
+    # in the dashboard slot (AegisMark UX patterns roadmap item #7).
+    # Plain dict {title, body, tone} — empty when no notice declared.
+    # The dashboard panel template branches on truthy `card.notice` to
+    # emit the band.
+    notice: dict[str, str] = Field(default_factory=dict)
 
 
 class WorkspaceContext(BaseModel):
@@ -533,6 +539,15 @@ def build_workspace_context(
                     for s in (getattr(region, "pipeline_stages", None) or [])
                 ],  # #890 + v0.61.66 #4
                 tones=dict(getattr(region, "tones", None) or {}),  # v0.61.65
+                notice=(
+                    {
+                        "title": region.notice.title,
+                        "body": region.notice.body,
+                        "tone": region.notice.tone,
+                    }
+                    if getattr(region, "notice", None)
+                    else {}
+                ),  # v0.61.68 #7
             )
         )
 

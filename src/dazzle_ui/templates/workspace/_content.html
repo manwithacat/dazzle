@@ -217,6 +217,32 @@
             </div>
           </div>
 
+          {# v0.61.68: optional notice band between card header and
+             body (AegisMark UX patterns roadmap item #7). Title is
+             strong; body is secondary copy. Tone tints the band's
+             background + left rail via design-system tokens so the
+             active theme applies. Hidden via x-show when no notice
+             is configured — the dashboard frame shape stays
+             unchanged for existing apps. #}
+          <div x-show="card.notice && card.notice.title"
+               x-cloak
+               class="dz-notice-band mx-4 mb-3 px-3 py-2 rounded-[4px] border-l-2"
+               :class="{
+                 'bg-[hsl(var(--success)/0.08)] border-[hsl(var(--success))]': card.notice && card.notice.tone === 'positive',
+                 'bg-[hsl(var(--warning)/0.10)] border-[hsl(var(--warning))]': card.notice && card.notice.tone === 'warning',
+                 'bg-[hsl(var(--destructive)/0.08)] border-[hsl(var(--destructive))]': card.notice && card.notice.tone === 'destructive',
+                 'bg-[hsl(var(--primary)/0.08)] border-[hsl(var(--primary))]': card.notice && card.notice.tone === 'accent',
+                 'bg-[hsl(var(--muted)/0.4)] border-[hsl(var(--border))]': !card.notice || !card.notice.tone || card.notice.tone === 'neutral',
+               }"
+               :data-dz-notice-tone="card.notice ? card.notice.tone : ''"
+               role="note">
+            <div class="text-[12px] font-medium leading-snug text-[hsl(var(--foreground))]"
+                 x-text="card.notice && card.notice.title"></div>
+            <div x-show="card.notice && card.notice.body"
+                 x-text="card.notice && card.notice.body"
+                 class="text-[11px] leading-snug text-[hsl(var(--muted-foreground))] mt-0.5"></div>
+          </div>
+
           {# Card body — HTMX-loaded region content.
              v0.61.1 (#864): above-fold cards use hx-trigger="load" only;
              below-fold cards use "intersect once" only. Combining both

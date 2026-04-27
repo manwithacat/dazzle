@@ -155,10 +155,16 @@ workspace command_center "Command Center":
     action: system_detail
     empty: "No systems registered"
 
-  # Health Summary — metrics tile region
+  # Health Summary — metrics tile region. Picks up the v0.61.65
+  # per-tile tones (#2) and v0.61.68 notice band (#7) from the
+  # AegisMark UX patterns roadmap.
   health_summary:
     source: System
     display: metrics
+    notice:
+      title: "Status as of last sync"
+      body: "Counts refresh every 30s; alert deltas use the prior 24h window."
+      tone: accent
     aggregate:
       total_systems: count(System)
       healthy_count: count(System WHERE status = 'healthy')

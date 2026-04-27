@@ -283,6 +283,36 @@ class DeltaSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class NoticeSpec(BaseModel):
+    """v0.61.68: prominent notice band rendered above the region body
+    inside the dashboard slot. AegisMark's SIMS-sync-opt-in prototype
+    uses notices for legal-basis disclosure, status banners, and
+    consent context — strong line + secondary copy with a tone tint.
+
+    Authors declare a notice region-side (per-region, not per-card)
+    and the framework renders it as a horizontal band between the
+    panel header and the data body. Pure presentation hook — no
+    impact on data, scope, or aggregates. AegisMark UX patterns
+    roadmap item #7.
+
+    Attributes:
+        title: Strong primary line — the headline of the notice.
+        body: Optional secondary line — the explanation. Empty string
+            means single-line notice.
+        tone: Palette token — ``positive`` / ``warning`` / ``destructive``
+            / ``accent`` / ``neutral``. Reuses the action_grid +
+            metrics tones vocabulary so the visual language stays
+            consistent across components. Defaults to ``neutral``
+            (subtle muted band).
+    """
+
+    title: str
+    body: str = ""
+    tone: str = "neutral"
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceRegion(BaseModel):
     """
     Named region within a workspace.
@@ -327,6 +357,11 @@ class WorkspaceRegion(BaseModel):
     # both are set, group_by_dims wins.
     group_by_dims: list[str | BucketRef] | None = None
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
+    # v0.61.68: optional notice band rendered above the region body
+    # inside the dashboard slot. Authors declare title (strong),
+    # body (secondary copy), and tone (positive/warning/destructive/
+    # accent/neutral). AegisMark UX patterns roadmap item #7.
+    notice: NoticeSpec | None = None
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
     # name → tone token (positive / warning / destructive / accent / neutral).
     # Reuses the action_grid card vocabulary for consistency. Surfaced by

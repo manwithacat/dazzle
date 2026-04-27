@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.68] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap item #7** — region-level `notice:` field renders a prominent banner band above the data body in the dashboard slot. AegisMark's SIMS-sync-opt-in prototype uses notices for legal-basis disclosure, opt-in context, and status banners — strong line + secondary copy with tone tinting. Phase 1 of the roadmap is now complete (items #1, #2, #4, #7).
+
+### Added
+- **`notice:` field on workspace regions** (`src/dazzle/core/lexer.py` already had `NOTICE` from the surface-side `attention notice:` block; reused here in workspace context). Two parser shapes: shorthand `notice: "Title text"` (title-only, neutral tone) and block form with `title:` / `body:` / `tone:` keys. Tone tokens reuse the action_grid + metrics vocabulary (positive / warning / destructive / accent / neutral).
+- **`NoticeSpec` IR type** (`src/dazzle/core/ir/workspaces.py`) — frozen Pydantic model with `title: str`, `body: str = ""`, `tone: str = "neutral"`. Exported from `dazzle.core.ir`.
+- **Notice band template** (`src/dazzle_ui/templates/workspace/_content.html`) — sits between the card header (drag handle + title + actions) and the HTMX-loaded body. Tinted background + left rail via design-system HSL slots (`var(--success)`, `var(--warning)`, etc.) so the active theme applies. Hidden via `x-show` when no notice is configured — existing dashboard frames render unchanged.
+- **Renderer wiring** (`src/dazzle_ui/runtime/workspace_renderer.py`, `src/dazzle_ui/runtime/page_routes.py`) — `RegionContext.notice: dict[str, str]` carries the band; `cards_for_json` includes the entry on every card payload. Empty dict when omitted.
+- **`examples/ops_dashboard`** Health Summary region picks up an accent-toned notice ("Status as of last sync / Counts refresh every 30s; alert deltas use the prior 24h window.") to demonstrate.
+
+### Tests
+- **`test_workspace_region_notice.py`** — 18 tests covering parser (default None, shorthand, block with all keys, block title-only, block with tone, missing title raises, unknown key raises), `NoticeSpec` construction, `RegionContext` wiring, card payload propagation, and template binding (`card.notice` reference, truthy gate, all four tone branches present, design-system tokens for tints).
+
+### Agent Guidance
+- **Two parser shapes for one IR field is a usability multiplier.** The shorthand `notice: "Title"` covers the common case (~70% in AegisMark's prototype); the block form `notice:` with `title:`/`body:`/`tone:` covers the rich case. Detection is trivial — peek the next token after the colon: STRING → shorthand, INDENT → block. Same pattern works any time you have a "name + optional metadata" pair (action, asset, integration, etc.).
+- **Static frame > HTMX swap for chrome.** The notice band is rendered in `_content.html` as part of the static card frame, NOT inside the HTMX-loaded region body. This means: (a) it appears immediately on first paint, before the data load, (b) it survives HTMX swaps when the region body refreshes, (c) the band's tone classes don't need to be re-evaluated per swap. Anything that's per-region-but-not-per-data belongs in the static frame.
+- **Reuse the tone vocabulary across components.** `action_grid` cards (#891), `metrics` tiles (#894/#2), and now `notice` bands all share the five-token palette (positive / warning / destructive / accent / neutral). When introducing a new tinted component, reuse — don't invent. Authors learn one vocabulary; theming applies uniformly.
+
 ## [0.61.67] - 2026-04-27
 
 Patch bump. **Fix #905** — `display: summary` and `display: metrics` regions no longer render the underlying items table inside the hero tile. AegisMark's teacher_workspace was rendering a 600-row Manuscript table under the "Marked overnight" hero, and an 82,568-row MarkingResult table under "Class average" — both crowded prototype-tight hero strips with ~400px of vertical waste per tile.

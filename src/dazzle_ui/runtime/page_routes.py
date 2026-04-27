@@ -1366,6 +1366,11 @@ async def _workspace_handler(
                 # dashboard panel header. Empty string when omitted —
                 # template's `x-show` hides the kicker element.
                 "eyebrow": getattr(r, "eyebrow", "") or "",
+                # v0.61.68: notice band rendered between header and
+                # body. Empty dict when omitted — Alpine `x-show` on
+                # truthy `card.notice.title` hides the band entirely.
+                # AegisMark UX patterns roadmap item #7.
+                "notice": getattr(r, "notice", {}) or {},
             }
         )
 

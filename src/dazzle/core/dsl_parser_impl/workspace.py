@@ -1105,6 +1105,7 @@ class WorkspaceParserMixin:
         eyebrow: str | None = None  # kicker line above region title (v0.61.60)
         title_override: str | None = None  # explicit region title override (v0.61.63 #903)
         tones: dict[str, str] = {}  # per-tile metric tones (v0.61.65)
+        notice: ir.NoticeSpec | None = None  # notice band (v0.61.68 #7)
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
@@ -1453,6 +1454,62 @@ class WorkspaceParserMixin:
 
                 self.expect(TokenType.DEDENT)
 
+            # notice: "<title>"            — shorthand: title-only band
+            # notice:                      — block: title + body + tone
+            #   title: "..."
+            #   body: "..."
+            #   tone: warning
+            #
+            # v0.61.68 (AegisMark UX patterns roadmap item #7) — region-
+            # level prominent banner above the data body. Reuses the
+            # action_grid + metrics tones vocabulary.
+            elif self.match(TokenType.NOTICE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    notice = ir.NoticeSpec(title=self.advance().value)
+                    self.skip_newlines()
+                else:
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    n_title = ""
+                    n_body = ""
+                    n_tone = "neutral"
+                    while not self.match(TokenType.DEDENT):
+                        self.skip_newlines()
+                        if self.match(TokenType.DEDENT):
+                            break
+                        key_tok = self.current_token()
+                        key = key_tok.value
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        if key == "title":
+                            n_title = self.expect(TokenType.STRING).value
+                            self.skip_newlines()
+                        elif key == "body":
+                            n_body = self.expect(TokenType.STRING).value
+                            self.skip_newlines()
+                        elif key == "tone":
+                            n_tone = self.expect_identifier_or_keyword().value
+                            self.skip_newlines()
+                        else:
+                            raise make_parse_error(
+                                f"Unknown notice key {key!r}. Expected one of: title, body, tone.",
+                                self.file,
+                                key_tok.line,
+                                key_tok.column,
+                            )
+                    self.expect(TokenType.DEDENT)
+                    if not n_title:
+                        tok = self.current_token()
+                        raise make_parse_error(
+                            "notice block requires `title:`",
+                            self.file,
+                            tok.line,
+                            tok.column,
+                        )
+                    notice = ir.NoticeSpec(title=n_title, body=n_body, tone=n_tone)
+
             # title: "<text>" — explicit region title override (#903).
             # `title` is intentionally NOT a lexer keyword (would break
             # every `expect(IDENTIFIER)` site that expects `title` as a
@@ -1677,4 +1734,5 @@ class WorkspaceParserMixin:
             eyebrow=eyebrow,
             title=title_override or None,  # #903: empty string → None for fallback
             tones=tones,
+            notice=notice,
         )
