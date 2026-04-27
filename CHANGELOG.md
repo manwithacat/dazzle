@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.67] - 2026-04-27
+
+Patch bump. **Fix #905** — `display: summary` and `display: metrics` regions no longer render the underlying items table inside the hero tile. AegisMark's teacher_workspace was rendering a 600-row Manuscript table under the "Marked overnight" hero, and an 82,568-row MarkingResult table under "Class average" — both crowded prototype-tight hero strips with ~400px of vertical waste per tile.
+
+### Removed
+- **Items+columns block in `metrics.html`** (`src/dazzle_ui/templates/workspace/regions/metrics.html`) — deleted the `<div class="overflow-x-auto"><table>...</table></div>` block, the divider `<div class="h-px ... my-3"></div>` above it, the `for item in items` / `for col in columns` iterations, the `_attention` row tinting, and the unused `render_status_badge` macro import. Summary/metrics regions are about the headline number; authors who want both metric tiles AND a list should declare two regions (one METRICS, one LIST).
+
+### Changed
+- `tests/unit/test_workspace_routes.py::TestMetricsRegionTemplate::test_drill_down_table_renders_when_items_and_columns` renamed and inverted to `test_no_drill_down_table_rendered_even_with_items` — pins the new contract: even when `items` and `columns` are populated, no table renders.
+- `test_no_hardcoded_hsl_literals` re-scoped to assert tone tints route through design-system tokens (`var(--warning)` etc.) — the previous form exercised the deleted items-table warning row tint.
+
+### Tests
+- **`test_metrics_no_items_table.py`** — 10 new string-level invariants on the template source: no `<table>`, no `<thead>`/`<tbody>`, no `for item in items` loop, no `for col in columns` loop, no `h-px` divider, no `overflow-x-auto` wrapper. Also four positive checks: still iterates `metrics`, still emits `dz-metric-tile`, still branches on `metric.tone`, still renders delta.
+
+### Agent Guidance
+- **"Hybrid metrics+table" cards are an anti-pattern.** Hero strip is the most prized visual real-estate in any dashboard; an unfiltered rows table underneath turns it into a list region with a metric on top. Better: declare separate regions with separate display modes. The DSL's job is to make this composition trivial — the template's job is to refuse it.
+- **Removing template branches is reversible only if the test suite pins the absence.** Without `test_metrics_no_items_table.py`, a future "let me add a small drill-down toggle" temptation could quietly reintroduce the bloat. String-level invariants on the template source are stronger than rendered-DOM checks because they catch the regression before the template even compiles.
+
 ## [0.61.66] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap item #4** — generalise `pipeline_steps` per-stage `aggregate:` to `value:`, accepting either an aggregate expression OR a literal string. Authors can now mix count-driven stages with descriptive flow-card labels ("Daily 02:00 UTC", "Manual review") in the same pipeline.

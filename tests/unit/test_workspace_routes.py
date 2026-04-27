@@ -906,31 +906,32 @@ class TestMetricsRegionTemplate:
         assert "Nothing to show." in html
 
     def test_no_hardcoded_hsl_literals(self) -> None:
-        """Gate 2: no hardcoded HSL warning literals.
+        """Gate 2: no hardcoded HSL literals (e.g. `hsl(38_92%_50%/0.08)`).
 
-        The pre-cycle-239 template had `hsl(38_92%_50%/0.08)` inline for
-        the warning attention-level. This test locks the migration in place.
+        Pre-cycle-239 the warning attention-level row tint was inlined.
+        Tone tints introduced in v0.61.65 (#894/#888) all route through
+        design-system tokens (`var(--warning)` etc.). This guard pins
+        the migration in place even though the items-table block was
+        removed in v0.61.67 (#905) — the tile-tint branches and any
+        future overlay must keep using token references.
         """
         html = render_fragment(
             "workspace/regions/metrics.html",
             **self._metrics_kwargs(
-                metrics=[{"label": "Total", "value": 10}],
-                items=[
-                    {
-                        "id": "1",
-                        "title": "Row",
-                        "_attention": {"level": "warning", "message": "Watch out"},
-                    }
-                ],
-                columns=[{"key": "title", "label": "Title", "type": "text"}],
+                metrics=[{"label": "Total", "value": 10, "tone": "warning"}],
             ),
         )
         # The old hardcoded literal must not appear anywhere
         assert "38_92%" not in html
-        # The canonical token must appear for the warning row tint
+        # Tone tint routes via the design-system token
         assert "hsl(var(--warning)" in html
 
-    def test_drill_down_table_renders_when_items_and_columns(self) -> None:
+    def test_no_drill_down_table_rendered_even_with_items(self) -> None:
+        """v0.61.67 (#905): `display: summary`/`display: metrics` MUST
+        NOT render an items table inside the hero tile, regardless of
+        whether `items`/`columns` are populated. Authors who want a
+        table should declare a separate `display: list` region.
+        """
         html = render_fragment(
             "workspace/regions/metrics.html",
             **self._metrics_kwargs(
@@ -947,14 +948,14 @@ class TestMetricsRegionTemplate:
         )
         # Tiles still present
         assert "dz-metric-tile" in html
-        # Drill-down table headers present
-        assert ">Title<" in html
-        assert ">Status<" in html
-        # Status badge (cycle 238 macro) rendered for each row
-        assert html.count("dz-status-badge") == 2
-        # Row data visible
-        assert "Row 1" in html
-        assert "Row 2" in html
+        # No table — the entire items+columns block is gone
+        assert "<table" not in html
+        assert "<thead" not in html
+        assert "<tbody" not in html
+        assert "Row 1" not in html
+        assert "Row 2" not in html
+        # No vertical-waste divider that used to sit above the table
+        assert 'class="h-px' not in html
 
     def test_no_dead_description_field(self) -> None:
         """Gate 6: cycle 239 removed the unused metric.description branch.
