@@ -63,6 +63,94 @@
   border-left-color: hsl(var(--border));
 }
 
+/* ── Action grid card surface + count badge tints (#891) ─────────── */
+/* v0.61.74 (#906 cleanup): action_grid was the second template using
+ * the buried-dynamic-class pattern. Card surface tint + count-badge
+ * tint both route via `data-dz-tone` / `data-dz-tone-badge`.
+ * Hardcoded `hsl(145,55%,45%)` / `hsl(40,90%,55%)` literals in the
+ * template are gone — both now use design-system slots so theming
+ * applies. */
+
+.dz-action-card[data-dz-tone="positive"] {
+  border-color: hsl(var(--success) / 0.4);
+  background: hsl(var(--success) / 0.05);
+}
+.dz-action-card[data-dz-tone="positive"]:hover {
+  background: hsl(var(--success) / 0.10);
+}
+.dz-action-card[data-dz-tone="warning"] {
+  border-color: hsl(var(--warning) / 0.4);
+  background: hsl(var(--warning) / 0.05);
+}
+.dz-action-card[data-dz-tone="warning"]:hover {
+  background: hsl(var(--warning) / 0.10);
+}
+.dz-action-card[data-dz-tone="destructive"] {
+  border-color: hsl(var(--destructive) / 0.4);
+  background: hsl(var(--destructive) / 0.05);
+}
+.dz-action-card[data-dz-tone="destructive"]:hover {
+  background: hsl(var(--destructive) / 0.10);
+}
+.dz-action-card[data-dz-tone="accent"] {
+  border-color: hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.05);
+}
+.dz-action-card[data-dz-tone="accent"]:hover {
+  background: hsl(var(--primary) / 0.10);
+}
+.dz-action-card[data-dz-tone="neutral"],
+.dz-action-card:not([data-dz-tone]) {
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+}
+.dz-action-card[data-dz-tone="neutral"]:hover,
+.dz-action-card:not([data-dz-tone]):hover {
+  background: hsl(var(--muted) / 0.4);
+}
+
+/* Count-badge tints — same five tones, slightly different opacities
+ * so the badge reads as denser than the card surface. */
+.dz-action-card-count[data-dz-tone-badge="positive"] {
+  background: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+.dz-action-card-count[data-dz-tone-badge="warning"] {
+  background: hsl(var(--warning) / 0.18);
+  color: hsl(var(--warning));
+}
+.dz-action-card-count[data-dz-tone-badge="destructive"] {
+  background: hsl(var(--destructive) / 0.15);
+  color: hsl(var(--destructive));
+}
+.dz-action-card-count[data-dz-tone-badge="accent"] {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+.dz-action-card-count[data-dz-tone-badge="neutral"],
+.dz-action-card-count:not([data-dz-tone-badge]) {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Metric delta arrow colour (#884 / sibling #906 cleanup) ──────── */
+/* v0.61.74: the period-over-period delta arrow used to compute its
+ * tone via a dynamic Tailwind class string. Now driven by
+ * `data-dz-delta-tone` matching the standard tone palette. The
+ * hardcoded `hsl(142 76% 36%)` literal is gone — `--success` is the
+ * canonical green slot. */
+
+.dz-metric-delta[data-dz-delta-tone="positive"] {
+  color: hsl(var(--success));
+}
+.dz-metric-delta[data-dz-delta-tone="destructive"] {
+  color: hsl(var(--destructive));
+}
+.dz-metric-delta[data-dz-delta-tone="neutral"],
+.dz-metric-delta:not([data-dz-delta-tone]) {
+  color: hsl(var(--muted-foreground));
+}
+
 /* ── Status list pill + icon colour (#3 / roadmap #3) ─────────────── */
 
 /* Pill backgrounds (rendered only for non-neutral states; neutral

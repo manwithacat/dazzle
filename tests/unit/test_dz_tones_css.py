@@ -151,6 +151,40 @@ class TestTemplatesNoDynamicTailwindToneClasses:
         # The data attribute must remain (it's the new source of truth)
         assert "data-dz-notice-tone" in text
 
+    def test_action_grid_no_dynamic_tone_classes(self) -> None:
+        """v0.61.74 (#906 cleanup): action_grid.html dropped the
+        `_tone_classes` and `_tone_count_classes` Jinja dictionaries
+        in favour of `data-dz-tone` / `data-dz-tone-badge` attributes
+        styled by dz-tones.css. The hardcoded HSL literals (positive
+        green = 145,55%,45%; warning amber = 40,90%,55%) are gone too
+        — both now route via design-system slots."""
+        text = (_TPL_DIR / "workspace/regions/action_grid.html").read_text()
+        assert "_tone_classes" not in text
+        assert "_tone_count_classes" not in text
+        # Hardcoded HSL literals — these were the worst offenders for
+        # downstream theming. None should remain.
+        assert "hsl(145,55%" not in text
+        assert "hsl(40,90%" not in text
+        assert "hsl(35,80%" not in text
+        # Both data attributes must remain
+        assert 'data-dz-tone="' in text
+        assert 'data-dz-tone-badge="' in text
+
+    def test_metrics_delta_no_dynamic_tone_class(self) -> None:
+        """v0.61.74 (#906 cleanup): the metric delta-arrow tone was
+        the second buried-dynamic-class instance in metrics.html
+        (separate from the per-tile tones fix in v0.61.70). The
+        hardcoded `hsl(142_76%_36%)` literal is gone; tone routes via
+        `data-dz-delta-tone`."""
+        text = (_TPL_DIR / "workspace/regions/metrics.html").read_text()
+        # The dynamic Tailwind class string is gone
+        assert "_tone_class" not in text
+        # The hardcoded green literal (used to be the positive arrow) is gone
+        assert "hsl(142_76%_36%)" not in text
+        assert "hsl(142 76% 36%)" not in text
+        # The data attribute must be there
+        assert "data-dz-delta-tone" in text
+
 
 # ───────────────────────── data attributes still emitted ──────────────────────────
 
@@ -171,3 +205,38 @@ class TestTemplatesStillEmitDataAttributes:
     def test_notice_band_emits_data_dz_notice_tone(self) -> None:
         text = (_TPL_DIR / "workspace/_content.html").read_text()
         assert "data-dz-notice-tone" in text
+
+    def test_action_grid_emits_data_dz_tone_attrs(self) -> None:
+        text = (_TPL_DIR / "workspace/regions/action_grid.html").read_text()
+        assert 'data-dz-tone="' in text
+        assert 'data-dz-tone-badge="' in text
+
+    def test_metrics_delta_emits_data_dz_delta_tone(self) -> None:
+        text = (_TPL_DIR / "workspace/regions/metrics.html").read_text()
+        assert "data-dz-delta-tone" in text
+
+
+class TestActionGridAndDeltaCssRulesPresent:
+    """Sibling check to TestDzTonesCssRulesPresent — pin the new
+    rules added in v0.61.74."""
+
+    def _text(self) -> str:
+        return (_CSS_DIR / "dz-tones.css").read_text()
+
+    def test_action_card_surface_rules_present(self) -> None:
+        text = self._text()
+        for tone in ("positive", "warning", "destructive", "accent", "neutral"):
+            sel = f'.dz-action-card[data-dz-tone="{tone}"]'
+            assert sel in text, f"Missing action-card rule for tone={tone!r}"
+
+    def test_action_card_count_rules_present(self) -> None:
+        text = self._text()
+        for tone in ("positive", "warning", "destructive", "accent", "neutral"):
+            sel = f'.dz-action-card-count[data-dz-tone-badge="{tone}"]'
+            assert sel in text, f"Missing action-card-count rule for tone={tone!r}"
+
+    def test_metric_delta_rules_present(self) -> None:
+        text = self._text()
+        for tone in ("positive", "destructive", "neutral"):
+            sel = f'.dz-metric-delta[data-dz-delta-tone="{tone}"]'
+            assert sel in text, f"Missing metric-delta rule for tone={tone!r}"

@@ -29,13 +29,16 @@
                        or (metric.delta_direction == 'down' and metric.delta_sentiment == 'positive_down') %}
         {% set _is_bad = (metric.delta_direction == 'down' and metric.delta_sentiment == 'positive_up')
                       or (metric.delta_direction == 'up' and metric.delta_sentiment == 'positive_down') %}
-        {% set _tone_class = 'text-[hsl(142_76%_36%)]' if _is_good
-                       else ('text-[hsl(var(--destructive))]' if _is_bad
-                       else 'text-[hsl(var(--muted-foreground))]') %}
+        {# v0.61.74 (#906 cleanup): the delta-arrow tone moved from a
+           dynamic Tailwind class string (JIT-invisible to downstream
+           consumers) to a `data-dz-delta-tone` attribute that
+           `dz-tones.css` styles. Same approach as per-tile tones. #}
+        {% set _delta_tone = 'positive' if _is_good else ('destructive' if _is_bad else 'neutral') %}
         {% set _arrow = '↑' if metric.delta_direction == 'up'
                   else ('↓' if metric.delta_direction == 'down' else '→') %}
         {% set _sign = '+' if metric.delta_direction == 'up' else '' %}
-        <div class="dz-metric-delta mt-1 text-[11px] {{ _tone_class }} tabular-nums"
+        <div class="dz-metric-delta mt-1 text-[11px] tabular-nums"
+             data-dz-delta-tone="{{ _delta_tone }}"
              data-dz-delta-direction="{{ metric.delta_direction }}"
              data-dz-delta-sentiment="{{ metric.delta_sentiment }}">
           <span aria-hidden="true">{{ _arrow }}</span>

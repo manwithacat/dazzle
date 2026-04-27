@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.74] - 2026-04-27
+
+Patch bump. **#906 cleanup pass** — completed an audit of all 30 region templates for the buried-dynamic-class pattern that bit AegisMark in #906. Found two remaining instances missed in the v0.61.70 fix: `action_grid` (per-card tone tints + count-badge tints) and `metrics` (period-over-period delta arrow tone). Both migrated to `data-dz-*` attributes styled by `dz-tones.css`. The audit also surfaced 5 hardcoded HSL literals (positive=145,55%,45%; warning=40,90%,55%; specific shades) in those templates — all replaced with design-system slot references.
+
+After this pass, **all 30 region templates use only static design-token references**. The bug class is closed at the framework level; downstream consumers will get correct colors regardless of their Tailwind scan glob configuration.
+
+### Fixed
+- **`action_grid.html`**: dropped `_tone_classes` and `_tone_count_classes` Jinja dictionaries. Card surface and count-badge tints now route via `data-dz-tone` and `data-dz-tone-badge` attributes respectively. The hardcoded `hsl(145,55%,45%)` (positive green) and `hsl(40,90%,55%)` (warning amber) literals are gone — both use `--success` and `--warning` design-system slots so theming applies.
+- **`metrics.html`** delta arrow: dropped the `_tone_class` dynamic Tailwind expression that picked between three colour classes via Jinja conditional. Now emits `data-dz-delta-tone="positive|destructive|neutral"`. The hardcoded `hsl(142 76% 36%)` literal (which was the positive-direction arrow colour) is gone — also routes via `--success`.
+
+### Added
+- **`dz-tones.css`** extended with rules for `.dz-action-card[data-dz-tone]` (surface tint + hover), `.dz-action-card-count[data-dz-tone-badge]` (badge background + foreground), and `.dz-metric-delta[data-dz-delta-tone]` (arrow colour). All five tones for the action-card/badge slots; three for the delta arrow (positive/destructive/neutral — the up/down/flat axis is independent and stays as `data-dz-delta-direction`).
+
+### Tests
+- **`test_dz_tones_css.py`** extended with 7 new tests across two new classes: action_grid + metrics-delta absence-of-dynamic-class guards, presence-of-data-attribute guards, and per-tone CSS rule presence. The existing per-component test classes now cover all four tinted components (metric tile, notice band, status pill+icon, action card+badge, metric delta arrow).
+
+### Agent Guidance
+- **Audit-then-fix pattern works.** The audit took ~30 min via a single Explore subagent run that categorised all 30 templates into three buckets (static / dynamic-from-data / hardcoded-color). Result was actionable: 2 templates needed work, 28 were already correct. Without the audit I'd have either (a) shipped the half-fix from #906 thinking it was complete, or (b) over-rotated and migrated all 30 templates unnecessarily. **When fixing a bug class, audit the surface before assuming the fix is local OR systemic.**
+- **The dynamic-class pattern is rare even when it exists.** Out of ~250 arbitrary-value HSL class references across 30 templates, only ~12 were the buried-dynamic kind. The rest are static literals using design-system variables — the JIT happily compiles them, downstream consumers' Tailwind scanners happily ignore them (because the rules ship in dz-tones-aware CSS bundles). The bug class is small even in templates that look superficially "Tailwind-heavy".
+- **CSS-side migration removes hardcoded color literals "for free".** The original action_grid had `hsl(145,55%,45%)` for positive — a one-off green that didn't match `--success`. Migrating the tone routing to dz-tones.css forced a decision: hardcode the literal in CSS, or use `--success`. Using the design slot is obviously right; doing the migration surfaces the choice you'd otherwise never get to.
+
 ## [0.61.73] - 2026-04-27
 
 Patch bump. **CI fix** — the AegisMark UX patterns roadmap shipped seven new fields on `WorkspaceRegion` IR (eyebrow, notice, tones, status_entries, confirmations, state_field, revoke, primary_action, secondary_action) across v0.61.65–v0.61.72. The integration-tier `test_simple_dsl_to_ir_snapshot` golden-master snapshot needed regeneration to include the new fields. Local unit-suite runs passed because the test lives under `tests/integration/` and the local pre-flight script filters with `-m "not e2e"` (which doesn't deselect the integration tier — but my own local invocations did).
