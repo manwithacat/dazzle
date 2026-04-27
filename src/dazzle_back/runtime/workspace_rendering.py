@@ -816,6 +816,7 @@ async def _workspace_region_handler(
             scope_filters=_scope_only_filters,
             delta=ctx.ctx_region.delta,  # #884
             source_entity=ctx.source,  # #888 Phase 1
+            tones=getattr(ctx.ctx_region, "tones", None),  # v0.61.65
         )
 
     # Bucketed aggregates for bar_chart distributions (#847). When a
@@ -1684,6 +1685,7 @@ async def _fetch_region_json(
             items,
             scope_filters=_scope_only_filters_batch,
             source_entity=ctx.source,  # #888 Phase 1
+            tones=getattr(ctx.ctx_region, "tones", None),  # v0.61.65
         )
 
     return {
@@ -2813,6 +2815,7 @@ async def _compute_aggregate_metrics(
     delta: Any | None = None,  # ir.DeltaSpec | None — see #884
     *,
     source_entity: str | None = None,  # #888 Phase 1 — for scalar aggregates
+    tones: dict[str, str] | None = None,  # v0.61.65 — per-tile palette token
 ) -> list[dict[str, Any]]:
     """Compute aggregate metrics, batching independent DB queries concurrently.
 
@@ -2900,11 +2903,15 @@ async def _compute_aggregate_metrics(
             elif isinstance(result, BaseException):
                 logger.warning("Aggregate metric query failed: %s", result)
 
-    # Build output in original order
+    # Build output in original order. v0.61.65: attach per-tile `tone` from
+    # the region-level `tones:` map when the metric name has an entry. The
+    # template branches on `metric.tone` to apply a palette tint.
+    _tones = tones or {}
     built_metrics = [
         {
             "label": name.replace("_", " ").title(),
             "value": sync_results.get(name, 0),
+            **({"tone": _tones[name]} if name in _tones else {}),
         }
         for name in metric_order
     ]

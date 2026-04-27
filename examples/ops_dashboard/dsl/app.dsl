@@ -164,6 +164,9 @@ workspace command_center "Command Center":
       healthy_count: count(System WHERE status = 'healthy')
       critical_count: count(System WHERE status = 'critical')
       avg_response_time: avg(response_time_ms)
+    tones:
+      healthy_count: positive
+      critical_count: destructive
 
   # Alert Volume — bar-chart distribution by severity
   alert_severity_breakdown:

@@ -173,6 +173,12 @@ class RegionContext(BaseModel):
     # one count query per stage. The render-ready list with resolved
     # values is built at request time as `pipeline_stage_data`.
     pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
+    # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
+    # name → tone token (positive / warning / destructive / accent /
+    # neutral). The metrics template surfaces the tone as a per-tile
+    # background tint via the `dz-tone-*` class. AegisMark UX patterns
+    # roadmap item #2.
+    tones: dict[str, str] = Field(default_factory=dict)
 
 
 class WorkspaceContext(BaseModel):
@@ -525,6 +531,7 @@ def build_workspace_context(
                     }
                     for s in (getattr(region, "pipeline_stages", None) or [])
                 ],  # #890
+                tones=dict(getattr(region, "tones", None) or {}),  # v0.61.65
             )
         )
 

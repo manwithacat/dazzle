@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.65] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap item #2** — per-tile `tone:` on `display: metrics` regions. Authors can now tint individual metric tiles to communicate at-a-glance state (positive / warning / destructive / accent / neutral). Mirrors the action_grid card vocabulary so the palette tokens stay consistent across components.
+
+### Added
+- **`tones:` block on workspace regions** (`src/dazzle/core/lexer.py`, `src/dazzle/core/dsl_parser_impl/workspace.py`, `src/dazzle/core/ir/workspaces.py`) — sibling to `aggregate:`. Maps metric name → tone token. Pure presentation hook with no impact on data, scope, or semantics.
+- **Per-tile background tint in `metrics.html`** — branches on `metric.tone` with five render paths (positive / warning / destructive / accent / default). All tones map to design-system HSL slots so the active theme applies; no hard-coded colours. Untoned tiles render unchanged (default muted bg). A `data-dz-tone` attribute is emitted when a tone is set, for downstream test/styling hooks.
+- **Renderer wiring** (`src/dazzle_back/runtime/workspace_rendering.py`, `src/dazzle_ui/runtime/workspace_renderer.py`) — `_compute_aggregate_metrics` accepts a `tones=` kwarg and attaches `tone` to each output metric dict whose name has an entry. The two render paths that build `metrics` for HTMX responses pass it through; the stats-only path (used by the workspace JSON endpoint) intentionally skips it.
+- **`examples/ops_dashboard`** Health Summary region demonstrates per-tile tones — `healthy_count: positive`, `critical_count: destructive`. Real-app coverage so the new field is exercised in a working DSL.
+
+### Tests
+- **`test_workspace_region_tones.py`** — 16 tests covering parser (default empty, single, multi, unknown-metric tolerance, presentation-only invariant), keyword-as-identifier escape hatch, RegionContext wiring, `_compute_aggregate_metrics` tone attachment (with / without / partial tones map), template binding (`metric.tone` reference, all five tone branches present, design-system tokens), and presentation-only invariant (tones don't change metric value or label).
+
+### Agent Guidance
+- **Sibling `tones:` block over inline tone-on-aggregate.** The natural temptation is `aggregate: { active: { expr: count(Item), tone: positive } }` — but that forks the existing `name: expr` flat-dict shape across every region author. Adding a parallel `tones:` map keeps the aggregate vocabulary unchanged and makes the per-metric tone optional and orthogonal. Same pattern applies to future per-metric metadata (icons, captions, links).
+- **Tone tokens are reused, not minted.** When introducing a new component-level tone slot, reuse the action_grid vocabulary (positive / warning / destructive / accent / neutral) before inventing new ones. Keeps the palette small and predictable for downstream theming.
+- **Conditional Jinja attributes need careful whitespace.** A naïve `{% if x %}attr="{{ x }}"{% endif %}` leaves trailing spaces in the rendered HTML when `x` is empty, which breaks DOM snapshot tests for unrelated regressions. The fix is `class="..."{% if x %} attr="{{ x }}"{% endif %}` — the leading space lives inside the conditional, so an empty `x` produces zero added whitespace.
+
 ## [0.61.64] - 2026-04-27
 
 Patch bump. **Fix #904** — `display: summary` + `aggregate: avg(field)` rendered "Avg Score 0" because the scalar-aggregate path through `Repository.aggregate` was broken in two compounding ways. AegisMark's class-average tile showed 0 despite ~82,000 visible MarkingResult rows with non-zero scores.

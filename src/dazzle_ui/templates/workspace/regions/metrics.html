@@ -11,9 +11,22 @@
     {# Metric tile — padded soft-bg pad only, no border. Enclosing
        dashboard slot owns all card chrome; a border here reads as a
        tile-card inside the dashboard card (issue #794 second
-       follow-up). #}
-    <div class="dz-metric-tile p-3 rounded-[4px] bg-[hsl(var(--muted)/0.4)]"
-         data-dz-metric-key="{{ metric.label | lower | replace(' ', '_') }}">
+       follow-up).
+
+       v0.61.65: per-tile tone tint (AegisMark UX patterns roadmap #2).
+       The region's `tones:` block populates `metric.tone` upstream;
+       neutral / unknown tokens fall through to the default muted bg.
+       Tokens map to design-system HSL slots so theming applies. #}
+    {% set _tone = metric.tone | default('') %}
+    {% set _tile_bg = (
+            'bg-[hsl(var(--success)/0.10)]' if _tone == 'positive'
+       else 'bg-[hsl(var(--warning)/0.10)]' if _tone == 'warning'
+       else 'bg-[hsl(var(--destructive)/0.10)]' if _tone == 'destructive'
+       else 'bg-[hsl(var(--primary)/0.10)]' if _tone == 'accent'
+       else 'bg-[hsl(var(--muted)/0.4)]'
+    ) %}
+    <div class="dz-metric-tile p-3 rounded-[4px] {{ _tile_bg }}"
+         data-dz-metric-key="{{ metric.label | lower | replace(' ', '_') }}"{% if _tone %} data-dz-tone="{{ _tone }}"{% endif %}>
       <div class="text-[11px] text-[hsl(var(--muted-foreground))] tracking-tight">{{ metric.label }}</div>
       <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5 tabular-nums">{{ metric.value | metric_number }}</div>
       {# v0.61.25 (#884): period-over-period delta. positive_up → up=good (green); positive_down → up=bad. #}

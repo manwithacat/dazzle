@@ -320,6 +320,13 @@ class WorkspaceRegion(BaseModel):
     # both are set, group_by_dims wins.
     group_by_dims: list[str | BucketRef] | None = None
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
+    # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
+    # name → tone token (positive / warning / destructive / accent / neutral).
+    # Reuses the action_grid card vocabulary for consistency. Surfaced by
+    # the metrics template as a per-tile background tint. Pure presentation
+    # — no impact on data, scope, or semantics. AegisMark UX patterns
+    # roadmap item #2.
+    tones: dict[str, str] = Field(default_factory=dict)
     # v0.34.0: Date-range filtering
     date_field: str | None = None
     date_range: bool = False  # Enable date picker on this region

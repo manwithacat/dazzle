@@ -1087,6 +1087,7 @@ class WorkspaceParserMixin:
         css_class: str | None = None  # region wrapper CSS class hook (#894)
         eyebrow: str | None = None  # kicker line above region title (v0.61.60)
         title_override: str | None = None  # explicit region title override (v0.61.63 #903)
+        tones: dict[str, str] = {}  # per-tile metric tones (v0.61.65)
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
         action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
@@ -1410,6 +1411,31 @@ class WorkspaceParserMixin:
                 eyebrow = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # tones:
+            #   <metric_name>: <tone_token>
+            # Per-tile palette tokens for `display: metrics` (v0.61.65,
+            # AegisMark UX patterns roadmap item #2). Mirrors the
+            # `aggregate:` block shape — name → token. Tone tokens are
+            # bare identifiers from the action_grid vocabulary
+            # (positive / warning / destructive / accent / neutral).
+            elif self.match(TokenType.TONES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    metric_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    tone_token = self.expect_identifier_or_keyword().value
+                    tones[metric_name] = tone_token
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
             # title: "<text>" — explicit region title override (#903).
             # `title` is intentionally NOT a lexer keyword (would break
             # every `expect(IDENTIFIER)` site that expects `title` as a
@@ -1633,4 +1659,5 @@ class WorkspaceParserMixin:
             pipeline_stages=pipeline_stages,
             eyebrow=eyebrow,
             title=title_override or None,  # #903: empty string → None for fallback
+            tones=tones,
         )
