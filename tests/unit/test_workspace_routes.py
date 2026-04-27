@@ -1253,7 +1253,7 @@ class TestDetailRegionTemplate:
         assert "hsl(var(--foreground))" in html
 
     def test_badge_column_delegates_to_status_badge_macro(self) -> None:
-        """Gate 6: type=badge invokes render_status_badge, producing dz-status-badge."""
+        """Gate 6: type=badge invokes render_status_badge, producing dz-badge."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1261,7 +1261,7 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "status", "label": "Status", "type": "badge"}],
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_ref_anchor_uses_primary_token(self) -> None:
         """Gate 7: ref column with ref_route + mapping value → anchor with primary token."""
@@ -1737,7 +1737,7 @@ class TestBarChartRegionTemplate:
                 total=2,
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_fallback_mode_does_not_use_status_badge(self) -> None:
         """Gate 8: fallback mode uses plain-text label span, NOT status badge."""
@@ -1748,7 +1748,7 @@ class TestBarChartRegionTemplate:
             ),
         )
         # Metric labels are plain spans, not badges
-        assert "dz-status-badge" not in html
+        assert "dz-badge" not in html
 
     def test_empty_state_when_no_data_at_all(self) -> None:
         """Gate 9: no items, no metrics → role=status empty state, no bars."""
@@ -2544,7 +2544,7 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_transition_button_wiring(self) -> None:
         """Gate 10: transition buttons use hx-put + hx-vals + hx-ext=json-enc."""
@@ -3269,9 +3269,9 @@ class TestKanbanTemplate:
         assert "In Progress" in html
         assert "Done" in html
         # Canonical status-badge marker + tones landed
-        assert "dz-status-badge" in html
-        assert 'data-dz-status-tone="neutral"' in html  # todo → neutral
-        assert 'data-dz-status-tone="info"' in html  # in_progress → info
+        assert "dz-badge" in html
+        assert 'data-dz-tone="neutral"' in html  # todo → neutral
+        assert 'data-dz-tone="info"' in html  # in_progress → info
         # Verify items are present
         assert "Fix bug" in html
         assert "Write docs" in html

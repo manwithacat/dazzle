@@ -710,8 +710,8 @@ class TestJinjaFilters:
             "{{ render_status_badge(value='in_progress') }}"
         )
         out = tmpl.render()
-        assert "dz-status-badge" in out
-        assert 'data-dz-status-tone="info"' in out
+        assert "dz-badge" in out
+        assert 'data-dz-tone="info"' in out
         assert "In Progress" in out  # humanised
         assert 'role="status"' in out
         assert "aria-label=" in out
@@ -723,7 +723,11 @@ class TestJinjaFilters:
         )
         out = tmpl.render()
         assert "—" in out
-        assert "dz-status-badge" not in out  # no badge when value is None
+        # No active badge when value is None — only the dz-badge-empty
+        # placeholder span. Match on `dz-badge"` (closing quote) so the
+        # empty-placeholder substring doesn't trigger the negative.
+        assert 'dz-badge"' not in out
+        assert "data-dz-tone" not in out
 
     def test_status_badge_macro_tone_override(self, env) -> None:
         tmpl = env.from_string(
@@ -731,34 +735,43 @@ class TestJinjaFilters:
             "{{ render_status_badge(value='anything', tone='destructive') }}"
         )
         out = tmpl.render()
-        assert 'data-dz-status-tone="destructive"' in out
+        assert 'data-dz-tone="destructive"' in out
 
     def test_status_badge_macro_size_sm(self, env) -> None:
+        """Post-CSS-refactor: sizing routes via the .dz-badge-sm
+        modifier class instead of inline Tailwind text-[10px]/h-4.
+        Visual contract is preserved by components/badge.css; the
+        template just emits the modifier."""
         tmpl = env.from_string(
             "{% from 'macros/status_badge.html' import render_status_badge %}"
             "{{ render_status_badge(value='done', size='sm') }}"
         )
         out = tmpl.render()
-        assert "text-[10px]" in out  # sm sizing
-        assert "h-4" in out
+        assert "dz-badge-sm" in out
 
     def test_status_badge_macro_md_default(self, env) -> None:
+        """Post-CSS-refactor: md is the default — no modifier class
+        needed. The .dz-badge base rule provides md sizing."""
         tmpl = env.from_string(
             "{% from 'macros/status_badge.html' import render_status_badge %}"
             "{{ render_status_badge(value='done') }}"
         )
         out = tmpl.render()
-        assert "text-[11px]" in out  # md default
-        assert "h-5" in out
+        assert "dz-badge" in out
+        # No size modifier — base class is implicitly md
+        assert "dz-badge-sm" not in out
 
     def test_status_badge_macro_bordered(self, env) -> None:
+        """Post-CSS-refactor: bordered routes via the .bordered
+        modifier class. Tone colour inheritance happens in
+        components/badge.css via .dz-badge.bordered[data-dz-tone='...']."""
         tmpl = env.from_string(
             "{% from 'macros/status_badge.html' import render_status_badge %}"
             "{{ render_status_badge(value='done', bordered=true) }}"
         )
         out = tmpl.render()
-        assert "border " in out
-        assert "border-[hsl(var(--success)/0.35)]" in out
+        assert "bordered" in out
+        assert 'data-dz-tone="success"' in out
 
     def test_status_badge_macro_display_override(self, env) -> None:
         tmpl = env.from_string(
@@ -768,14 +781,21 @@ class TestJinjaFilters:
         out = tmpl.render()
         assert ">New!<" in out
 
-    def test_status_badge_macro_uses_design_tokens(self, env) -> None:
-        """Every tone uses hsl(var(--token)) — never legacy DaisyUI classes."""
+    def test_status_badge_macro_uses_data_attribute_tones(self, env) -> None:
+        """Post-CSS-refactor: tone routes via data-dz-tone attribute,
+        not inline hsl(var(--token)) classes. Component CSS in
+        components/badge.css owns the colour mapping. Tested at the
+        attribute level here; the actual hsl tokens are pinned in
+        the badge.css file itself."""
         tmpl = env.from_string(
             "{% from 'macros/status_badge.html' import render_status_badge %}"
             "{{ render_status_badge(value='failed') }}"
         )
         out = tmpl.render()
-        assert "hsl(var(--destructive))" in out
+        assert 'data-dz-tone="destructive"' in out
+        # Inline Tailwind colour classes MUST NOT appear — the migration
+        # moved all tone styling to components/badge.css.
+        assert "hsl(var(--destructive))" not in out
         # Legacy DaisyUI class names MUST NOT appear
         assert "badge-error" not in out
         assert "badge-ghost" not in out
