@@ -29,6 +29,34 @@ def _entity_to_app_url(entity_name: str) -> str:
     return f"/app/{slug}/{{id}}"
 
 
+def _action_to_url(action: str) -> str:
+    """Resolve an ``action_grid`` card target to a URL (#891).
+
+    Two forms accepted:
+      - Bare surface/entity name (e.g. ``parents_evening_create``)
+        → ``/app/parents-evening-create``. Author can use any
+        underscore-separated identifier; runtime slugifies.
+      - Literal URL prefixed with `/` (e.g. ``"/app/marking-result?status=flagged"``)
+        — used as-is. Authors who need query strings, anchors, or
+        explicit paths choose this form.
+
+    Empty input returns empty string (informational card with no
+    click-through).
+    """
+    if not action:
+        return ""
+    if action.startswith("/"):
+        return action
+    # Split optional `?query` suffix so the surface name slugifies
+    # without dragging the query through the kebab-case transform.
+    if "?" in action:
+        name, query = action.split("?", 1)
+        slug = name.lower().replace("_", "-")
+        return f"/app/{slug}?{query}"
+    slug = action.lower().replace("_", "-")
+    return f"/app/{slug}"
+
+
 def _flatten_group_by(value: Any) -> str:
     """Reduce IR group_by (str | BucketRef | None) to a string for templates.
 
@@ -121,6 +149,12 @@ class RegionContext(BaseModel):
     # for non-bar_track displays.
     track_max: float | None = None
     track_format: str = ""
+    # v0.61.54 (#891): action_grid CTA cards. Each entry is a plain dict
+    # (label / icon / count_label / url / tone) — count resolved at
+    # request time by the runtime branch via `_fetch_count_metric`. List
+    # of dicts (not the IR type) avoids importing core.ir into the UI
+    # render context.
+    action_cards: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class WorkspaceContext(BaseModel):
@@ -231,6 +265,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "BOX_PLOT": "workspace/regions/box_plot.html",
     "BULLET": "workspace/regions/bullet.html",
     "BAR_TRACK": "workspace/regions/bar_track.html",  # #893
+    "ACTION_GRID": "workspace/regions/action_grid.html",  # #891
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -443,6 +478,16 @@ def build_workspace_context(
                 css_class=getattr(region, "css_class", None) or "",  # #894
                 track_max=getattr(region, "track_max", None),  # #893
                 track_format=getattr(region, "track_format", None) or "",  # #893
+                action_cards=[
+                    {
+                        "label": c.label,
+                        "icon": c.icon,
+                        "count_aggregate": c.count_aggregate,
+                        "url": _action_to_url(c.action),
+                        "tone": c.tone,
+                    }
+                    for c in (getattr(region, "action_cards", None) or [])
+                ],  # #891
             )
         )
 

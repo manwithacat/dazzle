@@ -761,6 +761,7 @@ from .webhooks import (
 
 # Workspaces
 from .workspaces import (
+    ActionCardSpec,
     BucketRef,
     ContextSelectorSpec,
     DeltaSpec,
@@ -864,6 +865,7 @@ __all__ = [
     "WorkspaceAccessLevel",
     "WorkspaceAccessSpec",
     "DeltaSpec",
+    "ActionCardSpec",
     "OverlaySeriesSpec",
     "ReferenceBand",
     "ReferenceLine",

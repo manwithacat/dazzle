@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.54] - 2026-04-27
+
+Patch bump. **Fix #891** — `display: action_grid`. CTA cards on dashboards: each card has a label, optional icon (Lucide), optional count badge driven by an aggregate, and a click target resolved to a URL. Tone tokens (positive/warning/destructive/neutral/accent) map to design palette. Foundation pattern for "things the user can do next" surfaces.
+
+### Added
+- **`DisplayMode.ACTION_GRID = "action_grid"`** in `src/dazzle/core/ir/workspaces.py`.
+- **`ActionCardSpec`** IR — frozen Pydantic model with `label` (required), `icon`, `count_aggregate`, `action`, `tone` (defaults `neutral`).
+- **`WorkspaceRegion.action_cards: list[ActionCardSpec]`** — empty list by default; populated by the parser when `actions:` block is present.
+- **Lexer tokens** `ACTIONS`, `TONE`, `COUNT_AGGREGATE` in `src/dazzle/core/lexer.py`.
+- **`_parse_action_cards_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — indented dash-list parser mirroring `_parse_overlay_series_block`. Each entry must lead with `label:`. Sub-keys: `icon` (string), `count_aggregate` (token-stream), `action` (string OR identifier — string required for URLs containing `?`/`/`/`=`), `tone` (whitelisted to {positive, warning, destructive, neutral, accent}).
+- **`_action_to_url(action: str)`** helper in `workspace_renderer.py` — bare identifiers slugify to `/app/<slug>` (with optional `?query` preserved); paths starting with `/` pass through verbatim.
+- **`RegionContext.action_cards`** — list of dicts (`{label, icon, count_aggregate, url, tone}`) with `url` pre-resolved at context build time.
+- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per card with non-empty `count_aggregate` via `asyncio.gather` (single batched query is a future optimisation). Honours scope-deny gate from #887: when scope denies, cards still render but counts are suppressed.
+- **Template** `src/dazzle_ui/templates/workspace/regions/action_grid.html` — responsive 1/2/3 grid of token-coloured cards with Lucide icon (`data-lucide="<name>"`) + count badge. Region-bodyless validation exemption added to parser (#891-aware: action_cards counts as a body alongside source/aggregate).
+- **`ActionCardSpec`** exported from `dazzle.core.ir.__init__` for downstream consumers.
+
+### Tests
+- **`tests/unit/test_workspace_action_grid.py`** (new) — 20 cases:
+  - `TestActionGridParser` (8): minimal DSL, label-only defaults, multiple cards order, action accepts quoted-string-with-query, action accepts bare identifier, invalid tone rejected, unknown key rejected, must-start-with-label
+  - `TestActionToUrl` (4): empty input, slugify bare identifier, literal URL passes through, bare-with-query preserves query
+  - `TestActionGridContext` (3): RegionContext default empty, carries cards, ActionCardSpec defaults
+  - `TestActionGridTemplateWiring` (4): template map, file exists, region_card macro, no interpolated tag names (XSS guard)
+  - `TestActionGridIsCountOnly` (1): IR accepts any aggregate text — runtime gates count-only
+
+### Changed
+- **Region body validation** (`workspace.py`) now treats `action_cards` as a valid region body alongside `source:` and `aggregate:`. action_grid regions are static-CTA-driven and don't need a data source.
+
+### Security
+- **Static-template guard test** pins that `action_grid.html` does NOT use Jinja-interpolated HTML tag names (`<{{ _Tag }}>`). The first draft tripped a Semgrep XSS warning; fixed by explicit `{% if card.url %}<a>{% else %}<div>{% endif %}` branches with body duplication. Test prevents regression.
+
+### Agent Guidance
+- **action_grid is a NEW region shape — not aggregate-derived data, but author-declared CTAs.** Each card carries its own count_aggregate (independent query) rather than slicing a shared bucketed aggregate. This trades batching opportunity for vocabulary cleanliness — single batched query when all cards share the same source entity is a future optimisation noted in the issue.
+- **Tone vocabulary is whitelisted.** Five tokens — `positive`, `warning`, `destructive`, `neutral`, `accent` — map to design palette via `_tone_classes` in the template. Add new tones at both the parser whitelist AND the template map; don't let either drift.
+- **Action target resolution is intentionally simple.** `_action_to_url` slugifies bare identifiers + preserves literal URLs. Surface-name → URL coupling deferred (would need surface metadata lookup) — for the MVP, authors who need surface-aware resolution can write the literal path: `action: "/app/parents-evening/create"`.
+- **Scope-deny invariant from #887 extends to action_grid.** When the active persona has scope denied, cards still render (they're static UI elements) but counts are suppressed — same posture as the chart aggregate gates.
+- **Foundation chain.** Combined with #894 (region `class:` hook) and #893 (bar_track), authors can compose dashboards from action-band-style CTAs without reinventing per-app templates: `display: action_grid` + `class: "action-band"` for project-specific styling.
+
 ## [0.61.53] - 2026-04-27
 
 Patch bump. **Fix #893** — `display: bar_track`. Compact horizontal value bars (per-row label + filled track + numeric) — pill-shaped tracks ideal for "AO score per pupil" or "feature adoption per cohort" cards. Reuses the existing single-dim chart pipeline for data, so existing `group_by` + `aggregate:` vocabulary works unchanged; only `track_max:` and `track_format:` are bar_track-specific.

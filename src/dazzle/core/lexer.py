@@ -147,6 +147,9 @@ class TokenType(Enum):
     CSS_CLASS = "class"  # v0.61.52: region-level class hook for project CSS (#894)
     TRACK_MAX = "track_max"  # v0.61.53 (#893): bar_track fill denominator
     TRACK_FORMAT = "track_format"  # v0.61.53 (#893): bar_track value format spec
+    ACTIONS = "actions"  # v0.61.54 (#891): action_grid card list
+    TONE = "tone"  # v0.61.54 (#891): action_grid card palette token
+    COUNT_AGGREGATE = "count_aggregate"  # v0.61.54 (#891): action_grid per-card count
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

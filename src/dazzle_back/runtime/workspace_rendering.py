@@ -1037,6 +1037,80 @@ async def _workspace_region_handler(
                 }
             )
 
+    # Action grid (#891, v0.61.54): CTA cards on dashboards. Each card
+    # carries a label/icon/url/tone (already resolved at context build
+    # time) plus an optional `count_aggregate` expression that the
+    # runtime fires per-card via the existing `_fetch_count_metric`
+    # machinery. Single batched query is a future optimisation; MVP
+    # fires concurrently via asyncio.gather.
+    # SECURITY (#887): same scope gate as other aggregate paths — when
+    # scope is denied the per-card counts are suppressed (cards still
+    # render but with no count badge).
+    action_card_data: list[dict[str, Any]] = []
+    if ctx.ctx_region.display == "ACTION_GRID":
+        _cards = ctx.ctx_region.action_cards or []
+        if _cards and not _scope_denied:
+            _AGG_RE = _AGGREGATE_RE
+            _count_tasks: list[Any] = []
+            _count_indices: list[int] = []
+            for _idx, _card in enumerate(_cards):
+                _expr = _card.get("count_aggregate") or ""
+                if not _expr:
+                    continue
+                _m = _AGG_RE.match(_expr)
+                if not _m:
+                    continue
+                _func, _entity_name, _where = _m.groups()
+                _agg_repo = ctx.repositories.get(_entity_name) if ctx.repositories else None
+                if _func != "count" or _agg_repo is None:
+                    # Per-card scalar aggregates not yet supported —
+                    # skip; card renders without a count.
+                    continue
+                _count_tasks.append(
+                    _fetch_count_metric(
+                        f"action_card_{_idx}",
+                        _agg_repo,
+                        _where,
+                        _scope_only_filters,
+                        source_entity=_entity_name,
+                    )
+                )
+                _count_indices.append(_idx)
+            _count_results: dict[int, Any] = {}
+            if _count_tasks:
+                import asyncio as _asyncio
+
+                _results = await _asyncio.gather(*_count_tasks, return_exceptions=True)
+                for _ridx, _rresult in zip(_count_indices, _results, strict=True):
+                    if isinstance(_rresult, tuple):
+                        _count_results[_ridx] = _rresult[1]
+                    else:
+                        logger.warning(
+                            "action_grid card %d count query failed: %s", _ridx, _rresult
+                        )
+            for _idx, _card in enumerate(_cards):
+                action_card_data.append(
+                    {
+                        "label": _card.get("label", ""),
+                        "icon": _card.get("icon", ""),
+                        "url": _card.get("url", ""),
+                        "tone": _card.get("tone", "neutral"),
+                        "count": _count_results.get(_idx),
+                    }
+                )
+        elif _cards:
+            # scope denied — render cards without counts
+            for _card in _cards:
+                action_card_data.append(
+                    {
+                        "label": _card.get("label", ""),
+                        "icon": _card.get("icon", ""),
+                        "url": _card.get("url", ""),
+                        "tone": _card.get("tone", "neutral"),
+                        "count": None,
+                    }
+                )
+
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
     # and runs ONE multi-dim GROUP BY via Repository.aggregate. Each entry
@@ -1280,6 +1354,8 @@ async def _workspace_region_handler(
         # Bar track (#893, v0.61.53) — per-row {label, value, fill_pct, formatted_value}
         bar_track_rows=bar_track_rows,
         bar_track_max=bar_track_max,
+        # Action grid (#891, v0.61.54) — per-card {label, icon, url, tone, count}
+        action_card_data=action_card_data,
     )
     return HTMLResponse(content=html)
 

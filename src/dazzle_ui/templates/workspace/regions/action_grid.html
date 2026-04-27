@@ -1,0 +1,92 @@
+{# Action grid region — v0.61.54 (#891).
+
+   CTA cards on dashboards. One card per `actions:` entry; each carries
+   a label, optional icon, optional count badge (resolved per-card via
+   `_fetch_count_metric` at request time), and a click target.
+
+   Tone tokens map to design palette:
+     - positive  → success surface
+     - warning   → warning surface
+     - destructive → destructive surface
+     - accent    → primary tint
+     - neutral   → muted (default)
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+<div class="dz-action-grid-region">
+  {% if action_card_data and action_card_data | length > 0 %}
+    {% set _tone_classes = {
+      'positive': 'border-[hsl(145,55%,45%/0.4)] bg-[hsl(145,55%,45%/0.05)] hover:bg-[hsl(145,55%,45%/0.10)]',
+      'warning': 'border-[hsl(40,90%,55%/0.4)] bg-[hsl(40,90%,55%/0.05)] hover:bg-[hsl(40,90%,55%/0.10)]',
+      'destructive': 'border-[hsl(var(--destructive)/0.4)] bg-[hsl(var(--destructive)/0.05)] hover:bg-[hsl(var(--destructive)/0.10)]',
+      'accent': 'border-[hsl(var(--primary)/0.4)] bg-[hsl(var(--primary)/0.05)] hover:bg-[hsl(var(--primary)/0.10)]',
+      'neutral': 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted)/0.4)]',
+    } %}
+    {% set _tone_count_classes = {
+      'positive': 'bg-[hsl(145,55%,45%/0.15)] text-[hsl(145,55%,30%)]',
+      'warning': 'bg-[hsl(40,90%,55%/0.18)] text-[hsl(35,80%,35%)]',
+      'destructive': 'bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]',
+      'accent': 'bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))]',
+      'neutral': 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+    } %}
+    <div class="dz-action-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+      {% for card in action_card_data %}
+        {% set _bg = _tone_classes.get(card.tone, _tone_classes['neutral']) %}
+        {% set _badge = _tone_count_classes.get(card.tone, _tone_count_classes['neutral']) %}
+        {# Explicit if/else for the wrapper element so the tag name is
+           never an interpolated value. Body is duplicated inside each
+           branch — small price for an unambiguous template. #}
+        {% if card.url %}
+        <a href="{{ card.url }}"
+           class="dz-action-card group flex flex-col gap-2 p-3 rounded-[6px] border {{ _bg }}
+                  transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                  cursor-pointer">
+          <div class="flex items-center justify-between gap-2">
+            {% if card.icon %}
+              <span class="dz-action-card-icon flex items-center justify-center w-5 h-5 text-[hsl(var(--muted-foreground))]"
+                    data-lucide="{{ card.icon }}"
+                    aria-hidden="true"></span>
+            {% else %}
+              <span class="w-5"></span>
+            {% endif %}
+            {% if card.count is not none %}
+              <span class="dz-action-card-count font-mono text-[11px] px-2 py-0.5 rounded-full {{ _badge }}">
+                {{ card.count }}
+              </span>
+            {% endif %}
+          </div>
+          <span class="dz-action-card-label text-[13px] font-medium text-[hsl(var(--foreground))] leading-tight">
+            {{ card.label }}
+          </span>
+        </a>
+        {% else %}
+        <div class="dz-action-card group flex flex-col gap-2 p-3 rounded-[6px] border {{ _bg }}
+                    transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+          <div class="flex items-center justify-between gap-2">
+            {% if card.icon %}
+              <span class="dz-action-card-icon flex items-center justify-center w-5 h-5 text-[hsl(var(--muted-foreground))]"
+                    data-lucide="{{ card.icon }}"
+                    aria-hidden="true"></span>
+            {% else %}
+              <span class="w-5"></span>
+            {% endif %}
+            {% if card.count is not none %}
+              <span class="dz-action-card-count font-mono text-[11px] px-2 py-0.5 rounded-full {{ _badge }}">
+                {{ card.count }}
+              </span>
+            {% endif %}
+          </div>
+          <span class="dz-action-card-label text-[13px] font-medium text-[hsl(var(--foreground))] leading-tight">
+            {{ card.label }}
+          </span>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No actions available.") }}</p>
+  {% endif %}
+</div>
+{% endcall %}

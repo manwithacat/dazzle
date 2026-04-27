@@ -76,6 +76,7 @@ class DisplayMode(StrEnum):
     BOX_PLOT = "box_plot"  # v0.61.29 (#881): per-group quartile spread
     BULLET = "bullet"  # v0.61.30 (#880): actual-vs-target rows with bands
     BAR_TRACK = "bar_track"  # v0.61.53 (#893): per-row label + filled track + value
+    ACTION_GRID = "action_grid"  # v0.61.54 (#891): CTA cards on dashboards
 
 
 class BucketRef(BaseModel):
@@ -172,6 +173,37 @@ class OverlaySeriesSpec(BaseModel):
     source: str | None = None
     filter: ConditionExpr | None = None
     aggregate_expr: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ActionCardSpec(BaseModel):
+    """v0.61.54 (#891): one CTA card in an action_grid region.
+
+    Each card carries a label, optional icon (Lucide name), an optional
+    count_aggregate (counted per-card via the existing aggregate
+    machinery), an action surface name (resolved to URL at render time),
+    and a tone token mapping to the design palette.
+
+    Attributes:
+        label: Human-readable CTA text rendered prominently on the card.
+        icon: Lucide icon name (e.g. "file-text", "clipboard-check"). Empty
+            string means no icon.
+        count_aggregate: Optional aggregate expression — ``count(<Entity>
+            where <pred>)`` / ``avg(<col>)`` etc. Same vocabulary as
+            region-level ``aggregate:``. Empty string means no count badge.
+        action: Surface name to navigate to on click — same resolution
+            path as region-level ``action:``. Empty string means no
+            click-through (informational card).
+        tone: Palette token — ``positive`` / ``warning`` / ``destructive``
+            / ``neutral`` / ``accent``. Defaults to ``neutral``.
+    """
+
+    label: str
+    icon: str = ""
+    count_aggregate: str = ""
+    action: str = ""
+    tone: str = "neutral"
 
     model_config = ConfigDict(frozen=True)
 
@@ -307,6 +339,11 @@ class WorkspaceRegion(BaseModel):
     #     str() of the value.
     track_max: float | None = None
     track_format: str | None = None
+    # v0.61.54 (#891): action_grid CTA cards. Each entry is fully
+    # specified — label / icon / count_aggregate / action / tone. The
+    # runtime fires one count query per card with a non-empty
+    # `count_aggregate`. Empty list = legacy behaviour (no cards).
+    action_cards: list[ActionCardSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

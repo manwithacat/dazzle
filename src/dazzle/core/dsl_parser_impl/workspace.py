@@ -381,6 +381,120 @@ class WorkspaceParserMixin:
                 return str(raw)
         return str(self.expect_identifier_or_keyword().value)
 
+    def _parse_action_cards_block(self) -> list[ir.ActionCardSpec]:
+        """Parse the indented body of an ``actions:`` block (#891).
+
+        Syntax (each entry uses the same dash-list shape as
+        ``overlay_series:`` — leading dash carries the inline ``label:``,
+        then an INDENT block holds icon/count_aggregate/action/tone)::
+
+            actions:
+              - label: "Generate notes"
+                icon: "file-text"
+                count_aggregate: count(StudentProfile where pending = true)
+                action: notes_create
+                tone: positive
+
+        Only ``label:`` is required. ``tone:`` defaults to ``neutral``.
+        """
+        cards: list[ir.ActionCardSpec] = []
+        _VALID_TONES = {"positive", "warning", "destructive", "neutral", "accent"}
+        _VALID_KEYS = {"label", "icon", "count_aggregate", "action", "tone"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    'actions entries must start with `- label: "..."`',
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            label_kw = self.expect_identifier_or_keyword().value
+            if label_kw != "label":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"actions entry must start with `label:`, got {label_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            label_str = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
+            icon_str = ""
+            count_aggregate = ""
+            action_str = ""
+            tone_str = "neutral"
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "icon":
+                        icon_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    elif key == "count_aggregate":
+                        # Same approach as `aggregate:` parser — capture
+                        # tokens until newline/dedent and join.
+                        parts: list[str] = []
+                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                            parts.append(self.advance().value)
+                        count_aggregate = " ".join(parts)
+                        self.skip_newlines()
+                    elif key == "action":
+                        # Accept STRING (for URLs with `/`, `?`, `=`) OR
+                        # IDENT (bare surface name). Required for examples
+                        # like `action: "marking_result_list?status=flagged"`
+                        # whose `?` and `=` don't tokenise as identifiers.
+                        if self.match(TokenType.STRING):
+                            action_str = self.advance().value
+                        else:
+                            action_str = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    elif key == "tone":
+                        tone_val = self.expect_identifier_or_keyword().value
+                        if tone_val not in _VALID_TONES:
+                            raise make_parse_error(
+                                f"actions entry {label_str!r}: tone must be one of "
+                                f"{sorted(_VALID_TONES)}; got {tone_val!r}",
+                                self.file,
+                                key_tok.line,
+                                key_tok.column,
+                            )
+                        tone_str = tone_val
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown actions key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            cards.append(
+                ir.ActionCardSpec(
+                    label=label_str,
+                    icon=icon_str,
+                    count_aggregate=count_aggregate,
+                    action=action_str,
+                    tone=tone_str,
+                )
+            )
+        return cards
+
     def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
         """Parse the indented body of an ``overlay_series:`` block (#883).
 
@@ -791,6 +905,7 @@ class WorkspaceParserMixin:
         css_class: str | None = None  # region wrapper CSS class hook (#894)
         track_max: float | None = None  # bar_track fill denominator (#893)
         track_format: str | None = None  # bar_track value format string (#893)
+        action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1104,6 +1219,16 @@ class WorkspaceParserMixin:
                 track_format = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # actions: indented dash-list of CTA card entries (#891).
+            # Each entry: label/icon/count_aggregate/action/tone.
+            elif self.match(TokenType.ACTIONS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                action_cards = self._parse_action_cards_block()
+                self.expect(TokenType.DEDENT)
+
             # overlay_series: indented dash-list of {label, source?,
             # filter?, aggregate} entries — additional line/area chart
             # series with their own scope (#883).
@@ -1168,7 +1293,9 @@ class WorkspaceParserMixin:
 
         # v0.9.5: Allow aggregate-only regions without source
         # Traditional regions require source, but pure metric regions don't
-        if source is None and not sources and not aggregates:
+        # v0.61.54 (#891): action_grid regions are also bodyless from the
+        # source/aggregate perspective — `actions:` IS the body.
+        if source is None and not sources and not aggregates and not action_cards:
             token = self.current_token()
             raise make_parse_error(
                 f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
@@ -1225,4 +1352,5 @@ class WorkspaceParserMixin:
             css_class=css_class,
             track_max=track_max,
             track_format=track_format,
+            action_cards=action_cards,
         )
