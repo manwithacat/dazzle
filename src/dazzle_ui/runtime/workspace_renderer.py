@@ -111,6 +111,11 @@ class RegionContext(BaseModel):
     # Threaded through so `_compute_aggregate_metrics(delta=...)` resolves
     # without AttributeError. Forward-ref since IR import would cycle.
     delta: Any | None = None
+    # v0.61.52 (#894): project-supplied CSS class on the region's outer
+    # wrapper. Empty string when not set. Threaded through to the
+    # `cards_for_json` payload so the Alpine card-grid binds it on the
+    # `<div :data-card-id>` element.
+    css_class: str = ""
 
 
 class WorkspaceContext(BaseModel):
@@ -429,6 +434,7 @@ def build_workspace_context(
                 bullet_actual=getattr(region, "bullet_actual", None) or "",
                 bullet_target=getattr(region, "bullet_target", None) or "",
                 delta=getattr(region, "delta", None),
+                css_class=getattr(region, "css_class", None) or "",  # #894
             )
         )
 

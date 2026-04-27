@@ -788,6 +788,7 @@ class WorkspaceParserMixin:
         bullet_actual: str | None = None  # bullet chart actual-value column (#880)
         bullet_target: str | None = None  # bullet chart target column (#880)
         overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
+        css_class: str | None = None  # region wrapper CSS class hook (#894)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1068,6 +1069,20 @@ class WorkspaceParserMixin:
                 bullet_target = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # class: <css-class-string> — project CSS hook on the region's
+            # outer wrapper (#894). Pure presentation; no data semantics.
+            # Accepts a quoted string OR a bare identifier (single class
+            # name). Multiple classes via the quoted-string form
+            # (`class: "metrics-strip dense"`).
+            elif self.match(TokenType.CSS_CLASS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    css_class = self.advance().value
+                else:
+                    css_class = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # overlay_series: indented dash-list of {label, source?,
             # filter?, aggregate} entries — additional line/area chart
             # series with their own scope (#883).
@@ -1186,4 +1201,5 @@ class WorkspaceParserMixin:
             bullet_actual=bullet_actual,
             bullet_target=bullet_target,
             overlay_series=overlay_series,
+            css_class=css_class,
         )

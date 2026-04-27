@@ -157,7 +157,10 @@
          (issue #794). #}
       <div :data-card-id="card.id"
            :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
-           :class="{ 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]': !isDragging(card.id) && !drag }"
+           :class="[
+             { 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]': !isDragging(card.id) && !drag },
+             card.css_class || ''
+           ]"
            tabindex="0"
            @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
            class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2">

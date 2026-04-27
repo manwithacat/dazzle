@@ -144,6 +144,7 @@ class TokenType(Enum):
     BULLET_LABEL = "bullet_label"  # v0.61.30: Bullet chart row label column (#880)
     BULLET_ACTUAL = "bullet_actual"  # v0.61.30: Bullet chart bar value column (#880)
     BULLET_TARGET = "bullet_target"  # v0.61.30: Bullet chart target tick column (#880)
+    CSS_CLASS = "class"  # v0.61.52: region-level class hook for project CSS (#894)
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

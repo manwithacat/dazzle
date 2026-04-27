@@ -1358,6 +1358,10 @@ async def _workspace_handler(
                 "title": r.title or r.name.replace("_", " ").title(),
                 "col_span": r.col_span,
                 "row_order": i,
+                # #894: project CSS hook on the wrapper. Empty string when
+                # the region didn't declare `class:` — Alpine binding then
+                # contributes nothing.
+                "css_class": getattr(r, "css_class", "") or "",
             }
         )
 

@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.52] - 2026-04-27
+
+Patch bump. **Fix #894** — region-level `class:` field. DSL authors can now attach a project-supplied CSS hook to any workspace region's outer card wrapper without forking templates or relying on heuristic class hooks.
+
+### Added
+- **`WorkspaceRegion.css_class: str | None`** in `src/dazzle/core/ir/workspaces.py` — IR field. Default `None`. Naming follows the `from`/`to` → `from_value`/`to_value` precedent on `ReferenceBand`: user-facing keyword is `class:` (matches HTML); Python field name is `css_class` to avoid the keyword collision.
+- **`TokenType.CSS_CLASS = "class"`** in `src/dazzle/core/lexer.py` — lexer token for the new keyword.
+- **Parser branch** in `src/dazzle/core/dsl_parser_impl/workspace.py` — accepts both bare-identifier (`class: highlight`) and quoted-string (`class: "metrics-strip dense"`) forms. Quoted form required for kebab-case / multi-class — bare form constrained to Python-identifier shapes (lexer treats `-` as operator everywhere in the DSL).
+- **`RegionContext.css_class: str = ""`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows the value from IR to the rendering context. Empty string when not set.
+- **`cards_for_json` payload extension** in `src/dazzle_ui/runtime/page_routes.py` — each card dict now carries `css_class` so the Alpine card-grid template can bind it without import dance.
+- **Template binding** in `src/dazzle_ui/templates/workspace/_content.html` — the outer card wrapper's `:class` array now includes `card.css_class || ''`, composing with the existing transition/drag-state binding rather than replacing it.
+
+### Tests
+- **`tests/unit/test_workspace_region_class.py`** (new) — 18 cases across 4 classes:
+  - `TestCssClassParser` (5 cases): default-None, bare identifier, quoted multi-class, BEM-style classes, no-clobber-other-fields
+  - `TestRegionContextCssClass` (3 cases): default empty string, value carried, card payload includes hook
+  - `TestCssClassTemplateBinding` (1 case): static template check pins the Alpine binding
+  - `TestCssClassIsPresentationOnly` (9 parametrized + 1 case): scope/data fields unaffected; bare and quoted form variants
+
+### Agent Guidance
+- **Pure presentation hook — no semantic impact.** `css_class` doesn't affect data, scope, RBAC, or any non-render behaviour. The `TestCssClassIsPresentationOnly` class pins this invariant; respect it when extending the field (e.g. don't tee it into RegionContext.filter_expr).
+- **Naming convention for keyword/Python collisions.** When a DSL keyword would shadow a Python keyword, follow the `class` → `css_class` (and `from`/`to` → `from_value`/`to_value`) pattern: keep the user-facing DSL string natural; alias to a Python-safe field name in the IR. Update Pydantic Field aliases when the IR uses Pydantic models for parsing.
+- **Bare vs quoted identifier.** The lexer treats `-` as an operator throughout the DSL — kebab-case identifiers always need the quoted-string form. This is a global constraint, not specific to `class:`. The parser tests pin both shapes for documentation.
+- **Foundation for the new display modes.** Issues #890–#893 (pipeline_steps / action_grid / profile_card / bar_track) will land their own templates that render inside the same card wrapper — they automatically pick up the `css_class` hook with no additional work.
+
 ## [0.61.51] - 2026-04-27
 
 Patch bump. **Fix #888 (Phase 1)** — reporting predicate algebra unification. Aggregate where-clauses now route through the same structured predicate algebra used by RBAC scope rules, closing three long-standing gaps: column-vs-column comparisons, OR clauses, and proper sum/avg/min/max with where-clauses.

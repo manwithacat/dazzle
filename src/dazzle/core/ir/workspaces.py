@@ -289,6 +289,12 @@ class WorkspaceRegion(BaseModel):
     # polylines/stacked layers driven by their own source/filter/aggregate.
     # Each overlay fires one extra `_compute_bucketed_aggregates` call.
     overlay_series: list[OverlaySeriesSpec] = Field(default_factory=list)
+    # v0.61.52 (#894): project-supplied CSS class on the region's outer
+    # wrapper. DSL keyword is `class:` (matches HTML); IR field name is
+    # `css_class` to avoid the Python keyword. Multiple classes
+    # space-separated. Pure presentation hook — no impact on data,
+    # scope, or semantics.
+    css_class: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
