@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.66] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap item #4** — generalise `pipeline_steps` per-stage `aggregate:` to `value:`, accepting either an aggregate expression OR a literal string. Authors can now mix count-driven stages with descriptive flow-card labels ("Daily 02:00 UTC", "Manual review") in the same pipeline.
+
+### Changed
+- **`pipeline_steps` per-stage key renamed `aggregate:` → `value:`** (`src/dazzle/core/dsl_parser_impl/workspace.py`, `src/dazzle/core/ir/workspaces.py`). Clean break per project policy — no shim. The new `value:` accepts a quoted string literal OR an unquoted aggregate expression; runtime uses `_AGGREGATE_RE.match` to dispatch.
+- **`PipelineStageSpec.aggregate_expr` renamed `value`** — single source of truth, matches the DSL field name. All call sites updated in the same commit (parser, runtime, renderer, tests, ops_dashboard example).
+
+### Added
+- **Literal-string render path in `pipeline_steps` runtime** (`src/dazzle_back/runtime/workspace_rendering.py`) — non-aggregate values short-circuit the query path entirely. They're stashed into `_stage_literals` during the dispatch loop and re-attached to the build output, so they render verbatim alongside count-driven siblings. Honours the scope-deny gate (literals still render even when scope-denied — they don't depend on row visibility).
+- **`examples/ops_dashboard` `alert_pipeline`** picked up a literal-value stage ("Audit / Daily 02:00 UTC") to demonstrate mixed-shape pipelines.
+
+### Tests
+- **`test_workspace_pipeline_steps.py`** — 4 new tests in `TestPipelineStepsValueShape`: quoted literal parses, literal with em-dash, mixed aggregate + literal in same block, and a regex-contract pin asserting `_AGGREGATE_RE` distinguishes both shapes correctly. All 14 existing tests updated for the rename.
+
+### Agent Guidance
+- **Field renames require updating the `getattr(...)` callers too.** When renaming a Pydantic field on an IR type, grep for both the field name AND `getattr(thing, "old_name")` patterns — the renderer often defensively reads via `getattr` to avoid IR-import cycles, and a missed `getattr("aggregate_expr")` would silently revert the new field to its default. The full call graph for this rename: parser → IR → runtime (`_stage.get(...)`) → renderer dict-build → template var name. Touching any one without the others lights up the test suite immediately, so don't be precious about it.
+- **Polymorphic field shapes (aggregate-expr OR literal-string) belong on a single field with runtime dispatch, not two parallel fields.** The wrong design here would have been `value:` for literals + keeping `aggregate:` for queries. Two fields means double the parser branches, double the IR fields, double the runtime gates, and forces authors to know the difference upfront. One field with runtime regex-dispatch (`_AGGREGATE_RE.match`) means authors write the natural form and the framework figures it out — same pattern as `_compute_aggregate_metrics` already uses for region-level aggregates.
+- **Reserved-keyword traps in test DSL.** `flow:` is reserved; `kind:` is reserved; `title:` works only because the workspace parser string-matches it. When writing pipeline-style test DSL, use `pipeline:`, `alerting:`, etc. for region names — reserved keywords surface as `Expected DEDENT, got flow` errors that look unrelated to what you actually broke.
+
 ## [0.61.65] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap item #2** — per-tile `tone:` on `display: metrics` regions. Authors can now tint individual metric tiles to communicate at-a-glance state (positive / warning / destructive / accent / neutral). Mirrors the action_grid card vocabulary so the palette tokens stay consistent across components.

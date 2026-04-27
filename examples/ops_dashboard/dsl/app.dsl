@@ -334,19 +334,24 @@ workspace command_center "Command Center":
         tone: positive
 
   # Pipeline steps — incident triage workflow. Exercises the v0.61.56
-  # (#890) pipeline_steps display mode with per-stage count aggregates.
+  # (#890) pipeline_steps display mode with per-stage values. The
+  # final stage uses a literal-string value (v0.61.66 #4) to describe
+  # a downstream system that has no entity backing — flow-card style.
   alert_pipeline:
     display: pipeline_steps
     stages:
       - label: "Active"
         caption: "currently firing"
-        aggregate: count(Alert where status = active)
+        value: count(Alert where status = active)
       - label: "Acknowledged"
         caption: "an engineer is on it"
-        aggregate: count(Alert where status = acknowledged)
+        value: count(Alert where status = acknowledged)
       - label: "Resolved"
         caption: "closed in this window"
-        aggregate: count(Alert where status = resolved)
+        value: count(Alert where status = resolved)
+      - label: "Audit"
+        caption: "external compliance log"
+        value: "Daily 02:00 UTC"
 
   # Profile card — single-system identity panel. Exercises the v0.61.55
   # (#892) profile_card display mode with `filter: id = current_context`

@@ -2,13 +2,14 @@
 
 Three layers:
   1. Parser: ``display: pipeline_steps`` + ``stages:`` indented dash-list
-     of ``{label, caption, aggregate}`` entries parses into the IR.
+     of ``{label, caption, value}`` entries parses into the IR.
      Crucially, the existing legacy ``stages: [a, b, c]`` bracketed
      form for ``progress`` mode still works — the parser shape-detects.
-  2. Runtime: each stage's `aggregate_expr` fires via
-     `_fetch_count_metric` concurrently. Stages without aggregates
-     (or with not-yet-supported `median`/`avg`/etc.) render `None` →
-     `—` in the template. Honours the #887 scope-deny gate.
+  2. Runtime: each stage's `value` is matched against `_AGGREGATE_RE`.
+     Aggregate-shaped values fire via `_fetch_count_metric` concurrently;
+     literal-string values render verbatim (v0.61.66 #4). Stages without
+     a value (or with not-yet-supported `median`/`avg`/etc.) render
+     `None` → `—` in the template. Honours the #887 scope-deny gate.
   3. Template: row of stage cards with arrow connectors between
      (desktop) / vertical chevrons (mobile). Empty-state fallback.
 """
@@ -39,10 +40,10 @@ workspace dash "Dash":
     stages:
       - label: "Scanned"
         caption: "complete pupil scripts"
-        aggregate: count(Manuscript where status = uploaded)
+        value: count(Manuscript where status = uploaded)
       - label: "Reviewed"
         caption: "human-validated"
-        aggregate: count(Manuscript where status = reviewed)
+        value: count(Manuscript where status = reviewed)
 """
 
 
@@ -56,13 +57,10 @@ class TestPipelineStepsParser:
         assert len(region.pipeline_stages) == 2
         assert region.pipeline_stages[0].label == "Scanned"
         assert region.pipeline_stages[0].caption == "complete pupil scripts"
-        assert (
-            region.pipeline_stages[0].aggregate_expr
-            == "count ( Manuscript where status = uploaded )"
-        )
+        assert region.pipeline_stages[0].value == "count ( Manuscript where status = uploaded )"
 
     def test_label_only_stage(self) -> None:
-        """Only ``label:`` is required — caption/aggregate default."""
+        """Only ``label:`` is required — caption/value default."""
         src = """module t
 app t "Test"
 workspace dash "Dash":
@@ -76,7 +74,7 @@ workspace dash "Dash":
         s = region.pipeline_stages[0]
         assert s.label == "Just a label"
         assert s.caption == ""
-        assert s.aggregate_expr == ""
+        assert s.value == ""
 
     def test_multiple_stages_preserve_order(self) -> None:
         src = """module t
@@ -133,21 +131,21 @@ workspace dash "Dash":
     stages:
       - label: "Scanned"
         caption: "complete pupil scripts, page order checked"
-        aggregate: count(Manuscript where status = uploaded)
+        value: count(Manuscript where status = uploaded)
       - label: "Rubric pass"
         caption: "AO-level judgements with evidence snippets"
-        aggregate: count(MarkingResult where latest_for_event = true)
+        value: count(MarkingResult where latest_for_event = true)
       - label: "Moderation"
         caption: "low-confidence results isolated for review"
-        aggregate: count(MarkingResult where flagged_for_review = true)
+        value: count(MarkingResult where flagged_for_review = true)
       - label: "Output"
         caption: "median grade"
-        aggregate: median(Manuscript.computed_grade)
+        value: median(Manuscript.computed_grade)
 """
         region = _parse(src).workspaces[0].regions[0]
         assert region.display == DisplayMode.PIPELINE_STEPS
         assert len(region.pipeline_stages) == 4
-        assert region.pipeline_stages[3].aggregate_expr.startswith("median")
+        assert region.pipeline_stages[3].value.startswith("median")
 
 
 # ───────────────────────── stages: shape dispatch ──────────────────────────
@@ -186,6 +184,81 @@ workspace dash "Dash":
         assert len(region.pipeline_stages) == 2
 
 
+# ───────────────────────── value: literal vs aggregate ──────────────────────────
+
+
+class TestPipelineStepsValueShape:
+    """v0.61.66 (AegisMark UX patterns #4): the ``value:`` key accepts
+    either an aggregate expression (matches `_AGGREGATE_RE` — fires a
+    count query) OR a literal string (renders verbatim — used for
+    flow-card descriptive labels like "Daily 02:00 UTC")."""
+
+    def test_quoted_literal_value_parses(self) -> None:
+        src = """module t
+app t "Test"
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "Sync"
+        caption: "external system"
+        value: "Daily 02:00 UTC"
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        assert region.pipeline_stages[0].value == "Daily 02:00 UTC"
+
+    def test_literal_with_special_chars(self) -> None:
+        src = """module t
+app t "Test"
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "Trigger"
+        value: "Manual review — escalation path"
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        assert region.pipeline_stages[0].value == "Manual review — escalation path"
+
+    def test_aggregate_and_literal_in_same_block(self) -> None:
+        """Mixed pipeline — count stages alongside literal-string stages.
+        The runtime fires queries for the aggregates and renders the
+        literals verbatim."""
+        src = """module t
+app t "Test"
+entity Alert:
+  id: uuid pk
+  status: enum[active,resolved]
+workspace dash "Dash":
+  alerting:
+    display: pipeline_steps
+    stages:
+      - label: "Active"
+        value: count(Alert where status = active)
+      - label: "Audit"
+        value: "Daily 02:00 UTC"
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        assert len(region.pipeline_stages) == 2
+        assert region.pipeline_stages[0].value.startswith("count")
+        assert region.pipeline_stages[1].value == "Daily 02:00 UTC"
+
+    def test_runtime_aggregate_re_distinguishes_shapes(self) -> None:
+        """The runtime gate uses `_AGGREGATE_RE` to decide between the
+        query path and the literal path. Pin the regex behaviour so
+        a future refactor doesn't accidentally treat literals as bad
+        aggregates (or vice versa)."""
+        from dazzle_back.runtime.workspace_rendering import _AGGREGATE_RE
+
+        assert _AGGREGATE_RE.match("count(Alert where status = active)") is not None
+        assert _AGGREGATE_RE.match("avg(score)") is not None
+        # Literal strings should NOT match — they fall through to the
+        # verbatim render path.
+        assert _AGGREGATE_RE.match("Daily 02:00 UTC") is None
+        assert _AGGREGATE_RE.match("Manual review") is None
+        assert _AGGREGATE_RE.match("") is None
+
+
 # ───────────────────────── PipelineStageSpec ──────────────────────────
 
 
@@ -194,12 +267,18 @@ class TestPipelineStageSpec:
         s = PipelineStageSpec(label="X")
         assert s.label == "X"
         assert s.caption == ""
-        assert s.aggregate_expr == ""
+        assert s.value == ""
 
     def test_construct_full(self) -> None:
-        s = PipelineStageSpec(label="Scanned", caption="cap", aggregate_expr="count(M)")
+        s = PipelineStageSpec(label="Scanned", caption="cap", value="count(M)")
         assert s.caption == "cap"
-        assert s.aggregate_expr == "count(M)"
+        assert s.value == "count(M)"
+
+    def test_construct_with_literal_value(self) -> None:
+        """v0.61.66: literal-string values are first-class — same field,
+        different shape (no aggregate function)."""
+        s = PipelineStageSpec(label="Sync", caption="cap", value="Daily 02:00 UTC")
+        assert s.value == "Daily 02:00 UTC"
 
 
 # ───────────────────────── template wiring ──────────────────────────
@@ -238,9 +317,7 @@ class TestPipelineStepsTemplateWiring:
 
         ctx = RegionContext(
             name="r",
-            pipeline_stages=[
-                {"label": "Scanned", "caption": "scripts", "aggregate_expr": "count(M)"}
-            ],
+            pipeline_stages=[{"label": "Scanned", "caption": "scripts", "value": "count(M)"}],
         )
         assert len(ctx.pipeline_stages) == 1
         assert ctx.pipeline_stages[0]["label"] == "Scanned"

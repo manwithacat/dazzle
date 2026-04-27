@@ -1204,12 +1204,12 @@ async def _workspace_region_handler(
                 )
 
     # Pipeline steps (#890, v0.61.56): sequential-stage workflow.
-    # Each stage has its own aggregate_expr that fires independently
-    # via the existing `_fetch_count_metric` machinery — RBAC scope
-    # rules apply per-stage. Stages without aggregates render `—`.
-    # Median and other not-yet-supported aggregates also render `—`
-    # (the issue's example uses `median(Manuscript.computed_grade)`
-    # which isn't in the count/sum/avg/min/max vocabulary today).
+    # Each stage's `value` is either an aggregate expression (matches
+    # `_AGGREGATE_RE` — fires a count query) OR a literal string
+    # (renders verbatim — v0.61.66 AegisMark UX patterns #4). RBAC
+    # scope rules apply per stage for the aggregate path. Stages with
+    # empty value render `—`. Median and other not-yet-supported
+    # aggregates also render `—` (only count is wired today).
     # Mirrors the action_grid pattern (#891).
     pipeline_stage_data: list[dict[str, Any]] = []
     if ctx.ctx_region.display == "PIPELINE_STEPS":
@@ -1217,12 +1217,16 @@ async def _workspace_region_handler(
         if _stages and not _scope_denied:
             _stage_tasks: list[Any] = []
             _stage_indices: list[int] = []
+            _stage_literals: dict[int, str] = {}
             for _sidx, _stage in enumerate(_stages):
-                _expr = _stage.get("aggregate_expr") or ""
+                _expr = _stage.get("value") or ""
                 if not _expr:
                     continue
                 _m = _AGGREGATE_RE.match(_expr)
                 if not _m:
+                    # Literal string — render verbatim. Stash so the
+                    # build loop below picks it up.
+                    _stage_literals[_sidx] = _expr
                     continue
                 _func, _entity_name, _where = _m.groups()
                 _agg_repo = ctx.repositories.get(_entity_name) if ctx.repositories else None
@@ -1272,7 +1276,9 @@ async def _workspace_region_handler(
                             _srresult,
                         )
             for _sidx, _stage in enumerate(_stages):
-                _val = _stage_results.get(_sidx)
+                # Literal beats aggregate result: any stage parsed as a
+                # literal short-circuits before the query path even ran.
+                _val: Any = _stage_literals.get(_sidx, _stage_results.get(_sidx))
                 pipeline_stage_data.append(
                     {
                         "label": _stage.get("label", ""),
@@ -1281,13 +1287,17 @@ async def _workspace_region_handler(
                     }
                 )
         elif _stages:
-            # scope denied — render stages with no values (—)
+            # scope denied — render stages with no values (—) for
+            # aggregate stages, but keep literals (they don't depend
+            # on scope).
             for _stage in _stages:
+                _expr = _stage.get("value") or ""
+                _is_literal = bool(_expr) and not _AGGREGATE_RE.match(_expr)
                 pipeline_stage_data.append(
                     {
                         "label": _stage.get("label", ""),
                         "caption": _stage.get("caption", ""),
-                        "value": None,
+                        "value": _expr if _is_literal else None,
                     }
                 )
 

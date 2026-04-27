@@ -169,8 +169,9 @@ class RegionContext(BaseModel):
     profile_stats: list[dict[str, str]] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
     # v0.61.56 (#890): pipeline_steps stages — each entry is a plain
-    # dict (label/caption/aggregate_expr) so the runtime branch can fire
-    # one count query per stage. The render-ready list with resolved
+    # dict (label/caption/value). Runtime branch fires one count query
+    # per aggregate-shaped value, and renders literal-string values
+    # verbatim (v0.61.66 #4). The render-ready list with resolved
     # values is built at request time as `pipeline_stage_data`.
     pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
@@ -527,10 +528,10 @@ def build_workspace_context(
                     {
                         "label": s.label,
                         "caption": s.caption,
-                        "aggregate_expr": s.aggregate_expr,
+                        "value": s.value,
                     }
                     for s in (getattr(region, "pipeline_stages", None) or [])
-                ],  # #890
+                ],  # #890 + v0.61.66 #4
                 tones=dict(getattr(region, "tones", None) or {}),  # v0.61.65
             )
         )

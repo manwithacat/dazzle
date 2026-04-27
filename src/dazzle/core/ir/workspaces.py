@@ -183,22 +183,29 @@ class PipelineStageSpec(BaseModel):
     """v0.61.56 (#890): one stage in a pipeline_steps region.
 
     Each stage has a label (the kicker), an optional caption (sub-text
-    under the headline number), and an aggregate expression that fires
-    independently — RBAC scope rules apply per-stage. Stages are
-    ordered left-to-right (or top-to-bottom on mobile).
+    under the headline number), and a value — either an aggregate
+    expression OR a literal string. Aggregate expressions fire
+    independently per stage with RBAC scope rules applied. Literal
+    strings render verbatim (used for descriptive flow labels — e.g.
+    "Daily 02:00 UTC", "Manual review"). Stages are ordered
+    left-to-right (or top-to-bottom on mobile).
 
     Attributes:
         label: Human-readable stage name (e.g. "Scanned", "Rubric pass").
         caption: Optional sub-text describing what's at this stage.
-        aggregate_expr: A single aggregate expression — same vocabulary
-            as region-level ``aggregate:``: ``count(<Entity> where <pred>)``,
-            ``avg(<col>)``, etc. Empty string means no value (renders as
-            ``—``).
+        value: Either an aggregate expression — same vocabulary as
+            region-level ``aggregate:``: ``count(<Entity> where <pred>)``,
+            ``avg(<col>)``, etc. — OR a literal string rendered as-is.
+            Detected by `_AGGREGATE_RE` match in the runtime: matches
+            fire a query, non-matches render verbatim. Empty string
+            means no value (renders as ``—``). v0.61.66: generalised
+            from `aggregate_expr` to support flow-card descriptive
+            stages (AegisMark UX patterns roadmap item #4).
     """
 
     label: str
     caption: str = ""
-    aggregate_expr: str = ""
+    value: str = ""
 
     model_config = ConfigDict(frozen=True)
 
