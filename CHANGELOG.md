@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.71] - 2026-04-27
+
+Patch bump. **AegisMark UX patterns roadmap item #5** — `pair_strip` workspace stage layout. AegisMark's SIMS-sync-opt-in prototype's `consent-grid` pattern is a stack of explicit `(info, action)` pairs; pair_strip is the framework primitive that gives DSL authors the same shape via a one-line stage declaration. Mobile fallback piggybacks on the existing 12-column responsive grid — no framework JS, no per-region template branching.
+
+### Added
+- **`pair_strip` stage value** in `STAGE_DEFAULT_SPANS` and `STAGE_FOLD_COUNTS` (`src/dazzle_ui/runtime/workspace_renderer.py`). Every region under a `stage: "pair_strip"` workspace gets `col_span=6`; CSS grid auto-flow stacks them into rows of two. Sibling to `dual_pane_flow` but reads more naturally for multi-pair flows. Eager-loads six regions above the fold (three pairs).
+- **`examples/ops_dashboard`** `incident_review` workspace demonstrates pair_strip with four regions = two pairs (`alert_summary` + `recent_alerts`, `system_overview` + `review_checklist`). Exercises the new stage alongside metrics tones (#2), notice band (#7), and status_list (#3) — full UX vocabulary in one workspace.
+
+### Tests
+- **`test_workspace_pair_strip.py`** — 8 tests across stage registration (default spans + fold counts), `_default_col_span` behaviour (first region, subsequent regions, regression guard for unrelated stages), example-app demo (workspace exists, has at least 4 regions), and a responsive-contract guard that pins the "no Python branching for mobile, CSS does it" decision so a future "let me add JS for mobile" temptation trips a test before shipping.
+
+### Agent Guidance
+- **A new layout intent doesn't always need new IR.** pair_strip and dual_pane_flow have identical col_span behaviour (every region half-width); pair_strip exists as a separate stage VALUE because authors thinking about an explicit-pair flow will reach for the more descriptive name. Adding a stage table entry is ~5 LOC; inventing a new region group primitive would have been ~150 LOC — and the second cycle of authors would still have written `stage: "pair_strip"` if it had been there.
+- **CSS grid auto-flow handles multi-row pair layouts natively.** When every region declares `col-span-6` and the parent is a 12-column grid, three pairs stack into three rows of two. Mobile fallback comes from the project's standard responsive media queries (the 12-column grid collapses to 1 column at narrow widths, which makes col-span-6 equivalent to col-span-12). Don't write framework JS for layout; let CSS do it.
+- **Stage values are free-form strings — adding one means just registering it.** No parser changes, no IR changes, no template changes. `STAGE_DEFAULT_SPANS[name] = pattern` + `STAGE_FOLD_COUNTS[name] = N` and the stage is ready. Same shape as how authors will discover it: read the DEFAULT_SPANS table, find a stage that matches their layout intent, type its name.
+
 ## [0.61.70] - 2026-04-27
 
 Patch bump. **Fix #906** — tone tints on `metrics` tiles, `notice` bands, and `status_list` pills/icons no longer rely on dynamic Tailwind arbitrary-value classes that the JIT can't observe at build time. Three components shipped with this bug across v0.61.65 / v0.61.68 / v0.61.69; AegisMark deployments saw transparent tiles + uncoloured pills despite the data attributes being correct.

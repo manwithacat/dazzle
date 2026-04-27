@@ -219,6 +219,16 @@ STAGE_DEFAULT_SPANS: dict[str, list[int] | int] = {
     "scanner_table": 12,
     "monitor_wall": 6,
     "command_center": [12, 6, 6, 4, 4, 4],
+    # v0.61.71 (#5, AegisMark UX patterns roadmap): pair_strip is for
+    # consent-flow / authorisation layouts where the page is a stack
+    # of explicit (info, action) pairs — three sections × two panels
+    # each in AegisMark's SIMS opt-in prototype. Every region is
+    # half-width; CSS grid auto-flow stacks them into rows of two.
+    # On narrow viewports the responsive rules in the project's
+    # bundle (or any consumer's media queries) collapse them to a
+    # single column. Sibling to dual_pane_flow but reads more
+    # naturally for multi-pair flows.
+    "pair_strip": 6,
 }
 
 
@@ -314,6 +324,10 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     "scanner_table": 2,
     "monitor_wall": 6,
     "command_center": 6,
+    # v0.61.71 (#5): pair_strip — load three pairs eagerly (six
+    # regions). Consent flows tend to be top-to-bottom linear so
+    # users see the whole story before scrolling.
+    "pair_strip": 6,
 }
 
 

@@ -403,6 +403,76 @@ workspace command_center "Command Center":
       purpose: "Full visibility into all systems and alerts"
 
 # =============================================================================
+# Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
+# =============================================================================
+# Demonstrates the pair_strip stage layout — every region renders at
+# half-width and CSS grid auto-flows them into rows of two. Used for
+# explicit (info, action) pair flows where each row tells one part of
+# a story. See AegisMark's `consent-grid` pattern in
+# `static/prototypes/sims-sync-opt-in.html`. Mobile collapses to a
+# single column via the project's responsive rules.
+
+workspace incident_review "Incident Review":
+  purpose: "Side-by-side pairs for change-management review"
+  stage: "pair_strip"
+  access: persona(ops_engineer)
+
+  # Pair 1: alert overview + alert list
+  alert_summary:
+    source: Alert
+    display: metrics
+    aggregate:
+      active: count(Alert WHERE acknowledged = false)
+      resolved: count(Alert WHERE status = 'resolved')
+    tones:
+      active: warning
+      resolved: positive
+
+  recent_alerts:
+    source: Alert
+    sort: triggered_at desc
+    limit: 5
+
+  # Pair 2: system context + readiness checklist
+  system_overview:
+    source: System
+    display: metrics
+    aggregate:
+      total: count(System)
+      critical: count(System WHERE status = 'critical')
+    tones:
+      critical: destructive
+
+  review_checklist:
+    display: status_list
+    notice:
+      title: "Review checklist"
+      body: "All four items must be confirmed before closing the incident."
+      tone: accent
+    entries:
+      - title: "Root cause documented"
+        caption: "Linked from the timeline section"
+        icon: "file-text"
+        state: positive
+      - title: "Customer impact assessed"
+        caption: "SLA breach window calculated"
+        icon: "users"
+        state: positive
+      - title: "Postmortem scheduled"
+        caption: "Within 48h of resolution"
+        icon: "calendar"
+        state: warning
+      - title: "Runbook updated"
+        caption: "Document any new mitigation steps"
+        icon: "book-open"
+        state: warning
+
+  ux:
+    for ops_engineer:
+      scope: all
+      purpose: "Pair-strip review of pending incidents"
+
+# =============================================================================
 # Surfaces
 # =============================================================================
 
