@@ -1,0 +1,51 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "comment-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "selector-class-pattern": [
+      "^[a-z]([a-z0-9-]+[a-z0-9])?$",
+      {
+        "message": "Class names use kebab-case (UK English; .colour-success not .color-success)"
+      }
+    ],
+    "custom-property-pattern": [
+      "^(colour-|space-|text-|leading-|weight-|radius-|shadow-|ease-|duration-|width-|neutral-|brand-|success-|warning-|danger-|flow-).*",
+      {
+        "message": "Custom properties use Dazzle's vocabulary (--colour-*, --space-*, etc.). UK English only."
+      }
+    ]
+  },
+  "ignoreFiles": [
+    "src/dazzle_ui/runtime/static/css/dazzle-bundle.css",
+    "src/dazzle_ui/runtime/static/css/dazzle-framework.css",
+    "src/dazzle_ui/runtime/static/css/dazzle-layer.css",
+    "src/dazzle_ui/runtime/static/css/design-system.css",
+    "src/dazzle_ui/runtime/static/css/dz.css",
+    "src/dazzle_ui/runtime/static/css/dz-tones.css",
+    "src/dazzle_ui/runtime/static/css/dz-widgets.css",
+    "src/dazzle_ui/runtime/static/css/site-sections.css",
+    "src/dazzle_ui/runtime/static/css/feedback-widget.css",
+    "src/dazzle_ui/runtime/static/css/themes/**",
+    "dist/**",
+    "node_modules/**",
+    "examples/**",
+    "fixtures/**"
+  ],
+  "overrides": [
+    {
+      "files": ["src/dazzle_ui/runtime/static/css/components/**/*.css"],
+      "rules": {
+        "declaration-property-value-disallowed-list": {
+          "/.*/": [
+            "/^[0-9]+(\\.[0-9]+)?(px|rem|em|pt|cm|mm)$/",
+            "/#[0-9a-fA-F]{3,8}/",
+            "/^rgb\\(/",
+            "/^hsl\\([0-9]/"
+          ],
+          "message": "Component CSS must reference design tokens, not literal values. Define new tokens in tokens.css if the existing scale doesn't fit."
+        }
+      }
+    }
+  ]
+}

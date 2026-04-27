@@ -1,0 +1,31 @@
+/*
+ * dazzle.css — single entry point for the Dazzle styling layer.
+ *
+ * This file is the only stylesheet referenced from HTML. It declares
+ * the canonical cascade-layer order and imports the rest in that
+ * order. Anything in a later layer wins over earlier layers
+ * regardless of selector specificity.
+ *
+ * Layer order (DO NOT REORDER):
+ *   reset      — modern element reset (Andy Bell + Open Props normalise)
+ *   tokens     — custom property declarations (the design system)
+ *   base       — element defaults (typography, links, form controls)
+ *   utilities  — small semantic utility layer (.row, .stack, etc.)
+ *   components — one file per component family
+ *   overrides  — escape hatch; used reluctantly, always with a comment
+ *
+ * Tailwind, DaisyUI, and the JIT scanner are intentionally absent.
+ * See dev_docs/css-refactor-2026-04-27.md for the migration rationale.
+ */
+
+@layer reset, tokens, base, utilities, components, overrides;
+
+@import url("reset.css") layer(reset);
+@import url("tokens.css") layer(tokens);
+@import url("base.css") layer(base);
+@import url("utilities.css") layer(utilities);
+
+/* Component imports land here as components migrate, one per family.
+ * Until then this section stays empty and the existing
+ * `dazzle-framework.css` / `dz-tones.css` continue serving the live
+ * pages from the legacy entry point. */

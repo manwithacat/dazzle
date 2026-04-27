@@ -1,0 +1,132 @@
+/*
+ * utilities.css — small semantic utility layer.
+ *
+ * The decision rule for adding a utility (from the migration plan):
+ *
+ *   Pattern used 2+ times within a component:
+ *     define it inside that component's CSS file.
+ *
+ *   Pattern used across 3+ components:
+ *     promote to utilities.css with a SEMANTIC name describing what
+ *     it does, not how it looks (.stack not .flex-col-gap-3).
+ *
+ *   "Feels useful later":
+ *     do NOT add it. Utilities are reactive, not speculative.
+ *     A Tailwind-shaped utility set is exactly what we are escaping.
+ *
+ * Wrapped in @layer utilities (declared in dazzle.css) so component
+ * styles override when needed without specificity wars.
+ */
+
+/* ─────────────────────────── stack ─────────────────────────────────
+ * Vertical rhythm — children flow top-to-bottom with consistent gap.
+ * The "stack" name is from Heydon Pickering's Every Layout
+ * (everylayout.dev/layouts/stack/) — the canonical name for this
+ * pattern in the post-Tailwind world. Sized variants reach for the
+ * spacing tokens. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ─────────────────────────── row ───────────────────────────────────
+ * Horizontal rhythm — children flow left-to-right (or right-to-left
+ * via writing direction), wrap as needed. Default gap uses --space-md
+ * so headers + button rows feel right out of the box. */
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+/* ─────────────────────────── cluster ───────────────────────────────
+ * Pack a group of items together (left-aligned, baseline-shared,
+ * tight gap). Used for tag rows, action button groups, breadcrumbs.
+ * Distinct from .row in intent — cluster says "these belong together
+ * as a unit"; row says "these spread along an axis". */
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: baseline;
+}
+
+/* ─────────────────────────── between ───────────────────────────────
+ * Two children, one pushed to each end. Most common: header bar with
+ * title on the left and actions on the right. */
+
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+/* ─────────────────────────── centre ────────────────────────────────
+ * Centre a single child both axes. Useful for empty-state copy,
+ * loading spinners, modal dialogs. */
+
+.centre {
+  display: grid;
+  place-items: center;
+}
+
+/* ─────────────────────────── grid-auto ────────────────────────────
+ * Responsive grid that auto-fills as many columns as the container
+ * width allows, with each column at least 16rem wide. The container
+ * decides; no media queries needed. */
+
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-md);
+}
+
+/* ─────────────────────────── flow ──────────────────────────────────
+ * Long-form content rhythm. Direct children get a consistent top
+ * margin (the "owl" selector — Heydon Pickering, axiomatic CSS).
+ * Use on prose containers, README-style content, generated copy.
+ * Override the CSS custom property to tune the rhythm. */
+
+.flow {
+  --flow-space: var(--space-md);
+}
+
+.flow > * + * {
+  margin-block-start: var(--flow-space);
+}
+
+/* ─────────────────────────── visually-hidden ───────────────────────
+ * Accessible "hidden but available to screen readers" pattern.
+ * Standard recipe — every framework ships one of these because it's
+ * non-obvious. */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

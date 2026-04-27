@@ -1,0 +1,3 @@
+# Component CSS files land here as Phase 2 migrates each family.
+# One file per component (button.css, card.css, form.css, etc.).
+# Each is wrapped in @layer components via dazzle.css's @import line.
