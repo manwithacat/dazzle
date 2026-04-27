@@ -1604,6 +1604,13 @@ async def _workspace_region_handler(
         profile_card_data=profile_card_data,
         # Pipeline steps (#890, v0.61.56) — per-stage {label, caption, value}
         pipeline_stage_data=pipeline_stage_data,
+        # Status list (#3, v0.61.69) — authored entries forwarded
+        # straight from the RegionContext. The template iterates
+        # `status_entries` directly; no per-request resolution needed.
+        # #908 (v0.61.76) added this forwarding — the variable was
+        # never being passed, so the template fell through to the
+        # empty-state branch even when entries: was declared.
+        status_entries=getattr(ctx.ctx_region, "status_entries", []),
         # Confirm action panel (#6, v0.61.72) — checklist + dual button.
         # IR-level fields (confirmations, action URLs, audit_enabled)
         # were resolved upstream during build_workspace_context and

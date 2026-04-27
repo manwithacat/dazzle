@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.76] - 2026-04-28
+
+Patch bump. **Fix #908** — `status_list` authored regions rendered "No data available." even when the IR held entries. The route registered correctly post-#907, the parser populated `status_entries`, the template iterated `status_entries` correctly — but `workspace_rendering.py` never forwarded the variable to the `render_fragment(...)` call. Template gate fell through to the empty-state branch every time.
+
+This is the second forwarding bug in the same render path inside 24h (#908 sibling to the AegisMark-reported `confirm_action_panel` and similar). The unit-tier template binding tests passed because they checked the template SOURCE for the right Jinja constructs but never actually rendered the template through `render_fragment` with a realistic kwargs payload.
+
+### Fixed
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — `render_fragment(...)` call now includes `status_entries=getattr(ctx.ctx_region, "status_entries", [])` alongside the other authored-display payloads (`action_card_data`, `pipeline_stage_data`, `confirmations`, `profile_card_data`).
+
+### Tests
+- **`test_workspace_status_list.py`** extended with `TestStatusListRendersAuthoredEntries` — three tests that actually render the template through `render_fragment(...)`: positive (entries present → entries render, empty-state suppressed), negative (no entries → empty-state fires correctly), and a defensive string-match guard pinning the forwarding line in `workspace_rendering.py` so a future refactor doesn't drop it again.
+
+### Agent Guidance
+- **Template-binding tests that check source aren't enough.** The `test_workspace_status_list.py::TestStatusListTemplateBinding` class verified the template iterates `status_entries`, references each field, uses `data-lucide`, etc. — all correctly. But it never asked "does the template actually render the entries when called through the runtime path?" The pre-fix bug shipped because the source-level tests were green. **For any authored display mode (where data flows from IR → render call → template), add at least one test that calls `render_fragment(template, **kwargs)` directly and asserts on the rendered HTML.**
+- **The render-call kwargs are a contract surface.** Every new authored display mode (status_list, confirm_action_panel, action_grid, pipeline_steps) needs a corresponding kwarg in the `render_fragment(...)` call in `workspace_rendering.py`. There's no DRY mechanism currently — each one is added by hand. Worth considering a contextual unpack pattern (`**ctx.template_kwargs()`) once we have 5+ display modes; adds one tested layer instead of N hand-maintained call-site lines.
+
 ## [0.61.75] - 2026-04-27
 
 Patch bump. **Fix #907** — `WorkspaceRouteBuilder.init_workspace_routes` short-circuited via `if not ctx_region.source: continue`, silently skipping route registration for any sourceless region. The four bodyless authored display modes (action_grid #891, pipeline_steps #890, status_list #3, confirm_action_panel #6) all hit this — their HTMX endpoints 404'd, the skeleton placeholder never got replaced, the entries never rendered. AegisMark hit it on three consecutive `status_list` regions in the SIMS sync settings workspace before reporting it.

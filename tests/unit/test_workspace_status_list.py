@@ -313,3 +313,82 @@ class TestStatusListEmpty:
         # through to the empty-state <p>. We don't render here; the
         # contract is checked via the template binding tests above.
         assert ctx.status_entries == []
+
+
+# ───────────────────────── runtime render contract ──────────────────────────
+
+
+class TestStatusListRendersAuthoredEntries:
+    """Regression for #908 — the runtime must forward `status_entries`
+    to the template render call. Pre-fix the variable was never passed,
+    so the template's `{% if status_entries and ... %}` gate fell
+    through to the empty-state every time, regardless of what the IR
+    held. AegisMark's sims_sync_settings_workspace shipped three
+    status_list regions all rendering "No data available" before
+    reporting it.
+
+    The unit-tier template binding tests passed because they checked
+    the template SOURCE for the right Jinja constructs but never
+    actually rendered the template through `render_fragment` with a
+    realistic kwargs payload."""
+
+    def test_render_fragment_emits_entries_when_passed(self) -> None:
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        html = render_fragment(
+            "workspace/regions/status_list.html",
+            title="Activation gates",
+            empty_message="No data available.",
+            status_entries=[
+                {
+                    "title": "DPA signed",
+                    "caption": "Oakwood Academy / DPA v1.4",
+                    "icon": "file-check",
+                    "state": "positive",
+                },
+                {
+                    "title": "Signatory verified",
+                    "caption": "Rachel Morgan signed from school account",
+                    "icon": "user-check",
+                    "state": "positive",
+                },
+            ],
+        )
+        # Entries must render — the empty-state fallback must NOT fire.
+        assert "DPA signed" in html
+        assert "Signatory verified" in html
+        assert "No data available" not in html
+        # Each entry's data attributes flow through
+        assert 'data-dz-state="positive"' in html
+        assert "data-dz-entry-count=" in html
+
+    def test_render_fragment_falls_back_to_empty_state_when_no_entries(self) -> None:
+        """Defensive: with status_entries=[], the template SHOULD show
+        the empty state. Pin the contract from the other direction."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        html = render_fragment(
+            "workspace/regions/status_list.html",
+            title="Empty",
+            empty_message="No status entries.",
+            status_entries=[],
+        )
+        assert "No status entries." in html
+        assert "dz-status-list-entry" not in html
+
+    def test_runtime_call_forwards_status_entries(self) -> None:
+        """Defensive: the workspace_rendering.py render_fragment call
+        must include `status_entries` in its kwargs. Pre-fix this was
+        the missing line that caused #908. String-match on the source
+        because the actual flow is hard to exercise without booting
+        a full FastAPI app."""
+        from pathlib import Path
+
+        rendering_path = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+        )
+        text = rendering_path.read_text()
+        assert "status_entries=getattr(ctx.ctx_region" in text, (
+            "workspace_rendering.py must forward status_entries to "
+            "render_fragment — #908 regression"
+        )
