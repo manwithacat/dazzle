@@ -908,12 +908,13 @@ class TestMetricsRegionTemplate:
     def test_no_hardcoded_hsl_literals(self) -> None:
         """Gate 2: no hardcoded HSL literals (e.g. `hsl(38_92%_50%/0.08)`).
 
-        Pre-cycle-239 the warning attention-level row tint was inlined.
-        Tone tints introduced in v0.61.65 (#894/#888) all route through
-        design-system tokens (`var(--warning)` etc.). This guard pins
-        the migration in place even though the items-table block was
-        removed in v0.61.67 (#905) — the tile-tint branches and any
-        future overlay must keep using token references.
+        v0.61.70 (#906) moved tone tints out of the template and into
+        `dz-tones.css` keyed off `data-dz-tone` — so the inline HSL
+        check still passes (vacuously, no inline HSL at all now), but
+        the contract that matters is that the rendered tile carries
+        the data attribute the CSS rule will match on. The actual
+        per-tone HSL slots are pinned in
+        `test_dz_tones_css.py::TestDzTonesCssRulesPresent`.
         """
         html = render_fragment(
             "workspace/regions/metrics.html",
@@ -921,10 +922,10 @@ class TestMetricsRegionTemplate:
                 metrics=[{"label": "Total", "value": 10, "tone": "warning"}],
             ),
         )
-        # The old hardcoded literal must not appear anywhere
+        # No hardcoded percentage-literal HSL values
         assert "38_92%" not in html
-        # Tone tint routes via the design-system token
-        assert "hsl(var(--warning)" in html
+        # The data attribute that `dz-tones.css` keys off must be present
+        assert 'data-dz-tone="warning"' in html
 
     def test_no_drill_down_table_rendered_even_with_items(self) -> None:
         """v0.61.67 (#905): `display: summary`/`display: metrics` MUST

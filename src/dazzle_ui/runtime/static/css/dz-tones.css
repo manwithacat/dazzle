@@ -1,0 +1,104 @@
+/* dz-tones.css — Tone tint rules for the Dazzle palette.
+ *
+ * The five tone tokens (positive / warning / destructive / accent /
+ * neutral) are reused across action_grid (#891), metrics (#894),
+ * notice band (#7), and status_list (#3) — and any future tinted
+ * component should reuse the same vocabulary.
+ *
+ * Why static CSS rather than Tailwind arbitrary values:
+ *   Templates that build class strings at IR-render time (from
+ *   user-declared `tones:`, `state:`, `tone:` blocks) emit class
+ *   names the Tailwind JIT can't observe at build time. Bundled
+ *   stylesheets ship without the rule and tiles render transparent.
+ *   See #906 for the AegisMark deployment that surfaced this.
+ *
+ * Pattern:
+ *   - Templates emit a `data-dz-<context>-tone="<token>"` attribute
+ *     (or `data-dz-state` for status_list state pills).
+ *   - The rules below match on `[data-dz-tone="..."]` etc. and apply
+ *     the design-system HSL slot — tokens that any project theme
+ *     overrides automatically.
+ *   - No dynamic Tailwind classes on the element, no JIT dependency.
+ */
+
+/* ── Metric tile background tints (#894 / roadmap #2) ────────────── */
+
+.dz-metric-tile[data-dz-tone="positive"] {
+  background: hsl(var(--success) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="warning"] {
+  background: hsl(var(--warning) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="destructive"] {
+  background: hsl(var(--destructive) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="accent"] {
+  background: hsl(var(--primary) / 0.10);
+}
+/* No rule for `data-dz-tone="neutral"` — neutral tiles fall back to
+ * the default `bg-[hsl(var(--muted)/0.4)]` Tailwind class baked into
+ * the template (the only static tile bg). */
+
+/* ── Notice band background + left rail (#7 / roadmap #7) ─────────── */
+
+.dz-notice-band[data-dz-notice-tone="positive"] {
+  background: hsl(var(--success) / 0.08);
+  border-left-color: hsl(var(--success));
+}
+.dz-notice-band[data-dz-notice-tone="warning"] {
+  background: hsl(var(--warning) / 0.10);
+  border-left-color: hsl(var(--warning));
+}
+.dz-notice-band[data-dz-notice-tone="destructive"] {
+  background: hsl(var(--destructive) / 0.08);
+  border-left-color: hsl(var(--destructive));
+}
+.dz-notice-band[data-dz-notice-tone="accent"] {
+  background: hsl(var(--primary) / 0.08);
+  border-left-color: hsl(var(--primary));
+}
+.dz-notice-band[data-dz-notice-tone="neutral"],
+.dz-notice-band:not([data-dz-notice-tone]) {
+  background: hsl(var(--muted) / 0.4);
+  border-left-color: hsl(var(--border));
+}
+
+/* ── Status list pill + icon colour (#3 / roadmap #3) ─────────────── */
+
+/* Pill backgrounds (rendered only for non-neutral states; neutral
+ * entries omit the pill via template branch). */
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-pill {
+  background: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-pill {
+  background: hsl(var(--warning) / 0.18);
+  color: hsl(var(--warning));
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-pill {
+  background: hsl(var(--destructive) / 0.15);
+  color: hsl(var(--destructive));
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-pill {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+
+/* Icon colour matches the state. Neutral entries fall back to the
+ * default muted-foreground. */
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-icon {
+  color: hsl(var(--success));
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-icon {
+  color: hsl(var(--warning));
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-icon {
+  color: hsl(var(--destructive));
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-icon {
+  color: hsl(var(--primary));
+}
+.dz-status-list-entry[data-dz-state="neutral"] .dz-status-list-icon,
+.dz-status-list-entry:not([data-dz-state]) .dz-status-list-icon {
+  color: hsl(var(--muted-foreground));
+}

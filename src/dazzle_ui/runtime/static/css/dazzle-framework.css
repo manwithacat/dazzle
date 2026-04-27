@@ -9,3 +9,6 @@
    Layered styles always lose to unlayered styles in the CSS cascade. */
 @import "dz.css";
 @import "dz-widgets.css";
+/* dz-tones.css must also be unlayered so its tone tints beat any
+ * Tailwind utility a project might apply to the same element (#906). */
+@import "dz-tones.css";

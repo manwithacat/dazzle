@@ -1,4 +1,4 @@
-/* dazzle v0.61.68 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.69 | MIT License | https://github.com/manwithacat/dazzle */
 @layer base, framework, app, overrides;
 @layer framework {
 [x-cloak] {
@@ -1277,6 +1277,73 @@ user-select: none;
 body.cursor-col-resize,
 body.cursor-col-resize * {
 cursor: col-resize !important;
+}
+}
+@layer framework {
+.dz-metric-tile[data-dz-tone="positive"] {
+background: hsl(var(--success) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="warning"] {
+background: hsl(var(--warning) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="destructive"] {
+background: hsl(var(--destructive) / 0.10);
+}
+.dz-metric-tile[data-dz-tone="accent"] {
+background: hsl(var(--primary) / 0.10);
+}
+.dz-notice-band[data-dz-notice-tone="positive"] {
+background: hsl(var(--success) / 0.08);
+border-left-color: hsl(var(--success));
+}
+.dz-notice-band[data-dz-notice-tone="warning"] {
+background: hsl(var(--warning) / 0.10);
+border-left-color: hsl(var(--warning));
+}
+.dz-notice-band[data-dz-notice-tone="destructive"] {
+background: hsl(var(--destructive) / 0.08);
+border-left-color: hsl(var(--destructive));
+}
+.dz-notice-band[data-dz-notice-tone="accent"] {
+background: hsl(var(--primary) / 0.08);
+border-left-color: hsl(var(--primary));
+}
+.dz-notice-band[data-dz-notice-tone="neutral"],
+.dz-notice-band:not([data-dz-notice-tone]) {
+background: hsl(var(--muted) / 0.4);
+border-left-color: hsl(var(--border));
+}
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-pill {
+background: hsl(var(--success) / 0.15);
+color: hsl(var(--success));
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-pill {
+background: hsl(var(--warning) / 0.18);
+color: hsl(var(--warning));
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-pill {
+background: hsl(var(--destructive) / 0.15);
+color: hsl(var(--destructive));
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-pill {
+background: hsl(var(--primary) / 0.15);
+color: hsl(var(--primary));
+}
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-icon {
+color: hsl(var(--success));
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-icon {
+color: hsl(var(--warning));
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-icon {
+color: hsl(var(--destructive));
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-icon {
+color: hsl(var(--primary));
+}
+.dz-status-list-entry[data-dz-state="neutral"] .dz-status-list-icon,
+.dz-status-list-entry:not([data-dz-state]) .dz-status-list-icon {
+color: hsl(var(--muted-foreground));
 }
 }
 @layer framework {

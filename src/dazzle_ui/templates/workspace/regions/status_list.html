@@ -14,31 +14,19 @@
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-status-list-region">
+  {# v0.61.69 (#3) ships the structure; v0.61.70 (#906) fixes the
+     tint plumbing — pill backgrounds + icon colours come from
+     dz-tones.css keyed off `data-dz-state`, not from dynamic Tailwind
+     classes (those were JIT-invisible and shipped unstyled). #}
   {% if status_entries and status_entries | length > 0 %}
-    {% set _pill_classes = {
-      'positive': 'bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]',
-      'warning': 'bg-[hsl(var(--warning)/0.18)] text-[hsl(var(--warning))]',
-      'destructive': 'bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]',
-      'accent': 'bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))]',
-      'neutral': 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-    } %}
-    {% set _icon_classes = {
-      'positive': 'text-[hsl(var(--success))]',
-      'warning': 'text-[hsl(var(--warning))]',
-      'destructive': 'text-[hsl(var(--destructive))]',
-      'accent': 'text-[hsl(var(--primary))]',
-      'neutral': 'text-[hsl(var(--muted-foreground))]',
-    } %}
     <ul class="dz-status-list flex flex-col divide-y divide-[hsl(var(--border))] list-none"
         data-dz-entry-count="{{ status_entries | length }}">
       {% for entry in status_entries %}
         {% set _state = entry.state | default('neutral') or 'neutral' %}
-        {% set _pill_bg = _pill_classes.get(_state, _pill_classes['neutral']) %}
-        {% set _icon_color = _icon_classes.get(_state, _icon_classes['neutral']) %}
         <li class="dz-status-list-entry flex items-start gap-3 py-3 first:pt-1 last:pb-1"
             data-dz-state="{{ _state }}">
           {% if entry.icon %}
-            <span class="dz-status-list-icon flex items-center justify-center w-5 h-5 mt-0.5 shrink-0 {{ _icon_color }}"
+            <span class="dz-status-list-icon flex items-center justify-center w-5 h-5 mt-0.5 shrink-0"
                   data-lucide="{{ entry.icon }}"
                   aria-hidden="true"></span>
           {% else %}
@@ -61,7 +49,7 @@
              status row. Authors who explicitly want a "Pending"-style
              muted pill can use a different state token (e.g. accent). #}
           {% if _state != 'neutral' %}
-            <span class="dz-status-list-pill shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide {{ _pill_bg }}">
+            <span class="dz-status-list-pill shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide">
               {{ _state }}
             </span>
           {% endif %}

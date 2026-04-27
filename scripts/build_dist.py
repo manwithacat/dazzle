@@ -21,6 +21,7 @@ CSS_SOURCES = [
     STATIC / "css" / "dazzle-layer.css",
     STATIC / "css" / "design-system.css",
     STATIC / "css" / "dz.css",
+    STATIC / "css" / "dz-tones.css",
     STATIC / "css" / "site-sections.css",
     STATIC / "css" / "feedback-widget.css",
 ]

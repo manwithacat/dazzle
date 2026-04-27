@@ -217,24 +217,17 @@
             </div>
           </div>
 
-          {# v0.61.68: optional notice band between card header and
-             body (AegisMark UX patterns roadmap item #7). Title is
-             strong; body is secondary copy. Tone tints the band's
-             background + left rail via design-system tokens so the
-             active theme applies. Hidden via x-show when no notice
-             is configured — the dashboard frame shape stays
-             unchanged for existing apps. #}
+          {# v0.61.68 (#7) optional notice band between card header
+             and body, v0.61.70 (#906) static-class fix. Tint applied
+             via dz-tones.css keyed off data-dz-notice-tone — the
+             previous dynamic Tailwind `:class` arbitrary values were
+             JIT-invisible and shipped without rules. Hidden via
+             x-show when no notice is configured — the dashboard
+             frame shape stays unchanged for existing apps. #}
           <div x-show="card.notice && card.notice.title"
                x-cloak
                class="dz-notice-band mx-4 mb-3 px-3 py-2 rounded-[4px] border-l-2"
-               :class="{
-                 'bg-[hsl(var(--success)/0.08)] border-[hsl(var(--success))]': card.notice && card.notice.tone === 'positive',
-                 'bg-[hsl(var(--warning)/0.10)] border-[hsl(var(--warning))]': card.notice && card.notice.tone === 'warning',
-                 'bg-[hsl(var(--destructive)/0.08)] border-[hsl(var(--destructive))]': card.notice && card.notice.tone === 'destructive',
-                 'bg-[hsl(var(--primary)/0.08)] border-[hsl(var(--primary))]': card.notice && card.notice.tone === 'accent',
-                 'bg-[hsl(var(--muted)/0.4)] border-[hsl(var(--border))]': !card.notice || !card.notice.tone || card.notice.tone === 'neutral',
-               }"
-               :data-dz-notice-tone="card.notice ? card.notice.tone : ''"
+               :data-dz-notice-tone="card.notice ? (card.notice.tone || 'neutral') : 'neutral'"
                role="note">
             <div class="text-[12px] font-medium leading-snug text-[hsl(var(--foreground))]"
                  x-text="card.notice && card.notice.title"></div>

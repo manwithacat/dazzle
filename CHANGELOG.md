@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.70] - 2026-04-27
+
+Patch bump. **Fix #906** — tone tints on `metrics` tiles, `notice` bands, and `status_list` pills/icons no longer rely on dynamic Tailwind arbitrary-value classes that the JIT can't observe at build time. Three components shipped with this bug across v0.61.65 / v0.61.68 / v0.61.69; AegisMark deployments saw transparent tiles + uncoloured pills despite the data attributes being correct.
+
+### Added
+- **`src/dazzle_ui/runtime/static/css/dz-tones.css`** — static tint rules keyed off `[data-dz-tone]` (metrics), `[data-dz-notice-tone]` (notice band), and `[data-dz-state]` (status_list pill + icon). All tints route through HSL design-system slots so theming applies. Wired into `dazzle-framework.css`, `css_loader.py` `CSS_UNLAYERED_FILES`, and `build_dist.py` `CSS_SOURCES` so it ships with every install shape.
+
+### Fixed
+- **#906**: `metrics.html`, `_content.html` (notice band), and `status_list.html` no longer build dynamic class strings like `bg-[hsl(var(--primary)/0.10)]`. Templates emit only the data attributes; `dz-tones.css` provides the matching rules. Templates kept their always-applied static fallback class (e.g. `bg-[hsl(var(--muted)/0.4)]` on every metric tile) so neutral entries render unchanged.
+
+### Tests
+- **`test_dz_tones_css.py`** — 15 new tests across four classes: file presence, per-component rule presence (metric tile, notice band, status_list pill, status_list icon — all tones), design-system token usage, three-path load order (framework CSS @import, css_loader CSS_UNLAYERED_FILES, build_dist CSS_SOURCES), absence of dynamic Tailwind tone classes in each template, and presence of the data attributes the CSS keys off.
+- **`test_workspace_region_tones.py`**, **`test_workspace_region_notice.py`**, **`test_workspace_status_list.py`** — pre-existing template-binding tests that pinned the OLD dynamic-class branches were inverted to assert the data-attribute contract instead. Per-tone HSL branches now pinned in the dz-tones.css test file (single source of truth).
+- **`test_css_delivery.py::TestCssLoader::test_canonical_order`** — extended `UNLAYERED_FILES` fixture to include `dz-tones.css`.
+- **`test_workspace_routes.py::TestMetricsRegionTemplate::test_no_hardcoded_hsl_literals`** — re-scoped to assert the `data-dz-tone="warning"` attribute renders on the tile (the dz-tones.css rule does the rest).
+
+### Agent Guidance
+- **Tailwind JIT can't see classes built at runtime.** When a template constructs a class string from server-side IR data (`tones:`, `state:`, `tone:` blocks etc.), the JIT scans nothing — it builds CSS from what it sees in source files at build time. Anything more dynamic than a static literal class needs an alternative source-of-truth: a static CSS rule keyed off a data attribute, a Tailwind safelist entry, or moving the decision into a CSS variable that a static rule consumes. **Default to the data-attribute pattern** (`[data-dz-tone="..."]`) — it's grep-able, theme-aware (HSL slots), and survives any Tailwind config refactor.
+- **Three load paths means three places to wire CSS.** Dazzle ships static assets via the `dazzle-framework.css` @import bundle (browser-native CSS @layers), the `css_loader.py` runtime concatenator (for inline serving), and `scripts/build_dist.py` (for the `dist/` bundle). Adding a new CSS file means updating all three or some deployment shape will ship without it. The `TestDzTonesCssLoadOrder` test class pins this contract.
+- **Same bug in three components is one bug, not three.** When a pattern is duplicated across components (the dynamic `bg-[hsl(...)]` lookup appeared in metrics, notice, and status_list templates) and one of them breaks, check the others before shipping a per-component fix. Better to ship one cross-cutting fix and three regression tests than three separate patches.
+
 ## [0.61.69] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap item #3** — `display: status_list` mode renders a vertical list of icon + title + caption + state-pill entries. The canonical row shape from AegisMark's "agreement card", "schedule grid", and "scope grid" prototype patterns. Authored variant only this cycle (DSL `entries:` dash-list); the source-bound variant that maps entity rows to entries is deferred to a later cycle per the roadmap.

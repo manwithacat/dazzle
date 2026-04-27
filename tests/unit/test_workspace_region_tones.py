@@ -203,22 +203,17 @@ class TestTonesTemplateBinding:
             "metrics.html dropped `metric.tone` binding — AegisMark roadmap item #2 lost"
         )
 
-    def test_template_branches_on_each_tone_token(self) -> None:
-        """All five tone tokens (positive/warning/destructive/accent/
-        neutral) must have a render path; missing tokens silently
-        fall through to the default muted bg."""
+    def test_template_emits_data_dz_tone_attribute(self) -> None:
+        """v0.61.70 (#906): tone tints come from `dz-tones.css` keyed
+        off `data-dz-tone`, NOT from inline Tailwind arbitrary-value
+        classes (those were JIT-invisible and shipped without rules).
+        The template must still emit the attribute so the CSS can
+        match it. The actual per-tone branches are pinned in
+        `test_dz_tones_css.py::TestDzTonesCssRulesPresent`."""
         text = self._template_text()
-        for tone in ("positive", "warning", "destructive", "accent"):
-            assert f"== '{tone}'" in text, f"Tone '{tone}' has no template branch in metrics.html"
-
-    def test_template_uses_design_system_tokens(self) -> None:
-        """Tones map to design-system HSL slots so the project
-        theme switcher applies — no hard-coded colours."""
-        text = self._template_text()
-        assert "var(--success)" in text
-        assert "var(--warning)" in text
-        assert "var(--destructive)" in text
-        assert "var(--primary)" in text
+        assert 'data-dz-tone="' in text, (
+            "metrics.html must emit data-dz-tone — dz-tones.css keys off it"
+        )
 
 
 # ───────────────────────── invariants ──────────────────────────

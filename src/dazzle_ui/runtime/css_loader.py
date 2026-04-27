@@ -22,7 +22,9 @@ CSS_SOURCE_FILES = (
 )
 
 # Files loaded unlayered (after framework layer) so they can override DaisyUI.
-CSS_UNLAYERED_FILES = ("dz.css",)
+# dz-tones.css (#906) must also be unlayered — tone tints beat Tailwind
+# arbitrary-value classes that would otherwise pin the bg.
+CSS_UNLAYERED_FILES = ("dz.css", "dz-tones.css")
 
 
 def _load_css_file(filename: str) -> str:

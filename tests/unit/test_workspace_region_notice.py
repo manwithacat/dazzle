@@ -219,22 +219,14 @@ class TestNoticeTemplateBinding:
         text = self._template_text()
         assert 'x-show="card.notice && card.notice.title"' in text
 
-    def test_template_branches_on_each_tone(self) -> None:
+    def test_template_emits_data_dz_notice_tone_attribute(self) -> None:
+        """v0.61.70 (#906): tone tints come from `dz-tones.css` keyed
+        off `data-dz-notice-tone`, NOT from inline Tailwind arbitrary
+        values inside an Alpine `:class="{...}"` binding (those were
+        JIT-invisible and shipped without rules). The template must
+        still emit the attribute so the CSS can match it. Per-tone
+        branches pinned in `test_dz_tones_css.py`."""
         text = self._template_text()
-        for tone in ("positive", "warning", "destructive", "accent"):
-            assert f"=== '{tone}'" in text, (
-                f"Tone '{tone}' has no template branch in _content.html notice band"
-            )
-
-    def test_template_uses_design_system_tokens(self) -> None:
-        """Tone tints route through HSL design-system variables so
-        themes apply — no hardcoded colours."""
-        text = self._template_text()
-        # Look at the notice band block specifically — find it by its class
-        notice_idx = text.find("dz-notice-band")
-        assert notice_idx > 0
-        notice_block = text[notice_idx : notice_idx + 1500]
-        assert "var(--success)" in notice_block
-        assert "var(--warning)" in notice_block
-        assert "var(--destructive)" in notice_block
-        assert "var(--primary)" in notice_block
+        assert "data-dz-notice-tone" in text, (
+            "_content.html must emit data-dz-notice-tone — dz-tones.css keys off it"
+        )

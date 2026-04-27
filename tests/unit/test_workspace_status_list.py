@@ -268,15 +268,17 @@ class TestStatusListTemplateBinding:
         text = self._text()
         assert "data-lucide=" in text
 
-    def test_template_uses_design_system_tokens(self) -> None:
-        """All five tone tints route through HSL design-system slots
-        so the active theme applies — no hardcoded colours."""
+    def test_template_emits_data_dz_state_attribute(self) -> None:
+        """v0.61.70 (#906): pill + icon tints come from `dz-tones.css`
+        keyed off `data-dz-state`, NOT from inline Tailwind arbitrary
+        values built at IR-render time (those were JIT-invisible and
+        shipped without rules). The template must still emit the
+        attribute so the CSS can match it. Per-state branches pinned
+        in `test_dz_tones_css.py::TestDzTonesCssRulesPresent`."""
         text = self._text()
-        assert "var(--success)" in text
-        assert "var(--warning)" in text
-        assert "var(--destructive)" in text
-        assert "var(--primary)" in text
-        assert "var(--muted)" in text
+        assert 'data-dz-state="' in text, (
+            "status_list.html must emit data-dz-state — dz-tones.css keys off it"
+        )
 
     def test_template_uses_region_card_macro(self) -> None:
         text = self._text()
