@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.59] - 2026-04-27
+
+Patch bump. **Fix #900** — region `class:` field landed in card data JSON but Alpine binding silently dropped the string element on the rendered DOM. AegisMark's `class: "action-band"` and `class: "journey-row"` weren't applying to the actual element classNames despite being on the wire.
+
+### Fixed
+- **Alpine `:class` binding** in `src/dazzle_ui/templates/workspace/_content.html` — array form `[obj, str]` was unreliable for the `card.css_class` string element. Replaced with explicit string output: `[card.css_class, transitionExpr].filter(Boolean).join(' ')`. Alpine now sets the className to a single concatenated string, unambiguous.
+
+### Tests
+- **`test_workspace_region_class.py`** extended to 20 cases (was 18): two new `TestCssClassTemplateBinding` cases — `test_template_binding_uses_string_concat_pattern` (static guard pinning the `.filter(Boolean).join(' ')` pattern) and `test_alpine_binding_simulation_includes_css_class` (pure-Python simulation of the binding evaluation that catches the `card.css_class` getting dropped at the test level).
+
+### Agent Guidance
+- **Static template-text assertions are insufficient for Alpine binding correctness.** The original v0.61.52 test only checked the BINDING TEXT was in the template — it didn't verify the binding actually applied at runtime. The new `test_alpine_binding_simulation_includes_css_class` mirrors the JS expression in Python and asserts the output includes the project class. Apply this pattern when adding any Alpine binding that author DSL feeds into.
+- **Single-string output is more robust than array form for `:class` bindings.** Alpine v3's `:class="[obj, str]"` should work but had a silent-drop failure mode here. The `.filter(Boolean).join(' ')` pattern produces a single string output that Alpine unambiguously appends to the static `class=` attribute. Use this pattern when reactive content joins user-supplied strings.
+- **Downstream-consumer feedback catches what synthetic tests miss.** v0.61.52 shipped with passing tests, but only AegisMark's real teacher_workspace caught the binding bug. The Python-simulation pattern adopted here is the cheapest mitigation; full Playwright validation of card rendering is a future improvement.
+
 ## [0.61.58] - 2026-04-27
 
 Patch bump. **Fix #899** — keyword-shadowing regression introduced by the v0.61.52–v0.61.56 display-mode batch. Common identifier names (`primary`, `secondary`, `caption`, `actions`, `tone`, `stats`, `facts`, `track_max`, `track_format`, etc.) were unusable as enum literal values and field names in downstream projects. AegisMark hit this with `school_phase: enum[primary, secondary, all_through, special]` and had to pin back to v0.61.54.

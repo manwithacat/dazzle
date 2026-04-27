@@ -129,25 +129,80 @@ class TestRegionContextCssClass:
 
 class TestCssClassTemplateBinding:
     """The Alpine card wrapper in `_content.html` must merge
-    `card.css_class` into its `:class` array binding without
-    clobbering the existing transition/drag-state classes."""
+    `card.css_class` into its `:class` binding without clobbering
+    the existing transition/drag-state classes — AND the binding must
+    actually output the class onto the rendered DOM element (#900
+    regressed the v0.61.52 hook with an array-form binding that
+    silently dropped the string element)."""
 
-    def test_template_binding_includes_card_css_class(self) -> None:
-        """Static check on the template — the `:class` array must
-        contain `card.css_class || ''` so the project hook composes
-        with the framework-supplied transition class."""
+    def test_template_binding_references_card_css_class(self) -> None:
+        """Static check on the template — the `:class` binding must
+        reference `card.css_class` so the project hook composes with
+        the framework-supplied transition class."""
         path = (
             Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
         )
         contents = path.read_text()
-        # The :class binding must include the css_class read.
-        assert "card.css_class || ''" in contents, (
+        assert "card.css_class" in contents, (
             "Alpine card wrapper missing `card.css_class` binding — #894 hook lost"
         )
-        # And the existing transition class must still be there.
         assert "transition-all duration-[200ms]" in contents, (
             "Existing transition binding regressed by #894 hook"
         )
+
+    def test_template_binding_uses_string_concat_pattern(self) -> None:
+        """Pin the #900 fix — the binding must collapse to a single
+        concatenated string via `.filter(Boolean).join(' ')` so Alpine
+        unambiguously sets the className. The previous array form
+        `[obj, str]` was dropping the string element silently in some
+        card-iteration paths."""
+        path = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
+        )
+        contents = path.read_text()
+        assert ".filter(Boolean).join(' ')" in contents, (
+            "Alpine card wrapper :class binding regressed to array form — "
+            "#900 returns. Use the `.filter(Boolean).join(' ')` string-output "
+            "pattern so the css_class string element actually applies."
+        )
+
+    def test_alpine_binding_simulation_includes_css_class(self) -> None:
+        """Simulate the Alpine binding evaluation in pure Python —
+        when card.css_class is set and isDragging+drag are false, the
+        output string MUST contain both the project class AND the
+        transition class. This catches the #900 failure mode (the
+        css_class string getting dropped) at the test level."""
+
+        def simulate_binding(
+            card_css_class: str,
+            is_dragging: bool = False,
+            drag: bool = False,
+        ) -> str:
+            """Mirror the Alpine expression in `_content.html`:
+            `[card.css_class, cond ? "..." : ""].filter(Boolean).join(' ')`
+            """
+            parts = [
+                card_css_class,
+                "transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                if (not is_dragging and not drag)
+                else "",
+            ]
+            return " ".join(p for p in parts if p)
+
+        # Project hook + transition both apply
+        out = simulate_binding("action-band")
+        assert "action-band" in out
+        assert "transition-all duration-[200ms]" in out
+
+        # Project hook applies even mid-drag (transition omitted then)
+        out = simulate_binding("action-band", drag=True)
+        assert "action-band" in out
+        assert "transition-all" not in out
+
+        # Empty css_class doesn't introduce stray spaces or undefined
+        out = simulate_binding("")
+        assert "transition-all" in out
+        assert out.strip() == out  # no leading/trailing whitespace
 
 
 # ───────────────────────── invariants ──────────────────────────

@@ -157,10 +157,15 @@
          (issue #794). #}
       <div :data-card-id="card.id"
            :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
+           {# Single concatenated string output — Alpine's array form
+              `[obj, str]` was dropping the string element on some
+              card-iteration paths (#900). Filtering and joining to
+              one string is unambiguous: Alpine appends the entire
+              expression to the static `class=` attribute. #}
            :class="[
-             { 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]': !isDragging(card.id) && !drag },
-             card.css_class || ''
-           ]"
+             card.css_class,
+             (!isDragging(card.id) && !drag) ? 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]' : ''
+           ].filter(Boolean).join(' ')"
            tabindex="0"
            @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
            class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2">
