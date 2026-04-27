@@ -1407,12 +1407,15 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'confirmations': list([
+            ]),
             'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.GRID: 'grid'>,
             'empty_message': None,
+            'eyebrow': None,
             'facts': list([
             ]),
             'filter': None,
@@ -1425,11 +1428,13 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'health',
+            'notice': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
             ]),
             'primary': None,
+            'primary_action': None,
             'profile_stats': list([
             ]),
             'progress_complete_at': None,
@@ -1439,7 +1444,9 @@
             ]),
             'reference_lines': list([
             ]),
+            'revoke': None,
             'secondary': None,
+            'secondary_action': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1448,6 +1455,12 @@
             }),
             'sources': list([
             ]),
+            'state_field': None,
+            'status_entries': list([
+            ]),
+            'title': None,
+            'tones': dict({
+            }),
             'track_format': None,
             'track_max': None,
           }),
@@ -1462,12 +1475,15 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'confirmations': list([
+            ]),
             'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.LIST: 'list'>,
             'empty_message': None,
+            'eyebrow': None,
             'facts': list([
             ]),
             'filter': None,
@@ -1480,11 +1496,13 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'deploys',
+            'notice': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
             ]),
             'primary': None,
+            'primary_action': None,
             'profile_stats': list([
             ]),
             'progress_complete_at': None,
@@ -1494,7 +1512,9 @@
             ]),
             'reference_lines': list([
             ]),
+            'revoke': None,
             'secondary': None,
+            'secondary_action': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1503,6 +1523,12 @@
             }),
             'sources': list([
             ]),
+            'state_field': None,
+            'status_entries': list([
+            ]),
+            'title': None,
+            'tones': dict({
+            }),
             'track_format': None,
             'track_max': None,
           }),
@@ -1517,12 +1543,15 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
+            'confirmations': list([
+            ]),
             'css_class': None,
             'date_field': None,
             'date_range': False,
             'delta': None,
             'display': <DisplayMode.DIAGRAM: 'diagram'>,
             'empty_message': None,
+            'eyebrow': None,
             'facts': list([
             ]),
             'filter': None,
@@ -1535,11 +1564,13 @@
             'heatmap_value': None,
             'limit': None,
             'name': 'app_map',
+            'notice': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
             ]),
             'primary': None,
+            'primary_action': None,
             'profile_stats': list([
             ]),
             'progress_complete_at': None,
@@ -1549,7 +1580,9 @@
             ]),
             'reference_lines': list([
             ]),
+            'revoke': None,
             'secondary': None,
+            'secondary_action': None,
             'show_outliers': True,
             'sort': list([
             ]),
@@ -1558,6 +1591,12 @@
             }),
             'sources': list([
             ]),
+            'state_field': None,
+            'status_entries': list([
+            ]),
+            'title': None,
+            'tones': dict({
+            }),
             'track_format': None,
             'track_max': None,
           }),

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.73] - 2026-04-27
+
+Patch bump. **CI fix** — the AegisMark UX patterns roadmap shipped seven new fields on `WorkspaceRegion` IR (eyebrow, notice, tones, status_entries, confirmations, state_field, revoke, primary_action, secondary_action) across v0.61.65–v0.61.72. The integration-tier `test_simple_dsl_to_ir_snapshot` golden-master snapshot needed regeneration to include the new fields. Local unit-suite runs passed because the test lives under `tests/integration/` and the local pre-flight script filters with `-m "not e2e"` (which doesn't deselect the integration tier — but my own local invocations did).
+
+### Fixed
+- **`tests/integration/__snapshots__/test_golden_master.ambr`** regenerated to include the seven new region fields. CI was red on every commit since v0.61.65.
+
+### Agent Guidance
+- **Run the integration tier locally before shipping IR changes.** `pytest tests/ -m "not e2e"` filters by mark, not by directory — but my local pre-flight script ran `tests/unit/` only, so integration-tier snapshot drift went unnoticed for nine versions. When adding any field to a frozen IR type that goes into a serialised snapshot, run `pytest tests/integration/test_golden_master.py` explicitly OR run the full suite without the directory filter. The CI badge would have caught this on commit one if I had been checking it after each ship.
+- **Snapshot tests are blast-radius-multipliers for IR changes.** A single new field on `WorkspaceRegion` lights up every snapshot that serialises a region. With nine versions of additions, the diff is large but mechanical: `pytest --snapshot-update` regenerates everything in one pass. The lesson: when adding ANY new IR field, the next test run should include snapshot tests in scope.
+
 ## [0.61.72] - 2026-04-27
 
 Patch bump. **AegisMark UX patterns roadmap item #6** — `display: confirm_action_panel` ships the irreversible-action consent primitive. State-bound rather than monolithic: a single panel declaration with `state_field:` handles all visual modes (off / pending / live / revoked) by reading the entity's status field. Multi-stage consent flows compose by chaining `experience` + `step` blocks, each step rendering a confirm_action_panel — no new wizard primitive needed.
