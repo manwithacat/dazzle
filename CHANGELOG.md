@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.58] - 2026-04-27
+
+Patch bump. **Fix #899** — keyword-shadowing regression introduced by the v0.61.52–v0.61.56 display-mode batch. Common identifier names (`primary`, `secondary`, `caption`, `actions`, `tone`, `stats`, `facts`, `track_max`, `track_format`, etc.) were unusable as enum literal values and field names in downstream projects. AegisMark hit this with `school_phase: enum[primary, secondary, all_through, special]` and had to pin back to v0.61.54.
+
+### Fixed
+- **`KEYWORD_AS_IDENTIFIER_TYPES` extended** in `src/dazzle/core/dsl_parser_impl/base.py` — added all 12 region-block tokens introduced across v0.61.52–v0.61.56:
+  - `AVATAR_FIELD`, `PRIMARY`, `SECONDARY`, `STATS`, `FACTS` (v0.61.55, #892 profile_card)
+  - `CAPTION` (v0.61.56, #890 pipeline_steps)
+  - `ACTIONS`, `TONE`, `COUNT_AGGREGATE` (v0.61.54, #891 action_grid)
+  - `TRACK_MAX`, `TRACK_FORMAT` (v0.61.53, #893 bar_track)
+  - `CSS_CLASS` (v0.61.52, #894 region class hook)
+- Same fix pattern as the v0.61.35 `DELTA` keyword fix — the tokens still function as region-block keys but the parser treats them as plain identifiers in expression / enum contexts.
+
+### Tests
+- **`tests/unit/test_keyword_as_identifier_regression.py`** (new) — 22 cases:
+  - `TestSchoolPhaseEnumLiteral` (1): the canonical #899 repro — `enum[primary, secondary, all_through, special]` parses cleanly
+  - `test_keyword_usable_as_enum_value` (11 parametrized): each new token round-trips as an enum literal value
+  - `test_keyword_usable_as_field_name` (9 parametrized): each new token round-trips as a plain entity field name
+  - `TestKeywordIdentifierListContainsNewTokens` (1): static invariant guard — if a future edit drops any of these tokens from `KEYWORD_AS_IDENTIFIER_TYPES`, this test fails loudly before the regression returns
+
+### Agent Guidance
+- **Adding a new lexer keyword? Add it to `KEYWORD_AS_IDENTIFIER_TYPES` at the same time.** Any keyword that names something authors would commonly use as a field or enum value (which is most of them) MUST be added to the list, otherwise downstream projects that already use the name break on upgrade. Pattern: keyword serves as a region-block key when it leads its line; identifier elsewhere (enum literals, field names, expressions). See `src/dazzle/core/dsl_parser_impl/base.py:488` for the list.
+- **The `TestKeywordIdentifierListContainsNewTokens` invariant test is the second line of defence.** If you add a new region-block keyword that's lexer-tokenised but forget to register it in `KEYWORD_AS_IDENTIFIER_TYPES`, this static-source test catches it. Update the `required` list in the test in the same commit when adding new tokens.
+- **Fix the regression class, not just the symptom.** v0.61.55–v0.61.56 each could have caught this individually, but it took a downstream consumer (AegisMark) to surface the pattern. The 22-case parametrized test now pins all 12 tokens at once — and any future region-block keyword should join the parametrize list.
+- **Downstream consumer feedback is the real validation.** The display-mode batch shipped with passing CI on every patch; the regression only manifested when a real project (AegisMark) tried to upgrade. Add a "downstream-DSL smoke test" job to CI? Tracked as a future improvement — for now, `KEYWORD_AS_IDENTIFIER_TYPES` is the operative invariant.
+
 ## [0.61.57] - 2026-04-27
 
 Patch bump. **CI fixes + security defence-in-depth + framework artefact coverage**. Closes the four CI failures introduced by the v0.61.52–v0.61.56 display-mode batch (absolute paths in tests, snapshot drift, ANSI in help text, framework coverage gate) plus a CodeQL XSS-through-DOM warning on the live theme switcher.

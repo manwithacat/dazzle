@@ -550,6 +550,38 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # `enum[light, dark, theme_a]`) so it must remain usable as an
     # identifier outside the app block.
     TokenType.THEME,
+    # v0.61.55 (#892) added profile_card region-block keywords. Per
+    # #899 regression — these tokens must remain usable as identifiers
+    # in enum literals (e.g. `enum[primary, secondary, all_through]`
+    # for school phase) and field names. Same fix pattern as DELTA
+    # above. See dsl/lexer.py for the full token list.
+    TokenType.AVATAR_FIELD,
+    TokenType.PRIMARY,
+    TokenType.SECONDARY,
+    TokenType.STATS,
+    TokenType.FACTS,
+    # v0.61.56 (#890) added pipeline_steps `caption:` keyword. Same
+    # rationale — `caption` is a common field name.
+    TokenType.CAPTION,
+    # v0.61.54 (#891) added action_grid keywords. ACTIONS is an
+    # existing identifier-shaped name people commonly use for fields
+    # and entity attributes. TONE is also a likely color/voice field
+    # name. COUNT_AGGREGATE is fully snake-cased and unlikely to clash,
+    # but for consistency keep them all here.
+    TokenType.ACTIONS,
+    TokenType.TONE,
+    TokenType.COUNT_AGGREGATE,
+    # v0.61.53 (#893) added bar_track keywords. `track_max` and
+    # `track_format` are snake-cased and unlikely to clash, but enum
+    # literals or field names like `track_max` could legitimately
+    # appear in other domains.
+    TokenType.TRACK_MAX,
+    TokenType.TRACK_FORMAT,
+    # v0.61.52 (#894) added the `class:` region keyword. CSS_CLASS is
+    # the token name; the user-facing keyword is `class` which is a
+    # Python keyword anyway, but enum values like `enum[primary,
+    # class_a, class_b]` could shadow it.
+    TokenType.CSS_CLASS,
     TokenType.LIST,
     TokenType.GRID,
     TokenType.TIMELINE,
