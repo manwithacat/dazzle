@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.62] - 2026-04-27
+
+Patch bump. **Fix #902** — multi-section `mode: create` surfaces emitted Alpine bindings (`isCurrent(N)`, `isActive(N)`, `step > N`, `goToStep(N)`) outside any `x-data` scope, throwing 20+ ReferenceErrors per page render and leaving step indicators stuck grey instead of highlighting the current step. Form chrome still functioned (Next/Cancel worked) but UX was degraded and the browser console was flooded.
+
+### Fixed
+- **`components/form.html`** — moved the `x-data="dzWizard(N)"` scope from the `<form>` element up to the outer wrapper `<div class="max-w-2xl">`. The stepper include sits ABOVE the form in source order, so a form-element-scoped binding left the stepper outside scope. The new wrapper-scoped binding wraps both the stepper AND the form.
+- **`dzWizard.validateStage` still works** — it uses `$el.querySelectorAll("[data-dz-stage]")` to find stage elements. Moving the scope from `<form>` to `<div>` keeps stages inside `$el` (they're inside the form which is inside the div).
+
+### Tests
+- **`tests/unit/test_form_stepper_alpine_scope_regression.py`** (new) — 4 cases:
+  - `TestFormStepperScope` (3): static-source guards pinning the dzWizard scope on the wrapper (not the form), the source-order check that the stepper include sits inside the scope, and the `#902` comment annotation
+  - `TestStepperBindingsRequireScope` (1): sanity check that the stepper still uses `isActive(`, `isCurrent(`, `step `, `goToStep(` — if a future edit changes the stepper to inline its own helpers, the regression test should be revisited
+
+### Agent Guidance
+- **Alpine `x-data` scope position is load-bearing.** When a template emits Alpine bindings (`:class`, `x-show`, `x-text`, etc.) that reference data/methods, those bindings MUST sit inside the element that opens the matching `x-data` scope. Move-the-scope-up is usually safer than move-the-binding-down because it preserves visual layout. When a fragment include depends on a parent's data scope, document that dependency in a comment so the include site doesn't get refactored without thinking.
+- **Source-order matters for include + x-data combinations.** A `{% include %}` that uses Alpine bindings must come AFTER the `x-data` opening tag in the rendered output. The `test_stepper_include_sits_inside_dzwizard_scope` invariant pins this by checking string positions in the rendered template — cheap and effective.
+- **Console-error floods are a sign of scope-shadowing bugs.** When users report "20+ ReferenceErrors per page" the cause is almost always an Alpine binding evaluated in the wrong x-data context. Grep the stack-trace identifiers (`isCurrent`, `step`, etc.) to find the `Alpine.data("dzX", () => ({...}))` definition, then trace the template tree from the binding upward to find where `x-data="dzX(...)"` should have wrapped it.
+
 ## [0.61.61] - 2026-04-27
 
 Patch bump. **Fix #901** — `action_grid` and `pipeline_steps` per-card / per-stage `count_aggregate` queries silently returned 0 when the per-card entity differed from the region's `source:` entity. AegisMark's cross-entity action cards (e.g. an `action_grid` whose source is `MarkingResult` but with a card counting `AssessmentEvent`) were all showing zero counts.

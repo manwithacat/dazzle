@@ -3,7 +3,16 @@
 {% from 'macros/form_field.html' import render_field %}
 
 {% if form %}
-<div class="max-w-2xl">
+{# #902: dzWizard scope must wrap BOTH the stepper AND the form so the
+   stepper's `isActive(N)` / `isCurrent(N)` / `step > N` bindings find
+   the methods + reactive state. Previously the scope was on the
+   `<form>` element — but the stepper sits ABOVE the form so it was
+   outside scope, throwing 20+ ReferenceErrors per render. Moving the
+   scope to the outer wrapper keeps validateStage's
+   `$el.querySelectorAll("[data-dz-stage]")` working since stages stay
+   inside the wrapper. #}
+<div class="max-w-2xl"
+     {% if form.sections %}x-data="dzWizard({{ form.sections | length }})"{% endif %}>
   {# Header #}
   {% block form_header %}
   <div class="flex items-center justify-between mb-6">
@@ -16,9 +25,9 @@
     {% include 'fragments/form_stepper.html' %}
   {% endif %}
 
-  {# Form #}
+  {# Form. dzWizard scope lives on the outer wrapper (above) so the
+     stepper sees it too — leave the form element scope-free here. #}
   <form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
-        {% if form.sections %}x-data="dzWizard({{ form.sections | length }})"{% endif %}
         hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
         hx-swap="innerHTML"
