@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.103] - 2026-04-28
+
+### Fixed
+- **`runtime/workspace_rendering.py`** — closes #935 (framework-side
+  hardening). The two `repo.list` exception handlers in the
+  workspace-region path previously logged at `WARN` and rendered an
+  empty result. AegisMark hit this as a 6-cycle debugging puzzle when
+  a hand-rolled migration left `CohortAssessment.uploaded_by` as
+  `varchar` while `User.id` was `uuid` — the Postgres
+  `varchar = uuid` cross-type comparison errors out, but the
+  framework swallowed the error and silently returned 0 rows.
+  Meanwhile the entity-list path (`/app/<entity>`) succeeded because
+  it stringifies `current_user` before the comparison.
+  Bumped both swallow-sites to `logger.error(...)` with structured
+  fields (`entity=... region=... exc=<ExceptionClass>`) so production
+  log filters surface the underlying cause on first occurrence. The
+  fail-closed security semantics from #546 are preserved — the
+  region still renders empty, never an unscoped fallback. Regression
+  tests in `tests/unit/test_workspace_region_error_visibility.py`
+  pin the absence of the old WARN message, the structured ERROR
+  log + exception-class capture, and the unchanged "Do NOT fall back
+  to unfiltered queries" anchor comment.
+
+### Agent Guidance
+- When swallowing an exception inside a fail-closed render path, log
+  at `ERROR` with structured fields (entity name, region name,
+  `type(exc).__name__`). `WARN` hides errors below most prod log
+  filters and the silent-failure pattern wastes engineer time.
+
 ## [0.61.102] - 2026-04-28
 
 ### Added

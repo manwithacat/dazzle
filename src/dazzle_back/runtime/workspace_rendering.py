@@ -793,8 +793,22 @@ async def _workspace_region_handler(
             # Zero results is valid — the region shows its empty: message.
             # Do NOT fall back to unfiltered queries: scope/filter conditions
             # are access-control gates, not advisory hints (#546).
-        except Exception:
-            logger.warning("Failed to list items for workspace region", exc_info=True)
+        except Exception as exc:
+            # #935: previously logged at WARN which hid backend errors
+            # (DB type mismatches, missing columns, scope-predicate
+            # compilation failures) inside the noise threshold of a
+            # busy server. The fail-closed semantics (#546) are
+            # preserved — the region still renders empty — but the
+            # log line is now ERROR-level + structured so anyone
+            # hitting "my region shows no rows but the entity list
+            # shows 5" gets a single grep to find the cause.
+            logger.error(
+                "workspace_region_query_failed entity=%s region=%s exc=%s",
+                ctx.source,
+                ctx.ctx_region.name,
+                type(exc).__name__,
+                exc_info=True,
+            )
 
     # Use pre-computed columns from startup (constant-folded from IR).
     # Filter out columns whose visible: predicate fails for the current
@@ -1768,9 +1782,15 @@ async def _fetch_region_json(
 
             # Zero results is valid — the region shows its empty: message.
             # Do NOT fall back to unfiltered queries (#546).
-        except Exception:
-            logger.warning(
-                "Batch: failed to list items for region %s", ctx.ctx_region.name, exc_info=True
+        except Exception as exc:
+            # #935: ERROR-level + structured (see _workspace_region_handler
+            # above for rationale). Same fail-closed semantics.
+            logger.error(
+                "workspace_region_query_failed entity=%s region=%s exc=%s context=batch",
+                ctx.source,
+                ctx.ctx_region.name,
+                type(exc).__name__,
+                exc_info=True,
             )
 
     # SECURITY (#887): suppress aggregates when scope is denied AND
