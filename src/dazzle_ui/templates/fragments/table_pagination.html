@@ -1,10 +1,13 @@
-{# Pagination fragment — pure Tailwind, preserves sort/filter/search state #}
+{# Pagination fragment — preserves sort/filter/search state across page hops.
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-pagination* classes
+   (components/fragments.css). Active-page tinting via .is-current
+   modifier instead of inline `bg-[hsl(var(--primary))]`. #}
 {% if table and table.total > table.page_size %}
 {% set total_pages = (table.total + table.page_size - 1) // table.page_size %}
-<div class="flex items-center justify-between px-1 py-2 text-[13px]">
+<div class="dz-pagination">
 
   {# Left: selection summary or row count #}
-  <span class="text-[hsl(var(--muted-foreground))]">
+  <span class="dz-pagination-summary">
     <span x-show="bulkCount > 0" x-cloak>
       <span x-text="bulkCount">0</span> of {{ table.total }} selected
     </span>
@@ -14,10 +17,10 @@
   </span>
 
   {# Right: page buttons #}
-  <div class="flex items-center gap-1">
+  <div class="dz-pagination-pages">
     {% for p in range(1, total_pages + 1) %}
     <button
-      class="h-8 px-3 rounded-[4px] text-[13px] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms] {% if p == table.page %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]{% else %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]{% endif %}"
+      class="dz-pagination-page{% if p == table.page %} is-current{% endif %}"
       {% if p == table.page %}aria-current="page"{% endif %}
       hx-get="{{ table.api_endpoint }}?page={{ p }}&page_size={{ table.page_size }}{% if table.sort_field %}&sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}{% if table.search_query %}&search={{ table.search_query }}{% endif %}{% if table.filter_values %}{% for k, v in table.filter_values.items() %}&filter[{{ k }}]={{ v }}{% endfor %}{% endif %}"
       hx-target="#{{ table.table_id or 'dt-table' }}-body"

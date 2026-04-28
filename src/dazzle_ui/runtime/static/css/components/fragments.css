@@ -1,0 +1,229 @@
+/*
+ * fragments.css — shared HTML fragments under templates/fragments/.
+ *
+ * Each fragment is a small render primitive (empty state placeholder,
+ * pagination row, breadcrumb trail, alert banner, etc.) referenced
+ * from many regions and pages. v0.62 keeps the existing semantic
+ * class names where they already existed (e.g. .dz-empty-state) and
+ * moves the visuals from inline Tailwind into rules here.
+ *
+ * Tone tinting on alert banners keys off `data-dz-alert-level`
+ * attribute selectors so the four semantic tones (info / success /
+ * warning / error) live in one place rather than four template
+ * branches.
+ *
+ * Wrapped in @layer components.
+ */
+
+/* ─────────────────────────── empty_state fragment ───────────────
+ * Canonical "no data" renderer (cycle 240). Vertical centre-aligned
+ * stack with optional Create-first CTA when persona has create
+ * permission. */
+
+.dz-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: var(--space-3xl);
+  text-align: center;
+}
+
+.dz-empty-state-icon {
+  width: 3rem;
+  height: 3rem;
+  margin-block-end: var(--space-sm);
+  color: var(--colour-text-muted);
+  opacity: 0.6;
+}
+
+.dz-empty-state-message {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.dz-empty-state-cta {
+  margin-block-start: var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.dz-empty-state-cta:hover {
+  filter: brightness(1.1);
+}
+
+/* ─────────────────────────── table_pagination fragment ──────────
+ * Footer row beneath data tables. Left: row count or selection
+ * summary (toggled by Alpine bulkCount). Right: page-number buttons.
+ * Active page button gets .is-current. */
+
+.dz-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 0.25rem;
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+}
+
+.dz-pagination-summary {
+  color: var(--colour-text-muted);
+}
+
+.dz-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dz-pagination-page {
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-pagination-page:hover {
+  background: var(--colour-bg);
+}
+
+.dz-pagination-page.is-current {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+/* ─────────────────────────── breadcrumbs fragment ───────────────
+ * Horizontal nav trail with chevron (›) separators. Last crumb is
+ * the current page (no link, bold). Native disclosure rather than
+ * custom SVG. */
+
+.dz-breadcrumbs {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-breadcrumbs > ol {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  list-style: none;
+  padding-inline-start: 0;
+  margin: 0;
+}
+
+.dz-breadcrumbs > ol > li {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dz-breadcrumb-separator {
+  color: var(--colour-text-muted);
+  opacity: 0.6;
+}
+
+.dz-breadcrumb-link {
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-breadcrumb-link:hover {
+  color: var(--colour-text);
+}
+
+.dz-breadcrumb-current {
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+/* ─────────────────────────── alert_banner fragment ──────────────
+ * Full-width tinted banner with optional icon and dismiss button.
+ * Tone keyed off data-dz-alert-level attribute (info / success /
+ * warning / error) — replaces 4-branch Tailwind class string. */
+
+.dz-alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-md);
+  border-block-end: 1px solid;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-alert-banner[data-dz-alert-level="info"] {
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+  border-block-end-color: color-mix(in oklch, var(--colour-brand) 20%, transparent);
+}
+
+.dz-alert-banner[data-dz-alert-level="success"] {
+  background: color-mix(in oklch, var(--colour-success) 8%, transparent);
+  border-block-end-color: color-mix(in oklch, var(--colour-success) 20%, transparent);
+}
+
+.dz-alert-banner[data-dz-alert-level="warning"] {
+  background: color-mix(in oklch, var(--colour-warning) 8%, transparent);
+  border-block-end-color: color-mix(in oklch, var(--colour-warning) 20%, transparent);
+}
+
+.dz-alert-banner[data-dz-alert-level="error"] {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+  border-block-end-color: color-mix(in oklch, var(--colour-danger) 20%, transparent);
+}
+
+.dz-alert-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+}
+
+.dz-alert-banner[data-dz-alert-level="info"]    .dz-alert-icon { color: var(--colour-brand); }
+.dz-alert-banner[data-dz-alert-level="success"] .dz-alert-icon { color: var(--colour-success); }
+.dz-alert-banner[data-dz-alert-level="warning"] .dz-alert-icon { color: var(--colour-warning); }
+.dz-alert-banner[data-dz-alert-level="error"]   .dz-alert-icon { color: var(--colour-danger); }
+
+.dz-alert-message {
+  flex: 1 1 0;
+  line-height: var(--leading-tight);
+}
+
+.dz-alert-dismiss {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-alert-dismiss:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}

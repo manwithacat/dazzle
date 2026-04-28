@@ -17,20 +17,21 @@
                            this gate is the single persona-correctness
                            control for empty-state CTAs (cycle 234
                            VERIFIED_FALSE_POSITIVE on EX-011/030/037).
-#}
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-empty-state* classes
+   (components/fragments.css). The data-dz-empty-kind attribute is
+   preserved (theme/QA hook). #}
 {%- set _label = (entity_name | default("items")) | lower -%}
 {%- set _create_label = (entity_name | default("item")) | lower -%}
-<div class="dz-empty-state flex flex-col items-center justify-center py-12 text-center"
+<div class="dz-empty-state"
      data-dz-empty-kind="{{ 'actionable' if create_url else 'read-only' }}"
      role="status">
-  <svg class="w-12 h-12 mb-3 text-[hsl(var(--muted-foreground))] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+  <svg class="dz-empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
   </svg>
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message or ("No " ~ _label ~ " found.") }}</p>
+  <p class="dz-empty-state-message">{{ empty_message or ("No " ~ _label ~ " found.") }}</p>
   {% if create_url %}
-  <a href="{{ create_url }}"
-     class="mt-4 inline-flex items-center h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-     data-dz-empty-cta>
+  <a href="{{ create_url }}" class="dz-empty-state-cta" data-dz-empty-cta>
     Create first {{ _create_label }}
   </a>
   {% endif %}

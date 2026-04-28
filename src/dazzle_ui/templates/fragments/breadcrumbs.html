@@ -10,23 +10,25 @@
 
    Uses the native chevron (›) as a separator rather than a custom SVG or
    DaisyUI-injected content. Matches the Linear/macOS convention.
-#}
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-breadcrumb* classes
+   (components/fragments.css). #}
 {% if crumbs and crumbs | length > 1 %}
-<nav class="dz-breadcrumbs text-[12px] text-[hsl(var(--muted-foreground))]" aria-label="Breadcrumb">
-  <ol class="flex items-center gap-1.5 flex-wrap">
+<nav class="dz-breadcrumbs" aria-label="Breadcrumb">
+  <ol>
     {% for crumb in crumbs %}
-    <li class="flex items-center gap-1.5">
+    <li>
       {% if not loop.first %}
-      <span class="text-[hsl(var(--muted-foreground))] opacity-60" aria-hidden="true">›</span>
+      <span class="dz-breadcrumb-separator" aria-hidden="true">›</span>
       {% endif %}
       {% if crumb.url %}
       <a href="{{ crumb.url }}"
          hx-get="{{ crumb.url }}"
          hx-push-url="true"
          hx-target="body"
-         class="hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms]">{{ crumb.label }}</a>
+         class="dz-breadcrumb-link">{{ crumb.label }}</a>
       {% else %}
-      <span class="text-[hsl(var(--foreground))] font-medium" aria-current="page">{{ crumb.label }}</span>
+      <span class="dz-breadcrumb-current" aria-current="page">{{ crumb.label }}</span>
       {% endif %}
     </li>
     {% endfor %}
