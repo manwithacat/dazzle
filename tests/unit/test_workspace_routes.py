@@ -647,8 +647,9 @@ class TestWorkspaceRefLinks:
         )
         assert "Alice" in html
         assert "/users/u1" in html
-        # Post-DaisyUI refactor: ref links use the --primary token directly
-        assert "text-[hsl(var(--primary))]" in html
+        # v0.62 CSS refactor: ref-link colour lives on .dz-ref-link CSS rule
+        # (components/fragments.css) rather than inline `text-[hsl(var(--primary))]`.
+        assert "dz-ref-link" in html
 
     def test_list_ref_no_link_without_ref_route(self) -> None:
         """Ref column without ref_route renders display name without link."""
@@ -1306,7 +1307,8 @@ class TestDetailRegionTemplate:
                 ],
             ),
         )
-        assert "hsl(var(--primary))" in html
+        # v0.62 CSS refactor: ref-link colour lives on .dz-ref-link CSS rule
+        assert "dz-ref-link" in html
         assert 'href="/app/user/42"' in html
         assert "Bob Smith" in html
 
@@ -5464,9 +5466,11 @@ class TestRefCellMacro:
         return tmpl.render(ref=ref, display_hint=display_hint, ref_route=ref_route, mode=mode)
 
     def test_link_mode_mapping_with_route_renders_anchor(self) -> None:
+        """v0.62 CSS refactor: anchor chrome on .dz-ref-link rule
+        rather than inline `text-[hsl(var(--primary))]` Tailwind."""
         out = self._render_macro({"id": "u42", "name": "Alice"}, "", "/user/{id}", "link")
         assert '<a href="/user/u42"' in out
-        assert "hsl(var(--primary))" in out
+        assert "dz-ref-link" in out
         assert ">Alice</a>" in out
         assert "onclick" not in out  # detail mode does NOT include stopPropagation
 

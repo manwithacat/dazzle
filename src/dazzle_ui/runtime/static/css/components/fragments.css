@@ -1695,3 +1695,79 @@
 .dz-filter-input:focus-visible {
   box-shadow: 0 0 0 1px var(--colour-brand);
 }
+
+/* ─────────────────────────── ref_cell macro ─────────────────────
+ * Reference link styling — used by detail / grid / list / queue
+ * regions. Three modes (link / link_stop / htmx_drawer) all render
+ * the same anchor chrome. */
+
+.dz-ref-link {
+  color: var(--colour-brand);
+  text-decoration: none;
+  transition: text-decoration-color var(--duration-fast) var(--ease-out);
+}
+
+.dz-ref-link:hover {
+  text-decoration: underline;
+}
+
+/* ─────────────────────────── search_input fragment ──────────────
+ * Reusable search input with magnifying-glass icon, X-clear button,
+ * and HTMX-driven results. */
+
+.dz-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dz-search-input-icon {
+  position: absolute;
+  inset-inline-start: 0.625rem;
+  pointer-events: none;
+  color: var(--colour-text-muted);
+}
+
+.dz-search-input {
+  height: 2rem;
+  width: 14rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  padding-inline-start: 2rem;
+  padding-inline-end: 1.75rem;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  outline: none;
+  transition: box-shadow var(--duration-base) var(--ease-out);
+}
+
+.dz-search-input::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-search-input:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+.dz-search-clear {
+  position: absolute;
+  inset-inline-end: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-search-clear:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}

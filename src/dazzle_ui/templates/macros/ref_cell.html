@@ -28,6 +28,11 @@
 
    Contract: see dev_docs/framework-gaps/2026-04-20-ref-display-align.md (gap
    doc pending if needed; macro extraction alone suffices for the known cases).
+
+   v0.62 CSS refactor: anchor chrome lives on .dz-ref-link
+   (components/fragments.css) rather than inline
+   `text-[hsl(var(--primary))] hover:underline` Tailwind. All three
+   modes use the same class.
 #}
 
 {%- macro ref_cell(ref, display_hint='', ref_route='', mode='link') -%}
@@ -35,15 +40,15 @@
 {%- set display_name = display_hint or (ref | ref_display) -%}
 {%- if ref_route and ref.get("id") -%}
 {%- if mode == 'link' -%}
-<a href="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline">{{ display_name }}</a>
+<a href="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}" class="dz-ref-link">{{ display_name }}</a>
 {%- elif mode == 'link_stop' -%}
 <a href="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}"
-   class="text-[hsl(var(--primary))] hover:underline"
+   class="dz-ref-link"
    onclick="event.stopPropagation()">{{ display_name }}</a>
 {%- elif mode == 'htmx_drawer' -%}
 <a hx-get="{{ ref_route | replace('{id}', ref.get('id', '')|string) }}"
    hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"
-   class="text-[hsl(var(--primary))] hover:underline" onclick="event.stopPropagation()">{{ display_name }}</a>
+   class="dz-ref-link" onclick="event.stopPropagation()">{{ display_name }}</a>
 {%- else -%}
 {{- display_name -}}
 {%- endif -%}
