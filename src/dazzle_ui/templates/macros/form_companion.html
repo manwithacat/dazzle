@@ -1,0 +1,69 @@
+{# form_companion.html — render a single CompanionContext alongside a
+   form (#923, Part D of #918).
+
+   The companion shape is a tight subset of WorkspaceRegion. v1 ships
+   declarative display modes (`summary_row`, `status_list`,
+   `pipeline_steps`); source-bound modes (`source: Entity`) parse and
+   render as a placeholder until the form-renderer pipeline gains
+   workspace-region invocation. #}
+
+{% macro render_companion(companion) %}
+<aside class="dz-form-companion dz-form-companion-{{ companion.position }}{% if companion.display %} dz-form-companion-{{ companion.display }}{% endif %}"
+       data-dazzle-companion="{{ companion.name }}">
+  {% if companion.eyebrow %}
+  <p class="dz-form-companion-eyebrow">{{ companion.eyebrow }}</p>
+  {% endif %}
+  {% if companion.title %}
+  <h4 class="dz-form-companion-title">{{ companion.title }}</h4>
+  {% endif %}
+
+  {# ── summary_row: aggregate metric tiles ───────────────────────── #}
+  {% if companion.display == "summary_row" and companion.aggregate %}
+  <div class="dz-form-companion-summary-row">
+    {% for metric_name, expr in companion.aggregate.items() %}
+    <div class="dz-form-companion-metric">
+      <span class="dz-form-companion-metric-label">{{ metric_name | replace('_', ' ') }}</span>
+      <span class="dz-form-companion-metric-value">—</span>
+      <span class="dz-form-companion-metric-expr" aria-hidden="true">{{ expr }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── status_list: vertical title + caption rows ────────────────── #}
+  {% elif companion.display == "status_list" and companion.entries %}
+  <ol class="dz-form-companion-status-list">
+    {% for entry in companion.entries %}
+    <li class="dz-form-companion-entry{% if entry.state %} dz-form-companion-entry--{{ entry.state }}{% endif %}">
+      <span class="dz-form-companion-entry-title">{{ entry.title }}</span>
+      {% if entry.caption %}
+      <span class="dz-form-companion-entry-caption">{{ entry.caption }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {# ── pipeline_steps: ordered stage cards ───────────────────────── #}
+  {% elif companion.display == "pipeline_steps" and companion.stages %}
+  <ol class="dz-form-companion-pipeline">
+    {% for stage in companion.stages %}
+    <li class="dz-form-companion-stage">
+      <span class="dz-form-companion-stage-label">{{ stage.label }}</span>
+      {% if stage.caption %}
+      <span class="dz-form-companion-stage-caption">{{ stage.caption }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {# ── source-bound (display: list) — placeholder until v2 ───────── #}
+  {% elif companion.source %}
+  <p class="dz-form-companion-placeholder">
+    Source-bound companion ({{ companion.source }}) — preview rendering shipping in a follow-up.
+  </p>
+
+  {# ── fallback: bare title only (still useful as an authoring stub) #}
+  {% else %}
+  <p class="dz-form-companion-placeholder">No content.</p>
+  {% endif %}
+</aside>
+{% endmacro %}

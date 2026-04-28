@@ -59,7 +59,9 @@ class FeedbackWidgetParserMixin:
                     break
 
                 token = self.current_token()
-                if token.type == TokenType.IDENTIFIER:
+                # `position` is also a keyword (TokenType.POSITION) since
+                # #923 — accept it here as a feedback_widget sub-key.
+                if token.type in (TokenType.IDENTIFIER, TokenType.POSITION):
                     key = token.value
                     self.advance()
                     self.expect(TokenType.COLON)

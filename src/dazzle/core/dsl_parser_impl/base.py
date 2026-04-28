@@ -905,4 +905,11 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # status outside the `nav <name>:` declaration block.
     TokenType.NAV,
     TokenType.GROUP,
+    # v0.61.102 (#923) — companion-region keywords. `companion` is
+    # snake-case-only inside surface blocks; `position` and
+    # `below_section` are common field/identifier shapes (e.g. a DSL
+    # might have `field position int`) so they need to remain usable.
+    TokenType.COMPANION,
+    TokenType.POSITION,
+    TokenType.BELOW_SECTION,
 )

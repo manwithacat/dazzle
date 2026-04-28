@@ -17,6 +17,9 @@ from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.strings import to_api_plural
 from dazzle_ui.runtime.template_context import (
     ColumnContext,
+    CompanionContext,
+    CompanionEntryContext,
+    CompanionStageContext,
     DetailContext,
     ExternalLinkAction,
     FieldContext,
@@ -901,6 +904,33 @@ def _compile_list_surface(
     )
 
 
+def _build_companion_contexts(surface: ir.SurfaceSpec) -> list[CompanionContext]:
+    """Convert IR `CompanionSpec` items into template-render contexts (#923)."""
+    out: list[CompanionContext] = []
+    for c in getattr(surface, "companions", []):
+        out.append(
+            CompanionContext(
+                name=c.name,
+                title=c.title,
+                eyebrow=c.eyebrow,
+                display=c.display,
+                position=str(c.position.value) if c.position else "bottom",
+                section_anchor=c.section_anchor,
+                aggregate=dict(c.aggregate),
+                entries=[
+                    CompanionEntryContext(
+                        title=e.title, caption=e.caption, state=e.state, icon=e.icon
+                    )
+                    for e in c.entries
+                ],
+                stages=[CompanionStageContext(label=s.label, caption=s.caption) for s in c.stages],
+                source=c.source,
+                limit=c.limit,
+            )
+        )
+    return out
+
+
 def _compile_form_surface(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -912,6 +942,7 @@ def _compile_form_surface(
     """Compile a CREATE or EDIT mode surface to a PageContext with form context."""
     fields = _build_form_fields(surface, entity)
     sections = _build_form_sections(surface, entity)
+    companions = _build_companion_contexts(surface)
 
     # Cycle 245 — collect persona-variant overrides for form surfaces.
     # Mirrors the cycle 243 list-surface path. Currently wires `hide`
@@ -946,6 +977,7 @@ def _compile_form_surface(
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
                 layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
+                companions=companions,  # v0.61.102 (#923)
             ),
         )
     else:
@@ -966,6 +998,7 @@ def _compile_form_surface(
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
                 layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
+                companions=companions,  # v0.61.102 (#923)
             ),
         )
 

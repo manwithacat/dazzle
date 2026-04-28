@@ -3631,5 +3631,196 @@ surface task_create "Create Task":
         assert elem.help == "A short summary of the task"
 
 
+class TestSurfaceCompanions:
+    """Companion regions on create/edit surfaces (#923, Part D of #918)."""
+
+    def test_companion_position_top(self):
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+  pages: int
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  companion summary "Batch summary" position=top:
+    eyebrow: "Live"
+    display: summary_row
+    aggregate:
+      pages: max(pages)
+
+  section main:
+    field pages "Page count"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert len(surface.companions) == 1
+        c = surface.companions[0]
+        assert c.name == "summary"
+        assert c.title == "Batch summary"
+        assert c.eyebrow == "Live"
+        assert c.position.value == "top"
+        assert c.section_anchor is None
+        assert c.display == "summary_row"
+        assert "pages" in c.aggregate
+
+    def test_companion_position_below_section(self):
+        """`position=below_section[<name>]` pins the companion to a
+        named section anchor."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  section automation "Automation":
+    field auto_run "Run automatically"
+
+  companion job_plan "What this triggers" position=below_section[automation]:
+    display: status_list
+    entries:
+      - title: "Classify the batch"
+        caption: "Match paper, subject, year group"
+      - title: "Separate the PDF"
+        caption: "Pages become manuscripts"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        c = surface.companions[0]
+        assert c.position.value == "below_section"
+        assert c.section_anchor == "automation"
+        assert len(c.entries) == 2
+        assert c.entries[0].title == "Classify the batch"
+        assert c.entries[0].caption == "Match paper, subject, year group"
+        assert c.entries[1].title == "Separate the PDF"
+
+    def test_companion_position_defaults_to_bottom(self):
+        """When no `position=` is supplied the companion defaults to
+        bottom — least-disruptive placement."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  companion plain "Footer note":
+    display: status_list
+
+  section main:
+    field id "id"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        c = fragment.surfaces[0].companions[0]
+        assert c.position.value == "bottom"
+        assert c.section_anchor is None
+
+    def test_companion_pipeline_stages(self):
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  companion plan "Pipeline" position=bottom:
+    display: pipeline_steps
+    stages:
+      - label: "Classify"
+        caption: "Sort by paper"
+      - label: "Score"
+
+  section main:
+    field id "id"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        c = fragment.surfaces[0].companions[0]
+        assert c.display == "pipeline_steps"
+        assert len(c.stages) == 2
+        assert c.stages[0].label == "Classify"
+        assert c.stages[0].caption == "Sort by paper"
+        assert c.stages[1].label == "Score"
+        assert c.stages[1].caption is None
+
+    def test_companion_source_bound(self):
+        """`source: Entity` + `filter:` + `limit:` parse for source-driven
+        companions (rendering still placeholder in v1)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Pupil "Pupil":
+  id: uuid pk
+  group: str(200)
+
+entity Doc "Doc":
+  id: uuid pk
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  companion roster "Cohort roster" position=top:
+    source: Pupil
+    display: list
+    limit: 5
+
+  section main:
+    field id "id"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        c = fragment.surfaces[0].companions[0]
+        assert c.source == "Pupil"
+        assert c.display == "list"
+        assert c.limit == 5
+
+    def test_multiple_companions_preserved_in_order(self):
+        """The IR list preserves the source declaration order — the
+        renderer relies on that for stable layout."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+
+surface doc_create "Upload":
+  uses entity Doc
+  mode: create
+
+  companion a "Top A" position=top:
+    display: status_list
+
+  companion b "Bottom B" position=bottom:
+    display: status_list
+
+  companion c "Top C" position=top:
+    display: status_list
+
+  section main:
+    field id "id"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        names = [c.name for c in fragment.surfaces[0].companions]
+        assert names == ["a", "b", "c"]
+
+
 if __name__ == "__main__":
     main()

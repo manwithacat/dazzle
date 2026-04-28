@@ -52,6 +52,7 @@ class SurfaceParserMixin:
         persona_variants: list[ir.PersonaVariant] = []
         related_groups: list[ir.RelatedGroup] = []
         layout = "wizard"  # v0.61.88 (#918): default render mode for create/edit
+        companions: list[ir.CompanionSpec] = []  # v0.61.102 (#923): Part D
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -148,6 +149,11 @@ class SurfaceParserMixin:
                 group = self._parse_related_group()
                 related_groups.append(group)
 
+            # v0.61.102 (#923): companion <name> ["title"] [position=<pos>]:
+            # — read-only panel rendered alongside the form.
+            elif self.match(TokenType.COMPANION):
+                companions.append(self._parse_companion())
+
             else:
                 break
 
@@ -185,6 +191,7 @@ class SurfaceParserMixin:
             related_groups=related_groups,
             source=loc,
             layout=layout,  # v0.61.88 (#918)
+            companions=companions,  # v0.61.102 (#923)
         )
 
     def _parse_related_group(self) -> ir.RelatedGroup:
@@ -284,6 +291,260 @@ class SurfaceParserMixin:
             token.line,
             token.column,
         )
+
+    def _parse_companion(self) -> ir.CompanionSpec:
+        """Parse a `companion <name> ["title"] [position=<pos>]:` block.
+
+        Companion syntax (v0.61.102, #923 — Part D of #918)::
+
+            companion summary "Batch summary" position=top:
+              eyebrow: "Live"
+              display: summary_row
+              aggregate:
+                pages: max(page_count)
+                strands: count(AssessmentObjective)
+
+            companion job_plan "What this upload creates" position=below_section[automation]:
+              display: status_list
+              entries:
+                - title: "Classify the batch"
+                  caption: "Match paper, subject, year group..."
+
+            companion roster_preview "Cohort roster":
+              source: StudentProfile
+              display: list
+              filter: teaching_group = matched_teaching_group
+              limit: 5
+        """
+        self.advance()  # consume `companion`
+        name = self.expect_identifier_or_keyword().value
+        title: str | None = None
+        if self.match(TokenType.STRING):
+            title = self.advance().value
+
+        position = ir.CompanionPosition.BOTTOM
+        section_anchor: str | None = None
+
+        # Optional inline `position=<top|bottom|below_section[<name>]>`
+        # before the colon.
+        if self.match(TokenType.POSITION):
+            self.advance()
+            self.expect(TokenType.EQUALS)
+            position, section_anchor = self._parse_companion_position()
+
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        eyebrow: str | None = None
+        display: str | None = None
+        source: str | None = None
+        filter_expr: ir.ConditionExpr | None = None
+        limit: int | None = None
+        aggregate: dict[str, str] = {}
+        entries: list[ir.CompanionEntrySpec] = []
+        stages: list[ir.CompanionStageSpec] = []
+
+        while not self.match(TokenType.DEDENT, TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT, TokenType.EOF):
+                break
+
+            tok = self.current_token()
+            key = tok.value
+
+            if key == "title":
+                self.advance()
+                self.expect(TokenType.COLON)
+                title = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "eyebrow":
+                self.advance()
+                self.expect(TokenType.COLON)
+                eyebrow = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "display":
+                self.advance()
+                self.expect(TokenType.COLON)
+                display = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "source":
+                self.advance()
+                self.expect(TokenType.COLON)
+                source = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "limit":
+                self.advance()
+                self.expect(TokenType.COLON)
+                limit = int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
+            elif key == "filter":
+                self.advance()
+                self.expect(TokenType.COLON)
+                filter_expr = self.parse_condition_expr()
+                self.skip_newlines()
+            elif key == "aggregate":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                aggregate = self._parse_companion_aggregate()
+            elif key == "entries":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                entries = self._parse_companion_entries()
+            elif key == "stages":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                stages = self._parse_companion_stages()
+            else:
+                # Unknown key — advance defensively rather than abort.
+                self.advance()
+                self.skip_newlines()
+
+        if self.match(TokenType.DEDENT):
+            self.advance()
+
+        return ir.CompanionSpec(
+            name=name,
+            title=title,
+            eyebrow=eyebrow,
+            display=display,
+            position=position,
+            section_anchor=section_anchor,
+            source=source,
+            filter=filter_expr,
+            limit=limit,
+            aggregate=aggregate,
+            entries=entries,
+            stages=stages,
+        )
+
+    def _parse_companion_position(self) -> tuple[ir.CompanionPosition, str | None]:
+        """Parse the value of a companion `position=...` attribute.
+
+        Accepts: `top`, `bottom`, `below_section[<section_name>]`.
+        Returns the position enum + the section anchor (None when not
+        a `below_section` form)."""
+        if self.match(TokenType.BELOW_SECTION):
+            self.advance()
+            self.expect(TokenType.LBRACKET)
+            anchor = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.RBRACKET)
+            return ir.CompanionPosition.BELOW_SECTION, anchor
+
+        token = self.expect_identifier_or_keyword()
+        try:
+            return ir.CompanionPosition(token.value), None
+        except ValueError as exc:
+            raise make_parse_error(
+                f"companion position must be 'top', 'bottom', or "
+                f"'below_section[<section>]', got {token.value!r}",
+                self.file,
+                token.line,
+                token.column,
+            ) from exc
+
+    def _parse_companion_aggregate(self) -> dict[str, str]:
+        """Parse `metric_name: <expression>` lines inside a companion's
+        `aggregate:` block until DEDENT. The right-hand side is captured
+        verbatim as a string — runtime evaluation happens elsewhere
+        (mirrors the workspace-region aggregate flow)."""
+        result: dict[str, str] = {}
+        while not self.match(TokenType.DEDENT, TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT, TokenType.EOF):
+                break
+            metric_name = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+            # Capture the rest of the line as a free-form expression
+            # string. Use the underlying token stream to read until
+            # newline.
+            expr_tokens: list[str] = []
+            while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                expr_tokens.append(self.current_token().value)
+                self.advance()
+            result[metric_name] = " ".join(expr_tokens).strip()
+            self.skip_newlines()
+        if self.match(TokenType.DEDENT):
+            self.advance()
+        return result
+
+    def _parse_companion_dash_block(self) -> dict[str, str]:
+        """Parse a single dash-prefixed YAML-style entry inside a
+        companion `entries:` / `stages:` block. Token stream looks like:
+
+            MINUS  IDENTIFIER  COLON  STRING  [NEWLINE
+              INDENT
+              IDENTIFIER  COLON  STRING  NEWLINE
+              ...
+              DEDENT]
+
+        Returns the collected key→string-value mapping. Caller maps
+        the keys onto the relevant Spec class."""
+        self.advance()  # consume `-`
+        data: dict[str, str] = {}
+        # First key/value on the same line as the dash.
+        first_key = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.COLON)
+        data[first_key] = self.expect(TokenType.STRING).value
+        self.skip_newlines()
+        # Optional indented continuation block with more `key: value`
+        # pairs. The lexer emits INDENT when subsequent lines are
+        # indented further than the dash.
+        if self.match(TokenType.INDENT):
+            self.advance()
+            while not self.match(TokenType.DEDENT, TokenType.EOF):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT, TokenType.EOF):
+                    break
+                key = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.COLON)
+                data[key] = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                self.advance()
+        return data
+
+    def _parse_companion_entries(self) -> list[ir.CompanionEntrySpec]:
+        """Parse `- title: ... caption: ...` entries inside a companion's
+        `entries:` block."""
+        entries: list[ir.CompanionEntrySpec] = []
+        while self.match(TokenType.MINUS):
+            data = self._parse_companion_dash_block()
+            entries.append(
+                ir.CompanionEntrySpec(
+                    title=data.get("title", ""),
+                    caption=data.get("caption"),
+                    state=data.get("state"),
+                    icon=data.get("icon"),
+                )
+            )
+            self.skip_newlines()
+        if self.match(TokenType.DEDENT):
+            self.advance()
+        return entries
+
+    def _parse_companion_stages(self) -> list[ir.CompanionStageSpec]:
+        """Parse `- label: ... caption: ...` stages inside a companion's
+        `stages:` block."""
+        stages: list[ir.CompanionStageSpec] = []
+        while self.match(TokenType.MINUS):
+            data = self._parse_companion_dash_block()
+            stages.append(
+                ir.CompanionStageSpec(
+                    label=data.get("label", ""),
+                    caption=data.get("caption"),
+                )
+            )
+            self.skip_newlines()
+        if self.match(TokenType.DEDENT):
+            self.advance()
+        return stages
 
     def parse_surface_section(self) -> ir.SurfaceSection:
         """Parse surface section."""

@@ -948,6 +948,8 @@
         'access': None,
         'actions': list([
         ]),
+        'companions': list([
+        ]),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -998,6 +1000,8 @@
       dict({
         'access': None,
         'actions': list([
+        ]),
+        'companions': list([
         ]),
         'entity_ref': 'Task',
         'headless': False,
@@ -1059,6 +1063,8 @@
         'access': None,
         'actions': list([
         ]),
+        'companions': list([
+        ]),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -1109,6 +1115,8 @@
       dict({
         'access': None,
         'actions': list([
+        ]),
+        'companions': list([
         ]),
         'entity_ref': 'Task',
         'headless': False,
@@ -1178,6 +1186,8 @@
           'require_auth': True,
         }),
         'actions': list([
+        ]),
+        'companions': list([
         ]),
         'entity_ref': 'SystemHealth',
         'headless': False,
@@ -1278,6 +1288,8 @@
           'require_auth': True,
         }),
         'actions': list([
+        ]),
+        'companions': list([
         ]),
         'entity_ref': 'DeployHistory',
         'headless': False,

@@ -1,6 +1,7 @@
 {# Form chrome — HTMX form submission, Alpine dzWizard for multi-step #}
 {# Contract: ~/.claude/skills/ux-architect/components/form-chrome.md (UX-016) #}
 {% from 'macros/form_field.html' import render_field %}
+{% from 'macros/form_companion.html' import render_companion %}
 
 {% if form %}
 {# #902: dzWizard scope must wrap BOTH the stepper AND the form so the
@@ -53,6 +54,14 @@
       {% include 'fragments/form_errors.html' %}
     </div>
 
+    {# v0.61.102 (#923): companions slot at top, after each named
+       section anchor, and at bottom. Empty list = no companions. #}
+    {% if form.companions %}
+      {% for companion in form.companions if companion.position == "top" %}
+        {{ render_companion(companion) }}
+      {% endfor %}
+    {% endif %}
+
     {# Fields — sectioned (wizard or single_page) or flat (delegated
        to UX-017 form-field). single_page renders all sections stacked
        without the dz-stage/x-show wrappers. #}
@@ -68,6 +77,11 @@
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
         {% endfor %}
+        {% if form.companions %}
+          {% for companion in form.companions if companion.position == "below_section" and companion.section_anchor == section.name %}
+            {{ render_companion(companion) }}
+          {% endfor %}
+        {% endif %}
       </div>
       {% endfor %}
     {% elif is_single_page %}
@@ -80,6 +94,11 @@
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
         {% endfor %}
+        {% if form.companions %}
+          {% for companion in form.companions if companion.position == "below_section" and companion.section_anchor == section.name %}
+            {{ render_companion(companion) }}
+          {% endfor %}
+        {% endif %}
       </section>
       {% endfor %}
     {% else %}
@@ -88,6 +107,12 @@
       {% endfor %}
     {% endif %}
     {% endblock form_fields %}
+
+    {% if form.companions %}
+      {% for companion in form.companions if companion.position == "bottom" %}
+        {{ render_companion(companion) }}
+      {% endfor %}
+    {% endif %}
 
     {# Actions — wizard nav, single_page single submit, or standard. #}
     {% block form_actions %}

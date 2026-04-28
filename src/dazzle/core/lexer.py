@@ -535,6 +535,13 @@ class TokenType(Enum):
     NAV = "nav"
     GROUP = "group"
 
+    # v0.61.102 (#923, Part D of #918) — companion regions on
+    # create/edit surfaces. Declarative read-only panels rendered
+    # at top, bottom, or below a named section of a form surface.
+    COMPANION = "companion"
+    POSITION = "position"
+    BELOW_SECTION = "below_section"
+
     # v0.39.0 Transition Side Effects
     ON_TRANSITION = "on_transition"
 

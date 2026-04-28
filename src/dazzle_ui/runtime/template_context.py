@@ -165,6 +165,39 @@ class FormSectionContext(BaseModel):
     note: str = ""
 
 
+class CompanionEntryContext(BaseModel):
+    """One row in a status_list companion."""
+
+    title: str
+    caption: str | None = None
+    state: str | None = None
+    icon: str | None = None
+
+
+class CompanionStageContext(BaseModel):
+    """One stage in a pipeline_steps companion."""
+
+    label: str
+    caption: str | None = None
+
+
+class CompanionContext(BaseModel):
+    """Read-only companion panel rendered alongside a form (#923)."""
+
+    name: str
+    title: str | None = None
+    eyebrow: str | None = None
+    display: str | None = None
+    position: str = "bottom"  # "top" | "bottom" | "below_section"
+    section_anchor: str | None = None
+    aggregate: dict[str, str] = Field(default_factory=dict)
+    entries: list[CompanionEntryContext] = Field(default_factory=list)
+    stages: list[CompanionStageContext] = Field(default_factory=list)
+    # Source-driven companions parse but render as a placeholder in v1.
+    source: str | None = None
+    limit: int | None = None
+
+
 class FormContext(BaseModel):
     """Context for rendering a form."""
 
@@ -177,6 +210,9 @@ class FormContext(BaseModel):
     cancel_url: str = "/"
     initial_values: dict[str, Any] = Field(default_factory=dict)
     sections: list[FormSectionContext] = Field(default_factory=list)
+    # v0.61.102 (#923): companion panels rendered alongside the form.
+    # Empty list = no companions.
+    companions: list[CompanionContext] = Field(default_factory=list)
     # v0.61.88 (#918): "wizard" (default) or "single_page". Controls how
     # multi-section create/edit surfaces render — wizard = stepper +
     # one-step-at-a-time; single_page = stacked sections, one submit

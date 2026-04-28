@@ -1,4 +1,4 @@
-/* dazzle v0.61.100 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.101 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2243,6 +2243,133 @@ font-size: var(--text-xs);
 color: var(--colour-text);
 min-inline-size: 2rem;
 text-align: end;
+}
+.dz-form-companion {
+margin-block: var(--space-md);
+padding: var(--space-md);
+border-radius: var(--radius-md);
+background: var(--colour-bg);
+border: 1px solid var(--colour-border);
+}
+.dz-form-companion-eyebrow {
+font-size: var(--text-xs);
+font-weight: var(--weight-medium);
+text-transform: uppercase;
+letter-spacing: 0.06em;
+color: var(--colour-text-muted);
+margin-block-end: var(--space-2xs);
+}
+.dz-form-companion-title {
+font-size: var(--text-md);
+font-weight: var(--weight-semibold);
+color: var(--colour-text);
+margin-block-end: var(--space-sm);
+}
+.dz-form-companion-summary-row {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+gap: var(--space-sm);
+}
+.dz-form-companion-metric {
+display: flex;
+flex-direction: column;
+gap: var(--space-2xs);
+padding: var(--space-sm);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+}
+.dz-form-companion-metric-label {
+font-size: var(--text-xs);
+color: var(--colour-text-muted);
+text-transform: capitalize;
+}
+.dz-form-companion-metric-value {
+font-size: var(--text-lg);
+font-weight: var(--weight-semibold);
+color: var(--colour-text);
+font-variant-numeric: tabular-nums;
+}
+.dz-form-companion-metric-expr {
+display: none;
+}
+.dz-form-companion-status-list {
+list-style: none;
+margin: 0;
+padding: 0;
+display: flex;
+flex-direction: column;
+gap: var(--space-sm);
+}
+.dz-form-companion-entry {
+display: flex;
+flex-direction: column;
+gap: var(--space-2xs);
+padding-inline-start: var(--space-md);
+border-inline-start: 2px solid var(--colour-border);
+}
+.dz-form-companion-entry--ok {
+border-inline-start-color: var(--colour-success, hsl(145 55% 45%));
+}
+.dz-form-companion-entry--warn {
+border-inline-start-color: var(--colour-warn, hsl(40 90% 55%));
+}
+.dz-form-companion-entry--pending {
+border-inline-start-color: var(--colour-text-muted);
+opacity: 0.85;
+}
+.dz-form-companion-entry-title {
+font-weight: var(--weight-medium);
+color: var(--colour-text);
+}
+.dz-form-companion-entry-caption {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+line-height: 1.4;
+}
+.dz-form-companion-pipeline {
+list-style: none;
+margin: 0;
+padding: 0;
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+gap: var(--space-sm);
+counter-reset: pipeline-step;
+}
+.dz-form-companion-stage {
+counter-increment: pipeline-step;
+padding: var(--space-sm);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+position: relative;
+}
+.dz-form-companion-stage::before {
+content: counter(pipeline-step);
+display: inline-block;
+width: 1.25rem;
+height: 1.25rem;
+text-align: center;
+font-size: var(--text-xs);
+font-weight: var(--weight-semibold);
+color: var(--colour-text-muted);
+margin-block-end: var(--space-2xs);
+}
+.dz-form-companion-stage-label {
+display: block;
+font-weight: var(--weight-medium);
+color: var(--colour-text);
+}
+.dz-form-companion-stage-caption {
+display: block;
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+line-height: 1.4;
+}
+.dz-form-companion-placeholder {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+font-style: italic;
 }
 }
 @layer components {

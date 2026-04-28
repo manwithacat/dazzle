@@ -662,6 +662,10 @@ from .subprocessors import (
 # Surfaces
 from .surfaces import (
     BusinessPriority,
+    CompanionEntrySpec,
+    CompanionPosition,
+    CompanionSpec,
+    CompanionStageSpec,
     Outcome,
     OutcomeKind,
     RelatedDisplayMode,
@@ -860,6 +864,10 @@ __all__ = [
     "SurfaceElement",
     "SurfaceSection",
     "SurfaceAction",
+    "CompanionSpec",
+    "CompanionPosition",
+    "CompanionEntrySpec",
+    "CompanionStageSpec",
     "SurfaceAccessSpec",
     "SurfaceSpec",
     # Workspaces

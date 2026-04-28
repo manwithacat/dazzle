@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.102] - 2026-04-28
+
+### Added
+- **DSL: companion regions on create/edit surfaces (Part D of #918)** —
+  closes #923. New top-level surface block declares read-only panels
+  rendered alongside the form at one of three positions:
+
+      surface ingestion_create "Upload":
+        uses entity IngestionBatch
+        mode: create
+        layout: single_page
+
+        companion summary "Batch summary" position=top:
+          eyebrow: "Live"
+          display: summary_row
+          aggregate:
+            pages: max(page_count)
+            strands: count(AssessmentObjective)
+
+        section automation "Automation":
+          field auto_run_marking "Run AI marking after attribution"
+
+        companion job_plan "What this upload creates" position=below_section[automation]:
+          display: status_list
+          entries:
+            - title: "Classify the batch"
+              caption: "Match paper, subject, year group"
+            - title: "Separate the PDF"
+              caption: "Pages become individual student manuscripts"
+
+  v1 ships declarative display modes (`summary_row`, `status_list`,
+  `pipeline_steps`) end-to-end. Source-bound companions
+  (`source: Entity` + `filter:`) parse cleanly and render as a
+  placeholder pending the form-renderer→workspace-region pipeline
+  integration. New IR types: `CompanionSpec`, `CompanionPosition`
+  (top / bottom / below_section), `CompanionEntrySpec`,
+  `CompanionStageSpec`. New context types: `CompanionContext` +
+  entry / stage variants. New macro: `templates/macros/form_companion.html`.
+  New CSS family: `.dz-form-companion-*` in `components/form.css`.
+  Form template (`components/form.html`) renders companions at top,
+  after each named section anchor, and at bottom. Regression tests:
+  `tests/unit/test_parser.py::TestSurfaceCompanions` (6 cases) +
+  `tests/unit/test_form_companions_render.py` (11 cases) cover IR,
+  parser, position routing, every display mode, and the compiler
+  conversion.
+
+### Changed
+- Promoted `companion`, `position`, and `below_section` to
+  `KEYWORD_AS_IDENTIFIER_TYPES` so they don't shadow common field /
+  enum names.
+- `feedback_widget.py` parser now accepts `position` as a sub-key
+  even though it's a reserved keyword (was previously matching only
+  `IDENTIFIER`-typed tokens).
+
+### Agent Guidance
+- Companion blocks live INSIDE a surface, parallel to `section` and
+  `action`. They do NOT submit to the create/edit handler. When
+  authoring DSL that mixes form fields with context-setting copy /
+  KPI tiles / job-plan previews, prefer companions over inline
+  field-shaped widgets.
+- v1 display modes are declarative. Source-bound
+  (`source: Entity`) panels parse but render a placeholder — defer
+  source-bound companions to a v2 once the workspace-region
+  invocation pipeline integrates with form rendering.
+
 ## [0.61.101] - 2026-04-28
 
 ### Fixed

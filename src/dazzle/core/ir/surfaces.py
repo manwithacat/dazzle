@@ -171,6 +171,91 @@ class SurfaceAction(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class CompanionPosition(StrEnum):
+    """Where a companion panel renders relative to the form sections.
+
+    Top / bottom run before / after the entire section list. `below_section`
+    pairs the companion with a specific section by name — the panel
+    renders directly under that section's content."""
+
+    TOP = "top"
+    BOTTOM = "bottom"
+    BELOW_SECTION = "below_section"
+
+
+class CompanionEntrySpec(BaseModel):
+    """One row in a `display: status_list` companion."""
+
+    title: str
+    caption: str | None = None
+    state: str | None = None  # e.g. "ok", "pending", "warn"
+    icon: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CompanionStageSpec(BaseModel):
+    """One stage in a `display: pipeline_steps` companion."""
+
+    label: str
+    caption: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CompanionSpec(BaseModel):
+    """A read-only companion panel rendered alongside a create/edit form.
+
+    Companion regions (#918 Part D, shipped in #923) let create/edit
+    surfaces show context that's adjacent to the form — KPI tiles,
+    "what this upload creates" job-plan previews, cohort roster snippets.
+    They participate in the form layout but never submit to the create
+    handler.
+
+    The shape is intentionally a tight subset of `WorkspaceRegion`. For
+    v1 we ship the declarative display modes (`summary_row`,
+    `status_list`, `pipeline_steps`); source-bound modes
+    (`source: Entity` + `filter:`) parse but render as a placeholder
+    until the form-renderer pipeline gains workspace-region invocation.
+
+    Attributes:
+        name: Companion identifier — referenced from the form template.
+        title: Optional headline above the companion content.
+        eyebrow: Optional small label above the title.
+        display: Display mode (`summary_row`, `status_list`,
+            `pipeline_steps`, `list`). None falls back to a bare
+            title-only render — useful as a temporary stub during
+            authoring.
+        position: Where the companion renders. Defaults to BOTTOM.
+        section_anchor: When position is BELOW_SECTION, the section
+            name to attach to. None for TOP / BOTTOM.
+        source: Entity name for source-driven companions
+            (`display: list`).
+        filter: Filter condition applied when source is set.
+        limit: Optional row cap for source-driven companions.
+        aggregate: Metric definitions for `display: summary_row`,
+            mapping metric name to expression (e.g.
+            `{"pages": "max(page_count)"}`).
+        entries: Static rows for `display: status_list`.
+        stages: Static stages for `display: pipeline_steps`.
+    """
+
+    name: str
+    title: str | None = None
+    eyebrow: str | None = None
+    display: str | None = None
+    position: CompanionPosition = CompanionPosition.BOTTOM
+    section_anchor: str | None = None
+    source: str | None = None
+    filter: ConditionExpr | None = None
+    limit: int | None = None
+    aggregate: dict[str, str] = Field(default_factory=dict)
+    entries: list[CompanionEntrySpec] = Field(default_factory=list)
+    stages: list[CompanionStageSpec] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SurfaceAccessSpec(BaseModel):
     """
     Access control specification for surfaces.
@@ -235,6 +320,10 @@ class SurfaceSpec(BaseModel):
     # "single_page" stacks all sections top-to-bottom with one submit
     # button at the end. No effect on view/list/custom modes.
     layout: str = "wizard"
+    # v0.61.102 (#923): companion regions on create/edit surfaces.
+    # Read-only panels rendered at top, bottom, or below a named
+    # section. Empty list = no companions (current behaviour).
+    companions: list[CompanionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
