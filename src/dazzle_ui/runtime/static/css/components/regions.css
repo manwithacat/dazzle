@@ -1143,3 +1143,303 @@
   color: var(--colour-text-muted);
   margin-block-start: var(--space-sm);
 }
+
+/* ─────────────────────────── action_grid region ─────────────────
+ * Responsive 1/2/3-col grid of CTA cards. Each card carries a
+ * label, optional icon, optional count badge — and a tone token
+ * (positive / warning / destructive / accent / neutral) routed
+ * through dz-tones.css via data-dz-tone / data-dz-tone-badge
+ * (unchanged). The hover/cursor affordance is gated on the
+ * <a>-vs-<div> wrapper choice in the template; the .dz-action-card
+ * rule covers the shared shape. */
+
+.dz-action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-block-start: var(--space-sm);
+}
+
+@media (min-width: 40rem) {
+  .dz-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .dz-action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dz-action-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  text-decoration: none;
+  color: var(--colour-text);
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+a.dz-action-card {
+  cursor: pointer;
+}
+
+a.dz-action-card:hover {
+  background: var(--colour-bg);
+}
+
+.dz-action-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.dz-action-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--colour-text-muted);
+}
+
+.dz-action-card-icon-spacer {
+  width: 1.25rem;
+}
+
+.dz-action-card-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+}
+
+.dz-action-card-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  line-height: var(--leading-tight);
+}
+
+/* ─────────────────────────── kanban region ──────────────────────
+ * Horizontal column board. Each column is a fixed-width tinted
+ * surface with a header (status badge + count) and a vertically-
+ * scrolling card stack. Cards are tinted surfaces; .is-clickable
+ * gives them shadow/border affordance when wired to action_url. */
+
+.dz-kanban-board {
+  display: flex;
+  gap: var(--space-md);
+  overflow-x: auto;
+  padding-block-end: var(--space-sm);
+  min-height: 12.5rem;
+}
+
+.dz-kanban-column {
+  flex-shrink: 0;
+  width: 16.25rem;
+  min-width: 16.25rem;
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+.dz-kanban-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-sm);
+  padding-inline: 0.25rem;
+}
+
+.dz-kanban-column-count {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-kanban-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.dz-kanban-card {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.04);
+}
+
+.dz-kanban-card.is-clickable {
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.dz-kanban-card.is-clickable:hover {
+  box-shadow: 0 2px 8px oklch(0% 0 0 / 0.06);
+  border-color: color-mix(in oklch, var(--colour-brand) 50%, var(--colour-border));
+}
+
+.dz-kanban-card-body {
+  padding: var(--space-sm);
+}
+
+.dz-kanban-card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-end: 0.25rem;
+}
+
+.dz-kanban-card-field {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-kanban-card-attn {
+  font-size: var(--text-xs);
+  margin-block-start: 0.25rem;
+}
+
+.dz-kanban-card-attn[data-dz-attn="critical"] { color: var(--colour-danger); }
+.dz-kanban-card-attn[data-dz-attn="warning"]  { color: var(--colour-warning); }
+.dz-kanban-card-attn[data-dz-attn="notice"]   { color: var(--colour-brand); }
+
+.dz-kanban-empty {
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--colour-text-muted) 60%, transparent);
+  text-align: center;
+  padding-block: var(--space-md);
+}
+
+.dz-kanban-overflow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-kanban-overflow-text {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-kanban-load-all {
+  height: 1.5rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-kanban-load-all:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── tab_data fragment ──────────────────
+ * Mini data table rendered inside a tab panel. No card wrapper
+ * (the wrapper lives one level up in tabbed_list). Filter bar
+ * sits above the table; pagination footer below. */
+
+.dz-tab-data {
+  /* Container — no chrome. The tabbed_list panel owns it. */
+}
+
+.dz-tab-data-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-tab-data-filter-select {
+  height: 1.75rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+.dz-tab-data-scroll {
+  overflow-x: auto;
+}
+
+.dz-tab-data-table {
+  width: 100%;
+  font-size: var(--text-sm);
+  border-collapse: collapse;
+}
+
+.dz-tab-data-sort-link {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  text-decoration: none;
+  color: inherit;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-tab-data-sort-link:hover {
+  color: var(--colour-text);
+}
+
+.dz-tab-data-row.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-tab-data-row.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+/* Attention tints on rows — same tone vocabulary as kanban cards */
+.dz-tab-data-row[data-dz-attn="critical"] {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+
+.dz-tab-data-row[data-dz-attn="warning"] {
+  background: color-mix(in oklch, var(--colour-warning) 8%, transparent);
+}
+
+.dz-tab-data-row[data-dz-attn="notice"] {
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+}
+
+.dz-tab-data-ref-link {
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.dz-tab-data-ref-link:hover {
+  text-decoration: underline;
+}
+
+.dz-tab-data-overflow {
+  font-size: var(--text-xs);
+  opacity: 0.5;
+  margin-block-start: var(--space-sm);
+}

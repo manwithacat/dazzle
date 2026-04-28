@@ -12,77 +12,57 @@
      - neutral   → muted (default)
 
    Card safety: region emits zero chrome + zero title. The dashboard
-   slot owns both via region_card. #}
+   slot owns both via region_card.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-action-* classes
+   (components/regions.css). Per-card tone tints + count-badge tints
+   still routed through dz-tones.css keyed off data-dz-tone /
+   data-dz-tone-badge (unchanged from #906 fix). Hover affordance now
+   gated on the wrapper element (a.dz-action-card vs div.dz-action-card)
+   via CSS rather than duplicated inline. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
-{# v0.61.74 (#906 cleanup): per-card tone tints and count-badge tints
-   moved from runtime-built Tailwind class strings (JIT-invisible to
-   downstream consumers) to `data-dz-tone` / `data-dz-tone-badge`
-   attributes that `dz-tones.css` styles. Same approach as per-tile
-   metric tones (#894) and the metric delta arrow (sibling fix).
-   Hardcoded HSL literals (positive=145,55%,45%; warning=40,90%,55%)
-   are gone — both now route via `--success` / `--warning` slots. #}
 <div class="dz-action-grid-region">
   {% if action_card_data and action_card_data | length > 0 %}
-    <div class="dz-action-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+    <div class="dz-action-grid">
       {% for card in action_card_data %}
         {% set _tone = card.tone | default('neutral') or 'neutral' %}
         {# Explicit if/else for the wrapper element so the tag name is
            never an interpolated value. Body is duplicated inside each
            branch — small price for an unambiguous template. #}
         {% if card.url %}
-        <a href="{{ card.url }}"
-           class="dz-action-card group flex flex-col gap-2 p-3 rounded-[6px] border
-                  transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                  cursor-pointer"
-           data-dz-tone="{{ _tone }}">
-          <div class="flex items-center justify-between gap-2">
+        <a href="{{ card.url }}" class="dz-action-card" data-dz-tone="{{ _tone }}">
+          <div class="dz-action-card-row">
             {% if card.icon %}
-              <span class="dz-action-card-icon flex items-center justify-center w-5 h-5 text-[hsl(var(--muted-foreground))]"
-                    data-lucide="{{ card.icon }}"
-                    aria-hidden="true"></span>
+              <span class="dz-action-card-icon" data-lucide="{{ card.icon }}" aria-hidden="true"></span>
             {% else %}
-              <span class="w-5"></span>
+              <span class="dz-action-card-icon-spacer"></span>
             {% endif %}
             {% if card.count is not none %}
-              <span class="dz-action-card-count font-mono text-[11px] px-2 py-0.5 rounded-full"
-                    data-dz-tone-badge="{{ _tone }}">
-                {{ card.count }}
-              </span>
+              <span class="dz-action-card-count" data-dz-tone-badge="{{ _tone }}">{{ card.count }}</span>
             {% endif %}
           </div>
-          <span class="dz-action-card-label text-[13px] font-medium text-[hsl(var(--foreground))] leading-tight">
-            {{ card.label }}
-          </span>
+          <span class="dz-action-card-label">{{ card.label }}</span>
         </a>
         {% else %}
-        <div class="dz-action-card group flex flex-col gap-2 p-3 rounded-[6px] border
-                    transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             data-dz-tone="{{ _tone }}">
-          <div class="flex items-center justify-between gap-2">
+        <div class="dz-action-card" data-dz-tone="{{ _tone }}">
+          <div class="dz-action-card-row">
             {% if card.icon %}
-              <span class="dz-action-card-icon flex items-center justify-center w-5 h-5 text-[hsl(var(--muted-foreground))]"
-                    data-lucide="{{ card.icon }}"
-                    aria-hidden="true"></span>
+              <span class="dz-action-card-icon" data-lucide="{{ card.icon }}" aria-hidden="true"></span>
             {% else %}
-              <span class="w-5"></span>
+              <span class="dz-action-card-icon-spacer"></span>
             {% endif %}
             {% if card.count is not none %}
-              <span class="dz-action-card-count font-mono text-[11px] px-2 py-0.5 rounded-full"
-                    data-dz-tone-badge="{{ _tone }}">
-                {{ card.count }}
-              </span>
+              <span class="dz-action-card-count" data-dz-tone-badge="{{ _tone }}">{{ card.count }}</span>
             {% endif %}
           </div>
-          <span class="dz-action-card-label text-[13px] font-medium text-[hsl(var(--foreground))] leading-tight">
-            {{ card.label }}
-          </span>
+          <span class="dz-action-card-label">{{ card.label }}</span>
         </div>
         {% endif %}
       {% endfor %}
     </div>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No actions available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No actions available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

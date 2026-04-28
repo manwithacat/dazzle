@@ -6,13 +6,18 @@
    Distinct from list.html — no card wrapper (the wrapper lives one level up in
    workspace-tabbed-region chrome). HTMX target convention:
    #tab-{region_name}-{source_entity|lower}. Endpoint is
-   /api/workspaces/{ws}/regions/{region}/{source}. #}
+   /api/workspaces/{ws}/regions/{region}/{source}.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-tab-data-* classes
+   (components/regions.css). Per-row attention tint via data-dz-attn
+   attribute (critical / warning / notice) instead of a 3-branch ternary
+   emitting different `bg-[...]` Tailwind class strings. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 <div class="dz-tab-data">
 {% if filter_columns %}
-<div class="flex flex-wrap gap-2 mb-2 filter-bar">
+<div class="dz-tab-data-filterbar filter-bar">
   {% for fc in filter_columns %}
-  <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px]"
+  <select class="dz-tab-data-filter-select"
           hx-get="{{ endpoint }}" hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
           hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
     <option value="">All {{ fc.label }}</option>
@@ -24,8 +29,8 @@
 </div>
 {% endif %}
 {% if items %}
-<div class="overflow-x-auto">
-  <table class="w-full text-[13px]">
+<div class="dz-tab-data-scroll">
+  <table class="dz-tab-data-table">
     <thead>
       <tr>
         {% for col in columns %}
@@ -33,9 +38,9 @@
           {% if col.sortable %}
           <a hx-get="{{ endpoint }}?sort={{ col.key }}&amp;dir={% if sort_field == col.key and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
              hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
-             class="cursor-pointer select-none hover:text-[hsl(var(--foreground))] inline-flex items-center gap-1 transition-colors duration-[80ms]">
+             class="dz-tab-data-sort-link">
             {{ col.label }}
-            {% if sort_field == col.key %}<span class="ml-1">{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
+            {% if sort_field == col.key %}<span>{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
           </a>
           {% else %}
           {{ col.label }}
@@ -47,8 +52,8 @@
     <tbody>
       {% for item in items %}
       {% set attn = item.get("_attention") if item.get is defined else none %}
-      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% elif attn.level == 'warning' %}bg-[hsl(var(--warning)/0.08)]{% elif attn.level == 'notice' %}bg-[hsl(var(--info)/0.08)]{% endif %} {% endif %}{% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
-          {% if attn %}title="{{ attn.message }}"{% endif %}
+      <tr class="dz-tab-data-row{% if action_url %} is-clickable{% endif %}"
+          {% if attn %}data-dz-attn="{{ attn.level }}" title="{{ attn.message }}"{% endif %}
           {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
           hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         {% for col in columns %}
@@ -67,7 +72,7 @@
             {% if ref is mapping %}
               {% set display_name = display_name or (ref | ref_display) %}
               {% if col.ref_route and ref.get("id") %}
-                <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline" onclick="event.stopPropagation()">{{ display_name }}</a>
+                <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="dz-tab-data-ref-link" onclick="event.stopPropagation()">{{ display_name }}</a>
               {% else %}{{ display_name }}{% endif %}
             {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
           {% else %}
@@ -81,9 +86,9 @@
   </table>
 </div>
 {% if total > items | length %}
-<p class="text-[12px] opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+<p class="dz-tab-data-overflow">Showing {{ items | length }} of {{ total }}</p>
 {% endif %}
 {% else %}
-<p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+<p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
 {% endif %}
 </div>
