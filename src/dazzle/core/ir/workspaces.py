@@ -194,6 +194,12 @@ class PipelineStageSpec(BaseModel):
     "Daily 02:00 UTC", "Manual review"). Stages are ordered
     left-to-right (or top-to-bottom on mobile).
 
+    v0.61.78 (#911) added per-stage progress: turns the menu-shape into
+    a thermometer-shape so operators see how complete each stage is,
+    not just whether anything is in it. Same expression vocabulary as
+    `value:` — either a literal number string or an aggregate. Clamped
+    to 0-100 at render time.
+
     Attributes:
         label: Human-readable stage name (e.g. "Scanned", "Rubric pass").
         caption: Optional sub-text describing what's at this stage.
@@ -205,11 +211,18 @@ class PipelineStageSpec(BaseModel):
             means no value (renders as ``—``). v0.61.66: generalised
             from `aggregate_expr` to support flow-card descriptive
             stages (AegisMark UX patterns roadmap item #4).
+        progress: Per-stage progress bar fraction (0-100). Same shape as
+            `value:` — either a literal numeric string ("74") or an
+            aggregate expression that resolves to a number. Empty string
+            means no bar rendered (preserves pre-#911 behaviour).
+            Clamped to 0-100 at render time; values >100 set
+            ``data-dz-progress-overshoot="true"`` so themes can flag.
     """
 
     label: str
     caption: str = ""
     value: str = ""
+    progress: str = ""
 
     model_config = ConfigDict(frozen=True)
 

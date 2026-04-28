@@ -436,6 +436,7 @@ class WorkspaceParserMixin:
 
             caption_str = ""
             value_str = ""
+            progress_str = ""
 
             if self.match(TokenType.INDENT):
                 self.advance()
@@ -450,24 +451,31 @@ class WorkspaceParserMixin:
                     if key == "caption":
                         caption_str = self.expect(TokenType.STRING).value
                         self.skip_newlines()
-                    elif key == "value":
+                    elif key in ("value", "progress"):
                         # v0.61.66: accept either a quoted literal
                         # string or an unquoted aggregate expression.
                         # Quoted shape — common for flow-card labels
                         # like "Daily 02:00 UTC". Unquoted shape — same
                         # as region-level `aggregate:` parser.
+                        # v0.61.78 (#911): `progress:` shares the same
+                        # acceptor — literal numeric ("74") or aggregate
+                        # expression. Runtime clamps 0-100.
                         if self.match(TokenType.STRING):
-                            value_str = self.advance().value
+                            payload = self.advance().value
                         else:
                             parts: list[str] = []
                             while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
                                 parts.append(self.advance().value)
-                            value_str = " ".join(parts)
+                            payload = " ".join(parts)
+                        if key == "value":
+                            value_str = payload
+                        else:
+                            progress_str = payload
                         self.skip_newlines()
                     else:
                         raise make_parse_error(
                             f"Unknown pipeline stages key {key!r}. "
-                            f"Expected one of: caption, value.",
+                            f"Expected one of: caption, value, progress.",
                             self.file,
                             key_tok.line,
                             key_tok.column,
@@ -479,6 +487,7 @@ class WorkspaceParserMixin:
                     label=label_str,
                     caption=caption_str,
                     value=value_str,
+                    progress=progress_str,
                 )
             )
         return stages

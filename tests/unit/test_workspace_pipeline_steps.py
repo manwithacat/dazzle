@@ -341,3 +341,170 @@ class TestPipelineStepsBodyless:
         assert region.source is None
         assert region.aggregates == {}
         assert len(region.pipeline_stages) == 2  # body via stages
+
+
+# ───────────────────────── #911 progress: per-stage bars ──────────────
+
+
+class TestPipelineStepsProgressParser:
+    """v0.61.78 (#911): per-stage `progress:` field. Same shape as
+    `value:` — literal numeric or aggregate expression. Default is
+    empty string (no bar). Coexists with `value:` so a stage can show
+    both a count and a fraction."""
+
+    def test_literal_progress_parses(self) -> None:
+        src = """module t
+app t "Test"
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "PDF decollation"
+        caption: "page boundaries grouped"
+        progress: 74
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        assert region.pipeline_stages[0].progress == "74"
+
+    def test_quoted_literal_progress_parses(self) -> None:
+        src = """module t
+app t "Test"
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "X"
+        progress: "50"
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        assert region.pipeline_stages[0].progress == "50"
+
+    def test_aggregate_progress_parses(self) -> None:
+        src = """module t
+app t "Test"
+entity Manuscript:
+  id: uuid pk
+  status: enum[uploaded,marked]
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "Marked"
+        value: count(Manuscript where status = marked)
+        progress: count(Manuscript where status = marked)
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        s = region.pipeline_stages[0]
+        assert s.value.startswith("count")
+        assert s.progress.startswith("count")
+
+    def test_progress_optional_default_empty(self) -> None:
+        """The base DSL omits progress: entirely — IR field defaults to ""."""
+        region = _parse(_BASE_DSL).workspaces[0].regions[0]
+        assert all(s.progress == "" for s in region.pipeline_stages)
+
+    def test_value_and_progress_coexist(self) -> None:
+        """Stage can carry both — value is the count, progress is the bar.
+        The prototype's three-column shape (label · count · bar)."""
+        src = """module t
+app t "Test"
+entity M:
+  id: uuid pk
+workspace dash "Dash":
+  pipeline:
+    display: pipeline_steps
+    stages:
+      - label: "Marked"
+        caption: "AO-level judgements complete"
+        value: count(M)
+        progress: 74
+"""
+        region = _parse(src).workspaces[0].regions[0]
+        s = region.pipeline_stages[0]
+        assert s.value.startswith("count")
+        assert s.progress == "74"
+
+
+class TestPipelineStageSpecProgressField:
+    def test_construct_with_progress(self) -> None:
+        s = PipelineStageSpec(label="X", progress="74")
+        assert s.progress == "74"
+
+    def test_default_progress_is_empty_string(self) -> None:
+        s = PipelineStageSpec(label="X")
+        assert s.progress == ""
+
+    def test_progress_independent_of_value(self) -> None:
+        """value: and progress: are separate fields — setting one doesn't
+        clobber the other."""
+        s = PipelineStageSpec(label="X", value="count(M)", progress="50")
+        assert s.value == "count(M)"
+        assert s.progress == "50"
+
+
+class TestProgressCoercion:
+    """The runtime helper `_coerce_pipeline_progress` clamps numeric
+    inputs to 0-100 and flags overshoot. None / empty / unparseable
+    → no bar (None, False)."""
+
+    def test_in_range_returns_int(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress(50) == (50, False)
+        assert _coerce_pipeline_progress("74") == (74, False)
+        assert _coerce_pipeline_progress(74.6) == (75, False)  # rounds
+
+    def test_zero_and_hundred_boundaries(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress(0) == (0, False)
+        assert _coerce_pipeline_progress(100) == (100, False)
+
+    def test_overshoot_clamps_to_100(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress(120) == (100, True)
+        assert _coerce_pipeline_progress("150") == (100, True)
+
+    def test_negative_clamps_to_0_no_overshoot(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress(-5) == (0, False)
+
+    def test_none_and_empty_return_none(self) -> None:
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress(None) == (None, False)
+        assert _coerce_pipeline_progress("") == (None, False)
+
+    def test_unparseable_returns_none(self) -> None:
+        """Garbage strings (e.g. "foo") become None — caller renders no
+        bar instead of bombing on a ValueError."""
+        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
+
+        assert _coerce_pipeline_progress("not a number") == (None, False)
+        assert _coerce_pipeline_progress(object()) == (None, False)
+
+
+class TestProgressTemplateWiring:
+    """The pipeline_steps.html template renders the progress bar
+    block when `stage.progress is not none` and emits
+    `data-dz-progress` for theming."""
+
+    def test_template_has_progress_block(self) -> None:
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/templates/workspace/regions/pipeline_steps.html"
+        )
+        contents = path.read_text()
+        # Conditional gate on progress not being None
+        assert "stage.progress is not none" in contents
+        # Bound data attribute for theming
+        assert 'data-dz-progress="{{ stage.progress }}"' in contents
+        # Overshoot flag — emitted only when set
+        assert "data-dz-progress-overshoot" in contents
+        # ARIA progressbar role + label so screen readers announce it
+        assert 'role="progressbar"' in contents
+        assert 'aria-valuemin="0"' in contents
+        assert 'aria-valuemax="100"' in contents
+        assert 'aria-valuenow="{{ stage.progress }}"' in contents

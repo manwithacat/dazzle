@@ -90,6 +90,35 @@ def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
     return _CARD_TEMPLATE_RE.sub(_sub, template)
 
 
+def _coerce_pipeline_progress(raw: Any) -> tuple[int | None, bool]:
+    """Coerce a pipeline_steps `progress:` value to (clamped_int, overshoot).
+
+    v0.61.78 (#911): the `progress:` field accepts either a literal
+    numeric string ("74") from the parser or a numeric result from
+    an aggregate count query. Returns:
+      - (None, False) when raw is None / empty / unparseable — caller
+        renders no bar (preserves the no-progress shape)
+      - (clamped, False) when 0 <= raw <= 100
+      - (100, True) when raw > 100 — clamp to 100, flag overshoot for
+        themes that want to surface "over capacity" visually
+      - (0, False) when raw < 0 — clamp to 0
+    """
+    if raw is None or raw == "":
+        return None, False
+    try:
+        # Accept int, float, numeric string, or anything that
+        # int(float(...)) can chew. SQL aggregate counts come back as
+        # ints; literal strings come from the parser.
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None, False
+    if value > 100:
+        return 100, True
+    if value < 0:
+        return 0, False
+    return int(round(value)), False
+
+
 def _format_bucket_label(value: Any, unit: str) -> str:
     """Render a time-bucket SQL value as a human-readable string.
 
@@ -1215,89 +1244,110 @@ async def _workspace_region_handler(
     if ctx.ctx_region.display == "PIPELINE_STEPS":
         _stages = ctx.ctx_region.pipeline_stages or []
         if _stages and not _scope_denied:
+            # Per-field task buckets — value (existing) and progress (#911).
+            # Each bucket is keyed by stage index so we can stitch results
+            # back into pipeline_stage_data after a single asyncio.gather.
             _stage_tasks: list[Any] = []
-            _stage_indices: list[int] = []
-            _stage_literals: dict[int, str] = {}
-            for _sidx, _stage in enumerate(_stages):
-                _expr = _stage.get("value") or ""
+            _stage_task_keys: list[tuple[int, str]] = []  # (stage_idx, "value"|"progress")
+            _stage_literals: dict[tuple[int, str], str] = {}  # (idx, field) → literal
+
+            def _queue_stage_field(_sidx: int, _field: str, _expr: str) -> None:
+                """Dispatch one stage field (value or progress) to either the
+                literal stash or an async count-metric task. Cross-entity
+                aggregates run unscoped with a warning, mirroring action_grid
+                (#901)."""
                 if not _expr:
-                    continue
+                    return
                 _m = _AGGREGATE_RE.match(_expr)
                 if not _m:
-                    # Literal string — render verbatim. Stash so the
-                    # build loop below picks it up.
-                    _stage_literals[_sidx] = _expr
-                    continue
+                    _stage_literals[(_sidx, _field)] = _expr
+                    return
                 _func, _entity_name, _where = _m.groups()
                 _agg_repo = ctx.repositories.get(_entity_name) if ctx.repositories else None
                 if _func != "count" or _agg_repo is None:
-                    # MVP: only count aggregates per stage. avg/sum/min/
-                    # max/median deferred; render `—` for now.
-                    continue
-                # #901: same gate as action_grid above — scope_filters
-                # were resolved against the region's source entity and
-                # cause silent SQL failure when applied to a different-
-                # entity repo. Pass scope_filters only when the stage
-                # entity matches the source. Cross-entity stages run
-                # unscoped — log a warning so operators can audit.
+                    return
                 _stage_scope = _scope_only_filters if _entity_name == ctx.source else None
                 if _stage_scope is None and _scope_only_filters is not None:
                     logger.warning(
-                        "pipeline_steps stage %d (entity=%s, source=%s): cross-entity "
-                        "count is unscoped — destination entity's own RBAC at "
-                        "navigation time still applies, but the stage value shows "
-                        "ALL rows the runtime can read",
+                        "pipeline_steps stage %d %s (entity=%s, source=%s): "
+                        "cross-entity count is unscoped — destination entity's "
+                        "own RBAC at navigation time still applies, but the "
+                        "stage %s shows ALL rows the runtime can read",
                         _sidx,
+                        _field,
                         _entity_name,
                         ctx.source,
+                        _field,
                     )
                 _stage_tasks.append(
                     _fetch_count_metric(
-                        f"pipeline_stage_{_sidx}",
+                        f"pipeline_stage_{_sidx}_{_field}",
                         _agg_repo,
                         _where,
                         _stage_scope,
                         source_entity=_entity_name,
                     )
                 )
-                _stage_indices.append(_sidx)
-            _stage_results: dict[int, Any] = {}
+                _stage_task_keys.append((_sidx, _field))
+
+            for _sidx, _stage in enumerate(_stages):
+                _queue_stage_field(_sidx, "value", _stage.get("value") or "")
+                _queue_stage_field(_sidx, "progress", _stage.get("progress") or "")
+
+            _stage_results: dict[tuple[int, str], Any] = {}
             if _stage_tasks:
                 import asyncio as _asyncio
 
                 _sresults = await _asyncio.gather(*_stage_tasks, return_exceptions=True)
-                for _sridx, _srresult in zip(_stage_indices, _sresults, strict=True):
+                for _key, _srresult in zip(_stage_task_keys, _sresults, strict=True):
                     if isinstance(_srresult, tuple):
-                        _stage_results[_sridx] = _srresult[1]
+                        _stage_results[_key] = _srresult[1]
                     else:
                         logger.warning(
-                            "pipeline_steps stage %d count query failed: %s",
-                            _sridx,
+                            "pipeline_steps stage %d %s query failed: %s",
+                            _key[0],
+                            _key[1],
                             _srresult,
                         )
+
             for _sidx, _stage in enumerate(_stages):
                 # Literal beats aggregate result: any stage parsed as a
                 # literal short-circuits before the query path even ran.
-                _val: Any = _stage_literals.get(_sidx, _stage_results.get(_sidx))
+                _val: Any = _stage_literals.get(
+                    (_sidx, "value"), _stage_results.get((_sidx, "value"))
+                )
+                _prog_raw: Any = _stage_literals.get(
+                    (_sidx, "progress"), _stage_results.get((_sidx, "progress"))
+                )
+                _prog_clamped, _prog_overshoot = _coerce_pipeline_progress(_prog_raw)
                 pipeline_stage_data.append(
                     {
                         "label": _stage.get("label", ""),
                         "caption": _stage.get("caption", ""),
                         "value": _val,
+                        "progress": _prog_clamped,
+                        "progress_overshoot": _prog_overshoot,
                     }
                 )
         elif _stages:
             # scope denied — render stages with no values (—) for
             # aggregate stages, but keep literals (they don't depend
-            # on scope).
+            # on scope). Same logic for progress: literal numerics
+            # render unchanged; aggregate progress is suppressed.
             for _stage in _stages:
                 _expr = _stage.get("value") or ""
                 _is_literal = bool(_expr) and not _AGGREGATE_RE.match(_expr)
+                _prog_expr = _stage.get("progress") or ""
+                _prog_is_literal = bool(_prog_expr) and not _AGGREGATE_RE.match(_prog_expr)
+                _prog_raw = _prog_expr if _prog_is_literal else None
+                _prog_clamped, _prog_overshoot = _coerce_pipeline_progress(_prog_raw)
                 pipeline_stage_data.append(
                     {
                         "label": _stage.get("label", ""),
                         "caption": _stage.get("caption", ""),
                         "value": _expr if _is_literal else None,
+                        "progress": _prog_clamped,
+                        "progress_overshoot": _prog_overshoot,
                     }
                 )
 

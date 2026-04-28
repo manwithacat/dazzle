@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.79] - 2026-04-28
+
+Patch bump. **Add #911** — `display: pipeline_steps` regions now accept a per-stage `progress: 0..100` field. Turns the menu-shape into a thermometer-shape so operators see how complete each stage is, not just whether anything is in it. Same expression vocabulary as `value:` — either a literal numeric string or a `count(<Entity> where ...)` aggregate. Clamped to 0-100 at render; values >100 set `data-dz-progress-overshoot="true"` for theme styling. Aligns with AegisMark's prototype shape (`scan-ingestion-job.html` per-stage progress bar).
+
+### Added
+- **`src/dazzle/core/ir/workspaces.py`** — `PipelineStageSpec.progress: str = ""`. Default empty preserves the v0.61.56 shape — existing pipelines render unchanged. Field shape mirrors `value:` so the parser + runtime can reuse the same dispatcher.
+- **`src/dazzle/core/dsl_parser_impl/workspace.py`** — `_parse_pipeline_stages` accepts `progress:` alongside `caption:` and `value:` inside each stage block. Same literal-or-aggregate acceptor (quoted string OR unquoted multi-token aggregate expression). Unknown-key error now lists `progress` as a valid key.
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — `_coerce_pipeline_progress` helper clamps numeric input to 0-100 and returns `(int|None, overshoot_bool)`. None / empty / unparseable → `(None, False)` so the template renders no bar (preserves existing layout). Overshoot (>100) → `(100, True)`. The PIPELINE_STEPS branch dispatches both `value` and `progress` per stage through a single `_queue_stage_field` helper that gathers async count tasks; literals short-circuit. Cross-entity scope warning is parameterised over field name so `progress` aggregates surface the same audit log line as `value` aggregates.
+- **`src/dazzle_ui/templates/workspace/regions/pipeline_steps.html`** — new conditional progress block beneath each stage's headline value. Renders only when `stage.progress is not none`. Emits `data-dz-progress="{n}"`, `data-dz-progress-overshoot="true"` when clamped, ARIA `progressbar` role + `aria-valuenow`. Inline `style="width: {n}%;"` on the fill so themes don't need to compute it; `data-dz-progress` carries the bound number for tone-keyed CSS.
+
+### Tests
+- **`test_workspace_pipeline_steps.py`** — 15 new tests across four classes:
+  - `TestPipelineStepsProgressParser` (5) — literal numeric, quoted literal, aggregate, default-empty, value+progress coexist.
+  - `TestPipelineStageSpecProgressField` (3) — IR construction with progress, default empty, independent of value.
+  - `TestProgressCoercion` (6) — in-range, 0/100 boundaries, overshoot clamps to 100 + flag, negative clamps to 0, None/empty/unparseable → None, garbage → None (no exception).
+  - `TestProgressTemplateWiring` (1) — template gates on `stage.progress is not none`, emits `data-dz-progress`, ARIA `progressbar` role + valuemin/valuemax/valuenow.
+
+### Agent Guidance
+- **Per-field async dispatch over per-stage.** The pre-#911 PIPELINE_STEPS branch had one task list keyed by stage index. Adding a second field (progress) needed task results addressable by `(stage_idx, field_name)`. The refactor introduced a single `_queue_stage_field` helper and a tuple-keyed result dict — easier to extend a third or fourth aggregate field without growing the loop body. When adding a parallel field to an existing stage spec, look for a one-task-per-stage shape and broaden it.
+- **Clamping is presentation, not validation.** `progress: 120` from the DSL is accepted at parse time and clamped at render time to 100 with an overshoot flag. The user might genuinely have 120% capacity (over-allocated work queue) and want the theme to surface "over capacity". Reject-at-parse would discard that signal. Same pattern for any numeric metric where >100% is meaningful: clamp + flag, don't error.
+
 ## [0.61.78] - 2026-04-28
 
 Patch bump. **Fix #910** — v0.61.77's #909 fix qualified scope predicate columns with the source entity table (`"StudentProfile"."school" = %s`). That was correct for the JOIN-ambiguity case but broke any DSL where the author wrote a *relation name* as shorthand for the FK column. AegisMark's `school = current_user.school` pre-fix bound (incorrectly) to the User-join's `school` column; post-fix Postgres errored with `column "StudentProfile"."school" does not exist` because the actual column is `school_id`. `display: profile_card` regions on `pupil_dashboard` returned 500 instead of the previous (wrong but non-crashing) empty state.

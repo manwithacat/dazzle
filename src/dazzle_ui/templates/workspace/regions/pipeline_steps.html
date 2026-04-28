@@ -10,6 +10,13 @@
    without a value (or with unsupported aggregates like median, or
    under denied scope) render `—`.
 
+   v0.61.78 (#911) added per-stage `progress:` (0-100). When set, a
+   thin progress track + percent label sit beneath the headline value
+   so the operator sees how complete the stage is, not just how many
+   rows are in it. `data-dz-progress="74"` carries the bound value
+   for theming; `data-dz-progress-overshoot="true"` flags clamped
+   values >100 so themes can surface "over capacity" visually.
+
    Card safety: region emits zero chrome + zero title. The dashboard
    slot owns both via region_card. #}
 {% from 'macros/region_wrapper.html' import region_card %}
@@ -29,6 +36,31 @@
             <span class="dz-pipeline-stage-caption text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
               {{ stage.caption }}
             </span>
+          {% endif %}
+
+          {# Progress bar (#911) — track + fill + percent label.
+             Renders only when `progress:` resolved to a number (None
+             means the field was omitted, unparseable, or under denied
+             scope for an aggregate). The fill width is set inline so
+             themes don't need to touch the rule; tone styling can key
+             off `data-dz-progress` thresholds (e.g. >=100 = success).
+             `data-dz-progress-overshoot` flags values that were
+             clamped from >100 so themes can surface "over capacity". #}
+          {% if stage.progress is not none %}
+            <div class="dz-pipeline-stage-progress flex items-center gap-2 mt-1"
+                 data-dz-progress="{{ stage.progress }}"
+                 {% if stage.progress_overshoot %}data-dz-progress-overshoot="true"{% endif %}
+                 role="progressbar"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="{{ stage.progress }}"
+                 aria-label="{{ stage.label }} progress">
+              <div class="dz-pipeline-stage-progress-track relative flex-1 h-1 rounded-full bg-[hsl(var(--muted))] overflow-hidden">
+                <div class="dz-pipeline-stage-progress-fill absolute inset-y-0 left-0 bg-[hsl(var(--primary))] rounded-full transition-[width] duration-200"
+                     style="width: {{ stage.progress }}%;"></div>
+              </div>
+              <span class="dz-pipeline-stage-progress-label text-[11px] font-medium text-[hsl(var(--muted-foreground))] tabular-nums">{{ stage.progress }}%</span>
+            </div>
           {% endif %}
 
           {# Connector — sits to the right (desktop) or below (mobile) of
