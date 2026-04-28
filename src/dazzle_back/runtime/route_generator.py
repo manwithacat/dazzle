@@ -1118,6 +1118,7 @@ def create_list_handler(
     fk_graph: "FKGraph | None" = None,
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
+    display_field: str | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -1200,6 +1201,7 @@ def create_list_handler(
                 fk_graph=fk_graph,
                 graph_spec=graph_spec,
                 all_services=all_services,
+                display_field=display_field,
             )
 
         _auth_handler.__annotations__ = {
@@ -1251,6 +1253,7 @@ def create_list_handler(
             fk_graph=fk_graph,
             graph_spec=graph_spec,
             all_services=all_services,
+            display_field=display_field,
         )
 
     _noauth_handler.__annotations__ = {
@@ -1471,6 +1474,7 @@ async def _list_handler_body(
     fk_graph: "FKGraph | None" = None,
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
+    display_field: str | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -1604,6 +1608,29 @@ async def _list_handler_body(
         filtered_items = filter_records_by_condition(items, post_filter, context)
         result["items"] = filtered_items
         result["total"] = len(filtered_items)
+
+    # #928: inject `__display__` on top-level list rows when the entity
+    # has a registered `display_field`. The relation_loader does the
+    # same injection when eager-loading FKs as nested objects, but
+    # FK `<select>` widgets fetch the target entity's plain list
+    # endpoint — that path bypassed relation_loader entirely, so option
+    # text fell back to the UUID. With this hop the JS display() lambda
+    # in `form_field.html` (which already prefers `item.__display__`)
+    # surfaces the human-readable label.
+    if display_field and result and isinstance(result, dict) and "items" in result:
+        materialised: list[Any] = []
+        for item in result["items"]:
+            if hasattr(item, "model_dump"):
+                row = item.model_dump(mode="json")
+            elif isinstance(item, dict):
+                row = dict(item)
+            else:
+                materialised.append(item)
+                continue
+            if display_field in row and "__display__" not in row:
+                row["__display__"] = row[display_field]
+            materialised.append(row)
+        result["items"] = materialised
 
     # Graph format serialization (#619 Phase 2)
     format_param = request.query_params.get("format")
@@ -1767,6 +1794,9 @@ async def _list_handler_body(
         allowed = set(json_projection)
         if auto_include:
             allowed.update(auto_include)
+        # #928: __display__ is added by the FK display injection above —
+        # surface it through projection so create-form FK selects can use it.
+        allowed.add("__display__")
         projected_items = []
         for item in result["items"]:
             if hasattr(item, "model_dump"):
@@ -2764,6 +2794,7 @@ class RouteGenerator:
         fk_graph: "FKGraph | None" = None,
         entity_graph_specs: dict[str, tuple[Any, Any | None]] | None = None,
         node_graph_specs: dict[str, dict[str, Any]] | None = None,
+        entity_display_fields: dict[str, str] | None = None,
         db_manager: Any | None = None,
     ):
         """
@@ -2813,6 +2844,12 @@ class RouteGenerator:
         self.fk_graph = fk_graph
         self.entity_graph_specs = entity_graph_specs or {}
         self.node_graph_specs = node_graph_specs or {}
+        # #928: per-entity display_field map. Used by `_list_handler_body`
+        # to inject `__display__` on top-level list responses so FK
+        # `<select>` widgets show the human-readable label (component_name,
+        # title, etc.) instead of the UUID PK. Mirrors the per-row
+        # injection that `relation_loader` does when eager-loading FKs.
+        self.entity_display_fields = entity_display_fields or {}
         self.db_manager = db_manager
         # Cycle 249 (EX-049): persona-backed entity map.
         # Maps entity_name → (persona_id, link_via) for each persona that
@@ -2993,6 +3030,7 @@ class RouteGenerator:
                 fk_graph=self.fk_graph,
                 graph_spec=_graph_spec,
                 all_services=self.services,
+                display_field=self.entity_display_fields.get(entity_name or ""),
             )
             self._add_route(endpoint, handler, response_model=None)
 

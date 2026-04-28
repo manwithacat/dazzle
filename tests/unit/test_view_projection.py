@@ -399,3 +399,194 @@ class TestAutoInclude:
         request = MockRequest()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
         assert service.last_kwargs.get("include") is None
+
+
+# ---------------------------------------------------------------------------
+# Display-field injection on list endpoints (#928)
+# ---------------------------------------------------------------------------
+
+
+class TestListHandlerDisplayFieldInjection:
+    """Issue #928: top-level list endpoints must inject `__display__` on
+    each row when the entity has a registered `display_field`. The FK
+    `<select>` widget on create surfaces fetches the target entity's
+    list endpoint and reads `item.__display__` for option text. Without
+    this hop the widget falls back to UUID values."""
+
+    @pytest.mark.asyncio
+    async def test_display_field_injects_display_key(self) -> None:
+        class MockService:
+            async def execute(self, **kwargs: object) -> dict:
+                return {
+                    "items": [
+                        {"id": "abc-123", "component_name": "English Language"},
+                        {"id": "def-456", "component_name": "Mathematics"},
+                    ],
+                    "total": 2,
+                    "page": 1,
+                    "page_size": 20,
+                }
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        handler = create_list_handler(MockService(), display_field="component_name")
+        result = await handler(
+            request=MockRequest(),
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+        )
+        items = result["items"]
+        assert items[0]["__display__"] == "English Language"
+        assert items[1]["__display__"] == "Mathematics"
+
+    @pytest.mark.asyncio
+    async def test_no_display_field_no_injection(self) -> None:
+        """Without a display_field the rows pass through unchanged."""
+
+        class MockService:
+            async def execute(self, **kwargs: object) -> dict:
+                return {
+                    "items": [{"id": "abc-123", "name": "Alpha"}],
+                    "total": 1,
+                    "page": 1,
+                    "page_size": 20,
+                }
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        handler = create_list_handler(MockService())
+        result = await handler(
+            request=MockRequest(),
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+        )
+        assert "__display__" not in result["items"][0]
+
+    @pytest.mark.asyncio
+    async def test_display_injection_does_not_overwrite_existing(self) -> None:
+        """If the row already carries `__display__` (e.g. from
+        relation_loader resolving a nested FK whose display_field is
+        itself a FK), the existing value wins."""
+
+        class MockService:
+            async def execute(self, **kwargs: object) -> dict:
+                return {
+                    "items": [
+                        {
+                            "id": "abc",
+                            "component_name": "abc-123",
+                            "__display__": "Resolved Label",
+                        }
+                    ],
+                    "total": 1,
+                    "page": 1,
+                    "page_size": 20,
+                }
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        handler = create_list_handler(MockService(), display_field="component_name")
+        result = await handler(
+            request=MockRequest(),
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+        )
+        assert result["items"][0]["__display__"] == "Resolved Label"
+
+    @pytest.mark.asyncio
+    async def test_display_injection_survives_json_projection(self) -> None:
+        """Field projection must not strip `__display__` — otherwise FK
+        selects on view-backed list surfaces would still see UUIDs."""
+
+        class MockService:
+            async def execute(self, **kwargs: object) -> dict:
+                return {
+                    "items": [{"id": "abc", "component_name": "Mathematics", "secret": "x"}],
+                    "total": 1,
+                    "page": 1,
+                    "page_size": 20,
+                }
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        handler = create_list_handler(
+            MockService(),
+            display_field="component_name",
+            json_projection=["id", "component_name"],
+        )
+        result = await handler(
+            request=MockRequest(),
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+        )
+        item = result["items"][0]
+        assert item["__display__"] == "Mathematics"
+        assert "secret" not in item

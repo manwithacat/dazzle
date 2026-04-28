@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.96] - 2026-04-28
+
+### Fixed
+- **`runtime/route_generator.py` + `runtime/server.py`** — closes #928.
+  Top-level entity list endpoints (`/api/<entity>/?page_size=N`) were
+  returning rows without a `__display__` key, even when the entity had
+  a registered `display_field`. The relation_loader injects
+  `__display__` when eager-loading FKs as nested objects, but the FK
+  `<select>` widget on create surfaces fetches the **target** entity's
+  plain list endpoint — that path bypassed relation_loader, so option
+  text fell back to the UUID PK ("English Language" rendered as
+  `2658aabf-a5c4-...`). Added `entity_display_fields` plumbing through
+  `RouteGenerator → create_list_handler → _list_handler_body`; when
+  set, the handler now walks each row and writes
+  `row["__display__"] = row[display_field]`. Existing `__display__`
+  values (e.g. from relation_loader resolving a nested FK whose
+  display_field is itself a FK) win — first-write semantics. The JSON
+  projection allow-list is augmented with `__display__` so it survives
+  view-backed list surfaces. Regression tests in
+  `tests/unit/test_view_projection.py::TestListHandlerDisplayFieldInjection`.
+
 ## [0.61.95] - 2026-04-28
 
 ### Added

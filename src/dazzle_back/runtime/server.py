@@ -909,6 +909,15 @@ class DazzleBackendApp:
                         "edge_table": edge_entity_name,
                     }
 
+        # #928: per-entity display_field map (parallels relation_registry's
+        # internal map but exposed through the route generator so the list
+        # handler can inject `__display__` on top-level list responses).
+        entity_display_fields: dict[str, str] = {
+            ir_entity.name: ir_entity.display_field
+            for ir_entity in self._appspec.domain.entities
+            if ir_entity.display_field
+        }
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -930,6 +939,7 @@ class DazzleBackendApp:
             fk_graph=_fk_graph,
             entity_graph_specs=entity_graph_specs,
             node_graph_specs=node_graph_specs,
+            entity_display_fields=entity_display_fields,
             db_manager=self._db_manager,
         )
 
