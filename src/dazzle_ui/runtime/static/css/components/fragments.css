@@ -1991,3 +1991,83 @@
   font-size: 0.625rem;
   color: var(--colour-text-muted);
 }
+
+/* ─────────────────────────── search_select fragment ─────────────
+ * Debounced search with dropdown results. Standard form input
+ * chrome + spinner + ARIA combobox listbox panel below. Error
+ * state (border colour) keyed off `aria-invalid="true"` — same
+ * convention as form.css. */
+
+.dz-search-select {
+  position: relative;
+  width: 100%;
+}
+
+.dz-search-select-input {
+  width: 100%;
+  height: 2rem;
+  padding-inline-start: var(--space-md);
+  padding-inline-end: 2rem;
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  outline: none;
+  transition:
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-search-select-input::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-search-select-input:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-search-select-input[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+.dz-search-select-input[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-danger);
+}
+
+.dz-search-select-spinner {
+  position: absolute;
+  inset-inline-end: var(--space-md);
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--colour-text-muted);
+}
+
+.dz-search-select-spinner-icon {
+  width: 1rem;
+  height: 1rem;
+  animation: dz-spin 1s linear infinite;
+}
+
+.dz-search-select-results {
+  position: absolute;
+  z-index: 50;
+  width: 100%;
+  margin-block-start: 0.25rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.dz-search-select-prompt {
+  padding-inline: var(--space-md);
+  padding-block: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
