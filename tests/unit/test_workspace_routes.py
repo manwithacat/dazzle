@@ -2001,7 +2001,10 @@ class TestGridRegionTemplate:
         assert "CPU:" in html
 
     def test_attention_level_critical_uses_destructive_token(self) -> None:
-        """Gate 6 (critical): _attention={level:critical} → --destructive left border."""
+        """Gate 6 (critical): _attention={level:critical} → danger left border.
+
+        v0.62 CSS refactor: emits .dz-attn-border + .dz-attn-tone-critical
+        modifier; CSS rule resolves to var(--colour-danger)."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -2015,11 +2018,12 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--destructive))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-critical" in html
         assert 'title="System down"' in html
 
     def test_attention_level_warning_uses_warning_token(self) -> None:
-        """Gate 6 (warning): --warning left border."""
+        """Gate 6 (warning): warning left border."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -2033,10 +2037,11 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--warning))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_attention_level_notice_uses_primary_token(self) -> None:
-        """Gate 6 (notice): --primary left border."""
+        """Gate 6 (notice): brand left border."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -2050,7 +2055,8 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--primary))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_htmx_drill_down_wired_when_action_url(self) -> None:
         """Gate 7: cells have hx-get + .is-clickable iff action_url is non-empty.
@@ -2306,7 +2312,10 @@ class TestTimelineRegionTemplate:
         assert html.count('class="dz-timeline-bullet ') == 2
 
     def test_bullet_colour_critical_uses_destructive_token(self) -> None:
-        """Gate 5 (critical): _attention={level:critical} → --destructive."""
+        """Gate 5 (critical): _attention={level:critical} → danger.
+
+        v0.62 CSS refactor: emits .dz-attn-bullet + .dz-attn-tone-critical
+        modifier on the bullet SVG; CSS rule resolves to var(--colour-danger)."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2322,10 +2331,11 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--destructive))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-critical" in html
 
     def test_bullet_colour_warning_uses_warning_token(self) -> None:
-        """Gate 5 (warning): --warning on bullet."""
+        """Gate 5 (warning): warning on bullet."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2341,10 +2351,12 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--warning))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_bullet_colour_default_uses_primary_token(self) -> None:
-        """Gate 5 (default): no attention → --primary."""
+        """Gate 5 (default): no attention → bullet falls back to brand
+        via the .dz-attn-tone-default modifier."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2359,7 +2371,8 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--primary))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-default" in html
 
     def test_htmx_drill_down_wired_when_action_url(self) -> None:
         """Gate 8: content pad has hx-get iff action_url is set.
@@ -2605,7 +2618,8 @@ class TestQueueRegionTemplate:
         assert html.count('class="dz-queue-row ') == 3
 
     def test_attention_critical_dual_signal(self) -> None:
-        """Gate 6 (critical): border + tint use --destructive."""
+        """Gate 6 (critical): emits .dz-attn-both + .dz-attn-tone-critical;
+        the CSS rule applies the danger border + 4% tint."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2620,12 +2634,12 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--destructive))]" in html
-        assert "bg-[hsl(var(--destructive)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-critical" in html
         assert "Blocker" in html
 
     def test_attention_warning_dual_signal(self) -> None:
-        """Gate 6 (warning): border + tint use --warning."""
+        """Gate 6 (warning): warning border + tint via .dz-attn-both .dz-attn-tone-warning."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2640,11 +2654,11 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--warning))]" in html
-        assert "bg-[hsl(var(--warning)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_attention_notice_dual_signal(self) -> None:
-        """Gate 6 (notice): border + tint use --primary."""
+        """Gate 6 (notice): brand border + tint via .dz-attn-both .dz-attn-tone-notice."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2659,8 +2673,8 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--primary))]" in html
-        assert "bg-[hsl(var(--primary)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_badge_column_delegates_to_status_badge(self) -> None:
         """Gate 7: badge-typed columns render via render_status_badge."""
@@ -2963,9 +2977,13 @@ class TestListRegionTemplate:
                 total=3,
             ),
         )
-        assert "bg-[hsl(var(--destructive)/0.08)]" in html
-        assert "bg-[hsl(var(--warning)/0.08)]" in html
-        assert "bg-[hsl(var(--primary)/0.06)]" in html
+        # v0.62 CSS refactor: bg tint variants live in CSS rules on
+        # .dz-attn-tint.dz-attn-tone-{critical|warning|notice};
+        # template emits the modifiers, CSS resolves the colour-mix.
+        assert "dz-attn-tint" in html
+        assert "dz-attn-tone-critical" in html
+        assert "dz-attn-tone-warning" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_sortable_column_header_has_hx_get(self) -> None:
         """Gate 8: sortable columns have <a hx-get=...?sort=...&dir=...>."""
@@ -5346,18 +5364,24 @@ class TestAttentionAccentMacro:
         )
         return tmpl.render(attn=attn, style=style)
 
+    # v0.62 CSS refactor: macro emits semantic class pair
+    # `dz-attn-{style} dz-attn-tone-{tier}`. The (style × tone) matrix
+    # is resolved by combinator selectors in components/fragments.css.
+
     def test_border_critical_destructive(self) -> None:
         out = self._render_macro({"level": "critical"}, "border")
-        assert "border-l-4" in out
-        assert "border-l-[hsl(var(--destructive))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_border_warning_warning(self) -> None:
         out = self._render_macro({"level": "warning"}, "border")
-        assert "border-l-[hsl(var(--warning))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_border_notice_primary(self) -> None:
         out = self._render_macro({"level": "notice"}, "border")
-        assert "border-l-[hsl(var(--primary))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_border_none_emits_nothing(self) -> None:
         """With no attn and style=border, macro emits empty string."""
@@ -5366,51 +5390,80 @@ class TestAttentionAccentMacro:
 
     def test_tint_critical_destructive_0_08(self) -> None:
         out = self._render_macro({"level": "critical"}, "tint")
-        assert "bg-[hsl(var(--destructive)/0.08)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_tint_warning_warning_0_08(self) -> None:
         out = self._render_macro({"level": "warning"}, "tint")
-        assert "bg-[hsl(var(--warning)/0.08)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_tint_notice_primary_0_06(self) -> None:
-        """Notice alpha is 0.06 (lighter than critical/warning 0.08)."""
+        """Notice alpha is 0.06 (lighter than critical/warning 0.08) —
+        encoded in the .dz-attn-tint.dz-attn-tone-notice CSS rule."""
         out = self._render_macro({"level": "notice"}, "tint")
-        assert "bg-[hsl(var(--primary)/0.06)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-notice" in out
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        notice_block = css.split(".dz-attn-tint.dz-attn-tone-notice {")[1].split("}")[0]
+        # 6% mix preserves the lighter alpha vs critical/warning's 8%
+        assert "var(--colour-brand) 6%" in notice_block
 
     def test_both_critical_border_and_tint_0_04(self) -> None:
-        """Queue-region style: dual signal (border + 0.04 alpha tint)."""
+        """Queue-region style: dual signal (border + 0.04 alpha tint).
+        The 4% mix is encoded in the CSS rule."""
         out = self._render_macro({"level": "critical"}, "both")
-        assert "border-l-[hsl(var(--destructive))]" in out
-        assert "bg-[hsl(var(--destructive)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-critical" in out
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        both_critical = css.split(".dz-attn-both.dz-attn-tone-critical {")[1].split("}")[0]
+        assert "var(--colour-danger) 4%" in both_critical
 
     def test_both_warning_dual_signal(self) -> None:
         out = self._render_macro({"level": "warning"}, "both")
-        assert "border-l-[hsl(var(--warning))]" in out
-        assert "bg-[hsl(var(--warning)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_both_notice_dual_signal(self) -> None:
         out = self._render_macro({"level": "notice"}, "both")
-        assert "border-l-[hsl(var(--primary))]" in out
-        assert "bg-[hsl(var(--primary)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_bullet_critical_text_destructive(self) -> None:
         """Timeline-region style: bullet marker text colour."""
         out = self._render_macro({"level": "critical"}, "bullet")
-        assert "text-[hsl(var(--destructive))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_bullet_warning_text_warning(self) -> None:
         out = self._render_macro({"level": "warning"}, "bullet")
-        assert "text-[hsl(var(--warning))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_bullet_notice_text_primary(self) -> None:
         out = self._render_macro({"level": "notice"}, "bullet")
-        assert "text-[hsl(var(--primary))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_bullet_none_falls_back_to_primary(self) -> None:
-        """Bullet is the only style that emits a class when attn is None —
-        timeline's default bullet colour is --primary."""
+        """Bullet is the only style that emits classes when attn is None —
+        timeline's default bullet colour is the brand token, encoded as
+        the `default` tone modifier in the CSS rule."""
         out = self._render_macro(None, "bullet")
-        assert "text-[hsl(var(--primary))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-default" in out
 
     def test_tint_none_emits_nothing(self) -> None:
         out = self._render_macro(None, "tint")
@@ -5421,16 +5474,21 @@ class TestAttentionAccentMacro:
         assert out.strip() == ""
 
     def test_unknown_level_emits_safe_fallback(self) -> None:
-        """Unknown level (e.g. 'error' instead of 'critical') emits
-        the base class only (border-l-4 for border, nothing for others).
-        Protects against typos in DSL-authored attention values."""
+        """Unknown level (e.g. 'error' instead of 'critical') emits the
+        base style class only — no tone modifier — so the fallback CSS
+        rule applies (just the variant chrome, no per-tier colour)."""
         out = self._render_macro({"level": "error"}, "border")
-        # base 'border-l-4' present but no specific colour token
-        assert "border-l-4" in out
-        assert "hsl(var(--destructive))" not in out
+        assert "dz-attn-border" in out
+        # No specific tone modifier
+        assert "dz-attn-tone-critical" not in out
+        assert "dz-attn-tone-warning" not in out
+        assert "dz-attn-tone-notice" not in out
 
         out_tint = self._render_macro({"level": "error"}, "tint")
-        assert out_tint.strip() == ""
+        # tint without tone has no styling — the macro still emits dz-attn-tint
+        # so the chrome class is present, but no tone modifier
+        assert "dz-attn-tint" in out_tint
+        assert "dz-attn-tone-" not in out_tint
 
 
 # ---------------------------------------------------------------------------

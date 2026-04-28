@@ -1771,3 +1771,65 @@
   background: var(--colour-bg);
   color: var(--colour-text);
 }
+
+/* ─────────────────────────── attention_accent macro ─────────────
+ * Cross-region attention/severity tier visual treatment. The macro
+ * `attention_classes` returns a class string the caller pastes into
+ * the element's `class=` attribute; this CSS resolves the (style ×
+ * tone) matrix.
+ *
+ *   - border  — 4px inline-start accent (grid)
+ *   - tint    — 0.06–0.08 background tint (list)
+ *   - both    — border + 0.04 background tint (queue)
+ *   - bullet  — text colour for the timeline dot (timeline)
+ *
+ * Tone semantics:
+ *   - critical → danger
+ *   - warning  → warning
+ *   - notice   → brand
+ *   - default  → brand (bullet only — falls back when no attention)
+ */
+
+.dz-attn-border {
+  border-inline-start-width: 4px;
+  border-inline-start-style: solid;
+}
+
+.dz-attn-border.dz-attn-tone-critical { border-inline-start-color: var(--colour-danger); }
+.dz-attn-border.dz-attn-tone-warning  { border-inline-start-color: var(--colour-warning); }
+.dz-attn-border.dz-attn-tone-notice   { border-inline-start-color: var(--colour-brand); }
+
+.dz-attn-tint.dz-attn-tone-critical {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+.dz-attn-tint.dz-attn-tone-warning {
+  background: color-mix(in oklch, var(--colour-warning) 8%, transparent);
+}
+.dz-attn-tint.dz-attn-tone-notice {
+  background: color-mix(in oklch, var(--colour-brand) 6%, transparent);
+}
+
+.dz-attn-both {
+  border-inline-start-width: 4px;
+  border-inline-start-style: solid;
+}
+
+.dz-attn-both.dz-attn-tone-critical {
+  border-inline-start-color: var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 4%, transparent);
+}
+
+.dz-attn-both.dz-attn-tone-warning {
+  border-inline-start-color: var(--colour-warning);
+  background: color-mix(in oklch, var(--colour-warning) 4%, transparent);
+}
+
+.dz-attn-both.dz-attn-tone-notice {
+  border-inline-start-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 4%, transparent);
+}
+
+.dz-attn-bullet.dz-attn-tone-critical { color: var(--colour-danger); }
+.dz-attn-bullet.dz-attn-tone-warning  { color: var(--colour-warning); }
+.dz-attn-bullet.dz-attn-tone-notice   { color: var(--colour-brand); }
+.dz-attn-bullet.dz-attn-tone-default  { color: var(--colour-brand); }

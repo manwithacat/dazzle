@@ -8,48 +8,25 @@
      - list-region    (style='tint')   — 0.06/0.08 bg tint only
 
    The *semantic* token mapping (critical→--destructive, warning→--warning,
-   notice→--primary) is the single source of truth. Individual style variants
-   keep their visual-intensity alpha choices (list 0.08/0.06, queue 0.04)
-   because region density differs.
-
-   Signal — each region's regression tests assert the rendered class string
-   contains the expected token reference (e.g. `hsl(var(--destructive))`).
-   Extracting to a macro preserves the class strings exactly, so existing
-   tests continue to pass without modification.
+   notice→--primary) is the single source of truth.
 
    Contract: see dev_docs/framework-gaps/2026-04-20-attention-tier-taxonomy-drift.md
+
+   v0.62 CSS refactor: macro now emits a pair of semantic class names
+   `dz-attn-{style} dz-attn-tone-{tier}` instead of a long
+   per-tier-per-style Tailwind class string. The (style × tone) matrix
+   is resolved by combinator selectors in components/fragments.css —
+   single source of truth for both the variant chrome (border vs tint
+   vs both vs bullet) and the per-tier colour token. Replaces the
+   #906-class JIT-invisibility risk that hung over the dynamic
+   `bg-[hsl(var(--{token})/0.08)]` strings.
 #}
 
 {%- macro attention_classes(attn, style='border') -%}
-{%- if attn -%}
-{%- set level = attn.level -%}
-{%- if style == 'border' -%}
-border-l-4
-{%- if level == 'critical' %} border-l-[hsl(var(--destructive))]
-{%- elif level == 'warning' %} border-l-[hsl(var(--warning))]
-{%- elif level == 'notice' %} border-l-[hsl(var(--primary))]
-{%- endif -%}
-{%- elif style == 'tint' -%}
-{%- if level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]
-{%- elif level == 'warning' %}bg-[hsl(var(--warning)/0.08)]
-{%- elif level == 'notice' %}bg-[hsl(var(--primary)/0.06)]
-{%- endif -%}
-{%- elif style == 'both' -%}
-border-l-4
-{%- if level == 'critical' %} border-l-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.04)]
-{%- elif level == 'warning' %} border-l-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.04)]
-{%- elif level == 'notice' %} border-l-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.04)]
-{%- endif -%}
-{%- elif style == 'bullet' -%}
-{%- if level == 'critical' %}text-[hsl(var(--destructive))]
-{%- elif level == 'warning' %}text-[hsl(var(--warning))]
-{%- elif level == 'notice' %}text-[hsl(var(--primary))]
-{%- else %}text-[hsl(var(--primary))]
-{%- endif -%}
-{%- endif -%}
-{%- else -%}
-{#- No attention — bullet-style falls back to --primary (timeline default);
-    other styles emit nothing. -#}
-{%- if style == 'bullet' -%}text-[hsl(var(--primary))]{%- endif -%}
+{%- set tier = attn.level if attn else ('default' if style == 'bullet' else '') -%}
+{%- if tier in ('critical', 'warning', 'notice') or (style == 'bullet' and tier == 'default') -%}
+dz-attn-{{ style }} dz-attn-tone-{{ tier }}
+{%- elif attn -%}
+dz-attn-{{ style }}
 {%- endif -%}
 {%- endmacro -%}
