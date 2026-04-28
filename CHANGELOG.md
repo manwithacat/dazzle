@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.90] - 2026-04-28
+
+### Fixed
+- **`runtime/css_loader.py` + `scripts/build_dist.py`** — closes #920.
+  Both bundling paths (the runtime `/styles/dazzle.css` route and the
+  CDN `dist/dazzle.min.css` build) had stale source-file lists that
+  pre-dated the v0.62 CSS refactor: they emitted only the three
+  legacy framework files (`dazzle-layer.css`, `design-system.css`,
+  `site-sections.css`) and skipped every `components/*.css` family
+  including `button.css`. Result: any page served the bundle (notably
+  the marketing site) rendered `dz-button` and similar classes with
+  zero CSS rules. Both lists now mirror the canonical
+  `static/css/dazzle.css` cascade — same files, same order, same
+  layer assignments (`reset` / `vendor` / `tokens` / `base` /
+  `utilities` / `components`, with `dz.css` / `dz-widgets.css` /
+  `dz-tones.css` unlayered for cascade-override). Tests in
+  `tests/unit/test_css_delivery.py::TestCssLoader` and `TestBuildDist`
+  now positively assert `.dz-button` exists in both bundles, so a
+  future stale-list regression fails immediately.
+
 ## [0.61.89] - 2026-04-28
 
 ### Fixed

@@ -1,10 +1,16 @@
 """
 CSS loader for Dazzle UI runtime.
 
-Loads and concatenates CSS files from static/css/ to produce
-the bundled stylesheet served at /styles/dazzle.css.
+Loads and concatenates CSS files from static/ to produce the bundled
+stylesheet served at /styles/dazzle.css.
 
-Uses CSS Cascade Layers (@layer) for explicit ordering.
+Uses CSS Cascade Layers (@layer) for explicit ordering. The layer
+order and file list mirror the canonical entry stylesheet
+``static/css/dazzle.css`` — that file's @import order is the source
+of truth; this loader concatenates the same files in the same order
+so the runtime bundle and the dev-time direct-import path resolve
+identically.
+
 Generates an inline source map for DevTools debugging.
 """
 
@@ -12,24 +18,55 @@ import base64
 import json
 from pathlib import Path
 
-_STATIC_CSS_DIR = Path(__file__).parent / "static" / "css"
+_STATIC_DIR = Path(__file__).parent / "static"
 
-# Canonical CSS source order — must match dazzle-framework.css and build_dist.py.
-CSS_SOURCE_FILES = (
-    "dazzle-layer.css",
-    "design-system.css",
-    "site-sections.css",
+# Cascade layer order — must match `static/css/dazzle.css`. Anything
+# in a later layer wins over earlier layers regardless of selector
+# specificity. `overrides` is reserved for project-level escape-hatch
+# rules; the loader never emits into it.
+CSS_LAYER_ORDER = "@layer reset, vendor, tokens, base, utilities, components, overrides;"
+
+# Layered source files in cascade order. Each entry is
+# ``(layer_name, path_relative_to_static)``. Order WITHIN a layer
+# also matters for ties resolved by source position; keep this list
+# byte-for-byte aligned with the @import order in
+# ``static/css/dazzle.css`` (#920).
+CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
+    ("reset", "css/reset.css"),
+    ("vendor", "vendor/tom-select.css"),
+    ("vendor", "vendor/flatpickr.css"),
+    ("vendor", "vendor/quill.snow.css"),
+    ("vendor", "vendor/pickr.css"),
+    ("tokens", "css/tokens.css"),
+    ("tokens", "css/design-system.css"),
+    ("base", "css/base.css"),
+    ("utilities", "css/utilities.css"),
+    ("components", "css/components/badge.css"),
+    ("components", "css/components/button.css"),
+    ("components", "css/components/dashboard.css"),
+    ("components", "css/components/detail.css"),
+    ("components", "css/components/form.css"),
+    ("components", "css/components/fragments.css"),
+    ("components", "css/components/htmx-states.css"),
+    ("components", "css/components/regions.css"),
+    ("components", "css/components/table.css"),
+    ("components", "css/dazzle-layer.css"),
+    ("components", "css/site-sections.css"),
 )
 
-# Files loaded unlayered (after framework layer) so they can override DaisyUI.
-# dz-tones.css (#906) must also be unlayered — tone tints beat Tailwind
-# arbitrary-value classes that would otherwise pin the bg.
-CSS_UNLAYERED_FILES = ("dz.css", "dz-tones.css")
+# Files loaded unlayered (after every @layer block) so they can
+# override earlier rules regardless of layer position. Layered styles
+# always lose to unlayered styles in the CSS cascade.
+CSS_UNLAYERED_FILES: tuple[str, ...] = (
+    "css/dz.css",
+    "css/dz-widgets.css",
+    "css/dz-tones.css",
+)
 
 
-def _load_css_file(filename: str) -> str:
-    """Load a CSS file from the static/css directory."""
-    path = _STATIC_CSS_DIR / filename
+def _load_css_file(rel_path: str) -> str:
+    """Load a CSS file from the static/ directory by relative path."""
+    path = _STATIC_DIR / rel_path
     if not path.exists():
         raise FileNotFoundError(f"CSS file not found: {path}")
     return path.read_text(encoding="utf-8")
@@ -37,50 +74,46 @@ def _load_css_file(filename: str) -> str:
 
 def get_bundled_css(theme_css: str | None = None) -> str:
     """
-    Load and concatenate CSS files with @layer framework wrappers.
-
-    Returns the DAZZLE semantic layer wrapped in cascade layer blocks.
-    v0.62 (Phase 4 teardown): the Tailwind compiled bundle was removed;
-    the framework now ships only the semantic .dz-* class families via
-    dazzle-framework.css and friends.
+    Concatenate all framework CSS into one bundle, layered to match
+    ``static/css/dazzle.css``.
 
     Args:
-        theme_css: Optional generated theme CSS to prepend (from ThemeSpec)
+        theme_css: Optional generated theme CSS to prepend (from ThemeSpec).
+            Inlined into the ``tokens`` layer so generated custom-property
+            values participate in the same cascade as the static tokens.
 
     Returns:
-        Concatenated CSS content with @layer wrappers and inline source map
+        Concatenated CSS with @layer wrappers and an inline source map.
     """
     parts: list[str] = [
-        "@layer base, framework, app, overrides;",
+        CSS_LAYER_ORDER,
         "",
         "/* =============================================================================",
-        "   DAZZLE Semantic Layer",
-        "   Thin aliases on top of DaisyUI (loaded via CDN) + Tailwind",
-        "   DO NOT EDIT - regenerate using dazzle init or dazzle serve",
+        "   DAZZLE Framework CSS Bundle",
+        "   Auto-generated by css_loader.py — mirrors static/css/dazzle.css",
         "   ============================================================================= */",
         "",
     ]
 
-    # Prepend generated theme CSS if provided
+    # Generated theme CSS lands in the tokens layer alongside the
+    # static custom-property declarations.
     if theme_css:
         parts.append("/* --- theme.css (generated) --- */")
-        parts.append(f"@layer framework {{\n{theme_css}\n}}")
+        parts.append(f"@layer tokens {{\n{theme_css}\n}}")
         parts.append("")
 
-    for filename in CSS_SOURCE_FILES:
-        parts.append(f"/* --- {filename} --- */")
-        parts.append(f"@layer framework {{\n{_load_css_file(filename)}\n}}")
+    for layer, rel_path in CSS_SOURCE_FILES:
+        parts.append(f"/* --- {rel_path} --- */")
+        parts.append(f"@layer {layer} {{\n{_load_css_file(rel_path)}\n}}")
         parts.append("")
 
-    # Unlayered files — must come after the layer block so they can override
-    # DaisyUI's unlayered drawer/sidebar base styles.
-    for filename in CSS_UNLAYERED_FILES:
-        parts.append(f"/* --- {filename} (unlayered — overrides DaisyUI) --- */")
-        parts.append(_load_css_file(filename))
+    # Unlayered files come last so they win the cascade.
+    for rel_path in CSS_UNLAYERED_FILES:
+        parts.append(f"/* --- {rel_path} (unlayered — cascade override) --- */")
+        parts.append(_load_css_file(rel_path))
         parts.append("")
 
-    # Inline source map (file-level, not line-level)
-    all_sources = list(CSS_SOURCE_FILES) + list(CSS_UNLAYERED_FILES)
+    all_sources = [path for _, path in CSS_SOURCE_FILES] + list(CSS_UNLAYERED_FILES)
     source_map = {"version": 3, "sources": all_sources, "mappings": ""}
     map_b64 = base64.b64encode(json.dumps(source_map).encode()).decode()
     parts.append(f"/*# sourceMappingURL=data:application/json;base64,{map_b64} */")

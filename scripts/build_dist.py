@@ -17,13 +17,38 @@ DIST_DIR = REPO_ROOT / "dist"
 STATIC = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static"
 SITE_STATIC = REPO_ROOT / "src" / "dazzle_ui" / "static"
 
-CSS_SOURCES = [
-    STATIC / "css" / "dazzle-layer.css",
-    STATIC / "css" / "design-system.css",
+# Order mirrors static/css/dazzle.css and css_loader.CSS_SOURCE_FILES.
+# Each entry is (layer_name, path). Pre-#920 this list was stale and
+# only emitted the three legacy files, so dist/dazzle.min.css shipped
+# with zero .dz-button (and every other v0.62 component) rules.
+CSS_SOURCES: list[tuple[str, Path]] = [
+    ("reset", STATIC / "css" / "reset.css"),
+    ("vendor", STATIC / "vendor" / "tom-select.css"),
+    ("vendor", STATIC / "vendor" / "flatpickr.css"),
+    ("vendor", STATIC / "vendor" / "quill.snow.css"),
+    ("vendor", STATIC / "vendor" / "pickr.css"),
+    ("tokens", STATIC / "css" / "tokens.css"),
+    ("tokens", STATIC / "css" / "design-system.css"),
+    ("base", STATIC / "css" / "base.css"),
+    ("utilities", STATIC / "css" / "utilities.css"),
+    ("components", STATIC / "css" / "components" / "badge.css"),
+    ("components", STATIC / "css" / "components" / "button.css"),
+    ("components", STATIC / "css" / "components" / "dashboard.css"),
+    ("components", STATIC / "css" / "components" / "detail.css"),
+    ("components", STATIC / "css" / "components" / "form.css"),
+    ("components", STATIC / "css" / "components" / "fragments.css"),
+    ("components", STATIC / "css" / "components" / "htmx-states.css"),
+    ("components", STATIC / "css" / "components" / "regions.css"),
+    ("components", STATIC / "css" / "components" / "table.css"),
+    ("components", STATIC / "css" / "dazzle-layer.css"),
+    ("components", STATIC / "css" / "site-sections.css"),
+]
+
+# Unlayered files appended after every @layer block — cascade override.
+CSS_UNLAYERED: list[Path] = [
     STATIC / "css" / "dz.css",
+    STATIC / "css" / "dz-widgets.css",
     STATIC / "css" / "dz-tones.css",
-    STATIC / "css" / "site-sections.css",
-    STATIC / "css" / "feedback-widget.css",
 ]
 
 JS_SOURCES = [
@@ -123,13 +148,21 @@ def build() -> None:
     results: list[tuple[str, int, int]] = []
 
     # --- CSS bundle ---
-    css_parts = ["@layer base, framework, app, overrides;\n"]
-    for src in CSS_SOURCES:
+    # Layer order matches static/css/dazzle.css. Each layered file
+    # gets wrapped in `@layer <name> { ... }`; unlayered files are
+    # appended last so they win the cascade.
+    css_parts = ["@layer reset, vendor, tokens, base, utilities, components, overrides;\n"]
+    for layer, src in CSS_SOURCES:
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
         content = src.read_text()
-        css_parts.append(f"@layer framework {{\n{content}\n}}\n")
+        css_parts.append(f"@layer {layer} {{\n{content}\n}}\n")
+    for src in CSS_UNLAYERED:
+        if not src.exists():
+            print(f"WARNING: missing {src}", file=sys.stderr)
+            continue
+        css_parts.append(src.read_text())
     css_combined = "\n".join(css_parts)
     css_minified = hdr + minify_css(css_combined)
     css_out = DIST_DIR / "dazzle.min.css"
