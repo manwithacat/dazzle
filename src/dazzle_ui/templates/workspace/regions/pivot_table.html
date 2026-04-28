@@ -3,18 +3,22 @@
    and pivot_dim_specs (column-header metadata: name, label, is_fk).
    Each row renders one combination of dimension values + measures.
    Strategy C aggregate primitive — Repository.aggregate runs ONE
-   GROUP BY query, scope evaluated once, no N+1. #}
+   GROUP BY query, scope evaluated once, no N+1.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-pivot-* classes.
+   Measure cells get the .is-measure modifier so right-alignment +
+   monospace come from the CSS rule, not duplicated utility strings. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
 <div class="dz-pivot-region">
   {% if pivot_buckets %}
-  <div class="dz-pivot-scroll overflow-x-auto">
-    <table class="dz-pivot-grid w-full text-[13px] border-collapse">
+  <div class="dz-pivot-scroll">
+    <table class="dz-pivot-grid">
       <thead>
-        <tr class="border-b border-[hsl(var(--border))]">
+        <tr>
           {% for spec in pivot_dim_specs %}
-          <th class="py-1 px-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{{ spec.label }}</th>
+          <th>{{ spec.label }}</th>
           {% endfor %}
           {% if pivot_buckets[0] %}
             {% for k in pivot_buckets[0].keys() %}
@@ -23,7 +27,7 @@
                 {%- if k == spec.name or k == spec.name ~ '_label' -%}{%- set is_dim_field = true -%}{%- endif -%}
               {%- endfor -%}
               {%- if not is_dim_field -%}
-              <th class="py-1 px-2 text-right font-medium text-[hsl(var(--muted-foreground))] font-mono">{{ k.replace('_', ' ').title() }}</th>
+              <th class="is-measure">{{ k.replace('_', ' ').title() }}</th>
               {%- endif -%}
             {% endfor %}
           {% endif %}
@@ -31,15 +35,15 @@
       </thead>
       <tbody>
         {% for row in pivot_buckets %}
-        <tr class="border-b border-[hsl(var(--border))] last:border-0">
+        <tr>
           {% for spec in pivot_dim_specs %}
-          <td class="py-1 px-2 text-[hsl(var(--foreground))]">
+          <td>
             {% if spec.is_fk %}
               {%- set fk_label = row[spec.name ~ '_label'] -%}
               {%- if fk_label is none -%}{{ row[spec.name] or '—' }}{%- else -%}{{ fk_label }}{%- endif -%}
             {% else %}
               {%- set sval = row[spec.name] -%}
-              {%- if sval is none -%}<span class="text-[hsl(var(--muted-foreground))]">—</span>{%- else -%}{{ render_status_badge(value=sval, size='sm') }}{%- endif -%}
+              {%- if sval is none -%}<span class="dz-pivot-null">—</span>{%- else -%}{{ render_status_badge(value=sval, size='sm') }}{%- endif -%}
             {% endif %}
           </td>
           {% endfor %}
@@ -49,7 +53,7 @@
               {%- if k == spec.name or k == spec.name ~ '_label' -%}{%- set is_dim_field = true -%}{%- endif -%}
             {%- endfor -%}
             {%- if not is_dim_field -%}
-            <td class="py-1 px-2 text-right font-mono text-[hsl(var(--foreground))]">{{ v }}</td>
+            <td class="is-measure">{{ v }}</td>
             {%- endif -%}
           {% endfor %}
         </tr>
@@ -57,9 +61,9 @@
       </tbody>
     </table>
   </div>
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ pivot_buckets | length }} row{{ '' if pivot_buckets|length == 1 else 's' }}</p>
+  <p class="dz-pivot-summary">{{ pivot_buckets | length }} row{{ '' if pivot_buckets|length == 1 else 's' }}</p>
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data to pivot.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No data to pivot.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

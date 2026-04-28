@@ -3104,7 +3104,11 @@ class TestFunnelChartRegionTemplate:
         assert "dz-funnel-stages" in html
 
     def test_grouped_mode_stage_count_matches_kanban_columns(self) -> None:
-        """Gate 3: one dz-funnel-stage per kanban_column."""
+        """Gate 3: one dz-funnel-stage per kanban_column.
+
+        v0.62 CSS refactor: stage opens with `class="dz-funnel-stage"`
+        followed by a newline before its data-attributes — count the
+        opener pattern."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3119,7 +3123,7 @@ class TestFunnelChartRegionTemplate:
                 total=4,
             ),
         )
-        assert html.count("dz-funnel-stage ") == 4
+        assert html.count('class="dz-funnel-stage"') == 4
 
     def test_fallback_mode_stage_count_matches_metrics(self) -> None:
         """Gate 4: one dz-funnel-stage per metric."""
@@ -3133,7 +3137,7 @@ class TestFunnelChartRegionTemplate:
                 ],
             ),
         )
-        assert html.count("dz-funnel-stage ") == 3
+        assert html.count('class="dz-funnel-stage"') == 3
         assert "Visitors" in html
         assert "Signups" in html
         assert "Paid" in html
@@ -3153,7 +3157,11 @@ class TestFunnelChartRegionTemplate:
         assert "(3)" in html
 
     def test_proportional_width_inline_style(self) -> None:
-        """Gate 6: stages have style="width: N%; min-width: 120px;"."""
+        """Gate 6: stages have inline `width: N%`.
+
+        v0.62 CSS refactor: width still inline (per-stage value), but
+        min-width is now declared once on `.dz-funnel-stage` in
+        components/regions.css instead of duplicated inline."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3171,7 +3179,16 @@ class TestFunnelChartRegionTemplate:
         )
         # Stage a has 4 items, base = 4 → width 100%
         assert "width: 100%" in html
-        assert "min-width: 120px" in html
+
+        # min-width lives on the .dz-funnel-stage CSS rule
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        funnel_block = css.split(".dz-funnel-stage {")[1].split("}")[0]
+        assert "min-width: 7.5rem" in funnel_block  # 7.5rem = 120px
 
     def test_minimum_width_floor_20_percent(self) -> None:
         """Gate 7: stages below 20% of base still render at 20% width."""
@@ -3189,7 +3206,13 @@ class TestFunnelChartRegionTemplate:
         assert "width: 20%" in html
 
     def test_primary_token_background(self) -> None:
-        """Gate 8: stages use bg-[hsl(var(--primary)/...)] with dynamic alpha."""
+        """Gate 8: stages get a brand-coloured background.
+
+        v0.62 CSS refactor: the brand background now lives on the
+        `.dz-funnel-stage` CSS rule (`background: var(--colour-brand)`)
+        rather than inline `bg-[hsl(var(--primary)/...)]` Tailwind.
+        Per-stage opacity fade still varies via `data-dz-funnel-step`
+        attribute selectors."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3199,10 +3222,25 @@ class TestFunnelChartRegionTemplate:
                 total=3,
             ),
         )
-        assert "bg-[hsl(var(--primary)/" in html
+        # Stages emit data-dz-funnel-step="0..7" so the rule + tints apply
+        assert 'data-dz-funnel-step="0"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        funnel_block = css.split(".dz-funnel-stage {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in funnel_block
+        assert "color: var(--colour-brand-contrast)" in funnel_block
 
     def test_progressive_alpha_first_two_stages(self) -> None:
-        """Gate 9: stage 1 alpha 0.9, stage 2 alpha 0.8."""
+        """Gate 9: depth-by-position fade applied via `data-dz-funnel-step`.
+
+        v0.62 CSS refactor: opacity decreases with stage index. Pin
+        the data-attribute emission for indices 0/1/2 + the CSS rules'
+        opacity values for those steps."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3212,12 +3250,26 @@ class TestFunnelChartRegionTemplate:
                 total=3,
             ),
         )
-        assert "hsl(var(--primary)/0.9)" in html
-        assert "hsl(var(--primary)/0.8)" in html
-        assert "hsl(var(--primary)/0.7)" in html
+        assert 'data-dz-funnel-step="0"' in html
+        assert 'data-dz-funnel-step="1"' in html
+        assert 'data-dz-funnel-step="2"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert '.dz-funnel-stage[data-dz-funnel-step="0"] { opacity: 0.9; }' in css
+        assert '.dz-funnel-stage[data-dz-funnel-step="1"] { opacity: 0.8; }' in css
+        assert '.dz-funnel-stage[data-dz-funnel-step="2"] { opacity: 0.7; }' in css
 
     def test_alpha_floor_at_stage_9_plus(self) -> None:
-        """Gate 10: 9th+ stage clamps alpha to 0.2."""
+        """Gate 10: 9th+ stage clamps to data-dz-funnel-step="7" (opacity 0.2).
+
+        v0.62 CSS refactor: the template clamps `loop.index0` to 7 for
+        steps 8+, so the same attribute selector applies and the rule
+        sets opacity: 0.2."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3227,9 +3279,17 @@ class TestFunnelChartRegionTemplate:
                 total=10,
             ),
         )
-        # 10 stages → stages at index 8+ (a through j = indices 0-9)
-        # Index 8 and 9 clamp to 0.2
-        assert "hsl(var(--primary)/0.2)" in html
+        # The 9th and 10th stages (indices 8, 9) clamp to step 7
+        # (3 occurrences total: index 7 itself + indices 8, 9 clamped)
+        assert html.count('data-dz-funnel-step="7"') == 3
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert '.dz-funnel-stage[data-dz-funnel-step="7"] { opacity: 0.2; }' in css
 
     def test_grouped_mode_renders_total_footer(self) -> None:
         """Gate 11: grouped mode shows '{total} total'."""

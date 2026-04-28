@@ -5,7 +5,12 @@
    underneath. Single-dim only — always time-bucketed. Consumes
    `bucketed_metrics` from _aggregate_via_groupby.
 
-   Card safety: region emits zero chrome + zero title. #}
+   Card safety: region emits zero chrome + zero title.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-sparkline-*
+   classes (components/regions.css). SVG fill/stroke tokens stay
+   inline (per-element shape colour) — Tailwind-arbitrary-value
+   removal applies to layout/typography only. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-sparkline-region">
@@ -15,9 +20,9 @@
     {% set max_val = max_val if max_val > 0 else 1 %}
     {% set count = bucketed_metrics | length %}
 
-    <div class="flex items-baseline gap-2">
-      <span class="text-[28px] font-semibold text-[hsl(var(--foreground))] leading-none">{{ last.value }}</span>
-      <span class="text-[11px] text-[hsl(var(--muted-foreground))] font-mono">{{ last.label }}</span>
+    <div class="dz-sparkline-headline">
+      <span class="dz-sparkline-value">{{ last.value }}</span>
+      <span class="dz-sparkline-bucket-label">{{ last.label }}</span>
     </div>
 
     {% if count > 1 %}
@@ -35,7 +40,7 @@
       {% endfor %}
       <svg xmlns="http://www.w3.org/2000/svg"
            viewBox="0 0 {{ w }} {{ h }}"
-           class="dz-sparkline-svg mt-1 w-full h-8"
+           class="dz-sparkline-svg"
            role="img"
            aria-label="Sparkline — {{ count }} points, latest {{ last.value }}, peak {{ max_val }}">
         <polygon
@@ -53,9 +58,7 @@
       </svg>
     {% endif %}
   {% else %}
-    <div class="text-center py-2">
-      <span class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("—") }}</span>
-    </div>
+    <div class="dz-sparkline-empty">{{ empty_message | default("—") }}</div>
   {% endif %}
 </div>
 {% endcall %}
