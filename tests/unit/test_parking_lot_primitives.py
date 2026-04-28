@@ -218,14 +218,30 @@ class TestSkeletonPatterns:
         return tmpl.render()
 
     def test_uses_design_tokens_not_daisyui(self) -> None:
+        """v0.62 CSS refactor: pulse animation lives on the .dz-skeleton
+        rule (components/fragments.css) rather than inline `animate-pulse`
+        Tailwind utility, and the muted-bg token is part of the same rule
+        rather than `bg-[hsl(var(--muted))]` per element."""
         html = self._import_macros()
         assert "dz-skeleton" in html
-        assert "animate-pulse" in html
-        assert "hsl(var(--muted))" in html
-        # DaisyUI
+        # DaisyUI markers absent
         assert 'class="skeleton ' not in html
         assert "card bg-base-100" not in html
-        assert "card-body" not in html
+        # `card-body` is the DaisyUI marker; .dz-skeleton-card / -card-stack
+        # share the substring but are distinct CSS-refactor classes.
+        cleaned = html.replace("dz-skeleton-card", "").replace("dz-skeleton-card-stack", "")
+        assert "card-body" not in cleaned
+
+        # CSS rule carries the pulse animation + muted background
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        skeleton_block = css.split(".dz-skeleton {")[1].split("}")[0]
+        assert "animation: dz-pulse" in skeleton_block
+        assert "background: var(--colour-bg)" in skeleton_block
 
 
 # ── Date range picker ──────────────────────────────────────────────────

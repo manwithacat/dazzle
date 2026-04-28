@@ -1,8 +1,13 @@
 {# inline_edit.html — phase-based cell editor, ux-architect/primitives/inline-edit contract
    Context: edit_row_id (str), edit_col (ColumnContext), edit_value (str)
    Phases: Display → Editing → Saving → Success/Error → Cancel
-   Rendered inside <td> via x-if in table_rows.html. No DaisyUI classes. #}
-<div class="relative -mx-1 -my-0.5">
+   Rendered inside <td> via x-if in table_rows.html. No DaisyUI classes.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-inline-edit-* classes
+   (components/fragments.css). The 4 input variants (text/bool/badge-select/
+   date) all share the same chrome — error vs default border keyed off
+   `data-dz-edit-error="true"` attribute via Alpine `:data-dz-edit-error`. #}
+<div class="dz-inline-edit">
 
   {# ── Text input (col type: text / default) ──────────────────────────────── #}
   {% if edit_col.type not in ["bool", "badge", "date"] %}
@@ -14,20 +19,13 @@
          @keydown.enter.prevent="commitEdit($el.value)"
          @keydown.tab.prevent="commitEdit($el.value)"
          @keydown.escape.prevent="cancelEdit()"
-         :class="editing && editing.error
-           ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
-           : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
-         class="w-full h-7 px-2 text-[13px] text-[hsl(var(--foreground))]
-                bg-[hsl(var(--background))] rounded-[3px] border
-                outline-none focus:ring-2 focus:ring-offset-0
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors duration-[80ms]
-                [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         :data-dz-edit-error="!!(editing && editing.error)"
+         class="dz-inline-edit-input"
          aria-label="Edit {{ edit_col.label }}" />
 
   {# ── Boolean checkbox (col type: bool) ─────────────────────────────────── #}
   {% elif edit_col.type == "bool" %}
-  <div class="flex items-center gap-2 h-7 px-1">
+  <div class="dz-inline-edit-bool-row">
     <input type="checkbox"
            name="{{ edit_col.key }}"
            :checked="editing ? (editing.originalValue === 'true' || editing.originalValue === true) : {{ 'true' if edit_value else 'false' }}"
@@ -35,12 +33,9 @@
            x-init="$el.focus()"
            @change="commitEdit($el.checked)"
            @keydown.escape.prevent="cancelEdit()"
-           class="w-4 h-4 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer
-                  disabled:opacity-50 disabled:cursor-not-allowed"
+           class="dz-inline-edit-checkbox"
            aria-label="Edit {{ edit_col.label }}" />
-    <label class="text-[13px] text-[hsl(var(--muted-foreground))] select-none cursor-pointer">
-      {{ edit_col.label }}
-    </label>
+    <label class="dz-inline-edit-bool-label">{{ edit_col.label }}</label>
   </div>
 
   {# ── Enum select (col type: badge) ──────────────────────────────────────── #}
@@ -50,15 +45,8 @@
           x-init="$el.focus()"
           @change="commitEdit($el.value)"
           @keydown.escape.prevent="cancelEdit()"
-          :class="editing && editing.error
-            ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
-            : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
-          class="w-full h-7 px-2 pr-6 text-[13px] text-[hsl(var(--foreground))]
-                 bg-[hsl(var(--background))] rounded-[3px] border
-                 outline-none focus:ring-2 focus:ring-offset-0 appearance-none
-                 disabled:opacity-50 disabled:cursor-not-allowed
-                 transition-colors duration-[80ms]
-                 [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+          :data-dz-edit-error="!!(editing && editing.error)"
+          class="dz-inline-edit-input dz-inline-edit-select"
           aria-label="Edit {{ edit_col.label }}">
     {% for opt in edit_col.filter_options %}
     <option value="{{ opt.value }}"
@@ -78,23 +66,16 @@
          @keydown.enter.prevent="commitEdit($el.value)"
          @keydown.tab.prevent="commitEdit($el.value)"
          @keydown.escape.prevent="cancelEdit()"
-         :class="editing && editing.error
-           ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
-           : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
-         class="w-full h-7 px-2 text-[13px] text-[hsl(var(--foreground))]
-                bg-[hsl(var(--background))] rounded-[3px] border
-                outline-none focus:ring-2 focus:ring-offset-0
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors duration-[80ms]
-                [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         :data-dz-edit-error="!!(editing && editing.error)"
+         class="dz-inline-edit-input"
          aria-label="Edit {{ edit_col.label }}" />
   {% endif %}
 
   {# ── Saving spinner (phase 3: Commit) ───────────────────────────────────── #}
   <div x-show="editing && editing.saving"
        aria-hidden="true"
-       class="absolute inset-y-0 right-1 flex items-center pointer-events-none">
-    <svg class="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))] animate-spin"
+       class="dz-inline-edit-spinner">
+    <svg class="dz-inline-edit-spinner-icon"
          viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle class="opacity-25" cx="12" cy="12" r="10"
               stroke="currentColor" stroke-width="2"/>
@@ -107,11 +88,7 @@
   <div x-show="editing && editing.error"
        x-text="editing && editing.error"
        role="alert"
-       class="absolute top-full left-0 mt-1 z-[50]
-              max-w-[200px] px-2 py-1 rounded-[4px] text-[11px] leading-tight
-              bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]
-              shadow-[0_2px_4px_rgb(0_0_0/0.12)]
-              whitespace-nowrap pointer-events-none">
+       class="dz-inline-edit-error">
   </div>
 
 </div>

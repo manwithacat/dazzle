@@ -118,13 +118,16 @@ class TestAccordion:
 
 class TestSkeletonPatterns:
     def test_skeleton_table_rows(self, jinja_env):
+        """v0.62 CSS refactor: shimmer rows use class `dz-skeleton`
+        with size variants; count one shimmer div per cell."""
         tmpl = jinja_env.from_string(
             '{% from "fragments/skeleton_patterns.html" import skeleton_table_rows %}'
             "{{ skeleton_table_rows(rows=3, cols=2) }}"
         )
         html = tmpl.render()
         assert html.count("<tr>") == 3
-        assert html.count("skeleton") == 6
+        # 3 rows × 2 cols = 6 shimmer divs (each opened with `dz-skeleton ` class)
+        assert html.count('class="dz-skeleton ') == 6
 
     def test_skeleton_card(self, jinja_env):
         tmpl = jinja_env.from_string(
