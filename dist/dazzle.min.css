@@ -1,4 +1,4 @@
-/* dazzle v0.61.89 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.90 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7644,6 +7644,14 @@ font-size: 2.5rem;
 .dz-section h2 {
 font-size: 1.75rem;
 }
+.dz-section-markdown h2,
+.dz-section .prose h2 {
+font-size: 1.375rem;
+}
+.dz-section-markdown h1,
+.dz-section .prose h1 {
+font-size: 1.75rem;
+}
 .dz-section-cta h2 {
 font-size: 2.25rem;
 }
@@ -7930,6 +7938,53 @@ margin: 0.5rem 0;
 .dz-section p {
 font-size: var(--dz-font-size-body, 1rem);
 line-height: var(--dz-line-height-body, 1.6);
+}
+.dz-section-markdown h1,
+.dz-section-markdown h2,
+.dz-section-markdown h3,
+.dz-section-markdown h4,
+.dz-section-markdown p,
+.dz-section .prose h1,
+.dz-section .prose h2,
+.dz-section .prose h3,
+.dz-section .prose h4,
+.dz-section .prose p {
+text-align: start;
+letter-spacing: normal;
+}
+.dz-section-markdown h1,
+.dz-section .prose h1 {
+font-size: 2rem;
+font-weight: 700;
+line-height: 1.25;
+margin: 2.5rem 0 1rem;
+}
+.dz-section-markdown h2,
+.dz-section .prose h2 {
+font-size: 1.5rem;
+font-weight: 600;
+line-height: 1.3;
+margin: 2rem 0 0.75rem;
+}
+.dz-section-markdown h3,
+.dz-section .prose h3 {
+font-size: 1.25rem;
+font-weight: 600;
+line-height: 1.4;
+margin: 1.5rem 0 0.5rem;
+}
+.dz-section-markdown h4,
+.dz-section .prose h4 {
+font-size: 1.05rem;
+font-weight: 600;
+line-height: 1.4;
+margin: 1.25rem 0 0.5rem;
+}
+.dz-section-markdown p,
+.dz-section .prose p {
+font-size: var(--dz-font-size-body, 1rem);
+line-height: 1.7;
+margin: 0 0 1em;
 }
 .dz-404-section {
 text-align: center;

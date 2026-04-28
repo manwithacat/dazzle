@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.91] - 2026-04-28
+
+### Fixed
+- **`static/css/site-sections.css`** — closes #921. The greedy
+  `.dz-section h1/h2/h3/p` typography rules (centred, large, heavy)
+  bled into article markdown bodies inside `.dz-section-markdown` and
+  `.dz-section .prose` containers, rendering blog-post H2s centred at
+  2.25rem instead of left-aligned at body sizes. Added a dedicated
+  article-body block that re-declares `text-align: start`, smaller
+  weights, and prose-scale font sizes for `h1-h4` and `p` inside any
+  markdown / prose section content. The base `.dz-section h2 { ...
+  text-align: center }` rule is unchanged so marketing section
+  headlines keep their existing styling. Responsive (`@media
+  max-width: 768px`) override added so mobile article H2s also
+  resolve to body-scale (1.375rem) rather than headline-scale
+  (1.75rem). Regression tests in
+  `tests/unit/test_section_markdown_typography.py` pin the override
+  block, the responsive override, and the unchanged base headline
+  rule.
+
 ## [0.61.90] - 2026-04-28
 
 ### Fixed
