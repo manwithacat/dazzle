@@ -5747,7 +5747,10 @@ class TestSearchResultsFragment:
         assert "Bob" in html
 
     def test_secondary_label_rendered_when_key_provided(self) -> None:
-        """Gate 4: secondary label renders when secondary_key + item value both truthy."""
+        """Gate 4: secondary label renders when secondary_key + item value both truthy.
+
+        v0.62 CSS refactor: muted styling lives on .dz-search-result-secondary
+        rule rather than inline `text-[hsl(var(--muted-foreground))]` Tailwind."""
         html = self._render(
             items=[
                 {"id": "u1", "name": "Alice", "email": "alice@example.com"},
@@ -5757,27 +5760,29 @@ class TestSearchResultsFragment:
         )
         assert "Alice" in html
         assert "alice@example.com" in html
-        assert "hsl(var(--muted-foreground))" in html
+        assert "dz-search-result-secondary" in html
 
     def test_secondary_label_omitted_when_missing_from_item(self) -> None:
-        """Gate 4 (negative): secondary_key set but item lacks the value → no secondary div."""
+        """Gate 4 (negative): secondary_key set but item lacks the value → no secondary div.
+
+        v0.62 CSS refactor: row class is .dz-search-result-row (was inline
+        `cursor-pointer hover:bg-[hsl(var(--muted))]` Tailwind). Count
+        rows by the canonical class instead."""
         html = self._render(
             items=[{"id": "u1", "name": "Alice"}],
             secondary_key="email",
             query="a",
         )
         assert "Alice" in html
-        # No email div rendered
-        # count of muted-foreground styling in items (the empty-state also uses it, but items don't when secondary absent)
-        # Better: verify only 1 div per item
-        result_divs = html.count("cursor-pointer")
-        assert result_divs == 1
+        result_rows = html.count("dz-search-result-row")
+        assert result_rows == 1
 
     def test_empty_state_with_query_shows_no_results_message(self) -> None:
         """Gate 5: empty items + query → 'No results found for "..."'."""
         html = self._render(items=[], query="xyzzy")
         assert 'No results found for "xyzzy"' in html
-        assert "cursor-pointer" not in html
+        # No rows rendered
+        assert "dz-search-result-row" not in html
 
     def test_empty_state_without_query_shows_prompt(self) -> None:
         """Gate 5: empty items + no query → 'Type at least N characters...'."""
@@ -5785,9 +5790,22 @@ class TestSearchResultsFragment:
         assert "Type at least 3 characters" in html
 
     def test_hover_uses_muted_token(self) -> None:
-        """Gate 6: items have hover:bg-[hsl(var(--muted))]."""
+        """Gate 6: row hover lives on the .dz-search-result-row:hover CSS rule.
+
+        v0.62 CSS refactor: hover state moved from inline
+        `hover:bg-[hsl(var(--muted))]` Tailwind to CSS rule."""
         html = self._render(items=[{"id": "1", "name": "Alice"}], query="a")
-        assert "hover:bg-[hsl(var(--muted))]" in html
+        assert "dz-search-result-row" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert ".dz-search-result-row:hover" in css
+        hover_block = css.split(".dz-search-result-row:hover {")[1].split("}")[0]
+        assert "background: var(--colour-bg)" in hover_block
 
     def test_no_daisyui_leaks(self) -> None:
         """Gate 11: zero DaisyUI class references."""
@@ -5821,10 +5839,22 @@ class TestSelectResultFragment:
         return render_fragment("fragments/select_result.html", **defaults)
 
     def test_confirmation_flash_uses_success_token(self) -> None:
-        """Gate 7: confirmation uses --success token and shows 'Selected: X'."""
+        """Gate 7: confirmation uses --success token and shows 'Selected: X'.
+
+        v0.62 CSS refactor: success colour lives on .dz-select-result-confirm
+        rule rather than inline `text-[hsl(var(--success))]` Tailwind."""
         html = self._render(display_val="Alice Smith")
-        assert "text-[hsl(var(--success))]" in html
         assert "Selected: Alice Smith" in html
+        assert "dz-select-result-confirm" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        confirm_block = css.split(".dz-select-result-confirm {")[1].split("}")[0]
+        assert "color: var(--colour-success)" in confirm_block
 
     def test_hidden_form_field_has_required_attrs(self) -> None:
         """Gate 8: hidden input has name, id, data-dazzle-field, value, hx-swap-oob."""
@@ -5837,16 +5867,28 @@ class TestSelectResultFragment:
         assert 'hx-swap-oob="true"' in html
 
     def test_visible_search_input_has_token_classes_and_oob_swap(self) -> None:
-        """Gate 9: visible input references all 4 design tokens + hx-swap-oob."""
+        """Gate 9: visible input uses semantic CSS class + hx-swap-oob.
+
+        v0.62 CSS refactor: input chrome (4 token refs) lives on
+        .dz-select-result-input rule rather than 4 inline Tailwind
+        utilities."""
         html = self._render(display_val="Alice", field_name="owner")
-        # The 4 token refs
-        assert "bg-[hsl(var(--background))]" in html
-        assert "border-[hsl(var(--border))]" in html
-        assert "text-[hsl(var(--foreground))]" in html
+        assert "dz-select-result-input" in html
         # Visible-input specific markers
         assert 'id="search-input-owner"' in html
         # hx-swap-oob on at least 2 inputs (hidden + visible)
         assert html.count('hx-swap-oob="true"') >= 2
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        input_block = css.split(".dz-select-result-input {")[1].split("}")[0]
+        assert "background: var(--colour-surface)" in input_block
+        assert "border: 1px solid var(--colour-border)" in input_block
+        assert "color: var(--colour-text)" in input_block
 
     def test_autofill_values_emit_extra_oob_inputs(self) -> None:
         """Gate 10: one <input hx-swap-oob> per autofill tuple."""

@@ -1,4 +1,7 @@
-{# Infinite scroll sentinel — triggers loading more rows when visible #}
+{# Infinite scroll sentinel — triggers loading more rows when visible.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-sentinel-* classes
+   (components/fragments.css). #}
 {% if table and table.total > (table.page * table.page_size) %}
 {% set next_page = table.page + 1 %}
 <tr class="dz-sentinel"
@@ -7,9 +10,9 @@
     hx-swap="afterend"
     hx-headers='{"Accept": "text/html"}'
     hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
-  <td colspan="{{ table.columns | length + 1 }}" class="text-center py-4">
-    <span class="w-4 h-4 animate-spin"></span>
-    <span class="sr-only">Loading more...</span>
+  <td colspan="{{ table.columns | length + 1 }}" class="dz-sentinel-cell">
+    <span class="dz-sentinel-spinner"></span>
+    <span class="visually-hidden">Loading more...</span>
   </td>
 </tr>
 {% endif %}
