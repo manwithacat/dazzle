@@ -248,6 +248,25 @@ class TestRadarMultiSeries:
         assert "peak 100" in html
 
 
+class TestRadarSvgOverflow:
+    """v0.61.87 (#917): SVG defaults to `overflow: hidden`, which clips
+    radar axis labels at the -90°/90° spokes (where the rotation pivot
+    of the existing nested-rotate label markup doesn't perfectly
+    counter-translate). Set `.dz-radar-svg { overflow: visible }` so
+    labels render in full rather than mid-word-truncated."""
+
+    def test_dz_radar_svg_has_overflow_visible(self) -> None:
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert ".dz-radar-svg {" in css
+        rule_block = css.split(".dz-radar-svg {")[1].split("}")[0]
+        assert "overflow: visible" in rule_block
+
+
 class TestRadarFloatFormatting:
     """v0.61.85 (#915): the spoke `<title>` tooltips, the `aria-label`,
     the `dz-chart-summary` line, and the degenerate-list value cells

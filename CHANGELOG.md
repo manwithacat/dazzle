@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.87] - 2026-04-28
+
+### Fixed
+- **`static/css/components/regions.css`** — closes #917. Adds
+  `.dz-radar-svg { overflow: visible }` so radar axis labels at the
+  -90°/90° spokes can render past the SVG bounds rather than being
+  clipped mid-word. SVG defaults to `overflow: hidden` per spec, and
+  the existing nested-rotate label markup ends up with rendered
+  positions outside the viewBox at the side spokes. Trig-placing
+  each label (the issue's "option 1") would eliminate the need for
+  this rule entirely — worth a follow-up cycle. Test in
+  `tests/unit/test_workspace_radar.py::TestRadarSvgOverflow`.
+
 ## [0.61.86] - 2026-04-28
 
 ### Fixed

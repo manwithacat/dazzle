@@ -1980,6 +1980,23 @@ a.dz-action-card:hover {
   height: auto;
 }
 
+/* Radar-specific: long axis labels at the -90°/90° spokes can extend
+ * past the SVG viewBox because the rotation pivot of the existing
+ * spoke-label markup doesn't perfectly counter-translate. Allow the
+ * labels to render past the SVG bounds rather than clipping mid-word
+ * (closes #917). The radar SVG is always the rightmost element in its
+ * card, and CSS Grid gives each card an isolated overflow region, so
+ * letting labels spill past the SVG won't bleed into neighbouring
+ * regions.
+ *
+ * Note: trig-placed labels (per the issue's "option 1") would
+ * eliminate the need for this rule entirely. Worth a follow-up; this
+ * is the smaller-blast-radius fix while the template still uses the
+ * nested-rotate workaround. */
+.dz-radar-svg {
+  overflow: visible;
+}
+
 .dz-chart-legend {
   display: flex;
   flex-wrap: wrap;
