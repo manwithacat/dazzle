@@ -1284,10 +1284,38 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
     Returns:
         Unified ModuleFragment
     """
+    # v0.61.95 (#926): collect shared nav definitions across modules.
+    # First-occurrence wins on duplicate names — same convention as the
+    # other module-level lists. Workspaces with `nav_ref` get their
+    # nav_groups expanded by prepending the named definition's groups
+    # so explicit per-workspace `nav_group` blocks append after the
+    # inherited ones (composition semantics from the issue).
+    nav_definitions: list[ir.NavDefinitionSpec] = []
+    nav_def_index: dict[str, ir.NavDefinitionSpec] = {}
+    for module in modules:
+        for nav_def in module.fragment.nav_definitions:
+            if nav_def.name not in nav_def_index:
+                nav_def_index[nav_def.name] = nav_def
+                nav_definitions.append(nav_def)
+
+    resolved_workspaces: list[ir.WorkspaceSpec] = []
+    for workspace in symbols.workspaces.values():
+        if workspace.nav_ref is None:
+            resolved_workspaces.append(workspace)
+            continue
+        resolved_def = nav_def_index.get(workspace.nav_ref)
+        if resolved_def is None:
+            # Unresolved reference — keep workspace as-is. Validation
+            # surfaces this separately so the parse path stays simple.
+            resolved_workspaces.append(workspace)
+            continue
+        merged_groups = [*resolved_def.groups, *workspace.nav_groups]
+        resolved_workspaces.append(workspace.model_copy(update={"nav_groups": merged_groups}))
+
     return ir.ModuleFragment(
         entities=list(symbols.entities.values()),
         surfaces=list(symbols.surfaces.values()),
-        workspaces=list(symbols.workspaces.values()),
+        workspaces=resolved_workspaces,
         experiences=list(symbols.experiences.values()),
         apis=list(symbols.apis.values()),
         foreign_models=list(symbols.foreign_models.values()),
@@ -1314,4 +1342,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0
         analytics=symbols.analytics,  # v0.61.0 Phase 3
+        nav_definitions=nav_definitions,  # v0.61.95 (#926)
     )

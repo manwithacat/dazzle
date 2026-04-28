@@ -594,6 +594,26 @@ class NavGroupSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class NavDefinitionSpec(BaseModel):
+    """A reusable, named navigation definition (v0.61.95, #926).
+
+    Top-level `nav <name>:` blocks declare a list of nav groups that
+    can be referenced from multiple workspaces via `uses nav <name>`,
+    eliminating the duplication that arises when several workspaces in
+    the same persona share a sidebar shape (a primary landing plus N
+    drill-downs).
+
+    Attributes:
+        name: Definition identifier — referenced by `uses nav <name>`.
+        groups: Nav groups (header + items) in display order.
+    """
+
+    name: str
+    groups: list[NavGroupSpec] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ContextSelectorSpec(BaseModel):
     """Specifies a context selector dropdown for a workspace.
 
@@ -640,6 +660,11 @@ class WorkspaceSpec(BaseModel):
     stage: str | None = None  # v0.8.0: Layout stage (formerly engine_hint)
     regions: list[WorkspaceRegion] = Field(default_factory=list)
     nav_groups: list[NavGroupSpec] = Field(default_factory=list)  # v0.38.0: Collapsible nav groups
+    # v0.61.95 (#926): reference to a shared `nav <name>:` definition.
+    # When set, the linker prepends the named definition's groups to
+    # `nav_groups` so the workspace's own `nav_group` blocks (if any)
+    # append after the inherited ones.
+    nav_ref: str | None = None
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     context_selector: ContextSelectorSpec | None = None  # v0.38.0

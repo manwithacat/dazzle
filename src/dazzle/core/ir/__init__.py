@@ -767,6 +767,7 @@ from .workspaces import (
     ContextSelectorSpec,
     DeltaSpec,
     DisplayMode,
+    NavDefinitionSpec,
     NavGroupSpec,
     NavItemIR,
     NoticeSpec,
@@ -864,6 +865,7 @@ __all__ = [
     # Workspaces
     "BucketRef",
     "DisplayMode",
+    "NavDefinitionSpec",
     "NavGroupSpec",
     "ContextSelectorSpec",
     "NavItemIR",

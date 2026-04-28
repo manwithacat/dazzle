@@ -1424,6 +1424,7 @@
             'label': 'Operations',
           }),
         ]),
+        'nav_ref': None,
         'purpose': None,
         'regions': list([
           dict({

@@ -898,4 +898,11 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.HELP,
     TokenType.QUESTION_DECL,
     TokenType.NOTE,
+    # v0.61.95 (#926) — `nav` and `group` are shared-nav-definition
+    # keywords. Both are common entity / field names (a domain might
+    # define `entity Group`, `field nav_position`, an enum like
+    # `enum[group_a, group_b]`, etc.) so promote them to identifier
+    # status outside the `nav <name>:` declaration block.
+    TokenType.NAV,
+    TokenType.GROUP,
 )

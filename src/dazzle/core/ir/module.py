@@ -72,7 +72,7 @@ from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .views import ViewSpec
 from .webhooks import WebhookSpec
-from .workspaces import WorkspaceSpec
+from .workspaces import NavDefinitionSpec, WorkspaceSpec
 
 
 class AppConfigSpec(BaseModel):
@@ -206,6 +206,10 @@ class ModuleFragment(BaseModel):
     subprocessors: list[SubprocessorSpec] = Field(default_factory=list)
     # Analytics block (v0.61.0 Phase 3)
     analytics: AnalyticsSpec | None = None
+    # Shared nav definitions (v0.61.95, #926). Referenced by
+    # `WorkspaceSpec.nav_ref`; resolved by the linker which inlines the
+    # named definition's groups into `WorkspaceSpec.nav_groups`.
+    nav_definitions: list[NavDefinitionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

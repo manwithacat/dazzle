@@ -36,6 +36,7 @@ from .island import IslandParserMixin
 from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
+from .nav import NavParserMixin
 from .notification import NotificationParserMixin
 from .params import ParamParserMixin
 from .process import ProcessParserMixin
@@ -87,6 +88,7 @@ class Parser(
     SLAParserMixin,
     IslandParserMixin,
     NotificationParserMixin,
+    NavParserMixin,
     GrantParserMixin,
     ParamParserMixin,
     FeedbackWidgetParserMixin,
@@ -509,6 +511,15 @@ class Parser(
             }
         )
 
+    def _dispatch_nav(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        nav_spec = self.parse_nav_definition()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "nav_definitions": [*fragment.nav_definitions, nav_spec],
+            }
+        )
+
     def _dispatch_approval(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         approval_spec = self.parse_approval()
         return ir.ModuleFragment(
@@ -650,6 +661,7 @@ class Parser(
             TokenType.TRANSACTION: self._dispatch_transaction,
             TokenType.ENUM: self._dispatch_enum,
             TokenType.WEBHOOK: self._dispatch_webhook,
+            TokenType.NAV: self._dispatch_nav,
             TokenType.APPROVAL: self._dispatch_approval,
             TokenType.SLA: self._dispatch_sla,
             TokenType.ISLAND: self._dispatch_island,

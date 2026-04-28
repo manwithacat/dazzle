@@ -530,6 +530,11 @@ class TokenType(Enum):
     COLLAPSED = "collapsed"
     CONTEXT_SELECTOR = "context_selector"
 
+    # v0.61.95 (#926) Shared nav definitions — top-level `nav <name>:`
+    # blocks reusable across workspaces via `uses nav <name>`.
+    NAV = "nav"
+    GROUP = "group"
+
     # v0.39.0 Transition Side Effects
     ON_TRANSITION = "on_transition"
 

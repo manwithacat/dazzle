@@ -2583,6 +2583,147 @@ workspace dashboard "Dashboard":
         ws = fragment.workspaces[0]
         assert ws.nav_groups == []
 
+    def test_nav_definition_top_level(self):
+        """Issue #926: top-level `nav <name>:` declares a reusable nav
+        block referenced from workspaces via `uses nav <name>`."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Class "Class":
+  id: uuid pk
+
+entity Manuscript "Manuscript":
+  id: uuid pk
+
+nav teacher_nav:
+  group "My Classes" icon=users:
+    Class
+  group "Work":
+    Manuscript
+
+workspace dashboard "Dashboard":
+  uses nav teacher_nav
+  classes:
+    source: Class
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        # The nav definition itself is captured at module level:
+        assert len(fragment.nav_definitions) == 1
+        nav = fragment.nav_definitions[0]
+        assert nav.name == "teacher_nav"
+        assert len(nav.groups) == 2
+        assert nav.groups[0].label == "My Classes"
+        assert nav.groups[0].icon == "users"
+        assert nav.groups[0].items[0].entity == "Class"
+        assert nav.groups[1].label == "Work"
+        # The workspace records the reference but linker materialises it:
+        ws = fragment.workspaces[0]
+        assert ws.nav_ref == "teacher_nav"
+        # At parse time the workspace's own nav_groups stay empty —
+        # the linker is what prepends the inherited groups.
+        assert ws.nav_groups == []
+
+    def test_nav_definition_composition_with_workspace_groups(self):
+        """Workspace's own `group/nav_group` blocks compose with the
+        inherited definition; linker prepends inherited then appends own."""
+        from dazzle.core import ir, linker_impl
+
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Class "Class":
+  id: uuid pk
+
+entity Session "Session":
+  id: uuid pk
+
+nav teacher_nav:
+  group "Classes" icon=users:
+    Class
+
+workspace proctor "Proctor":
+  uses nav teacher_nav
+  group "Sessions" icon=calendar:
+    Session
+  s:
+    source: Session
+"""
+        _, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        mod = ir.ModuleIR(
+            name="test.core",
+            file=Path("test.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        symbols = linker_impl.build_symbol_table([mod])
+        merged = linker_impl.merge_fragments([mod], symbols)
+        ws = merged.workspaces[0]
+        assert [g.label for g in ws.nav_groups] == ["Classes", "Sessions"]
+
+    def test_nav_definition_unresolved_ref_does_not_crash(self):
+        """An unresolved `uses nav <name>` reference leaves the
+        workspace's own nav_groups in place rather than crashing —
+        validation surfaces the error, parsing/linking shouldn't fail."""
+        from dazzle.core import ir, linker_impl
+
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Class "Class":
+  id: uuid pk
+
+workspace orphan "Orphan":
+  uses nav nonexistent_nav
+  group "Local" icon=users:
+    Class
+  c:
+    source: Class
+"""
+        _, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        mod = ir.ModuleIR(
+            name="test.core",
+            file=Path("test.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        symbols = linker_impl.build_symbol_table([mod])
+        merged = linker_impl.merge_fragments([mod], symbols)
+        ws = merged.workspaces[0]
+        # Unresolved reference: workspace's own group survives untouched.
+        assert ws.nav_ref == "nonexistent_nav"
+        assert [g.label for g in ws.nav_groups] == ["Local"]
+
+    def test_nav_definition_accepts_nav_group_keyword(self):
+        """Inside `nav <name>:` blocks both `group` and `nav_group`
+        parse identically — keeps the lighter keyword optional."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Class "Class":
+  id: uuid pk
+
+nav teacher_nav:
+  nav_group "Classes" icon=users:
+    Class
+
+workspace ws "WS":
+  uses nav teacher_nav
+  c:
+    source: Class
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert fragment.nav_definitions[0].groups[0].label == "Classes"
+
     def test_nav_group_icon_with_keyword_substring(self):
         """Issue #922: hyphenated icon names that contain a reserved keyword
         as a sub-token must still parse. `help-circle`, `circle-help`,

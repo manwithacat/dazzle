@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.95] - 2026-04-28
+
+### Added
+- **DSL: shared `nav <name>:` definitions** — closes #926. New
+  top-level construct declares a reusable list of nav groups that
+  workspaces can bind to via `uses nav <name>`. Cuts paste-and-edit
+  duplication when a persona has multiple workspaces (a primary
+  landing + N drill-downs) that all need to share the same sidebar
+  shape. Composition: a workspace may also declare its own
+  `group "..."` / `nav_group "..."` blocks; the linker prepends the
+  inherited groups, then appends the workspace's own. Inside a
+  `nav <name>:` block both `group` and `nav_group` keywords parse
+  identically. New IR types: `ir.NavDefinitionSpec`,
+  `WorkspaceSpec.nav_ref`, `ModuleFragment.nav_definitions`. New
+  parser mixin: `NavParserMixin`. Linker resolution lives in
+  `merge_fragments` so the surfaced `WorkspaceSpec.nav_groups`
+  always carries the fully composed list — downstream renderers and
+  scanners need no per-feature awareness. Regression tests in
+  `tests/unit/test_parser.py::TestNavGroupParsing`. Snapshots
+  refreshed for the new optional `nav_ref` IR field (purely
+  additive, defaults to None).
+
+### Changed
+- Promoted `nav` and `group` to keyword-as-identifier set so the new
+  reserved keywords don't shadow common field/entity names like
+  `entity Group`, `field nav_position`, `enum[group_a, group_b]`.
+
 ## [0.61.94] - 2026-04-28
 
 ### Fixed

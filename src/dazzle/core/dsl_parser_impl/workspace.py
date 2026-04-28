@@ -1032,6 +1032,7 @@ class WorkspaceParserMixin:
         stage = None
         regions: list[ir.WorkspaceRegion] = []
         nav_groups: list[ir.NavGroupSpec] = []
+        nav_ref: str | None = None
         ux_spec = None
         access_spec = None
         context_selector = None
@@ -1067,8 +1068,18 @@ class WorkspaceParserMixin:
             elif self.match(TokenType.CONTEXT_SELECTOR):
                 context_selector = self._parse_context_selector()
 
+            # uses nav <name> — bind a shared nav definition (v0.61.95, #926)
+            elif self.match(TokenType.USES) and self.peek_token().type == TokenType.NAV:
+                self.advance()  # consume `uses`
+                self.advance()  # consume `nav`
+                nav_ref = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # nav_group "Label" [icon=name] [collapsed]:
-            elif self.match(TokenType.NAV_GROUP):
+            # group "Label" [icon=name] [collapsed]: (same shape, lighter
+            # visual weight inside `nav <name>:` blocks but also accepted
+            # inline so projects can use the shorter keyword everywhere)
+            elif self.match(TokenType.NAV_GROUP, TokenType.GROUP):
                 nav_groups.append(self._parse_nav_group())
 
             # ux: (optional workspace-level UX)
@@ -1092,6 +1103,7 @@ class WorkspaceParserMixin:
             stage=stage,
             regions=regions,
             nav_groups=nav_groups,
+            nav_ref=nav_ref,
             ux=ux_spec,
             access=access_spec,
             context_selector=context_selector,
