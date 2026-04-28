@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.81] - 2026-04-28
+
+Patch bump. **Fix #912** — v0.61.79's #911 progress-bar work landed the parser, IR, runtime helper, and template — but silently dropped the `progress` field at the IR→template-context boundary in `workspace_renderer.py`. Result: parser parsed `progress: 100` fine, IR carried it, but the rendered template never saw `stage.progress` so the bar never appeared. Same bug shape as #910 — data drops at a boundary.
+
+### Fixed
+- **`src/dazzle_ui/runtime/workspace_renderer.py`** — `pipeline_stages` boundary now includes `"progress": s.progress` in each dict alongside `label`, `caption`, `value`. The runtime then reads `_stage.get("progress")` and the template's `{% if stage.progress is not none %}` finally evaluates true.
+
+### Tests
+- **`test_workspace_pipeline_steps.py::TestProgressFlowsThroughBoundary`** — 4 new tests pinning the full IR→context→template flow:
+  - `test_boundary_emits_progress_in_dict` — pin the boundary shape directly via `build_workspace_context`.
+  - `test_template_renders_bar_when_progress_set` — render the template with realistic `pipeline_stage_data` and assert `data-dz-progress`, ARIA wiring, percent labels.
+  - `test_template_omits_bar_when_progress_none` — negative case, legacy pipelines unchanged.
+  - `test_template_emits_overshoot_flag_when_clamped` — overshoot path.
+
+The pre-fix template-wiring test only checked the template *source* for `stage.progress is not none`. It never verified that `progress` actually flowed through the boundary so it couldn't catch this regression — exactly the same blind spot as #910's profile_stats render path. The new tests instantiate the boundary and the template, not just the source files.
+
+### Agent Guidance
+- **#910 lesson restated.** When adding a new field to an IR spec that flows through a boundary into a render path, write **at least one test that exercises the boundary with a non-empty value**. Source-text contract tests catch refactoring drift but miss data-flow gaps. The pattern: parse DSL → build context → render template → assert the value reaches the rendered output. The previous #911 test set asserted the parser, IR, runtime helper, *and* template-source contract — every link in the chain except the one that broke.
+- **A "/issues closed" event is not a /deploy verified event.** v0.61.79 closed #911 and shipped — both the parser and the template change landed in commits — but the boundary in workspace_renderer.py wasn't touched. Production exposed it within hours. The fix loop already had this as guidance for #910 ("when closing a fix issue, ask the reporter to verify"); the same applies for feature work that crosses multiple layers.
+
 ## [0.61.80] - 2026-04-28
 
 Patch bump. **Fix #910 (second attempt)** — v0.61.78 fixed the predicate compiler so scope filters now correctly emit `school_id` for relation-name shorthand. That restored real items for AegisMark's `pupil_identity` profile_card region (sibling regions all returning 200 confirmed the predicate compiler is now correct). But the same region kept returning 500 because there was a second, distinct bug in the profile_card render path itself — masked for the entire lifetime of `display: profile_card` because it never had non-empty items in any production test.

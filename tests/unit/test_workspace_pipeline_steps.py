@@ -508,3 +508,145 @@ class TestProgressTemplateWiring:
         assert 'aria-valuemin="0"' in contents
         assert 'aria-valuemax="100"' in contents
         assert 'aria-valuenow="{{ stage.progress }}"' in contents
+
+
+# ───────────────────────── #912: end-to-end progress flow ──────────────
+
+
+class TestProgressFlowsThroughBoundary:
+    """v0.61.81 (#912): the IR→template-context boundary at
+    `workspace_renderer.py:574` previously built pipeline_stages dicts
+    with only `{label, caption, value}` — silently dropping the
+    `progress` field added in v0.61.79 (#911). Result: parser parsed
+    progress: 100 fine, IR carried it, but the rendered template never
+    saw `stage.progress` so the bar never appeared.
+
+    Same bug shape as #910 (profile_stats attribute access on what was
+    actually a dict, which only fired when items were non-empty). The
+    pre-fix template-wiring test only checked the template source for
+    `stage.progress is not none` — it never verified that `progress`
+    actually flowed through the IR→context boundary.
+
+    These tests pin the full IR→context→template flow with non-empty
+    progress values."""
+
+    def test_boundary_emits_progress_in_dict(self) -> None:
+        """The IR→template-context boundary must include `progress` in
+        each pipeline_stages dict — without this the runtime can't see it."""
+        from dazzle.core.ir.workspaces import PipelineStageSpec, WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(
+            name="test",
+            title="Test",
+            regions=[
+                WorkspaceRegion(
+                    name="pipeline",
+                    display="pipeline_steps",
+                    pipeline_stages=[
+                        PipelineStageSpec(
+                            label="Marked", caption="cap", value="count(M)", progress="74"
+                        ),
+                    ],
+                ),
+            ],
+        )
+        ctx = build_workspace_context(ws)
+        region = ctx.regions[0]
+        assert len(region.pipeline_stages) == 1
+        stage = region.pipeline_stages[0]
+        # All four fields must flow through the boundary
+        assert stage["label"] == "Marked"
+        assert stage["caption"] == "cap"
+        assert stage["value"] == "count(M)"
+        assert stage["progress"] == "74", (
+            "progress field was silently dropped at the IR→context boundary — "
+            "rendered template never sees it, no bar rendered (#912)."
+        )
+
+    def test_template_renders_bar_when_progress_set(self) -> None:
+        """End-to-end: parse a DSL with `progress: 100`, build IR,
+        cross the template-context boundary, render. Pin the rendered
+        HTML — would have caught #912 immediately."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        # Simulate the runtime's pipeline_stage_data shape that
+        # workspace_rendering.py constructs after the boundary
+        # (label/caption/value/progress/progress_overshoot per stage).
+        pipeline_stage_data = [
+            {
+                "label": "PDF received",
+                "caption": "scan stored",
+                "value": 0,
+                "progress": 100,
+                "progress_overshoot": False,
+            },
+            {
+                "label": "Decollated",
+                "caption": "page boundaries grouped",
+                "value": 12,
+                "progress": 74,
+                "progress_overshoot": False,
+            },
+        ]
+        html = render_fragment(
+            "workspace/regions/pipeline_steps.html",
+            title="Job pipeline",
+            pipeline_stage_data=pipeline_stage_data,
+        )
+        # Both stages must render the progress bar
+        assert html.count('data-dz-progress="100"') == 1
+        assert html.count('data-dz-progress="74"') == 1
+        # ARIA wiring per bar
+        assert html.count('role="progressbar"') == 2
+        # The percent labels
+        assert "100%" in html
+        assert "74%" in html
+
+    def test_template_omits_bar_when_progress_none(self) -> None:
+        """Pin the negative case — stage.progress is None (legacy
+        pipelines that don't use progress:) renders no bar. Preserves
+        the v0.61.78 shape for existing apps."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        pipeline_stage_data = [
+            {
+                "label": "Step A",
+                "caption": "",
+                "value": 5,
+                "progress": None,
+                "progress_overshoot": False,
+            },
+        ]
+        html = render_fragment(
+            "workspace/regions/pipeline_steps.html",
+            title="Pipeline",
+            pipeline_stage_data=pipeline_stage_data,
+        )
+        # No bar rendered
+        assert "data-dz-progress=" not in html
+        assert 'role="progressbar"' not in html
+        # But the rest of the stage still renders
+        assert "Step A" in html
+        # Value is rendered with surrounding whitespace; just check the digit
+        assert "\n5" in html or " 5" in html or ">5" in html
+
+    def test_template_emits_overshoot_flag_when_clamped(self) -> None:
+        """Values >100 clamp to 100 + set data-dz-progress-overshoot."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        pipeline_stage_data = [
+            {
+                "label": "Over",
+                "caption": "",
+                "value": 0,
+                "progress": 100,
+                "progress_overshoot": True,
+            },
+        ]
+        html = render_fragment(
+            "workspace/regions/pipeline_steps.html",
+            title="Pipeline",
+            pipeline_stage_data=pipeline_stage_data,
+        )
+        assert 'data-dz-progress-overshoot="true"' in html

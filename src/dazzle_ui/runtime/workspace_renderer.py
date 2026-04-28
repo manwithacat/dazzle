@@ -576,9 +576,16 @@ def build_workspace_context(
                         "label": s.label,
                         "caption": s.caption,
                         "value": s.value,
+                        # v0.61.81 (#912): progress was added to PipelineStageSpec
+                        # in v0.61.79 (#911) but the IR→template-context boundary
+                        # silently dropped it — same bug shape as #910's
+                        # profile_stats AttributeError. Parser landed; render
+                        # path never received the value. The progress: 0..100
+                        # field needs to flow through here too.
+                        "progress": s.progress,
                     }
                     for s in (getattr(region, "pipeline_stages", None) or [])
-                ],  # #890 + v0.61.66 #4
+                ],  # #890 + v0.61.66 #4 + v0.61.79 #911 + v0.61.81 #912
                 tones=dict(getattr(region, "tones", None) or {}),  # v0.61.65
                 notice=(
                     {
