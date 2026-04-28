@@ -54,27 +54,31 @@
     {% set cy = side / 2 %}
     {% set r_max = (side / 2) - 32 %}
 
-    {# Pre-compute per-spoke angle + cosines/sines via a tiny lookup
-       table. Jinja can't do trig directly, so we use the angles list
-       approach: for each spoke i, angle_radians = -π/2 + (2π × i / N).
-       Starting angle -π/2 puts spoke 0 at 12 o'clock; going clockwise
-       matches the natural reading order. #}
+    {# Pre-compute per-spoke geometry. Earlier versions tried to use
+       SVG `<g transform="rotate">` chains because Jinja can't call
+       cos/sin directly — that approach silently broke the data-vertex
+       distribution (#929) and emitted zero-length ring/polygon
+       segments because both endpoints were rotated together. The
+       fix: a tiny `radar_polar_xy(index, count, ratio, cx, cy, r_max)`
+       global (registered in `template_renderer.py`) does the polar →
+       cartesian conversion in Python; the template emits explicit
+       (x, y) coords everywhere. #}
     {% set ns = namespace(spokes=[]) %}
     {% for b in bucketed_metrics %}
-      {% set deg = (loop.index0 / count) * 360 - 90 %}
-      {# Per-series normalised radius for this spoke. Index by series
-         name so the multi-polygon loop below can pull the right one. #}
       {% set per_series = {} %}
       {% for s in _series_names %}
         {% set v = (b.metrics[s] if b.metrics is defined else b.value) %}
         {% set _ = per_series.update({s: v / max_val}) %}
       {% endfor %}
+      {% set axis_xy = radar_polar_xy(loop.index0, count, 1.0, cx, cy, r_max) %}
       {% set _ = ns.spokes.append({
         'label': b.label,
         'value': b.value,
         'metrics': b.metrics if b.metrics is defined else {'value': b.value},
-        'deg': deg,
+        'index': loop.index0,
         'per_series': per_series,
+        'axis_x': axis_xy.x,
+        'axis_y': axis_xy.y,
       }) %}
     {% endfor %}
 
@@ -83,109 +87,71 @@
          class="dz-radar-svg dz-chart-svg"
          role="img"
          aria-label="{{ title }} radar — {{ count }} spokes, peak {{ max_val | metric_number }}">
-      {# Concentric polar grid rings — 4 rings at 25/50/75/100% of r_max.
-         Render via N-sided polygons matching the spoke count so grid
-         vertices align with spoke endpoints (cleaner geometry than
-         circles when the count is small). #}
+      {# Concentric polar grid rings — 4 N-gons at 25/50/75/100% of
+         r_max with vertices on the spoke endpoints. #}
       {% for ring_pct in [0.25, 0.5, 0.75, 1.0] %}
-        {% set ring_r = r_max * ring_pct %}
-        {% set ring_points = [] %}
+        {% set _ring_pts = [] %}
         {% for s in ns.spokes %}
-          {# Use SVG transform="rotate(deg cx cy)" applied to a vertex
-             at (cx, cy - ring_r). We can't actually rotate a single
-             point in markup without trig — so emit a <g transform> per
-             vertex would be wasteful. Instead, hand-compute via Jinja's
-             `degrees` filter and the math below.
-
-             The trick: place the vertex straight up at (cx, cy - ring_r),
-             then wrap each line segment in <g transform="rotate"> via
-             the polygon construction below. For the polygon `points` we
-             need explicit x/y per vertex, so we DO need cos/sin.
-
-             Workaround: emit individual `<line>` elements per ring
-             segment, each rotated via SVG `transform`. This trades a
-             single <polygon> for N <line>s per ring. Still pure SVG
-             and no JS. #}
-          {% set _ = ring_points.append(s.deg) %}
+          {% set p = radar_polar_xy(s.index, count, ring_pct, cx, cy, r_max) %}
+          {% set _ = _ring_pts.append(p.x ~ ',' ~ p.y) %}
         {% endfor %}
-        {# Ring as N <line> segments connecting spoke i to spoke i+1.
-           Each line is from (cx, cy - ring_r) to itself rotated by the
-           inter-spoke angle, wrapped in a <g rotate> at spoke i. #}
-        {% set step_deg = 360 / count %}
-        {% for s in ns.spokes %}
-          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-            <line x1="{{ cx }}" y1="{{ cy - ring_r }}"
-                  x2="{{ cx }}" y2="{{ cy - ring_r }}"
-                  transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
-                  stroke="hsl(var(--border))"
-                  stroke-width="0.5"
-                  stroke-opacity="0.6"/>
-          </g>
-        {% endfor %}
+        <polygon points="{{ _ring_pts | join(' ') }}"
+                 fill="none"
+                 stroke="hsl(var(--border))"
+                 stroke-width="0.5"
+                 stroke-opacity="0.6"/>
       {% endfor %}
 
       {# Spoke axis lines — from centre to each spoke endpoint at r_max. #}
       {% for s in ns.spokes %}
-        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-          <line x1="{{ cx }}" y1="{{ cy }}"
-                x2="{{ cx }}" y2="{{ cy - r_max }}"
-                stroke="hsl(var(--border))"
-                stroke-width="0.5"
-                stroke-opacity="0.7"/>
-        </g>
+        <line x1="{{ cx }}" y1="{{ cy }}"
+              x2="{{ s.axis_x }}" y2="{{ s.axis_y }}"
+              stroke="hsl(var(--border))"
+              stroke-width="0.5"
+              stroke-opacity="0.7"/>
       {% endfor %}
 
-      {# Data polygons — one per series. Render each as N rotated
-         <line> segments forming the outline plus N rotated <circle>
-         markers at the vertices. Pure-SVG cheat: Jinja can't compute
-         cos/sin, so each vertex is wrapped in <g transform="rotate">.
-         Fill is omitted (would need explicit (x,y) coords); the
-         outline + vertex markers are the readable shape, and an
-         opacity gradient differentiates overlapping series. #}
-      {% set step_deg = 360 / count %}
+      {# Data polygons — one per series. Now that we have explicit
+         (x, y) coords, render the outline as a single <polygon> with
+         a translucent fill plus N circle markers at the vertices —
+         the readable shape every chart library converges on. #}
       {% for series_name in _series_names %}
         {% set series_colour = _palette[loop.index0 % (_palette | length)] %}
+        {% set _poly_pts = [] %}
+        {% set ns_v = namespace(vertices=[]) %}
         {% for s in ns.spokes %}
-          {% set vertex_r = r_max * s.per_series[series_name] %}
-          {% set next_r = r_max * ns.spokes[(loop.index0 + 1) % count].per_series[series_name] %}
-          {# Vertex marker. #}
-          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-            <circle cx="{{ cx }}" cy="{{ cy - vertex_r }}" r="3"
-                    fill="{{ series_colour }}"
-                    stroke="hsl(var(--card))"
-                    stroke-width="1">
-              <title>{{ s.label }} {{ series_name }}: {{ s.metrics[series_name] | metric_number }}</title>
-            </circle>
-          </g>
-          {# Line from this vertex to the next (rotation deltas). #}
-          <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-            <line x1="{{ cx }}" y1="{{ cy - vertex_r }}"
-                  x2="{{ cx }}" y2="{{ cy - next_r }}"
-                  transform="rotate({{ step_deg }} {{ cx }} {{ cy }})"
-                  stroke="{{ series_colour }}"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"/>
-          </g>
+          {% set p = radar_polar_xy(s.index, count, s.per_series[series_name], cx, cy, r_max) %}
+          {% set _ = _poly_pts.append(p.x ~ ',' ~ p.y) %}
+          {% set _ = ns_v.vertices.append({'x': p.x, 'y': p.y, 'label': s.label, 'value': s.metrics[series_name]}) %}
+        {% endfor %}
+        <polygon points="{{ _poly_pts | join(' ') }}"
+                 fill="{{ series_colour }}"
+                 fill-opacity="0.15"
+                 stroke="{{ series_colour }}"
+                 stroke-width="1.5"
+                 stroke-linejoin="round"/>
+        {% for v in ns_v.vertices %}
+          <circle cx="{{ v.x }}" cy="{{ v.y }}" r="3"
+                  fill="{{ series_colour }}"
+                  stroke="hsl(var(--card))"
+                  stroke-width="1">
+            <title>{{ v.label }} {{ series_name }}: {{ v.value | metric_number }}</title>
+          </circle>
         {% endfor %}
       {% endfor %}
 
       {# Spoke labels — placed slightly outside r_max so they don't
-         collide with the outermost ring. #}
+         collide with the outermost ring. Labels stay upright (no
+         rotation) — radar labels rotated to follow the spoke read
+         worse than horizontal text in user testing. #}
       {% for s in ns.spokes %}
-        {% set label_r = r_max + 14 %}
-        <g transform="rotate({{ s.deg }} {{ cx }} {{ cy }})">
-          {# Counter-rotate the text so it stays upright regardless of
-             the spoke angle. #}
-          <g transform="rotate({{ -s.deg }} {{ cx }} {{ cy - label_r }})">
-            <text x="{{ cx }}" y="{{ cy - label_r }}"
-                  text-anchor="middle"
-                  dominant-baseline="middle"
-                  font-size="10"
-                  fill="hsl(var(--foreground))"
-                  font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ s.label }}</text>
-          </g>
-        </g>
+        {% set label_pos = radar_polar_xy(s.index, count, 1.0, cx, cy, r_max + 14) %}
+        <text x="{{ label_pos.x }}" y="{{ label_pos.y }}"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              font-size="10"
+              fill="hsl(var(--foreground))"
+              font-family="ui-monospace, 'SF Mono', Menlo, monospace">{{ s.label }}</text>
       {% endfor %}
     </svg>
 

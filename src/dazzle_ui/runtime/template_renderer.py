@@ -450,6 +450,32 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["resolve_fk_id"] = _resolve_fk_id_filter
     env.filters["humanize"] = _humanize_filter
 
+    # #929: radar widget needs explicit polar-to-cartesian conversion
+    # for vertex placement. Jinja can't call cos/sin directly, so the
+    # template was using a `<g transform="rotate">` hack that put every
+    # vertex on the north axis after partial transform application —
+    # symptoms: all data dots stacked on the vertical centerline.
+    # Expose a small global the radar template uses to compute spoke
+    # endpoints + vertex positions natively.
+    import math as _math
+
+    def _radar_polar_xy(
+        index: int, count: int, ratio: float, cx: float, cy: float, r_max: float
+    ) -> dict[str, float]:
+        # Start at 12 o'clock (-π/2) and proceed clockwise so spoke 0
+        # is straight up and the natural reading order matches the
+        # bucket order. SVG y axis is inverted (down is positive), so
+        # `cy + r·sin(angle)` reads correctly because sin(-π/2) = -1
+        # which gives `cy - r` — i.e. north of centre.
+        angle = -_math.pi / 2 + (2 * _math.pi * float(index)) / float(count)
+        radius = float(r_max) * float(ratio)
+        return {
+            "x": float(cx) + radius * _math.cos(angle),
+            "y": float(cy) + radius * _math.sin(angle),
+        }
+
+    env.globals["radar_polar_xy"] = _radar_polar_xy
+
     return env
 
 

@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.100] - 2026-04-28
+
+### Fixed
+- **`templates/workspace/regions/radar.html` +
+  `runtime/template_renderer.py`** — closes #929. The radar widget
+  used `<g transform="rotate">` chains to position vertices because
+  Jinja can't call cos/sin directly. The chain produced correct
+  results for elements at constant radius (axis lines, labels) but
+  silently broke at varying radii (data dots, polygon outlines, ring
+  grid). Symptom: every data circle ended up on the north spoke,
+  ring polygons emitted as zero-length lines (invisible). Replaced
+  the rotation hack with an explicit polar→cartesian helper:
+  `radar_polar_xy(index, count, ratio, cx, cy, r_max)` registered as
+  a Jinja global. Template now emits explicit (x, y) coords for ring
+  polygons (proper N-gons), spoke axis lines, data polygons (with
+  translucent fill — the readable shape every chart library
+  converges on), vertex circles, and labels (no longer rotated;
+  upright text reads better than spoke-aligned text per user
+  testing). Regression tests in `tests/unit/test_radar_geometry.py`
+  pin the helper, the rendered SVG's distinct cx values across
+  spokes (the smoking gun for #929), the explicit polygon points,
+  and the absence of `<g transform="rotate">` wrappers around
+  circles.
+
 ## [0.61.99] - 2026-04-28
 
 ### Added
