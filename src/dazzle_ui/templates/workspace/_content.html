@@ -281,34 +281,64 @@
 </aside>
 <script>
 (function() {
-  var drawer = document.getElementById('dz-detail-drawer');
-  var backdrop = document.getElementById('dz-drawer-backdrop');
-  var content = document.getElementById('dz-detail-drawer-content');
-  var expand = document.getElementById('dz-drawer-expand');
+  // #934: this script gets re-executed every time `_content.html` is
+  // swapped into `#main-content` (workspace nav, htmx morph swap).
+  // Pre-fix the IIFE re-bound listeners to `document.body` on every
+  // run — N navigations meant N stacked listeners — and captured
+  // local element references in closures that pointed at detached
+  // DOM after morph. The failure mode: empty drawer "slid in" mid-
+  // page on workspace→workspace nav because state leaked across
+  // swaps and the close path mutated the wrong (detached) element.
+  //
+  // The fix has three parts:
+  //   1. Init guard — register every listener exactly once across the
+  //      session.
+  //   2. Look up `drawer` / `backdrop` / `content` / `expand` fresh on
+  //      each call so post-morph swaps still find the live nodes.
+  //   3. `htmx:afterSettle` defensive close — if a swap landed
+  //      anywhere other than `#dz-detail-drawer-content`, force the
+  //      drawer closed. Stale `is-open` state from a previous workspace
+  //      page can no longer leak across nav.
+  function _qd(id) { return document.getElementById(id); }
 
   window.dzDrawer = {
     isOpen: false,
     open: function(url) {
-      if (url && expand) { expand.href = url; expand.hidden = false; } else if (expand) { expand.hidden = true; }
+      var drawer = _qd('dz-detail-drawer');
+      var backdrop = _qd('dz-drawer-backdrop');
+      var expand = _qd('dz-drawer-expand');
+      if (!drawer || !backdrop) return;
+      if (url && expand) { expand.href = url; expand.hidden = false; }
+      else if (expand) { expand.hidden = true; }
       drawer.classList.add('is-open');
       backdrop.classList.add('is-open');
       document.body.classList.add('overflow-hidden');
       this.isOpen = true;
     },
     close: function() {
-      drawer.classList.remove('is-open');
-      backdrop.classList.remove('is-open');
+      var drawer = _qd('dz-detail-drawer');
+      var backdrop = _qd('dz-drawer-backdrop');
+      if (drawer) drawer.classList.remove('is-open');
+      if (backdrop) backdrop.classList.remove('is-open');
       document.body.classList.remove('overflow-hidden');
       this.isOpen = false;
     }
   };
+
+  if (window.__dzDrawerInit) return;
+  window.__dzDrawerInit = true;
 
   document.body.addEventListener('dz:drawerOpen', function(e) {
     var url = (e.detail && e.detail.url) || '';
     window.dzDrawer.open(url);
   });
 
-  content.addEventListener('click', function(e) {
+  // Click delegation on document.body — the drawer content node is
+  // recreated on every workspace render, so we can't bind directly to
+  // it. Filter to clicks INSIDE the live drawer content element.
+  document.body.addEventListener('click', function(e) {
+    var content = _qd('dz-detail-drawer-content');
+    if (!content || !content.contains(e.target)) return;
     var link = e.target.closest('a[href]');
     if (!link) return;
     if (link.hasAttribute('hx-get')) return;
@@ -327,6 +357,21 @@
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && window.dzDrawer.isOpen) {
+      window.dzDrawer.close();
+    }
+  });
+
+  // #934: defensive close on any swap that doesn't target the drawer.
+  // Workspace→workspace nav uses `hx-target="#main-content"`, so the
+  // drawer's `is-open` state from a prior interaction would otherwise
+  // persist visually across the swap. The drawer-targeted action path
+  // (target == 'dz-detail-drawer-content') is left alone because the
+  // `dz:drawerOpen` trigger fires *after* htmx:afterSettle on that
+  // path — opening the drawer is the intended next step there.
+  document.body.addEventListener('htmx:afterSettle', function(e) {
+    var target = e.detail && e.detail.target;
+    if (!target || target.id === 'dz-detail-drawer-content') return;
+    if (window.dzDrawer && window.dzDrawer.isOpen) {
       window.dzDrawer.close();
     }
   });

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.101] - 2026-04-28
+
+### Fixed
+- **`templates/workspace/_content.html`** — closes #934. The drawer
+  IIFE re-executed on every htmx morph swap that re-rendered
+  `_content.html`, stacking duplicate `dz:drawerOpen` /
+  `keydown` listeners on `document.body` and capturing now-stale
+  drawer/backdrop element references in closures. AegisMark hit the
+  user-visible failure as an empty drawer "sliding in" mid-page on
+  workspace→workspace nav. Three-part fix:
+  1. **Init guard** — listeners register exactly once across the
+     session via `window.__dzDrawerInit`. Subsequent script re-runs
+     refresh the `window.dzDrawer` facade only.
+  2. **Fresh element lookups** — `dzDrawer.open` and `.close` now
+     resolve `#dz-detail-drawer` / `#dz-drawer-backdrop` via
+     `getElementById` on every call, so they don't operate on
+     detached nodes after morph replaces the drawer DOM.
+  3. **`htmx:afterSettle` defensive close** — any swap landing
+     anywhere other than `#dz-detail-drawer-content` force-closes the
+     drawer. The drawer-targeting path opens via `dz:drawerOpen` AFTER
+     `htmx:afterSettle`, so this is safe — opening still works.
+  Click delegation for in-drawer links also moved to `document.body`
+  with a `contains()` filter, since the drawer's content node is
+  recreated on every workspace render.
+  Regression tests in `tests/unit/test_drawer_morph_safety.py` (7
+  cases) pin all three invariants — init guard, fresh lookups,
+  defensive close + drawer-target skip + only-when-open guard.
+
 ## [0.61.100] - 2026-04-28
 
 ### Fixed
