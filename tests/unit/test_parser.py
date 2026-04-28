@@ -3364,6 +3364,91 @@ surface task_create "Create Task":
         assert elem.options.get("widget") == "picker"
         assert elem.visible is not None
 
+    def test_surface_layout_single_page(self):
+        """surface layout: single_page parses and is stored on SurfaceSpec (#918)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  layout: single_page
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.layout == "single_page"
+
+    def test_surface_layout_defaults_to_wizard(self):
+        """surface without layout: defaults to wizard (#918)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.layout == "wizard"
+
+    def test_surface_section_note(self):
+        """section note: sets descriptive subtitle (#918)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    note: "Fill in the basics"
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        section = surface.sections[0]
+        assert section.note == "Fill in the basics"
+
+    def test_surface_field_help(self):
+        """field help: adds muted helper text below the field label (#918)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title" help: "A short summary of the task"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        elem = surface.sections[0].elements[0]
+        assert elem.field_name == "title"
+        assert elem.help == "A short summary of the task"
+
 
 if __name__ == "__main__":
     main()

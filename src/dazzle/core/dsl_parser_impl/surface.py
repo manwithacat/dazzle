@@ -51,6 +51,7 @@ class SurfaceParserMixin:
         search_fields: list[str] = []
         persona_variants: list[ir.PersonaVariant] = []
         related_groups: list[ir.RelatedGroup] = []
+        layout = "wizard"  # v0.61.88 (#918): default render mode for create/edit
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -70,6 +71,20 @@ class SurfaceParserMixin:
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
                 mode = ir.SurfaceMode(mode_token.value)
+                self.skip_newlines()
+
+            # v0.61.88 (#918): layout: wizard|single_page — controls how
+            # multi-section create/edit surfaces render. wizard (default)
+            # = multi-step. single_page = stacked sections, one submit at end.
+            elif self.match(TokenType.LAYOUT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                layout_token = self.expect_identifier_or_keyword()
+                if layout_token.value not in ("wizard", "single_page"):
+                    self.error(
+                        f"layout must be 'wizard' or 'single_page', got {layout_token.value!r}"
+                    )
+                layout = layout_token.value
                 self.skip_newlines()
 
             # source: ViewName (view reference for field projection)
@@ -169,6 +184,7 @@ class SurfaceParserMixin:
             search_fields=search_fields,
             related_groups=related_groups,
             source=loc,
+            layout=layout,  # v0.61.88 (#918)
         )
 
     def _parse_related_group(self) -> ir.RelatedGroup:
@@ -291,6 +307,14 @@ class SurfaceParserMixin:
             visible_condition = self.parse_condition_expr()
             self.skip_newlines()
 
+        # v0.61.88 (#918): optional section-level note: "<text>"
+        note: str | None = None
+        if self.match(TokenType.NOTE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            note = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+
         elements = []
 
         while not self.match(TokenType.DEDENT):
@@ -323,12 +347,14 @@ class SurfaceParserMixin:
                             opt_val += "." + self.expect_identifier_or_keyword().value
                     options[opt_key] = opt_val
 
-                # Parse optional visible:, when:, and trailing key=value options
-                # in any order.  This allows e.g.:
+                # Parse optional visible:, when:, help:, and trailing
+                # key=value options in any order.  This allows e.g.:
                 #   field x "X" visible: role(admin) widget=picker
                 #   field x "X" widget=picker visible: role(admin)
+                #   field x "X" help: "Pick from the cohort roster" widget=combobox
                 field_visible = None
                 when_expr = None
+                help_text: str | None = None  # v0.61.88 (#918)
                 while True:
                     if self.match(TokenType.VISIBLE):
                         self.advance()
@@ -338,6 +364,12 @@ class SurfaceParserMixin:
                         self.advance()
                         self.expect(TokenType.COLON)
                         when_expr = self.collect_line_as_expr()
+                    elif self.match(TokenType.HELP):
+                        # v0.61.88 (#918): help: "<string>" — muted help
+                        # text rendered below the field label.
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        help_text = self.expect(TokenType.STRING).value
                     elif self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
                         # Trailing key=value option (e.g. widget=picker after visible:)
                         peek = self.peek_token()
@@ -364,6 +396,7 @@ class SurfaceParserMixin:
                         options=options,
                         when_expr=when_expr,
                         visible=field_visible,
+                        help=help_text,  # v0.61.88 (#918)
                     )
                 )
 
@@ -383,6 +416,7 @@ class SurfaceParserMixin:
             title=title,
             elements=elements,
             visible=visible_condition,
+            note=note,  # v0.61.88 (#918)
         )
 
     def parse_surface_action(self) -> ir.SurfaceAction:

@@ -83,6 +83,8 @@ class FieldContext(BaseModel):
     when_expr: str = ""  # Serialized when: condition from surface element
     visible: bool = True  # Evaluated at render time against record data
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)
+    # v0.61.88 (#918): muted help text rendered below the field label.
+    help: str = ""
 
 
 class TableContext(BaseModel):
@@ -159,6 +161,8 @@ class FormSectionContext(BaseModel):
     fields: list[FieldContext]
     visible: bool = True  # Evaluated at render time for role-based visibility
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)
+    # v0.61.88 (#918): muted explanatory copy rendered below the section title.
+    note: str = ""
 
 
 class FormContext(BaseModel):
@@ -173,6 +177,11 @@ class FormContext(BaseModel):
     cancel_url: str = "/"
     initial_values: dict[str, Any] = Field(default_factory=dict)
     sections: list[FormSectionContext] = Field(default_factory=list)
+    # v0.61.88 (#918): "wizard" (default) or "single_page". Controls how
+    # multi-section create/edit surfaces render — wizard = stepper +
+    # one-step-at-a-time; single_page = stacked sections, one submit
+    # at the bottom. No effect when sections is empty (single-form path).
+    layout: str = "wizard"
     # Per-persona field hide lists, keyed by persona id.
     # Compiled from `for <persona>: hide: field1, field2` DSL blocks
     # (cycle 245, extends the cycle 243 TableContext pattern to forms).

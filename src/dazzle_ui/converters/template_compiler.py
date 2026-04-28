@@ -753,6 +753,7 @@ def _build_form_sections(
                     ref_api=ref_api,
                     when_expr=when_str,
                     visible_condition=vis,
+                    help=element.help or "",  # v0.61.88 (#918)
                 )
             )
 
@@ -762,6 +763,7 @@ def _build_form_sections(
                 title=section.title or section.name.replace("_", " ").title(),
                 fields=section_fields,
                 visible_condition=section_vis,
+                note=section.note or "",  # v0.61.88 (#918)
             )
         )
 
@@ -943,6 +945,7 @@ def _compile_form_surface(
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
+                layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
             ),
         )
     else:
@@ -962,6 +965,7 @@ def _compile_form_surface(
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
+                layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
             ),
         )
 

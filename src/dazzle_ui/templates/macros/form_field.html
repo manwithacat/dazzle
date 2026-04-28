@@ -14,7 +14,7 @@
 {% set error = errors.get(field.name, "") if errors else "" %}
 {% set field_id = "field-" ~ field.name %}
 {% set error_id = "error-" ~ field.name %}
-{% set hint_id = "hint-" ~ field.name if field.hint is defined and field.hint else "" %}
+{% set hint_id = "hint-" ~ field.name if field.help is defined and field.help else "" %}
 {% set described_by = ([error_id] if error else []) + ([hint_id] if hint_id else []) %}
 
 <div class="dz-form-field">
@@ -40,8 +40,8 @@
         <span class="visually-hidden">(required)</span>
       {% endif %}
     </label>
-    {% if field.hint is defined and field.hint %}
-    <p id="{{ hint_id }}" class="dz-form-hint">{{ field.hint }}</p>
+    {% if field.help is defined and field.help %}
+    <p id="{{ hint_id }}" class="dz-form-hint">{{ field.help }}</p>
     {% endif %}
     {% include "fragments/search_select.html" %}
     {% if error %}
@@ -62,8 +62,8 @@
         <span class="visually-hidden">(required)</span>
       {% endif %}
     </label>
-    {% if field.hint is defined and field.hint %}
-    <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+    {% if field.help is defined and field.help %}
+    <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
     {% endif %}
     <select id="field-{{ field.name }}" name="{{ field.name }}"
             data-dazzle-field="{{ field.name }}"
@@ -71,7 +71,7 @@
             data-dz-ref-api="{{ field.ref_api }}"
             class="dz-form-input"
             {% if field.required %}required aria-required="true"{% endif %}
-            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
+            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}
             x-data='{ options: [], loading: true, current: {{ (values.get(field.name) if values else "") | tojson }} }'
             x-init="
               fetch('{{ field.ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
@@ -110,8 +110,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <select id="field-{{ field.name }}" name="{{ field.name }}"
           data-dz-widget="combobox"
@@ -119,7 +119,7 @@
           class="dz-form-input"
           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
           {% if field.required %}required aria-required="true"{% endif %}
-          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
     <option value="">{{ field.placeholder or 'Select...' }}</option>
     {% for opt in field.options %}
     <option value="{{ opt.value }}" {% if values.get(field.name) == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
@@ -138,8 +138,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <select id="field-{{ field.name }}" name="{{ field.name }}"
           data-dz-widget="multiselect"
@@ -148,7 +148,7 @@
           multiple
           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
           {% if field.required %}required aria-required="true"{% endif %}
-          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
     {% for opt in field.options %}
     <option value="{{ opt.value }}" {% if opt.value|string in (values.get(field.name) or []) %}selected{% endif %}>{{ opt.label }}</option>
     {% endfor %}
@@ -166,8 +166,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
          data-dz-widget="tags"
@@ -176,7 +176,7 @@
          value="{{ values.get(field.name, '') }}"
          {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
          {% if field.required %}required aria-required="true"{% endif %}
-         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
   {% if errors.get(field.name) %}
   <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
   {% endif %}
@@ -190,8 +190,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
          data-dz-widget="datepicker"
@@ -200,7 +200,7 @@
          value="{{ values.get(field.name, field.default or '') }}"
          {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
          {% if field.required %}required aria-required="true"{% endif %}
-         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
   {% if errors.get(field.name) %}
   <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
   {% endif %}
@@ -214,8 +214,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
          data-dz-widget="daterange"
@@ -224,7 +224,7 @@
          value="{{ values.get(field.name, '') }}"
          placeholder="{{ field.placeholder or 'Select date range...' }}"
          {% if field.required %}required aria-required="true"{% endif %}
-         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
   {% if errors.get(field.name) %}
   <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
   {% endif %}
@@ -238,8 +238,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <div data-dz-widget="colorpicker" class="dz-form-color-group">
     <div class="pcr-trigger dz-form-color-swatch"
@@ -249,7 +249,7 @@
     <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
            value="{{ values.get(field.name, field.default or '#3b82f6') }}"
            {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
     <span class="dz-form-color-hex" aria-hidden="true">{{ values.get(field.name, field.default or '#3b82f6') }}</span>
   </div>
   {% if errors.get(field.name) %}
@@ -265,8 +265,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <div data-dz-widget="richtext" data-dz-options='{}'
        class="dz-form-richtext"
@@ -274,7 +274,7 @@
     <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
            value="{{ values.get(field.name, '') }}"
            {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
     <div data-dz-editor></div>
   </div>
   {% if errors.get(field.name) %}
@@ -290,8 +290,8 @@
       <span class="visually-hidden">(required)</span>
     {% endif %}
   </label>
-  {% if field.hint %}
-  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% if field.help %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
   <div data-dz-widget="range-tooltip" class="dz-form-slider-group">
     <input id="field-{{ field.name }}" name="{{ field.name }}" type="range"
@@ -302,7 +302,7 @@
            step="{{ field.extra.step | default(1) }}"
            value="{{ values.get(field.name, field.default or '50') }}"
            {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
     <span data-dz-range-value
           class="dz-form-slider-value"
           aria-hidden="true">{{ values.get(field.name, field.default or '50') }}</span>
@@ -321,9 +321,9 @@
       {% endif %}
     </label>
 
-    {% if field.hint is defined and field.hint %}
+    {% if field.help is defined and field.help %}
     <p id="{{ hint_id }}" class="dz-form-hint">
-      {{ field.hint }}
+      {{ field.help }}
     </p>
     {% endif %}
 

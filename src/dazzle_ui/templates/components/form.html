@@ -14,8 +14,15 @@
 
    v0.62 CSS refactor: inline Tailwind → semantic .dz-form-* + .dz-button
    primitives (components/fragments.css + components/button.css). #}
+{# v0.61.88 (#918): `form.layout` ("wizard"|"single_page") controls
+   whether sections render as a multi-step wizard (existing behaviour)
+   or stack top-to-bottom on one page. The dzWizard Alpine scope is
+   only attached in wizard mode; single_page renders without any
+   step state, all sections visible, single submit at the end. #}
+{% set is_single_page = form.sections and form.layout == "single_page" %}
+{% set is_wizard = form.sections and form.layout != "single_page" %}
 <div class="dz-form-shell"
-     {% if form.sections %}x-data="dzWizard({{ form.sections | length }})"{% endif %}>
+     {% if is_wizard %}x-data="dzWizard({{ form.sections | length }})"{% endif %}>
   {# Header #}
   {% block form_header %}
   <div class="dz-form-header">
@@ -23,13 +30,14 @@
   </div>
   {% endblock form_header %}
 
-  {# Stepper indicator for multi-section forms (UX-018 form-wizard) #}
-  {% if form.sections %}
+  {# Stepper indicator — wizard layout only #}
+  {% if is_wizard %}
     {% include 'fragments/form_stepper.html' %}
   {% endif %}
 
-  {# Form. dzWizard scope lives on the outer wrapper (above) so the
-     stepper sees it too — leave the form element scope-free here. #}
+  {# Form. dzWizard scope lives on the outer wrapper (above) when in
+     wizard mode so the stepper sees it too — the form element stays
+     scope-free here. #}
   <form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
         hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
@@ -45,17 +53,34 @@
       {% include 'fragments/form_errors.html' %}
     </div>
 
-    {# Fields — sectioned (wizard) or flat (delegated to UX-017 form-field) #}
+    {# Fields — sectioned (wizard or single_page) or flat (delegated
+       to UX-017 form-field). single_page renders all sections stacked
+       without the dz-stage/x-show wrappers. #}
     {% block form_fields %}
-    {% if form.sections %}
+    {% if is_wizard %}
       {% for section in form.sections %}
       <div data-dz-stage="{{ loop.index0 }}"
            x-show="isCurrent({{ loop.index0 }})">
         <h3 class="dz-form-section-title">{{ section.title }}</h3>
+        {% if section.note %}
+        <p class="dz-form-section-note">{{ section.note }}</p>
+        {% endif %}
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
         {% endfor %}
       </div>
+      {% endfor %}
+    {% elif is_single_page %}
+      {% for section in form.sections %}
+      <section class="dz-form-section">
+        <h3 class="dz-form-section-title">{{ section.title }}</h3>
+        {% if section.note %}
+        <p class="dz-form-section-note">{{ section.note }}</p>
+        {% endif %}
+        {% for field in section.fields %}
+          {{ render_field(field, form.initial_values) }}
+        {% endfor %}
+      </section>
       {% endfor %}
     {% else %}
       {% for field in form.fields %}
@@ -64,9 +89,9 @@
     {% endif %}
     {% endblock form_fields %}
 
-    {# Actions — wizard nav or standard submit #}
+    {# Actions — wizard nav, single_page single submit, or standard. #}
     {% block form_actions %}
-    {% if form.sections %}
+    {% if is_wizard %}
     <div class="dz-form-actions">
       <button type="button"
               class="dz-button dz-button-ghost"

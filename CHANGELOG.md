@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.88] - 2026-04-28
+
+### Added
+- **DSL: `layout: single_page` on create/edit surfaces** — closes #918
+  (parts A+B+C). New surface-level `layout:` keyword accepts `wizard`
+  (default, existing multi-step behaviour) or `single_page` (all
+  sections stack top-to-bottom on one page with a single submit at
+  the end). Wired through `SurfaceSpec.layout` → `FormContext.layout`
+  → `templates/components/form.html` which now branches on
+  `is_wizard` vs `is_single_page` (the dzWizard Alpine scope is only
+  attached in wizard mode). Parser tests in
+  `tests/unit/test_parser.py::TestSurfaceParsing::test_surface_layout_*`.
+- **DSL: `note:` on surface sections** — closes #918 part B. Sections
+  may now declare `note: "<string>"` directly under the section
+  header to render a muted descriptive subtitle below the section
+  title (`<p class="dz-form-section-note">`). New CSS rule in
+  `static/css/components/fragments.css`. Parser test
+  `test_surface_section_note`.
+- **DSL: `help:` on form fields** — closes #918 part C. Fields may
+  now declare `help: "<string>"` (alongside the existing `visible:`,
+  `when:`, `widget=` trailing options) to render muted helper text
+  below the field label. Plumbs through `SurfaceElement.help` →
+  `FieldContext.help` → existing `dz-form-hint` markup in
+  `templates/macros/form_field.html` (the data attribute renamed
+  from the previously-dead `field.hint` to `field.help`; the CSS
+  class kept its `dz-form-hint` name). Parser test
+  `test_surface_field_help`.
+
+### Notes
+- Issue #918 part D (companion regions — read-only sidebar/secondary
+  panels alongside form sections) is intentionally deferred. It
+  needs a placement design decision (sidebar vs stacked) that should
+  not be bundled with the mechanical A+B+C wiring above.
+
 ## [0.61.87] - 2026-04-28
 
 ### Fixed

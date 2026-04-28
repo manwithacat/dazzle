@@ -220,7 +220,7 @@ class TestFormTemplateRendering:
                     options=[],
                     source=None,
                     default=None,
-                    hint=None,
+                    help="",
                     extra={},
                 )
             ],

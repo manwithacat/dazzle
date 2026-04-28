@@ -24,7 +24,7 @@
          data-dazzle-field="{{ field.name }}"
          value="{{ init_id }}"
          {% if field.required %}required aria-required="true"{% endif %}
-         {% if errors and errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %} />
+         {% if errors and errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %} />
 
   {# Visible search input with HTMX debounced search — ARIA combobox role #}
   <input type="text"

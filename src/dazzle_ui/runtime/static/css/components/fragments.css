@@ -3011,6 +3011,19 @@
   margin-block-end: var(--space-md);
 }
 
+.dz-form-section-note {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+}
+
+.dz-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-block-end: var(--space-lg);
+}
+
 .dz-form-body {
   display: flex;
   flex-direction: column;

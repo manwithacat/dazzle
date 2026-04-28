@@ -121,6 +121,9 @@ class SurfaceElement(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict)
     when_expr: Expr | None = None
     visible: ConditionExpr | None = None
+    # v0.61.88 (#918): field-level help text below the label. Renders as
+    # a muted paragraph. None = no help text.
+    help: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -142,6 +145,9 @@ class SurfaceSection(BaseModel):
     title: str | None = None
     elements: list[SurfaceElement] = Field(default_factory=list)
     visible: ConditionExpr | None = None
+    # v0.61.88 (#918): section-level explanatory copy. Renders as a muted
+    # paragraph below the section heading. None = no note.
+    note: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -224,6 +230,11 @@ class SurfaceSpec(BaseModel):
     source: SourceLocation | None = None
     related_groups: list[RelatedGroup] = Field(default_factory=list)
     headless: bool = False
+    # v0.61.88 (#918): layout for create/edit surfaces. "wizard" (default,
+    # current behaviour) renders 2+ sections as a multi-step wizard;
+    # "single_page" stacks all sections top-to-bottom with one submit
+    # button at the end. No effect on view/list/custom modes.
+    layout: str = "wizard"
 
     model_config = ConfigDict(frozen=True)
 
