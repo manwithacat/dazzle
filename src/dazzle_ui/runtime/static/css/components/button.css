@@ -64,3 +64,24 @@
 .dz-button-destructive:hover {
   background: var(--colour-danger-soft);
 }
+
+/* `.dz-button.dz-button-primary` — filled brand variant. Composes
+ * with .dz-button baseline (height + padding + radius). The standalone
+ * `.dz-button-primary` rule in components/table.css is a smaller
+ * table-header-only variant and stays scoped (less-specific selector,
+ * no .dz-button qualifier). */
+.dz-button.dz-button-primary {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border: 1px solid var(--colour-brand);
+}
+
+.dz-button.dz-button-primary:hover {
+  filter: brightness(1.1);
+}
+
+.dz-button.dz-button-primary:disabled,
+.dz-button.dz-button-primary[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}

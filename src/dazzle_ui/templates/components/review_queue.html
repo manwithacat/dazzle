@@ -1,21 +1,23 @@
 {# Review queue component - displays entities one-at-a-time with approve/return actions #}
 {# Contract: ~/.claude/skills/ux-architect/components/review-queue.md (UX-030) #}
+{# v0.62 CSS refactor: inline Tailwind → semantic .dz-review-* shell + reuse
+   .dz-detail-* primitives for the field list + .dz-button family for actions
+   (components/fragments.css, components/detail.css, components/button.css). #}
 {% if review %}
-<div class="max-w-4xl" data-dazzle-entity="{{ review.entity_name }}" data-dazzle-review="true">
+<div class="dz-review-shell" data-dazzle-entity="{{ review.entity_name }}" data-dazzle-review="true">
   {# Header with queue progress #}
   {% block review_header %}
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center gap-3">
-      <a href="{{ review.back_url }}"
-         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">&larr; Back</a>
-      <h2 class="text-[18px] font-semibold text-[hsl(var(--foreground))]">{{ review.title }}</h2>
+  <div class="dz-detail-header">
+    <div class="dz-detail-header-title">
+      <a href="{{ review.back_url }}" class="dz-button dz-button-ghost">&larr; Back</a>
+      <h2 class="dz-detail-title">{{ review.title }}</h2>
     </div>
     {% if review.queue_total > 0 %}
-    <div class="flex items-center gap-2">
-      <span class="text-[12px] text-[hsl(var(--muted-foreground))]">
+    <div class="dz-review-progress">
+      <span class="dz-review-progress-text">
         {{ review.queue_position + 1 }} of {{ review.queue_total }}
       </span>
-      <progress data-dz-progress class="w-24 h-1 rounded-[2px]"
+      <progress data-dz-progress class="dz-review-progress-bar"
                 value="{{ review.queue_position + 1 }}"
                 max="{{ review.queue_total }}"
                 aria-hidden="true"></progress>
@@ -27,10 +29,10 @@
   {# Queue navigation #}
   {% block review_nav %}
   {% if review.prev_url or review.next_url %}
-  <div class="flex justify-between mb-4">
+  <div class="dz-review-nav">
     {% if review.prev_url %}
     <a href="{{ review.prev_url }}"
-       class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+       class="dz-button dz-button-ghost"
        hx-get="{{ review.prev_url }}" hx-push-url="true" hx-target="body" hx-swap="innerHTML">
       &larr; Previous
     </a>
@@ -39,7 +41,7 @@
     {% endif %}
     {% if review.next_url %}
     <a href="{{ review.next_url }}"
-       class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+       class="dz-button dz-button-ghost"
        hx-get="{{ review.next_url }}" hx-push-url="true" hx-target="body" hx-swap="innerHTML">
       Next &rarr;
     </a>
@@ -52,15 +54,15 @@
 
   {# Item detail card #}
   {% block review_fields %}
-  <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
-    <div class="p-4">
-      <dl class="divide-y divide-[hsl(var(--border))]">
+  <div class="dz-detail-card">
+    <div class="dz-detail-card-body">
+      <dl class="dz-detail-list">
         {% for field in review.fields %}
         {% if field.visible | default(true) %}
         {% set value = review.item.get(field.name, "") %}
-        <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
-          <dt class="text-[13px] font-medium text-[hsl(var(--muted-foreground))]">{{ field.label }}</dt>
-          <dd class="mt-1 text-[13px] text-[hsl(var(--foreground))] sm:col-span-2 sm:mt-0">
+        <div class="dz-detail-row">
+          <dt class="dz-detail-label">{{ field.label }}</dt>
+          <dd class="dz-detail-value">
             {% if field.type == "badge" %}
               {% include 'fragments/status_badge.html' %}
             {% elif field.type == "bool" or field.type == "checkbox" %}
@@ -70,9 +72,9 @@
             {% elif field.type == "currency" or field.type == "money" %}
               {{ value | currency(field.extra.get('currency_code', 'GBP') if field.extra else 'GBP') }}
             {% elif field.type == "ref" %}
-              {% if value is mapping %}{{ value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "\u2014") }}{% elif value %}{{ value }}{% else %}&mdash;{% endif %}
+              {% if value is mapping %}{{ value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "—") }}{% elif value %}{{ value }}{% else %}&mdash;{% endif %}
             {% else %}
-              {{ value | default("\u2014") }}
+              {{ value | default("—") }}
             {% endif %}
           </dd>
         </div>
@@ -86,30 +88,23 @@
   {# Review actions #}
   {% block review_actions %}
   {% if review.actions %}
-  <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)] mt-4">
-    <div class="p-4">
+  <div class="dz-detail-card" style="margin-top: var(--space-md);">
+    <div class="dz-detail-card-body">
       {# Notes textarea (shown when a return/reject action needs it) #}
-      <div id="review-notes-container" class="hidden mb-4">
-        <label for="review-notes" class="block text-[13px] font-medium text-[hsl(var(--foreground))] mb-1">
+      <div id="review-notes-container" class="dz-review-notes-wrap" hidden>
+        <label for="review-notes" class="dz-review-notes-label">
           Notes
-          <span class="text-[12px] font-normal text-[hsl(var(--destructive))] ml-1" aria-hidden="true">Required</span>
+          <span class="dz-review-notes-required" aria-hidden="true">Required</span>
         </label>
         <textarea id="review-notes" name="{{ review.notes_field }}"
-                  class="w-full px-3 py-2 min-h-24 resize-y rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                  class="dz-review-notes-textarea"
                   rows="3"
                   placeholder="Reason for returning/rejecting..."></textarea>
       </div>
 
-      <div class="flex gap-2 justify-end" data-dazzle-review-actions="{{ review.entity_name }}">
+      <div class="dz-review-actions" data-dazzle-review-actions="{{ review.entity_name }}">
         {% for action in review.actions %}
-        <button class="h-8 px-3 rounded-[4px] border text-[13px] font-medium inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-          {% if action.style == 'primary' %}
-            bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))] hover:brightness-110
-          {% elif action.style == 'error' %}
-            border-[hsl(var(--destructive))] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)]
-          {% else %}
-            border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]
-          {% endif %}"
+        <button class="dz-button {% if action.style == 'primary' %}dz-button-primary{% elif action.style == 'error' %}dz-button-destructive{% else %}dz-button-outline{% endif %}"
                 data-dazzle-action="{{ review.entity_name }}.review.{{ action.event }}"
                 data-review-to-state="{{ action.to_state }}"
                 data-review-require-notes="{{ 'true' if action.require_notes else 'false' }}"
@@ -137,13 +132,14 @@
 
   {# Queue empty state #}
   {% if not review.item %}
-  <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)] mt-4">
-    <div class="p-4 text-center py-12">
-      <div class="text-[48px] mb-2" aria-hidden="true">&#10003;</div>
-      <h3 class="text-[16px] font-semibold text-[hsl(var(--foreground))] mb-1">Queue Complete</h3>
-      <p class="text-[13px] text-[hsl(var(--muted-foreground))]">All items have been reviewed.</p>
-      <a href="{{ review.back_url }}"
-         class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border border-[hsl(var(--primary))] text-[13px] font-medium hover:brightness-110 inline-flex items-center mt-4 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">Return to list</a>
+  <div class="dz-detail-card" style="margin-top: var(--space-md);">
+    <div class="dz-detail-card-body">
+      <div class="dz-review-empty">
+        <div class="dz-review-empty-icon" aria-hidden="true">&#10003;</div>
+        <h3 class="dz-review-empty-title">Queue Complete</h3>
+        <p class="dz-review-empty-body">All items have been reviewed.</p>
+        <a href="{{ review.back_url }}" class="dz-button dz-button-primary">Return to list</a>
+      </div>
     </div>
   </div>
   {% endif %}
@@ -155,9 +151,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const container = document.getElementById('review-notes-container');
   if (!container) return;
 
-  document.querySelectorAll('[data-review-require-notes="true"]').forEach(inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms] => {
-    inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].addEventListener('mouseenter', () => container.classList.remove('hidden'));
-    inline-flex items-center font-medium rounded-[4px] transition-colors duration-[80ms].addEventListener('focus', () => container.classList.remove('hidden'));
+  document.querySelectorAll('[data-review-require-notes="true"]').forEach(btn => {
+    btn.addEventListener('mouseenter', () => container.removeAttribute('hidden'));
+    btn.addEventListener('focus', () => container.removeAttribute('hidden'));
   });
 });
 </script>

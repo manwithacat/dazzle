@@ -2579,3 +2579,160 @@
   max-width: 24rem;
   pointer-events: none;
 }
+
+/* ─────────────────────────── form chrome (UX-016) ───────────────
+ * Replaces `max-w-2xl` wrapper, `flex justify-between mb-6` header,
+ * `space-y-4` field gap and the htmx-request opacity dim that all
+ * lived as inline Tailwind on components/form.html. */
+
+.dz-form-shell {
+  max-width: 42rem;
+}
+
+.dz-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-xl);
+}
+
+.dz-form-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-form-section-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: var(--space-md);
+}
+
+.dz-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-form-body.htmx-request {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.dz-form-actions {
+  display: flex;
+  gap: var(--space-md);
+  padding-block-start: var(--space-md);
+  border-top: 1px solid var(--colour-border);
+}
+
+/* ─────────────────────────── review queue (UX-030) ─────────────
+ * One-at-a-time review chrome. Reuses .dz-detail-* primitives for
+ * the field list; only review-specific shell + progress + nav +
+ * action chrome lives here. */
+
+.dz-review-shell {
+  max-width: 56rem;  /* ~max-w-4xl */
+}
+
+.dz-review-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dz-review-progress-text {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-review-progress-bar {
+  inline-size: 6rem;
+  block-size: 0.25rem;
+  border-radius: var(--radius-xs);
+}
+
+.dz-review-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-block-end: var(--space-md);
+}
+
+.dz-review-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.dz-review-notes-wrap {
+  margin-block-end: var(--space-md);
+}
+
+.dz-review-notes-wrap[hidden] {
+  display: none;
+}
+
+.dz-review-notes-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-end: var(--space-xs);
+}
+
+.dz-review-notes-required {
+  display: inline;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  color: var(--colour-danger);
+  margin-inline-start: 0.25rem;
+}
+
+.dz-review-notes-textarea {
+  inline-size: 100%;
+  min-block-size: 6rem;
+  resize: vertical;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-review-notes-textarea::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-review-notes-textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+.dz-review-empty {
+  text-align: center;
+  padding-block: var(--space-2xl);
+}
+
+.dz-review-empty-icon {
+  font-size: 3rem;
+  margin-block-end: var(--space-sm);
+}
+
+.dz-review-empty-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: var(--space-xs);
+}
+
+.dz-review-empty-body {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+}

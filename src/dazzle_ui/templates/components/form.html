@@ -10,13 +10,16 @@
    outside scope, throwing 20+ ReferenceErrors per render. Moving the
    scope to the outer wrapper keeps validateStage's
    `$el.querySelectorAll("[data-dz-stage]")` working since stages stay
-   inside the wrapper. #}
-<div class="max-w-2xl"
+   inside the wrapper.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-form-* + .dz-button
+   primitives (components/fragments.css + components/button.css). #}
+<div class="dz-form-shell"
      {% if form.sections %}x-data="dzWizard({{ form.sections | length }})"{% endif %}>
   {# Header #}
   {% block form_header %}
-  <div class="flex items-center justify-between mb-6">
-    <h2 class="text-[20px] font-semibold text-[hsl(var(--foreground))]">{{ form.title }}</h2>
+  <div class="dz-form-header">
+    <h2 class="dz-form-title">{{ form.title }}</h2>
   </div>
   {% endblock form_header %}
 
@@ -35,7 +38,7 @@
         hx-target-5*="#form-errors"
         hx-headers='{"Content-Type": "application/json"}'
         hx-ext="json-enc"
-        class="space-y-4 htmx-request:opacity-60 htmx-request:pointer-events-none transition-opacity duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        class="dz-form-body">
 
     {# Form errors area (swapped by HTMX on validation failure) #}
     <div id="form-errors">
@@ -48,7 +51,7 @@
       {% for section in form.sections %}
       <div data-dz-stage="{{ loop.index0 }}"
            x-show="isCurrent({{ loop.index0 }})">
-        <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-3">{{ section.title }}</h3>
+        <h3 class="dz-form-section-title">{{ section.title }}</h3>
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
         {% endfor %}
@@ -64,39 +67,37 @@
     {# Actions — wizard nav or standard submit #}
     {% block form_actions %}
     {% if form.sections %}
-    <div class="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
+    <div class="dz-form-actions">
       <button type="button"
-              class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-button dz-button-ghost"
               x-show="step > 0" @click="prev()">
         Back
       </button>
       <button type="button"
-              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-button dz-button-primary"
               x-show="step < total - 1" @click="next()">
         Next
       </button>
       <button type="submit"
-              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-button dz-button-primary"
               x-show="step === total - 1"
               data-dazzle-action="{{ form.entity_name }}.save"
               data-loading-disable>
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
       </button>
-      <a href="{{ form.cancel_url }}"
-         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+      <a href="{{ form.cancel_url }}" class="dz-button dz-button-ghost">
         Cancel
       </a>
     </div>
     {% else %}
-    <div class="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
+    <div class="dz-form-actions">
       <button type="submit"
-              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-button dz-button-primary"
               data-dazzle-action="{{ form.entity_name }}.save"
               data-loading-disable>
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
       </button>
-      <a href="{{ form.cancel_url }}"
-         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+      <a href="{{ form.cancel_url }}" class="dz-button dz-button-ghost">
         Cancel
       </a>
     </div>

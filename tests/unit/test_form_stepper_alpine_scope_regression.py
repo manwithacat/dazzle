@@ -31,10 +31,14 @@ class TestFormStepperScope:
         """The dzWizard `x-data` must be on the outer wrapper div, NOT
         on the form element. The previous form-element-scoped binding
         left the stepper include (which sits before the form in
-        source order) outside the scope."""
+        source order) outside the scope.
+
+        v0.62 CSS refactor: the wrapper's `max-w-2xl` Tailwind class
+        moved to the semantic `.dz-form-shell` rule in
+        components/fragments.css. Assertion updated accordingly."""
         contents = self._read_form_template()
         # The outer div opens with the dzWizard binding
-        assert 'class="max-w-2xl"' in contents and 'x-data="dzWizard(' in contents, (
+        assert 'class="dz-form-shell"' in contents and 'x-data="dzWizard(' in contents, (
             "form.html missing dzWizard scope on the outer wrapper"
         )
 
