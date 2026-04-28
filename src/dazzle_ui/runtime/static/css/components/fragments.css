@@ -874,3 +874,224 @@
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
 }
+
+/* ─────────────────────────── experience_transition macro ────────
+ * Single source of truth for the 5 transition-button branches in
+ * experience/_content.html (#EX-053). Three style variants — primary,
+ * ghost, border (default) — keyed off `data-dz-transition-style`. */
+
+.dz-experience-transition {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding-inline: var(--space-md);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  border: 0;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
+}
+
+.dz-experience-transition[data-dz-transition-style="primary"] {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.dz-experience-transition[data-dz-transition-style="primary"]:hover {
+  filter: brightness(1.1);
+}
+
+.dz-experience-transition[data-dz-transition-style="ghost"] {
+  background: transparent;
+  color: var(--colour-text-muted);
+}
+
+.dz-experience-transition[data-dz-transition-style="ghost"]:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-experience-transition[data-dz-transition-style="default"],
+.dz-experience-transition:not([data-dz-transition-style]) {
+  background: transparent;
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+}
+
+.dz-experience-transition[data-dz-transition-style="default"]:hover,
+.dz-experience-transition:not([data-dz-transition-style]):hover {
+  background: var(--colour-bg);
+}
+
+/* ─────────────────────────── auth_page_wrapper macro ────────────
+ * Auth page card shell — centered max-w-sm card with product name,
+ * heading, optional error region, and form body. */
+
+.dz-auth-card {
+  width: 100%;
+  max-width: 24rem;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-lg);
+}
+
+.dz-auth-product {
+  display: block;
+  text-align: center;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-brand);
+  margin-block-end: var(--space-md);
+  text-decoration: none;
+}
+
+.dz-auth-product:hover {
+  text-decoration: underline;
+}
+
+.dz-auth-title {
+  text-align: center;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: var(--space-lg);
+}
+
+.dz-auth-error {
+  display: none;  /* gated by JS via classList.remove('hidden') */
+  flex-direction: row;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-block-end: var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-auth-error:not(.hidden) {
+  display: flex;
+}
+
+/* ─────────────────────────── a11y helpers ───────────────────────
+ * Loading spinner used as an HTMX indicator. Sized + animated host
+ * for the inline span. (.visually-hidden + sr-only-fallback already
+ * defined in utilities.css.) */
+
+.dz-loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-md);
+}
+
+.dz-loading-spinner-icon {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  animation: dz-spin 1s linear infinite;
+}
+
+/* Skip link — visually hidden by default, focusable via Tab. */
+.dz-skip-link {
+  position: absolute;
+  inset-block-start: -100vh;  /* off-screen by default */
+  inset-inline-start: 0;
+  padding: var(--space-sm);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-sm);
+  z-index: 9999;
+  text-decoration: none;
+  transition: top var(--duration-fast) var(--ease-out);
+}
+
+.dz-skip-link:focus,
+.dz-skip-link:focus-visible {
+  inset-block-start: 0.5rem;
+  inset-inline-start: 0.5rem;
+}
+
+/* ─────────────────────────── layouts/single_column ──────────────
+ * Top bar + main + footer layout used by simpler app shells. */
+
+.dz-layout-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dz-layout-topbar {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  background: var(--colour-surface);
+  border-block-end: 1px solid var(--colour-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.dz-layout-topbar-title {
+  flex: 1 1 0;
+}
+
+.dz-layout-topbar-title-text {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.dz-layout-topbar-nav {
+  display: flex;
+  gap: var(--space-sm);
+  flex: none;
+}
+
+.dz-layout-nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-layout-nav-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-layout-main {
+  flex: 1 1 0;
+  margin-inline: auto;
+  padding: var(--space-md);
+  max-width: 64rem;
+  width: 100%;
+}
+
+@media (min-width: 64rem) {
+  .dz-layout-main {
+    padding: var(--space-lg);
+  }
+}
+
+.dz-layout-footer {
+  text-align: center;
+  padding: var(--space-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border-block-start: 1px solid var(--colour-border);
+}

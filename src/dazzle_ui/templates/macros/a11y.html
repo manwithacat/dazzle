@@ -1,18 +1,18 @@
-{# macros/a11y.html — reusable accessibility helpers #}
+{# macros/a11y.html — reusable accessibility helpers.
+
+   v0.62 CSS refactor: sr-only renamed to .visually-hidden (defined
+   in utilities.css); skip_link styled via .dz-skip-link in
+   components/fragments.css; loading_spinner uses .dz-loading-spinner
+   wrapper + .dz-loading-spinner-icon. #}
 
 {# Screen-reader-only text #}
 {% macro sr_only(text) %}
-<span class="sr-only">{{ text }}</span>
+<span class="visually-hidden">{{ text }}</span>
 {% endmacro %}
 
 {# Visually hidden but focusable skip link #}
 {% macro skip_link(target="#main-content", text="Skip to main content") %}
-<a href="{{ target }}"
-   class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2
-          focus:z-[9999] focus:p-3 focus:bg-primary focus:text-primary-content
-          focus:rounded focus:shadow-lg focus:text-[13px] focus:font-semibold">
-  {{ text }}
-</a>
+<a href="{{ target }}" class="dz-skip-link">{{ text }}</a>
 {% endmacro %}
 
 {# Icon with accessible label — decorative by default #}
@@ -27,9 +27,9 @@
 {# Loading spinner with live announcement #}
 {% macro loading_spinner(label="Loading", id=None) %}
 <div {% if id %}id="{{ id }}"{% endif %}
-     class="htmx-indicator flex justify-center py-4"
+     class="htmx-indicator dz-loading-spinner"
      role="status" aria-label="{{ label }}">
-  <span class="w-5 h-5 animate-spin loading-md" aria-hidden="true"></span>
-  <span class="sr-only">{{ label }}</span>
+  <span class="dz-loading-spinner-icon" aria-hidden="true"></span>
+  <span class="visually-hidden">{{ label }}</span>
 </div>
 {% endmacro %}

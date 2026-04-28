@@ -1,15 +1,20 @@
 {% extends "base.html" %}
 
+{# v0.62 CSS refactor: inline Tailwind → semantic .dz-layout-* classes
+   (components/fragments.css). Top bar + main content + footer shell;
+   centered max-w container at 64rem with responsive padding bump
+   at lg+. #}
+
 {% block body %}
-<div class="min-h-screen flex flex-col">
+<div class="dz-layout-shell">
   {# Top bar #}
-  <div class="flex items-center px-4 py-2 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm">
-    <div class="flex-1">
-      <span class="text-lg font-semibold">{{ app_name | default("Dazzle") }}</span>
+  <div class="dz-layout-topbar">
+    <div class="dz-layout-topbar-title">
+      <span class="dz-layout-topbar-title-text">{{ app_name | default("Dazzle") }}</span>
     </div>
-    <div class="flex-none gap-2">
+    <div class="dz-layout-topbar-nav">
       {% for nav_item in nav_items | default([]) %}
-      <a href="{{ nav_item.route }}" class="inline-flex items-center h-8 px-3 rounded-[4px] text-[hsl(var(--muted-foreground))] text-[13px] font-medium hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms]"
+      <a href="{{ nav_item.route }}" class="dz-layout-nav-link"
          hx-get="{{ nav_item.route }}"
          hx-target="#main-content"
          hx-swap="morph:innerHTML transition:true"
@@ -23,12 +28,12 @@
   </div>
 
   {# Page content #}
-  <main id="main-content" class="flex-1 container mx-auto p-4 lg:p-6 max-w-5xl" tabindex="-1">
+  <main id="main-content" class="dz-layout-main" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
 
   {# Footer #}
-  <footer class="footer footer-center p-4 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))]">
+  <footer class="dz-layout-footer">
     <p>Powered by {{ app_name | default("Dazzle") }}</p>
   </footer>
 </div>

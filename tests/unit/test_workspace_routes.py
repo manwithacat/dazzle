@@ -7293,6 +7293,9 @@ class TestExperienceShellComposition:
 
     # Gate 14 — transition buttons resolve 3 styles, rendered via hx-post (cycle 292: EX-053 fix)
     def test_transition_buttons_three_styles(self) -> None:
+        """v0.62 CSS refactor: 3-style branch (primary/ghost/default)
+        moved from inline Tailwind ternary to attribute selectors on
+        `.dz-experience-transition[data-dz-transition-style="..."]`."""
         exp = self._make_experience(
             page_context=None,
             transitions=[
@@ -7302,14 +7305,12 @@ class TestExperienceShellComposition:
             ],
         )
         html = self._render(exp)
-        # primary style uses --primary token
-        assert "bg-[hsl(var(--primary))]" in html
+        # 3 buttons emit the 3 distinct style attribute values
+        assert 'data-dz-transition-style="primary"' in html
         assert "Continue" in html
-        # ghost style uses --muted-foreground at rest
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        assert 'data-dz-transition-style="ghost"' in html
         assert "Back" in html
-        # default style uses --border
-        assert "border-[hsl(var(--border))]" in html
+        assert 'data-dz-transition-style="default"' in html
         assert "Skip" in html
         # Cycle 292 EX-053 fix: transitions MUST use hx-post (not plain <form method="post">)
         # so that base.html's htmx:configRequest listener injects the CSRF header
@@ -7489,6 +7490,10 @@ class TestExperienceTransitionMacro:
         assert '<form method="post"' not in html
 
     def test_macro_three_styles_render_distinct_class_sets(self) -> None:
+        """v0.62 CSS refactor: 3 styles emit 3 distinct
+        `data-dz-transition-style` attribute values; CSS rules in
+        components/fragments.css resolve each to the right tokens
+        (brand fill, ghost muted, bordered default)."""
         html = self._render_with_transitions(
             [
                 {"event": "a", "label": "A", "style": "primary", "url": "/a"},
@@ -7496,13 +7501,30 @@ class TestExperienceTransitionMacro:
                 {"event": "c", "label": "C", "style": "default", "url": "/c"},
             ]
         )
-        # Primary: --primary bg + --primary-foreground text
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "hover:brightness-110" in html
-        # Ghost: muted-foreground at rest
-        assert "text-[hsl(var(--muted-foreground))]" in html
-        # Default (bordered)
-        assert "border-[hsl(var(--border))]" in html
+        # 3 distinct attribute values
+        assert 'data-dz-transition-style="primary"' in html
+        assert 'data-dz-transition-style="ghost"' in html
+        assert 'data-dz-transition-style="default"' in html
         # All three URLs rendered
         for url in ("/a", "/b", "/c"):
             assert f'hx-post="{url}"' in html
+
+        # CSS rules carry the right tokens per style
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        primary_block = css.split('.dz-experience-transition[data-dz-transition-style="primary"]')[
+            1
+        ].split("}")[0]
+        assert "background: var(--colour-brand)" in primary_block
+        ghost_block = css.split('.dz-experience-transition[data-dz-transition-style="ghost"]')[
+            1
+        ].split("}")[0]
+        assert "color: var(--colour-text-muted)" in ghost_block
+        default_block = css.split('.dz-experience-transition[data-dz-transition-style="default"]')[
+            1
+        ].split("}")[0]
+        assert "border: 1px solid var(--colour-border)" in default_block
