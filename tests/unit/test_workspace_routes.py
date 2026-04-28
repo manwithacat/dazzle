@@ -1192,7 +1192,7 @@ class TestDetailRegionTemplate:
         return defaults
 
     def test_renders_canonical_wrapper_and_grid(self) -> None:
-        """Gates 1 + 2: dz-detail-region + dz-detail-grid <dl>."""
+        """Gates 1 + 2: dz-detail-region + dz-detail-region-grid <dl>."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1204,7 +1204,7 @@ class TestDetailRegionTemplate:
             ),
         )
         assert "dz-detail-region" in html
-        assert "dz-detail-grid" in html
+        assert "dz-detail-region-grid" in html
         assert "<dl" in html
 
     def test_dt_dd_pair_count_matches_columns(self) -> None:
@@ -1223,8 +1223,8 @@ class TestDetailRegionTemplate:
         assert html.count("<dt") == 3
         assert html.count("<dd") == 3
 
-    def test_labels_use_muted_foreground_token(self) -> None:
-        """Gate 4: <dt> class references --muted-foreground token, no hardcoded HSL."""
+    def test_labels_use_semantic_class(self) -> None:
+        """Gate 4: <dt> emits .dz-detail-label semantic class (colour token in CSS)."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1232,17 +1232,18 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "name", "label": "Name", "type": "text"}],
             ),
         )
-        # dt label uses the token
-        assert "hsl(var(--muted-foreground))" in html
-        # No digit-starting HSL literals inside class attributes
         import re
 
         dt_match = re.search(r"<dt[^>]*class=\"([^\"]+)\"", html)
         assert dt_match is not None
-        assert "hsl(" not in dt_match.group(1) or "var(--" in dt_match.group(1)
+        classes = dt_match.group(1)
+        assert "dz-detail-label" in classes
+        # No inline arbitrary-value Tailwind escape hatches
+        assert "hsl(" not in classes
+        assert "text-[" not in classes
 
-    def test_values_use_foreground_token(self) -> None:
-        """Gate 5: <dd> class references --foreground token."""
+    def test_values_use_semantic_class(self) -> None:
+        """Gate 5: <dd> emits .dz-detail-value semantic class."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1250,7 +1251,14 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "name", "label": "Name", "type": "text"}],
             ),
         )
-        assert "hsl(var(--foreground))" in html
+        import re
+
+        dd_match = re.search(r"<dd[^>]*class=\"([^\"]+)\"", html)
+        assert dd_match is not None
+        classes = dd_match.group(1)
+        assert "dz-detail-value" in classes
+        assert "hsl(" not in classes
+        assert "text-[" not in classes
 
     def test_badge_column_delegates_to_status_badge_macro(self) -> None:
         """Gate 6: type=badge invokes render_status_badge, producing dz-badge."""

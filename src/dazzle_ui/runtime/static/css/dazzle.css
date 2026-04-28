@@ -30,6 +30,8 @@
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);
 @import url("components/badge.css") layer(components);
+@import url("components/button.css") layer(components);
+@import url("components/detail.css") layer(components);
 @import url("components/form.css") layer(components);
 @import url("components/htmx-states.css") layer(components);
 
