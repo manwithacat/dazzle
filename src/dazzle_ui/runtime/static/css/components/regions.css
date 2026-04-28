@@ -1443,3 +1443,340 @@ a.dz-action-card:hover {
   opacity: 0.5;
   margin-block-start: var(--space-sm);
 }
+
+/* ─────────────────────────── histogram region ───────────────────
+ * Server-rendered SVG histogram. Bar fill, axis line, and reference
+ * lines all use design tokens via their own SVG attributes; this
+ * file owns only the host shape + summary footer. */
+
+.dz-histogram-svg {
+  width: 100%;
+  height: auto;
+}
+
+.dz-histogram-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
+
+/* ─────────────────────────── queue region ───────────────────────
+ * Review queue: count chip + metrics row + filter bar + rows with
+ * inline transition buttons. Each row has plain padding (no full
+ * border — dashboard slot owns chrome) and a hover tint when no
+ * attention accent is present. */
+
+.dz-queue-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-block-end: var(--space-sm);
+}
+
+.dz-queue-count {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-sm);
+  height: 1.25rem;
+  border-radius: var(--radius-xs, 0.1875rem);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.dz-queue-metrics {
+  display: flex;
+  gap: var(--space-md);
+  margin-block-end: var(--space-md);
+}
+
+.dz-queue-metric {
+  flex: 1 1 0;
+  text-align: center;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+  border: 1px solid var(--colour-border);
+}
+
+.dz-queue-metric-value {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-queue-metric-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-queue-filter-select {
+  height: 1.75rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+.dz-queue-filter-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-queue-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dz-queue-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+/* Hover tint only when no attention accent — attention accents
+ * carry their own tint via attention_classes macro. */
+.dz-queue-row:not([data-dz-attn]):hover {
+  background: var(--colour-bg);
+}
+
+.dz-queue-row-main {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dz-queue-row-main.is-clickable {
+  cursor: pointer;
+}
+
+.dz-queue-row-headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dz-queue-row-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-queue-row-attn {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-queue-row-date {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-queue-row-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.dz-queue-action {
+  height: 1.75rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: transparent;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-queue-action:hover {
+  background: var(--colour-bg);
+}
+
+.dz-queue-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-queue-empty {
+  text-align: center;
+  padding-block: var(--space-md);
+}
+
+/* ─────────────────────────── list region ────────────────────────
+ * Data table inside a region card. Has its own actions row (region
+ * actions + CSV export), filter bar, and table. Row attention tint
+ * via .is-clickable + attention_classes macro (unchanged). */
+
+.dz-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-block-end: var(--space-md);
+}
+
+.dz-list-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dz-list-action-button {
+  height: 1.75rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--radius-sm);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.dz-list-action-button:hover {
+  filter: brightness(1.1);
+}
+
+.dz-list-csv-button {
+  height: 1.75rem;
+  width: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-list-csv-button:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-list-csv-button > svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dz-list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-list-filter-select {
+  height: 1.75rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+.dz-list-filter-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-list-scroll {
+  overflow-x: auto;
+}
+
+.dz-list-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dz-list-table > thead > tr {
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-list-table th {
+  text-align: start;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  letter-spacing: -0.01em;
+}
+
+.dz-list-table > tbody > tr {
+  border-block-end: 1px solid var(--colour-border);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-list-table > tbody > tr:last-child {
+  border-block-end: 0;
+}
+
+.dz-list-row.is-clickable {
+  cursor: pointer;
+}
+
+.dz-list-row.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-list-table td {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+}
+
+.dz-list-sort-link {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  text-decoration: none;
+  color: inherit;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-list-sort-link:hover {
+  color: var(--colour-text);
+}
+
+.dz-list-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}

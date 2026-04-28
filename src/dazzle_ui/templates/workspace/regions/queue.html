@@ -1,6 +1,11 @@
-{# Queue display mode — review queue with inline transition actions #}
-{# UX-035 adopter #5 (after grid, list, kanban, tabbed_list).
-   Contract: ~/.claude/skills/ux-architect/components/queue-region.md (UX-068) #}
+{# Queue display mode — review queue with inline transition actions
+   UX-035 adopter #5 (after grid, list, kanban, tabbed_list).
+   Contract: ~/.claude/skills/ux-architect/components/queue-region.md (UX-068)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-queue-* classes
+   (components/regions.css). Row attention accent still flows through the
+   unchanged attention_classes macro; row hover-tint applies only when no
+   attention attribute is present, gated via `.dz-queue-row:not([data-dz-attn])`. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/attention_accent.html' import attention_classes %}
@@ -9,18 +14,18 @@
   {# Count badge row — dashboard slot owns the title (#794 second
      follow-up), we just surface the total item count here. #}
   {% if total > 0 %}
-  <div class="flex items-center justify-end mb-2">
-    <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">{{ total }}</span>
+  <div class="dz-queue-count-row">
+    <span class="dz-queue-count">{{ total }}</span>
   </div>
   {% endif %}
 
   {# Metrics summary #}
   {% if metrics %}
-  <div class="dz-queue-metrics flex gap-3 mb-3">
+  <div class="dz-queue-metrics">
     {% for metric in metrics %}
-    <div class="p-2 rounded-[4px] bg-[hsl(var(--muted)/0.4)] border border-[hsl(var(--border))] flex-1 text-center">
-      <div class="text-[16px] font-semibold text-[hsl(var(--foreground))]">{{ metric.value }}</div>
-      <div class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ metric.label }}</div>
+    <div class="dz-queue-metric">
+      <div class="dz-queue-metric-value">{{ metric.value }}</div>
+      <div class="dz-queue-metric-label">{{ metric.label }}</div>
     </div>
     {% endfor %}
   </div>
@@ -28,9 +33,9 @@
 
   {# Filter bar #}
   {% if filter_columns %}
-  <div class="dz-queue-filters flex flex-wrap gap-2 mb-2 filter-bar">
+  <div class="dz-queue-filters filter-bar">
     {% for fc in filter_columns %}
-    <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+    <select class="dz-queue-filter-select"
             hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
             hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
       <option value="">All {{ fc.label }}</option>
@@ -44,24 +49,24 @@
 
   {# Queue items #}
   {% if items %}
-  <div class="space-y-2">
+  <div class="dz-queue-rows">
     {% for item in items %}
     {% set attn = item.get("_attention") if item.get is defined else none %}
     {# Queue row — plain pad only, no full border. Dashboard slot owns
        card chrome; full border here reads as a card-in-card (issue
        #794 second follow-up). Attention states keep their left-border
        accent since side borders are accents, not chrome. #}
-    <div class="dz-queue-row flex items-center gap-3 p-3 rounded-[4px] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-      {% if attn %}{{ attention_classes(attn, 'both') }}{% else %}hover:bg-[hsl(var(--muted)/0.4)]{% endif %}">
+    <div class="dz-queue-row {% if attn %}{{ attention_classes(attn, 'both') }}{% endif %}"
+         {% if attn %}data-dz-attn="{{ attn.level }}"{% endif %}>
 
       {# Main content — clickable to navigate to detail #}
-      <div class="flex-1 min-w-0 {% if action_url %}cursor-pointer{% endif %}"
+      <div class="dz-queue-row-main {% if action_url %}is-clickable{% endif %}"
            {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
            hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-        <div class="flex items-center gap-2">
+        <div class="dz-queue-row-headline">
           {% set _display = item[display_key ~ "_display"] %}
           {% set _primary = item[display_key] %}
-          <span class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate">{% if _display is not none %}{{ _display }}{% elif _primary is not none %}{{ _primary }}{% else %}{{ item.id }}{% endif %}</span>
+          <span class="dz-queue-row-title">{% if _display is not none %}{{ _display }}{% elif _primary is not none %}{{ _primary }}{% else %}{{ item.id }}{% endif %}</span>
           {% for col in columns %}
             {% if col.type == "badge" and col.key != display_key %}
               {{ render_status_badge(value=item[col.key]) }}
@@ -69,23 +74,23 @@
           {% endfor %}
         </div>
         {% if attn %}
-        <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-0.5">{{ attn.message }}</p>
+        <p class="dz-queue-row-attn">{{ attn.message }}</p>
         {% endif %}
         {# Date columns as secondary info #}
         {% for col in columns %}
           {% if col.type == "date" and item[col.key] %}
-          <span class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ col.label }}: {{ item[col.key] | timeago }}</span>
+          <span class="dz-queue-row-date">{{ col.label }}: {{ item[col.key] | timeago }}</span>
           {% endif %}
         {% endfor %}
       </div>
 
       {# Inline transition action buttons — outlined neutral #}
       {% if queue_transitions %}
-      <div class="flex gap-1 flex-shrink-0" onclick="event.stopPropagation()">
+      <div class="dz-queue-row-actions" onclick="event.stopPropagation()">
         {% for tr in queue_transitions %}
         {% if item.get(queue_status_field) != tr.to_state %}
         <button type="button"
-                class="h-7 px-2.5 rounded-[4px] border border-[hsl(var(--border))] text-[11px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] inline-flex items-center"
+                class="dz-queue-action"
                 hx-put="{{ queue_api_endpoint }}/{{ item.id }}"
                 hx-vals='{"{{ queue_status_field }}": "{{ tr.to_state }}"}'
                 hx-ext="json-enc"
@@ -101,10 +106,10 @@
     {% endfor %}
   </div>
   {% if total > items | length %}
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items | length }} of {{ total }}</p>
+  <p class="dz-queue-overflow">Showing {{ items | length }} of {{ total }}</p>
   {% endif %}
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))] py-4 text-center" role="status">{{ empty_message | default("Queue is empty.") }}</p>
+  <p class="dz-empty-dense dz-queue-empty" role="status">{{ empty_message | default("Queue is empty.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

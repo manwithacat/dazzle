@@ -10,7 +10,11 @@
    etc.
 
    Card safety: region emits zero chrome + zero title. The dashboard
-   slot owns both via region_card. #}
+   slot owns both via region_card.
+
+   v0.62 CSS refactor: SVG fill/stroke tokens stay inline (per-element
+   shape colour); host wrapper sized via .dz-histogram-svg + summary
+   line uses .dz-histogram-summary (components/regions.css). #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-histogram-region">
@@ -36,7 +40,7 @@
     {% set plot_h = h - pt - pb %}
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 {{ w }} {{ h }}"
-         class="dz-histogram-svg w-full h-auto"
+         class="dz-histogram-svg"
          role="img"
          aria-label="{{ title }} histogram — {{ count }} bins, {{ total }} samples, peak {{ max_count }}">
       {# Baseline at the bottom of the plot area. #}
@@ -93,11 +97,11 @@
       {% endfor %}
     </svg>
 
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-histogram-summary">
       {{ count }} bins · {{ total }} samples · peak {{ max_count }}
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

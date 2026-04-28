@@ -2518,7 +2518,11 @@ class TestQueueRegionTemplate:
         assert "dz-queue-region" in html
 
     def test_count_badge_when_total_nonzero(self) -> None:
-        """Gate 2: total > 0 → count badge with primary token."""
+        """Gate 2: total > 0 → count badge styled with brand fill.
+
+        v0.62 CSS refactor: brand background lives on the
+        .dz-queue-count CSS rule rather than inline
+        `bg-[hsl(var(--primary))]` Tailwind."""
         with_count = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2527,7 +2531,16 @@ class TestQueueRegionTemplate:
             ),
         )
         assert ">42<" in with_count
-        assert "bg-[hsl(var(--primary))]" in with_count
+        assert "dz-queue-count" in with_count
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        count_block = css.split(".dz-queue-count {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in count_block
 
     def test_metrics_strip_when_metrics_present(self) -> None:
         """Gate 3: metrics → dz-queue-metrics with one tile per metric."""
@@ -2570,7 +2583,12 @@ class TestQueueRegionTemplate:
         assert 'name="filter_status"' in html
 
     def test_row_count_matches_items_length(self) -> None:
-        """Gate 5: dz-queue-row count equals len(items)."""
+        """Gate 5: dz-queue-row count equals len(items).
+
+        v0.62 CSS refactor: the substring `dz-queue-row` also matches
+        sub-elements (.dz-queue-row-main, .dz-queue-row-headline,
+        .dz-queue-row-title, etc.). Count the leading
+        `class="dz-queue-row ` opener instead."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2582,7 +2600,7 @@ class TestQueueRegionTemplate:
                 total=3,
             ),
         )
-        assert html.count("dz-queue-row") == 3
+        assert html.count('class="dz-queue-row ') == 3
 
     def test_attention_critical_dual_signal(self) -> None:
         """Gate 6 (critical): border + tint use --destructive."""
@@ -2985,7 +3003,10 @@ class TestListRegionTemplate:
         assert "▼" in desc
 
     def test_row_drill_down_when_action_url_set(self) -> None:
-        """Gate 10: rows have hx-get iff action_url is non-empty."""
+        """Gate 10: rows have hx-get + .is-clickable iff action_url is non-empty.
+
+        v0.62 CSS refactor: cursor + hover live on the .is-clickable
+        modifier (.dz-list-row.is-clickable rule)."""
         with_action = render_fragment(
             "workspace/regions/list.html",
             **self._list_kwargs(
@@ -2996,7 +3017,7 @@ class TestListRegionTemplate:
         )
         assert 'hx-get="/app/item/abc"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/list.html",
