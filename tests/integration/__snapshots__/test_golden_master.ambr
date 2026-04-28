@@ -1463,6 +1463,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'width': None,
           }),
           dict({
             'action': None,
@@ -1531,6 +1532,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'width': None,
           }),
           dict({
             'action': None,
@@ -1599,6 +1601,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'width': None,
           }),
         ]),
         'source': None,

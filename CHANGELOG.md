@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.84] - 2026-04-28
+
+### Fixed
+- **`tests/integration/__snapshots__/test_golden_master.ambr`** — refresh
+  the golden-master IR snapshot to include the new `width: None` key on
+  `WorkspaceRegion`. The v0.61.83 ship of #914 added the optional field
+  to the IR but didn't refresh the snapshot; CI on v0.61.83 caught it
+  via `test_simple_dsl_to_ir_snapshot`. Snapshot diff is the new
+  `width` key only — no other shape change.
+
 ## [0.61.83] - 2026-04-28
 
 ### Added
