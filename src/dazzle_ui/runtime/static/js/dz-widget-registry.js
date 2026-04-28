@@ -10,7 +10,9 @@
 (function () {
   var bridge = window.dz && window.dz.bridge;
   if (!bridge) {
-    console.warn("[dz-widget-registry] Bridge not found — skipping widget registration");
+    console.warn(
+      "[dz-widget-registry] Bridge not found — skipping widget registration",
+    );
     return;
   }
 
@@ -35,6 +37,50 @@
 
   bridge.registerWidget("combobox", {
     mount: function (el, options) {
+      // #927: when the combobox is bound to an FK (data-dz-ref-api set
+      // on the <select>), wire TomSelect's remote-load callback so it
+      // fetches options from the target entity's list endpoint at first
+      // open + on every type-to-search query. Without this branch the
+      // <select> stays empty (it has no static <option>s — the form
+      // template intentionally leaves them out so this code path
+      // populates them) and TomSelect renders a useless empty dropdown.
+      var refApi = el.getAttribute("data-dz-ref-api");
+      if (refApi) {
+        var fkOptions = Object.assign(
+          {
+            maxItems: 1,
+            valueField: "id",
+            labelField: "__display__",
+            searchField: ["__display__"],
+            load: function (query, callback) {
+              var url =
+                refApi +
+                (refApi.indexOf("?") >= 0 ? "&" : "?") +
+                "page_size=100";
+              fetch(url, { headers: { Accept: "application/json" } })
+                .then(function (r) {
+                  return r.json();
+                })
+                .then(function (data) {
+                  var items = (data && data.items) || [];
+                  // Defensive fallback for entities without display_field —
+                  // TomSelect would render `undefined` otherwise.
+                  items.forEach(function (it) {
+                    if (it.__display__ == null)
+                      it.__display__ = it.name || it.id || "";
+                  });
+                  callback(items);
+                })
+                .catch(function () {
+                  callback();
+                });
+            },
+            preload: "focus",
+          },
+          options,
+        );
+        return mountTomSelect(el, fkOptions);
+      }
       return mountTomSelect(el, Object.assign({ maxItems: 1 }, options));
     },
     unmount: unmountTomSelect,
@@ -42,18 +88,27 @@
 
   bridge.registerWidget("multiselect", {
     mount: function (el, options) {
-      return mountTomSelect(el, Object.assign({ plugins: ["remove_button"] }, options));
+      return mountTomSelect(
+        el,
+        Object.assign({ plugins: ["remove_button"] }, options),
+      );
     },
     unmount: unmountTomSelect,
   });
 
   bridge.registerWidget("tags", {
     mount: function (el, options) {
-      return mountTomSelect(el, Object.assign({
-        plugins: ["remove_button"],
-        create: true,
-        createFilter: options.createFilter || null,
-      }, options));
+      return mountTomSelect(
+        el,
+        Object.assign(
+          {
+            plugins: ["remove_button"],
+            create: true,
+            createFilter: options.createFilter || null,
+          },
+          options,
+        ),
+      );
     },
     unmount: unmountTomSelect,
   });
@@ -140,7 +195,8 @@
     mount: function (el, options) {
       if (typeof Quill === "undefined") return null;
       var editorDiv = el.querySelector("[data-dz-editor]") || el;
-      var hiddenInput = el.querySelector("input[type=hidden]") || el.querySelector("textarea");
+      var hiddenInput =
+        el.querySelector("input[type=hidden]") || el.querySelector("textarea");
       var defaults = {
         theme: "snow",
         placeholder: options.placeholder || "Write something...",
@@ -180,7 +236,9 @@
       var input = el.querySelector("input[type=range]");
       var tooltip = el.querySelector("[data-dz-range-value]");
       if (!input || !tooltip) return null;
-      var update = function () { tooltip.textContent = input.value; };
+      var update = function () {
+        tooltip.textContent = input.value;
+      };
       input.addEventListener("input", update);
       update();
       return { input: input, handler: update };

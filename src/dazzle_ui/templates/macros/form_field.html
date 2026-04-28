@@ -51,6 +51,42 @@
     <p id="{{ error_id }}" class="dz-form-error" role="alert">{{ error }}</p>
     {% endif %}
 
+  {% elif field.ref_entity and field.widget == "combobox" %}
+    {# Entity-ref + combobox: TomSelect with remote load (#927).
+       The combobox widget needs a populated <select> at mount time;
+       Alpine's async x-for would populate options AFTER TomSelect had
+       already wrapped an empty select, leaving zero items. So instead
+       we hand the FK API URL to TomSelect via data-dz-ref-api and let
+       its built-in `load` callback fetch + render options. #}
+    <label for="field-{{ field.name }}" class="dz-form-label">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="dz-form-required" aria-hidden="true">*</span>
+        <span class="visually-hidden">(required)</span>
+      {% endif %}
+    </label>
+    {% if field.help is defined and field.help %}
+    <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
+    {% endif %}
+    <select id="field-{{ field.name }}" name="{{ field.name }}"
+            data-dazzle-field="{{ field.name }}"
+            data-dz-widget="combobox"
+            data-dz-ref-entity="{{ field.ref_entity }}"
+            data-dz-ref-api="{{ field.ref_api }}"
+            data-dz-options='{}'
+            class="dz-form-input"
+            {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+            {% if field.required %}required aria-required="true"{% endif %}
+            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+      {# Optional pre-selected value — TomSelect's load callback fills the rest. #}
+      {% if values.get(field.name) %}
+      <option value="{{ values.get(field.name) }}" selected>{{ values.get(field.name) }}</option>
+      {% endif %}
+    </select>
+    {% if errors.get(field.name) %}
+    <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+    {% endif %}
+
   {% elif field.ref_entity %}
     {# Entity-ref auto-wiring (cycle 236 — closes EX-044).
        When a DSL field is a plain `ref Entity` with no explicit `source:`

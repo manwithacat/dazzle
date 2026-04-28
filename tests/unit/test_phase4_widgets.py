@@ -84,6 +84,56 @@ class TestWidgetCSS:
         assert ".ql-container" in content or ".ql-toolbar" in content, "Missing Quill overrides"
 
 
+class TestComboboxFkRemoteLoad:
+    """#927: combobox widget binding for FK fields must use TomSelect's
+    `load` callback to fetch options from data-dz-ref-api at first
+    open + on every search query. Without this, the <select> stays
+    empty and TomSelect renders a useless dropdown."""
+
+    def _load_registry(self):
+        return (STATIC_DIR / "js" / "dz-widget-registry.js").read_text()
+
+    def test_combobox_branches_on_data_dz_ref_api(self):
+        source = self._load_registry()
+        assert 'el.getAttribute("data-dz-ref-api")' in source
+
+    def test_remote_load_hits_target_list_endpoint(self):
+        source = self._load_registry()
+        # Find the combobox registration block.
+        idx = source.index('bridge.registerWidget("combobox"')
+        block = source[idx : idx + 2500]
+        assert "load: function" in block
+        assert "fetch(url" in block
+
+    def test_remote_load_uses_display_value_field_mapping(self):
+        """TomSelect's valueField/labelField/searchField must reflect
+        Dazzle's API contract: id is the value, __display__ is the label
+        (server now injects __display__ on every list row — see #928)."""
+        source = self._load_registry()
+        idx = source.index('bridge.registerWidget("combobox"')
+        block = source[idx : idx + 2500]
+        assert 'valueField: "id"' in block
+        assert 'labelField: "__display__"' in block
+        assert 'searchField: ["__display__"]' in block
+
+    def test_remote_load_appends_page_size_query(self):
+        """The fetch URL must include a page_size param so the dropdown
+        doesn't truncate at the API's default page size."""
+        source = self._load_registry()
+        idx = source.index('bridge.registerWidget("combobox"')
+        block = source[idx : idx + 2500]
+        assert "page_size=100" in block
+
+    def test_static_options_path_unaffected(self):
+        """When data-dz-ref-api is absent, the existing static-options
+        path must still call mountTomSelect with maxItems: 1."""
+        source = self._load_registry()
+        idx = source.index('bridge.registerWidget("combobox"')
+        block = source[idx : idx + 2500]
+        # The fallback mountTomSelect call (no ref API) is still present.
+        assert "mountTomSelect(el, Object.assign({ maxItems: 1 }, options))" in block
+
+
 # ── Form field widget rendering ──────────────────────────────────────────
 
 
@@ -102,6 +152,8 @@ class _FakeField:
         self.default = kwargs.get("default")
         self.options = kwargs.get("options", [])
         self.source = kwargs.get("source")
+        self.ref_entity = kwargs.get("ref_entity")
+        self.ref_api = kwargs.get("ref_api")
         self.extra = kwargs.get("extra", {})
 
 
@@ -184,6 +236,41 @@ class TestFormFieldWidgets:
         html = self._render(jinja_env, field)
         assert 'type="text"' in html
         assert "data-dz-widget" not in html
+
+    def test_ref_entity_combobox_emits_widget_attr_and_ref_api(self, jinja_env):
+        """#927: an FK field with widget=combobox must render as a
+        TomSelect-bound select with the ref-api hook so the widget
+        registry's combobox handler can wire the remote-load callback."""
+        field = _FakeField(
+            "matched_mark_scheme",
+            "Mark scheme",
+            "ref",
+            widget="combobox",
+            ref_entity="MarkScheme",
+            ref_api="/api/markscheme/",
+        )
+        html = self._render(jinja_env, field)
+        assert 'data-dz-widget="combobox"' in html
+        assert 'data-dz-ref-api="/api/markscheme/"' in html
+        assert 'data-dz-ref-entity="MarkScheme"' in html
+        # No Alpine x-for fallback — TomSelect's load callback owns option population.
+        assert "x-for=" not in html
+
+    def test_ref_entity_without_combobox_keeps_alpine_fallback(self, jinja_env):
+        """When widget is NOT combobox, the existing Alpine fetch path
+        must still render — don't accidentally route everything to the
+        combobox branch."""
+        field = _FakeField(
+            "owner",
+            "Owner",
+            "ref",
+            ref_entity="User",
+            ref_api="/api/user/",
+        )
+        html = self._render(jinja_env, field)
+        # Alpine x-for renders options reactively for the non-combobox path
+        assert "x-for=" in html
+        assert 'data-dz-widget="combobox"' not in html
 
 
 class TestFieldHelpRendering:

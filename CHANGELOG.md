@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.97] - 2026-04-28
+
+### Fixed
+- **`templates/macros/form_field.html` + `static/js/dz-widget-registry.js`** —
+  closes #927. Branch-precedence bug: `field.ref_entity` matched before
+  `field.widget == "combobox"` in `form_field.html`, so FK fields with
+  `widget=combobox` always rendered as the auto-wired Alpine select
+  rather than a TomSelect-bound combobox. Restoring the combobox path
+  also exposed a deeper issue — the existing combobox branch reads
+  static `field.options`, not an FK API. Added a dedicated
+  `field.ref_entity AND widget == "combobox"` branch above the plain
+  ref_entity branch that emits a TomSelect-friendly `<select>` with
+  `data-dz-widget="combobox"` + `data-dz-ref-api`. Extended the
+  combobox widget registration to detect `data-dz-ref-api` and wire
+  TomSelect's `load` callback to fetch from the target entity's list
+  endpoint, with `valueField: "id"`, `labelField: "__display__"`,
+  `searchField: ["__display__"]` (relies on the `__display__`
+  injection from #928). Static-options combobox path is unaffected —
+  the new branch only activates when both `data-dz-ref-api` and
+  `data-dz-widget="combobox"` are present. Regression tests in
+  `tests/unit/test_phase4_widgets.py::TestComboboxFkRemoteLoad` pin
+  the registry behaviour and `TestFormFieldWidgets` pins the template
+  branching (combobox path emits widget+refApi, plain ref_entity path
+  keeps Alpine x-for fallback).
+
+### Agent Guidance
+- FK-bound `widget=combobox` selects use TomSelect's remote-load
+  pattern, not Alpine's x-for. When adding new widget bindings that
+  need async option population, prefer TomSelect's `load` callback
+  over Alpine reactivity — TomSelect wraps the select once at mount
+  and ignores later DOM mutations.
+
 ## [0.61.96] - 2026-04-28
 
 ### Fixed
