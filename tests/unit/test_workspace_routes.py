@@ -7339,10 +7339,11 @@ class TestExperienceShellComposition:
 
     # Gate 6 — completed/current steps use --primary, pending use --muted
     def test_step_coloring_uses_correct_tokens(self) -> None:
-        """v0.62 CSS refactor: per-step tone moved from inline class
-        ternary to `.is-completed` / `.is-current` modifier classes on
-        the <li>; CSS rules in components/fragments.css resolve the
-        bullet + label colour for each state."""
+        """v0.62 CSS refactor: experience stepper reuses the existing
+        .dz-steps* family from fragments/steps_indicator.html. `.is-completed`
+        applies to the .dz-steps-circle / .dz-steps-label children for
+        BOTH completed and current steps so they share the brand fill
+        (matches the steps_indicator position-based convention)."""
         exp = self._make_experience(
             steps=[
                 {"name": "step_one", "title": "One", "is_completed": True},
@@ -7352,9 +7353,10 @@ class TestExperienceShellComposition:
             current_step="step_two",
         )
         html = self._render(exp)
-        # Modifier classes on <li> drive the state-tone CSS
-        assert "is-completed" in html
-        assert "is-current" in html
+        # Both completed AND current steps emit .dz-steps-circle.is-completed
+        assert html.count("dz-steps-circle is-completed") == 2
+        # Pending step has the bare .dz-steps-circle (no is-completed)
+        assert html.count('class="dz-steps-circle">') == 1
 
         from pathlib import Path
 
@@ -7362,27 +7364,22 @@ class TestExperienceShellComposition:
             Path(__file__).resolve().parents[2]
             / "src/dazzle_ui/runtime/static/css/components/fragments.css"
         ).read_text()
-        # Active rule references the brand token (was --primary)
-        assert ".dz-steps-item.is-completed .dz-steps-bullet" in css
-        assert ".dz-steps-item.is-current .dz-steps-bullet" in css
-        active_block = css.split(
-            ".dz-steps-item.is-completed .dz-steps-bullet,\n"
-            ".dz-steps-item.is-current .dz-steps-bullet {"
-        )[1].split("}")[0]
+        # Active circle rule references the brand token
+        assert ".dz-steps-circle.is-completed" in css
+        active_block = css.split(".dz-steps-circle.is-completed {")[1].split("}")[0]
         assert "var(--colour-brand)" in active_block
 
-        # Pending bullet rule references the muted bg
-        bullet_block = css.split(".dz-steps-bullet {")[1].split("}")[0]
-        assert "var(--colour-bg)" in bullet_block
-        assert "var(--colour-text-muted)" in bullet_block
+        # Pending circle rule references the muted bg
+        circle_block = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "var(--colour-bg)" in circle_block
+        assert "var(--colour-text-muted)" in circle_block
 
     # Gate 7 — connector line colour reflects LEFT step's completion
     def test_connector_line_colour_by_left_step(self) -> None:
         """v0.62 CSS refactor: connector tone moved from per-element
-        `bg-[hsl(var(--primary))]` ternary to `.dz-steps-item.is-completed
-        .dz-steps-connector` cascade selector. The CSS rule applies to
-        the connector whose parent <li> is marked is-completed (= the
-        LEFT step is done)."""
+        `bg-[hsl(var(--primary))]` ternary to `.is-completed` modifier
+        on the connector div, gated by the LEFT step's `is_completed`
+        flag in the template (matches steps_indicator convention)."""
         exp_completed_left = self._make_experience(
             steps=[
                 {"name": "a", "title": "A", "is_completed": True},
@@ -7391,10 +7388,8 @@ class TestExperienceShellComposition:
             current_step="b",
         )
         html = self._render(exp_completed_left)
-        # The completed <li> carries the is-completed class which the
-        # CSS rule keys off
-        assert "dz-steps-item is-completed" in html
-        assert 'class="dz-steps-connector"' in html
+        # Connector with is-completed since LEFT step is completed
+        assert "dz-steps-connector is-completed" in html
 
         from pathlib import Path
 
@@ -7405,12 +7400,22 @@ class TestExperienceShellComposition:
         # Pending connector — base rule uses --colour-border
         connector_block = css.split(".dz-steps-connector {")[1].split("}")[0]
         assert "var(--colour-border)" in connector_block
-        # Completed connector — descendant rule uses --colour-brand
-        assert ".dz-steps-item.is-completed .dz-steps-connector" in css
-        completed_block = css.split(".dz-steps-item.is-completed .dz-steps-connector {")[1].split(
-            "}"
-        )[0]
+        # Completed connector rule uses --colour-brand
+        assert ".dz-steps-connector.is-completed" in css
+        completed_block = css.split(".dz-steps-connector.is-completed {")[1].split("}")[0]
         assert "var(--colour-brand)" in completed_block
+
+        # Left step NOT completed → connector lacks the is-completed modifier
+        exp_pending_left = self._make_experience(
+            steps=[
+                {"name": "a", "title": "A", "is_current": True},
+                {"name": "b", "title": "B"},
+            ],
+            current_step="a",
+        )
+        html2 = self._render(exp_pending_left)
+        assert 'class="dz-steps-connector"' in html2
+        assert "dz-steps-connector is-completed" not in html2
 
     # Gate 13 — non-surface step renders muted placeholder
     def test_non_surface_step_renders_muted_placeholder(self) -> None:

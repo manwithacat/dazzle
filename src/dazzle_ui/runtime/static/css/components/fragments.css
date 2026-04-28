@@ -3290,71 +3290,10 @@
   margin-block-end: var(--space-xl);
 }
 
-.dz-steps {
-  display: flex;
-  align-items: center;
-  inline-size: 100%;
-  margin-block-end: 2rem;
-  list-style: none;
-  padding: 0;
-}
-
-.dz-steps-item {
-  display: flex;
-  align-items: center;
-}
-
-.dz-steps-item:not(:last-child) {
-  flex: 1;
-}
-
-.dz-steps-item-content {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.dz-steps-bullet {
-  flex-shrink: 0;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6875rem;
-  font-weight: var(--weight-semibold);
-  background: var(--colour-bg);
-  color: var(--colour-text-muted);
-}
-
-.dz-steps-item.is-completed .dz-steps-bullet,
-.dz-steps-item.is-current .dz-steps-bullet {
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-}
-
-.dz-steps-label {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-}
-
-.dz-steps-item.is-completed .dz-steps-label,
-.dz-steps-item.is-current .dz-steps-label {
-  color: var(--colour-text);
-  font-weight: var(--weight-medium);
-}
-
-.dz-steps-connector {
-  flex: 1;
-  margin-inline: var(--space-md);
-  block-size: 1px;
-  background: var(--colour-border);
-}
-
-.dz-steps-item.is-completed .dz-steps-connector {
-  background: var(--colour-brand);
-}
+/* Experience stepper reuses the existing .dz-steps* family from
+ * the steps_indicator fragment block above (line ~448). The pattern
+ * uses .is-completed on the .dz-steps-circle / .dz-steps-label /
+ * .dz-steps-connector children rather than a modifier on the item. */
 
 .dz-experience-form-shell {
   max-inline-size: 42rem;

@@ -12,19 +12,22 @@
   {# Title #}
   <h2 class="dz-experience-title">{{ experience.title }}</h2>
 
-  {# Progress indicator — semantic .dz-steps stepper. #}
+  {# Progress indicator — reuses the existing .dz-steps / .dz-steps-circle
+     family from fragments/steps_indicator.html. `.is-completed` marker
+     applies to both completed AND current steps so they share the brand
+     fill (matches the steps_indicator position-based convention). #}
   {% if experience.steps | length > 1 %}
   <ol class="dz-steps">
     {% for step in experience.steps %}
-    <li class="dz-steps-item{% if step.is_completed %} is-completed{% endif %}{% if step.is_current %} is-current{% endif %}"
+    <li class="dz-steps-item{% if not loop.last %} is-not-last{% endif %}"
         data-dz-exp-step="{{ step.name }}"
         {% if step.is_current %}aria-current="step"{% endif %}>
-      <div class="dz-steps-item-content">
-        <span class="dz-steps-bullet">{{ loop.index }}</span>
-        <span class="dz-steps-label">{{ step.title }}</span>
+      <div class="dz-steps-row">
+        <span class="dz-steps-circle{% if step.is_completed or step.is_current %} is-completed{% endif %}">{{ loop.index }}</span>
+        <span class="dz-steps-label{% if step.is_completed or step.is_current %} is-completed{% endif %}">{{ step.title }}</span>
       </div>
       {% if not loop.last %}
-      <div class="dz-steps-connector"></div>
+      <div class="dz-steps-connector{% if step.is_completed %} is-completed{% endif %}"></div>
       {% endif %}
     </li>
     {% endfor %}
