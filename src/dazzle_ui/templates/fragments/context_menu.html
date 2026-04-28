@@ -11,8 +11,10 @@
    for state. Fires on right-click (`@contextmenu`); the menu is
    positioned absolutely at cursor coordinates via Alpine `:style`.
    `@click.outside` closes the menu.
-#}
-<div x-data="dzContextMenu" class="dz-context-menu relative" @contextmenu="onContextMenu($event)">
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-context-menu* classes
+   (components/fragments.css). #}
+<div x-data="dzContextMenu" class="dz-context-menu" @contextmenu="onContextMenu($event)">
   {# The trigger area — wraps caller content #}
   {% block context_trigger %}
   {{ trigger_content | safe if trigger_content else '' }}
@@ -29,18 +31,18 @@
       @keydown.escape.window="close()"
       role="menu"
       data-dz-context-menu-panel
-      class="z-50 min-w-44 py-1 rounded-[4px] bg-[hsl(var(--popover))] border border-[hsl(var(--border))] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)] text-[13px]">
+      class="dz-context-menu-panel">
     {% for item in items %}
     {% if item.divider %}
-    <li class="my-1 border-t border-[hsl(var(--border))]" role="separator"></li>
+    <li class="dz-context-menu-divider" role="separator"></li>
     {% else %}
     <li>
       <a {% if item.url %}href="{{ item.url }}"{% else %}href="#" @click.prevent="close()"{% endif %}
          {% if item.url %}@click="close()"{% endif %}
          role="menuitem"
          data-dz-context-menu-item
-         class="flex items-center gap-2 px-3 py-1.5 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms]">
-        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" aria-hidden="true"></i>{% endif %}
+         class="dz-context-menu-item">
+        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="dz-context-menu-item-icon" aria-hidden="true"></i>{% endif %}
         <span>{{ item.label }}</span>
       </a>
     </li>

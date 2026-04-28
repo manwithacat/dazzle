@@ -256,11 +256,25 @@ class TestDateRangePicker:
         assert 'id="date-to-events"' in html
 
     def test_uses_design_tokens(self) -> None:
+        """v0.62 CSS refactor: input chrome (border / text colour /
+        focus ring) lives on .dz-date-range-input rule rather than
+        inline `bg-[hsl(var(--background))] border-[hsl(var(--border))]`
+        Tailwind utilities."""
         html = _render_fragment(
             "fragments/date_range_picker.html",
             endpoint="/api/data",
             region_name="events",
         )
-        assert "hsl(var(--border))" in html
-        assert "hsl(var(--foreground))" in html
-        assert "hsl(var(--ring))" in html
+        assert "dz-date-range-input" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        input_block = css.split(".dz-date-range-input {")[1].split("}")[0]
+        assert "border: 1px solid var(--colour-border)" in input_block
+        assert "color: var(--colour-text)" in input_block
+        # Focus ring on :focus-visible variant
+        assert ".dz-date-range-input:focus-visible" in css
