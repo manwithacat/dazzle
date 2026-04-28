@@ -34,6 +34,7 @@
 @import url("components/detail.css") layer(components);
 @import url("components/form.css") layer(components);
 @import url("components/htmx-states.css") layer(components);
+@import url("components/table.css") layer(components);
 
 /* Additional component imports land here as families migrate.
  * Track migration status in dev_docs/css-refactor-phase-0-notes.md. */

@@ -147,6 +147,7 @@
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
   --colour-brand: var(--brand-600);
+  --colour-brand-contrast: white;  /* foreground on filled brand fills (CTAs) */
   --colour-accent: var(--brand-500);
   --colour-success: var(--success-500);
   --colour-warning: var(--warning-500);
