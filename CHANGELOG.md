@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.85] - 2026-04-28
+
+### Fixed
+- **`templates/workspace/regions/radar.html`** — closes #915. Spoke
+  `<title>` tooltips, the `aria-label`, the `dz-chart-summary` line,
+  and the degenerate-list value cells all now run aggregate values
+  through the existing `metric_number` Jinja filter, so a radar with
+  `aggregate: avg(score)` returning `10.453333333333333` renders as
+  `10.5` (>= 1 → 1dp + thousands separator) rather than leaking the
+  full Python float repr. Other chart families (line_chart, box_plot)
+  may carry the same pattern; not in scope here — file separately
+  if hit. Tests in `tests/unit/test_workspace_radar.py::TestRadarFloatFormatting`.
+
 ## [0.61.84] - 2026-04-28
 
 ### Fixed

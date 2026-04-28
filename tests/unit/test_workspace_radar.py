@@ -246,3 +246,88 @@ class TestRadarMultiSeries:
         )
         # Footer reports the global peak across both series
         assert "peak 100" in html
+
+
+class TestRadarFloatFormatting:
+    """v0.61.85 (#915): the spoke `<title>` tooltips, the `aria-label`,
+    the `dz-chart-summary` line, and the degenerate-list value cells
+    all run aggregate values through the `metric_number` filter so
+    raw 16dp floats (e.g. `avg(score)` returning `10.453333333333333`)
+    render as `10.5` instead of leaking the full Python repr."""
+
+    FLOATY_BUCKETS = [
+        {
+            "label": "AO1",
+            "value": 10.453333333333333,
+            "metrics": {"avg_score": 10.453333333333333},
+        },
+        {
+            "label": "AO2",
+            "value": 7.166666666666667,
+            "metrics": {"avg_score": 7.166666666666667},
+        },
+        {
+            "label": "AO3",
+            "value": 9.0,
+            "metrics": {"avg_score": 9.0},
+        },
+    ]
+
+    def test_summary_rounds_peak_to_one_decimal(self) -> None:
+        html = render_fragment(
+            "workspace/regions/radar.html",
+            title="AO profile",
+            bucketed_metrics=self.FLOATY_BUCKETS,
+            empty_message="",
+        )
+        # max value is 10.453... which the metric_number filter renders
+        # as "10.5" (>= 1 → 1dp + thousands separator)
+        assert "peak 10.5" in html
+        # The raw 16dp repr must NOT leak into the summary
+        assert "10.453333333333333" not in html
+
+    def test_aria_label_rounds_peak(self) -> None:
+        html = render_fragment(
+            "workspace/regions/radar.html",
+            title="AO profile",
+            bucketed_metrics=self.FLOATY_BUCKETS,
+            empty_message="",
+        )
+        # aria-label has the same peak value
+        assert 'aria-label="AO profile radar — 3 spokes, peak 10.5"' in html
+
+    def test_spoke_title_tooltip_rounds_value(self) -> None:
+        html = render_fragment(
+            "workspace/regions/radar.html",
+            title="AO profile",
+            bucketed_metrics=self.FLOATY_BUCKETS,
+            empty_message="",
+        )
+        # Per-spoke <title> tooltips also format
+        assert "AO1 avg_score: 10.5" in html
+        assert "AO2 avg_score: 7.2" in html
+        assert "AO3 avg_score: 9.0" in html
+
+    def test_degenerate_list_rounds_values(self) -> None:
+        """When < 3 spokes, the radar falls back to a KPI list whose
+        value cells must also round."""
+        degenerate = [
+            {
+                "label": "AO1",
+                "value": 10.453333333333333,
+                "metrics": {"avg_score": 10.453333333333333},
+            },
+            {
+                "label": "AO2",
+                "value": 7.166666666666667,
+                "metrics": {"avg_score": 7.166666666666667},
+            },
+        ]
+        html = render_fragment(
+            "workspace/regions/radar.html",
+            title="X",
+            bucketed_metrics=degenerate,
+            empty_message="",
+        )
+        assert "10.5" in html
+        assert "10.453333333333333" not in html

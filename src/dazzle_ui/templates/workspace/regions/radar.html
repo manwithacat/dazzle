@@ -82,7 +82,7 @@
          viewBox="0 0 {{ side }} {{ side }}"
          class="dz-radar-svg dz-chart-svg"
          role="img"
-         aria-label="{{ title }} radar — {{ count }} spokes, peak {{ max_val }}">
+         aria-label="{{ title }} radar — {{ count }} spokes, peak {{ max_val | metric_number }}">
       {# Concentric polar grid rings — 4 rings at 25/50/75/100% of r_max.
          Render via N-sided polygons matching the spoke count so grid
          vertices align with spoke endpoints (cleaner geometry than
@@ -154,7 +154,7 @@
                     fill="{{ series_colour }}"
                     stroke="hsl(var(--card))"
                     stroke-width="1">
-              <title>{{ s.label }} {{ series_name }}: {{ s.metrics[series_name] }}</title>
+              <title>{{ s.label }} {{ series_name }}: {{ s.metrics[series_name] | metric_number }}</title>
             </circle>
           </g>
           {# Line from this vertex to the next (rotation deltas). #}
@@ -203,7 +203,7 @@
       </div>
     {% endif %}
     <p class="dz-chart-summary">
-      {{ count }} spokes · {{ _series_names | length }} {{ 'series' if _series_names | length > 1 else 'series' }} · peak {{ max_val }}
+      {{ count }} spokes · {{ _series_names | length }} {{ 'series' if _series_names | length > 1 else 'series' }} · peak {{ max_val | metric_number }}
     </p>
   {% elif bucketed_metrics and bucketed_metrics | length > 0 %}
     {# Fewer than 3 spokes is a degenerate radar (line or point); fall
@@ -212,7 +212,7 @@
       {% for b in bucketed_metrics %}
         <div class="dz-chart-degenerate-row">
           <span>{{ b.label }}</span>
-          <span class="dz-chart-degenerate-value">{{ b.value }}</span>
+          <span class="dz-chart-degenerate-value">{{ b.value | metric_number }}</span>
         </div>
       {% endfor %}
     </div>
