@@ -1,14 +1,17 @@
+{# v0.62 CSS refactor: native <details>/<summary> per item — matches the
+   pre-existing .dz-faq-item CSS rules in site-sections.css that expected
+   a summary element. The previous markup used radio + div wrappers that
+   the CSS never matched. #}
 {% from "site/sections/_helpers.html" import section_id_attr, section_header %}
 <section{{ section_id_attr(section) }} class="dz-section dz-section-faq">
   <div class="dz-section-content">
     {{ section_header(section) }}
     <div class="dz-faq-list">
       {% for item in section["items"] | default([]) %}
-      <div class="border border-[hsl(var(--border))] rounded-[4px] bg-[hsl(var(--muted))]">
-        <input type="radio" name="faq">
-        <div class="text-[13px] font-medium cursor-pointer font-medium">{{ item.question | default("") }}</div>
-        <div class="px-3 py-2"><p>{{ item.answer | default("") }}</p></div>
-      </div>
+      <details class="dz-faq-item">
+        <summary>{{ item.question | default("") }}</summary>
+        <p>{{ item.answer | default("") }}</p>
+      </details>
       {% endfor %}
     </div>
   </div>

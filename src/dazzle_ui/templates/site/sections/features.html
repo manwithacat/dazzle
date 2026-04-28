@@ -5,12 +5,13 @@
     {{ section_media(section) }}
     <div class="dz-features-grid">
       {% for item in section["items"] | default([]) %}
-      <div class="dz-feature-item bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
-        <div class="p-4">
-          {% if item.icon %}<i data-lucide="{{ item.icon }}"></i>{% endif %}
-          <h3 class="text-lg font-semibold">{{ item.title | default("") }}</h3>
-          <p>{{ item.body | default("") }}</p>
-        </div>
+      {# v0.62 CSS refactor: card chrome + h3 styling already in
+         .dz-feature-item rule (site-sections.css). Inline padding/border/
+         shadow utilities removed; CSS rule supplies them. #}
+      <div class="dz-feature-item">
+        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="dz-feature-icon"></i>{% endif %}
+        <h3>{{ item.title | default("") }}</h3>
+        <p>{{ item.body | default("") }}</p>
       </div>
       {% endfor %}
     </div>

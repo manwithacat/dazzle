@@ -695,6 +695,13 @@
   min-height: 100vh;
 }
 
+/* Default body background — overridden per page via {% block body_class %}.
+ * Was inline `bg-[hsl(var(--card))]` Tailwind on <body> in site_base.html;
+ * v0.62 moves to a semantic class rule. */
+.dz-site-bg {
+  background: var(--dz-surface-card, hsl(var(--card)));
+}
+
 .dz-site-header {
   position: sticky;
   top: 0;

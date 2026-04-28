@@ -27,7 +27,7 @@
   {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
-<body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}"
+<body class="dz-site {% block body_class %}dz-site-bg{% endblock %}"
   {% if tenant_slug %}data-dz-tenant="{{ tenant_slug }}"{% endif %}
   {% if persona_class %}data-dz-persona-class="{{ persona_class }}"{% endif %}
   {% block body_attrs %}{% endblock %}>

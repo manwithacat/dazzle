@@ -6,7 +6,7 @@
       <h2>{{ section.headline | default("") }}</h2>
       {% if section.body %}<p>{{ section.body }}</p>{% endif %}
       {% if section.primary_cta %}
-      <div class="dz-cta-group dz-cta-group--left"><a href="{{ section.primary_cta.href | default('#') }}" class="inline-flex items-center h-9 px-4 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[14px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">{{ section.primary_cta.label | default("Learn More") }}</a></div>
+      <div class="dz-cta-group dz-cta-group--left"><a href="{{ section.primary_cta.href | default('#') }}" class="dz-button dz-button-primary">{{ section.primary_cta.label | default("Learn More") }}</a></div>
       {% endif %}
     </div>
     {% if section.media and section.media.kind == "image" and section.media.src %}

@@ -1906,6 +1906,9 @@ display: flex;
 flex-direction: column;
 min-height: 100vh;
 }
+.dz-site-bg {
+background: var(--dz-surface-card, hsl(var(--card)));
+}
 .dz-site-header {
 position: sticky;
 top: 0;

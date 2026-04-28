@@ -10,7 +10,7 @@
         <h3>{{ item.title | default("") }}</h3>
         <p>{{ item.body | default("") }}</p>
         {% if item.cta %}
-        <a href="{{ item.cta.href | default('#') }}" class="inline-flex items-center h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]">{{ item.cta.label | default("Learn More") }}</a>
+        <a href="{{ item.cta.href | default('#') }}" class="dz-button dz-button-primary">{{ item.cta.label | default("Learn More") }}</a>
         {% endif %}
       </div>
       {% endfor %}
