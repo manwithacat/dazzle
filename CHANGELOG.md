@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.94] - 2026-04-28
+
+### Fixed
+- **`runtime/static/js/dz-alpine.js`** — closes #924. The previous fix
+  for #919 (v0.61.89) installed the htmx:afterSettle listener inside
+  the `dzDashboardBuilder` Alpine component's `init()`. That works
+  when the SAME component instance survives a morph swap (re-clicking
+  the active workspace nav link), but when the user navigates between
+  *different* workspaces via the sidebar, idiomorph replaces the
+  `<div x-data="dzDashboardBuilder()">` element entirely and Alpine
+  never picks up the new one — `<template x-for>` directives stay
+  inert and the JSON layout island renders as raw text. Added a
+  module-level `htmx:afterSettle` listener (outside `alpine:init`) on
+  document.body that calls `Alpine.initTree(target)` on every swap,
+  forcing Alpine to discover and initialize any new `x-data` roots.
+  Idempotent — Alpine tags processed elements internally so
+  re-initializing inited components is a no-op. Regression tests in
+  `tests/unit/test_dashboard_builder_triggers.py::TestGlobalInitTreeBridge`
+  pin: listener exists, sits at module scope (not inside
+  alpine:init), uses afterSettle (not afterSwap), guards missing
+  Alpine.
+
 ## [0.61.93] - 2026-04-28
 
 ### Fixed

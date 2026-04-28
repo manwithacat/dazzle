@@ -1270,3 +1270,31 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 });
+
+// ── HTMX morph-swap → Alpine.initTree bridge (#924) ───────────────────
+//
+// htmx-morph swaps mutate the DOM in-place — they don't fire the
+// MutationObserver patterns Alpine relies on for auto-discovery of new
+// `x-data` roots. When a sidebar workspace link morphs `#main-content`
+// from one workspace to another, the new `<div x-data="dzDashboardBuilder()">`
+// element lands in the DOM but Alpine never calls `init()` on it, so
+// `<template x-for>` directives stay inert and the JSON layout island
+// renders as raw text.
+//
+// The fix is the standard Alpine + HTMX bridge: after every swap settles,
+// walk the swapped subtree and call `Alpine.initTree(target)`. Alpine
+// tags processed elements internally so re-initing inited components is
+// a no-op — safe to fire on every settle.
+//
+// Listen on `htmx:afterSettle` (not `afterSwap`) for the same reason as
+// the per-component listener in dashboard-builder.js: under the morph
+// extension `afterSwap` fires before idiomorph commits child-node text,
+// so the JSON data island still holds stale text at that point. See
+// #919 (the original fix) and #924 (this follow-up).
+document.body.addEventListener("htmx:afterSettle", (e) => {
+  const target = e && e.detail && e.detail.target;
+  if (!target) return;
+  if (window.Alpine && typeof window.Alpine.initTree === "function") {
+    window.Alpine.initTree(target);
+  }
+});

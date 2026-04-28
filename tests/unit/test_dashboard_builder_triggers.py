@@ -133,3 +133,68 @@ class TestRehydrateOnHtmxAfterSettle:
         # Bound the search to the helper body (next 1500 chars cover it).
         body = source[idx : idx + 1500]
         assert 'this.saveState = "clean";' in body
+
+
+DZ_ALPINE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "dazzle_ui"
+    / "runtime"
+    / "static"
+    / "js"
+    / "dz-alpine.js"
+)
+
+
+class TestGlobalInitTreeBridge:
+    """#924: the per-component htmx:afterSettle listener (#919) only re-
+    hydrates when the SAME dzDashboardBuilder Alpine instance survives the
+    morph swap. When the user navigates between *different* workspaces via
+    the sidebar, idiomorph replaces the `<div x-data="dzDashboardBuilder()">`
+    element entirely and Alpine never initializes the new one — so the
+    new x-for renders nothing and the JSON layout island shows as raw
+    text. The fix is a global htmx:afterSettle listener in dz-alpine.js
+    that calls Alpine.initTree(target) on every swap so any new x-data
+    elements get initialized."""
+
+    def _load_alpine(self) -> str:
+        return DZ_ALPINE_PATH.read_text()
+
+    def test_global_listener_exists(self) -> None:
+        source = self._load_alpine()
+        assert 'document.body.addEventListener("htmx:afterSettle"' in source
+
+    def test_calls_alpine_init_tree(self) -> None:
+        source = self._load_alpine()
+        assert "window.Alpine.initTree(target)" in source
+
+    def test_listener_is_outside_alpine_init_block(self) -> None:
+        """The listener must be a module-level registration, not nested
+        inside the alpine:init handler — alpine:init only fires once,
+        but this listener must fire for every htmx swap."""
+        source = self._load_alpine()
+        listener_idx = source.index('document.body.addEventListener("htmx:afterSettle"')
+        last_alpine_init_close = source.rindex("  }));\n});\n")
+        assert listener_idx > last_alpine_init_close, (
+            "the global htmx:afterSettle listener must live AFTER the "
+            "alpine:init block closes — otherwise it never registers"
+        )
+
+    def test_uses_after_settle_not_after_swap(self) -> None:
+        """Same #919 reasoning — afterSwap fires before idiomorph commits
+        child textContent under the morph extension."""
+        source = self._load_alpine()
+        # The bridge listener uses afterSettle. (Other afterSwap mentions
+        # may exist elsewhere, so we only assert the bridge uses settle.)
+        bridge_block_idx = source.index("HTMX morph-swap → Alpine.initTree bridge")
+        bridge_block = source[bridge_block_idx : bridge_block_idx + 2000]
+        assert "htmx:afterSettle" in bridge_block
+        assert "htmx:afterSwap" not in bridge_block
+
+    def test_guards_missing_alpine(self) -> None:
+        """If Alpine isn't loaded yet (race during boot), the listener
+        must no-op rather than throw."""
+        source = self._load_alpine()
+        bridge_block_idx = source.index("HTMX morph-swap → Alpine.initTree bridge")
+        bridge_block = source[bridge_block_idx : bridge_block_idx + 2000]
+        assert "if (window.Alpine" in bridge_block
