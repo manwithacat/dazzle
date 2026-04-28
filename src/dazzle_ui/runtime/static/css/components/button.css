@@ -85,3 +85,11 @@
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* Size modifier — smaller button used by inline action rows
+ * (e.g. 2FA settings row buttons). Composes with .dz-button base. */
+.dz-button.dz-button-sm {
+  height: 1.75rem;
+  padding-inline: var(--space-md);
+  font-size: var(--text-xs);
+}

@@ -990,6 +990,399 @@
   display: flex;
 }
 
+/* Success alert — mirror of .dz-auth-error but brand-toned. Used by
+ * the forgot-password flow's "email sent" confirmation. */
+.dz-auth-success {
+  display: none;
+  flex-direction: row;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-block-end: var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-auth-success:not(.hidden) {
+  display: flex;
+}
+
+/* Subtitle paragraph under the auth title (multi-step flows). */
+.dz-auth-subtitle {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block: calc(var(--space-md) * -0.5) var(--space-md);
+}
+
+/* Form body inside the auth card — column with vertical rhythm. */
+.dz-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dz-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dz-auth-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+/* Auth input — same shape as .dz-form-input but scoped to auth so
+ * future tweaks don't bleed into the in-app form. */
+.dz-auth-input {
+  inline-size: 100%;
+  block-size: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-auth-input::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-auth-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+.dz-auth-input[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+/* Submit button stretches full width inside the card. Composes with
+ * .dz-button .dz-button-primary base. */
+.dz-auth-submit {
+  inline-size: 100%;
+  margin-block-start: var(--space-md);
+  block-size: 2.25rem;
+}
+
+/* Footer link rows: small, end-aligned for "Forgot password?" and
+ * centre-aligned for the sibling-page CTA. */
+.dz-auth-footer-end {
+  text-align: end;
+  font-size: var(--text-xs);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-auth-footer-center {
+  text-align: center;
+  font-size: var(--text-sm);
+  margin-block-start: var(--space-md);
+}
+
+.dz-auth-link-muted {
+  color: var(--colour-text-muted);
+  text-decoration: none;
+}
+
+.dz-auth-link-muted:hover {
+  color: var(--colour-text);
+  text-decoration: underline;
+}
+
+.dz-auth-link-brand {
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.dz-auth-link-brand:hover {
+  text-decoration: underline;
+}
+
+/* Hint paragraph under a field (e.g. password requirements). */
+.dz-auth-hint {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+/* Read-only line displaying the user's email on multi-step flows
+ * (forgot/reset/2FA challenge). */
+.dz-auth-context-line {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+}
+
+.dz-auth-context-line strong {
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+/* QR code panel for 2FA setup — flex column with code below. */
+.dz-auth-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  margin-block: var(--space-md);
+}
+
+.dz-auth-qr-image {
+  inline-size: 12rem;
+  block-size: 12rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+}
+
+.dz-auth-qr-secret {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  word-break: break-all;
+  text-align: center;
+  padding: var(--space-sm);
+  background: var(--colour-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+}
+
+/* Recovery codes block (2FA settings, post-setup). Monospace list. */
+.dz-auth-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+  padding: var(--space-md);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+/* 2FA: large centred code input — 6 digits visually tracked apart. */
+.dz-auth-input-code {
+  inline-size: 100%;
+  block-size: 2.5rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  color: var(--colour-text);
+  font-size: 1.25rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.4em;
+  text-align: center;
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-auth-input-code::placeholder {
+  color: var(--colour-text-muted);
+  letter-spacing: 0.4em;
+}
+
+.dz-auth-input-code:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* "OR" divider between primary and alternate auth methods. */
+.dz-auth-divider {
+  position: relative;
+  margin-block: var(--space-md);
+}
+
+.dz-auth-divider::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.dz-auth-divider-label {
+  position: relative;
+  display: inline-block;
+  padding-inline: var(--space-sm);
+  background: var(--colour-surface);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--colour-text-muted);
+}
+
+.dz-auth-divider-row {
+  text-align: center;
+}
+
+/* Inline link-button (e.g. "Send code to email" / "Resend") that
+ * looks like text but is a <button>. */
+.dz-auth-link-button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding-inline: var(--space-sm);
+  block-size: 1.75rem;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-auth-link-button:hover:not(:disabled) {
+  color: var(--colour-text);
+  text-decoration: underline;
+}
+
+.dz-auth-link-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dz-auth-link-button-row {
+  text-align: center;
+  margin-block-start: var(--space-sm);
+}
+
+/* Section heading inside an auth card (2FA setup splits into TOTP /
+ * Email OTP / Recovery sections). */
+.dz-auth-section-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: 0.25rem;
+}
+
+.dz-auth-section-body {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+}
+
+/* QR container — centred row that holds the action button before
+ * setup, and the rendered QR image after. */
+.dz-auth-qr-container {
+  display: flex;
+  justify-content: center;
+  margin-block: var(--space-md);
+}
+
+/* Inline `<code>` displaying the TOTP secret. */
+.dz-auth-secret-inline {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  color: var(--colour-text);
+  background: var(--colour-bg);
+  padding-inline: 0.25rem;
+  padding-block: 0.125rem;
+  border-radius: var(--radius-xs);
+}
+
+/* Section divider — replaces inline `border-[hsl(var(--border))]`
+ * on <hr> elements inside the auth card. */
+.dz-auth-hr {
+  border: 0;
+  border-block-start: 1px solid var(--colour-border);
+  margin-block: var(--space-xl);
+}
+
+/* Recovery codes alert + grid (post-2FA-setup). */
+.dz-auth-recovery-alert {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-bg);
+  padding: var(--space-md);
+}
+
+.dz-auth-recovery-alert-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-auth-recovery-alert-body {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.25rem;
+}
+
+.dz-auth-recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-block-start: var(--space-md);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+}
+
+/* Each recovery code pill (created by JS in 2fa_setup.html). */
+.dz-auth-recovery-pill {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-sm);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+/* "Back to App" link — full-width ghost-style block link. */
+.dz-auth-back-link {
+  display: block;
+  inline-size: 100%;
+  block-size: 2.25rem;
+  line-height: 2.25rem;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  margin-block-start: var(--space-xl);
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-auth-back-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* 2FA settings status rows — label on the left, action button on the
+ * right. Last row drops the bottom border. */
+.dz-auth-status-loading {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-auth-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-auth-status-row.is-last {
+  border-block-end: 0;
+}
+
+.dz-auth-status-label {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
 /* ─────────────────────────── a11y helpers ───────────────────────
  * Loading spinner used as an HTMX indicator. Sized + animated host
  * for the inline span. (.visually-hidden + sr-only-fallback already
