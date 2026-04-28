@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.61.104"
+version = "0.61.105"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -173,6 +173,15 @@ mobile_full = [
 aws = [
     "aioboto3>=13.0",
     "boto3>=1.35",
+]
+# moto-based S3 mocks for storage primitive integration tests (#932 cycle 2).
+# Pulled into the dev install via `pip install -e ".[dev,aws-test]"`. The
+# in-memory FakeStorageProvider in dazzle_back.runtime.storage.testing
+# covers most unit tests without this dep — moto is only needed for the
+# small set of integration tests that exercise the real boto3 surface.
+aws-test = [
+    "boto3>=1.35",
+    "moto[s3]>=5.0",
 ]
 
 [project.urls]

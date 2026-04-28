@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.105] - 2026-04-29
+
+### Added
+- **Storage primitive cycle 2: runtime providers + registry** — second
+  installment of #932. Now ships the runtime layer that cycle 3's
+  upload-ticket / finalize routes will hang off:
+
+  - **`S3Provider(StorageProvider)`** wrapping `boto3.client("s3")`'s
+    `generate_presigned_post` and `head_object`. Honours
+    `[storage.<name>] endpoint_url` for R2 / MinIO / LocalStack
+    routing per-storage; falls back to `aws_config.endpoint_url`
+    when not set. Encodes `content-length-range` constraint up to
+    `max_bytes` and a `Content-Type` lock on the policy.
+  - **`FakeStorageProvider`** in `dazzle_back.runtime.storage.testing`
+    — in-memory dict-backed implementation. Exposes the same
+    protocol surface plus test-only `put_object`, `objects()`, and
+    `reset()`. Tests construct one directly — no fixtures, no
+    environment, no boto3.
+  - **`StorageRegistry`** mapping storage name → provider. Lazy
+    construction (boto3 client only built on first use) and a
+    `register_provider(name, provider)` injection point so the
+    route generator can swap a `FakeStorageProvider` in for tests.
+    `${VAR}` env-var interpolation on `bucket` / `region` /
+    `endpoint_url` runs at provider-build time with loud-on-missing
+    `EnvVarMissingError`.
+
+  46-test suite (`test_storage_cycle1.py` + `test_storage_cycle2.py`)
+  covers FakeStorageProvider behaviour, registry lifecycle (lazy
+  construction, override-registration, env-var resolution, missing-
+  storage errors), and S3Provider via both a stub client (fast unit
+  tests with no boto3) and **moto** (real boto3 surface — signing
+  math, content-length-range encoding, 404→None). Adds a new
+  `[aws-test]` extra pulling `moto[s3]>=5.0` for projects + CI.
+
+### Agent Guidance
+- For unit tests that need an upload primitive, use
+  `from dazzle_back.runtime.storage import FakeStorageProvider`.
+  For integration tests that exercise the real boto3 surface,
+  install with `pip install -e ".[dev,aws-test]"` and use moto's
+  `mock_aws()` context manager around a `boto3.client("s3")` you
+  pass into `S3Provider(cfg, client=client)`.
+- The route generator (cycle 3) will get a `StorageRegistry` from
+  the manifest at server startup. To inject a fake in tests,
+  `registry.register_provider(name, FakeStorageProvider(...))`
+  before the request. The registry caches providers, so the
+  registration must happen before the first `registry.get(name)`.
+
 ## [0.61.104] - 2026-04-29
 
 ### Added

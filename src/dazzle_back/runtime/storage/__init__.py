@@ -28,11 +28,15 @@ from .protocol import (
     StorageProvider,
     UploadTicket,
 )
+from .registry import StorageRegistry
+from .testing import FakeStorageProvider
 
 __all__ = [
     "EnvVarMissingError",
+    "FakeStorageProvider",
     "ObjectMetadata",
     "StorageProvider",
+    "StorageRegistry",
     "UploadTicket",
     "extract_env_var_refs",
     "interpolate_env_vars",
