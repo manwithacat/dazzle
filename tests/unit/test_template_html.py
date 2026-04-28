@@ -631,22 +631,27 @@ class TestDashboardRegionCompositeShapes:
         article→section), the fingerprint test catches it and signals
         the shell needs updating in this test file.
 
-        Checking the most load-bearing class combo: the <article> with
-        ``rounded-md border bg-[hsl(var(--card))]``. That's the card
-        surface AegisMark's counters depend on.
+        v0.62 CSS refactor: the load-bearing surface class is now
+        ``.dz-card`` (defined in components/dashboard.css) rather than
+        the inline ``rounded-md border bg-[hsl(var(--card))]`` Tailwind
+        triple. The contract — a card surface with border + background
+        — is preserved in CSS.
         """
         content_template = TEMPLATES_DIR / "workspace" / "_content.html"
         text = content_template.read_text()
-        assert "rounded-md border" in text, (
-            "workspace/_content.html no longer contains 'rounded-md border' — "
+        assert "dz-card" in text, (
+            "workspace/_content.html no longer references .dz-card — "
             "the dashboard slot chrome has changed. Update "
             "_DASHBOARD_SLOT_WITH_REGION in this test file to match."
         )
-        assert "bg-[hsl(var(--card))]" in text, (
-            "workspace/_content.html no longer contains 'bg-[hsl(var(--card))]' — "
-            "the card background token has changed. Update "
-            "_DASHBOARD_SLOT_WITH_REGION in this test file to match."
-        )
+        # Verify the .dz-card CSS rule still defines a card surface
+        # (border + background-from-surface-token).
+        css = (
+            TEMPLATES_DIR.parent / "runtime" / "static" / "css" / "components" / "dashboard.css"
+        ).read_text()
+        assert ".dz-card {" in css
+        assert "border: 1px solid var(--colour-border)" in css
+        assert "background: var(--colour-surface)" in css
 
     def test_sidebar_nav_scrolls_to_top_on_morph(self):
         """#876: cross-page nav clicks must reset scroll on the morph

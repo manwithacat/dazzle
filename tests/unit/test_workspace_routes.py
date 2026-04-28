@@ -5837,7 +5837,7 @@ class TestWorkspaceShellComposition:
         # Empty list → wrapper absent
         html_empty = self._render(primary_actions=[])
         assert 'data-test-id="dz-workspace-primary-actions"' not in html_empty
-        # Populated → wrapper present + hx-boost + primary token
+        # Populated → wrapper present + hx-boost + filled-brand semantic class
         html_full = self._render(
             primary_actions=[
                 {"label": "New Task", "route": "/app/task/new"},
@@ -5846,8 +5846,10 @@ class TestWorkspaceShellComposition:
         )
         assert 'data-test-id="dz-workspace-primary-actions"' in html_full
         assert html_full.count('hx-boost="true"') >= 2
-        assert "bg-[hsl(var(--primary))]" in html_full
-        assert "text-[hsl(var(--primary-foreground))]" in html_full
+        # v0.62 CSS refactor: primary-action filled-brand styling lives
+        # in .dz-workspace-action (components/dashboard.css), not inline
+        # `bg-[hsl(var(--primary))]`.
+        assert "dz-workspace-action" in html_full
         # Action labels render into anchor inner text (allowing intermediate whitespace + SVG icons)
         assert "New Task" in html_full
         assert "New Contact" in html_full
@@ -5873,11 +5875,10 @@ class TestWorkspaceShellComposition:
             context_options_url="/api/foo",
             context_selector_entity="tenant",
         )
-        # All four required tokens on the <select>
-        assert "border-[hsl(var(--border))]" in html
-        assert "bg-[hsl(var(--background))]" in html
-        assert "text-[hsl(var(--foreground))]" in html
-        assert "focus:ring-[hsl(var(--ring))]" in html
+        # v0.62 CSS refactor: select chrome lives on the
+        # .dz-workspace-context-select class (components/dashboard.css).
+        # The CSS rule defines border, surface bg, text, and focus ring.
+        assert "dz-workspace-context-select" in html
 
     # Gate 9
     def test_context_selector_uses_canonical_prefs_key(self) -> None:
@@ -5929,15 +5930,33 @@ class TestWorkspaceShellComposition:
 
     # Gate 13
     def test_card_focus_ring_on_wrapper_not_article(self) -> None:
-        """#794 card-within-a-card guard: focus ring lives on the wrapper with offset-2."""
+        """#794 card-within-a-card guard: focus ring lives on the wrapper.
+
+        v0.62 CSS refactor: the focus ring is provided by the
+        ``.dz-card-wrapper:focus`` rule (components/dashboard.css)
+        rather than inline ``focus:ring-2`` Tailwind utilities. The
+        article retains ``.dz-card`` for surface chrome but no focus
+        styling — the wrapper owns it.
+        """
         html = self._render()
-        assert "focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2" in html
-        # The inner <article> must NOT have focus:ring classes
+        assert "dz-card-wrapper" in html
+        # The inner <article> must NOT carry focus styling — only the surface class
         import re
 
         article_tag = re.search(r"<article[^>]*>", html)
         assert article_tag is not None
-        assert "focus:ring-" not in article_tag.group(0)
+        article = article_tag.group(0)
+        assert "focus:ring-" not in article
+        assert "dz-card-wrapper" not in article  # wrapper class is on outer div only
+
+        # CSS rule confirms wrapper carries the focus ring
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        assert ".dz-card-wrapper:focus" in css
 
     # Gate 14 — drawer aside carries no Alpine directives (plain-JS imperative API only)
     def test_drawer_aside_has_no_alpine_directives(self) -> None:
@@ -6042,19 +6061,33 @@ class TestWorkspaceContextSelector:
         )
         assert "project code:" in html
 
-    # Gate 3: select uses all 4 design tokens
+    # Gate 3: select uses canonical semantic class
     def test_select_uses_full_token_set(self) -> None:
+        """v0.62 CSS refactor: 4-token contract (border / bg / text / focus
+        ring) lives on the .dz-workspace-context-select CSS rule rather
+        than as inline Tailwind utilities on the <select> tag."""
         html = self._render()
-        # Extract the select tag and verify the 4 tokens
         import re
 
         select_match = re.search(r'<select[^>]*id="dz-context-selector"[^>]*>', html)
         assert select_match is not None
         tag = select_match.group(0)
-        assert "border-[hsl(var(--border))]" in tag
-        assert "bg-[hsl(var(--background))]" in tag
-        assert "text-[hsl(var(--foreground))]" in tag
-        assert "focus:ring-[hsl(var(--ring))]" in tag
+        assert "dz-workspace-context-select" in tag
+
+        # Confirm the CSS rule carries the four concerns: border, surface bg,
+        # text colour, focus ring.
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        select_block = css.split(".dz-workspace-context-select")[1].split("}")[0]
+        assert "border" in select_block
+        assert "background" in select_block
+        assert "color" in select_block
+        # Focus ring lives on the :focus-visible variant of the same selector
+        assert ".dz-workspace-context-select:focus-visible" in css
 
     # Gate 4: default "All" option first
     def test_default_all_option_present(self) -> None:
@@ -6103,13 +6136,13 @@ class TestWorkspaceContextSelector:
 
     # Gate 11: no Alpine directives on the widget
     def test_no_alpine_directives_on_selector(self) -> None:
+        """v0.62 CSS refactor: widget wrapper class renamed from
+        ``mb-4 flex items-center gap-2`` to ``.dz-workspace-context``."""
         html = self._render()
         import re
 
-        # Extract the div wrapping the label+select (lines 39-45 in the template)
-        # The div starts with class="mb-4 flex items-center gap-2"
         widget_match = re.search(
-            r'<div class="mb-4 flex items-center gap-2">.*?</div>\s*<script>',
+            r'<div class="dz-workspace-context">.*?</div>\s*<script>',
             html,
             re.DOTALL,
         )
@@ -6677,22 +6710,31 @@ class TestWorkspaceHeading:
             primary_actions=primary_actions or [],
         )
 
-    # Gate 1: title uses full 4-class token set
+    # Gate 1: title uses canonical semantic class
     def test_title_uses_full_token_set(self) -> None:
+        """v0.62 CSS refactor: 4-token contract on the h2 (size, weight,
+        leading, colour) lives on .dz-workspace-title (components/dashboard.css)
+        rather than inline Tailwind utilities."""
         html = self._render(workspace_title="Dashboard")
         import re
 
         h2_match = re.search(r"<h2[^>]*>", html)
         assert h2_match is not None
         tag = h2_match.group(0)
-        for cls in (
-            "text-[17px]",
-            "font-medium",
-            "leading-[24px]",
-            "tracking-[-0.01em]",
-            "text-[hsl(var(--foreground))]",
-        ):
-            assert cls in tag, f"missing class {cls!r} in h2 tag: {tag}"
+        assert "dz-workspace-title" in tag
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        title_block = css.split(".dz-workspace-title {")[1].split("}")[0]
+        # The four concerns: size, weight, colour, line-height (line-height
+        # comes from the document base — h2 inherits via base.css).
+        assert "font-size" in title_block
+        assert "font-weight" in title_block
+        assert "color: var(--colour-text)" in title_block
 
     # Gate 2: title fallback works
     def test_title_fallback_from_name(self) -> None:
@@ -6742,10 +6784,23 @@ class TestWorkspaceHeading:
 
     # Gate 8: primary-token class set on each action
     def test_action_uses_primary_token_set(self) -> None:
+        """v0.62 CSS refactor: filled-brand styling lives on
+        .dz-workspace-action (components/dashboard.css)."""
         html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "text-[hsl(var(--primary-foreground))]" in html
-        assert "hover:bg-[hsl(var(--primary)/0.9)]" in html
+        assert "dz-workspace-action" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        action_block = css.split(".dz-workspace-action {")[1].split("}")[0]
+        # Filled-brand: brand background + contrast foreground
+        assert "background: var(--colour-brand)" in action_block
+        assert "color: var(--colour-brand-contrast)" in action_block
+        # Hover state lives on .dz-workspace-action:hover
+        assert ".dz-workspace-action:hover" in css
 
     # Gate 9: plus-icon SVG is decorative
     def test_plus_icon_svg_is_aria_hidden(self) -> None:
@@ -6761,24 +6816,30 @@ class TestWorkspaceHeading:
         assert wrapper_match is not None
         wrapper = wrapper_match.group(0)
         assert 'aria-hidden="true"' in wrapper
-        assert 'class="w-3.5 h-3.5"' in wrapper
         assert 'fill="none"' in wrapper
         assert 'stroke="currentColor"' in wrapper
 
     # Gate 10: asymmetric flex row
     def test_row_uses_asymmetric_flex(self) -> None:
+        """v0.62 CSS refactor: heading row layout lives on .dz-workspace-heading
+        (flex / items-start / justify-between / gap), and the actions wrapper
+        shrink-0 lives on .dz-workspace-primary-actions."""
         html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
-        import re
+        assert "dz-workspace-heading" in html
+        assert "dz-workspace-primary-actions" in html
 
-        # Find the outer heading row wrapper
-        # Pattern: <div class="flex items-start justify-between gap-4 mb-4">
-        assert "flex items-start justify-between gap-4 mb-4" in html
-        # Actions wrapper has shrink-0
-        actions_match = re.search(
-            r'<div class="flex items-center gap-2 shrink-0"',
-            html,
-        )
-        assert actions_match is not None
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        heading_block = css.split(".dz-workspace-heading {")[1].split("}")[0]
+        assert "display: flex" in heading_block
+        assert "align-items: flex-start" in heading_block
+        assert "justify-content: space-between" in heading_block
+        actions_block = css.split(".dz-workspace-primary-actions {")[1].split("}")[0]
+        assert "flex-shrink: 0" in actions_block
 
     # Gate 11: no Alpine on the heading row
     def test_heading_row_is_alpine_free(self) -> None:
@@ -6806,8 +6867,11 @@ class TestWorkspaceHeading:
     # Gate 12: no DaisyUI
     def test_no_daisyui_classes_in_heading(self) -> None:
         html = self._render(primary_actions=[{"label": "Create", "route": "/create"}])
+        # `card-body` is a DaisyUI marker; .dz-card-body is the v0.62
+        # semantic class — exclude it from the substring check.
+        cleaned = html.replace("dz-card-body", "")
         for banned in ("btn ", "btn-primary", "hero ", "card-body"):
-            assert banned not in html, f"DaisyUI leak: {banned!r}"
+            assert banned not in cleaned, f"DaisyUI leak: {banned!r}"
 
 
 # ---------------------------------------------------------------------------

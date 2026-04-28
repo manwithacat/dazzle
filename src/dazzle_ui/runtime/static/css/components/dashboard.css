@@ -1,0 +1,531 @@
+/*
+ * dashboard.css — workspace shell + card grid + drawer.
+ *
+ * Used by templates/workspace/_content.html — the dashboard
+ * composition shell (workspace-shell.md contract). Owns:
+ *   - Outer shell padding + heading row + primary actions
+ *   - Context selector chrome
+ *   - Edit toolbar (Reset + Save buttons; Save reflects 5 saveState
+ *     values: clean / dirty / saving / saved / error)
+ *   - 12-column responsive card grid
+ *   - Card chrome (header / drag handle / notice band / body / resize)
+ *   - Add-card dashed CTA
+ *   - Detail drawer singleton + backdrop
+ *
+ * Design rule: Alpine state grammar (saveState, isDragging, isResizing,
+ * showPicker etc.) is preserved verbatim. Where the template previously
+ * used `:class` to toggle utility classes, we now toggle semantic
+ * state modifiers (.is-dragging, .is-resizing, [data-dz-save-state])
+ * and let CSS resolve the visual delta. Same state machine, no parallel.
+ *
+ * Wrapped in @layer components.
+ */
+
+/* ─────────────────────────── outer shell ────────────────────────
+ * Padded root for the workspace; no max-width constraint — caller
+ * provides the layout container. */
+
+.dz-workspace {
+  padding: var(--space-md);
+}
+
+.dz-workspace-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-block-end: var(--space-md);
+}
+
+.dz-workspace-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-workspace-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* Workspace-level primary action — same shape as .dz-button-primary
+ * but slightly taller (h-2 instead of h-1.75) to match the heading. */
+.dz-workspace-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-workspace-action:hover {
+  opacity: 0.9;
+}
+
+/* ─────────────────────────── context selector ───────────────────
+ * Workspace-level context filter. Just a label + select. */
+
+.dz-workspace-context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+.dz-workspace-context-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-workspace-context-select {
+  height: 2rem;
+  padding-inline: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+}
+
+.dz-workspace-context-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+/* ─────────────────────────── edit toolbar ───────────────────────
+ * Right-aligned row above the grid: Reset + Save buttons. Save
+ * reflects saveState (clean/dirty/saving/saved/error) via a
+ * data-dz-save-state attribute the template binds with x-bind. */
+
+.dz-workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+.dz-workspace-toolbar-spacer {
+  flex: 1 1 0;
+}
+
+.dz-workspace-reset {
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-workspace-reset:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-workspace-save {
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-workspace-save[data-dz-save-state="clean"] {
+  color: var(--colour-text-muted);
+  cursor: default;
+}
+
+.dz-workspace-save[data-dz-save-state="dirty"] {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.dz-workspace-save[data-dz-save-state="saving"] {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  opacity: 0.7;
+}
+
+.dz-workspace-save[data-dz-save-state="saved"] {
+  background: var(--colour-success);
+  color: white;
+}
+
+.dz-workspace-save[data-dz-save-state="error"] {
+  border-color: var(--colour-danger);
+  color: var(--colour-danger);
+}
+
+.dz-workspace-save-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.dz-workspace-save-busy-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  animation: dz-spin 1s linear infinite;
+}
+
+/* ─────────────────────────── card grid ──────────────────────────
+ * 1-col on mobile, 12-col on >=md. items-start to collapse to
+ * intrinsic content height (#844). */
+
+.dz-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .dz-dashboard-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+/* ─────────────────────────── card wrapper ───────────────────────
+ * Layout/positioning element only. Visible card chrome lives on
+ * the inner <article>. Wrapper stays square (no rounding) so the
+ * focus ring traces a clean rectangle (#794). */
+
+.dz-card-wrapper {
+  position: relative;
+  outline: none;
+}
+
+.dz-card-wrapper:focus {
+  box-shadow: 0 0 0 2px var(--colour-surface), 0 0 0 4px var(--colour-brand);
+}
+
+/* Smooth transitions on all reposition/resize except while dragging
+ * (the wrapper sets style.transform directly during drag). Toggled
+ * via .is-animating class (Alpine sets it when not dragging and not
+ * mid-drag). */
+.dz-card-wrapper.is-animating {
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+/* ─────────────────────────── card chrome ────────────────────────
+ * The visible card surface. Default border + bg + clipping. When
+ * resizing, swap to a dashed brand-coloured border. */
+
+.dz-card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  overflow: hidden;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.dz-card.is-resizing {
+  border-style: dashed;
+  border-color: var(--colour-brand);
+}
+
+/* Card header — drag handle zone. */
+.dz-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  cursor: grab;
+  min-height: 2.25rem;
+}
+
+.dz-card-header:active {
+  cursor: grabbing;
+}
+
+.dz-card-header.is-dragging {
+  cursor: grabbing;
+}
+
+.dz-card-titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.dz-card-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+  line-height: 1;
+}
+
+.dz-card-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  user-select: none;
+  margin: 0;
+}
+
+/* Header actions — fade in on hover/focus-within of the wrapper.
+ * Was opacity-0 + group-hover only; #799 set rest opacity to 0.6 so
+ * touch + keyboard users can still see them. */
+.dz-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-card-wrapper:hover .dz-card-actions,
+.dz-card-wrapper:focus-within .dz-card-actions {
+  opacity: 1;
+}
+
+.dz-card-action-button {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.dz-card-action-button:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* Notice band — between header and body. Tone tint via
+ * data-dz-notice-tone (existing dz-notice-band class is the visual
+ * carrier; styling lives in tones layer). Layout shape lives here. */
+.dz-card-notice {
+  margin-inline: var(--space-md);
+  margin-block-end: var(--space-sm);
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-radius: var(--radius-sm);
+  border-inline-start-width: 2px;
+  border-inline-start-style: solid;
+}
+
+.dz-card-notice-title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.dz-card-notice-body {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+/* Card body — HTMX-loaded region content slot. */
+.dz-card-body {
+  padding-inline: var(--space-md);
+  padding-block-end: var(--space-md);
+}
+
+/* Skeleton loader (shown until HTMX swap completes) */
+.dz-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  animation: dz-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dz-card-skeleton-line {
+  height: 1rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-sm);
+}
+
+.dz-card-skeleton-line.is-thin {
+  height: 0.75rem;
+}
+
+.dz-card-skeleton-line.w-3-4 { width: 75%; }
+.dz-card-skeleton-line.w-5-6 { width: 83.333%; }
+
+@keyframes dz-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Resize handle — right edge. Same fade-on-hover pattern as the
+ * action buttons. */
+.dz-card-resize {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 0.375rem;
+  height: 100%;
+  cursor: col-resize;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+  border-end-end-radius: var(--radius-md);
+  border-start-end-radius: var(--radius-md);
+}
+
+.dz-card-wrapper:hover .dz-card-resize,
+.dz-card-wrapper:focus-within .dz-card-resize {
+  opacity: 1;
+}
+
+.dz-card-resize:hover {
+  background: color-mix(in oklch, var(--colour-brand) 30%, transparent);
+}
+
+/* ─────────────────────────── add-card CTA ───────────────────────
+ * Centred dashed-border button below the grid. Picker pops up
+ * relative to it (positioning lives in the picker template). */
+
+.dz-add-card-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--space-md);
+}
+
+.dz-add-card-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 2rem;
+  padding-inline: var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--colour-border);
+  color: var(--colour-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.dz-add-card-button:hover {
+  border-color: var(--colour-brand);
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── detail drawer ──────────────────────
+ * Right-side slide-over for entity detail. Backdrop sits at z-40,
+ * drawer at z-50. Translate-x-full while closed; toggled by the
+ * window.dzDrawer JS singleton via classList. */
+
+.dz-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: oklch(0% 0 0 / 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+.dz-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dz-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--colour-bg);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(100%);
+  transition: transform var(--duration-slow) var(--ease-in-out);
+}
+
+@media (min-width: 40rem) {
+  .dz-drawer {
+    max-width: 42rem;
+  }
+}
+
+.dz-drawer.is-open {
+  transform: translateX(0);
+}
+
+.dz-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--colour-border);
+  flex-shrink: 0;
+}
+
+.dz-drawer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-drawer-button:hover {
+  background: var(--colour-bg);
+}
+
+.dz-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
