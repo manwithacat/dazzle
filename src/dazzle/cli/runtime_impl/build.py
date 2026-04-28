@@ -579,49 +579,7 @@ def _generate_asyncapi_target(appspec: Any, output_dir: Path) -> None:
     typer.echo(f"  AsyncAPI -> {yaml_file}, {json_file}")
 
 
-def build_css_command(
-    output: str = typer.Option(
-        "",
-        "--output",
-        "-o",
-        help="Output CSS file path (default: static/css/dazzle-bundle.css)",
-    ),
-    no_minify: bool = typer.Option(False, "--no-minify", help="Skip minification"),
-) -> None:
-    """
-    Build compiled Tailwind CSS bundle from templates.
-
-    Scans all Dazzle UI templates for Tailwind utility classes and produces
-    a single CSS file containing only the classes actually used. This replaces
-    the Tailwind CDN runtime JIT compiler.
-
-    Requires the Tailwind CSS standalone CLI, which is downloaded automatically
-    on first use (~40MB, cached in ~/.dazzle/cache/).
-
-    Examples:
-        dazzle build-css                    # Build to default location
-        dazzle build-css --no-minify        # Unminified for debugging
-        dazzle build-css -o dist/styles.css # Custom output path
-    """
-    try:
-        from dazzle_ui.build_css import build_css
-    except ImportError as e:
-        typer.echo(f"Dazzle UI not available: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    output_path = Path(output).resolve() if output else None
-    project_root = Path.cwd()
-
-    typer.echo("Building Tailwind CSS bundle...")
-    result = build_css(
-        output_path=output_path,
-        project_root=project_root,
-        minify=not no_minify,
-    )
-
-    if result is None:
-        typer.echo("CSS build failed.", err=True)
-        raise typer.Exit(code=1)
-
-    size_kb = result.stat().st_size / 1024
-    typer.echo(f"CSS bundle built: {result} ({size_kb:.1f} KB)")
+# `build_css_command` removed in v0.62 (Phase 4 teardown). The Tailwind
+# JIT bundle is no longer needed — every Dazzle template now consumes
+# the semantic .dz-* class families from dazzle-framework.css. See
+# dev_docs/2026-04-27-css-refactor-phase-4.md for the migration notes.

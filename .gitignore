@@ -42,7 +42,7 @@ Thumbs.db
 # Build output
 build/
 *.pyc
-src/dazzle_ui/runtime/static/css/dazzle-bundle.css
+# v0.62 (Phase 4 teardown): dazzle-bundle.css no longer generated.
 
 # Test artifacts
 .coverage

@@ -1,12 +1,15 @@
 """
-Regression test for the PyPI publish workflow (#843).
+Regression test for the PyPI publish workflow.
 
-Guards the CI chain that ensures every tagged release ships a fresh
-Tailwind CSS bundle. The bundle is gitignored — if the CI step that
-regenerates it ever disappears, wheels revert to shipping nothing
-(or whatever stale copy the runner happens to have), and new Tailwind
-classes added in template refactors silently drop from downstream
-installs.
+Originally guarded the CI chain that rebuilt the Tailwind CSS bundle
+before packaging (issue #843). v0.62 removed that pipeline as part of
+the Phase 4 teardown — every Dazzle UI template now consumes semantic
+.dz-* class families served by static CSS files that are checked into
+the repo, so there's no longer a runtime JIT step to regenerate.
+
+The test file is retained as a guard against accidental re-introduction
+of the build-css step, and to pin the wheel-shape invariants that
+matter post-teardown.
 """
 
 from __future__ import annotations
@@ -20,26 +23,31 @@ class TestPublishWorkflow:
     def test_workflow_exists(self) -> None:
         assert WORKFLOW_PATH.is_file(), f"Workflow missing: {WORKFLOW_PATH}"
 
-    def test_runs_build_css_before_python_build(self) -> None:
-        """`dazzle build-css` must run before `python -m build` in the build job.
-
-        If this test fails, the wheel is being packaged with a stale or
-        missing dazzle-bundle.css — see #843 for the user-facing symptom.
-        """
+    def test_runs_python_build(self) -> None:
+        """The workflow must still run `python -m build` to produce the
+        wheel + sdist artefacts."""
         content = WORKFLOW_PATH.read_text()
-        build_css_idx = content.find("dazzle build-css")
-        python_build_idx = content.find("python -m build")
-        assert build_css_idx != -1, "Workflow no longer runs `dazzle build-css` — #843 regression."
-        assert python_build_idx != -1, "Workflow no longer runs `python -m build`."
-        assert build_css_idx < python_build_idx, (
-            "`dazzle build-css` must run before `python -m build` so the wheel "
-            "ships a fresh bundle. Re-order the steps in publish-pypi.yml."
+        assert "python -m build" in content, "Workflow no longer runs `python -m build`."
+
+    def test_no_build_css_step(self) -> None:
+        """v0.62 (Phase 4 teardown): `dazzle build-css` must NOT run in
+        the publish workflow. The Tailwind compiled bundle is gone; if
+        someone re-adds the step, this test fails to flag the
+        regression."""
+        content = WORKFLOW_PATH.read_text()
+        assert "dazzle build-css" not in content, (
+            "Workflow re-introduced `dazzle build-css` — Phase 4 teardown "
+            "removed both the CLI command and the underlying build_css.py "
+            "module. Drop the step or restore the module + CLI."
         )
 
-    def test_verifies_bundle_in_wheel(self) -> None:
-        """A post-build guard must assert dazzle-bundle.css is in the wheel."""
+    def test_no_dazzle_bundle_reference(self) -> None:
+        """v0.62 (Phase 4 teardown): no part of the publish workflow
+        should reference `dazzle-bundle.css` (the file no longer ships
+        in the wheel)."""
         content = WORKFLOW_PATH.read_text()
-        assert "dazzle-bundle.css" in content, (
-            "Workflow no longer verifies the bundle is in the built wheel — "
-            "see #843 — add the `python -m zipfile -l` grep guard back."
+        assert "dazzle-bundle.css" not in content, (
+            "Workflow still references `dazzle-bundle.css` — that file "
+            "was removed in the Phase 4 teardown. Drop the verification "
+            "step or restore the build pipeline."
         )

@@ -16,7 +16,6 @@ The modules are:
 from .build import (
     build_api_command,
     build_command,
-    build_css_command,
     build_ui_command,
     migrate_command,
 )
@@ -30,7 +29,6 @@ __all__ = [
     # Build commands
     "build_ui_command",
     "build_api_command",
-    "build_css_command",
     "migrate_command",
     "build_command",
     # Serve

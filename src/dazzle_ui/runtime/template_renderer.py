@@ -418,14 +418,11 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
 
     env.globals["theme_variant"] = get_theme_variant
 
-    # Global: detect if compiled Tailwind CSS bundle exists
+    # v0.62 CSS refactor (Phase 4 teardown): Tailwind compiled bundle
+    # removed — the `_tailwind_bundled` Jinja global and the per-request
+    # filesystem existence check went with it. The semantic .dz-* class
+    # families ship as static CSS files loaded directly from base.html.
     static_dir = Path(__file__).parent / "static"
-    bundled = (static_dir / "css" / "dazzle-bundle.css").exists()
-    # Also check project static dir (sibling of project templates dir)
-    if not bundled and project_templates_dir:
-        project_static = project_templates_dir.parent / "static"
-        bundled = (project_static / "css" / "dazzle-bundle.css").exists()
-    env.globals["_tailwind_bundled"] = bundled
 
     # Asset fingerprinting manifest — content-hash cache busting (#711)
     from dazzle_ui.runtime.asset_fingerprint import build_asset_manifest, static_url_filter
