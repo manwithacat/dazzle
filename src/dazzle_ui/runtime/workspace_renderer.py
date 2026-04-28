@@ -462,24 +462,41 @@ def build_workspace_context(
         action_url = ""
         action_id_field = "id"
         if action_name and app_spec:
-            surfaces = app_spec.surfaces
-            for s in surfaces:
-                if s.name == action_name:
-                    entity_ref = s.entity_ref or ""
-                    if entity_ref:
-                        if entity_ref == source_name:
-                            # Same entity — use row id
-                            action_url = _entity_to_app_url(entity_ref)
-                        else:
-                            # Cross-entity — find FK field in source entity
-                            fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
-                            if fk_field:
-                                action_url = _entity_to_app_url(entity_ref)
-                                action_id_field = fk_field
-                            else:
-                                # Fallback: use row id
-                                action_url = _entity_to_app_url(entity_ref)
+            # v0.61.86 (#916): if `action:` matches a workspace name (not a
+            # surface), route to the workspace's app-shell URL with the row
+            # identifier as `context_id` query param. Heatmap rows on a
+            # pivoted view aggregate across many records, so opening the
+            # source-record detail drawer is rarely useful — drilling into
+            # a per-row workspace (e.g. `pupil_dashboard` keyed by the
+            # `student_profile` row) is the natural action. Workspace lookup
+            # comes BEFORE the surface lookup so workspace names take
+            # precedence on collision (workspaces and surfaces share a
+            # namespace in DSL anyway, but be explicit).
+            workspaces = getattr(app_spec, "workspaces", None) or []
+            for ws in workspaces:
+                if getattr(ws, "name", None) == action_name:
+                    action_url = f"/app/workspaces/{action_name}?context_id={{id}}"
                     break
+
+            if not action_url:
+                surfaces = app_spec.surfaces
+                for s in surfaces:
+                    if s.name == action_name:
+                        entity_ref = s.entity_ref or ""
+                        if entity_ref:
+                            if entity_ref == source_name:
+                                # Same entity — use row id
+                                action_url = _entity_to_app_url(entity_ref)
+                            else:
+                                # Cross-entity — find FK field in source entity
+                                fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
+                                if fk_field:
+                                    action_url = _entity_to_app_url(entity_ref)
+                                    action_id_field = fk_field
+                                else:
+                                    # Fallback: use row id
+                                    action_url = _entity_to_app_url(entity_ref)
+                        break
 
         # Default: if no explicit action, link rows to the source entity detail view
         if not action_url and source_name:

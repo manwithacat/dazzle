@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.86] - 2026-04-28
+
+### Fixed
+- **`src/dazzle_ui/runtime/workspace_renderer.py`** — closes #916.
+  When `display: heatmap` (or any region) declares `action: <name>`,
+  the action-resolution loop now checks `app_spec.workspaces` BEFORE
+  `app_spec.surfaces`. If `<name>` matches a workspace, the URL
+  pattern is `/app/workspaces/<name>?context_id={id}` — the heatmap
+  template substitutes `{id}` with the row identifier, producing the
+  app-shell URL with the row's identifier passed via the standard
+  `context_id` query param. Previous behaviour silently downgraded
+  to source-record detail because only `surfaces` was checked. Tests
+  in `tests/unit/test_heatmap_action_workspace.py`.
+
 ## [0.61.85] - 2026-04-28
 
 ### Fixed
