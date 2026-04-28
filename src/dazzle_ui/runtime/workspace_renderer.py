@@ -423,10 +423,19 @@ def build_workspace_context(
 
         template = DISPLAY_TEMPLATE_MAP.get(display_mode, "workspace/regions/list.html")
 
-        col_span = _default_col_span(stage, idx)
-        # Kanban needs full width for horizontal scroll to work
-        if display_mode == "KANBAN":
-            col_span = 12
+        # v0.61.83 (#914): explicit `width:` on the region wins over both
+        # the stage default and the kanban auto-promotion. Saved layouts
+        # (drag-resize via the dashboard builder) still override this at
+        # the layout-restore step in `apply_layout_to_workspace` further
+        # down — user resize is the highest signal.
+        _explicit_width = getattr(region, "width", None)
+        if _explicit_width is not None:
+            col_span = _explicit_width
+        else:
+            col_span = _default_col_span(stage, idx)
+            # Kanban needs full width for horizontal scroll to work
+            if display_mode == "KANBAN":
+                col_span = 12
 
         # Serialise sort specs
         sort_specs = []

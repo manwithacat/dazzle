@@ -157,6 +157,7 @@ class TokenType(Enum):
     FACTS = "facts"  # v0.61.55 (#892): profile_card key-facts list (interpolated)
     CAPTION = "caption"  # v0.61.56 (#890): pipeline_steps stage sub-text
     EYEBROW = "eyebrow"  # v0.61.60: region kicker line above the title
+    WIDTH = "width"  # v0.61.83 (#914): region grid-column span (1..12)
     TONES = "tones"  # v0.61.65: per-metric tone palette tokens for `display: metrics`
     ENTRIES = "entries"  # v0.61.69 (#3): status_list entry block keyword
     STATE = "state"  # v0.61.69 (#3): status_list entry pill state token

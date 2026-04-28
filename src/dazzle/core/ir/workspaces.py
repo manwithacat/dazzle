@@ -503,6 +503,15 @@ class WorkspaceRegion(BaseModel):
     # "Hero Marked"). Empty string is treated as None — the runtime
     # falls back to the auto-derived title. Pure presentation hook.
     title: str | None = None
+    # v0.61.83 (#914): explicit grid-column span override. When set,
+    # overrides both the stage-default (12 for unknown stages, 4 for
+    # `metrics`, etc.) and any project-CSS `:has()` + `!important`
+    # contortion projects previously needed to coerce hero strips and
+    # KPI rows. Saved layouts (drag-resize via the dashboard builder)
+    # still win — the user's explicit resize is the highest signal.
+    # Range: 1..12 inclusive; values outside that band are clamped at
+    # parse time with a warning. None = "use stage default".
+    width: int | None = None
     # v0.61.53 (#893): bar_track display config — per-row horizontal
     # value bar. Reuses `group_by` for the row dimension and
     # `aggregates` for the bar value (single-dim chart pipeline). These

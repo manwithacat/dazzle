@@ -1311,6 +1311,7 @@ class WorkspaceParserMixin:
         css_class: str | None = None  # region wrapper CSS class hook (#894)
         eyebrow: str | None = None  # kicker line above region title (v0.61.60)
         title_override: str | None = None  # explicit region title override (v0.61.63 #903)
+        width: int | None = None  # explicit grid-column span (v0.61.83 #914)
         tones: dict[str, str] = {}  # per-tile metric tones (v0.61.65)
         notice: ir.NoticeSpec | None = None  # notice band (v0.61.68 #7)
         track_max: float | None = None  # bar_track fill denominator (#893)
@@ -1640,6 +1641,26 @@ class WorkspaceParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 eyebrow = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # width: <int 1..12> — explicit grid-column span override.
+            # v0.61.83 (#914). Project-supplied integer literal; values
+            # outside 1..12 are clamped at parse time. Saved layouts
+            # (drag-resize via the dashboard builder) still win — this
+            # is the DSL-author hint for the default position.
+            elif self.match(TokenType.WIDTH):
+                self.advance()
+                self.expect(TokenType.COLON)
+                _w_token = self.expect(TokenType.NUMBER)
+                try:
+                    _w_raw = int(_w_token.value)
+                except (TypeError, ValueError):
+                    _w_raw = 12
+                if _w_raw < 1:
+                    _w_raw = 1
+                elif _w_raw > 12:
+                    _w_raw = 12
+                width = _w_raw
                 self.skip_newlines()
 
             # tones:
@@ -2022,6 +2043,7 @@ class WorkspaceParserMixin:
             pipeline_stages=pipeline_stages,
             eyebrow=eyebrow,
             title=title_override or None,  # #903: empty string → None for fallback
+            width=width,  # #914: explicit grid-column span override (1..12)
             tones=tones,
             notice=notice,
             status_entries=status_entries,

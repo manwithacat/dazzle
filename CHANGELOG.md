@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.83] - 2026-04-28
+
+### Added
+- **Region-level `width:` field** — closes #914. DSL authors can now
+  set an explicit grid-column span (1..12) per region in a workspace
+  declaration:
+  ```dsl
+  hero_marked_overnight:
+    title: "Marked overnight"
+    eyebrow: "Today"
+    source: Manuscript
+    display: summary
+    width: 3
+    aggregate:
+      count: count(Manuscript where status = marked)
+  ```
+  Replaces the project-side `:has()` + `!important` CSS overrides
+  that hero strips and KPI rows previously needed to escape the
+  default 12-column-stack layout. Out-of-range values are clamped
+  to 1..12 at parse time. Saved layouts (drag-resize via the
+  dashboard builder) still win — the user's explicit resize is the
+  highest signal. New `WIDTH` token + `WorkspaceRegion.width` IR
+  field; `_default_col_span()` consults the IR field before falling
+  back to the stage-default lookup. Tests in
+  `tests/unit/test_workspace_region_width.py`.
+
 ## [0.61.82] - 2026-04-28
 
 ### v0.62 CSS refactor — semantic class families replace inline Tailwind
