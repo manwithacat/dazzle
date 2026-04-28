@@ -1,14 +1,18 @@
 {# Detail fields fragment — renders entity item as a definition list.
-   Used by the API read handler for HTMX/browser content negotiation. #}
+   Used by the API read handler for HTMX/browser content negotiation.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-detail-fields-* classes
+   (components/fragments.css). Lighter version of the detail_view component
+   (no header / actions / related groups). #}
 {% from 'macros/status_badge.html' import render_status_badge %}
-<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
-  <div class="p-4">
-    <h2 class="text-lg font-semibold">{{ entity_name }}</h2>
-    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 mt-4">
+<div class="dz-detail-fields-card">
+  <div class="dz-detail-fields-body">
+    <h2 class="dz-detail-fields-title">{{ entity_name }}</h2>
+    <dl class="dz-detail-fields-list">
       {% for key, value in item.items() %}
       {% if value is not none and key != 'id' %}
-      <dt class="font-medium text-[hsl(var(--muted-foreground))] text-[13px] text-right py-1">{{ key | replace('_', ' ') | title }}</dt>
-      <dd class="py-1 text-[13px] break-all">
+      <dt class="dz-detail-fields-key">{{ key | replace('_', ' ') | title }}</dt>
+      <dd class="dz-detail-fields-value">
         {% if value is sameas true %}
         {{ render_status_badge(value="yes", tone="success", display="Yes") }}
         {% elif value is sameas false %}

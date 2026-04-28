@@ -66,7 +66,7 @@
 
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 {{ w }} {{ h }}"
-         class="dz-area-chart-svg w-full h-auto"
+         class="dz-area-chart-svg dz-chart-svg"
          role="img"
          aria-label="{{ title }} stacked area chart — {{ tcount }} time buckets, {{ series_keys | length }} series">
       <line x1="{{ pl }}" y1="{{ pt + plot_h }}"
@@ -158,20 +158,20 @@
     </svg>
 
     {# Legend — colour key → series name. #}
-    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+    <div class="dz-chart-legend">
       {% for series_key in series_keys %}
         {% set colour = palette[loop.index0 % (palette | length)] %}
-        <span class="inline-flex items-center gap-1">
-          <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ colour }}; opacity: 0.7"></span>
-          <span class="font-mono">{{ series_key }}</span>
+        <span class="dz-chart-legend-item">
+          <span class="dz-chart-legend-swatch" style="background: {{ colour }}; opacity: 0.7"></span>
+          <span class="dz-chart-legend-name">{{ series_key }}</span>
         </span>
       {% endfor %}
     </div>
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-1 font-mono">
+    <p class="dz-chart-summary">
       {{ tcount }} buckets · {{ series_keys | length }} series · peak {{ max_total }}
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

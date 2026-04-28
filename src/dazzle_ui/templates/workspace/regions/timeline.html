@@ -1,26 +1,32 @@
 {# Timeline region — UX-035 adopter #7.
-   Contract: ~/.claude/skills/ux-architect/components/timeline-region.md (UX-067) #}
+   Contract: ~/.claude/skills/ux-architect/components/timeline-region.md (UX-067)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-timeline-* classes
+   (components/regions.css). Hover state on `is-clickable` modifier
+   toggled by `{% if action_url %}`; attention accent still flows
+   through the unchanged attention_classes macro. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/attention_accent.html' import attention_classes %}
 {% call region_card(title) %}
 <div class="dz-timeline-region">
   {% if items %}
-  <ul class="dz-timeline-list relative pl-4 border-l border-[hsl(var(--border))] space-y-3">
+  <ul class="dz-timeline-list">
     {% for item in items %}
     {% set attn = item.get("_attention") if item.get is defined else none %}
-    <li class="dz-timeline-item relative">
+    <li class="dz-timeline-item">
       {# Bullet marker on the border line #}
-      <span class="absolute -left-[21px] top-1.5 flex h-3 w-3 items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="dz-timeline-bullet h-3 w-3 {{ attention_classes(attn, 'bullet') }}"
-          aria-hidden="true">
+      <span class="dz-timeline-bullet-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+             class="dz-timeline-bullet {{ attention_classes(attn, 'bullet') }}"
+             aria-hidden="true">
           <circle cx="10" cy="10" r="6"/>
         </svg>
       </span>
 
-      <div class="flex gap-3">
+      <div class="dz-timeline-row">
         {# Date column #}
-        <div class="text-[11px] text-[hsl(var(--muted-foreground))] min-w-[80px] pt-1">
+        <div class="dz-timeline-date">
           {% for col in columns %}
           {% if col.type == "date" %}
           {{ item[col.key] | timeago }}
@@ -31,17 +37,16 @@
         {# Content pad — plain padding only. No border, no bg. The
            enclosing dashboard slot owns all card chrome; adding an
            edge here reads as a card-in-card (issue #794 second
-           follow-up). Hover state uses bg tint for affordance. #}
-        <div class="dz-timeline-content flex-1 py-1 px-2 rounded-[4px]
-          {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
+           follow-up). Hover state uses bg tint via .is-clickable. #}
+        <div class="dz-timeline-content{% if action_url %} is-clickable{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}
              {% if attn %}title="{{ attn.message }}"{% endif %}>
           {% set _primary = item[display_key] %}
-          <p class="text-[13px] font-medium text-[hsl(var(--foreground))]">{% if _primary is none %}{{ item.get("name", (entity_name|default("Event"))) }}{% else %}{{ _primary }}{% endif %}</p>
+          <p class="dz-timeline-title">{% if _primary is none %}{{ item.get("name", (entity_name|default("Event"))) }}{% else %}{{ _primary }}{% endif %}</p>
           {% for col in columns %}
           {% if col.key != display_key and col.type != "date" %}
-          <p class="text-[11px] text-[hsl(var(--muted-foreground))]">
+          <p class="dz-timeline-field">
             <span>{{ col.label }}:</span>
             {% if col.type == "badge" %}
               {{ render_status_badge(value=item[col.key], size='sm') }}
@@ -64,10 +69,10 @@
     {% endfor %}
   </ul>
   {% if total > items | length %}
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items | length }} of {{ total }}</p>
+  <p class="dz-timeline-overflow">Showing {{ items | length }} of {{ total }}</p>
   {% endif %}
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No events yet.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No events yet.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

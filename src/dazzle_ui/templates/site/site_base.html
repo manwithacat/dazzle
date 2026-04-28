@@ -11,8 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   {# CSS Cascade Layer order #}
   <style>@layer base, framework, app, overrides;</style>
-  {# Tailwind CSS + DaisyUI — self-hosted compiled bundle (#832, cycle 323). #}
-  <link rel="stylesheet" href="{{ 'css/dazzle-bundle.css' | static_url }}">
+  {# v0.62 CSS refactor (Phase 4 teardown): Tailwind compiled bundle
+     removed. Marketing templates consume site-sections.css (loaded as
+     part of dazzle.css below). #}
   {# DAZZLE design system layer — local route served by site_routes.py. #}
   <link rel="stylesheet" href="/styles/dazzle.css">
   {% if custom_css %}
@@ -27,7 +28,7 @@
   {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
-<body class="dz-site {% block body_class %}bg-[hsl(var(--card))]{% endblock %}"
+<body class="dz-site {% block body_class %}dz-site-bg{% endblock %}"
   {% if tenant_slug %}data-dz-tenant="{{ tenant_slug }}"{% endif %}
   {% if persona_class %}data-dz-persona-class="{{ persona_class }}"{% endif %}
   {% block body_attrs %}{% endblock %}>

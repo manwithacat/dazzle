@@ -1,0 +1,95 @@
+/*
+ * button.css — button component family.
+ *
+ * Single semantic class .dz-button with three variant modifiers:
+ *   .dz-button-ghost        no border, hover-tint only (back, cancel)
+ *   .dz-button-outline      bordered neutral (default action button)
+ *   .dz-button-destructive  bordered danger (delete, revoke)
+ *
+ * Used everywhere — detail_view header, modal footers, drawer
+ * actions, toolbar buttons. Centralising here means future
+ * theming + accessibility tweaks happen in one place.
+ *
+ * The `<button>` element baseline in base.css already provides
+ * focus ring, disabled state, font inheritance — these classes
+ * extend that baseline with size + variant.
+ *
+ * Wrapped in @layer components.
+ */
+
+.dz-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.dz-button-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--colour-text-muted);
+}
+
+.dz-button-ghost:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-button-outline {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+}
+
+.dz-button-outline:hover {
+  background: var(--colour-bg);
+}
+
+.dz-button-destructive {
+  background: var(--colour-surface);
+  color: var(--colour-danger);
+  border: 1px solid var(--colour-danger);
+}
+
+.dz-button-destructive:hover {
+  background: var(--colour-danger-soft);
+}
+
+/* `.dz-button.dz-button-primary` — filled brand variant. Composes
+ * with .dz-button baseline (height + padding + radius). The standalone
+ * `.dz-button-primary` rule in components/table.css is a smaller
+ * table-header-only variant and stays scoped (less-specific selector,
+ * no .dz-button qualifier). */
+.dz-button.dz-button-primary {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border: 1px solid var(--colour-brand);
+}
+
+.dz-button.dz-button-primary:hover {
+  filter: brightness(1.1);
+}
+
+.dz-button.dz-button-primary:disabled,
+.dz-button.dz-button-primary[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Size modifier — smaller button used by inline action rows
+ * (e.g. 2FA settings row buttons). Composes with .dz-button base. */
+.dz-button.dz-button-sm {
+  height: 1.75rem;
+  padding-inline: var(--space-md);
+  font-size: var(--text-xs);
+}

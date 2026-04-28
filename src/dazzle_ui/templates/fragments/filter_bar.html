@@ -1,19 +1,22 @@
-{# Filter bar fragment — pure Tailwind, same HTMX wiring and filter logic.
-   Contract: ~/.claude/skills/ux-architect/components/filter-bar.md (UX-033) #}
+{# Filter bar fragment.
+   Contract: ~/.claude/skills/ux-architect/components/filter-bar.md (UX-033)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-filter-* classes
+   (components/fragments.css). Three branches (ref-loaded select, static
+   select, text input) all share the .dz-filter-input or .dz-filter-select
+   chrome rule. #}
 {% set tbody_target = '#' + (table.table_id or 'dt-table') + '-body' %}
-<div class="flex flex-wrap gap-2 items-end">
+<div class="dz-filter-bar">
   {% for col in table.columns %}
   {% if col.filterable %}
-  <div class="flex flex-col gap-0.5 w-40">
+  <div class="dz-filter-cell">
 
-    <label class="text-[12px] font-medium text-[hsl(var(--muted-foreground))]">
-      {{ col.label }}
-    </label>
+    <label class="dz-filter-label">{{ col.label }}</label>
 
     {% if col.filter_type == "select" and col.filter_ref_entity %}
     {# Ref/belongs_to filter: select with dynamically loaded options #}
     <select name="filter[{{ col.key }}]"
-            class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
+            class="dz-filter-select"
             hx-get="{{ table.api_endpoint }}"
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
@@ -56,7 +59,7 @@
     {% elif col.filter_type == "select" %}
     {# Enum/static select filter #}
     <select name="filter[{{ col.key }}]"
-            class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
+            class="dz-filter-select"
             hx-get="{{ table.api_endpoint }}"
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
@@ -79,7 +82,7 @@
            name="filter[{{ col.key }}]"
            placeholder="Filter {{ col.label | lower }}…"
            value="{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}"
-           class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
+           class="dz-filter-input"
            hx-get="{{ table.api_endpoint }}"
            hx-target="{{ tbody_target }}"
            hx-swap="innerHTML"

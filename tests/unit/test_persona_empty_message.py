@@ -279,18 +279,32 @@ class TestEmptyStateFragment:
         assert "Create first task" in html
 
     def test_cta_uses_design_tokens_not_daisyui(self) -> None:
+        """v0.62 CSS refactor: CTA chrome (brand bg + contrast fg)
+        lives on the .dz-empty-state-cta CSS rule rather than inline
+        `bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]`
+        Tailwind utilities."""
         html = self._render(
             empty_message="No tasks",
             entity_name="task",
             create_url="/app/task/create",
         )
-        # Canonical design-token classes
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "text-[hsl(var(--primary-foreground))]" in html
+        # Semantic class
+        assert "dz-empty-state-cta" in html
         # Legacy DaisyUI classes MUST NOT appear
         assert "btn-primary" not in html
         assert "btn-sm" not in html
         assert "text-base-content" not in html
+
+        # CSS rule carries the brand fill
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        cta_block = css.split(".dz-empty-state-cta {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in cta_block
+        assert "color: var(--colour-brand-contrast)" in cta_block
 
     def test_fallback_copy_when_empty_message_missing(self) -> None:
         html = self._render(entity_name="task")

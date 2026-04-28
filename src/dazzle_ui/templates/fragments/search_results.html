@@ -1,20 +1,23 @@
 {# Search results fragment: items returned by search endpoint.
-   Contract: ~/.claude/skills/ux-architect/components/search-flow-fragments.md (cycle 288) #}
+   Contract: ~/.claude/skills/ux-architect/components/search-flow-fragments.md (cycle 288)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-search-result-* classes
+   (components/fragments.css). #}
 
 {% if items %}
   {% for item in items %}
-  <div class="px-3 py-2 cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors"
+  <div class="dz-search-result-row"
        hx-get="{{ select_endpoint }}&id={{ item[value_key] }}"
        hx-target="#search-results-{{ field_name }}"
        hx-swap="innerHTML">
-    <div class="font-medium text-[13px]">{{ item[display_key] }}</div>
+    <div class="dz-search-result-name">{{ item[display_key] }}</div>
     {% if secondary_key and item.get(secondary_key) %}
-    <div class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ item[secondary_key] }}</div>
+    <div class="dz-search-result-secondary">{{ item[secondary_key] }}</div>
     {% endif %}
   </div>
   {% endfor %}
 {% else %}
-  <div class="p-3 text-[13px] text-[hsl(var(--muted-foreground))]">
+  <div class="dz-search-result-empty">
     {% if query %}
       No results found for "{{ query }}"
     {% else %}

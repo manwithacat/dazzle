@@ -8,23 +8,21 @@
 {% block body_class %}dz-auth-page{% endblock %}
 
 {% block body %}
+{# v0.62 CSS refactor: inline Tailwind → semantic .dz-auth-* family.
+   The dynamic JS row/button class strings are now thin wrappers over
+   the .dz-auth-status-row / .dz-button + .dz-button-sm composition. #}
 {% call auth_page_card("2FA Settings", product_name) %}
 
   {# The macro renders #dz-auth-error. Success alert is unique to this flow, so we add it inline. #}
-  <div id="dz-auth-success"
-       class="hidden flex gap-2 p-3 mb-4 rounded-[4px] border border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.08)] text-[13px] text-[hsl(var(--foreground))]"
-       role="status"></div>
+  <div id="dz-auth-success" class="dz-auth-success hidden" role="status"></div>
 
-  <div id="dz-status" class="mt-2">
-    <p class="text-center text-[13px] text-[hsl(var(--muted-foreground))]">Loading status...</p>
+  <div id="dz-status">
+    <p class="dz-auth-status-loading">Loading status...</p>
   </div>
 
-  <div class="mt-6">
-    <a href="/app"
-       class="block w-full h-9 leading-9 text-center rounded-[4px] text-[hsl(var(--muted-foreground))] text-[13px] font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[120ms]">
-      Back to App
-    </a>
-  </div>
+  <a href="/app" class="dz-auth-back-link">
+    Back to App
+  </a>
 {% endcall %}
 {% endblock %}
 
@@ -35,23 +33,15 @@
   const successDiv = document.getElementById('dz-auth-success');
   const statusDiv = document.getElementById('dz-status');
 
-  // Class strings for the dynamically-generated status rows. Centralised so
-  // any future tweak to the row/button grammar touches a single location.
-  // Matches the UX-036 button vocabulary established in cycles 33–41.
-  const ROW_CLASSES =
-    'flex justify-between items-center py-3 border-b border-[hsl(var(--border))]';
-  const ROW_CLASSES_LAST =
-    'flex justify-between items-center py-3';
-  const LABEL_CLASSES =
-    'text-[13px] text-[hsl(var(--foreground))]';
-  const BTN_BASE =
-    'h-7 px-3 rounded-[4px] text-[12px] font-medium transition-colors duration-[120ms]';
-  const BTN_PRIMARY =
-    BTN_BASE + ' bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
-  const BTN_DESTRUCTIVE =
-    BTN_BASE + ' bg-[hsl(var(--destructive))] text-[hsl(var(--primary-foreground))] hover:brightness-110';
-  const BTN_OUTLINE =
-    BTN_BASE + ' border border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]';
+  // v0.62 CSS refactor: row/button class strings are now thin wrappers
+  // over .dz-auth-status-row + .dz-button + .dz-button-sm semantic
+  // composition (components/fragments.css, components/button.css).
+  const ROW_CLASSES = 'dz-auth-status-row';
+  const ROW_CLASSES_LAST = 'dz-auth-status-row is-last';
+  const LABEL_CLASSES = 'dz-auth-status-label';
+  const BTN_PRIMARY = 'dz-button dz-button-primary dz-button-sm';
+  const BTN_DESTRUCTIVE = 'dz-button dz-button-destructive dz-button-sm';
+  const BTN_OUTLINE = 'dz-button dz-button-outline dz-button-sm';
 
   function showError(msg) {
     errorDiv.textContent = msg;

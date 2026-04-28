@@ -14,20 +14,23 @@ def jinja_env():
 
 class TestToastFragment:
     def test_renders_alert_with_level(self, jinja_env):
+        """v0.62 CSS refactor: tone tinting moved from inline
+        `text-[hsl(var(--success))]` / `border-l-[hsl(var(--success))]`
+        Tailwind dictionaries to attribute selectors on
+        `.dz-toast[data-dz-toast-level="success"]` in
+        components/fragments.css."""
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Saved", level="success")
-        # Post-DaisyUI refactor: toast uses design-system tokens, not alert-success
-        assert "text-[hsl(var(--success))]" in html
-        assert "border-l-[hsl(var(--success))]" in html
+        assert 'data-dz-toast-level="success"' in html
         assert "Saved" in html
         assert 'remove-me="5s"' in html
 
     def test_default_level_is_info(self, jinja_env):
+        """info is the default level — tone tinting via
+        data-dz-toast-level attribute selector for `.dz-toast` in CSS."""
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Hello")
-        # info level maps to --primary in the token system
-        assert "text-[hsl(var(--primary))]" in html
-        assert "border-l-[hsl(var(--primary))]" in html
+        assert 'data-dz-toast-level="info"' in html
 
 
 class TestAlertBanner:
@@ -76,12 +79,15 @@ class TestBreadcrumbs:
 
 class TestStepsIndicator:
     def test_renders_steps(self, jinja_env):
+        """v0.62 CSS refactor: completed/current step styling moved
+        from inline `bg-[hsl(var(--primary))]` to .is-completed
+        modifier on .dz-steps-circle (components/fragments.css)."""
         steps = [{"label": "Info"}, {"label": "Review"}, {"label": "Done"}]
         tmpl = jinja_env.from_string('{% include "fragments/steps_indicator.html" %}')
         html = tmpl.render(steps=steps, current_step=2)
-        # Cycle 251 — migrated from DaisyUI step-primary to design tokens
         assert "dz-steps" in html
-        assert "bg-[hsl(var(--primary))]" in html  # completed/current steps
+        # 2 circles + 2 labels emit .is-completed (steps 1, 2)
+        assert html.count("dz-steps-circle is-completed") == 2
         assert 'aria-current="step"' in html
 
 
@@ -112,13 +118,16 @@ class TestAccordion:
 
 class TestSkeletonPatterns:
     def test_skeleton_table_rows(self, jinja_env):
+        """v0.62 CSS refactor: shimmer rows use class `dz-skeleton`
+        with size variants; count one shimmer div per cell."""
         tmpl = jinja_env.from_string(
             '{% from "fragments/skeleton_patterns.html" import skeleton_table_rows %}'
             "{{ skeleton_table_rows(rows=3, cols=2) }}"
         )
         html = tmpl.render()
         assert html.count("<tr>") == 3
-        assert html.count("skeleton") == 6
+        # 3 rows × 2 cols = 6 shimmer divs (each opened with `dz-skeleton ` class)
+        assert html.count('class="dz-skeleton ') == 6
 
     def test_skeleton_card(self, jinja_env):
         tmpl = jinja_env.from_string(
@@ -137,11 +146,32 @@ class TestModal:
         assert "<dialog" in html
         assert "Edit Item" in html
         assert "Fields" in html
-        # Post-DaisyUI refactor: native <dialog> uses CSS ::backdrop pseudo
-        # via Tailwind's `backdrop:` prefix, not a modal-backdrop class.
-        assert "backdrop:bg-black" in html
+        # v0.62 CSS refactor: <dialog> chrome lives on `.dz-modal` rule
+        # in components/fragments.css. Backdrop tinting now keyed off
+        # the native `.dz-modal::backdrop` pseudo-element selector
+        # rather than Tailwind's `backdrop:` prefix.
+        assert 'class="dz-modal"' in html
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert ".dz-modal::backdrop" in css
 
     def test_size_classes(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "components/modal.html" %}')
         html = tmpl.render(title="Big", size="xl")
-        assert "max-w-4xl" in html
+        # v0.62 CSS refactor: size moved from inline `max-w-4xl` Tailwind
+        # to the `data-dz-modal-size="xl"` attribute selector consumed by
+        # `.dz-modal[data-dz-modal-size="xl"] .dz-modal-panel` in
+        # components/fragments.css.
+        assert 'data-dz-modal-size="xl"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert '.dz-modal[data-dz-modal-size="xl"]' in css

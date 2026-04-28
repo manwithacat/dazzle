@@ -45,9 +45,22 @@ class TestAuthPageWrapper:
         )
 
     def test_card_max_width_still_rendered(self) -> None:
-        """The inner card div (max-w-sm) must still be present."""
+        """The inner card div must still be present.
+
+        v0.62 CSS refactor: card chrome (max-width 24rem, padding,
+        border, shadow) lives on .dz-auth-card rule rather than inline
+        `w-full max-w-sm bg-[hsl(var(--card))] border ...` Tailwind."""
         html = _render_login()
-        assert "w-full max-w-sm" in html
+        assert "dz-auth-card" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        card_block = css.split(".dz-auth-card {")[1].split("}")[0]
+        assert "max-width: 24rem" in card_block  # 24rem = previous max-w-sm
 
     def test_product_name_rendered_in_card(self) -> None:
         html = _render_login()

@@ -38,16 +38,29 @@ class TestTooltipRichFragment:
         assert "Export as CSV" in html
 
     def test_uses_design_tokens_not_daisyui(self) -> None:
+        """v0.62 CSS refactor: panel chrome (foreground bg / background fg /
+        shadow) lives on .dz-tooltip-panel rule rather than inline
+        `bg-[hsl(var(--foreground))] text-[hsl(var(--background))]` Tailwind."""
         html = self._render(content="Hello")
-        # Canonical design-token colour classes
-        assert "bg-[hsl(var(--foreground))]" in html
-        assert "text-[hsl(var(--background))]" in html
+        # Semantic class on rendered panel
+        assert "dz-tooltip-panel" in html
         # Legacy DaisyUI class names MUST NOT appear
         assert "bg-neutral" not in html
         assert "text-neutral-content" not in html
         assert "rounded-box" not in html
         # "shadow-lg" is a DaisyUI shadow helper; modernised to explicit shadow
         assert "shadow-lg" not in html
+
+        # CSS rule carries the inverted colour pair (foreground bg + background fg)
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        panel_block = css.split(".dz-tooltip-panel {")[1].split("}")[0]
+        assert "background: var(--colour-text)" in panel_block
+        assert "color: var(--colour-bg)" in panel_block
 
     def test_position_override(self) -> None:
         html = self._render(content="Help", position="bottom")

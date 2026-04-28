@@ -46,11 +46,28 @@ class TestHeatmapRowClick:
                 )
 
     def test_row_has_cursor_pointer_when_action_url_set(self) -> None:
-        """Pointer affordance + hover on the <tr>, gated by action_url."""
+        """Pointer affordance + hover on the <tr>, gated by action_url.
+
+        v0.62 CSS refactor: the visual delta lives on the .is-clickable
+        modifier toggled by the template's `{% if action_url %}` branch,
+        and styled by `.dz-heatmap-grid > tbody > tr.is-clickable` in
+        components/regions.css. Pin both the template gating and the
+        CSS rule existence."""
         content = HEATMAP.read_text()
+        # Template applies .is-clickable inside the action_url branch
         tr_match = re.search(
-            r"<tr[^>]*action_url[^>]*cursor-pointer",
+            r"<tr\s*\{%\s*if\s+action_url\s*%\}[^>]*is-clickable",
             content,
             re.DOTALL,
         )
-        assert tr_match, "Heatmap <tr> must get cursor-pointer when action_url is set (#845)."
+        assert tr_match, "Heatmap <tr> must get .is-clickable when action_url is set (#845)."
+
+        # CSS rule exists and sets cursor pointer + hover background
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert ".dz-heatmap-grid > tbody > tr.is-clickable" in css
+        assert "cursor: pointer" in css

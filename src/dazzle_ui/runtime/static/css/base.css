@@ -1,0 +1,168 @@
+/*
+ * base.css — element defaults that apply before any component CSS.
+ *
+ * Sets typography, link colour, form-control surface, and the
+ * canonical body background. References tokens only; never literal
+ * values. Wrapped in @layer base (declared in dazzle.css).
+ *
+ * The dividing line between reset.css and base.css:
+ *   reset    — strips browser defaults to a neutral baseline
+ *   base     — applies Dazzle's defaults (the brand voice in CSS)
+ */
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  color: var(--colour-text);
+  background: var(--colour-bg);
+}
+
+/* Headings — sizes and weights, not spacing. Spacing is the
+ * caller's concern (component or utility). */
+
+h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+h4 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+h5 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+h6 {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Links — inherit colour by default; components apply brand tint
+ * where appropriate (e.g. inline body copy). */
+
+a {
+  color: inherit;
+  text-decoration-color: var(--colour-border);
+  text-underline-offset: 0.15em;
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+/* Form controls — minimal Dazzle-flavoured baseline so an
+ * un-styled <input> looks intentional rather than browser-default.
+ * Components extend this; they do not fight it. */
+
+input,
+textarea,
+select {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 1px;
+}
+
+button {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+button:hover:not(:disabled) {
+  background: var(--colour-bg);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Code + pre — monospace family, neutral surface. */
+
+code,
+kbd,
+samp,
+pre {
+  font-family:
+    ui-monospace,
+    "SF Mono",
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  font-size: 0.95em;
+}
+
+pre {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  overflow-x: auto;
+}
+
+/* Tables — a sensible default. Components override for data grids. */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  text-align: start;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--colour-border);
+}
+
+th {
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+}

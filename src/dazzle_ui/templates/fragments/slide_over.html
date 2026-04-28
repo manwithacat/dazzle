@@ -1,6 +1,10 @@
-{# Enhanced slide-over — Alpine dzSlideOver with configurable width and focus trap #}
-{# Contract: ~/.claude/skills/ux-architect/components/slide-over.md (UX-012) #}
-{# Parameters: panel_id (str, default: 'dz-slideover'), width (str: sm|md|lg|xl|full, default: md), title (str) #}
+{# Enhanced slide-over — Alpine dzSlideOver with configurable width and focus trap.
+   Contract: ~/.claude/skills/ux-architect/components/slide-over.md (UX-012)
+   Parameters: panel_id (str, default: 'dz-slideover'), width (str: sm|md|lg|xl|full, default: md), title (str)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-slideover-* classes
+   (components/fragments.css). Width preset via data-dz-width attribute
+   selector — replaces Alpine `:class="widthClass()"` runtime computation. #}
 {% set panel_id = panel_id | default('dz-slideover') %}
 {% set width = width | default('md') %}
 <div x-data="dzSlideOver" data-dz-width="{{ width }}" id="{{ panel_id }}"
@@ -15,7 +19,7 @@
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0"
        @click="hide()"
-       class="fixed inset-0 bg-black/30 z-40"
+       class="dz-slideover-backdrop"
        style="display: none">
   </div>
 
@@ -27,27 +31,26 @@
        x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="translate-x-0"
        x-transition:leave-end="translate-x-full"
-       :class="widthClass()"
        role="dialog" aria-modal="true" :aria-labelledby="'{{ panel_id }}-title'"
-       class="fixed inset-y-0 right-0 z-50 w-full bg-[hsl(var(--background))] border-l border-[hsl(var(--border))] shadow-[-8px_0_24px_rgb(0_0_0/0.12)] overflow-y-auto transform"
+       class="dz-slideover-panel"
        style="display: none">
 
     {# Header #}
-    <div class="flex items-center justify-between p-4 border-b border-[hsl(var(--border))]">
-      <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))]" id="{{ panel_id }}-title">{{ title | default('Details') }}</h3>
+    <div class="dz-slideover-header">
+      <h3 class="dz-slideover-title" id="{{ panel_id }}-title">{{ title | default('Details') }}</h3>
       <button @click="hide()"
-              class="h-7 w-7 flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-slideover-close"
               aria-label="Close">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
 
     {# Content — HTMX swaps into here #}
-    <div id="{{ panel_id }}-content" class="p-4">
+    <div id="{{ panel_id }}-content" class="dz-slideover-content">
       {% block slideover_content %}
-      <p class="text-[13px] text-[hsl(var(--muted-foreground))]">Select an item to view details.</p>
+      <p class="dz-slideover-content-empty">Select an item to view details.</p>
       {% endblock %}
     </div>
   </div>

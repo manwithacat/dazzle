@@ -1,9 +1,15 @@
 {# Workspace shell composition — heading, context selector, edit chrome,
    card grid, add-card, and detail drawer singleton.
-   Contract: ~/.claude/skills/ux-architect/components/workspace-shell.md #}
+   Contract: ~/.claude/skills/ux-architect/components/workspace-shell.md
+
+   v0.62 CSS refactor: Tailwind utility soup → semantic .dz-workspace-*
+   / .dz-card-* / .dz-drawer-* classes (components/dashboard.css). Alpine
+   state grammar (saveState, isDragging, isResizing, showPicker) preserved
+   verbatim — :class bindings now toggle .is-dragging / .is-resizing /
+   data-dz-save-state and CSS resolves the visual delta. #}
 {# Layout JSON embedded as a data island (#635) #}
 <script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
-<div class="p-4" x-data="dzDashboardBuilder()">
+<div class="dz-workspace" x-data="dzDashboardBuilder()">
   {# Workspace heading — title + primary actions row. `purpose:` is
      developer intent (e.g. "Personal dashboard for support agents")
      and leaks into user-facing copy when rendered verbatim, with no
@@ -12,20 +18,15 @@
      are framework-inferred from region entities that have CREATE
      surfaces and for which the current persona has create permission
      — closes #827. #}
-  <div class="flex items-start justify-between gap-4 mb-4">
-    <h2 class="text-[17px] font-medium leading-[24px] tracking-[-0.01em] text-[hsl(var(--foreground))]">
+  <div class="dz-workspace-heading">
+    <h2 class="dz-workspace-title">
       {{ workspace.title or workspace.name.replace('_', ' ').title() }}
     </h2>
     {% if primary_actions %}
-    <div class="flex items-center gap-2 shrink-0" data-test-id="dz-workspace-primary-actions">
+    <div class="dz-workspace-primary-actions" data-test-id="dz-workspace-primary-actions">
       {% for action in primary_actions %}
-      <a href="{{ action.route }}" hx-boost="true"
-         class="h-8 px-3 rounded-[4px] text-[13px] font-medium
-                bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]
-                hover:bg-[hsl(var(--primary)/0.9)]
-                transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                inline-flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <a href="{{ action.route }}" hx-boost="true" class="dz-workspace-action">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         {{ action.label }}
@@ -36,10 +37,9 @@
   </div>
 
   {% if workspace.context_options_url %}
-  <div class="mb-4 flex items-center gap-2">
-    <label class="text-[13px] font-medium" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
-    <select id="dz-context-selector"
-            class="h-8 rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]">
+  <div class="dz-workspace-context">
+    <label class="dz-workspace-context-label" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
+    <select id="dz-context-selector" class="dz-workspace-context-select">
       <option value="">All</option>
     </select>
   </div>
@@ -89,42 +89,32 @@
   {% endif %}
 
   {# ── Toolbar ── #}
-  <div class="flex items-center justify-end gap-2 mb-4">
-    <div class="flex-1"></div>
+  <div class="dz-workspace-toolbar">
+    <div class="dz-workspace-toolbar-spacer"></div>
 
     {# Reset button #}
-    <button @click="resetLayout()"
-            class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))]
-                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                   hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]">
+    <button @click="resetLayout()" class="dz-workspace-reset">
       Reset
     </button>
 
-    {# Save button — reflects saveState #}
+    {# Save button — reflects saveState via data-dz-save-state attribute. #}
     <button @click="save()"
             :disabled="saveState === 'clean' || saveState === 'saving' || saveState === 'saved'"
-            :class="{
-              'text-[hsl(var(--muted-foreground))] cursor-default': saveState === 'clean',
-              'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]': saveState === 'dirty',
-              'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] opacity-70': saveState === 'saving',
-              'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]': saveState === 'saved',
-              'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]': saveState === 'error',
-            }"
+            :data-dz-save-state="saveState"
             :title="saveState === 'error' ? _saveError : ''"
-            class="h-8 px-3 rounded-[4px] text-[13px] font-medium border border-transparent
-                   transition-all duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+            class="dz-workspace-save">
       {# x-cloak gates visibility until Alpine evaluates x-show — protects
          against degraded state (#866) where alpine:init fails to fire
          (HTMX morph race, layout-JSON parse error, etc.) and the browser's
          default `display: inline` stacks every status label simultaneously. #}
       <span x-cloak x-show="saveState === 'clean'">Saved</span>
       <span x-cloak x-show="saveState === 'dirty'">Save layout</span>
-      <span x-cloak x-show="saveState === 'saving'" class="flex items-center gap-1">
-        <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+      <span x-cloak x-show="saveState === 'saving'" class="dz-workspace-save-busy">
+        <svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
         Saving
       </span>
-      <span x-cloak x-show="saveState === 'saved'" class="flex items-center gap-1">
-        <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+      <span x-cloak x-show="saveState === 'saved'" class="dz-workspace-save-busy">
+        <svg class="dz-workspace-save-busy-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
         Saved
       </span>
       <span x-cloak x-show="saveState === 'error'">Retry</span>
@@ -142,7 +132,7 @@
      ones. Fixed in #844 — each cell now collapses to intrinsic content
      height. dashboard-builder.js only manipulates grid-column spans, so
      drag/resize behaviour is unaffected. #}
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start"
+  <div class="dz-dashboard-grid"
        data-grid-container
        role="application"
        aria-label="Dashboard card grid"
@@ -164,19 +154,15 @@
               expression to the static `class=` attribute. #}
            :class="[
              card.css_class,
-             (!isDragging(card.id) && !drag) ? 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]' : ''
+             (!isDragging(card.id) && !drag) ? 'is-animating' : ''
            ].filter(Boolean).join(' ')"
            tabindex="0"
            @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
-           class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2">
+           class="dz-card-wrapper">
 
         {# Card chrome #}
-        <article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden
-                        transition-[border-color,box-shadow] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-                 :class="{
-                   'border-[hsl(var(--border))]': !isResizing(card.id),
-                   'border-dashed border-[hsl(var(--primary))]': isResizing(card.id),
-                 }"
+        <article class="dz-card"
+                 :class="{ 'is-resizing': isResizing(card.id) }"
                  role="article"
                  :aria-labelledby="'card-title-' + card.id">
 
@@ -184,19 +170,19 @@
              as the stable pointer-start anchor for INTERACTION_WALK
              (see docs/proposals/interaction-walk-harness.md). Don't
              rename without updating the harness. #}
-          <div class="flex items-center justify-between px-4 py-2 cursor-grab active:cursor-grabbing min-h-[36px]"
-               :class="{ 'cursor-grabbing': isDragging(card.id) }"
+          <div class="dz-card-header"
+               :class="{ 'is-dragging': isDragging(card.id) }"
                data-test-id="dz-card-drag-handle"
                @pointerdown="startDrag(card.id, $event)">
             {# v0.61.60: optional kicker line above the title (AegisMark
                UX patterns roadmap item #1). Hidden when card.eyebrow
                is empty so existing dashboards render unchanged. #}
-            <div class="flex flex-col">
+            <div class="dz-card-titles">
               <span x-show="card.eyebrow"
                     x-text="card.eyebrow"
-                    class="text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))] leading-none"></span>
+                    class="dz-card-eyebrow"></span>
               <h3 :id="'card-title-' + card.id"
-                  class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
+                  class="dz-card-title"
                   x-text="card.title"></h3>
             </div>
             {# Primary actions stay visible (issue #799): opacity-60 at rest so
@@ -204,15 +190,13 @@
                to full on mouse hover or any focus within the card. The old
                pattern (opacity-0 + group-hover only) made the remove button
                invisible to touch users and anyone doing keyboard navigation. #}
-            <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[80ms]">
+            <div class="dz-card-actions">
               <button @click.stop="removeCard(card.id)"
                       data-test-id="dz-card-remove"
-                      class="h-6 w-6 flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))]
-                             hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
-                             transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                      class="dz-card-action-button"
                       aria-label="Remove card">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                <span class="sr-only">Remove card</span>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span class="visually-hidden">Remove card</span>
               </button>
             </div>
           </div>
@@ -226,14 +210,13 @@
              frame shape stays unchanged for existing apps. #}
           <div x-show="card.notice && card.notice.title"
                x-cloak
-               class="dz-notice-band mx-4 mb-3 px-3 py-2 rounded-[4px] border-l-2"
+               class="dz-notice-band dz-card-notice"
                :data-dz-notice-tone="card.notice ? (card.notice.tone || 'neutral') : 'neutral'"
                role="note">
-            <div class="text-[12px] font-medium leading-snug text-[hsl(var(--foreground))]"
-                 x-text="card.notice && card.notice.title"></div>
+            <div class="dz-card-notice-title" x-text="card.notice && card.notice.title"></div>
             <div x-show="card.notice && card.notice.body"
                  x-text="card.notice && card.notice.body"
-                 class="text-[11px] leading-snug text-[hsl(var(--muted-foreground))] mt-0.5"></div>
+                 class="dz-card-notice-body"></div>
           </div>
 
           {# Card body — HTMX-loaded region content.
@@ -245,41 +228,34 @@
              #798 preserved: eager "load" still handles cards already
              in-viewport at observation time (IntersectionObserver fires
              for NEW intersections only). #}
-          <div class="px-4 pb-4"
+          <div class="dz-card-body"
                :id="'region-' + card.region + '-' + card.id"
                :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
                :hx-trigger="cardHxTrigger(card, {{ 'true' if workspace.sse_url else 'false' }})"
                hx-swap="innerHTML">
             {# Skeleton loading state #}
-            <div class="space-y-3 py-2 animate-pulse">
-              <div class="h-4 bg-[hsl(var(--muted))] rounded w-3/4"></div>
-              <div class="h-3 bg-[hsl(var(--muted))] rounded w-full"></div>
-              <div class="h-3 bg-[hsl(var(--muted))] rounded w-5/6"></div>
+            <div class="dz-card-skeleton">
+              <div class="dz-card-skeleton-line w-3-4"></div>
+              <div class="dz-card-skeleton-line is-thin"></div>
+              <div class="dz-card-skeleton-line is-thin w-5-6"></div>
             </div>
           </div>
         </article>
 
         {# Resize handle — right edge, visible on hover #}
         <div @pointerdown="startResize(card.id, $event)"
-             class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize
-                    opacity-0 group-hover:opacity-100 transition-opacity duration-[80ms]
-                    hover:bg-[hsl(var(--primary)/0.3)] rounded-r-md"
+             class="dz-card-resize"
              aria-hidden="true"></div>
       </div>
     </template>
   </div>
 
   {# ── Add Card ── #}
-  <div class="relative flex justify-center mt-4">
+  <div class="dz-add-card-row">
     <button @click="showPicker = !showPicker"
             data-test-id="dz-add-card-trigger"
-            class="h-8 px-4 text-[13px] font-medium rounded-md
-                   border-2 border-dashed border-[hsl(var(--border))]
-                   text-[hsl(var(--muted-foreground))]
-                   hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--foreground))]
-                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                   flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            class="dz-add-card-button">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add Card
     </button>
     {% include 'workspace/_card_picker.html' %}
@@ -288,21 +264,20 @@
 
 {# Detail drawer (preserved unchanged) #}
 <div id="dz-drawer-backdrop"
-     class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300"
+     class="dz-drawer-backdrop"
      onclick="window.dzDrawer.close()"></div>
-<aside id="dz-detail-drawer"
-       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-[hsl(var(--background))] shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
-  <div class="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] shrink-0">
-    <button class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1" onclick="window.dzDrawer.close()">
-      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+<aside id="dz-detail-drawer" class="dz-drawer">
+  <div class="dz-drawer-header">
+    <button class="dz-drawer-button" onclick="window.dzDrawer.close()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       Close
     </button>
-    <a id="dz-drawer-expand" hidden class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1">
+    <a id="dz-drawer-expand" hidden class="dz-drawer-button">
       Open full page
-      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
     </a>
   </div>
-  <div id="dz-detail-drawer-content" class="flex-1 overflow-y-auto p-4"></div>
+  <div id="dz-detail-drawer-content" class="dz-drawer-content"></div>
 </aside>
 <script>
 (function() {
@@ -315,14 +290,14 @@
     isOpen: false,
     open: function(url) {
       if (url && expand) { expand.href = url; expand.hidden = false; } else if (expand) { expand.hidden = true; }
-      drawer.classList.remove('translate-x-full');
-      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      drawer.classList.add('is-open');
+      backdrop.classList.add('is-open');
       document.body.classList.add('overflow-hidden');
       this.isOpen = true;
     },
     close: function() {
-      drawer.classList.add('translate-x-full');
-      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      drawer.classList.remove('is-open');
+      backdrop.classList.remove('is-open');
       document.body.classList.remove('overflow-hidden');
       this.isOpen = false;
     }

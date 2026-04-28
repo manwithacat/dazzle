@@ -1,6 +1,11 @@
-{# Search-select fragment — debounced search with dropdown results, Alpine state #}
-{# Contract: ~/.claude/skills/ux-architect/components/widget-search-select.md (UX-028) #}
-{# ARIA combobox pattern (ARIA 1.2 — input with popup listbox variant).            #}
+{# Search-select fragment — debounced search with dropdown results, Alpine state.
+   Contract: ~/.claude/skills/ux-architect/components/widget-search-select.md (UX-028)
+   ARIA combobox pattern (ARIA 1.2 — input with popup listbox variant).
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-search-select-* classes
+   (components/fragments.css). Error border keyed off `aria-invalid="true"`
+   (already emitted for accessibility) — visual + a11y now share one
+   source of truth instead of a 2-branch Jinja class string. #}
 
 {# Resolve initial value for edit mode: ref objects have display names #}
 {% set init_id = "" %}
@@ -13,7 +18,7 @@
   {% set init_display = value %}
 {% endif %}
 
-<div class="relative w-full" x-data="{ open: false }" data-dz-widget="search_select">
+<div class="dz-search-select" x-data="{ open: false }" data-dz-widget="search_select">
   {# Hidden input — form submission carrier #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
          data-dazzle-field="{{ field.name }}"
@@ -24,10 +29,11 @@
   {# Visible search input with HTMX debounced search — ARIA combobox role #}
   <input type="text"
          id="search-input-{{ field.name }}"
-         class="w-full h-8 pl-3 pr-8 rounded-[4px] bg-[hsl(var(--background))] border {% if errors and errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         class="dz-search-select-input"
          placeholder="{{ field.placeholder or ('Search ' + field.label + '...') }}"
          autocomplete="off"
          role="combobox"
+         {% if errors and errors.get(field.name) %}aria-invalid="true"{% endif %}
          :aria-expanded="open"
          aria-controls="search-results-{{ field.name }}"
          aria-autocomplete="list"
@@ -44,9 +50,9 @@
 
   {# Loading indicator — HTMX toggles htmx-indicator visibility automatically #}
   <span id="search-spinner-{{ field.name }}"
-        class="htmx-indicator absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--muted-foreground))]"
+        class="htmx-indicator dz-search-select-spinner"
         role="status" aria-label="Searching">
-    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+    <svg class="dz-search-select-spinner-icon" fill="none" viewBox="0 0 24 24" aria-hidden="true">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
     </svg>
@@ -58,9 +64,9 @@
        x-cloak
        role="listbox"
        aria-label="{{ field.label }} suggestions"
-       class="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)]">
+       class="dz-search-select-results">
     {# Empty state shown before any search #}
-    <div class="px-3 py-3 text-[13px] text-[hsl(var(--muted-foreground))]" role="option" aria-disabled="true">
+    <div class="dz-search-select-prompt" role="option" aria-disabled="true">
       Type at least {{ field.source.min_chars }} characters to search...
     </div>
   </div>

@@ -7,7 +7,12 @@
    per #794 second follow-up: dashboard slot owns chrome + title.
 
    Contract: ~/.claude/skills/ux-architect/components/funnel-chart-region.md (UX-070)
-#}
+
+   v0.62 CSS refactor: per-stage opacity fade now driven by
+   `data-dz-funnel-step="{idx}"` attribute selectors in
+   components/regions.css — replaces the dynamic
+   `bg-[hsl(var(--primary)/{{ pct }})]` Tailwind-arbitrary value
+   that was JIT-invisible to downstream consumers. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(None) %}
 <div class="dz-funnel-chart-region">
@@ -24,40 +29,42 @@
   {% endfor %}
   {% set first_count = stage_counts.get(kanban_columns[0], 0) if kanban_columns else 1 %}
   {% set base = first_count if first_count > 0 else 1 %}
-  <div class="dz-funnel-stages space-y-1 mt-2">
+  <div class="dz-funnel-stages">
     {% for stage in kanban_columns %}
     {% set count = stage_counts.get(stage, 0) %}
     {% set pct = (count / base * 100) | int %}
     {% set width = pct if pct >= 20 else 20 %}
-    <div class="flex flex-col items-center">
-      <div class="dz-funnel-stage rounded px-3 py-1.5 text-center transition-all bg-[hsl(var(--primary)/{{ (90 - loop.index0 * 10) / 100 if loop.index0 < 8 else 0.2 }})] text-[hsl(var(--primary-foreground))]"
-           style="width: {{ width }}%; min-width: 120px;">
-        <span class="text-[12px] font-medium">{{ stage }}</span>
-        <span class="text-[12px] opacity-80 ml-1">({{ count }})</span>
+    <div class="dz-funnel-stage-row">
+      <div class="dz-funnel-stage"
+           data-dz-funnel-step="{{ loop.index0 if loop.index0 < 8 else 7 }}"
+           style="width: {{ width }}%;">
+        <span class="dz-funnel-stage-label">{{ stage }}</span>
+        <span class="dz-funnel-stage-count">({{ count }})</span>
       </div>
     </div>
     {% endfor %}
   </div>
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ total }} total</p>
+  <p class="dz-funnel-summary">{{ total }} total</p>
   {% elif metrics %}
   {# Fallback: render metrics as funnel stages #}
   {% set first_val = metrics[0].value if metrics else 1 %}
   {% set base = first_val if first_val > 0 else 1 %}
-  <div class="dz-funnel-stages space-y-1 mt-2">
+  <div class="dz-funnel-stages">
     {% for metric in metrics %}
     {% set pct = (metric.value / base * 100) | int %}
     {% set width = pct if pct >= 20 else 20 %}
-    <div class="flex flex-col items-center">
-      <div class="dz-funnel-stage rounded px-3 py-1.5 text-center transition-all bg-[hsl(var(--primary)/{{ (90 - loop.index0 * 10) / 100 if loop.index0 < 8 else 0.2 }})] text-[hsl(var(--primary-foreground))]"
-           style="width: {{ width }}%; min-width: 120px;">
-        <span class="text-[12px] font-medium">{{ metric.label }}</span>
-        <span class="text-[12px] opacity-80 ml-1">({{ metric.value }})</span>
+    <div class="dz-funnel-stage-row">
+      <div class="dz-funnel-stage"
+           data-dz-funnel-step="{{ loop.index0 if loop.index0 < 8 else 7 }}"
+           style="width: {{ width }}%;">
+        <span class="dz-funnel-stage-label">{{ metric.label }}</span>
+        <span class="dz-funnel-stage-count">({{ metric.value }})</span>
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

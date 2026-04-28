@@ -1,7 +1,10 @@
 {# Select result fragment: OOB swap fragments for autofill after selection.
-   Contract: ~/.claude/skills/ux-architect/components/search-flow-fragments.md (cycle 288) #}
+   Contract: ~/.claude/skills/ux-architect/components/search-flow-fragments.md (cycle 288)
 
-<div class="p-3 text-[13px] text-[hsl(var(--success))]">Selected: {{ display_val }}</div>
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-select-result-* classes
+   (components/fragments.css). #}
+
+<div class="dz-select-result-confirm">Selected: {{ display_val }}</div>
 
 {# Hidden value input #}
 <input type="hidden" name="{{ field_name }}" id="field-{{ field_name }}"
@@ -10,7 +13,7 @@
 
 {# Visible search input updated with display value #}
 <input type="text" id="search-input-{{ field_name }}"
-       class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[13px] text-[hsl(var(--foreground))]" value="{{ display_val }}"
+       class="dz-select-result-input" value="{{ display_val }}"
        hx-swap-oob="true" />
 
 {# Autofill mapped fields #}

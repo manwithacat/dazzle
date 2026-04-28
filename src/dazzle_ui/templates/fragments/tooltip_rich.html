@@ -24,9 +24,11 @@
      show_delay   : int          — ms before showing (default 200)
      hide_delay   : int          — ms before hiding (default 100)
 #}
+{# v0.62 CSS refactor: inline Tailwind → semantic .dz-tooltip* classes
+   (components/fragments.css). #}
 {% set position = position | default('top') %}
 <div x-data="dzTooltip"
-     class="dz-tooltip relative inline-block"
+     class="dz-tooltip"
      data-dz-delay="{{ show_delay | default(200) }}"
      data-dz-hide-delay="{{ hide_delay | default(100) }}"
      data-dz-position="{{ position }}"
@@ -52,7 +54,7 @@
        x-anchor.{{ position }}="$el.parentElement"
        role="tooltip"
        data-dz-tooltip-panel
-       class="absolute z-50 px-2 py-1 rounded-[4px] max-w-xs text-[12px] font-medium leading-snug bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-[0_4px_12px_rgb(0_0_0/0.15),0_1px_3px_rgb(0_0_0/0.08)]"
+       class="dz-tooltip-panel"
        :aria-hidden="!visible">
     {{ content }}
   </div>

@@ -1,0 +1,100 @@
+/*
+ * badge.css — status / state / enum badge component.
+ *
+ * Single semantic class (.dz-badge) plus tone modifier via
+ * data-dz-tone attribute. Used by the render_status_badge macro
+ * (templates/macros/status_badge.html) — 19 import sites across
+ * tables, kanban cards, detail views, review queues.
+ *
+ * The macro owns the tone-resolution logic (Jinja `badge_tone`
+ * filter resolves enum values to one of five tones); this CSS
+ * file owns the visual styling. Authors don't think about
+ * specific colour values — they invoke the macro with a value
+ * and trust the design system.
+ *
+ * Wrapped in @layer components (declared in dazzle.css). All
+ * lengths and colours route via design tokens — Stylelint enforces
+ * this in components/.
+ */
+
+.dz-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-medium);
+  /* Defaults match the macro's `size="md"` branch. The .dz-badge-sm
+   * modifier overrides for dense regions (timeline, bar_chart). */
+  padding-inline: var(--space-sm);
+  height: 1.25rem;
+  font-size: var(--text-xs);
+}
+
+.dz-badge-sm {
+  padding-inline: var(--space-xs);
+  height: 1rem;
+  /* Slightly smaller than the default --text-xs for micro contexts. */
+  font-size: 0.625rem;
+  line-height: 1;
+}
+
+/* ── Tone tints ───────────────────────────────────────────────────
+ * Five tone tokens matching the wider Dazzle palette: neutral
+ * (default), success, warning, info, destructive. Selected via
+ * `data-dz-tone` attribute emitted by the macro. */
+
+.dz-badge[data-dz-tone="success"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+
+.dz-badge[data-dz-tone="warning"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+
+.dz-badge[data-dz-tone="info"] {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand);
+}
+
+.dz-badge[data-dz-tone="destructive"] {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+
+.dz-badge[data-dz-tone="neutral"],
+.dz-badge:not([data-dz-tone]) {
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+}
+
+/* ── Optional border ──────────────────────────────────────────────
+ * The macro accepts a `bordered` boolean for emphasis (used in the
+ * detail region). Border colour matches the tone. */
+
+.dz-badge.bordered {
+  border: 1px solid var(--colour-border);
+}
+
+.dz-badge.bordered[data-dz-tone="success"] {
+  border-color: var(--colour-success);
+}
+.dz-badge.bordered[data-dz-tone="warning"] {
+  border-color: var(--colour-warning);
+}
+.dz-badge.bordered[data-dz-tone="info"] {
+  border-color: var(--colour-brand);
+}
+.dz-badge.bordered[data-dz-tone="destructive"] {
+  border-color: var(--colour-danger);
+}
+
+/* ── Em-dash placeholder ──────────────────────────────────────────
+ * When the macro is called with empty value, it renders a single-
+ * char placeholder (—) for absent status. Same muted treatment as
+ * any other "no value" token. */
+
+.dz-badge-empty {
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+}

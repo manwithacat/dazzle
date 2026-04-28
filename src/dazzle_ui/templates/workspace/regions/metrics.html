@@ -1,28 +1,30 @@
 {# Metrics region — UX-035 adopter #6.
-   Contract: ~/.claude/skills/ux-architect/components/metrics-region.md (UX-042) #}
+   Contract: ~/.claude/skills/ux-architect/components/metrics-region.md (UX-042)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-metrics-* /
+   .dz-metric-* classes (components/regions.css). Per-tile and per-
+   delta-arrow tone tinting still routes through dz-tones.css keyed
+   off data-dz-tone / data-dz-delta-tone (unchanged). #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
   {# Metrics tiles grid — responsive 1/2/4 column layout #}
   {% if metrics %}
-  <div class="dz-metrics-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
-       data-dz-tile-count="{{ metrics | length }}">
+  <div class="dz-metrics-grid" data-dz-tile-count="{{ metrics | length }}">
     {% for metric in metrics %}
-    {# Metric tile — padded soft-bg pad only, no border. Enclosing
+    {# Metric tile — padded soft-bg only, no border. Enclosing
        dashboard slot owns all card chrome; a border here reads as a
        tile-card inside the dashboard card (issue #794 second
        follow-up).
 
        v0.61.65 (#2) per-tile tone tint, v0.61.70 (#906) static-class
-       fix. The neutral / no-tone case keeps the Tailwind muted-bg
-       class as the static fallback; named tones get their tint from
-       `dz-tones.css` keyed off `data-dz-tone`. The previous dynamic
-       `bg-[hsl(...)]` classes were JIT-invisible so they shipped
-       without rules to back them. #}
+       fix. The neutral / no-tone case keeps the soft background as
+       baseline; named tones get their tint from `dz-tones.css` keyed
+       off `data-dz-tone`. #}
     {% set _tone = metric.tone | default('') %}
-    <div class="dz-metric-tile p-3 rounded-[4px] bg-[hsl(var(--muted)/0.4)]"
+    <div class="dz-metric-tile"
          data-dz-metric-key="{{ metric.label | lower | replace(' ', '_') }}"{% if _tone %} data-dz-tone="{{ _tone }}"{% endif %}>
-      <div class="text-[11px] text-[hsl(var(--muted-foreground))] tracking-tight">{{ metric.label }}</div>
-      <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5 tabular-nums">{{ metric.value | metric_number }}</div>
+      <div class="dz-metric-label">{{ metric.label }}</div>
+      <div class="dz-metric-value">{{ metric.value | metric_number }}</div>
       {# v0.61.25 (#884): period-over-period delta. positive_up → up=good (green); positive_down → up=bad. #}
       {% if metric.delta_direction is defined %}
         {% set _is_good = (metric.delta_direction == 'up' and metric.delta_sentiment == 'positive_up')
@@ -37,23 +39,23 @@
         {% set _arrow = '↑' if metric.delta_direction == 'up'
                   else ('↓' if metric.delta_direction == 'down' else '→') %}
         {% set _sign = '+' if metric.delta_direction == 'up' else '' %}
-        <div class="dz-metric-delta mt-1 text-[11px] tabular-nums"
+        <div class="dz-metric-delta"
              data-dz-delta-tone="{{ _delta_tone }}"
              data-dz-delta-direction="{{ metric.delta_direction }}"
              data-dz-delta-sentiment="{{ metric.delta_sentiment }}">
           <span aria-hidden="true">{{ _arrow }}</span>
-          <span class="font-medium">{{ _sign }}{{ metric.delta }}</span>
+          <span class="dz-metric-delta-value">{{ _sign }}{{ metric.delta }}</span>
           {% if metric.delta_pct is defined and metric.delta_pct != 0 %}
-          <span class="text-[hsl(var(--muted-foreground))]">({{ metric.delta_pct }}%)</span>
+          <span class="dz-metric-delta-pct">({{ metric.delta_pct }}%)</span>
           {% endif %}
-          <span class="text-[hsl(var(--muted-foreground))]">vs {{ metric.delta_period_label }}</span>
+          <span class="dz-metric-delta-period">vs {{ metric.delta_period_label }}</span>
         </div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No metrics available.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No metrics available.") }}</p>
   {% endif %}
 
   {# v0.61.67 (#905): No items table here. `display: summary` and

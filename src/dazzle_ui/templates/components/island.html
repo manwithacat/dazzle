@@ -12,6 +12,9 @@
   {% if island.fallback %}
   {{ island.fallback }}
   {% else %}
-  <div class="dz-skeleton h-32 w-full rounded-[4px] bg-[hsl(var(--muted))] animate-pulse"></div>
+  {# v0.62 CSS refactor: .dz-skeleton in components/fragments.css already
+     supplies the muted-bg + pulse animation; per-element Tailwind utilities
+     are no longer needed. .dz-island-skeleton sets the fixed-height stub. #}
+  <div class="dz-skeleton dz-island-skeleton"></div>
   {% endif %}
 </div>

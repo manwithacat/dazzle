@@ -1,5 +1,13 @@
-{# filterable_table.html — pure Tailwind data table
-   Contract: ~/.claude/skills/ux-architect/components/data-table.md #}
+{# filterable_table.html — data table component
+   Contract: ~/.claude/skills/ux-architect/components/data-table.md
+
+   v0.62 CSS refactor: Tailwind utility soup → semantic .dz-table-*
+   classes from components/table.css. Sticky header + sortable cols
+   + column resize + visibility menu + bulk actions + loading
+   overlay + empty state — all chrome lives in CSS now. Alpine
+   state grammar (loading, colMenuOpen, isColumnVisible, bulkCount,
+   columnWidths) unchanged; semantic classes layer over the same
+   :class / x-show bindings. #}
 {% if table %}
 {%- set config_json = {
       "sortField": table.default_sort_field,
@@ -26,30 +34,24 @@
      #}
      x-data='dzTable("{{ table.table_id }}", "{{ table.api_endpoint }}", {{ config_json }})'
      :aria-busy="loading"
-     class="flex flex-col gap-3">
+     class="dz-table">
 
   {# ── Table header: title + actions ───────────────────────────────────────── #}
   {% block table_header %}
-  <div class="flex items-center justify-between">
-    <h2 class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))]">
-      {{ table.title }}
-    </h2>
-    <div class="flex items-center gap-2">
+  <div class="dz-table-header">
+    <h2 class="dz-table-title">{{ table.title }}</h2>
+    <div class="dz-table-header-actions">
 
       {# Column visibility menu #}
       {% if table.columns | length > 3 %}
-      <div class="relative" @click.outside="colMenuOpen = false">
+      <div class="dz-table-col-menu" @click.outside="colMenuOpen = false">
         <button
           type="button"
           @click="colMenuOpen = !colMenuOpen"
           :aria-expanded="colMenuOpen"
           aria-label="Toggle column visibility"
           aria-haspopup="menu"
-          class="inline-flex items-center gap-1.5 h-7 px-2 rounded-[4px] text-[12px] font-medium
-                 text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]
-                 bg-[hsl(var(--background))] hover:bg-[hsl(var(--card))]
-                 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                 select-none">
+          class="dz-table-col-menu-trigger">
           {# Columns icon #}
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
                xmlns="http://www.w3.org/2000/svg">
@@ -62,26 +64,14 @@
 
         {# Column visibility dropdown #}
         <div x-show="colMenuOpen"
-             x-transition:enter="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             x-transition:enter-start="opacity-0 scale-[0.97]"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-[0.97]"
+             x-transition.opacity.duration.80ms
              role="menu"
-             class="absolute right-0 top-full mt-1 w-44 z-[100]
-                    bg-[hsl(var(--card))] border border-[hsl(var(--border))]
-                    rounded-[6px] shadow-[0_4px_8px_rgb(0_0_0/0.08),0_2px_4px_rgb(0_0_0/0.04)]
-                    py-1 overflow-hidden">
+             class="dz-table-col-menu-panel">
           {% for col in table.columns %}
           {% if not col.hidden %}
-          <label role="menuitemcheckbox"
-                 class="flex items-center gap-2 px-3 py-1.5 cursor-pointer
-                        text-[13px] text-[hsl(var(--foreground))]
-                        hover:bg-[hsl(var(--muted)/0.5)]
-                        transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+          <label role="menuitemcheckbox" class="dz-table-col-menu-item">
             <input type="checkbox"
-                   class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
+                   class="dz-table-col-menu-checkbox"
                    :checked="isColumnVisible('{{ col.key }}')"
                    @change="toggleColumn('{{ col.key }}')"
                    aria-label="Show {{ col.label }} column" />
@@ -97,10 +87,7 @@
       {% if table.create_url %}
       <a href="{{ table.create_url }}"
          data-dazzle-action="{{ table.entity_name }}.create"
-         class="inline-flex items-center gap-1 h-7 px-3 rounded-[4px] text-[12px] font-medium
-                bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]
-                hover:opacity-90 transition-opacity duration-[80ms]
-                [transition-timing-function:cubic-bezier(0.2,0,0,1)] select-none">
+         class="dz-button-primary">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
              xmlns="http://www.w3.org/2000/svg">
           <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -113,7 +100,7 @@
   {% endblock table_header %}
 
   {# ── Toolbar: search · filters · bulk actions ─────────────────────────────── #}
-  <div class="flex items-center gap-2 flex-wrap">
+  <div class="dz-table-toolbar">
     {# Search — left #}
     {% if table.search_enabled %}
     {% with endpoint=table.api_endpoint, target='#' + table.table_id + '-body' %}
@@ -124,7 +111,7 @@
     {# Filter chips — centre, flex-grow #}
     {%- set has_filters = table.columns | selectattr('filterable') | list | length > 0 -%}
     {% if has_filters %}
-    <div class="flex-1 min-w-0">
+    <div class="dz-table-toolbar-filters">
       {% include 'fragments/filter_bar.html' with context %}
     </div>
     {% endif %}
@@ -138,7 +125,7 @@
   </div>
 
   {# ── Table scroll + loading overlay container ─────────────────────────────── #}
-  <div class="relative rounded-[6px] border border-[hsl(var(--border))] overflow-hidden">
+  <div class="dz-table-scroll">
 
     {# Loading overlay — sits above the table, dimmed backdrop.
        x-cloak suppresses the SSR'd overlay until Alpine hydrates and
@@ -146,35 +133,29 @@
        that agent-QA tools consistently caught as "stuck Loading". #}
     <div x-cloak
          x-show="loading"
-         x-transition:enter="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-[140ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
+         x-transition.opacity.duration.80ms
          aria-hidden="true"
-         class="absolute inset-0 z-[10] bg-[hsl(var(--background)/0.6)] backdrop-blur-[1px]
-                flex items-center justify-center pointer-events-none">
+         class="dz-table-loading">
       {# Spinner #}
-      <svg class="w-5 h-5 text-[hsl(var(--muted-foreground))] animate-spin" viewBox="0 0 24 24" fill="none"
+      <svg class="dz-table-loading-spinner" viewBox="0 0 24 24" fill="none"
            xmlns="http://www.w3.org/2000/svg">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
         <path class="opacity-75" fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
       </svg>
-      <span class="sr-only">Loading…</span>
+      <span class="visually-hidden">Loading…</span>
     </div>
 
     {# Horizontal scroll region #}
-    <div class="overflow-x-auto"
+    <div class="dz-table-scroll-x"
          role="region"
          aria-label="{{ table.title }} table"
          tabindex="0">
 
-      <table class="w-full border-collapse"
+      <table class="dz-table-grid"
              data-entity="{{ table.entity_name }}"
              aria-label="{{ table.title }}">
-        <caption class="sr-only">{{ table.title }}</caption>
+        <caption class="visually-hidden">{{ table.title }}</caption>
 
         {# colgroup — one <col> per visible column. Drives column-resize via pointer events. #}
         <colgroup>
@@ -192,15 +173,13 @@
         </colgroup>
 
         {# ── Sticky header ─────────────────────────────────────────────────── #}
-        <thead class="sticky top-0 bg-[hsl(var(--card))] z-10"
-               style="box-shadow: 0 1px 0 hsl(var(--border))">
+        <thead class="dz-table-head">
           <tr>
             {# Select-all checkbox #}
             {% if table.bulk_actions %}
-            <th scope="col"
-                class="w-10 px-3 py-2 text-left">
+            <th scope="col" class="dz-table-th dz-table-th-select">
               <input type="checkbox"
-                     class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
+                     class="dz-table-col-menu-checkbox"
                      @change="toggleSelectAll($event.target.checked)"
                      :checked="bulkCount > 0 && bulkCount === $el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length"
                      :indeterminate="bulkCount > 0 && bulkCount < $el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length"
@@ -215,26 +194,20 @@
                 data-dz-col="{{ col.key }}"
                 x-show="isColumnVisible('{{ col.key }}')"
                 {% if col.sortable %}:aria-sort="ariaSortDir('{{ col.key }}')"{% endif %}
-                class="relative px-3 py-2 text-left whitespace-nowrap
-                       text-[12px] font-medium uppercase tracking-[0.04em]
-                       text-[hsl(var(--muted-foreground))] select-none">
+                class="dz-table-th">
 
               {% if col.sortable %}
               {# Sortable header button #}
               <button type="button"
                       @click="toggleSort('{{ col.key }}')"
                       aria-label="Sort by {{ col.label }}"
-                      class="inline-flex items-center gap-1 cursor-pointer
-                             hover:text-[hsl(var(--foreground))]
-                             transition-colors duration-[80ms]
-                             [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+                      class="dz-table-sort-button">
                 {{ col.label }}
                 {# 12px chevron SVG — rotated by Alpine sortIcon() #}
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
                      :class="sortIcon('{{ col.key }}')"
-                     class="transition-transform duration-[80ms]
-                            [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+                     class="dz-table-sort-icon">
                   <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5"
                         stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -248,19 +221,15 @@
                    aria-orientation="vertical"
                    aria-label="Resize {{ col.label }} column"
                    @pointerdown="startColumnResize('{{ col.key }}', $event)"
-                   class="absolute top-0 right-0 w-1 h-full cursor-col-resize
-                          hover:bg-[hsl(var(--primary)/0.5)]
-                          transition-colors duration-[80ms]
-                          [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                          z-10">
+                   class="dz-table-resize-handle">
               </div>
             </th>
             {% endif %}
             {% endfor %}
 
             {# Actions column header #}
-            <th scope="col" class="w-16 px-3 py-2">
-              <span class="sr-only">Actions</span>
+            <th scope="col" class="dz-table-th dz-table-th-actions">
+              <span class="visually-hidden">Actions</span>
             </th>
           </tr>
         </thead>
@@ -274,34 +243,27 @@
                hx-indicator="#{{ table.table_id }}-loading-sr"
                @htmx:before-request="loading = true"
                @htmx:after-settle="loading = false"
-               class="divide-y divide-[hsl(var(--border))]">
+               class="dz-table-body">
           {% include 'fragments/table_rows.html' %}
         </tbody>
       </table>
 
-      {# Empty state — visible when tbody has no data rows #}
+      {# Empty state — visible (via :has CSS selector) when tbody has no data rows #}
       <div id="{{ table.table_id }}-empty"
            role="status"
-           class="hidden py-16 flex flex-col items-center gap-3
-                  text-[hsl(var(--muted-foreground))]
-                  [&:not(:has(~ tbody tr[data-dz-row-id]))]:flex">
+           class="dz-table-empty">
         {# Empty icon #}
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"
              xmlns="http://www.w3.org/2000/svg"
-             class="opacity-30">
+             class="dz-table-empty-icon">
           <rect x="4" y="4" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
           <path d="M12 16h16M12 20h10M12 24h8" stroke="currentColor" stroke-width="1.5"
                 stroke-linecap="round"/>
         </svg>
-        <p class="text-[15px] font-medium text-[hsl(var(--foreground))]">No {{ table.entity_name | replace("_", " ") | lower }}s found</p>
-        <p class="text-[13px]">Try adjusting your search or filter criteria.</p>
+        <p class="dz-table-empty-title">No {{ table.entity_name | replace("_", " ") | lower }}s found</p>
+        <p class="dz-table-empty-hint">Try adjusting your search or filter criteria.</p>
         {% if table.create_url %}
-        <a href="{{ table.create_url }}"
-           class="mt-1 inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px]
-                  text-[13px] font-medium bg-[hsl(var(--primary))]
-                  text-[hsl(var(--primary-foreground))]
-                  hover:opacity-90 transition-opacity duration-[80ms]
-                  [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        <a href="{{ table.create_url }}" class="dz-button-primary">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
@@ -310,19 +272,18 @@
         {% endif %}
       </div>
 
-    </div>{# /overflow-x-auto #}
-  </div>{# /relative rounded border #}
+    </div>{# /dz-table-scroll-x #}
+  </div>{# /dz-table-scroll #}
 
   {# Screen-reader-only HTMX loading indicator (real indicator managed by Alpine loading flag above) #}
-  <div id="{{ table.table_id }}-loading-sr" class="htmx-indicator sr-only"
+  <div id="{{ table.table_id }}-loading-sr" class="htmx-indicator visually-hidden"
        role="status" aria-label="Loading data">
     Loading…
   </div>
 
   {# ── Footer: pagination ───────────────────────────────────────────────────── #}
   {% if table.pagination_mode != "infinite" %}
-  <div id="{{ table.table_id }}-pagination"
-       class="flex items-center justify-between">
+  <div id="{{ table.table_id }}-pagination" class="dz-table-footer">
     {% include 'fragments/table_pagination.html' %}
   </div>
   {% endif %}
@@ -336,7 +297,7 @@
   <div id="dz-live-region"
        aria-live="polite"
        aria-atomic="true"
-       class="sr-only">
+       class="visually-hidden">
   </div>
 
 </div>

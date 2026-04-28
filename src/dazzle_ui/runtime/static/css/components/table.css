@@ -1,0 +1,339 @@
+/*
+ * table.css — filterable_table component family.
+ *
+ * Used by templates/components/filterable_table.html (data-table
+ * contract). The table itself, sticky header, sortable column
+ * controls, column-resize handle, column-visibility menu, loading
+ * overlay, empty state, and the surrounding chrome (header row,
+ * toolbar row, scroll container) all live here. Row-level styling
+ * (hover, selected, inline-edit cell) lives in the table-rows
+ * fragment migration that follows.
+ *
+ * Dynamic Alpine state (loading=true, colMenuOpen, isColumnVisible,
+ * bulkCount, columnWidths) drives the same DOM attributes as before
+ * — :class bindings, x-show, :style. We don't introduce parallel
+ * .is-* modifiers; semantic classes layer over the existing state
+ * grammar.
+ *
+ * Wrapped in @layer components.
+ */
+
+/* ─────────────────────────── outer wrapper ──────────────────────
+ * Table card root — vertical flow of header / toolbar / scroll
+ * container / pagination footer. */
+
+.dz-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ─────────────────────────── header row ─────────────────────────
+ * Title on the left, action group (columns menu + create button)
+ * on the right. */
+
+.dz-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dz-table-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ─────────────────────────── toolbar row ────────────────────────
+ * search input / filter chips / bulk actions. Wraps on narrow
+ * containers. */
+
+.dz-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.dz-table-toolbar-filters {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ─────────────────────────── column visibility menu ─────────────
+ * Triggered by the "Columns" button; rendered via Alpine x-show. */
+
+.dz-table-col-menu {
+  position: relative;
+}
+
+.dz-table-col-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 1.75rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-col-menu-trigger:hover {
+  background: var(--colour-surface);
+}
+
+.dz-table-col-menu-panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-block-start: var(--space-xs);
+  width: 11rem;
+  z-index: 100;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding-block: var(--space-xs);
+  overflow: hidden;
+}
+
+.dz-table-col-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-xs);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-col-menu-item:hover {
+  background: var(--colour-bg);
+}
+
+.dz-table-col-menu-checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--radius-sm);
+  accent-color: var(--colour-brand);
+  cursor: pointer;
+}
+
+/* ─────────────────────────── primary action button ──────────────
+ * The "New <Entity>" CTA. Filled brand variant — distinct from the
+ * .dz-button-outline / -ghost / -destructive in button.css because
+ * this is the only filled variant we currently need. Co-located with
+ * the table for now; will be promoted to button.css if a second call
+ * site appears. */
+
+.dz-button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 1.75rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border: 1px solid var(--colour-brand);
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-button-primary:hover {
+  opacity: 0.9;
+}
+
+/* ─────────────────────────── scroll container ───────────────────
+ * Holds the loading overlay + horizontal scroll region + table.
+ * Border + radius + clip live here so the sticky header doesn't
+ * bleed past the rounded corners. */
+
+.dz-table-scroll {
+  position: relative;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.dz-table-scroll-x {
+  overflow-x: auto;
+}
+
+/* ─────────────────────────── loading overlay ────────────────────
+ * Shown via Alpine x-show="loading"; backdrop blur + dimmed
+ * background + centred spinner. Pointer-events none so the user can
+ * still scroll mid-load. */
+
+.dz-table-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+
+.dz-table-loading-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--colour-text-muted);
+  animation: dz-spin 1s linear infinite;
+}
+
+@keyframes dz-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────── the table itself ───────────────────
+ * border-collapse so the sticky-header shadow sits flush. */
+
+.dz-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Sticky header — bg + bottom shadow stand in for a 1px border that
+ * collapse would have stripped. */
+.dz-table-head {
+  position: sticky;
+  top: 0;
+  background: var(--colour-surface);
+  z-index: 10;
+  box-shadow: 0 1px 0 var(--colour-border);
+}
+
+.dz-table-th {
+  position: relative;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  text-align: start;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+  user-select: none;
+}
+
+.dz-table-th-select {
+  width: 2.5rem;
+}
+
+.dz-table-th-actions {
+  width: 4rem;
+}
+
+/* Sort button — inline within the th when the column is sortable. */
+.dz-table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-sort-button:hover {
+  color: var(--colour-text);
+}
+
+.dz-table-sort-icon {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* Resize handle — 4px wide vertical strip on the right edge of each
+ * th, shows brand tint on hover. */
+.dz-table-resize-handle {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 0.25rem;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-resize-handle:hover {
+  background: color-mix(in oklch, var(--colour-brand) 50%, transparent);
+}
+
+/* Body — divide rows with subtle border-top via adjacent-sibling. */
+.dz-table-body > tr + tr {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+/* ─────────────────────────── empty state ────────────────────────
+ * Visible (via :has selector) when tbody has no data rows. */
+
+.dz-table-empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-3xl);
+  color: var(--colour-text-muted);
+}
+
+/* When no data row siblings exist, show the empty state. The :has()
+ * selector gates this on a sibling tbody having no rows with data-dz-row-id. */
+.dz-table-empty:not(:has(~ tbody tr[data-dz-row-id])) {
+  display: flex;
+}
+
+.dz-table-empty-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.3;
+}
+
+.dz-table-empty-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-table-empty-hint {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+/* ─────────────────────────── pagination footer ──────────────────
+ * Wrapper for the pagination fragment (own internal layout). */
+
+.dz-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

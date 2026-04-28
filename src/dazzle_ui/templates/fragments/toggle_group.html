@@ -13,10 +13,17 @@
      multi    : bool                          — true for multi-select (default false → exclusive)
      initial  : str | None                    — pre-selected value (comma-separated for multi)
      label    : str | None                    — ARIA group label (defaults to ``name``)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-toggle-* classes
+   (components/fragments.css). Selected-button styling now driven by
+   `aria-pressed="true"` (already emitted via Alpine `:aria-pressed`)
+   so the visual state and the accessibility attribute share one
+   source of truth — and Alpine `:class` collapses to nothing rather
+   than two parallel branch class strings.
 #}
 {% set multi = multi | default(false) %}
 <div x-data="dzToggleGroup"
-     class="dz-toggle-group inline-flex rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.3)] p-0.5"
+     class="dz-toggle-group"
      data-dz-multi="{{ 'true' if multi else 'false' }}"
      {% if initial %}data-dz-value="{{ initial }}"{% endif %}
      role="{{ 'group' if multi else 'radiogroup' }}"
@@ -31,10 +38,7 @@
           @keydown.left.prevent="$el.previousElementSibling && $el.previousElementSibling.focus()"
           @keydown.right.prevent="$el.nextElementSibling && $el.nextElementSibling.tagName === 'BUTTON' && $el.nextElementSibling.focus()"
           :aria-pressed="isSelected('{{ option.value }}')"
-          :class="isSelected('{{ option.value }}')
-            ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
-            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'"
-          class="h-7 px-3 rounded-[3px] text-[12px] font-medium transition-[background-color,color,box-shadow] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
+          class="dz-toggle-item">
     {{ option.label }}
   </button>
   {% endfor %}

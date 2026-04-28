@@ -1,30 +1,33 @@
 {# Experience flow content — step progress + inner surface
-   Contract: ~/.claude/skills/ux-architect/components/experience-shell.md (UX-072) #}
+   Contract: ~/.claude/skills/ux-architect/components/experience-shell.md (UX-072)
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-experience-* /
+   .dz-steps-* family (components/fragments.css) and .dz-button primitives
+   for the form submit. Step state tone now driven by .is-completed /
+   .is-current modifier classes on the <li> rather than per-element class
+   ternaries. #}
 {% from 'macros/form_field.html' import render_field %}
 {% from 'macros/experience_transition.html' import experience_transition_button %}
 
-<div data-dz-experience="{{ experience.name }}" class="max-w-4xl mx-auto">
+<div data-dz-experience="{{ experience.name }}" class="dz-experience">
   {# Title #}
-  <h2 class="text-2xl font-bold mb-6">{{ experience.title }}</h2>
+  <h2 class="dz-experience-title">{{ experience.title }}</h2>
 
-  {# Progress indicator — pure Tailwind stepper (cycle 251) #}
+  {# Progress indicator — reuses the existing .dz-steps / .dz-steps-circle
+     family from fragments/steps_indicator.html. `.is-completed` marker
+     applies to both completed AND current steps so they share the brand
+     fill (matches the steps_indicator position-based convention). #}
   {% if experience.steps | length > 1 %}
-  <ol class="dz-steps flex items-center w-full mb-8">
+  <ol class="dz-steps">
     {% for step in experience.steps %}
-    <li class="flex items-center{% if not loop.last %} flex-1{% endif %}"
+    <li class="dz-steps-item{% if not loop.last %} is-not-last{% endif %}"
         data-dz-exp-step="{{ step.name }}"
         {% if step.is_current %}aria-current="step"{% endif %}>
-      <div class="flex items-center gap-2">
-        <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold
-                     {% if step.is_completed or step.is_current %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]{% else %}bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]{% endif %}">
-          {{ loop.index }}
-        </span>
-        <span class="text-[13px] {% if step.is_completed or step.is_current %}text-[hsl(var(--foreground))] font-medium{% else %}text-[hsl(var(--muted-foreground))]{% endif %}">
-          {{ step.title }}
-        </span>
+      <div class="dz-steps-row">
+        <span class="dz-steps-circle{% if step.is_completed or step.is_current %} is-completed{% endif %}">{{ loop.index }}</span>
+        <span class="dz-steps-label{% if step.is_completed or step.is_current %} is-completed{% endif %}">{{ step.title }}</span>
       </div>
       {% if not loop.last %}
-      <div class="flex-1 mx-3 h-px {% if step.is_completed %}bg-[hsl(var(--primary))]{% else %}bg-[hsl(var(--border))]{% endif %}"></div>
+      <div class="dz-steps-connector{% if step.is_completed %} is-completed{% endif %}"></div>
       {% endif %}
     </li>
     {% endfor %}
@@ -38,7 +41,7 @@
 
       {# Form step: render the form with action rewritten to experience endpoint #}
       {% if ctx.form %}
-        <div class="max-w-2xl">
+        <div class="dz-experience-form-shell">
           <form data-dazzle-form="{{ ctx.form.entity_name }}"
                 data-dazzle-form-mode="{{ ctx.form.mode }}"
                 hx-{{ "put" if ctx.form.method == "put" else "post" }}="{{ ctx.form.action_url }}"
@@ -48,7 +51,7 @@
                 hx-target-5*="#form-errors"
                 hx-headers='{"Content-Type": "application/json"}'
                 hx-ext="json-enc"
-                class="space-y-4">
+                class="dz-experience-form-body">
 
             <div id="form-errors">
               {% include 'fragments/form_errors.html' %}
@@ -60,7 +63,7 @@
               {% for section in ctx.form.sections %}
               <div class="dz-wizard-stage" data-dz-stage="{{ loop.index0 }}"
                    {% if not loop.first %}style="display:none"{% endif %}>
-                <h3 class="text-lg font-semibold mb-3">{{ section.title }}</h3>
+                <h3 class="dz-experience-stage-title">{{ section.title }}</h3>
                 {% for field in section.fields %}
                   {{ render_field(field, ctx.form.initial_values) }}
                 {% endfor %}
@@ -73,8 +76,8 @@
             {% endif %}
 
             {# Form submit + navigation buttons #}
-            <div class="flex gap-3 pt-4">
-              <button type="submit" class="inline-flex items-center h-9 px-4 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[14px] font-medium hover:brightness-110 transition-[filter] duration-[80ms]"
+            <div class="dz-experience-actions">
+              <button type="submit" class="dz-button dz-button-primary"
                       data-loading-class="loading"
                       data-loading-disable>
                 {% if ctx.form.mode == "edit" %}Save & Continue{% else %}Submit{% endif %}
@@ -93,7 +96,7 @@
         {% include 'components/detail_view.html' %}
         {# Transition buttons — hx-post picks up CSRF header via base.html htmx:configRequest listener. #}
         {% if experience.transitions %}
-        <div class="flex gap-3 pt-4">
+        <div class="dz-experience-actions">
           {% for tr in experience.transitions %}
             {{ experience_transition_button(tr) }}
           {% endfor %}
@@ -104,7 +107,7 @@
       {% elif ctx.table %}
         {% include 'components/filterable_table.html' %}
         {% if experience.transitions %}
-        <div class="flex gap-3 pt-4">
+        <div class="dz-experience-actions">
           {% for tr in experience.transitions %}
             {{ experience_transition_button(tr) }}
           {% endfor %}
@@ -112,11 +115,11 @@
         {% endif %}
 
       {% else %}
-        <div class="flex items-center gap-3 px-4 py-3 rounded-[4px] bg-[hsl(var(--info)/0.08)] border border-[hsl(var(--info)/0.2)] text-[13px] text-[hsl(var(--foreground))]" role="alert">
+        <div class="dz-experience-ready" role="alert">
           <span>This step is ready.</span>
         </div>
         {% if experience.transitions %}
-        <div class="flex gap-3 pt-4">
+        <div class="dz-experience-actions">
           {% for tr in experience.transitions %}
             {{ experience_transition_button(tr) }}
           {% endfor %}
@@ -126,12 +129,12 @@
 
     {% else %}
       {# Non-surface step (process/integration) — placeholder #}
-      <div class="rounded-[6px] bg-[hsl(var(--muted))] p-8 text-center">
-        <div class="text-lg font-medium mb-2">Step in progress</div>
-        <p class="text-[hsl(var(--muted-foreground))]">This step is being processed. Please wait or continue.</p>
+      <div class="dz-experience-placeholder">
+        <div class="dz-experience-placeholder-title">Step in progress</div>
+        <p class="dz-experience-placeholder-body">This step is being processed. Please wait or continue.</p>
       </div>
       {% if experience.transitions %}
-      <div class="flex gap-3 pt-4 justify-center">
+      <div class="dz-experience-actions dz-experience-actions-centered">
         {% for tr in experience.transitions %}
           {{ experience_transition_button(tr) }}
         {% endfor %}

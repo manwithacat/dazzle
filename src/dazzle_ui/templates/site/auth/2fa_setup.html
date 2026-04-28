@@ -8,80 +8,73 @@
 {% block body_class %}dz-auth-page{% endblock %}
 
 {% block body %}
+{# v0.62 CSS refactor: inline Tailwind → semantic .dz-auth-* family. #}
 {% call auth_page_card("Set Up 2FA", product_name) %}
 
   {# The macro renders #dz-auth-error. Success alert is unique to this flow, so we add it inline. #}
-  <div id="dz-auth-success"
-       class="hidden flex gap-2 p-3 mb-4 rounded-[4px] border border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.08)] text-[13px] text-[hsl(var(--foreground))]"
-       role="status"></div>
+  <div id="dz-auth-success" class="dz-auth-success hidden" role="status"></div>
 
   {# ─── TOTP (Authenticator App) ─────────────────────────────────────── #}
   <div id="dz-totp-section">
-    <h2 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-1">Authenticator App</h2>
-    <p class="text-[13px] text-[hsl(var(--muted-foreground))] mb-3">
+    <h2 class="dz-auth-section-title">Authenticator App</h2>
+    <p class="dz-auth-section-body">
       Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
     </p>
 
-    <div id="dz-qr-container" class="flex justify-center my-4">
-      <button id="dz-setup-totp"
-              class="h-9 px-4 rounded-[4px] border border-[hsl(var(--primary))] bg-transparent text-[hsl(var(--primary))] text-[13px] font-medium hover:bg-[hsl(var(--primary)/0.08)] transition-colors duration-[120ms]">
+    <div id="dz-qr-container" class="dz-auth-qr-container">
+      <button id="dz-setup-totp" class="dz-button dz-button-outline">
         Generate QR Code
       </button>
     </div>
 
     <div id="dz-totp-verify" class="hidden">
-      <p class="text-[13px] text-[hsl(var(--muted-foreground))] mb-2">
+      <p class="dz-auth-section-body">
         Or enter the secret manually:
-        <code id="dz-totp-secret" class="text-[11px] font-mono text-[hsl(var(--foreground))] bg-[hsl(var(--muted))] px-1 py-0.5 rounded-[3px]"></code>
+        <code id="dz-totp-secret" class="dz-auth-secret-inline"></code>
       </p>
 
-      <form id="dz-totp-form" class="space-y-3">
-        <div class="w-full space-y-1">
-          <label for="totp_code" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">Enter code from app</label>
+      <form id="dz-totp-form" class="dz-auth-form">
+        <div class="dz-auth-field">
+          <label for="totp_code" class="dz-auth-label">Enter code from app</label>
           <input type="text" id="totp_code" name="code" required
                  inputmode="numeric" pattern="[0-9]*" maxlength="6"
                  placeholder="000000"
-                 class="w-full h-10 px-3 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-center text-[20px] font-semibold tracking-[0.4em] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+                 class="dz-auth-input-code">
         </div>
-        <button type="submit"
-                class="w-full h-9 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] mt-2">
+        <button type="submit" class="dz-button dz-button-primary dz-auth-submit">
           Verify &amp; Enable
         </button>
       </form>
     </div>
   </div>
 
-  <hr class="my-6 border-[hsl(var(--border))]">
+  <hr class="dz-auth-hr">
 
   {# ─── Email OTP ────────────────────────────────────────────────────── #}
   <div id="dz-email-otp-section">
-    <h2 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-1">Email Verification</h2>
-    <p class="text-[13px] text-[hsl(var(--muted-foreground))] mb-3">
+    <h2 class="dz-auth-section-title">Email Verification</h2>
+    <p class="dz-auth-section-body">
       Receive a one-time code via email when you sign in.
     </p>
-    <button id="dz-enable-email-otp"
-            class="w-full h-9 rounded-[4px] border border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] text-[13px] font-medium hover:bg-[hsl(var(--muted)/0.5)] disabled:opacity-50 disabled:hover:bg-transparent transition-colors duration-[120ms]">
+    <button id="dz-enable-email-otp" class="dz-button dz-button-outline dz-auth-submit">
       Enable Email OTP
     </button>
   </div>
 
   {# ─── Recovery Codes ─────────────────────────────────────────────── #}
-  <div id="dz-recovery-section" class="hidden mt-4">
-    <div class="rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)] p-3" role="alert">
-      <h3 class="text-[13px] font-semibold text-[hsl(var(--foreground))]">Save Your Recovery Codes</h3>
-      <p class="text-[12px] text-[hsl(var(--muted-foreground))] mt-1">
+  <div id="dz-recovery-section" class="hidden">
+    <div class="dz-auth-recovery-alert" role="alert">
+      <h3 class="dz-auth-recovery-alert-title">Save Your Recovery Codes</h3>
+      <p class="dz-auth-recovery-alert-body">
         Store these codes in a safe place. Each code can only be used once.
       </p>
     </div>
-    <div id="dz-recovery-codes" class="grid grid-cols-2 gap-2 mt-4 font-mono text-[12px]"></div>
+    <div id="dz-recovery-codes" class="dz-auth-recovery-grid"></div>
   </div>
 
-  <div class="mt-6">
-    <a href="/app"
-       class="block w-full h-9 leading-9 text-center rounded-[4px] text-[hsl(var(--muted-foreground))] text-[13px] font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[120ms]">
-      Back to App
-    </a>
-  </div>
+  <a href="/app" class="dz-auth-back-link">
+    Back to App
+  </a>
 {% endcall %}
 {% endblock %}
 
@@ -91,11 +84,9 @@
   const errorDiv = document.getElementById('dz-auth-error');
   const successDiv = document.getElementById('dz-auth-success');
 
-  // Class string applied to each recovery-code pill. Kept in one place so the
-  // grammar matches the rest of the UX-036 adopters (see /ux-log cycle 41).
-  const RECOVERY_CODE_CLASSES =
-    'rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] ' +
-    'px-2 py-2 text-center text-[12px] text-[hsl(var(--foreground))]';
+  // v0.62 CSS refactor: recovery-pill chrome moved from inline Tailwind
+  // string to `.dz-auth-recovery-pill` rule (components/fragments.css).
+  const RECOVERY_CODE_CLASSES = 'dz-auth-recovery-pill';
 
   function showError(msg) {
     errorDiv.textContent = msg;

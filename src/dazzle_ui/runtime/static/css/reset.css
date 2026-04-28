@@ -1,0 +1,113 @@
+/*
+ * reset.css — modern element reset.
+ *
+ * Based on Andy Bell's modern CSS reset
+ * (https://piccalil.li/blog/a-more-modern-css-reset/) plus selected
+ * lines from Open Props' normalise stylesheet for form-control
+ * consistency. Both attributed.
+ *
+ * Wrapped in @layer reset (declared in dazzle.css) so component
+ * styles always win without specificity wars.
+ */
+
+/* Use a more intuitive box-sizing model. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Remove default margin in favour of explicit spacing tokens. */
+* {
+  margin: 0;
+}
+
+/* Allow percentage-based heights in the application. */
+html,
+body {
+  height: 100%;
+}
+
+/* Add accessible line-height and improve text rendering. */
+body {
+  line-height: var(--leading-normal, 1.5);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Improve media defaults — block layout, max-width to parent. */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Inherit fonts for inputs and buttons (browsers usually don't). */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Avoid text overflows on long words. */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+/* Improve heading line height — tight by default for display sizes. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: var(--leading-tight, 1.2);
+  text-wrap: balance;
+}
+
+/* Create a root stacking context. */
+#root,
+#__next {
+  isolation: isolate;
+}
+
+/* ─────────────── form-control consistency (Open Props) ───────────
+ * Cherry-picked lines from Open Props' normalise.css. These handle
+ * the genuinely tedious cross-browser inconsistencies in form
+ * controls — number-input spinners, select chevrons, textarea
+ * resize handles. Lifting the values; not depending on the package. */
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Honour user's reduced-motion preference at the cascade root. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

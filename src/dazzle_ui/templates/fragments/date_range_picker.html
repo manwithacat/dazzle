@@ -1,23 +1,25 @@
 {# Date range picker for workspace regions with date_range enabled.
    Contract: ~/.claude/skills/ux-architect/components/parking-lot-primitives.md (cycle 247)
-#}
-<div class="dz-date-range-picker date-range-bar flex items-center gap-2 mb-2">
-  <label class="text-[11px] text-[hsl(var(--muted-foreground))]" for="date-from-{{ region_name }}">From</label>
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-date-range-* classes
+   (components/fragments.css). #}
+<div class="dz-date-range-picker date-range-bar">
+  <label class="dz-date-range-label" for="date-from-{{ region_name }}">From</label>
   <input type="date"
          id="date-from-{{ region_name }}"
          name="date_from"
          value="{{ date_from or '' }}"
-         class="h-7 px-2 w-36 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+         class="dz-date-range-input"
          hx-get="{{ endpoint }}"
          hx-target="#region-{{ region_name }}"
          hx-swap="innerHTML"
          hx-include="closest .date-range-bar"/>
-  <label class="text-[11px] text-[hsl(var(--muted-foreground))]" for="date-to-{{ region_name }}">To</label>
+  <label class="dz-date-range-label" for="date-to-{{ region_name }}">To</label>
   <input type="date"
          id="date-to-{{ region_name }}"
          name="date_to"
          value="{{ date_to or '' }}"
-         class="h-7 px-2 w-36 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+         class="dz-date-range-input"
          hx-get="{{ endpoint }}"
          hx-target="#region-{{ region_name }}"
          hx-swap="innerHTML"

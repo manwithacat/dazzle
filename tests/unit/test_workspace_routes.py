@@ -647,8 +647,9 @@ class TestWorkspaceRefLinks:
         )
         assert "Alice" in html
         assert "/users/u1" in html
-        # Post-DaisyUI refactor: ref links use the --primary token directly
-        assert "text-[hsl(var(--primary))]" in html
+        # v0.62 CSS refactor: ref-link colour lives on .dz-ref-link CSS rule
+        # (components/fragments.css) rather than inline `text-[hsl(var(--primary))]`.
+        assert "dz-ref-link" in html
 
     def test_list_ref_no_link_without_ref_route(self) -> None:
         """Ref column without ref_route renders display name without link."""
@@ -1054,10 +1055,13 @@ class TestProgressRegionTemplate:
         assert "Done (5)" in html
 
     def test_tristate_colouring_flows_through_tokens(self) -> None:
-        """Gate 4: chips reference --success/--warning/--muted tokens.
+        """Gate 4: chips emit data-dz-stage-tone (complete | active | empty).
 
-        Locks in the cycle 271 migration away from the hardcoded
-        `hsl(142_71%_45%)` green literal.
+        v0.62 CSS refactor: the visual tristate (success / warning /
+        neutral) is now applied via attribute selectors on .dz-progress-chip
+        in components/regions.css, rather than inline `hsl(var(--success))`
+        Tailwind utilities. Locks in the cycle 271 migration away from
+        the hardcoded `hsl(142_71%_45%)` green literal.
         """
         html = render_fragment(
             "workspace/regions/progress.html",
@@ -1072,9 +1076,22 @@ class TestProgressRegionTemplate:
                 progress_total=8,
             ),
         )
-        assert "hsl(var(--success)" in html
-        assert "hsl(var(--warning)" in html
-        assert "hsl(var(--muted)" in html
+        # Three tones, three rendered values
+        assert 'data-dz-stage-tone="complete"' in html
+        assert 'data-dz-stage-tone="active"' in html
+        assert 'data-dz-stage-tone="empty"' in html
+
+        # CSS rules confirm each tone references the right semantic colour
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert 'dz-progress-chip[data-dz-stage-tone="complete"]' in css
+        assert "var(--colour-success)" in css
+        assert 'dz-progress-chip[data-dz-stage-tone="active"]' in css
+        assert "var(--colour-warning)" in css
 
     def test_no_hardcoded_hsl_literals(self) -> None:
         """Gate 4 (negative form): pre-cycle-271 hardcoded green must not reappear."""
@@ -1192,7 +1209,7 @@ class TestDetailRegionTemplate:
         return defaults
 
     def test_renders_canonical_wrapper_and_grid(self) -> None:
-        """Gates 1 + 2: dz-detail-region + dz-detail-grid <dl>."""
+        """Gates 1 + 2: dz-detail-region + dz-detail-region-grid <dl>."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1204,7 +1221,7 @@ class TestDetailRegionTemplate:
             ),
         )
         assert "dz-detail-region" in html
-        assert "dz-detail-grid" in html
+        assert "dz-detail-region-grid" in html
         assert "<dl" in html
 
     def test_dt_dd_pair_count_matches_columns(self) -> None:
@@ -1223,8 +1240,8 @@ class TestDetailRegionTemplate:
         assert html.count("<dt") == 3
         assert html.count("<dd") == 3
 
-    def test_labels_use_muted_foreground_token(self) -> None:
-        """Gate 4: <dt> class references --muted-foreground token, no hardcoded HSL."""
+    def test_labels_use_semantic_class(self) -> None:
+        """Gate 4: <dt> emits .dz-detail-label semantic class (colour token in CSS)."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1232,17 +1249,18 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "name", "label": "Name", "type": "text"}],
             ),
         )
-        # dt label uses the token
-        assert "hsl(var(--muted-foreground))" in html
-        # No digit-starting HSL literals inside class attributes
         import re
 
         dt_match = re.search(r"<dt[^>]*class=\"([^\"]+)\"", html)
         assert dt_match is not None
-        assert "hsl(" not in dt_match.group(1) or "var(--" in dt_match.group(1)
+        classes = dt_match.group(1)
+        assert "dz-detail-label" in classes
+        # No inline arbitrary-value Tailwind escape hatches
+        assert "hsl(" not in classes
+        assert "text-[" not in classes
 
-    def test_values_use_foreground_token(self) -> None:
-        """Gate 5: <dd> class references --foreground token."""
+    def test_values_use_semantic_class(self) -> None:
+        """Gate 5: <dd> emits .dz-detail-value semantic class."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1250,10 +1268,17 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "name", "label": "Name", "type": "text"}],
             ),
         )
-        assert "hsl(var(--foreground))" in html
+        import re
+
+        dd_match = re.search(r"<dd[^>]*class=\"([^\"]+)\"", html)
+        assert dd_match is not None
+        classes = dd_match.group(1)
+        assert "dz-detail-value" in classes
+        assert "hsl(" not in classes
+        assert "text-[" not in classes
 
     def test_badge_column_delegates_to_status_badge_macro(self) -> None:
-        """Gate 6: type=badge invokes render_status_badge, producing dz-status-badge."""
+        """Gate 6: type=badge invokes render_status_badge, producing dz-badge."""
         html = render_fragment(
             "workspace/regions/detail.html",
             **self._detail_kwargs(
@@ -1261,7 +1286,7 @@ class TestDetailRegionTemplate:
                 columns=[{"key": "status", "label": "Status", "type": "badge"}],
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_ref_anchor_uses_primary_token(self) -> None:
         """Gate 7: ref column with ref_route + mapping value → anchor with primary token."""
@@ -1282,7 +1307,8 @@ class TestDetailRegionTemplate:
                 ],
             ),
         )
-        assert "hsl(var(--primary))" in html
+        # v0.62 CSS refactor: ref-link colour lives on .dz-ref-link CSS rule
+        assert "dz-ref-link" in html
         assert 'href="/app/user/42"' in html
         assert "Bob Smith" in html
 
@@ -1436,7 +1462,13 @@ class TestHeatmapRegionTemplate:
         assert thead_html.count("<th") == 4  # 1 empty corner + 3 column labels
 
     def test_three_tier_threshold_colouring_uses_tokens(self) -> None:
-        """Gate 5 (positive): 2-threshold path references all 3 design tokens."""
+        """Gate 5 (positive): 2-threshold path emits the three tone bands.
+
+        v0.62 CSS refactor: cells now carry data-dz-heatmap-tone="bad"
+        / "warn" / "good" attributes; the tint colours
+        (destructive / warning / success) live on attribute selectors
+        in components/regions.css. Pin both the data-attribute
+        emission and the CSS rules' colour tokens."""
         html = render_fragment(
             "workspace/regions/heatmap.html",
             **self._heatmap_kwargs(
@@ -1445,13 +1477,13 @@ class TestHeatmapRegionTemplate:
                         "row": "Low",
                         "row_id": "low",
                         "cells": [{"value": 1.0}],
-                    },  # below first (destructive)
-                    {"row": "Mid", "row_id": "mid", "cells": [{"value": 5.0}]},  # between (warning)
+                    },  # below first (bad)
+                    {"row": "Mid", "row_id": "mid", "cells": [{"value": 5.0}]},  # between (warn)
                     {
                         "row": "High",
                         "row_id": "high",
                         "cells": [{"value": 9.0}],
-                    },  # at/above second (success)
+                    },  # at/above second (good)
                 ],
                 heatmap_col_values=["val"],
                 heatmap_thresholds=[3.0, 8.0],
@@ -1459,9 +1491,24 @@ class TestHeatmapRegionTemplate:
                 total=3,
             ),
         )
-        assert "hsl(var(--destructive)" in html
-        assert "hsl(var(--warning)" in html
-        assert "hsl(var(--success)" in html
+        # Three tone bands rendered as data-attributes
+        assert 'data-dz-heatmap-tone="bad"' in html
+        assert 'data-dz-heatmap-tone="warn"' in html
+        assert 'data-dz-heatmap-tone="good"' in html
+
+        # CSS rules route each tone to the right semantic colour token
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="bad"]' in css
+        assert "var(--colour-danger)" in css
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="warn"]' in css
+        assert "var(--colour-warning)" in css
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="good"]' in css
+        assert "var(--colour-success)" in css
 
     def test_no_hardcoded_hsl_literals(self) -> None:
         """Gate 5 (negative): pre-cycle-273 red/green literals must not reappear."""
@@ -1699,21 +1746,38 @@ class TestBarChartRegionTemplate:
         assert "width: 100%" in html
 
     def test_track_and_fill_use_design_tokens(self) -> None:
-        """Gate 5: track → --muted, fill → --primary. No hardcoded HSL."""
+        """Gate 5: track + fill chrome live on semantic CSS rules.
+
+        v0.62 CSS refactor: track surface (`--colour-bg`) and fill
+        (`--colour-brand`) tokens live on `.dz-bar-chart-track` and
+        `.dz-bar-chart-fill` rules in components/regions.css rather
+        than inline `bg-[hsl(var(--muted))]` / `bg-[hsl(var(--primary))]`
+        Tailwind."""
         html = render_fragment(
             "workspace/regions/bar_chart.html",
             **self._bar_kwargs(
                 metrics=[{"label": "X", "value": 1}],
             ),
         )
-        assert "hsl(var(--muted))" in html
-        assert "hsl(var(--primary))" in html
+        assert "dz-bar-chart-track" in html
+        assert "dz-bar-chart-fill" in html
         # No hardcoded HSL literals in class attributes
         import re
 
-        # Exclude the one legitimate inline style="width: N%"
         class_hsl_leaks = re.findall(r'class="[^"]*hsl\(\d', html)
         assert not class_hsl_leaks, f"hardcoded HSL in class attr: {class_hsl_leaks}"
+
+        # CSS rules carry the right tokens
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        track_block = css.split(".dz-bar-chart-track {")[1].split("}")[0]
+        fill_block = css.split(".dz-bar-chart-fill {")[1].split("}")[0]
+        assert "background: var(--colour-bg)" in track_block
+        assert "background: var(--colour-brand)" in fill_block
 
     def test_grouped_mode_renders_total_footer(self) -> None:
         """Gate 6: grouped mode ends with '{total} total' paragraph."""
@@ -1737,7 +1801,7 @@ class TestBarChartRegionTemplate:
                 total=2,
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_fallback_mode_does_not_use_status_badge(self) -> None:
         """Gate 8: fallback mode uses plain-text label span, NOT status badge."""
@@ -1748,7 +1812,7 @@ class TestBarChartRegionTemplate:
             ),
         )
         # Metric labels are plain spans, not badges
-        assert "dz-status-badge" not in html
+        assert "dz-badge" not in html
 
     def test_empty_state_when_no_data_at_all(self) -> None:
         """Gate 9: no items, no metrics → role=status empty state, no bars."""
@@ -1856,7 +1920,11 @@ class TestGridRegionTemplate:
         return defaults
 
     def test_renders_canonical_wrapper_and_grid(self) -> None:
-        """Gates 1 + 2: dz-grid-region + responsive CSS grid container."""
+        """Gates 1 + 2: dz-grid-region wrapper + .dz-grid-list container.
+
+        v0.62 CSS refactor: responsive 1/2/3-column layout lives on
+        .dz-grid-list (components/regions.css) via @media breakpoints,
+        not inline `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` Tailwind."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1864,10 +1932,19 @@ class TestGridRegionTemplate:
             ),
         )
         assert "dz-grid-region" in html
-        # Responsive grid utilities
-        assert "grid-cols-1" in html
-        assert "sm:grid-cols-2" in html
-        assert "lg:grid-cols-3" in html
+        assert "dz-grid-list" in html
+
+        # Verify the CSS rule defines responsive breakpoints
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        # 1-col baseline + 2-col at 40rem + 3-col at 64rem
+        assert ".dz-grid-list {" in css
+        assert "@media (min-width: 40rem)" in css
+        assert "@media (min-width: 64rem)" in css
 
     def test_cell_count_matches_items_length(self) -> None:
         """Gate 3: dz-grid-cell count equals len(items)."""
@@ -1881,10 +1958,18 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert html.count("dz-grid-cell") == 3
+        # `dz-grid-cell` substring appears once per cell as the class.
+        # Use a stricter count that excludes adjacent classes like
+        # dz-grid-cell-title / dz-grid-cell-field — count the leading
+        # `class="dz-grid-cell ` opener.
+        assert html.count('class="dz-grid-cell ') == 3
 
     def test_primary_label_in_h4(self) -> None:
-        """Gate 4: each cell contains <h4> with display_key value + foreground token."""
+        """Gate 4: each cell contains <h4> with display_key value.
+
+        v0.62 CSS refactor: title colour token lives on the
+        .dz-grid-cell-title CSS rule rather than inline
+        `text-[hsl(var(--foreground))]` Tailwind."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1892,7 +1977,7 @@ class TestGridRegionTemplate:
             ),
         )
         assert "<h4" in html
-        assert "hsl(var(--foreground))" in html
+        assert "dz-grid-cell-title" in html
         assert "Alpha" in html
 
     def test_non_primary_columns_render_as_paragraphs(self) -> None:
@@ -1916,7 +2001,10 @@ class TestGridRegionTemplate:
         assert "CPU:" in html
 
     def test_attention_level_critical_uses_destructive_token(self) -> None:
-        """Gate 6 (critical): _attention={level:critical} → --destructive left border."""
+        """Gate 6 (critical): _attention={level:critical} → danger left border.
+
+        v0.62 CSS refactor: emits .dz-attn-border + .dz-attn-tone-critical
+        modifier; CSS rule resolves to var(--colour-danger)."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1930,11 +2018,12 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--destructive))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-critical" in html
         assert 'title="System down"' in html
 
     def test_attention_level_warning_uses_warning_token(self) -> None:
-        """Gate 6 (warning): --warning left border."""
+        """Gate 6 (warning): warning left border."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1948,10 +2037,11 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--warning))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_attention_level_notice_uses_primary_token(self) -> None:
-        """Gate 6 (notice): --primary left border."""
+        """Gate 6 (notice): brand left border."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1965,10 +2055,14 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert "border-l-[hsl(var(--primary))]" in html
+        assert "dz-attn-border" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_htmx_drill_down_wired_when_action_url(self) -> None:
-        """Gate 7: cells have hx-get iff action_url is non-empty."""
+        """Gate 7: cells have hx-get + .is-clickable iff action_url is non-empty.
+
+        v0.62 CSS refactor: cursor + hover state live on the
+        .is-clickable modifier (CSS rule on .dz-grid-cell.is-clickable)."""
         with_action = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1978,7 +2072,7 @@ class TestGridRegionTemplate:
         )
         assert 'hx-get="/app/system/abc123"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/grid.html",
@@ -1988,7 +2082,7 @@ class TestGridRegionTemplate:
             ),
         )
         assert "hx-get=" not in without_action
-        assert "cursor-pointer" not in without_action
+        assert "is-clickable" not in without_action
 
     def test_ref_anchor_stop_propagation(self) -> None:
         """Gate 8: ref column anchor includes event.stopPropagation() onclick.
@@ -2124,7 +2218,11 @@ class TestTimelineRegionTemplate:
         return datetime.utcnow()
 
     def test_renders_canonical_wrapper_and_list(self) -> None:
-        """Gates 1 + 2: dz-timeline-region + dz-timeline-list <ul>."""
+        """Gates 1 + 2: dz-timeline-region + dz-timeline-list <ul>.
+
+        v0.62 CSS refactor: the left rail (border-inline-start) lives
+        on the .dz-timeline-list CSS rule, not as inline `border-l`
+        Tailwind on the <ul>."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2142,7 +2240,16 @@ class TestTimelineRegionTemplate:
         assert "dz-timeline-region" in html
         assert "dz-timeline-list" in html
         assert "<ul" in html
-        assert "border-l" in html
+
+        # The left rail lives in CSS now
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        timeline_block = css.split(".dz-timeline-list {")[1].split("}")[0]
+        assert "border-inline-start: 1px solid var(--colour-border)" in timeline_block
 
     def test_item_count_matches_items_length(self) -> None:
         """Gate 3: dz-timeline-item count equals len(items)."""
@@ -2175,7 +2282,11 @@ class TestTimelineRegionTemplate:
         assert html.count("dz-timeline-item") == 3
 
     def test_bullet_marker_per_item(self) -> None:
-        """Gate 4: each item has one dz-timeline-bullet SVG."""
+        """Gate 4: each item has one dz-timeline-bullet SVG.
+
+        v0.62 CSS refactor: the wrapper class .dz-timeline-bullet-wrap
+        also contains the substring 'dz-timeline-bullet', so count the
+        SVG class attribute specifically."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2196,10 +2307,15 @@ class TestTimelineRegionTemplate:
                 total=2,
             ),
         )
-        assert html.count("dz-timeline-bullet") == 2
+        # Match the SVG element's class attribute (which starts with
+        # `dz-timeline-bullet ` followed by an attention-tone class).
+        assert html.count('class="dz-timeline-bullet ') == 2
 
     def test_bullet_colour_critical_uses_destructive_token(self) -> None:
-        """Gate 5 (critical): _attention={level:critical} → --destructive."""
+        """Gate 5 (critical): _attention={level:critical} → danger.
+
+        v0.62 CSS refactor: emits .dz-attn-bullet + .dz-attn-tone-critical
+        modifier on the bullet SVG; CSS rule resolves to var(--colour-danger)."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2215,10 +2331,11 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--destructive))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-critical" in html
 
     def test_bullet_colour_warning_uses_warning_token(self) -> None:
-        """Gate 5 (warning): --warning on bullet."""
+        """Gate 5 (warning): warning on bullet."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2234,10 +2351,12 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--warning))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_bullet_colour_default_uses_primary_token(self) -> None:
-        """Gate 5 (default): no attention → --primary."""
+        """Gate 5 (default): no attention → bullet falls back to brand
+        via the .dz-attn-tone-default modifier."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2252,7 +2371,8 @@ class TestTimelineRegionTemplate:
                 total=1,
             ),
         )
-        assert "text-[hsl(var(--primary))]" in html
+        assert "dz-attn-bullet" in html
+        assert "dz-attn-tone-default" in html
 
     def test_htmx_drill_down_wired_when_action_url(self) -> None:
         """Gate 8: content pad has hx-get iff action_url is set.
@@ -2272,7 +2392,8 @@ class TestTimelineRegionTemplate:
         )
         assert 'hx-get="/app/event/abc"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        # v0.62 CSS refactor: cursor + hover live on .is-clickable
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/timeline.html",
@@ -2283,6 +2404,7 @@ class TestTimelineRegionTemplate:
             ),
         )
         assert "hx-get=" not in without_action
+        assert "is-clickable" not in without_action
 
     def test_truncation_footer_conditional(self) -> None:
         """Gate 9: 'Showing N of M' renders only when total > len(items)."""
@@ -2411,7 +2533,11 @@ class TestQueueRegionTemplate:
         assert "dz-queue-region" in html
 
     def test_count_badge_when_total_nonzero(self) -> None:
-        """Gate 2: total > 0 → count badge with primary token."""
+        """Gate 2: total > 0 → count badge styled with brand fill.
+
+        v0.62 CSS refactor: brand background lives on the
+        .dz-queue-count CSS rule rather than inline
+        `bg-[hsl(var(--primary))]` Tailwind."""
         with_count = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2420,7 +2546,16 @@ class TestQueueRegionTemplate:
             ),
         )
         assert ">42<" in with_count
-        assert "bg-[hsl(var(--primary))]" in with_count
+        assert "dz-queue-count" in with_count
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        count_block = css.split(".dz-queue-count {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in count_block
 
     def test_metrics_strip_when_metrics_present(self) -> None:
         """Gate 3: metrics → dz-queue-metrics with one tile per metric."""
@@ -2463,7 +2598,12 @@ class TestQueueRegionTemplate:
         assert 'name="filter_status"' in html
 
     def test_row_count_matches_items_length(self) -> None:
-        """Gate 5: dz-queue-row count equals len(items)."""
+        """Gate 5: dz-queue-row count equals len(items).
+
+        v0.62 CSS refactor: the substring `dz-queue-row` also matches
+        sub-elements (.dz-queue-row-main, .dz-queue-row-headline,
+        .dz-queue-row-title, etc.). Count the leading
+        `class="dz-queue-row ` opener instead."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2475,10 +2615,11 @@ class TestQueueRegionTemplate:
                 total=3,
             ),
         )
-        assert html.count("dz-queue-row") == 3
+        assert html.count('class="dz-queue-row ') == 3
 
     def test_attention_critical_dual_signal(self) -> None:
-        """Gate 6 (critical): border + tint use --destructive."""
+        """Gate 6 (critical): emits .dz-attn-both + .dz-attn-tone-critical;
+        the CSS rule applies the danger border + 4% tint."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2493,12 +2634,12 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--destructive))]" in html
-        assert "bg-[hsl(var(--destructive)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-critical" in html
         assert "Blocker" in html
 
     def test_attention_warning_dual_signal(self) -> None:
-        """Gate 6 (warning): border + tint use --warning."""
+        """Gate 6 (warning): warning border + tint via .dz-attn-both .dz-attn-tone-warning."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2513,11 +2654,11 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--warning))]" in html
-        assert "bg-[hsl(var(--warning)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-warning" in html
 
     def test_attention_notice_dual_signal(self) -> None:
-        """Gate 6 (notice): border + tint use --primary."""
+        """Gate 6 (notice): brand border + tint via .dz-attn-both .dz-attn-tone-notice."""
         html = render_fragment(
             "workspace/regions/queue.html",
             **self._queue_kwargs(
@@ -2532,8 +2673,8 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "border-l-[hsl(var(--primary))]" in html
-        assert "bg-[hsl(var(--primary)/0.04)]" in html
+        assert "dz-attn-both" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_badge_column_delegates_to_status_badge(self) -> None:
         """Gate 7: badge-typed columns render via render_status_badge."""
@@ -2544,7 +2685,7 @@ class TestQueueRegionTemplate:
                 total=1,
             ),
         )
-        assert "dz-status-badge" in html
+        assert "dz-badge" in html
 
     def test_transition_button_wiring(self) -> None:
         """Gate 10: transition buttons use hx-put + hx-vals + hx-ext=json-enc."""
@@ -2836,9 +2977,13 @@ class TestListRegionTemplate:
                 total=3,
             ),
         )
-        assert "bg-[hsl(var(--destructive)/0.08)]" in html
-        assert "bg-[hsl(var(--warning)/0.08)]" in html
-        assert "bg-[hsl(var(--primary)/0.06)]" in html
+        # v0.62 CSS refactor: bg tint variants live in CSS rules on
+        # .dz-attn-tint.dz-attn-tone-{critical|warning|notice};
+        # template emits the modifiers, CSS resolves the colour-mix.
+        assert "dz-attn-tint" in html
+        assert "dz-attn-tone-critical" in html
+        assert "dz-attn-tone-warning" in html
+        assert "dz-attn-tone-notice" in html
 
     def test_sortable_column_header_has_hx_get(self) -> None:
         """Gate 8: sortable columns have <a hx-get=...?sort=...&dir=...>."""
@@ -2878,7 +3023,10 @@ class TestListRegionTemplate:
         assert "▼" in desc
 
     def test_row_drill_down_when_action_url_set(self) -> None:
-        """Gate 10: rows have hx-get iff action_url is non-empty."""
+        """Gate 10: rows have hx-get + .is-clickable iff action_url is non-empty.
+
+        v0.62 CSS refactor: cursor + hover live on the .is-clickable
+        modifier (.dz-list-row.is-clickable rule)."""
         with_action = render_fragment(
             "workspace/regions/list.html",
             **self._list_kwargs(
@@ -2889,7 +3037,7 @@ class TestListRegionTemplate:
         )
         assert 'hx-get="/app/item/abc"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/list.html",
@@ -3035,7 +3183,11 @@ class TestFunnelChartRegionTemplate:
         assert "dz-funnel-stages" in html
 
     def test_grouped_mode_stage_count_matches_kanban_columns(self) -> None:
-        """Gate 3: one dz-funnel-stage per kanban_column."""
+        """Gate 3: one dz-funnel-stage per kanban_column.
+
+        v0.62 CSS refactor: stage opens with `class="dz-funnel-stage"`
+        followed by a newline before its data-attributes — count the
+        opener pattern."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3050,7 +3202,7 @@ class TestFunnelChartRegionTemplate:
                 total=4,
             ),
         )
-        assert html.count("dz-funnel-stage ") == 4
+        assert html.count('class="dz-funnel-stage"') == 4
 
     def test_fallback_mode_stage_count_matches_metrics(self) -> None:
         """Gate 4: one dz-funnel-stage per metric."""
@@ -3064,7 +3216,7 @@ class TestFunnelChartRegionTemplate:
                 ],
             ),
         )
-        assert html.count("dz-funnel-stage ") == 3
+        assert html.count('class="dz-funnel-stage"') == 3
         assert "Visitors" in html
         assert "Signups" in html
         assert "Paid" in html
@@ -3084,7 +3236,11 @@ class TestFunnelChartRegionTemplate:
         assert "(3)" in html
 
     def test_proportional_width_inline_style(self) -> None:
-        """Gate 6: stages have style="width: N%; min-width: 120px;"."""
+        """Gate 6: stages have inline `width: N%`.
+
+        v0.62 CSS refactor: width still inline (per-stage value), but
+        min-width is now declared once on `.dz-funnel-stage` in
+        components/regions.css instead of duplicated inline."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3102,7 +3258,16 @@ class TestFunnelChartRegionTemplate:
         )
         # Stage a has 4 items, base = 4 → width 100%
         assert "width: 100%" in html
-        assert "min-width: 120px" in html
+
+        # min-width lives on the .dz-funnel-stage CSS rule
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        funnel_block = css.split(".dz-funnel-stage {")[1].split("}")[0]
+        assert "min-width: 7.5rem" in funnel_block  # 7.5rem = 120px
 
     def test_minimum_width_floor_20_percent(self) -> None:
         """Gate 7: stages below 20% of base still render at 20% width."""
@@ -3120,7 +3285,13 @@ class TestFunnelChartRegionTemplate:
         assert "width: 20%" in html
 
     def test_primary_token_background(self) -> None:
-        """Gate 8: stages use bg-[hsl(var(--primary)/...)] with dynamic alpha."""
+        """Gate 8: stages get a brand-coloured background.
+
+        v0.62 CSS refactor: the brand background now lives on the
+        `.dz-funnel-stage` CSS rule (`background: var(--colour-brand)`)
+        rather than inline `bg-[hsl(var(--primary)/...)]` Tailwind.
+        Per-stage opacity fade still varies via `data-dz-funnel-step`
+        attribute selectors."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3130,10 +3301,25 @@ class TestFunnelChartRegionTemplate:
                 total=3,
             ),
         )
-        assert "bg-[hsl(var(--primary)/" in html
+        # Stages emit data-dz-funnel-step="0..7" so the rule + tints apply
+        assert 'data-dz-funnel-step="0"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        funnel_block = css.split(".dz-funnel-stage {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in funnel_block
+        assert "color: var(--colour-brand-contrast)" in funnel_block
 
     def test_progressive_alpha_first_two_stages(self) -> None:
-        """Gate 9: stage 1 alpha 0.9, stage 2 alpha 0.8."""
+        """Gate 9: depth-by-position fade applied via `data-dz-funnel-step`.
+
+        v0.62 CSS refactor: opacity decreases with stage index. Pin
+        the data-attribute emission for indices 0/1/2 + the CSS rules'
+        opacity values for those steps."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3143,12 +3329,26 @@ class TestFunnelChartRegionTemplate:
                 total=3,
             ),
         )
-        assert "hsl(var(--primary)/0.9)" in html
-        assert "hsl(var(--primary)/0.8)" in html
-        assert "hsl(var(--primary)/0.7)" in html
+        assert 'data-dz-funnel-step="0"' in html
+        assert 'data-dz-funnel-step="1"' in html
+        assert 'data-dz-funnel-step="2"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert '.dz-funnel-stage[data-dz-funnel-step="0"] { opacity: 0.9; }' in css
+        assert '.dz-funnel-stage[data-dz-funnel-step="1"] { opacity: 0.8; }' in css
+        assert '.dz-funnel-stage[data-dz-funnel-step="2"] { opacity: 0.7; }' in css
 
     def test_alpha_floor_at_stage_9_plus(self) -> None:
-        """Gate 10: 9th+ stage clamps alpha to 0.2."""
+        """Gate 10: 9th+ stage clamps to data-dz-funnel-step="7" (opacity 0.2).
+
+        v0.62 CSS refactor: the template clamps `loop.index0` to 7 for
+        steps 8+, so the same attribute selector applies and the rule
+        sets opacity: 0.2."""
         html = render_fragment(
             "workspace/regions/funnel_chart.html",
             **self._funnel_kwargs(
@@ -3158,9 +3358,17 @@ class TestFunnelChartRegionTemplate:
                 total=10,
             ),
         )
-        # 10 stages → stages at index 8+ (a through j = indices 0-9)
-        # Index 8 and 9 clamp to 0.2
-        assert "hsl(var(--primary)/0.2)" in html
+        # The 9th and 10th stages (indices 8, 9) clamp to step 7
+        # (3 occurrences total: index 7 itself + indices 8, 9 clamped)
+        assert html.count('data-dz-funnel-step="7"') == 3
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert '.dz-funnel-stage[data-dz-funnel-step="7"] { opacity: 0.2; }' in css
 
     def test_grouped_mode_renders_total_footer(self) -> None:
         """Gate 11: grouped mode shows '{total} total'."""
@@ -3269,9 +3477,9 @@ class TestKanbanTemplate:
         assert "In Progress" in html
         assert "Done" in html
         # Canonical status-badge marker + tones landed
-        assert "dz-status-badge" in html
-        assert 'data-dz-status-tone="neutral"' in html  # todo → neutral
-        assert 'data-dz-status-tone="info"' in html  # in_progress → info
+        assert "dz-badge" in html
+        assert 'data-dz-tone="neutral"' in html  # todo → neutral
+        assert 'data-dz-tone="info"' in html  # in_progress → info
         # Verify items are present
         assert "Fix bug" in html
         assert "Write docs" in html
@@ -3519,9 +3727,10 @@ class TestTimelineTemplate:
         )
         assert "Created company" in html
         assert "Started CDD" in html
-        # Post-DaisyUI refactor: timeline shape is now a border-l vertical rule
-        # + space-y-3 stack instead of a named timeline class.
-        assert "pl-4 border-l border-[hsl(var(--border))]" in html
+        # v0.62 CSS refactor: timeline list shape (left rail + stacked
+        # items) lives on .dz-timeline-list rather than inline
+        # `pl-4 border-l border-[hsl(var(--border))]`.
+        assert "dz-timeline-list" in html
 
     def test_timeline_empty(self) -> None:
         html = render_fragment(
@@ -5155,18 +5364,24 @@ class TestAttentionAccentMacro:
         )
         return tmpl.render(attn=attn, style=style)
 
+    # v0.62 CSS refactor: macro emits semantic class pair
+    # `dz-attn-{style} dz-attn-tone-{tier}`. The (style × tone) matrix
+    # is resolved by combinator selectors in components/fragments.css.
+
     def test_border_critical_destructive(self) -> None:
         out = self._render_macro({"level": "critical"}, "border")
-        assert "border-l-4" in out
-        assert "border-l-[hsl(var(--destructive))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_border_warning_warning(self) -> None:
         out = self._render_macro({"level": "warning"}, "border")
-        assert "border-l-[hsl(var(--warning))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_border_notice_primary(self) -> None:
         out = self._render_macro({"level": "notice"}, "border")
-        assert "border-l-[hsl(var(--primary))]" in out
+        assert "dz-attn-border" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_border_none_emits_nothing(self) -> None:
         """With no attn and style=border, macro emits empty string."""
@@ -5175,51 +5390,80 @@ class TestAttentionAccentMacro:
 
     def test_tint_critical_destructive_0_08(self) -> None:
         out = self._render_macro({"level": "critical"}, "tint")
-        assert "bg-[hsl(var(--destructive)/0.08)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_tint_warning_warning_0_08(self) -> None:
         out = self._render_macro({"level": "warning"}, "tint")
-        assert "bg-[hsl(var(--warning)/0.08)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_tint_notice_primary_0_06(self) -> None:
-        """Notice alpha is 0.06 (lighter than critical/warning 0.08)."""
+        """Notice alpha is 0.06 (lighter than critical/warning 0.08) —
+        encoded in the .dz-attn-tint.dz-attn-tone-notice CSS rule."""
         out = self._render_macro({"level": "notice"}, "tint")
-        assert "bg-[hsl(var(--primary)/0.06)]" in out
+        assert "dz-attn-tint" in out
+        assert "dz-attn-tone-notice" in out
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        notice_block = css.split(".dz-attn-tint.dz-attn-tone-notice {")[1].split("}")[0]
+        # 6% mix preserves the lighter alpha vs critical/warning's 8%
+        assert "var(--colour-brand) 6%" in notice_block
 
     def test_both_critical_border_and_tint_0_04(self) -> None:
-        """Queue-region style: dual signal (border + 0.04 alpha tint)."""
+        """Queue-region style: dual signal (border + 0.04 alpha tint).
+        The 4% mix is encoded in the CSS rule."""
         out = self._render_macro({"level": "critical"}, "both")
-        assert "border-l-[hsl(var(--destructive))]" in out
-        assert "bg-[hsl(var(--destructive)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-critical" in out
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        both_critical = css.split(".dz-attn-both.dz-attn-tone-critical {")[1].split("}")[0]
+        assert "var(--colour-danger) 4%" in both_critical
 
     def test_both_warning_dual_signal(self) -> None:
         out = self._render_macro({"level": "warning"}, "both")
-        assert "border-l-[hsl(var(--warning))]" in out
-        assert "bg-[hsl(var(--warning)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_both_notice_dual_signal(self) -> None:
         out = self._render_macro({"level": "notice"}, "both")
-        assert "border-l-[hsl(var(--primary))]" in out
-        assert "bg-[hsl(var(--primary)/0.04)]" in out
+        assert "dz-attn-both" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_bullet_critical_text_destructive(self) -> None:
         """Timeline-region style: bullet marker text colour."""
         out = self._render_macro({"level": "critical"}, "bullet")
-        assert "text-[hsl(var(--destructive))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-critical" in out
 
     def test_bullet_warning_text_warning(self) -> None:
         out = self._render_macro({"level": "warning"}, "bullet")
-        assert "text-[hsl(var(--warning))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-warning" in out
 
     def test_bullet_notice_text_primary(self) -> None:
         out = self._render_macro({"level": "notice"}, "bullet")
-        assert "text-[hsl(var(--primary))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-notice" in out
 
     def test_bullet_none_falls_back_to_primary(self) -> None:
-        """Bullet is the only style that emits a class when attn is None —
-        timeline's default bullet colour is --primary."""
+        """Bullet is the only style that emits classes when attn is None —
+        timeline's default bullet colour is the brand token, encoded as
+        the `default` tone modifier in the CSS rule."""
         out = self._render_macro(None, "bullet")
-        assert "text-[hsl(var(--primary))]" in out
+        assert "dz-attn-bullet" in out
+        assert "dz-attn-tone-default" in out
 
     def test_tint_none_emits_nothing(self) -> None:
         out = self._render_macro(None, "tint")
@@ -5230,16 +5474,21 @@ class TestAttentionAccentMacro:
         assert out.strip() == ""
 
     def test_unknown_level_emits_safe_fallback(self) -> None:
-        """Unknown level (e.g. 'error' instead of 'critical') emits
-        the base class only (border-l-4 for border, nothing for others).
-        Protects against typos in DSL-authored attention values."""
+        """Unknown level (e.g. 'error' instead of 'critical') emits the
+        base style class only — no tone modifier — so the fallback CSS
+        rule applies (just the variant chrome, no per-tier colour)."""
         out = self._render_macro({"level": "error"}, "border")
-        # base 'border-l-4' present but no specific colour token
-        assert "border-l-4" in out
-        assert "hsl(var(--destructive))" not in out
+        assert "dz-attn-border" in out
+        # No specific tone modifier
+        assert "dz-attn-tone-critical" not in out
+        assert "dz-attn-tone-warning" not in out
+        assert "dz-attn-tone-notice" not in out
 
         out_tint = self._render_macro({"level": "error"}, "tint")
-        assert out_tint.strip() == ""
+        # tint without tone has no styling — the macro still emits dz-attn-tint
+        # so the chrome class is present, but no tone modifier
+        assert "dz-attn-tint" in out_tint
+        assert "dz-attn-tone-" not in out_tint
 
 
 # ---------------------------------------------------------------------------
@@ -5275,9 +5524,11 @@ class TestRefCellMacro:
         return tmpl.render(ref=ref, display_hint=display_hint, ref_route=ref_route, mode=mode)
 
     def test_link_mode_mapping_with_route_renders_anchor(self) -> None:
+        """v0.62 CSS refactor: anchor chrome on .dz-ref-link rule
+        rather than inline `text-[hsl(var(--primary))]` Tailwind."""
         out = self._render_macro({"id": "u42", "name": "Alice"}, "", "/user/{id}", "link")
         assert '<a href="/user/u42"' in out
-        assert "hsl(var(--primary))" in out
+        assert "dz-ref-link" in out
         assert ">Alice</a>" in out
         assert "onclick" not in out  # detail mode does NOT include stopPropagation
 
@@ -5404,10 +5655,13 @@ class TestAlpineDropdownComponent:
         assert "Actions" in html
 
     def test_caret_rotates_on_open(self) -> None:
-        """Gate 3b: caret SVG has `:class="open && 'rotate-180'"`."""
+        """Gate 3b: caret SVG flips on open. v0.62 CSS refactor: rotation
+        moved from `:class="open && 'rotate-180'"` to a `:style` binding
+        with rotate(180deg) since the panel chrome no longer ships
+        Tailwind utility classes. Pin the inline rotate transform."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "transition-transform" in html
-        assert "'rotate-180'" in html
+        assert "transform: rotate(180deg)" in html
+        assert "transition: transform" in html
 
     def test_menu_is_ul_with_x_show(self) -> None:
         """Gate 4: menu is <ul x-show="open">."""
@@ -5417,19 +5671,41 @@ class TestAlpineDropdownComponent:
         assert "x-transition" in html
 
     def test_menu_positioned_below_right(self) -> None:
-        """Gate 5: menu has absolute right-0 mt-1 z-50 positioning."""
+        """Gate 5: menu is right-anchored absolute panel. v0.62 CSS
+        refactor: positioning moved to .dz-dropdown-panel rule with
+        an inline override for inset-inline-end:0."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "absolute" in html
-        assert "right-0" in html
-        assert "z-50" in html
+        assert "dz-dropdown-panel" in html
+        assert "inset-inline-end: 0" in html
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        panel_block = css.split(".dz-dropdown-panel {")[1].split("}")[0]
+        assert "position: absolute" in panel_block
+        assert "z-index: 30" in panel_block
 
     def test_menu_chrome_uses_design_tokens(self) -> None:
-        """Gate 6: menu chrome references --card, --border tokens."""
+        """Gate 6: menu chrome references --colour-surface + --colour-border
+        tokens. v0.62 CSS refactor: tokens moved from inline
+        `bg-[hsl(var(--card))] border-[hsl(var(--border))]` to the
+        .dz-dropdown-panel rule in components/fragments.css."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "bg-[hsl(var(--card))]" in html
-        assert "border-[hsl(var(--border))]" in html
-        assert "rounded-lg" in html
-        assert "shadow-md" in html
+        assert "dz-dropdown-panel" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        panel_block = css.split(".dz-dropdown-panel {")[1].split("}")[0]
+        assert "var(--colour-surface)" in panel_block
+        assert "var(--colour-border)" in panel_block
+        assert "border-radius:" in panel_block
+        assert "box-shadow:" in panel_block
 
     def test_item_count_matches_dropdown_items(self) -> None:
         """Gate 7: DOM contains len(dropdown_items) <li> elements."""
@@ -5558,7 +5834,10 @@ class TestSearchResultsFragment:
         assert "Bob" in html
 
     def test_secondary_label_rendered_when_key_provided(self) -> None:
-        """Gate 4: secondary label renders when secondary_key + item value both truthy."""
+        """Gate 4: secondary label renders when secondary_key + item value both truthy.
+
+        v0.62 CSS refactor: muted styling lives on .dz-search-result-secondary
+        rule rather than inline `text-[hsl(var(--muted-foreground))]` Tailwind."""
         html = self._render(
             items=[
                 {"id": "u1", "name": "Alice", "email": "alice@example.com"},
@@ -5568,27 +5847,29 @@ class TestSearchResultsFragment:
         )
         assert "Alice" in html
         assert "alice@example.com" in html
-        assert "hsl(var(--muted-foreground))" in html
+        assert "dz-search-result-secondary" in html
 
     def test_secondary_label_omitted_when_missing_from_item(self) -> None:
-        """Gate 4 (negative): secondary_key set but item lacks the value → no secondary div."""
+        """Gate 4 (negative): secondary_key set but item lacks the value → no secondary div.
+
+        v0.62 CSS refactor: row class is .dz-search-result-row (was inline
+        `cursor-pointer hover:bg-[hsl(var(--muted))]` Tailwind). Count
+        rows by the canonical class instead."""
         html = self._render(
             items=[{"id": "u1", "name": "Alice"}],
             secondary_key="email",
             query="a",
         )
         assert "Alice" in html
-        # No email div rendered
-        # count of muted-foreground styling in items (the empty-state also uses it, but items don't when secondary absent)
-        # Better: verify only 1 div per item
-        result_divs = html.count("cursor-pointer")
-        assert result_divs == 1
+        result_rows = html.count("dz-search-result-row")
+        assert result_rows == 1
 
     def test_empty_state_with_query_shows_no_results_message(self) -> None:
         """Gate 5: empty items + query → 'No results found for "..."'."""
         html = self._render(items=[], query="xyzzy")
         assert 'No results found for "xyzzy"' in html
-        assert "cursor-pointer" not in html
+        # No rows rendered
+        assert "dz-search-result-row" not in html
 
     def test_empty_state_without_query_shows_prompt(self) -> None:
         """Gate 5: empty items + no query → 'Type at least N characters...'."""
@@ -5596,9 +5877,22 @@ class TestSearchResultsFragment:
         assert "Type at least 3 characters" in html
 
     def test_hover_uses_muted_token(self) -> None:
-        """Gate 6: items have hover:bg-[hsl(var(--muted))]."""
+        """Gate 6: row hover lives on the .dz-search-result-row:hover CSS rule.
+
+        v0.62 CSS refactor: hover state moved from inline
+        `hover:bg-[hsl(var(--muted))]` Tailwind to CSS rule."""
         html = self._render(items=[{"id": "1", "name": "Alice"}], query="a")
-        assert "hover:bg-[hsl(var(--muted))]" in html
+        assert "dz-search-result-row" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert ".dz-search-result-row:hover" in css
+        hover_block = css.split(".dz-search-result-row:hover {")[1].split("}")[0]
+        assert "background: var(--colour-bg)" in hover_block
 
     def test_no_daisyui_leaks(self) -> None:
         """Gate 11: zero DaisyUI class references."""
@@ -5632,10 +5926,22 @@ class TestSelectResultFragment:
         return render_fragment("fragments/select_result.html", **defaults)
 
     def test_confirmation_flash_uses_success_token(self) -> None:
-        """Gate 7: confirmation uses --success token and shows 'Selected: X'."""
+        """Gate 7: confirmation uses --success token and shows 'Selected: X'.
+
+        v0.62 CSS refactor: success colour lives on .dz-select-result-confirm
+        rule rather than inline `text-[hsl(var(--success))]` Tailwind."""
         html = self._render(display_val="Alice Smith")
-        assert "text-[hsl(var(--success))]" in html
         assert "Selected: Alice Smith" in html
+        assert "dz-select-result-confirm" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        confirm_block = css.split(".dz-select-result-confirm {")[1].split("}")[0]
+        assert "color: var(--colour-success)" in confirm_block
 
     def test_hidden_form_field_has_required_attrs(self) -> None:
         """Gate 8: hidden input has name, id, data-dazzle-field, value, hx-swap-oob."""
@@ -5648,16 +5954,28 @@ class TestSelectResultFragment:
         assert 'hx-swap-oob="true"' in html
 
     def test_visible_search_input_has_token_classes_and_oob_swap(self) -> None:
-        """Gate 9: visible input references all 4 design tokens + hx-swap-oob."""
+        """Gate 9: visible input uses semantic CSS class + hx-swap-oob.
+
+        v0.62 CSS refactor: input chrome (4 token refs) lives on
+        .dz-select-result-input rule rather than 4 inline Tailwind
+        utilities."""
         html = self._render(display_val="Alice", field_name="owner")
-        # The 4 token refs
-        assert "bg-[hsl(var(--background))]" in html
-        assert "border-[hsl(var(--border))]" in html
-        assert "text-[hsl(var(--foreground))]" in html
+        assert "dz-select-result-input" in html
         # Visible-input specific markers
         assert 'id="search-input-owner"' in html
         # hx-swap-oob on at least 2 inputs (hidden + visible)
         assert html.count('hx-swap-oob="true"') >= 2
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        input_block = css.split(".dz-select-result-input {")[1].split("}")[0]
+        assert "background: var(--colour-surface)" in input_block
+        assert "border: 1px solid var(--colour-border)" in input_block
+        assert "color: var(--colour-text)" in input_block
 
     def test_autofill_values_emit_extra_oob_inputs(self) -> None:
         """Gate 10: one <input hx-swap-oob> per autofill tuple."""
@@ -5817,19 +6135,32 @@ class TestWorkspaceShellComposition:
 
     # Gate 5
     def test_heading_uses_foreground_token_with_title_fallback(self) -> None:
+        """v0.62 CSS refactor: h2 chrome moved from inline
+        `text-[17px] font-medium ... text-[hsl(var(--foreground))]`
+        Tailwind to the `.dz-workspace-title` rule in
+        components/dashboard.css. The rule sources the foreground
+        colour from --colour-text."""
         html = self._render()
-        # The h2 opening tag and the --foreground token must co-occur
         assert "<h2" in html
-        assert "text-[hsl(var(--foreground))]" in html
+        assert 'class="dz-workspace-title"' in html
         # Title renders ("My Dashboard" — set on the WorkspaceContext)
         assert "My Dashboard" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        rule = css.split(".dz-workspace-title {")[1].split("}")[0]
+        assert "var(--colour-text)" in rule
 
     # Gate 6
     def test_primary_actions_row_conditional(self) -> None:
         # Empty list → wrapper absent
         html_empty = self._render(primary_actions=[])
         assert 'data-test-id="dz-workspace-primary-actions"' not in html_empty
-        # Populated → wrapper present + hx-boost + primary token
+        # Populated → wrapper present + hx-boost + filled-brand semantic class
         html_full = self._render(
             primary_actions=[
                 {"label": "New Task", "route": "/app/task/new"},
@@ -5838,8 +6169,10 @@ class TestWorkspaceShellComposition:
         )
         assert 'data-test-id="dz-workspace-primary-actions"' in html_full
         assert html_full.count('hx-boost="true"') >= 2
-        assert "bg-[hsl(var(--primary))]" in html_full
-        assert "text-[hsl(var(--primary-foreground))]" in html_full
+        # v0.62 CSS refactor: primary-action filled-brand styling lives
+        # in .dz-workspace-action (components/dashboard.css), not inline
+        # `bg-[hsl(var(--primary))]`.
+        assert "dz-workspace-action" in html_full
         # Action labels render into anchor inner text (allowing intermediate whitespace + SVG icons)
         assert "New Task" in html_full
         assert "New Contact" in html_full
@@ -5865,11 +6198,10 @@ class TestWorkspaceShellComposition:
             context_options_url="/api/foo",
             context_selector_entity="tenant",
         )
-        # All four required tokens on the <select>
-        assert "border-[hsl(var(--border))]" in html
-        assert "bg-[hsl(var(--background))]" in html
-        assert "text-[hsl(var(--foreground))]" in html
-        assert "focus:ring-[hsl(var(--ring))]" in html
+        # v0.62 CSS refactor: select chrome lives on the
+        # .dz-workspace-context-select class (components/dashboard.css).
+        # The CSS rule defines border, surface bg, text, and focus ring.
+        assert "dz-workspace-context-select" in html
 
     # Gate 9
     def test_context_selector_uses_canonical_prefs_key(self) -> None:
@@ -5921,15 +6253,33 @@ class TestWorkspaceShellComposition:
 
     # Gate 13
     def test_card_focus_ring_on_wrapper_not_article(self) -> None:
-        """#794 card-within-a-card guard: focus ring lives on the wrapper with offset-2."""
+        """#794 card-within-a-card guard: focus ring lives on the wrapper.
+
+        v0.62 CSS refactor: the focus ring is provided by the
+        ``.dz-card-wrapper:focus`` rule (components/dashboard.css)
+        rather than inline ``focus:ring-2`` Tailwind utilities. The
+        article retains ``.dz-card`` for surface chrome but no focus
+        styling — the wrapper owns it.
+        """
         html = self._render()
-        assert "focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2" in html
-        # The inner <article> must NOT have focus:ring classes
+        assert "dz-card-wrapper" in html
+        # The inner <article> must NOT carry focus styling — only the surface class
         import re
 
         article_tag = re.search(r"<article[^>]*>", html)
         assert article_tag is not None
-        assert "focus:ring-" not in article_tag.group(0)
+        article = article_tag.group(0)
+        assert "focus:ring-" not in article
+        assert "dz-card-wrapper" not in article  # wrapper class is on outer div only
+
+        # CSS rule confirms wrapper carries the focus ring
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        assert ".dz-card-wrapper:focus" in css
 
     # Gate 14 — drawer aside carries no Alpine directives (plain-JS imperative API only)
     def test_drawer_aside_has_no_alpine_directives(self) -> None:
@@ -6034,19 +6384,33 @@ class TestWorkspaceContextSelector:
         )
         assert "project code:" in html
 
-    # Gate 3: select uses all 4 design tokens
+    # Gate 3: select uses canonical semantic class
     def test_select_uses_full_token_set(self) -> None:
+        """v0.62 CSS refactor: 4-token contract (border / bg / text / focus
+        ring) lives on the .dz-workspace-context-select CSS rule rather
+        than as inline Tailwind utilities on the <select> tag."""
         html = self._render()
-        # Extract the select tag and verify the 4 tokens
         import re
 
         select_match = re.search(r'<select[^>]*id="dz-context-selector"[^>]*>', html)
         assert select_match is not None
         tag = select_match.group(0)
-        assert "border-[hsl(var(--border))]" in tag
-        assert "bg-[hsl(var(--background))]" in tag
-        assert "text-[hsl(var(--foreground))]" in tag
-        assert "focus:ring-[hsl(var(--ring))]" in tag
+        assert "dz-workspace-context-select" in tag
+
+        # Confirm the CSS rule carries the four concerns: border, surface bg,
+        # text colour, focus ring.
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        select_block = css.split(".dz-workspace-context-select")[1].split("}")[0]
+        assert "border" in select_block
+        assert "background" in select_block
+        assert "color" in select_block
+        # Focus ring lives on the :focus-visible variant of the same selector
+        assert ".dz-workspace-context-select:focus-visible" in css
 
     # Gate 4: default "All" option first
     def test_default_all_option_present(self) -> None:
@@ -6095,13 +6459,13 @@ class TestWorkspaceContextSelector:
 
     # Gate 11: no Alpine directives on the widget
     def test_no_alpine_directives_on_selector(self) -> None:
+        """v0.62 CSS refactor: widget wrapper class renamed from
+        ``mb-4 flex items-center gap-2`` to ``.dz-workspace-context``."""
         html = self._render()
         import re
 
-        # Extract the div wrapping the label+select (lines 39-45 in the template)
-        # The div starts with class="mb-4 flex items-center gap-2"
         widget_match = re.search(
-            r'<div class="mb-4 flex items-center gap-2">.*?</div>\s*<script>',
+            r'<div class="dz-workspace-context">.*?</div>\s*<script>',
             html,
             re.DOTALL,
         )
@@ -6494,9 +6858,22 @@ class TestStepsIndicator:
 
     # Gate 1: <ol> root has dz-steps class
     def test_root_has_canonical_class(self) -> None:
+        """v0.62 CSS refactor: layout (flex/items-center/w-full) lives
+        on the .dz-steps CSS rule (components/fragments.css), not inline
+        Tailwind."""
         html = self._render(steps=[{"label": "A"}])
         assert '<ol class="dz-steps' in html
-        assert "flex items-center w-full" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        steps_block = css.split(".dz-steps {")[1].split("}")[0]
+        assert "display: flex" in steps_block
+        assert "align-items: center" in steps_block
+        assert "width: 100%" in steps_block
 
     # Gate 2: N steps → N <li>
     def test_n_steps_produce_n_li(self) -> None:
@@ -6518,73 +6895,82 @@ class TestStepsIndicator:
         assert 'aria-current="step"' in li_matches[0]
         assert 'aria-current="step"' not in li_matches[1]
 
-    # Gate 5: steps <= current use --primary tokens
+    # Gate 5: steps <= current emit .is-completed modifier
     def test_steps_up_to_current_use_primary(self) -> None:
+        """v0.62 CSS refactor: completed-state styling lives on the
+        .is-completed modifier in the CSS rules, not inline
+        `bg-[hsl(var(--primary))]` per element. Pin the modifier
+        emission count + the CSS rule's brand fill."""
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # 3 circles should be primary (steps 1, 2, 3)
-        assert html.count("bg-[hsl(var(--primary))]") >= 3
-        # Current step + completed labels use --foreground
-        assert "text-[hsl(var(--foreground))]" in html
+        # 3 circles + 3 labels emit .is-completed (steps 1, 2, 3)
+        assert html.count("dz-steps-circle is-completed") == 3
+        assert html.count("dz-steps-label is-completed") == 3
 
-    # Gate 6: steps > current use --muted tokens
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_block = css.split(".dz-steps-circle.is-completed {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in circle_block
+
+    # Gate 6: steps > current omit .is-completed (default state)
     def test_steps_after_current_use_muted(self) -> None:
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # 2 circles muted (steps 4, 5)
-        assert html.count("bg-[hsl(var(--muted))]") >= 2
-        # Muted labels for steps 4, 5
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        # 5 total circles, 3 completed → 2 plain (no is-completed)
+        assert html.count("dz-steps-circle") == 5
+        assert html.count("dz-steps-circle is-completed") == 3
+
+        # Default (non-completed) circle styling uses muted tokens via CSS
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_default = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "color: var(--colour-text-muted)" in circle_default
 
     # Gate 7: connector colour is STRICT less-than current
     def test_connector_threshold_is_strict_less_than(self) -> None:
-        """Connector LEADING INTO current = primary. Connector LEADING OUT = muted."""
+        """Connector LEADING INTO current = brand (.is-completed).
+        Connector LEADING OUT = default border. Strict-less-than
+        threshold preserved post-refactor."""
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # Extract connector divs in order
-        import re
-
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px (bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html,
-        )
         # 4 connectors between 5 steps
-        assert len(connectors) == 4
-        # Connectors 1→2, 2→3 (leading INTO current=3) are primary
-        assert connectors[0] == "bg-[hsl(var(--primary))]"
-        assert connectors[1] == "bg-[hsl(var(--primary))]"
-        # Connector 3→4 (leading OUT of current) is border
-        assert connectors[2] == "bg-[hsl(var(--border))]"
-        assert connectors[3] == "bg-[hsl(var(--border))]"
+        assert html.count("dz-steps-connector") == 4
+        # Connectors 1→2, 2→3 (leading INTO current=3) → 2 emit .is-completed
+        assert html.count("dz-steps-connector is-completed") == 2
 
-    # Gate 8: flex-1 on all non-last steps
+    # Gate 8: .is-not-last on all non-last steps (flex grows them)
     def test_flex_1_on_non_last_steps_only(self) -> None:
+        """v0.62 CSS refactor: `flex-1` modifier is now `.is-not-last`
+        emitted by the template gate, with `flex: 1 1 0` in the CSS
+        rule."""
         html = self._render(steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}])
         import re
 
         li_tags = re.findall(r"<li[^>]*>", html)
-        # First two should have flex-1, last shouldn't
-        assert "flex-1" in li_tags[0]
-        assert "flex-1" in li_tags[1]
-        assert "flex-1" not in li_tags[2]
+        # First two get is-not-last; the last one doesn't
+        assert "is-not-last" in li_tags[0]
+        assert "is-not-last" in li_tags[1]
+        assert "is-not-last" not in li_tags[2]
 
     # Gate 9: no connector after last step
     def test_no_connector_after_last_step(self) -> None:
         html = self._render(steps=[{"label": "A"}, {"label": "B"}])
         # Only 1 connector between 2 steps
-        import re
-
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px',
-            html,
-        )
-        assert len(connectors) == 1
+        assert html.count("dz-steps-connector") == 1
 
     # Gate 10: label uses step.label
     def test_label_reads_step_label_key(self) -> None:
@@ -6595,12 +6981,25 @@ class TestStepsIndicator:
         html_wrong = self._render(steps=[{"title": "Should not render"}])
         assert "Should not render" not in html_wrong
 
-    # Gate 11: circles are 6x6, rounded-full, 11px semibold
+    # Gate 11: circle chrome (size, rounded-full, font) lives in CSS rule
     def test_circle_styling_is_canonical(self) -> None:
+        """v0.62 CSS refactor: circle dimensions + typography live on
+        .dz-steps-circle rule rather than inline `w-6 h-6 rounded-full
+        text-[11px] font-semibold` Tailwind utilities."""
         html = self._render(steps=[{"label": "A"}])
-        # The span carrying the number
-        assert "shrink-0 w-6 h-6 rounded-full" in html
-        assert "text-[11px] font-semibold" in html
+        assert "dz-steps-circle" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_block = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "width: 1.5rem" in circle_block  # 6 × 0.25rem
+        assert "height: 1.5rem" in circle_block
+        assert "border-radius: var(--radius-full)" in circle_block
+        assert "font-weight: var(--weight-semibold)" in circle_block
 
     # Gate 12: zero Alpine, HTMX, JS
     def test_no_alpine_htmx_or_js(self) -> None:
@@ -6669,22 +7068,31 @@ class TestWorkspaceHeading:
             primary_actions=primary_actions or [],
         )
 
-    # Gate 1: title uses full 4-class token set
+    # Gate 1: title uses canonical semantic class
     def test_title_uses_full_token_set(self) -> None:
+        """v0.62 CSS refactor: 4-token contract on the h2 (size, weight,
+        leading, colour) lives on .dz-workspace-title (components/dashboard.css)
+        rather than inline Tailwind utilities."""
         html = self._render(workspace_title="Dashboard")
         import re
 
         h2_match = re.search(r"<h2[^>]*>", html)
         assert h2_match is not None
         tag = h2_match.group(0)
-        for cls in (
-            "text-[17px]",
-            "font-medium",
-            "leading-[24px]",
-            "tracking-[-0.01em]",
-            "text-[hsl(var(--foreground))]",
-        ):
-            assert cls in tag, f"missing class {cls!r} in h2 tag: {tag}"
+        assert "dz-workspace-title" in tag
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        title_block = css.split(".dz-workspace-title {")[1].split("}")[0]
+        # The four concerns: size, weight, colour, line-height (line-height
+        # comes from the document base — h2 inherits via base.css).
+        assert "font-size" in title_block
+        assert "font-weight" in title_block
+        assert "color: var(--colour-text)" in title_block
 
     # Gate 2: title fallback works
     def test_title_fallback_from_name(self) -> None:
@@ -6734,10 +7142,23 @@ class TestWorkspaceHeading:
 
     # Gate 8: primary-token class set on each action
     def test_action_uses_primary_token_set(self) -> None:
+        """v0.62 CSS refactor: filled-brand styling lives on
+        .dz-workspace-action (components/dashboard.css)."""
         html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "text-[hsl(var(--primary-foreground))]" in html
-        assert "hover:bg-[hsl(var(--primary)/0.9)]" in html
+        assert "dz-workspace-action" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        action_block = css.split(".dz-workspace-action {")[1].split("}")[0]
+        # Filled-brand: brand background + contrast foreground
+        assert "background: var(--colour-brand)" in action_block
+        assert "color: var(--colour-brand-contrast)" in action_block
+        # Hover state lives on .dz-workspace-action:hover
+        assert ".dz-workspace-action:hover" in css
 
     # Gate 9: plus-icon SVG is decorative
     def test_plus_icon_svg_is_aria_hidden(self) -> None:
@@ -6753,24 +7174,30 @@ class TestWorkspaceHeading:
         assert wrapper_match is not None
         wrapper = wrapper_match.group(0)
         assert 'aria-hidden="true"' in wrapper
-        assert 'class="w-3.5 h-3.5"' in wrapper
         assert 'fill="none"' in wrapper
         assert 'stroke="currentColor"' in wrapper
 
     # Gate 10: asymmetric flex row
     def test_row_uses_asymmetric_flex(self) -> None:
+        """v0.62 CSS refactor: heading row layout lives on .dz-workspace-heading
+        (flex / items-start / justify-between / gap), and the actions wrapper
+        shrink-0 lives on .dz-workspace-primary-actions."""
         html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
-        import re
+        assert "dz-workspace-heading" in html
+        assert "dz-workspace-primary-actions" in html
 
-        # Find the outer heading row wrapper
-        # Pattern: <div class="flex items-start justify-between gap-4 mb-4">
-        assert "flex items-start justify-between gap-4 mb-4" in html
-        # Actions wrapper has shrink-0
-        actions_match = re.search(
-            r'<div class="flex items-center gap-2 shrink-0"',
-            html,
-        )
-        assert actions_match is not None
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        heading_block = css.split(".dz-workspace-heading {")[1].split("}")[0]
+        assert "display: flex" in heading_block
+        assert "align-items: flex-start" in heading_block
+        assert "justify-content: space-between" in heading_block
+        actions_block = css.split(".dz-workspace-primary-actions {")[1].split("}")[0]
+        assert "flex-shrink: 0" in actions_block
 
     # Gate 11: no Alpine on the heading row
     def test_heading_row_is_alpine_free(self) -> None:
@@ -6798,8 +7225,11 @@ class TestWorkspaceHeading:
     # Gate 12: no DaisyUI
     def test_no_daisyui_classes_in_heading(self) -> None:
         html = self._render(primary_actions=[{"label": "Create", "route": "/create"}])
+        # `card-body` is a DaisyUI marker; .dz-card-body is the v0.62
+        # semantic class — exclude it from the substring check.
+        cleaned = html.replace("dz-card-body", "")
         for banned in ("btn ", "btn-primary", "hero ", "card-body"):
-            assert banned not in html, f"DaisyUI leak: {banned!r}"
+            assert banned not in cleaned, f"DaisyUI leak: {banned!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -6858,10 +7288,21 @@ class TestExperienceShellComposition:
 
     # Gate 1
     def test_outer_wrapper_has_data_experience_and_centering(self) -> None:
+        """v0.62 CSS refactor: max-width + mx-auto Tailwind utilities
+        moved to .dz-experience rule in components/fragments.css."""
         html = self._render(self._make_experience())
         assert 'data-dz-experience="onboarding"' in html
-        assert "max-w-4xl" in html
-        assert "mx-auto" in html
+        assert 'class="dz-experience"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        rule = css.split(".dz-experience {")[1].split("}")[0]
+        assert "max-inline-size:" in rule
+        assert "margin-inline: auto" in rule
 
     # Gate 2
     def test_title_renders_as_h2_with_title_text(self) -> None:
@@ -6898,6 +7339,11 @@ class TestExperienceShellComposition:
 
     # Gate 6 — completed/current steps use --primary, pending use --muted
     def test_step_coloring_uses_correct_tokens(self) -> None:
+        """v0.62 CSS refactor: experience stepper reuses the existing
+        .dz-steps* family from fragments/steps_indicator.html. `.is-completed`
+        applies to the .dz-steps-circle / .dz-steps-label children for
+        BOTH completed and current steps so they share the brand fill
+        (matches the steps_indicator position-based convention)."""
         exp = self._make_experience(
             steps=[
                 {"name": "step_one", "title": "One", "is_completed": True},
@@ -6907,16 +7353,33 @@ class TestExperienceShellComposition:
             current_step="step_two",
         )
         html = self._render(exp)
-        # Current/completed: --primary
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "text-[hsl(var(--primary-foreground))]" in html
-        # Pending: --muted
-        assert "bg-[hsl(var(--muted))]" in html
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        # Both completed AND current steps emit .dz-steps-circle.is-completed
+        assert html.count("dz-steps-circle is-completed") == 2
+        # Pending step has the bare .dz-steps-circle (no is-completed)
+        assert html.count('class="dz-steps-circle">') == 1
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        # Active circle rule references the brand token
+        assert ".dz-steps-circle.is-completed" in css
+        active_block = css.split(".dz-steps-circle.is-completed {")[1].split("}")[0]
+        assert "var(--colour-brand)" in active_block
+
+        # Pending circle rule references the muted bg
+        circle_block = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "var(--colour-bg)" in circle_block
+        assert "var(--colour-text-muted)" in circle_block
 
     # Gate 7 — connector line colour reflects LEFT step's completion
     def test_connector_line_colour_by_left_step(self) -> None:
-        # Left step completed → connector uses --primary
+        """v0.62 CSS refactor: connector tone moved from per-element
+        `bg-[hsl(var(--primary))]` ternary to `.is-completed` modifier
+        on the connector div, gated by the LEFT step's `is_completed`
+        flag in the template (matches steps_indicator convention)."""
         exp_completed_left = self._make_experience(
             steps=[
                 {"name": "a", "title": "A", "is_completed": True},
@@ -6925,21 +7388,24 @@ class TestExperienceShellComposition:
             current_step="b",
         )
         html = self._render(exp_completed_left)
-        # Look for the connector <div class="flex-1 mx-3 h-px ..."> with --primary
-        assert "flex-1 mx-3 h-px" in html
-        # With completed left, --primary line colour appears on the connector
-        # (and also on the left step's chip — we just verify at least one primary occurrence)
-        # Stronger assertion: search for the pattern specifically
-        import re
+        # Connector with is-completed since LEFT step is completed
+        assert "dz-steps-connector is-completed" in html
 
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html,
-        )
-        assert connectors, f"no connector line matched — got: {html[:500]}"
-        assert connectors[0] == "bg-[hsl(var(--primary))]"
+        from pathlib import Path
 
-        # Left step NOT completed → connector uses --border
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        # Pending connector — base rule uses --colour-border
+        connector_block = css.split(".dz-steps-connector {")[1].split("}")[0]
+        assert "var(--colour-border)" in connector_block
+        # Completed connector rule uses --colour-brand
+        assert ".dz-steps-connector.is-completed" in css
+        completed_block = css.split(".dz-steps-connector.is-completed {")[1].split("}")[0]
+        assert "var(--colour-brand)" in completed_block
+
+        # Left step NOT completed → connector lacks the is-completed modifier
         exp_pending_left = self._make_experience(
             steps=[
                 {"name": "a", "title": "A", "is_current": True},
@@ -6948,21 +7414,32 @@ class TestExperienceShellComposition:
             current_step="a",
         )
         html2 = self._render(exp_pending_left)
-        connectors2 = re.findall(
-            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html2,
-        )
-        assert connectors2 == ["bg-[hsl(var(--border))]"]
+        assert 'class="dz-steps-connector"' in html2
+        assert "dz-steps-connector is-completed" not in html2
 
     # Gate 13 — non-surface step renders muted placeholder
     def test_non_surface_step_renders_muted_placeholder(self) -> None:
+        """v0.62 CSS refactor: non-surface placeholder chrome moved to
+        `.dz-experience-placeholder` rule in components/fragments.css."""
         # page_context=None → non-surface branch
         html = self._render(self._make_experience(page_context=None))
-        assert "bg-[hsl(var(--muted))]" in html
+        assert "dz-experience-placeholder" in html
         assert "Step in progress" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        rule = css.split(".dz-experience-placeholder {")[1].split("}")[0]
+        assert "var(--colour-bg)" in rule
 
     # Gate 14 — transition buttons resolve 3 styles, rendered via hx-post (cycle 292: EX-053 fix)
     def test_transition_buttons_three_styles(self) -> None:
+        """v0.62 CSS refactor: 3-style branch (primary/ghost/default)
+        moved from inline Tailwind ternary to attribute selectors on
+        `.dz-experience-transition[data-dz-transition-style="..."]`."""
         exp = self._make_experience(
             page_context=None,
             transitions=[
@@ -6972,14 +7449,12 @@ class TestExperienceShellComposition:
             ],
         )
         html = self._render(exp)
-        # primary style uses --primary token
-        assert "bg-[hsl(var(--primary))]" in html
+        # 3 buttons emit the 3 distinct style attribute values
+        assert 'data-dz-transition-style="primary"' in html
         assert "Continue" in html
-        # ghost style uses --muted-foreground at rest
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        assert 'data-dz-transition-style="ghost"' in html
         assert "Back" in html
-        # default style uses --border
-        assert "border-[hsl(var(--border))]" in html
+        assert 'data-dz-transition-style="default"' in html
         assert "Skip" in html
         # Cycle 292 EX-053 fix: transitions MUST use hx-post (not plain <form method="post">)
         # so that base.html's htmx:configRequest listener injects the CSRF header
@@ -7159,6 +7634,10 @@ class TestExperienceTransitionMacro:
         assert '<form method="post"' not in html
 
     def test_macro_three_styles_render_distinct_class_sets(self) -> None:
+        """v0.62 CSS refactor: 3 styles emit 3 distinct
+        `data-dz-transition-style` attribute values; CSS rules in
+        components/fragments.css resolve each to the right tokens
+        (brand fill, ghost muted, bordered default)."""
         html = self._render_with_transitions(
             [
                 {"event": "a", "label": "A", "style": "primary", "url": "/a"},
@@ -7166,13 +7645,30 @@ class TestExperienceTransitionMacro:
                 {"event": "c", "label": "C", "style": "default", "url": "/c"},
             ]
         )
-        # Primary: --primary bg + --primary-foreground text
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "hover:brightness-110" in html
-        # Ghost: muted-foreground at rest
-        assert "text-[hsl(var(--muted-foreground))]" in html
-        # Default (bordered)
-        assert "border-[hsl(var(--border))]" in html
+        # 3 distinct attribute values
+        assert 'data-dz-transition-style="primary"' in html
+        assert 'data-dz-transition-style="ghost"' in html
+        assert 'data-dz-transition-style="default"' in html
         # All three URLs rendered
         for url in ("/a", "/b", "/c"):
             assert f'hx-post="{url}"' in html
+
+        # CSS rules carry the right tokens per style
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        primary_block = css.split('.dz-experience-transition[data-dz-transition-style="primary"]')[
+            1
+        ].split("}")[0]
+        assert "background: var(--colour-brand)" in primary_block
+        ghost_block = css.split('.dz-experience-transition[data-dz-transition-style="ghost"]')[
+            1
+        ].split("}")[0]
+        assert "color: var(--colour-text-muted)" in ghost_block
+        default_block = css.split('.dz-experience-transition[data-dz-transition-style="default"]')[
+            1
+        ].split("}")[0]
+        assert "border: 1px solid var(--colour-border)" in default_block

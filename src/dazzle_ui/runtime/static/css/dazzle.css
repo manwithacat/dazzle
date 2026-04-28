@@ -1,0 +1,43 @@
+/*
+ * dazzle.css — single entry point for the Dazzle styling layer.
+ *
+ * This file is the only stylesheet referenced from HTML. It declares
+ * the canonical cascade-layer order and imports the rest in that
+ * order. Anything in a later layer wins over earlier layers
+ * regardless of selector specificity.
+ *
+ * Layer order (DO NOT REORDER):
+ *   reset      — modern element reset (Andy Bell + Open Props normalise)
+ *   vendor     — vendored widget CSS (Tom Select, Flatpickr, Quill, Pickr)
+ *   tokens     — custom property declarations (the design system)
+ *   base       — element defaults (typography, links, form controls)
+ *   utilities  — small semantic utility layer (.row, .stack, etc.)
+ *   components — one file per component family
+ *   overrides  — escape hatch; used reluctantly, always with a comment
+ *
+ * Tailwind, DaisyUI, and the JIT scanner are intentionally absent.
+ * See dev_docs/css-refactor-2026-04-27.md for the migration rationale.
+ */
+
+@layer reset, vendor, tokens, base, utilities, components, overrides;
+
+@import url("reset.css") layer(reset);
+@import url("../vendor/tom-select.css") layer(vendor);
+@import url("../vendor/flatpickr.css") layer(vendor);
+@import url("../vendor/quill.snow.css") layer(vendor);
+@import url("../vendor/pickr.css") layer(vendor);
+@import url("tokens.css") layer(tokens);
+@import url("base.css") layer(base);
+@import url("utilities.css") layer(utilities);
+@import url("components/badge.css") layer(components);
+@import url("components/button.css") layer(components);
+@import url("components/dashboard.css") layer(components);
+@import url("components/detail.css") layer(components);
+@import url("components/form.css") layer(components);
+@import url("components/fragments.css") layer(components);
+@import url("components/htmx-states.css") layer(components);
+@import url("components/regions.css") layer(components);
+@import url("components/table.css") layer(components);
+
+/* Additional component imports land here as families migrate.
+ * Track migration status in dev_docs/css-refactor-phase-0-notes.md. */

@@ -40,7 +40,9 @@ def get_bundled_css(theme_css: str | None = None) -> str:
     Load and concatenate CSS files with @layer framework wrappers.
 
     Returns the DAZZLE semantic layer wrapped in cascade layer blocks.
-    Tailwind + DaisyUI are built separately by build_css().
+    v0.62 (Phase 4 teardown): the Tailwind compiled bundle was removed;
+    the framework now ships only the semantic .dz-* class families via
+    dazzle-framework.css and friends.
 
     Args:
         theme_css: Optional generated theme CSS to prepend (from ThemeSpec)

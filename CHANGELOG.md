@@ -9,6 +9,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### v0.62 CSS refactor — semantic class families replace inline Tailwind
+
+A multi-cycle big-bang migration. Every Dazzle UI template now consumes
+semantic `.dz-*` class families served by checked-in static CSS files
+(`dazzle-framework.css`, `design-system.css`, `site-sections.css`,
+`components/*.css`) — no more inline `text-[hsl(var(--…))]` Tailwind
+utilities, no more JIT bundle compile step at build time.
+
+Lands as ~38 commits on the `css-refactor-2026-04-27` branch. Final
+commit (Phase 4 teardown) removes the `build_css.py` module, the
+`dazzle build-css` CLI, the publish-workflow Tailwind step, and the
+two `<link rel="stylesheet" href="…dazzle-bundle.css">` references in
+`base.html` and `site_base.html`.
+
+### Changed
+- **All UI templates** — every template now uses semantic `.dz-*`
+  classes that reference design tokens via CSS rules rather than
+  inline `bg-[hsl(var(--…))]` Tailwind utilities. The class families
+  are organised by surface: `.dz-form-*`, `.dz-detail-*`,
+  `.dz-button-*`, `.dz-table-*`, `.dz-card-*`, `.dz-toast-*`,
+  `.dz-modal-*`, `.dz-slideover-*`, `.dz-pipeline-*`, `.dz-steps-*`,
+  `.dz-experience-*`, `.dz-error-*`, `.dz-auth-*`, `.dz-feature-*`,
+  `.dz-testimonial-*`, `.dz-faq-*`, `.dz-qa-personas`, etc.
+- **Toast tones** keyed off `:data-dz-toast-level` attribute selectors
+  (replaces dynamic Tailwind class strings invisible to JIT).
+- **Modal sizes** keyed off `data-dz-modal-size="sm|md|lg|xl"`
+  attribute selectors.
+- **Step states** in the experience stepper use `.is-completed` /
+  `.is-current` modifier classes; CSS descendant rules resolve the
+  bullet/label/connector colour for each state.
+- **Form-field error border** driven by `aria-invalid="true"` on the
+  input element (CSS rule `.dz-form-input[aria-invalid="true"]`),
+  replacing per-branch conditional class concatenation in 8 widget
+  branches of `macros/form_field.html`.
+- **`/static/css/dazzle-bundle.css` route** kept for back-compat — now
+  serves theme override CSS only (when a theme is active), instead of
+  the Tailwind+theme combo.
+
+### Removed
+- **`src/dazzle_ui/build_css.py`** — the standalone Tailwind CLI
+  wrapper + binary download/cache logic (226 LOC).
+- **`dazzle build-css` CLI command** — registration in
+  `src/dazzle/cli/__init__.py`, the `build_css_command` symbol from
+  `runtime_impl/__init__.py` and `build.py`.
+- **Tailwind+DaisyUI build invocation** in
+  `src/dazzle_ui/runtime/combined_server.py`. `bundled_css` parameter
+  now carries only theme override CSS.
+- **`_tailwind_bundled` Jinja global** + the per-request filesystem
+  existence check in `src/dazzle_ui/runtime/template_renderer.py`.
+- **`<link rel="stylesheet" href="…dazzle-bundle.css">`** in
+  `templates/base.html` and `templates/site/site_base.html`.
+- **Three publish-workflow steps** in
+  `.github/workflows/publish-pypi.yml`: editable install for the
+  `dazzle build-css` CLI, the rebuild step itself, and the post-build
+  `dazzle-bundle.css in wheel` verification.
+- **`dazzle-bundle.css` entry** from `.gitignore`.
+- **`tests/unit/test_build_css.py`** — the entire file (23 tests).
+
+### Fixed
+- **`templates/components/review_queue.html`** — the cycle-250
+  DaisyUI sweep had renamed the `btn` arrow-function parameter in the
+  notes-toggle script to a Tailwind class string, throwing
+  SyntaxError at parse time. Restored the parameter name.
+- **`templates/site/sections/qa_personas.html`** — same JS-corruption
+  bug as review_queue. Restored the `btn` parameter.
+- **`templates/site/sections/faq.html`** — markup used radio buttons
+  + div wrappers that the `.dz-faq-item` CSS (which expects
+  `<details>`/`<summary>`) never matched. Switched to the
+  contract-matching markup.
+- **`templates/site/sections/testimonials.html`** — markup wrapped
+  each item in Tailwind-styled `<div>`s that didn't match the
+  `.dz-testimonial-item` CSS (which expects `<blockquote>` +
+  `.dz-testimonial-author`). Switched to the contract-matching markup.
+
+### Agent Guidance
+- **`.dz-button` is the universal button primitive.** Compose with
+  `.dz-button-primary` / `-outline` / `-ghost` / `-destructive` for
+  variant, optionally with `.dz-button-sm` for the smaller size.
+  Direct utility-style buttons are no longer the norm.
+- **Tone tinting via `data-*` attribute selectors.** When a component
+  has 3+ tone variants (info/success/warning/error etc.), prefer
+  `data-dz-{thing}-{type}="value"` attribute selectors over per-tone
+  inline class strings. CSS rules
+  `.dz-{thing}[data-dz-...="value"]` resolve the matrix without
+  touching dynamic class strings — this matters because Tailwind's
+  JIT won't see dynamic strings (the original #906 bug class).
+- **State via `.is-*` modifier classes.** When an Alpine component
+  has 2-branch state ternaries on `:class`, prefer setting `.is-*`
+  modifiers and resolving them via CSS rules. Same advantage —
+  static class names visible to any tooling.
+- **`aria-invalid="true"` drives error state, not a class.** Form
+  field error borders should be CSS
+  `.dz-form-input[aria-invalid="true"]` rather than per-branch
+  `border-[hsl(var(--destructive))]` conditionals. The aria attribute
+  is the single source of truth (visual + screen reader behaviour
+  share one attribute).
+
 ## [0.61.81] - 2026-04-28
 
 Patch bump. **Fix #912** — v0.61.79's #911 progress-bar work landed the parser, IR, runtime helper, and template — but silently dropped the `progress` field at the IR→template-context boundary in `workspace_renderer.py`. Result: parser parsed `progress: 100` fine, IR carried it, but the rendered template never saw `stage.progress` so the bar never appeared. Same bug shape as #910 — data drops at a boundary.

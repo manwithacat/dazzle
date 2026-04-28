@@ -1,6 +1,12 @@
-{# table_rows.html — inline-editable row cells, row states, Tab navigation
+{# table_rows.html — inline-editable row cells, row states, Tab navigation.
    Requires: dzTable Alpine controller (editing, selected, isEditing, startEdit, toggleRow)
-   Row height: h-9 (36px dense). No DaisyUI classes. #}
+   Row height: 36px dense.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-tr-* classes
+   (components/fragments.css). Row state matrix (.is-selected /
+   .is-saving / .is-error) driven by `:class="{...}"` Alpine binds —
+   one-token swaps instead of 4 different `bg-/border-/opacity-`
+   Tailwind expressions per modifier. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% if table and table.rows %}
 {% set _row_label_col = namespace(key="id") %}
@@ -12,13 +18,11 @@
     data-dazzle-row="{{ table.entity_name }}"
     data-dz-row-id="{{ item.id }}"
     :class="{
-      'bg-[hsl(var(--primary)/0.1)]': selected.has('{{ item.id }}'),
-      'hover:bg-[hsl(var(--card))]': !selected.has('{{ item.id }}'),
-      'opacity-70': editing && editing.rowId === '{{ item.id }}' && editing.saving,
-      'border-l-2 border-[hsl(var(--destructive))]': editing && editing.rowId === '{{ item.id }}' && editing.error
+      'is-selected': selected.has('{{ item.id }}'),
+      'is-saving': editing && editing.rowId === '{{ item.id }}' && editing.saving,
+      'is-error': editing && editing.rowId === '{{ item.id }}' && editing.error
     }"
-    class="group h-9 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-           text-[13px] text-[hsl(var(--foreground))] cursor-pointer"
+    class="dz-tr-row group"
     {% if table.detail_url_template %}
     hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
     hx-push-url="true"
@@ -28,11 +32,11 @@
 
   {# ── Checkbox cell ─────────────────────────────────────────────────────── #}
   {% if table.bulk_actions %}
-  <td class="w-10 px-3" onclick="event.stopPropagation()">
-    <label class="sr-only" for="row-check-{{ item.id }}">Select {{ _row_label }}</label>
+  <td class="dz-tr-checkbox-cell" onclick="event.stopPropagation()">
+    <label class="visually-hidden" for="row-check-{{ item.id }}">Select {{ _row_label }}</label>
     <input type="checkbox"
            id="row-check-{{ item.id }}"
-           class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
+           class="dz-tr-checkbox"
            :checked="selected.has('{{ item.id }}')"
            @change="toggleRow('{{ item.id }}')"
            aria-label="Select {{ _row_label }}" />
@@ -44,11 +48,7 @@
   {% if not col.hidden %}
   <td data-dz-col="{{ col.key }}"
       x-show="isColumnVisible('{{ col.key }}')"
-      {% if col.type in ["currency", "percentage"] %}
-      class="px-3 tabular-nums text-right"
-      {% else %}
-      class="px-3"
-      {% endif %}
+      class="dz-tr-cell{% if col.type in ['currency', 'percentage'] %} is-numeric{% endif %}"
       onclick="event.stopPropagation()">
 
     {# ── Inline editable cell ──────────────────────────────────────────── #}
@@ -63,10 +63,7 @@
 
     {# Display mode: double-click to enter edit #}
     <template x-if="!isEditing('{{ item.id }}', '{{ col.key }}')">
-      <span class="block w-full rounded-[3px] px-1 -mx-1 py-0.5
-                   hover:outline hover:outline-1 hover:outline-[hsl(var(--border))]
-                   hover:cursor-text transition-all duration-[80ms]
-                   [transition-timing-function:cubic-bezier(0.2,0,0,1)] truncate"
+      <span class="dz-tr-cell-display"
             {% set _edit_val = item[col.key] %}
             @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', '{% if _edit_val is not none %}{{ _edit_val | e }}{% endif %}')"
             title="{% if _edit_val is not none %}{{ _edit_val }}{% endif %}">
@@ -101,7 +98,7 @@
       {% set _pct_val = item[col.key] %}
       {% if _pct_val is none %}—{% else %}{{ _pct_val }}%{% endif %}
     {% else %}
-      <span class="truncate block max-w-[240px]">{{ item[col.key] | default("") | truncate_text }}</span>
+      <span class="dz-tr-cell-truncate">{{ item[col.key] | default("") | truncate_text }}</span>
     {% endif %}
     {% endif %}
 
@@ -110,19 +107,15 @@
   {% endfor %}
 
   {# ── Row actions — revealed on hover ──────────────────────────────────────── #}
-  <td class="w-16 px-2 text-right" onclick="event.stopPropagation()">
-    <div class="inline-flex items-center gap-0.5 opacity-0 group-hover:opacity-100
-                transition-opacity duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+  <td class="dz-tr-actions-cell" onclick="event.stopPropagation()">
+    <div class="dz-tr-actions">
 
       {# View action #}
       {% if table.detail_url_template %}
       <a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
          data-dazzle-action="{{ table.entity_name }}.view"
          aria-label="View {{ _row_label }}"
-         class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
-                text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]
-                hover:bg-[hsl(var(--muted)/0.5)]
-                transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+         class="dz-tr-action">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
              xmlns="http://www.w3.org/2000/svg">
           <path d="M7 2.5C4.5 2.5 2.5 5 2.5 7s2 4.5 4.5 4.5S11.5 9 11.5 7 9.5 2.5 7 2.5z"
@@ -135,10 +128,7 @@
       <a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit"
          data-dazzle-action="{{ table.entity_name }}.edit"
          aria-label="Edit {{ _row_label }}"
-         class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
-                text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]
-                hover:bg-[hsl(var(--muted)/0.5)]
-                transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+         class="dz-tr-action">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
              xmlns="http://www.w3.org/2000/svg">
           <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"
@@ -156,10 +146,7 @@
               hx-confirm="Delete this {{ table.entity_name | lower }}?"
               hx-target="closest tr"
               hx-swap="outerHTML swap:300ms"
-              class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
-                     text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]
-                     hover:bg-[hsl(var(--destructive)/0.1)]
-                     transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+              class="dz-tr-action is-destructive">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
              xmlns="http://www.w3.org/2000/svg">
           <path d="M2 3.5h10M5.5 3.5V2.5h3v1M5.5 6v4M8.5 6v4M3 3.5l.5 8h7l.5-8"
@@ -175,7 +162,7 @@
 {% else %}
 <tr>
   <td colspan="{{ (table.columns | length) + (2 if table.bulk_actions else 1) if table else 1 }}"
-      class="text-center py-8 text-[13px] text-[hsl(var(--muted-foreground))]"
+      class="dz-tr-empty-cell"
       data-dz-empty-kind="{{ table.empty_kind | default('collection') if table else 'collection' }}">
     {#
       Typed empty-state picker (#807).
@@ -201,7 +188,7 @@
            hx-target="#{{ table.table_id }}-body"
            hx-swap="innerHTML"
            hx-push-url="{{ request.url.path }}"
-           class="ml-2 text-[hsl(var(--primary))] hover:underline">
+           class="dz-tr-empty-link">
           Clear filters
         </a>
       {% endif %}
@@ -217,8 +204,7 @@
            (table.empty_message if table and table.empty_message else
               "No " + (table.entity_name|default('items'))|lower + " found.")) }}
       {% if table and table.create_url %}
-        <a href="{{ table.create_url }}"
-           class="ml-2 text-[hsl(var(--primary))] hover:underline">
+        <a href="{{ table.create_url }}" class="dz-tr-empty-link">
           Add one
         </a>
       {% endif %}

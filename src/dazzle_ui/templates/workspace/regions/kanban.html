@@ -1,34 +1,39 @@
-{# Kanban region — UX-035 adopter #3 (after grid, list). #}
+{# Kanban region — UX-035 adopter #3 (after grid, list).
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-kanban-* classes
+   (components/regions.css). Card hover-affordance lives on .is-clickable
+   modifier; per-row attention tint via data-dz-attn (critical / warning /
+   notice) attribute selectors. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
   {% if items and kanban_columns %}
-  <div class="flex gap-3 overflow-x-auto pb-2" style="min-height: 200px;">
+  <div class="dz-kanban-board">
     {% for col_value in kanban_columns %}
     {% set col_items = items | selectattr(group_by, "equalto", col_value) | list %}
-    <div class="flex-shrink-0 bg-[hsl(var(--muted)/0.4)] rounded-[6px] p-2" style="width: 260px; min-width: 260px;">
-      <div class="flex items-center justify-between mb-2 px-1">
+    <div class="dz-kanban-column">
+      <div class="dz-kanban-column-head">
         {{ render_status_badge(value=col_value) }}
-        <span class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ col_items | length }}</span>
+        <span class="dz-kanban-column-count">{{ col_items | length }}</span>
       </div>
-      <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+      <div class="dz-kanban-stack">
         {% for item in col_items %}
-        <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]{% if action_url %} cursor-pointer hover:shadow-[0_2px_8px_rgb(0_0_0/0.06)] hover:border-[hsl(var(--primary)/0.5)] transition-all duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
+        <div class="dz-kanban-card{% if action_url %} is-clickable{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-          <div class="p-2">
+          <div class="dz-kanban-card-body">
             {% set _dk_val = item[display_key] if display_key else none %}
             {% if _dk_val is mapping %}
               {% set _dk_display = _dk_val.get("name") or _dk_val.get("company_name") or ((_dk_val.get("first_name", "") ~ " " ~ _dk_val.get("last_name", "")) | trim) or _dk_val.get("title") or _dk_val.get("label") or _dk_val.get("email") or _dk_val.get("id", "Item") %}
             {% else %}
               {% set _dk_display = _dk_val %}
             {% endif %}
-            <h4 class="text-[13px] font-medium text-[hsl(var(--foreground))] mb-1">
+            <h4 class="dz-kanban-card-title">
               {{ item.get("title") or item.get("name") or item.get("company_name") or ((item.get("first_name", "") ~ " " ~ item.get("last_name", "")) | trim) or item.get("label") or item.get("email") or _dk_display | default("Item") }}
             </h4>
             {% for meta_col in columns %}
             {% if meta_col.key != display_key and meta_col.key != group_by %}
-            <p class="text-[11px] text-[hsl(var(--muted-foreground))]">
+            <p class="dz-kanban-card-field">
               <span>{{ meta_col.label }}:</span>
               {% if meta_col.type == "badge" %}
                 {{ render_status_badge(value=item[meta_col.key], size='sm') }}
@@ -45,7 +50,7 @@
                   {% set display_name = display_name or (ref | ref_display) %}
                   {% if meta_col.ref_route and ref.get("id") %}
                     <a href="{{ meta_col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
-                       class="text-[hsl(var(--primary))] hover:underline"
+                       class="dz-tab-data-ref-link"
                        onclick="event.stopPropagation()">{{ display_name }}</a>
                   {% else %}{{ display_name }}{% endif %}
                 {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
@@ -57,28 +62,23 @@
             {% endfor %}
             {% set attn = item.get("_attention") if item.get is defined else none %}
             {% if attn %}
-            <p class="text-[11px] mt-1
-              {% if attn.level == 'critical' %}text-[hsl(var(--destructive))]
-              {% elif attn.level == 'warning' %}text-[hsl(var(--warning))]
-              {% else %}text-[hsl(var(--primary))]{% endif %}">
-              {{ attn.message }}
-            </p>
+            <p class="dz-kanban-card-attn" data-dz-attn="{{ attn.level }}">{{ attn.message }}</p>
             {% endif %}
           </div>
         </div>
         {% endfor %}
         {% if not col_items %}
-        <p class="text-[11px] text-[hsl(var(--muted-foreground)/0.6)] text-center py-4">No items</p>
+        <p class="dz-kanban-empty">No items</p>
         {% endif %}
       </div>
     </div>
     {% endfor %}
   </div>
   {% if total > items | length %}
-  <div class="flex items-center gap-2 mt-2">
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))]">Showing {{ items | length }} of {{ total }}</p>
+  <div class="dz-kanban-overflow">
+    <p class="dz-kanban-overflow-text">Showing {{ items | length }} of {{ total }}</p>
     <button type="button"
-            class="h-6 px-2 rounded-[4px] text-[11px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] inline-flex items-center"
+            class="dz-kanban-load-all"
             hx-get="{{ endpoint }}?page_size={{ total }}"
             hx-target="closest [data-dz-region]"
             hx-swap="outerHTML">Load all</button>

@@ -9,46 +9,42 @@
    `id = current_context`); the runtime takes the first item.
 
    Card safety: region emits zero chrome + zero title. The dashboard
-   slot owns both via region_card. #}
+   slot owns both via region_card.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-profile-*
+   classes (components/regions.css). Stats grid responsive at 40rem
+   container width. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-profile-card-region">
   {% if profile_card_data and (profile_card_data.primary or profile_card_data.avatar_url or profile_card_data.initials) %}
-    <div class="dz-profile-card flex flex-col gap-3">
+    <div class="dz-profile-card">
       {# Identity row — avatar + name/meta #}
-      <div class="flex items-start gap-3">
+      <div class="dz-profile-identity">
         {% if profile_card_data.avatar_url %}
           <img src="{{ profile_card_data.avatar_url }}"
                alt="{{ profile_card_data.primary }}"
-               class="dz-profile-avatar w-12 h-12 rounded-full object-cover bg-[hsl(var(--muted))] shrink-0" />
+               class="dz-profile-avatar" />
         {% elif profile_card_data.initials %}
-          <span class="dz-profile-initials w-12 h-12 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]
-                       flex items-center justify-center text-[14px] font-semibold tracking-tight shrink-0"
-                aria-hidden="true">{{ profile_card_data.initials }}</span>
+          <span class="dz-profile-initials" aria-hidden="true">{{ profile_card_data.initials }}</span>
         {% endif %}
-        <div class="flex-1 min-w-0">
+        <div class="dz-profile-text">
           {% if profile_card_data.primary %}
-            <h3 class="dz-profile-primary text-[15px] font-semibold leading-[20px] text-[hsl(var(--foreground))] truncate">
-              {{ profile_card_data.primary }}
-            </h3>
+            <h3 class="dz-profile-primary">{{ profile_card_data.primary }}</h3>
           {% endif %}
           {% if profile_card_data.secondary %}
-            <p class="dz-profile-secondary text-[12px] leading-[16px] text-[hsl(var(--muted-foreground))] mt-0.5">
-              {{ profile_card_data.secondary }}
-            </p>
+            <p class="dz-profile-secondary">{{ profile_card_data.secondary }}</p>
           {% endif %}
         </div>
       </div>
 
-      {# Stats grid — 1 col on mobile, 3 col at sm: + #}
+      {# Stats grid — 1 col on mobile, 3 col at 40rem container width + #}
       {% if profile_card_data.stats and profile_card_data.stats | length > 0 %}
-        <dl class="dz-profile-stats grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-[hsl(var(--border))] pt-3">
+        <dl class="dz-profile-stats">
           {% for stat in profile_card_data.stats %}
             <div class="dz-profile-stat">
-              <dt class="text-[11px] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{{ stat.label }}</dt>
-              <dd class="text-[14px] font-medium text-[hsl(var(--foreground))] mt-0.5">
-                {{ stat.value or "—" }}
-              </dd>
+              <dt class="dz-profile-stat-label">{{ stat.label }}</dt>
+              <dd class="dz-profile-stat-value">{{ stat.value or "—" }}</dd>
             </div>
           {% endfor %}
         </dl>
@@ -56,18 +52,18 @@
 
       {# Facts list — bulleted, soft-wrap #}
       {% if profile_card_data.facts and profile_card_data.facts | length > 0 %}
-        <ul class="dz-profile-facts space-y-1 border-t border-[hsl(var(--border))] pt-3 text-[12px] text-[hsl(var(--foreground))]">
+        <ul class="dz-profile-facts">
           {% for fact in profile_card_data.facts %}
-            <li class="flex gap-2 leading-snug">
-              <span class="text-[hsl(var(--muted-foreground))] shrink-0" aria-hidden="true">·</span>
-              <span class="min-w-0">{{ fact }}</span>
+            <li class="dz-profile-fact">
+              <span class="dz-profile-fact-bullet" aria-hidden="true">·</span>
+              <span class="dz-profile-fact-text">{{ fact }}</span>
             </li>
           {% endfor %}
         </ul>
       {% endif %}
     </div>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No profile data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No profile data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

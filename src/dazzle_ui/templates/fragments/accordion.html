@@ -17,10 +17,13 @@
    Note: pre-cycle-247 version passed content through `| safe` which was
    a latent XSS vector (same class as the cycle 241 tooltip fix). Removed
    because the primitive has no consumer; safe-by-default is preferred.
-#}
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-accordion-* classes
+   (components/fragments.css). Chevron rotation driven by [open] state on
+   the parent <details> rather than the Tailwind group-open: variant. #}
 <div class="dz-accordion">
   {% for section in sections %}
-  <details class="dz-accordion-item border border-[hsl(var(--border))] rounded-[4px] bg-[hsl(var(--card))] {% if not loop.first %}mt-1{% endif %}"
+  <details class="dz-accordion-item"
            {% if loop.first and not section.endpoint %}open{% endif %}
            {% if section.endpoint %}
            hx-get="{{ section.endpoint }}"
@@ -30,17 +33,16 @@
            {% endif %}
            data-dz-accordion-item
            data-dz-section-id="{{ section.id }}">
-    <summary class="flex items-center justify-between cursor-pointer list-none px-3 py-2 text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] rounded-[4px]">
+    <summary class="dz-accordion-summary">
       <span>{{ section.title }}</span>
-      <svg class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-[120ms] group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <svg class="dz-accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
       </svg>
     </summary>
-    <div class="dz-accordion-content px-3 py-2 text-[13px] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))]"
-         id="accordion-content-{{ section.id }}">
+    <div class="dz-accordion-content" id="accordion-content-{{ section.id }}">
       {% if section.endpoint %}
-      <span class="inline-flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
-        <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <span class="dz-accordion-loading">
+        <svg class="dz-accordion-loading-icon" fill="none" viewBox="0 0 24 24" aria-hidden="true">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>

@@ -3,29 +3,26 @@
    their sidebar, persona badge, and logout context. Shipped as part of
    the #776 fix (cycle 219): before this existed, 404s inside /app/* fell
    through to site/404.html which rendered the public marketing chrome
-   and told logged-in users to "Sign In". #}
+   and told logged-in users to "Sign In".
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-error-* family
+   (components/fragments.css) + .dz-button primitives. #}
 
 {% block title %}Page Not Found - {{ app_name | default("Dazzle") }}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col items-center justify-center min-h-[60vh] px-4">
-  <h1 class="text-[48px] font-semibold leading-none text-[hsl(var(--foreground))] mb-4">404</h1>
-  <p class="text-[15px] text-[hsl(var(--muted-foreground))] mb-6 text-center max-w-[480px]">
+<div class="dz-error-page">
+  <h1 class="dz-error-code">404</h1>
+  <p class="dz-error-message">
     {{ message | default("The page you're looking for doesn't exist.") }}
   </p>
   {% if suggestions %}
-  <div class="mb-6 w-full max-w-[480px] rounded-[6px] border border-[hsl(var(--border))]
-              bg-[hsl(var(--card))] p-4">
-    <p class="text-[13px] font-medium text-[hsl(var(--foreground))] mb-2">
-      Did you mean:
-    </p>
-    <ul class="flex flex-col gap-1">
+  <div class="dz-error-suggestions-card">
+    <p class="dz-error-suggestions-title">Did you mean:</p>
+    <ul class="dz-error-suggestions-list">
       {% for sug in suggestions %}
       <li>
-        <a href="{{ sug.url }}"
-           class="inline-flex items-center gap-2 text-[13px]
-                  text-[hsl(var(--primary))] hover:underline">
-          <code class="font-mono text-[12px] text-[hsl(var(--muted-foreground))]">{{ sug.url }}</code>
+        <a href="{{ sug.url }}" class="dz-error-suggestion-link">
+          <code class="dz-error-suggestion-url">{{ sug.url }}</code>
           <span>— {{ sug.label }}</span>
         </a>
       </li>
@@ -33,23 +30,16 @@
     </ul>
   </div>
   {% endif %}
-  <div class="flex items-center gap-2">
+  <div class="dz-error-actions">
     {% if back_url %}
-    <a href="{{ back_url }}"
-       class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px] text-[13px] font-medium
-              bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]
-              hover:brightness-110 transition-[filter] duration-[80ms]
-              [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <a href="{{ back_url }}" class="dz-button dz-button-primary">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
       {{ back_label | default("Back") }}
     </a>
     {% endif %}
-    <a href="/app"
-       class="inline-flex items-center h-8 px-3 rounded-[4px] text-[13px] font-medium
-              text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
-              transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+    <a href="/app" class="dz-button dz-button-ghost">
       Go to Dashboard
     </a>
   </div>

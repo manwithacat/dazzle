@@ -1,0 +1,189 @@
+/*
+ * tokens.css — Dazzle design system as CSS custom properties.
+ *
+ * Every length, colour, type-size, radius, shadow, and motion value
+ * used in component CSS MUST resolve to a token defined here.
+ * Literal values (px, rem, em, hex, hsl numerics) are permitted only
+ * inside this file. Stylelint enforces this rule.
+ *
+ * UK English throughout: --colour-*, not --color-*.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ *
+ * Portions of this file derived from Open Props by Adam Argyle (MIT).
+ * Source: https://github.com/argyleink/open-props
+ * Values have been renamed to Dazzle's vocabulary and selectively
+ * adopted. Open Props is NOT a runtime dependency — values are
+ * vendored in source.
+ */
+
+:root {
+  /* ─────────────────────────────── spacing ─────────────────────────
+   * 4px base. Geometric-ish progression: each step roughly 1.5x.
+   * Use semantic names; fall back to scale when truly arbitrary.
+   * ───────────────────────────────────────────────────────────────── */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 0.75rem;   /* 12px */
+  --space-lg: 1rem;      /* 16px */
+  --space-xl: 1.5rem;    /* 24px */
+  --space-2xl: 2rem;     /* 32px */
+  --space-3xl: 3rem;     /* 48px */
+
+  /* ─────────────────────────── fluid spacing ───────────────────────
+   * For responsive padding/gap that adapts smoothly. Lifted formulae
+   * pattern from Open Props (props.sizes.css). */
+  --space-fluid-sm: clamp(0.5rem, 1vw, 0.75rem);
+  --space-fluid-md: clamp(0.75rem, 1.5vw, 1rem);
+  --space-fluid-lg: clamp(1rem, 2.5vw, 1.5rem);
+
+  /* ────────────────────────────── type scale ───────────────────────
+   * Fluid via clamp(). Lifted from Open Props (props.fonts.css)
+   * fluid-font-size block, renamed to Dazzle's vocabulary. The
+   * clamp expressions are non-trivial to derive correctly.
+   * ───────────────────────────────────────────────────────────────── */
+  --text-xs: clamp(0.75rem, 0.7rem + 0.2vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.25vw, 1rem);
+  --text-base: clamp(1rem, 0.9rem + 0.3vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  --text-xl: clamp(1.375rem, 1.2rem + 0.7vw, 1.75rem);
+  --text-2xl: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
+  --text-3xl: clamp(2.25rem, 1.9rem + 1.5vw, 3rem);
+  --text-display: clamp(3rem, 2.4rem + 2.5vw, 4.5rem);
+
+  /* ─────────────────────────── font families ─────────────────────
+   * `--font-system` is the OS-default sans stack; `--font-mono` is
+   * used by tabular numerics in chart summaries (bar_track etc.). */
+  --font-system: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
+               Consolas, "Liberation Mono", monospace;
+
+  /* ─────────────────────────── line height ─────────────────────────
+   * Unitless; multiplies the font-size of the same element. */
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-loose: 1.8;
+
+  /* ─────────────────────────── font weight ─────────────────────────
+   * Variable-font friendly; only the weights we actually use. */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ─────────────────────────── radii ───────────────────────────────
+   * Use semantic names. Full = pill. */
+  --radius-sm: 0.25rem;  /* 4px — small inputs, badges */
+  --radius-md: 0.375rem; /* 6px — cards, buttons */
+  --radius-lg: 0.75rem;  /* 12px — large cards, modals */
+  --radius-full: 9999px;
+
+  /* ─────────────────────────── shadows ─────────────────────────────
+   * Layered for depth. Sources: Open Props shadow blocks adjusted
+   * for Dazzle's visual identity (lower contrast, warmer ambient). */
+  --shadow-sm:
+    0 1px 2px hsl(0 0% 0% / 0.04),
+    0 1px 3px hsl(0 0% 0% / 0.06);
+  --shadow-md:
+    0 2px 4px hsl(0 0% 0% / 0.04),
+    0 4px 8px hsl(0 0% 0% / 0.08);
+  --shadow-lg:
+    0 4px 8px hsl(0 0% 0% / 0.04),
+    0 12px 24px hsl(0 0% 0% / 0.12);
+
+  /* ─────────────────────────── motion ──────────────────────────────
+   * Easings lifted from Open Props (props.easings.css). The
+   * cubic-bezier values for spring-like easings are well-tuned. */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.5, -0.5, 0.5, 1.5);
+
+  --duration-fast: 80ms;
+  --duration-base: 150ms;
+  --duration-slow: 300ms;
+
+  /* ─────────────────────────── widths ──────────────────────────────
+   * Common content widths. */
+  --width-prose: 65ch;
+  --width-content: 56rem;
+  --width-page: 80rem;
+
+  /* ─────────────────────────── colour ramps ────────────────────────
+   * Raw OKLCH ramps lifted from Open Props
+   * (props.colors-oklch.css), renamed to Dazzle's vocabulary. Use
+   * semantic tokens (--colour-*) below for almost all styling;
+   * raw ramps only when no semantic token fits.
+   * ───────────────────────────────────────────────────────────────── */
+  --neutral-50: oklch(98.5% 0.002 247.84);
+  --neutral-100: oklch(96.7% 0.003 264.54);
+  --neutral-200: oklch(92.8% 0.006 264.53);
+  --neutral-300: oklch(86.9% 0.012 252.89);
+  --neutral-400: oklch(70.6% 0.022 261.32);
+  --neutral-500: oklch(55.1% 0.027 264.36);
+  --neutral-600: oklch(44.6% 0.030 256.80);
+  --neutral-700: oklch(37.3% 0.034 259.73);
+  --neutral-800: oklch(27.8% 0.030 256.85);
+  --neutral-900: oklch(21.0% 0.034 264.66);
+  --neutral-950: oklch(13.0% 0.028 261.69);
+
+  --brand-50: oklch(97.0% 0.014 254.60);
+  --brand-100: oklch(93.2% 0.032 255.59);
+  --brand-200: oklch(88.2% 0.059 254.13);
+  --brand-300: oklch(80.9% 0.105 251.81);
+  --brand-400: oklch(70.7% 0.165 254.62);
+  --brand-500: oklch(62.3% 0.214 259.81);
+  --brand-600: oklch(54.6% 0.245 262.88);
+  --brand-700: oklch(48.8% 0.243 264.05);
+  --brand-800: oklch(42.4% 0.199 265.64);
+  --brand-900: oklch(37.9% 0.146 265.52);
+  --brand-950: oklch(28.2% 0.091 267.94);
+
+  --success-500: oklch(64.8% 0.150 142.50);
+  --warning-500: oklch(76.9% 0.188 70.08);
+  --danger-500: oklch(63.7% 0.208 25.33);
+
+  /* ─────────────────────────── colour: semantic ────────────────────
+   * Semantic tokens that components reference. Project themes
+   * override THESE, not the raw ramps. light-dark() handles
+   * scheme switching when supported; @media fallback below.
+   * ───────────────────────────────────────────────────────────────── */
+  --colour-bg: light-dark(var(--neutral-50), var(--neutral-950));
+  --colour-surface: light-dark(white, var(--neutral-900));
+  --colour-text: light-dark(var(--neutral-900), var(--neutral-50));
+  --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
+  --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
+  --colour-brand: var(--brand-600);
+  --colour-brand-contrast: white;  /* foreground on filled brand fills (CTAs) */
+  --colour-accent: var(--brand-500);
+  --colour-success: var(--success-500);
+  --colour-warning: var(--warning-500);
+  --colour-danger: var(--danger-500);
+
+  /* Tone tints (background washes for surfaces) — semantic tokens
+   * the dz-tones replacements consume. Authors don't hand-craft
+   * `hsl(var(--success) / 0.08)` strings any more. */
+  --colour-success-soft: oklch(from var(--colour-success) 95% 0.05 h);
+  --colour-warning-soft: oklch(from var(--colour-warning) 95% 0.05 h);
+  --colour-danger-soft: oklch(from var(--colour-danger) 95% 0.05 h);
+  --colour-brand-soft: oklch(from var(--colour-brand) 95% 0.05 h);
+
+  /* Default colour-scheme advertisement — lets browser-chrome
+   * (scrollbars, form controls) pick appropriate variants. */
+  color-scheme: light dark;
+}
+
+/* Fallback for browsers without light-dark() support. Modern
+ * Chrome / Firefox / Safari all support it as of 2024 but the
+ * @supports gate keeps the door open for outliers. */
+@media (prefers-color-scheme: dark) {
+  @supports not (color: light-dark(white, black)) {
+    :root {
+      --colour-bg: var(--neutral-950);
+      --colour-surface: var(--neutral-900);
+      --colour-text: var(--neutral-50);
+      --colour-text-muted: var(--neutral-400);
+      --colour-border: var(--neutral-700);
+    }
+  }
+}

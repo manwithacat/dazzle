@@ -1,5 +1,10 @@
 {# List region — UX-035 adopter #2 (after grid).
-   Contract: ~/.claude/skills/ux-architect/components/list-region.md (UX-069) #}
+   Contract: ~/.claude/skills/ux-architect/components/list-region.md (UX-069)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-list-* classes
+   (components/regions.css). Hover state on .is-clickable modifier;
+   attention accent still flows through unchanged attention_classes
+   macro. Action buttons + CSV export use semantic class names. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/attention_accent.html' import attention_classes %}
@@ -10,12 +15,12 @@
      owns the title (#794 second follow-up) — rendering it here would
      duplicate. Actions float right; the row stays full-width so the
      spacing above the table remains consistent. #}
-  <div class="dz-list-actions flex items-center justify-end mb-3">
-    <div class="flex items-center gap-1">
+  <div class="dz-list-actions">
+    <div class="dz-list-action-group">
       {% if region_actions %}
       {% for act in region_actions %}
       <button type="button"
-              class="h-7 px-2.5 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[12px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] inline-flex items-center"
+              class="dz-list-action-button"
               hx-post="{{ act.endpoint }}"
               hx-confirm="{{ act.confirm }}"
               hx-swap="none">{{ act.label }}</button>
@@ -29,9 +34,9 @@
               data-dz-csv-endpoint="{{ endpoint }}"
               data-dz-csv-filename="{{ region_name | default('export') }}.csv"
               onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)"
-              class="h-7 w-7 inline-flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              class="dz-list-csv-button"
               title="Export CSV" aria-label="Export CSV">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
       </button>
@@ -40,9 +45,9 @@
 
   {# Filter bar — per-column dropdowns #}
   {% if filter_columns %}
-  <div class="dz-list-filters flex flex-wrap gap-2 mb-2 filter-bar">
+  <div class="dz-list-filters filter-bar">
     {% for fc in filter_columns %}
-    <select class="h-7 px-2 rounded-[4px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[12px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+    <select class="dz-list-filter-select"
             hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
             hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
       <option value="">All {{ fc.label }}</option>
@@ -61,18 +66,18 @@
   {% endif %}
 
   {% if items %}
-  <div class="overflow-x-auto">
-    <table class="dz-list-table w-full">
+  <div class="dz-list-scroll">
+    <table class="dz-list-table">
       <thead>
-        <tr class="bg-[hsl(var(--muted)/0.3)] border-b border-[hsl(var(--border))]">
+        <tr>
           {% for col in columns %}
-          <th class="text-left text-[12px] font-medium text-[hsl(var(--muted-foreground))] px-3 py-2 tracking-tight">
+          <th>
             {% if col.sortable %}
             <a hx-get="{{ endpoint }}?sort={{ col.key }}&amp;dir={% if sort_field == col.key and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
-               class="cursor-pointer select-none hover:text-[hsl(var(--foreground))] inline-flex items-center gap-1 transition-colors duration-[80ms]">
+               class="dz-list-sort-link">
               {{ col.label }}
-              {% if sort_field == col.key %}<span class="ml-1">{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
+              {% if sort_field == col.key %}<span>{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
             </a>
             {% else %}
             {{ col.label }}
@@ -84,14 +89,12 @@
       <tbody>
         {% for item in items %}
         {% set attn = item.get("_attention") if item.get is defined else none %}
-        <tr class="dz-list-row border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-            {{ attention_classes(attn, 'tint') }}
-            {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
+        <tr class="dz-list-row {{ attention_classes(attn, 'tint') }}{% if action_url %} is-clickable{% endif %}"
             {% if attn %}title="{{ attn.message }}"{% endif %}
             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
             hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           {% for col in columns %}
-          <td class="text-[13px] text-[hsl(var(--foreground))] px-3 py-2">
+          <td>
             {% if col.type == "badge" %}
               {{ render_status_badge(value=item[col.key]) }}
             {% elif col.type == "bool" %}
@@ -113,7 +116,7 @@
     </table>
   </div>
   {% if total > items | length %}
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items | length }} of {{ total }}</p>
+  <p class="dz-list-overflow">Showing {{ items | length }} of {{ total }}</p>
   {% endif %}
   {% else %}
   {% include "fragments/empty_state.html" %}

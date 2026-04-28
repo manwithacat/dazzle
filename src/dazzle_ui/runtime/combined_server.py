@@ -283,21 +283,12 @@ def run_unified_server(
         except Exception:
             logger.debug("Failed to load bundled CSS", exc_info=True)
 
-    # Build Tailwind+DaisyUI CSS via standalone CLI (#377)
-    tailwind_css = ""
-    try:
-        from dazzle_ui.build_css import build_css
-
-        tw_output = build_css(project_root=project_root)
-        if tw_output and tw_output.exists():
-            tailwind_css = tw_output.read_text(encoding="utf-8")
-            print(f"[Dazzle] CSS bundle built: {tw_output.stat().st_size / 1024:.0f} KB")
-    except Exception:
-        logger.debug("Tailwind CSS build skipped (CLI not available)", exc_info=True)
-
-    # Combine CSS parts into a single bundle string
-    _bundle_parts = [p for p in [tailwind_css, theme_css] if p]
-    bundled_css = "\n".join(_bundle_parts) if _bundle_parts else ""
+    # v0.62 CSS refactor (Phase 4 teardown): Tailwind build step removed.
+    # `bundled_css` now carries only theme override CSS (if any). Themes
+    # are also preferentially loaded via `<link>` chains in base.html, so
+    # this route is a back-compat path for downstream apps that still
+    # rely on the combined-bundle URL.
+    bundled_css = theme_css or ""
 
     assemble_post_build_routes(
         app,

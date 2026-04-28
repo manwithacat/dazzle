@@ -1,5 +1,10 @@
 {# Grid region — first adopter of the shared region_card macro (UX-035).
-   Contract: ~/.claude/skills/ux-architect/components/grid-region.md (UX-066) #}
+   Contract: ~/.claude/skills/ux-architect/components/grid-region.md (UX-066)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-grid-* classes
+   (components/regions.css). Cell hover-state lives on .is-clickable
+   modifier (toggled by `{% if action_url %}`); attention accent still
+   flows through the unchanged attention_classes macro. #}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/attention_accent.html' import attention_classes %}
@@ -7,27 +12,25 @@
 {% call region_card(title) %}
 <div class="dz-grid-region">
   {% if items %}
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+  <div class="dz-grid-list">
     {% for item in items %}
     {% set attn = item.get("_attention") if item.get is defined else none %}
     {# Item cell is intentionally plain — no bg/border/full chrome. The
        visible card chrome lives on the enclosing region_card macro
        (rounded-[6px] + border + bg). Duplicating chrome here produced
        a card-within-a-card effect; see issue #794 and its follow-up. #}
-    <div class="dz-grid-cell rounded-[4px] p-3 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-      {{ attention_classes(attn, 'border') }}
-      {% if action_url %} cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]{% endif %}"
+    <div class="dz-grid-cell {{ attention_classes(attn, 'border') }}{% if action_url %} is-clickable{% endif %}"
          {% if attn %}title="{{ attn.message }}"{% endif %}
          {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
          hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-      <h4 class="text-[13px] font-medium text-[hsl(var(--foreground))] mb-1.5">
+      <h4 class="dz-grid-cell-title">
         {% set _primary = item[display_key] %}
         {% if _primary is none %}{{ item.get("name", (entity_name|default("Item"))) }}{% else %}{{ _primary }}{% endif %}
       </h4>
       {% for col in columns %}
       {% if col.key != display_key %}
-      <p class="text-[12px] text-[hsl(var(--muted-foreground))]">
-        <span class="text-[11px]">{{ col.label }}:</span>
+      <p class="dz-grid-cell-field">
+        <span class="dz-grid-cell-field-label">{{ col.label }}:</span>
         {% if col.type == "badge" %}
           {{ render_status_badge(value=item[col.key]) }}
         {% elif col.type == "bool" %}

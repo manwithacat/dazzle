@@ -1,15 +1,20 @@
 {# Detail region — UX-035 adopter #14.
-   Contract: ~/.claude/skills/ux-architect/components/detail-region.md (UX-063) #}
+   Contract: ~/.claude/skills/ux-architect/components/detail-region.md (UX-063)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-detail-region-*
+   classes (see components/detail.css). Two-column label/value grid
+   distinct from the row-stacked .dz-detail-row in the standalone
+   detail_view component. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% from 'macros/ref_cell.html' import ref_cell %}
 {% call region_card(title) %}
 <div class="dz-detail-region">
   {% if item %}
-  <dl class="dz-detail-grid grid grid-cols-2 gap-2">
+  <dl class="dz-detail-region-grid">
     {% for col in columns %}
-    <dt class="dz-detail-label text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">{{ col.label }}</dt>
-    <dd class="dz-detail-value text-[13px] text-[hsl(var(--foreground))]">
+    <dt class="dz-detail-label">{{ col.label }}</dt>
+    <dd class="dz-detail-value">
       {% if col.type == "badge" %}
         {{ render_status_badge(value=item[col.key], bordered=true) }}
       {% elif col.type == "bool" %}
@@ -28,7 +33,7 @@
     {% endfor %}
   </dl>
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No record selected.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No record selected.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

@@ -54,6 +54,9 @@ class TestBreadcrumbs:
         assert "Current" in html
 
     def test_uses_design_tokens(self) -> None:
+        """v0.62 CSS refactor: token references move from inline
+        Tailwind to CSS rules. Check the semantic class names + CSS
+        rule content cross-reference."""
         html = _render_fragment(
             "fragments/breadcrumbs.html",
             crumbs=[
@@ -61,8 +64,19 @@ class TestBreadcrumbs:
                 type("C", (), {"label": "B", "url": None})(),
             ],
         )
-        assert "hsl(var(--muted-foreground))" in html
-        assert "hsl(var(--foreground))" in html
+        assert "dz-breadcrumb-link" in html
+        assert "dz-breadcrumb-current" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        link_block = css.split(".dz-breadcrumb-link {")[1].split("}")[0]
+        current_block = css.split(".dz-breadcrumb-current {")[1].split("}")[0]
+        assert "var(--colour-text-muted)" in link_block
+        assert "var(--colour-text)" in current_block
 
 
 # ── Alert banner ───────────────────────────────────────────────────────
@@ -79,21 +93,46 @@ class TestAlertBanner:
         assert "alert alert-" not in html  # legacy DaisyUI
 
     def test_info_tone_default(self) -> None:
+        """v0.62 CSS refactor: tone tinting moved from inline
+        `bg-[hsl(var(--info)/0.08)]` to attribute selectors on
+        `.dz-alert-banner[data-dz-alert-level="info"]` in
+        components/fragments.css. Pin the data-attribute emission +
+        the CSS rule's brand colour reference."""
         html = _render_fragment(
             "fragments/alert_banner.html",
             message="Info",
         )
         assert 'data-dz-alert-level="info"' in html
-        assert "hsl(var(--info)" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert '.dz-alert-banner[data-dz-alert-level="info"]' in css
+        info_block = css.split('.dz-alert-banner[data-dz-alert-level="info"]')[1].split("}")[0]
+        assert "var(--colour-brand)" in info_block
 
     def test_error_tone_uses_destructive_token(self) -> None:
+        """v0.62 CSS refactor: same pattern as info — error tone uses
+        `var(--colour-danger)` on the data-attribute selector."""
         html = _render_fragment(
             "fragments/alert_banner.html",
             message="Error",
             level="error",
         )
         assert 'data-dz-alert-level="error"' in html
-        assert "hsl(var(--destructive)" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert '.dz-alert-banner[data-dz-alert-level="error"]' in css
+        error_block = css.split('.dz-alert-banner[data-dz-alert-level="error"]')[1].split("}")[0]
+        assert "var(--colour-danger)" in error_block
 
     def test_no_daisyui_btn(self) -> None:
         html = _render_fragment(
@@ -179,14 +218,30 @@ class TestSkeletonPatterns:
         return tmpl.render()
 
     def test_uses_design_tokens_not_daisyui(self) -> None:
+        """v0.62 CSS refactor: pulse animation lives on the .dz-skeleton
+        rule (components/fragments.css) rather than inline `animate-pulse`
+        Tailwind utility, and the muted-bg token is part of the same rule
+        rather than `bg-[hsl(var(--muted))]` per element."""
         html = self._import_macros()
         assert "dz-skeleton" in html
-        assert "animate-pulse" in html
-        assert "hsl(var(--muted))" in html
-        # DaisyUI
+        # DaisyUI markers absent
         assert 'class="skeleton ' not in html
         assert "card bg-base-100" not in html
-        assert "card-body" not in html
+        # `card-body` is the DaisyUI marker; .dz-skeleton-card / -card-stack
+        # share the substring but are distinct CSS-refactor classes.
+        cleaned = html.replace("dz-skeleton-card", "").replace("dz-skeleton-card-stack", "")
+        assert "card-body" not in cleaned
+
+        # CSS rule carries the pulse animation + muted background
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        skeleton_block = css.split(".dz-skeleton {")[1].split("}")[0]
+        assert "animation: dz-pulse" in skeleton_block
+        assert "background: var(--colour-bg)" in skeleton_block
 
 
 # ── Date range picker ──────────────────────────────────────────────────
@@ -217,11 +272,25 @@ class TestDateRangePicker:
         assert 'id="date-to-events"' in html
 
     def test_uses_design_tokens(self) -> None:
+        """v0.62 CSS refactor: input chrome (border / text colour /
+        focus ring) lives on .dz-date-range-input rule rather than
+        inline `bg-[hsl(var(--background))] border-[hsl(var(--border))]`
+        Tailwind utilities."""
         html = _render_fragment(
             "fragments/date_range_picker.html",
             endpoint="/api/data",
             region_name="events",
         )
-        assert "hsl(var(--border))" in html
-        assert "hsl(var(--foreground))" in html
-        assert "hsl(var(--ring))" in html
+        assert "dz-date-range-input" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        input_block = css.split(".dz-date-range-input {")[1].split("}")[0]
+        assert "border: 1px solid var(--colour-border)" in input_block
+        assert "color: var(--colour-text)" in input_block
+        # Focus ring on :focus-visible variant
+        assert ".dz-date-range-input:focus-visible" in css

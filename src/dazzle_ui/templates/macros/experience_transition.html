@@ -1,11 +1,17 @@
 {# Experience transition button — single source of truth for the 5 branches
    that render a transition affordance in experience/_content.html.
    Contract: ~/.claude/skills/ux-architect/components/experience-shell.md (UX-072)
-   Fixes EX-053 (CSRF) + closes experience-shell v2 Q2 (quadruplication). #}
+   Fixes EX-053 (CSRF) + closes experience-shell v2 Q2 (quadruplication).
+
+   v0.62 CSS refactor: 3-style branch (primary/ghost/border-default)
+   moved from inline Tailwind ternary to attribute selectors on
+   `.dz-experience-transition[data-dz-transition-style="..."]` in
+   components/fragments.css. Same #906-class JIT-visibility win. #}
 
 {%- macro experience_transition_button(tr) -%}
 <button type="button"
-        class="inline-flex items-center h-9 px-4 font-medium rounded-[4px] text-[14px] transition-colors duration-[80ms] {% if tr.style == 'primary' %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:brightness-110{% elif tr.style == 'ghost' %}text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]{% else %}border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]{% endif %}"
+        class="dz-experience-transition"
+        data-dz-transition-style="{{ tr.style | default('default') }}"
         hx-post="{{ tr.url }}"
         hx-target="body"
         hx-swap="innerHTML">

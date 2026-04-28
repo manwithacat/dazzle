@@ -1,0 +1,348 @@
+/*
+ * form.css — form field component family.
+ *
+ * Used by the render_field macro (templates/macros/form_field.html)
+ * which dispatches across ~14 field types: checkbox, ref-entity
+ * select, search-select, plain text/number/email/date/datetime,
+ * textarea, select, money, file, plus widget-driven combobox /
+ * multi_select / tags / picker / range / color / rich_text /
+ * slider (which delegate to vendored libraries — Tom Select,
+ * Flatpickr, Quill, Pickr).
+ *
+ * Pre-CSS-refactor every branch composed its own inline Tailwind
+ * class string with conditional Jinja for the error/idle border.
+ * Post-refactor, the macro emits semantic classes only and styling
+ * lives here. Error state derives from the `aria-invalid="true"`
+ * attribute the macro already emits for accessibility — single
+ * source of truth, no parallel `.is-error` modifier needed.
+ *
+ * Wrapped in @layer components.
+ */
+
+/* ─────────────────────────── outer wrapper ──────────────────────
+ * Vertical flow of label / hint / input / error. Tight gap so
+ * forms feel cohesive; .stack base utility would be too generous. */
+
+.dz-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+/* ─────────────────────────── label ──────────────────────────────
+ * Block label above the input. Required-mark is a child span. */
+
+.dz-form-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-form-required {
+  color: var(--colour-danger);
+  margin-inline-start: var(--space-xs);
+}
+
+/* ─────────────────────────── hint + error ───────────────────────
+ * Both small + muted; error is danger-coloured. The macro emits
+ * <p id="hint-{name}"> and <p id="error-{name}"> for aria-describedby
+ * referencing. */
+
+.dz-form-hint {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.dz-form-error {
+  font-size: var(--text-xs);
+  color: var(--colour-danger);
+  margin-block-start: var(--space-xs);
+}
+
+/* ─────────────────────────── base input ─────────────────────────
+ * The canonical row input — used by text, email, number, date,
+ * datetime, select. Single class .dz-form-input handles the lot.
+ * Error state derives from `aria-invalid="true"` (selector below);
+ * focus state via :focus-visible. */
+
+.dz-form-input {
+  width: 100%;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  transition:
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-form-input::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-form-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-form-input[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+.dz-form-input[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-danger);
+}
+
+/* ─────────────────────────── textarea ───────────────────────────
+ * Same chrome as .dz-form-input but multi-line. Override height
+ * + padding-block; resize handle vertical only. */
+
+.dz-form-textarea {
+  height: auto;
+  min-height: 6rem;
+  padding-block: var(--space-sm);
+  resize: vertical;
+}
+
+/* ─────────────────────────── checkbox ───────────────────────────
+ * Inline row: checkbox + text label. The macro wraps both in
+ * <label class="dz-form-checkbox-label"> for click-target convenience. */
+
+.dz-form-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-form-checkbox {
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  accent-color: var(--colour-brand);
+}
+
+/* ─────────────────────────── money widget ───────────────────────
+ * Three sub-elements:
+ *   .dz-form-money-group — flex row container
+ *   .dz-form-money-prefix — currency symbol box (pinned currency)
+ *   .dz-form-money-select — currency dropdown (unpinned currency)
+ * The amount input uses .dz-form-input with a .dz-form-input-trailing
+ * modifier to round only the right corners. */
+
+.dz-form-money-group {
+  display: flex;
+  width: 100%;
+}
+
+.dz-form-money-prefix {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  background: var(--colour-bg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  border: 1px solid var(--colour-border);
+  border-inline-end: 0;
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.dz-form-money-select {
+  height: 2rem;
+  width: 7rem;
+  padding-inline: var(--space-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  border: 1px solid var(--colour-border);
+  border-inline-end: 0;
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.dz-form-money-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* Modifier on .dz-form-input that joins it to a leading prefix —
+ * rounds only the right corners. Used by the money widget. */
+.dz-form-input-trailing {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+/* ─────────────────────────── file upload ────────────────────────
+ * Two states (dragging via Alpine x-show; preview vs dropzone via
+ * x-show). Container uses .dz-file-upload (existing class on the
+ * x-data root). */
+
+.dz-file-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-block-end: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+}
+
+.dz-file-upload-preview-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: var(--colour-success);
+}
+
+.dz-file-upload-preview-name {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-file-upload-preview-clear {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-file-upload-preview-clear:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-file-upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 8rem;
+  border: 2px dashed var(--colour-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-file-upload-zone:hover,
+.dz-file-upload-zone.dragging {
+  background: var(--colour-bg);
+  border-color: var(--colour-brand);
+}
+
+.dz-file-upload-zone-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-block-end: var(--space-sm);
+  color: var(--colour-text-muted);
+  opacity: 0.6;
+}
+
+.dz-file-upload-zone-prompt {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-file-upload-progress {
+  width: 100%;
+  height: 0.25rem;
+  margin-block-start: var(--space-sm);
+  border-radius: 2px;
+}
+
+/* ─────────────────────────── search-select wrapper ──────────────
+ * UX-028 search-select dynamic search; the wrapper is the include
+ * `fragments/search_select.html` which has its own internal
+ * structure. We don't override that here — only style the label /
+ * hint / error around it. The fragment-level CSS would migrate
+ * separately when we get to fragments/. */
+
+/* No rules needed — search-select inherits .dz-form-label + hint
+ * + error from the surrounding macro structure. */
+
+/* ─────────────────────────── colorpicker (UX-024) ───────────────
+ * Pickr wrapper. Swatch + hex display sit inline next to each other. */
+
+.dz-form-color-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-form-color-swatch {
+  block-size: 2rem;
+  inline-size: 2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  cursor: pointer;
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.dz-form-color-swatch:hover {
+  filter: brightness(1.05);
+}
+
+.dz-form-color-hex {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+/* ─────────────────────────── richtext (UX-025) ──────────────────
+ * Quill editor wrapper. Border + radius live on the wrapper; Quill
+ * internals manage their own toolbar/editor styling. */
+
+.dz-form-richtext {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--colour-bg);
+}
+
+.dz-form-richtext[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+/* ─────────────────────────── slider (UX-023) ────────────────────
+ * Native <input type="range"> + dzRangeTooltip controller. */
+
+.dz-form-slider-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-form-slider {
+  inline-size: 100%;
+}
+
+.dz-form-slider-value {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+  min-inline-size: 2rem;
+  text-align: end;
+}

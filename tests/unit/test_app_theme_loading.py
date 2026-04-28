@@ -155,14 +155,24 @@ class TestBaseTemplateThemeLink:
         html = self._render_base(None)
         assert "themes/" not in html
 
-    def test_theme_link_renders_after_bundle(self) -> None:
-        """Cascade order matters — the theme override must come AFTER
-        the bundle so `@layer overrides` wins."""
+    def test_theme_link_emits_when_theme_set(self) -> None:
+        """When a theme is set, base.html must emit a <link> for the
+        theme stylesheet so the browser loads it.
+
+        v0.62 (Phase 4 teardown): the Tailwind compiled bundle is gone.
+        Cascade order between the theme and the framework CSS no longer
+        depends on source order — both files declare explicit `@layer`
+        blocks, and the layer order (`base, framework, app, overrides`)
+        is set in base.html's inline `<style>` declaration. The original
+        bundle/theme position check no longer applies."""
         html = self._render_base("linear-dark")
-        bundle_pos = html.find("dazzle-bundle")
         theme_pos = html.find("themes/linear-dark")
-        assert bundle_pos > -1 and theme_pos > -1
-        assert theme_pos > bundle_pos, "theme link must come AFTER bundle"
+        assert theme_pos > -1, "theme <link> not emitted for app_theme=linear-dark"
+        # Layer cascade is governed by base.html's inline declaration:
+        #     <style>@layer base, framework, app, overrides;</style>
+        # NOT by source order of <link> tags. Verify the layer
+        # declaration is still present.
+        assert "@layer base, framework, app, overrides" in html
 
 
 class TestThemeURLResolution:

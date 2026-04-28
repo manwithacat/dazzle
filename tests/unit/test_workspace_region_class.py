@@ -146,8 +146,12 @@ class TestCssClassTemplateBinding:
         assert "card.css_class" in contents, (
             "Alpine card wrapper missing `card.css_class` binding — #894 hook lost"
         )
-        assert "transition-all duration-[200ms]" in contents, (
-            "Existing transition binding regressed by #894 hook"
+        # v0.62 CSS refactor: the inline transition utility class moved to
+        # the .is-animating semantic state modifier (resolved in dashboard.css).
+        # The Alpine ternary still toggles a class, just a semantic one.
+        assert "is-animating" in contents, (
+            "Existing transition state binding regressed by #894 hook — "
+            ".is-animating modifier missing from the :class ternary."
         )
 
     def test_template_binding_uses_string_concat_pattern(self) -> None:
