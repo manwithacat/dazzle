@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.93] - 2026-04-28
+
+### Fixed
+- **`templates/macros/form_field.html`** — closes #925. The
+  `field.type == "checkbox"` branch wired
+  `aria-describedby="hint-{name}"` on the input but never rendered the
+  matching `<p id="hint-{name}" class="dz-form-hint">{{ field.help
+  }}</p>` element, so help text on boolean fields was silently
+  dropped (and the aria reference dangled). Added the missing
+  paragraph after the checkbox label, mirroring every other field-type
+  branch. Regression tests in
+  `tests/unit/test_phase4_widgets.py::TestFieldHelpRendering` pin
+  checkbox + four other branches and assert the absence path
+  (no help → no hint markup).
+
 ## [0.61.92] - 2026-04-28
 
 ### Fixed

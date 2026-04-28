@@ -97,6 +97,7 @@ class _FakeField:
         self.widget = widget
         self.required = kwargs.get("required", False)
         self.hint = kwargs.get("hint")
+        self.help = kwargs.get("help")
         self.placeholder = kwargs.get("placeholder")
         self.default = kwargs.get("default")
         self.options = kwargs.get("options", [])
@@ -183,3 +184,58 @@ class TestFormFieldWidgets:
         html = self._render(jinja_env, field)
         assert 'type="text"' in html
         assert "data-dz-widget" not in html
+
+
+class TestFieldHelpRendering:
+    """#918 introduced `help:` on fields; #925 caught that the checkbox
+    branch wired the aria reference but skipped the actual `<p>` element.
+    Pin every widely-used branch so the regression can't recur."""
+
+    def _render(self, jinja_env, field, values=None, errors=None):
+        tmpl = jinja_env.from_string(
+            '{% from "macros/form_field.html" import render_field %}'
+            "{{ render_field(field, values, errors) }}"
+        )
+        return tmpl.render(field=field, values=values or {}, errors=errors or {})
+
+    def test_help_renders_for_checkbox(self, jinja_env):
+        """#925: boolean/checkbox branch must render the help paragraph."""
+        field = _FakeField(
+            "auto_match",
+            "Auto-match",
+            "checkbox",
+            help="Suggested matches below 90% stay in review.",
+        )
+        html = self._render(jinja_env, field)
+        assert 'class="dz-form-hint"' in html
+        assert "Suggested matches below 90% stay in review." in html
+        assert 'id="hint-auto_match"' in html
+        assert 'aria-describedby="hint-auto_match"' in html
+
+    def test_help_renders_for_text(self, jinja_env):
+        field = _FakeField("title", "Title", "str", help="A short summary visible in lists")
+        html = self._render(jinja_env, field)
+        assert "A short summary visible in lists" in html
+        assert 'class="dz-form-hint"' in html
+
+    def test_help_renders_for_textarea(self, jinja_env):
+        field = _FakeField("desc", "Description", "textarea", help="Markdown allowed.")
+        html = self._render(jinja_env, field)
+        assert "Markdown allowed." in html
+
+    def test_help_renders_for_select(self, jinja_env):
+        field = _FakeField(
+            "status",
+            "Status",
+            "select",
+            options=[{"value": "a", "label": "Active"}],
+            help="Choose carefully.",
+        )
+        html = self._render(jinja_env, field)
+        assert "Choose carefully." in html
+
+    def test_help_omitted_when_no_help(self, jinja_env):
+        field = _FakeField("plain", "Plain", "checkbox")
+        html = self._render(jinja_env, field)
+        assert 'class="dz-form-hint"' not in html
+        assert "aria-describedby" not in html

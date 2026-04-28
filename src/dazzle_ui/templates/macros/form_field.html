@@ -30,6 +30,9 @@
              {% if value %}checked{% endif %} />
       <span>{{ field.label }}</span>
     </label>
+    {% if field.help is defined and field.help %}
+    <p id="{{ hint_id }}" class="dz-form-hint">{{ field.help }}</p>
+    {% endif %}
 
   {% elif field.source %}
     {# UX-028: search-select dynamic search with autofill #}
