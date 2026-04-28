@@ -2958,3 +2958,117 @@
   inline-size: 100%;
   border-radius: var(--radius-sm);
 }
+
+/* ─────────────────────────── in-app error pages ─────────────────
+ * 403 + 404 share centred chrome inside the app shell. Used by
+ * app/403.html (#776 / #808) and app/404.html. */
+
+.dz-error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 60vh;
+  padding-inline: var(--space-md);
+}
+
+.dz-error-code {
+  font-size: 3rem;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  color: var(--colour-text);
+  margin-block-end: var(--space-md);
+}
+
+.dz-error-message {
+  font-size: var(--text-md);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+  text-align: center;
+  max-inline-size: 30rem;
+}
+
+.dz-error-suggestions-card,
+.dz-error-detail-card {
+  inline-size: 100%;
+  max-inline-size: 30rem;
+  margin-block-end: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+}
+
+.dz-error-suggestions-card {
+  background: var(--colour-surface);
+}
+
+.dz-error-detail-card {
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-error-suggestions-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-error-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dz-error-suggestion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.dz-error-suggestion-link:hover {
+  text-decoration: underline;
+}
+
+.dz-error-suggestion-url {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-error-detail-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-md);
+  row-gap: 0.375rem;
+  margin: 0;
+}
+
+.dz-error-detail-label {
+  color: var(--colour-text-muted);
+}
+
+.dz-error-detail-chip {
+  display: inline-block;
+  margin-inline-end: 0.25rem;
+  padding-inline: 0.25rem;
+  padding-block: 0.125rem;
+  border-radius: var(--radius-xs);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono, monospace);
+}
+
+.dz-error-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
