@@ -1780,3 +1780,189 @@ a.dz-action-card:hover {
   color: var(--colour-text-muted);
   margin-block-start: var(--space-sm);
 }
+
+/* ─────────────────────────── confirm_action_panel region ────────
+ * Irreversible-action consent primitive (#6, AegisMark UX patterns).
+ * Renders a checklist of obligations + dual primary/draft buttons in
+ * the off state, a "Currently live" summary + revoke in the live
+ * state, and an audit footer + (optional) re-enable button in the
+ * revoked state. State branch keys off the panel root's
+ * data-dz-state-value so future enrichments (e.g. tone tinting) can
+ * key off it without touching every branch's class string. */
+
+.dz-confirm-summary {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  margin-block-end: var(--space-md);
+}
+
+.dz-confirm-summary[data-dz-confirm-tone="success"] {
+  border-color: color-mix(in oklch, var(--colour-success) 40%, transparent);
+  background: color-mix(in oklch, var(--colour-success) 6%, transparent);
+}
+
+.dz-confirm-summary[data-dz-confirm-tone="muted"] {
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+.dz-confirm-summary-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-confirm-summary-body {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-confirm-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding-inline-start: 0;
+}
+
+.dz-confirm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.dz-confirm-checkbox {
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  accent-color: var(--colour-brand);
+}
+
+.dz-confirm-row-label {
+  flex: 1 1 0;
+  cursor: pointer;
+}
+
+.dz-confirm-title {
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.dz-confirm-caption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+  list-style: none;
+}
+
+.dz-confirm-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-primary:hover {
+  opacity: 0.9;
+}
+
+/* When the gate is unsatisfied, Alpine flips this to is-disabled.
+ * We swap to a muted-tone surface and disable pointer events so the
+ * a-tag-as-button affordance falls inert. */
+.dz-confirm-primary.is-disabled,
+.dz-confirm-primary[aria-disabled="true"] {
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.dz-confirm-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--colour-border);
+  background: transparent;
+  color: var(--colour-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-secondary:hover {
+  background: var(--colour-bg);
+}
+
+.dz-confirm-revoke {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid color-mix(in oklch, var(--colour-danger) 50%, transparent);
+  background: transparent;
+  color: var(--colour-danger);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-revoke:hover {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+
+.dz-confirm-audit {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-md);
+  line-height: var(--leading-tight);
+}
+
+/* ─────────────────────────── box_plot region ────────────────────
+ * Server-rendered SVG quartile boxes per group. SVG fill/stroke
+ * tokens stay inline (per-element shape colour); host wrapper sized
+ * via .dz-box-plot-svg + summary uses .dz-box-plot-summary. */
+
+.dz-box-plot-svg {
+  width: 100%;
+  height: auto;
+}
+
+.dz-box-plot-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}

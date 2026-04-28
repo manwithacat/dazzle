@@ -50,7 +50,7 @@
 
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 {{ w }} {{ h }}"
-         class="dz-box-plot-svg w-full h-auto"
+         class="dz-box-plot-svg"
          role="img"
          aria-label="{{ title }} box plot — {{ count }} groups, range {{ y_min | round(1) }}–{{ y_max | round(1) }}">
       {# Baseline + axis. #}
@@ -141,11 +141,11 @@
       {% endfor %}
     </svg>
 
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-box-plot-summary">
       {{ count }} groups · {{ box_plot_stats | sum(attribute='n') }} samples
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}
