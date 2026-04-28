@@ -1,5 +1,9 @@
-{# Tabbed multi-source list — one tab per source entity, each lazy-loaded via HTMX #}
-{# UX-035 adopter #4 (after grid, list, kanban).                                     #}
+{# Tabbed multi-source list — one tab per source entity, each lazy-loaded via HTMX
+   UX-035 adopter #4 (after grid, list, kanban).
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-tabbed-list-* classes
+   (components/regions.css). Active-tab visual now driven by the .is-active
+   modifier toggled by the inline JS handler — no per-class swap-fest. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% set tabs = source_tabs if source_tabs is defined else (region.source_tabs if region is defined else []) %}
 {% set rname = region_name if region_name is defined else (region.name if region is defined else "unknown") %}
@@ -9,12 +13,12 @@
 {% call region_card(rtitle) %}
   {# Tab headers #}
   {% if tabs %}
-  <div role="tablist" class="flex border-b border-[hsl(var(--border))] mb-3" id="tabs-{{ rname }}">
+  <div role="tablist" class="dz-tabbed-list-tabs" id="tabs-{{ rname }}">
     {% for tab in tabs %}
     <a role="tab"
-       class="px-3 py-2 text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] -mb-px border-b-2 border-transparent cursor-pointer{% if loop.first %} border-[hsl(var(--primary))] text-[hsl(var(--foreground))] font-medium{% endif %}"
+       class="dz-tabbed-list-tab{% if loop.first %} is-active{% endif %}"
        data-tab-target="tab-{{ rname }}-{{ tab.entity_name | lower }}"
-       onclick="document.querySelectorAll('#tabs-{{ rname }} [role=tab]').forEach(t => { t.classList.remove('border-[hsl(var(--primary))]'); t.classList.remove('text-[hsl(var(--foreground))]'); t.classList.remove('font-medium'); t.classList.add('border-transparent'); t.classList.add('text-[hsl(var(--muted-foreground))]'); }); this.classList.remove('border-transparent'); this.classList.remove('text-[hsl(var(--muted-foreground))]'); this.classList.add('border-[hsl(var(--primary))]'); this.classList.add('text-[hsl(var(--foreground))]'); this.classList.add('font-medium'); document.querySelectorAll('#panels-{{ rname }} .tab-panel').forEach(p => p.classList.add('hidden')); document.getElementById(this.dataset.tabTarget).classList.remove('hidden');">
+       onclick="document.querySelectorAll('#tabs-{{ rname }} [role=tab]').forEach(t => t.classList.remove('is-active')); this.classList.add('is-active'); document.querySelectorAll('#panels-{{ rname }} .tab-panel').forEach(p => p.classList.add('hidden')); document.getElementById(this.dataset.tabTarget).classList.remove('hidden');">
       {{ tab.label }}
     </a>
     {% endfor %}
@@ -28,8 +32,8 @@
          hx-get="{{ tab.endpoint }}"
          hx-trigger="{% if loop.first %}load{% else %}intersect once{% endif %}"
          hx-swap="innerHTML">
-      <div class="flex justify-center py-8 text-[hsl(var(--muted-foreground))]">
-        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <div class="dz-tabbed-list-panel-loading">
+        <svg fill="none" viewBox="0 0 24 24" aria-hidden="true">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>
@@ -38,6 +42,6 @@
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ rempty }}</p>
+  <p class="dz-tabbed-list-empty">{{ rempty }}</p>
   {% endif %}
 {% endcall %}

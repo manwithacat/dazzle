@@ -497,3 +497,216 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ─────────────────────────── diagram region ─────────────────────
+ * Mermaid-rendered SVG inside a horizontal-scroll container.
+ * Mermaid's own CSS handles the diagram chrome; we own the wrapper. */
+
+.dz-diagram-scroll {
+  overflow-x: auto;
+}
+
+.dz-diagram-source {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  /* Mermaid replaces this <pre> with rendered SVG once initialised;
+   * the source-text styling matters only on the initial paint flash. */
+}
+
+.dz-diagram-empty {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+/* ─────────────────────────── tree region ────────────────────────
+ * Nested <details>/<summary> hierarchy. Each level indents via the
+ * children container's padding-inline-start. The chevron rotates
+ * via the [open] state on the parent details. */
+
+.dz-tree-node {
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-xs);
+}
+
+.dz-tree-summary {
+  font-size: var(--text-sm);
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+/* Hide the default disclosure marker — we render our own chevron. */
+.dz-tree-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dz-tree-summary:hover {
+  background: var(--colour-bg);
+}
+
+.dz-tree-chevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--colour-text-muted);
+  transition: transform var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.dz-tree-node[open] > .dz-tree-summary .dz-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.dz-tree-label {
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-tree-count {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.375rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  background: var(--colour-bg);
+}
+
+.dz-tree-children {
+  padding-inline-start: var(--space-lg);
+  padding-inline-end: var(--space-sm);
+  padding-block-end: var(--space-xs);
+}
+
+.dz-tree-flat-item {
+  padding-inline: var(--space-sm);
+  padding-block: 0.375rem;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-tree-flat-item:last-child {
+  border-block-end: 0;
+}
+
+/* ─────────────────────────── tabbed_list region ─────────────────
+ * Per-source tabs that lazy-load their content. Tab strip is a
+ * horizontal flex row with a bottom border. The active tab gets
+ * .is-active (set by the inline JS handler) which raises the
+ * bottom-border colour to brand. */
+
+.dz-tabbed-list-tabs {
+  display: flex;
+  border-block-end: 1px solid var(--colour-border);
+  margin-block-end: var(--space-md);
+}
+
+.dz-tabbed-list-tab {
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: -1px;  /* Overlap parent border so active border flush */
+  border-block-end: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+}
+
+.dz-tabbed-list-tab:hover {
+  color: var(--colour-text);
+}
+
+.dz-tabbed-list-tab.is-active {
+  border-block-end-color: var(--colour-brand);
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+.dz-tabbed-list-panel-loading {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-2xl);
+  color: var(--colour-text-muted);
+}
+
+.dz-tabbed-list-panel-loading > svg {
+  width: 1rem;
+  height: 1rem;
+  animation: dz-spin 1s linear infinite;
+}
+
+.dz-tabbed-list-empty {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+/* ─────────────────────────── grid region ────────────────────────
+ * Responsive cell grid (1 → 2 → 3 columns at sm/lg breakpoints).
+ * Cells are intentionally plain — the dashboard slot owns the card
+ * chrome. Each cell gets an attention-accent border via the
+ * existing attention_classes macro (untouched), and .is-clickable
+ * when wired to action_url. */
+
+.dz-grid-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+@media (min-width: 40rem) {
+  .dz-grid-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .dz-grid-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dz-grid-cell {
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-grid-cell.is-clickable {
+  cursor: pointer;
+}
+
+.dz-grid-cell.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-grid-cell-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-end: 0.375rem;
+}
+
+.dz-grid-cell-field {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.dz-grid-cell-field-label {
+  font-size: var(--text-xs);
+}

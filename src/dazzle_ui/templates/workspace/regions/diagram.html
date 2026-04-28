@@ -1,10 +1,14 @@
 {# Diagram region — UX-035 adopter #11.
-   Contract: ~/.claude/skills/ux-architect/components/workspace-diagram-region.md (UX-061) #}
+   Contract: ~/.claude/skills/ux-architect/components/workspace-diagram-region.md (UX-061)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-diagram-* classes
+   (components/regions.css). Mermaid handles its own SVG chrome; this
+   template owns only the scroll wrapper + initial source-flash. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
   {% if diagram_data %}
-  <div class="overflow-x-auto">
-    <pre class="mermaid text-[13px] text-[hsl(var(--foreground))]">{{ diagram_data }}</pre>
+  <div class="dz-diagram-scroll">
+    <pre class="mermaid dz-diagram-source">{{ diagram_data }}</pre>
   </div>
   <script>
     if (typeof mermaid === "undefined") {
@@ -25,6 +29,6 @@
     }
   </script>
   {% else %}
-  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">No entity relationships to display.</p>
+  <p class="dz-diagram-empty">No entity relationships to display.</p>
   {% endif %}
 {% endcall %}

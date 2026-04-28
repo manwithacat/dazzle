@@ -1901,7 +1901,11 @@ class TestGridRegionTemplate:
         return defaults
 
     def test_renders_canonical_wrapper_and_grid(self) -> None:
-        """Gates 1 + 2: dz-grid-region + responsive CSS grid container."""
+        """Gates 1 + 2: dz-grid-region wrapper + .dz-grid-list container.
+
+        v0.62 CSS refactor: responsive 1/2/3-column layout lives on
+        .dz-grid-list (components/regions.css) via @media breakpoints,
+        not inline `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` Tailwind."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1909,10 +1913,19 @@ class TestGridRegionTemplate:
             ),
         )
         assert "dz-grid-region" in html
-        # Responsive grid utilities
-        assert "grid-cols-1" in html
-        assert "sm:grid-cols-2" in html
-        assert "lg:grid-cols-3" in html
+        assert "dz-grid-list" in html
+
+        # Verify the CSS rule defines responsive breakpoints
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        # 1-col baseline + 2-col at 40rem + 3-col at 64rem
+        assert ".dz-grid-list {" in css
+        assert "@media (min-width: 40rem)" in css
+        assert "@media (min-width: 64rem)" in css
 
     def test_cell_count_matches_items_length(self) -> None:
         """Gate 3: dz-grid-cell count equals len(items)."""
@@ -1926,10 +1939,18 @@ class TestGridRegionTemplate:
                 ],
             ),
         )
-        assert html.count("dz-grid-cell") == 3
+        # `dz-grid-cell` substring appears once per cell as the class.
+        # Use a stricter count that excludes adjacent classes like
+        # dz-grid-cell-title / dz-grid-cell-field — count the leading
+        # `class="dz-grid-cell ` opener.
+        assert html.count('class="dz-grid-cell ') == 3
 
     def test_primary_label_in_h4(self) -> None:
-        """Gate 4: each cell contains <h4> with display_key value + foreground token."""
+        """Gate 4: each cell contains <h4> with display_key value.
+
+        v0.62 CSS refactor: title colour token lives on the
+        .dz-grid-cell-title CSS rule rather than inline
+        `text-[hsl(var(--foreground))]` Tailwind."""
         html = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -1937,7 +1958,7 @@ class TestGridRegionTemplate:
             ),
         )
         assert "<h4" in html
-        assert "hsl(var(--foreground))" in html
+        assert "dz-grid-cell-title" in html
         assert "Alpha" in html
 
     def test_non_primary_columns_render_as_paragraphs(self) -> None:
@@ -2013,7 +2034,10 @@ class TestGridRegionTemplate:
         assert "border-l-[hsl(var(--primary))]" in html
 
     def test_htmx_drill_down_wired_when_action_url(self) -> None:
-        """Gate 7: cells have hx-get iff action_url is non-empty."""
+        """Gate 7: cells have hx-get + .is-clickable iff action_url is non-empty.
+
+        v0.62 CSS refactor: cursor + hover state live on the
+        .is-clickable modifier (CSS rule on .dz-grid-cell.is-clickable)."""
         with_action = render_fragment(
             "workspace/regions/grid.html",
             **self._grid_kwargs(
@@ -2023,7 +2047,7 @@ class TestGridRegionTemplate:
         )
         assert 'hx-get="/app/system/abc123"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/grid.html",
@@ -2033,7 +2057,7 @@ class TestGridRegionTemplate:
             ),
         )
         assert "hx-get=" not in without_action
-        assert "cursor-pointer" not in without_action
+        assert "is-clickable" not in without_action
 
     def test_ref_anchor_stop_propagation(self) -> None:
         """Gate 8: ref column anchor includes event.stopPropagation() onclick.
