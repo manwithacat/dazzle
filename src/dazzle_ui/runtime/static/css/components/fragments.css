@@ -2552,3 +2552,30 @@
     display: block;
   }
 }
+
+/* ─────────────────────────── app body chrome ────────────────────
+ * <body> level chrome — full-viewport background + min-height so
+ * short pages still fill the screen with the surface colour.
+ * Replaces inline `min-h-screen bg-[hsl(var(--background))]`. */
+
+.dz-app-body {
+  min-height: 100vh;
+  background: var(--colour-bg);
+}
+
+/* ─────────────────────────── toast stack ────────────────────────
+ * Fixed-position container for stacked toast notifications. Two
+ * separate stacks (Alpine dzToast + HTMX OOB) share the same
+ * chrome — extracting it kills the duplicated Tailwind string. */
+
+.dz-toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 24rem;
+  pointer-events: none;
+}
