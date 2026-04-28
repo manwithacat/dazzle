@@ -146,11 +146,32 @@ class TestModal:
         assert "<dialog" in html
         assert "Edit Item" in html
         assert "Fields" in html
-        # Post-DaisyUI refactor: native <dialog> uses CSS ::backdrop pseudo
-        # via Tailwind's `backdrop:` prefix, not a modal-backdrop class.
-        assert "backdrop:bg-black" in html
+        # v0.62 CSS refactor: <dialog> chrome lives on `.dz-modal` rule
+        # in components/fragments.css. Backdrop tinting now keyed off
+        # the native `.dz-modal::backdrop` pseudo-element selector
+        # rather than Tailwind's `backdrop:` prefix.
+        assert 'class="dz-modal"' in html
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert ".dz-modal::backdrop" in css
 
     def test_size_classes(self, jinja_env):
         tmpl = jinja_env.from_string('{% include "components/modal.html" %}')
         html = tmpl.render(title="Big", size="xl")
-        assert "max-w-4xl" in html
+        # v0.62 CSS refactor: size moved from inline `max-w-4xl` Tailwind
+        # to the `data-dz-modal-size="xl"` attribute selector consumed by
+        # `.dz-modal[data-dz-modal-size="xl"] .dz-modal-panel` in
+        # components/fragments.css.
+        assert 'data-dz-modal-size="xl"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        assert '.dz-modal[data-dz-modal-size="xl"]' in css

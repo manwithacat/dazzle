@@ -5655,10 +5655,13 @@ class TestAlpineDropdownComponent:
         assert "Actions" in html
 
     def test_caret_rotates_on_open(self) -> None:
-        """Gate 3b: caret SVG has `:class="open && 'rotate-180'"`."""
+        """Gate 3b: caret SVG flips on open. v0.62 CSS refactor: rotation
+        moved from `:class="open && 'rotate-180'"` to a `:style` binding
+        with rotate(180deg) since the panel chrome no longer ships
+        Tailwind utility classes. Pin the inline rotate transform."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "transition-transform" in html
-        assert "'rotate-180'" in html
+        assert "transform: rotate(180deg)" in html
+        assert "transition: transform" in html
 
     def test_menu_is_ul_with_x_show(self) -> None:
         """Gate 4: menu is <ul x-show="open">."""
@@ -5668,19 +5671,41 @@ class TestAlpineDropdownComponent:
         assert "x-transition" in html
 
     def test_menu_positioned_below_right(self) -> None:
-        """Gate 5: menu has absolute right-0 mt-1 z-50 positioning."""
+        """Gate 5: menu is right-anchored absolute panel. v0.62 CSS
+        refactor: positioning moved to .dz-dropdown-panel rule with
+        an inline override for inset-inline-end:0."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "absolute" in html
-        assert "right-0" in html
-        assert "z-50" in html
+        assert "dz-dropdown-panel" in html
+        assert "inset-inline-end: 0" in html
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        panel_block = css.split(".dz-dropdown-panel {")[1].split("}")[0]
+        assert "position: absolute" in panel_block
+        assert "z-index: 30" in panel_block
 
     def test_menu_chrome_uses_design_tokens(self) -> None:
-        """Gate 6: menu chrome references --card, --border tokens."""
+        """Gate 6: menu chrome references --colour-surface + --colour-border
+        tokens. v0.62 CSS refactor: tokens moved from inline
+        `bg-[hsl(var(--card))] border-[hsl(var(--border))]` to the
+        .dz-dropdown-panel rule in components/fragments.css."""
         html = self._render(dropdown_label="X", dropdown_items=[])
-        assert "bg-[hsl(var(--card))]" in html
-        assert "border-[hsl(var(--border))]" in html
-        assert "rounded-lg" in html
-        assert "shadow-md" in html
+        assert "dz-dropdown-panel" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        panel_block = css.split(".dz-dropdown-panel {")[1].split("}")[0]
+        assert "var(--colour-surface)" in panel_block
+        assert "var(--colour-border)" in panel_block
+        assert "border-radius:" in panel_block
+        assert "box-shadow:" in panel_block
 
     def test_item_count_matches_dropdown_items(self) -> None:
         """Gate 7: DOM contains len(dropdown_items) <li> elements."""

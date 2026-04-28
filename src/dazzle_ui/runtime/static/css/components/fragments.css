@@ -749,6 +749,15 @@
   height: 1rem;
 }
 
+.dz-slideover-body {
+  padding: var(--space-md);
+}
+
+.dz-slideover-empty-text {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
 .dz-slideover-content {
   padding: var(--space-md);
 }
@@ -2735,4 +2744,217 @@
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
   margin-block-end: var(--space-md);
+}
+
+/* ─────────────────────────── modal (dormant — UX contract only) ─
+ * Used by the dormant components/modal.html primitive. No production
+ * consumer today; classes exist so the eventual Tailwind teardown
+ * doesn't break the component if revived. Same shape as .dz-slideover
+ * but as a centred <dialog> element. */
+
+.dz-modal {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  transition: opacity var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out);
+}
+
+.dz-modal::backdrop {
+  background: oklch(0% 0 0 / 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.dz-modal[open] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.dz-modal:not([open]) {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.dz-modal-panel {
+  inline-size: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.dz-modal[data-dz-modal-size="sm"] .dz-modal-panel { max-inline-size: 24rem; }
+.dz-modal[data-dz-modal-size="md"] .dz-modal-panel { max-inline-size: 32rem; }
+.dz-modal[data-dz-modal-size="lg"] .dz-modal-panel { max-inline-size: 42rem; }
+.dz-modal[data-dz-modal-size="xl"] .dz-modal-panel { max-inline-size: 56rem; }
+
+.dz-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-xl);
+  padding-block-start: var(--space-xl);
+  padding-block-end: var(--space-sm);
+}
+
+.dz-modal-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.dz-modal-close-form {
+  margin: 0;
+}
+
+.dz-modal-close-form-floating {
+  position: absolute;
+  inset-inline-end: var(--space-md);
+  inset-block-start: var(--space-md);
+  margin: 0;
+}
+
+.dz-modal-body {
+  padding-inline: var(--space-xl);
+  padding-block: var(--space-md);
+  max-block-size: 70vh;
+  overflow-y: auto;
+  font-size: var(--text-sm);
+}
+
+.dz-modal-backdrop-form {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  z-index: -1;
+}
+
+.dz-modal-backdrop-button {
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: default;
+  background: transparent;
+  border: 0;
+}
+
+/* ─────────────────────────── confirm dialog (dormant) ───────────
+ * Used by components/alpine/confirm_dialog.html. */
+
+.dz-confirm-dialog {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.dz-confirm-dialog::backdrop {
+  background: oklch(0% 0 0 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.dz-confirm-panel {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-inline-size: 24rem;
+  inline-size: 100%;
+  padding: var(--space-lg);
+}
+
+.dz-confirm-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.dz-confirm-message {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0 0 var(--space-lg) 0;
+}
+
+.dz-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.dz-confirm-spinner {
+  block-size: 0.875rem;
+  inline-size: 0.875rem;
+  animation: dz-spin 0.6s linear infinite;
+}
+
+@keyframes dz-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────── dropdown (dormant) ─────────────────
+ * Used by components/alpine/dropdown.html. Minimal chrome — Alpine
+ * controls visibility via x-show/x-cloak. */
+
+.dz-dropdown-root {
+  position: relative;
+  display: inline-block;
+}
+
+.dz-dropdown-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 0.25rem);
+  inset-inline-start: 0;
+  z-index: 30;
+  min-inline-size: 12rem;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding-block: var(--space-xs);
+}
+
+.dz-dropdown-item {
+  display: block;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dz-dropdown-item:hover {
+  background: var(--colour-bg);
+}
+
+/* ─────────────────────────── island (dormant) ───────────────────
+ * Generic dashboard island wrapper — used by components/island.html
+ * (UX-059), no production consumer. */
+
+.dz-island {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.dz-island-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-md);
+}
+
+.dz-island-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-island-skeleton {
+  block-size: 8rem;
+  inline-size: 100%;
+  border-radius: var(--radius-sm);
 }
