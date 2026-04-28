@@ -1,5 +1,10 @@
 {# Bar chart region — UX-035 adopter #9.
-   Contract: ~/.claude/skills/ux-architect/components/bar-chart-region.md (UX-065) #}
+   Contract: ~/.claude/skills/ux-architect/components/bar-chart-region.md (UX-065)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-bar-chart-* classes
+   (components/regions.css). Three branches (per-bucket aggregate, items+
+   group_by client-side rollup, metrics fallback) all share the same row
+   shape: label / track / value. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% from 'macros/status_badge.html' import render_status_badge %}
 {% call region_card(title) %}
@@ -11,18 +16,16 @@
      many source rows landed in each bucket. #}
   {% set max_val = bucketed_metrics | map(attribute='value') | max if bucketed_metrics else 1 %}
   {% set max_val = max_val if max_val > 0 else 1 %}
-  <div class="dz-bar-chart-bars space-y-2 mt-2">
+  <div class="dz-bar-chart-bars">
     {% for bucket in bucketed_metrics %}
-    <div class="dz-bar-chart-row flex items-center gap-2">
-      <span class="text-[11px] w-24 truncate text-right">
+    <div class="dz-bar-chart-row">
+      <span class="dz-bar-chart-label">
         {{ render_status_badge(value=bucket.label, size='sm') }}
       </span>
-      <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
-        <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             style="width: {{ (bucket.value / max_val * 100) | int }}%">
-        </div>
+      <div class="dz-bar-chart-track">
+        <div class="dz-bar-chart-fill" style="width: {{ (bucket.value / max_val * 100) | int }}%"></div>
       </div>
-      <span class="text-[11px] font-mono text-[hsl(var(--muted-foreground))] w-10 text-right">{{ bucket.value }}</span>
+      <span class="dz-bar-chart-value">{{ bucket.value }}</span>
     </div>
     {% endfor %}
   </div>
@@ -38,41 +41,37 @@
   {% endfor %}
   {% set max_count = grouped.values() | max if grouped.values() | list else 1 %}
   {% set max_count = max_count if max_count > 0 else 1 %}
-  <div class="dz-bar-chart-bars space-y-2 mt-2">
+  <div class="dz-bar-chart-bars">
     {% for label, count in grouped.items() %}
-    <div class="dz-bar-chart-row flex items-center gap-2">
-      <span class="text-[11px] w-24 truncate text-right">
+    <div class="dz-bar-chart-row">
+      <span class="dz-bar-chart-label">
         {{ render_status_badge(value=label, size='sm') }}
       </span>
-      <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
-        <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             style="width: {{ (count / max_count * 100) | int }}%">
-        </div>
+      <div class="dz-bar-chart-track">
+        <div class="dz-bar-chart-fill" style="width: {{ (count / max_count * 100) | int }}%"></div>
       </div>
-      <span class="text-[11px] font-mono text-[hsl(var(--muted-foreground))] w-8 text-right">{{ count }}</span>
+      <span class="dz-bar-chart-value">{{ count }}</span>
     </div>
     {% endfor %}
   </div>
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">{{ total }} total</p>
+  <p class="dz-bar-chart-summary">{{ total }} total</p>
   {% elif metrics %}
   {# Fallback: render aggregate metrics as bars #}
   {% set max_val = metrics | map(attribute='value') | max if metrics else 1 %}
   {% set max_val = max_val if max_val > 0 else 1 %}
-  <div class="dz-bar-chart-bars space-y-2 mt-2">
+  <div class="dz-bar-chart-bars">
     {% for metric in metrics %}
-    <div class="dz-bar-chart-row flex items-center gap-2">
-      <span class="text-[11px] text-[hsl(var(--muted-foreground))] w-28 truncate text-right">{{ metric.label }}</span>
-      <div class="flex-1 bg-[hsl(var(--muted))] rounded-full h-5 overflow-hidden">
-        <div class="h-full rounded-full bg-[hsl(var(--primary))] transition-[width] duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
-             style="width: {{ (metric.value / max_val * 100) | int }}%">
-        </div>
+    <div class="dz-bar-chart-row">
+      <span class="dz-bar-chart-label is-wide">{{ metric.label }}</span>
+      <div class="dz-bar-chart-track">
+        <div class="dz-bar-chart-fill" style="width: {{ (metric.value / max_val * 100) | int }}%"></div>
       </div>
-      <span class="text-[11px] font-mono text-[hsl(var(--foreground))] w-10 text-right">{{ metric.value }}</span>
+      <span class="dz-bar-chart-value is-wide">{{ metric.value }}</span>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

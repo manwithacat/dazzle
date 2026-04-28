@@ -13,7 +13,11 @@
    multi-measure support in `_compute_bucketed_aggregates`).
 
    Card safety: region emits zero chrome + zero title. The dashboard
-   slot owns both via region_card. #}
+   slot owns both via region_card.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-bullet-* classes
+   (components/regions.css). Per-band colour stays inline (per-element
+   shape colour driven by reference_bands data). #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-bullet-region">
@@ -25,13 +29,13 @@
       'destructive': 'hsl(var(--destructive))',
       'muted': 'hsl(var(--muted-foreground))',
     } %}
-    <div class="dz-bullet-rows space-y-2 mt-2">
+    <div class="dz-bullet-rows">
       {% for row in bullet_rows %}
         {% set actual_pct = (row.actual / bullet_max_value * 100) %}
         {% set target_pct = (row.target / bullet_max_value * 100) if row.target is not none else 0 %}
-        <div class="dz-bullet-row flex items-center gap-2 text-[12px]">
-          <span class="dz-bullet-label w-24 truncate text-right text-[hsl(var(--foreground))]">{{ row.label }}</span>
-          <div class="dz-bullet-track flex-1 relative h-5 bg-[hsl(var(--muted))] rounded-sm overflow-hidden">
+        <div class="dz-bullet-row">
+          <span class="dz-bullet-label">{{ row.label }}</span>
+          <div class="dz-bullet-track">
             {# Comparative bands behind the bar — render before the bar
                so the bar sits on top. Bands are absolute-positioned by
                from/to as a percentage of bullet_max_value. #}
@@ -39,34 +43,34 @@
               {% set band_left_pct = (band['from'] / bullet_max_value * 100) %}
               {% set band_width_pct = ((band.to - band['from']) / bullet_max_value * 100) %}
               {% set band_colour = _band_colours.get(band.color, _band_colours['target']) %}
-              <span class="dz-bullet-band absolute top-0 bottom-0"
-                    style="left: {{ band_left_pct | round(2) }}%; width: {{ band_width_pct | round(2) }}%; background: {{ band_colour }}; opacity: 0.18;"
+              <span class="dz-bullet-band"
+                    style="left: {{ band_left_pct | round(2) }}%; width: {{ band_width_pct | round(2) }}%; background: {{ band_colour }};"
                     title="{{ band.label }}: {{ band['from'] }}–{{ band.to }}"></span>
             {% endfor %}
             {# Actual bar — primary tint, full opacity so it reads above
                the muted bands. #}
-            <span class="dz-bullet-actual absolute top-1 bottom-1 bg-[hsl(var(--primary))] rounded-sm"
-                  style="left: 0; width: {{ actual_pct | round(2) }}%;"
+            <span class="dz-bullet-actual"
+                  style="width: {{ actual_pct | round(2) }}%;"
                   title="{{ row.label }} actual: {{ row.actual }}"></span>
             {# Target tick — vertical line at target_pct. Only render
                when the row has a target value. #}
             {% if row.target is not none %}
-              <span class="dz-bullet-target absolute top-0 bottom-0 w-[2px] bg-[hsl(var(--foreground))]"
+              <span class="dz-bullet-target"
                     style="left: {{ target_pct | round(2) }}%;"
                     title="{{ row.label }} target: {{ row.target }}"></span>
             {% endif %}
           </div>
-          <span class="dz-bullet-value w-16 text-right font-mono text-[hsl(var(--muted-foreground))]">
+          <span class="dz-bullet-value">
             {{ row.actual | round(1) }}{% if row.target is not none %} / {{ row.target | round(1) }}{% endif %}
           </span>
         </div>
       {% endfor %}
     </div>
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-bullet-summary">
       {{ bullet_rows | length }} rows · scale 0–{{ bullet_max_value | round(1) }}
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

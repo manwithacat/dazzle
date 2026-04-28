@@ -1744,21 +1744,38 @@ class TestBarChartRegionTemplate:
         assert "width: 100%" in html
 
     def test_track_and_fill_use_design_tokens(self) -> None:
-        """Gate 5: track → --muted, fill → --primary. No hardcoded HSL."""
+        """Gate 5: track + fill chrome live on semantic CSS rules.
+
+        v0.62 CSS refactor: track surface (`--colour-bg`) and fill
+        (`--colour-brand`) tokens live on `.dz-bar-chart-track` and
+        `.dz-bar-chart-fill` rules in components/regions.css rather
+        than inline `bg-[hsl(var(--muted))]` / `bg-[hsl(var(--primary))]`
+        Tailwind."""
         html = render_fragment(
             "workspace/regions/bar_chart.html",
             **self._bar_kwargs(
                 metrics=[{"label": "X", "value": 1}],
             ),
         )
-        assert "hsl(var(--muted))" in html
-        assert "hsl(var(--primary))" in html
+        assert "dz-bar-chart-track" in html
+        assert "dz-bar-chart-fill" in html
         # No hardcoded HSL literals in class attributes
         import re
 
-        # Exclude the one legitimate inline style="width: N%"
         class_hsl_leaks = re.findall(r'class="[^"]*hsl\(\d', html)
         assert not class_hsl_leaks, f"hardcoded HSL in class attr: {class_hsl_leaks}"
+
+        # CSS rules carry the right tokens
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        track_block = css.split(".dz-bar-chart-track {")[1].split("}")[0]
+        fill_block = css.split(".dz-bar-chart-fill {")[1].split("}")[0]
+        assert "background: var(--colour-bg)" in track_block
+        assert "background: var(--colour-brand)" in fill_block
 
     def test_grouped_mode_renders_total_footer(self) -> None:
         """Gate 6: grouped mode ends with '{total} total' paragraph."""
@@ -2193,7 +2210,11 @@ class TestTimelineRegionTemplate:
         return datetime.utcnow()
 
     def test_renders_canonical_wrapper_and_list(self) -> None:
-        """Gates 1 + 2: dz-timeline-region + dz-timeline-list <ul>."""
+        """Gates 1 + 2: dz-timeline-region + dz-timeline-list <ul>.
+
+        v0.62 CSS refactor: the left rail (border-inline-start) lives
+        on the .dz-timeline-list CSS rule, not as inline `border-l`
+        Tailwind on the <ul>."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2211,7 +2232,16 @@ class TestTimelineRegionTemplate:
         assert "dz-timeline-region" in html
         assert "dz-timeline-list" in html
         assert "<ul" in html
-        assert "border-l" in html
+
+        # The left rail lives in CSS now
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        timeline_block = css.split(".dz-timeline-list {")[1].split("}")[0]
+        assert "border-inline-start: 1px solid var(--colour-border)" in timeline_block
 
     def test_item_count_matches_items_length(self) -> None:
         """Gate 3: dz-timeline-item count equals len(items)."""
@@ -2244,7 +2274,11 @@ class TestTimelineRegionTemplate:
         assert html.count("dz-timeline-item") == 3
 
     def test_bullet_marker_per_item(self) -> None:
-        """Gate 4: each item has one dz-timeline-bullet SVG."""
+        """Gate 4: each item has one dz-timeline-bullet SVG.
+
+        v0.62 CSS refactor: the wrapper class .dz-timeline-bullet-wrap
+        also contains the substring 'dz-timeline-bullet', so count the
+        SVG class attribute specifically."""
         html = render_fragment(
             "workspace/regions/timeline.html",
             **self._timeline_kwargs(
@@ -2265,7 +2299,9 @@ class TestTimelineRegionTemplate:
                 total=2,
             ),
         )
-        assert html.count("dz-timeline-bullet") == 2
+        # Match the SVG element's class attribute (which starts with
+        # `dz-timeline-bullet ` followed by an attention-tone class).
+        assert html.count('class="dz-timeline-bullet ') == 2
 
     def test_bullet_colour_critical_uses_destructive_token(self) -> None:
         """Gate 5 (critical): _attention={level:critical} → --destructive."""
@@ -2341,7 +2377,8 @@ class TestTimelineRegionTemplate:
         )
         assert 'hx-get="/app/event/abc"' in with_action
         assert "#dz-detail-drawer-content" in with_action
-        assert "cursor-pointer" in with_action
+        # v0.62 CSS refactor: cursor + hover live on .is-clickable
+        assert "is-clickable" in with_action
 
         without_action = render_fragment(
             "workspace/regions/timeline.html",
@@ -2352,6 +2389,7 @@ class TestTimelineRegionTemplate:
             ),
         )
         assert "hx-get=" not in without_action
+        assert "is-clickable" not in without_action
 
     def test_truncation_footer_conditional(self) -> None:
         """Gate 9: 'Showing N of M' renders only when total > len(items)."""
@@ -3648,9 +3686,10 @@ class TestTimelineTemplate:
         )
         assert "Created company" in html
         assert "Started CDD" in html
-        # Post-DaisyUI refactor: timeline shape is now a border-l vertical rule
-        # + space-y-3 stack instead of a named timeline class.
-        assert "pl-4 border-l border-[hsl(var(--border))]" in html
+        # v0.62 CSS refactor: timeline list shape (left rail + stacked
+        # items) lives on .dz-timeline-list rather than inline
+        # `pl-4 border-l border-[hsl(var(--border))]`.
+        assert "dz-timeline-list" in html
 
     def test_timeline_empty(self) -> None:
         html = render_fragment(

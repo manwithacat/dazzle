@@ -920,3 +920,226 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+/* ─────────────────────────── bullet chart region ───────────────
+ * Stephen Few bullet rows. Three fixed columns: label (right) /
+ * track / value. Track contains: optional reference bands behind,
+ * actual bar, target tick. Band/bar/tick are absolutely positioned
+ * inside the relative track. */
+
+.dz-bullet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-bullet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.dz-bullet-label {
+  width: 6rem;
+  text-align: end;
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-bullet-track {
+  flex: 1 1 0;
+  position: relative;
+  height: 1.25rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.dz-bullet-band {
+  position: absolute;
+  inset-block: 0;
+  opacity: 0.18;
+}
+
+.dz-bullet-actual {
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline-start: 0;
+  background: var(--colour-brand);
+  border-radius: var(--radius-sm);
+}
+
+.dz-bullet-target {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: var(--colour-text);
+}
+
+.dz-bullet-value {
+  width: 4rem;
+  text-align: end;
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.dz-bullet-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
+
+/* ─────────────────────────── timeline region ────────────────────
+ * Vertical timeline (similar shape to activity_feed). Bullet
+ * marker on the left rail, date column, content pad. Shares the
+ * .dz-activity-* dot/bullet pattern but renders item-shape rather
+ * than bare message. */
+
+.dz-timeline-list {
+  position: relative;
+  padding-inline-start: var(--space-md);
+  border-inline-start: 1px solid var(--colour-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  list-style: none;
+  margin: 0;
+}
+
+.dz-timeline-item {
+  position: relative;
+}
+
+.dz-timeline-bullet-wrap {
+  position: absolute;
+  inset-inline-start: -1.3125rem;
+  top: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-timeline-bullet {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-timeline-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.dz-timeline-date {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  min-width: 5rem;
+  padding-block-start: 0.25rem;
+}
+
+.dz-timeline-content {
+  flex: 1 1 0;
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+.dz-timeline-content.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-timeline-content.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-timeline-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-timeline-field {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.dz-timeline-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+/* ─────────────────────────── bar_chart region ───────────────────
+ * Horizontal bar rows: label (right) / track / value (right). The
+ * track has rounded-full chrome; the fill is brand-coloured and
+ * its width is the inline value-derived percentage. */
+
+.dz-bar-chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-bar-chart-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dz-bar-chart-label {
+  width: 6rem;
+  text-align: end;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-bar-chart-label.is-wide {
+  width: 7rem;
+  color: var(--colour-text-muted);
+}
+
+.dz-bar-chart-track {
+  flex: 1 1 0;
+  height: 1.25rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.dz-bar-chart-fill {
+  height: 100%;
+  background: var(--colour-brand);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.dz-bar-chart-value {
+  width: 2.5rem;
+  text-align: end;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.dz-bar-chart-value.is-wide {
+  width: 2.5rem;
+  color: var(--colour-text);
+}
+
+.dz-bar-chart-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
