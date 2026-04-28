@@ -39,5 +39,27 @@
 @import url("components/regions.css") layer(components);
 @import url("components/table.css") layer(components);
 
+/* Legacy framework files retained from the pre-v0.62 stack. The
+ * templates were migrated to .dz-* semantic classes that live in the
+ * new components/*.css above, but these legacy files still own:
+ *   - dazzle-layer.css : structural shell (.dz-app, .dz-app__main)
+ *   - design-system.css: shadcn-zinc design tokens (var(--background) etc)
+ *   - site-sections.css: marketing-page section grammar
+ *   - dz.css           : micro-runtime CSS-only transitions
+ *   - dz-tones.css     : tone-tinting attribute selectors (#906)
+ *   - dz-widgets.css   : vendored widget theme overrides
+ * Until each is decomposed into the new layer system, they load here
+ * so their rules continue to apply.
+ *
+ * Found broken in production by aegismark on the v0.62 merge — base.html
+ * had been left pointing at the old `dazzle-framework.css` entry which
+ * imported only the legacy stack and skipped every component family. */
+@import url("design-system.css") layer(tokens);
+@import url("dazzle-layer.css") layer(components);
+@import url("site-sections.css") layer(components);
+@import url("dz.css");
+@import url("dz-widgets.css");
+@import url("dz-tones.css");
+
 /* Additional component imports land here as families migrate.
  * Track migration status in dev_docs/css-refactor-phase-0-notes.md. */

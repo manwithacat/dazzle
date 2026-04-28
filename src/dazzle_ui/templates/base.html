@@ -27,8 +27,9 @@
 
   {# v0.62 CSS refactor (Phase 4 teardown): Tailwind compiled bundle
      removed. All UI templates now consume the semantic .dz-* class
-     families from dazzle-framework.css (loaded below) and friends —
-     no more JIT compilation step required at build time. #}
+     families from dazzle.css (loaded below) and the legacy framework
+     files it @imports — no more JIT compilation step required at build
+     time. #}
   {# v0.61.36: optional app-shell theme override. The bundle ships
      design-system.css's default shadcn-zinc tokens; this <link> loads
      an alternate :root block (e.g. linear-dark) AFTER the bundle so
@@ -85,8 +86,14 @@
   <script defer src="{{ 'js/dz-alpine.js' | static_url }}"></script>
   <script defer src="{{ 'js/dashboard-builder.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/alpine.min.js' | static_url }}"></script>
-  {# Dazzle framework CSS (local — framework layer via @import) #}
-  <link rel="stylesheet" href="{{ 'css/dazzle-framework.css' | static_url }}">
+  {# Dazzle framework CSS — single entry point that declares the
+     cascade-layer order (reset, vendor, tokens, base, utilities,
+     components, overrides) and @imports every layer + component file
+     including the legacy dz.css / dz-tones.css / dazzle-layer.css
+     friends still relied on by templates. Found broken on v0.62
+     merge (was pointing at the old `dazzle-framework.css` entry that
+     skipped every component family). #}
+  <link rel="stylesheet" href="{{ 'css/dazzle.css' | static_url }}">
   <script defer src="{{ 'js/dz-a11y.js' | static_url }}"></script>
   <script defer src="{{ 'js/dz-islands.js' | static_url }}"></script>
   <script defer src="{{ 'js/dz-component-bridge.js' | static_url }}"></script>

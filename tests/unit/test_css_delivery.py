@@ -130,6 +130,67 @@ class TestCssLoader:
             assert f in source_map["sources"]
 
 
+class TestDazzleCssEntry:
+    """v0.62 (post-merge bug fix): base.html must load `dazzle.css` —
+    NOT the legacy `dazzle-framework.css` — and dazzle.css must @import
+    every component family + every legacy framework file the templates
+    still rely on. Found broken in production by aegismark on the v0.62
+    merge: base.html had been left pointing at dazzle-framework.css
+    which only imported the legacy stack and skipped every
+    components/*.css file (incl. the load-bearing fragments.css)."""
+
+    @classmethod
+    def _base_html(cls) -> str:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        return (repo_root / "src/dazzle_ui/templates/base.html").read_text()
+
+    @classmethod
+    def _dazzle_css(cls) -> str:
+        return (STATIC_CSS / "dazzle.css").read_text()
+
+    def test_base_html_loads_dazzle_css(self) -> None:
+        contents = self._base_html()
+        assert "'css/dazzle.css'" in contents
+
+    def test_base_html_does_not_load_legacy_entry(self) -> None:
+        """Guard against accidental revert to the legacy entry point."""
+        contents = self._base_html()
+        assert "'css/dazzle-framework.css'" not in contents
+
+    def test_dazzle_css_imports_every_component_family(self) -> None:
+        """The 9 component families MUST be @imported — they own every
+        .dz-* class the v0.62 refactor moved templates to consume."""
+        css = self._dazzle_css()
+        for family in (
+            "components/badge.css",
+            "components/button.css",
+            "components/dashboard.css",
+            "components/detail.css",
+            "components/form.css",
+            "components/fragments.css",
+            "components/htmx-states.css",
+            "components/regions.css",
+            "components/table.css",
+        ):
+            assert f'@import url("{family}")' in css, f"{family} missing"
+
+    def test_dazzle_css_imports_legacy_framework_files(self) -> None:
+        """The legacy framework files still own rules templates rely on
+        (dz-app structural shell, design-system tokens, dz-tones tinting,
+        dz.css transitions, etc.). They MUST be @imported by dazzle.css
+        so the cascade still resolves their rules."""
+        css = self._dazzle_css()
+        for legacy in (
+            "dazzle-layer.css",
+            "design-system.css",
+            "site-sections.css",
+            "dz.css",
+            "dz-widgets.css",
+            "dz-tones.css",
+        ):
+            assert f'@import url("{legacy}")' in css, f"{legacy} missing"
+
+
 class TestBuildDist:
     @classmethod
     def setup_class(cls) -> None:

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.82] - 2026-04-28
+
 ### v0.62 CSS refactor — semantic class families replace inline Tailwind
 
 A multi-cycle big-bang migration. Every Dazzle UI template now consumes
@@ -105,6 +107,20 @@ two `<link rel="stylesheet" href="…dazzle-bundle.css">` references in
   `border-[hsl(var(--destructive))]` conditionals. The aria attribute
   is the single source of truth (visual + screen reader behaviour
   share one attribute).
+
+### Fixed (post-merge)
+- **`templates/base.html` + `static/css/dazzle.css`** — the v0.62
+  merge left base.html pointing at the legacy `dazzle-framework.css`
+  entry, which only `@import`s the legacy 6-file stack
+  (dazzle-layer, design-system, site-sections, dz, dz-widgets,
+  dz-tones) and skipped every `components/*.css` file — including
+  the load-bearing `fragments.css` — so every template the v0.62
+  refactor migrated rendered unstyled. base.html now loads
+  `dazzle.css`, and `dazzle.css` was extended to also `@import` the
+  legacy framework files (whose tone/transition/structural rules
+  the templates still rely on). Reported by aegismark; new
+  `TestDazzleCssEntry` regression class in
+  `tests/unit/test_css_delivery.py` pins both invariants.
 
 ## [0.61.81] - 2026-04-28
 
