@@ -732,6 +732,14 @@ class DazzleBackendApp:
         )
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
+        # #933: register the AuthStore with the module-level singleton
+        # so project route handlers can call `current_user_id(request)`
+        # / `current_user(request)` / `@require_auth(...)` without
+        # re-implementing the cookie + sessions-table dance.
+        from dazzle_back.runtime.auth import register_auth_store
+
+        register_auth_store(self._auth_store)
+
         from dazzle_back.runtime.auth import (
             create_auth_dependency,
             create_optional_auth_dependency,

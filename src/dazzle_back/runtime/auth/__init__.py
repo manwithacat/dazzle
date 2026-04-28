@@ -6,6 +6,13 @@ two-factor authentication, and JWT token endpoints.
 """
 
 from .crypto import hash_password, verify_password
+from .current import (
+    current_auth,
+    current_user,
+    current_user_id,
+    register_auth_store,
+    require_auth,
+)
 from .dependencies import (
     create_auth_dependency,
     create_deny_dependency,
@@ -66,6 +73,11 @@ __all__ = [
     "create_deny_dependency",
     "create_jwt_auth_routes",
     "create_optional_auth_dependency",
+    "current_auth",
+    "current_user",
+    "current_user_id",
+    "register_auth_store",
+    "require_auth",
     "emit_user_logged_in",
     "emit_user_password_changed",
     "emit_user_registered",

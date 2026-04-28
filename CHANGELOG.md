@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.99] - 2026-04-28
+
+### Added
+- **`runtime/auth/current.py`** — closes #933. Project route handlers
+  declared via `# dazzle:route-override` had to re-implement the
+  cookie + sessions-table dance themselves (12-line snippet copy-pasted
+  in every handler that needed auth). Exposed thin wrappers around
+  `AuthStore.validate_session`:
+  - `current_user_id(request) -> str | None` — UUID string or None
+  - `current_user(request) -> dict | None` — `{id, email, roles, preferences}`
+  - `current_auth(request) -> AuthContext` — full pydantic context (always returns; check `.is_authenticated`)
+  - `@require_auth(roles=["..."])` — decorator returning 401/403 JSONResponses; injects `auth: AuthContext` kwarg into the wrapped handler
+  - `register_auth_store(store)` — server wires this at startup; tests can install stubs
+  All helpers are best-effort: malformed sessions, DB errors, and
+  unauthenticated paths all map to `None` / empty `AuthContext` so
+  callers don't need try/except around every call. Role-required spec
+  accepts both `role_*` (DB-style) and bare (persona-id-style) names.
+  Regression tests in `tests/unit/test_auth_current_helpers.py` (14
+  cases) cover both helpers and the decorator's gating semantics.
+
+### Agent Guidance
+- For project route overrides that need auth, prefer
+  `from dazzle_back.runtime.auth import current_user_id, require_auth`
+  over hand-rolling `SELECT user_id FROM sessions ...`. The
+  framework's session validation handles expiry + token rotation
+  correctly and a hand-rolled query won't.
+
 ## [0.61.98] - 2026-04-28
 
 ### Fixed
