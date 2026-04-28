@@ -1,0 +1,257 @@
+/*
+ * regions.css — region templates' visualisation chrome.
+ *
+ * Workspace regions (templates/workspace/regions/*.html) historically
+ * carried both a semantic class (.dz-progress-region etc.) AND a
+ * companion inline Tailwind utility string. v0.62 keeps the semantic
+ * names — they were already the right shape — and moves the visuals
+ * into this file. The .dz-empty-dense placeholder is shared with
+ * detail.css.
+ *
+ * Migrated families:
+ *   - progress      progress bar + stage chips (success/warning/neutral)
+ *   - bar_track     horizontal value bars w/ label and formatted value
+ *   - profile_card  identity panel (avatar / name / meta / stats / facts)
+ *
+ * Wrapped in @layer components.
+ */
+
+/* ─────────────────────────── progress region ────────────────────
+ * Header row: <progress> bar + percentage label. Stages row: chips
+ * coloured by status (complete=success, in-progress=warning,
+ * empty=neutral). Optional summary line beneath. */
+
+.dz-progress-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-progress-header > progress {
+  flex: 1 1 0;
+  height: 0.5rem;
+  width: 100%;
+}
+
+.dz-progress-header > span {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  color: var(--colour-text);
+}
+
+.dz-progress-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.dz-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+}
+
+/* Per-stage tone — driven by data-dz-stage-tone (template emits
+ * "complete" / "active" / "empty"). Mirror of the badge tone system. */
+.dz-progress-chip[data-dz-stage-tone="complete"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+  border-color: color-mix(in oklch, var(--colour-success) 30%, transparent);
+}
+
+.dz-progress-chip[data-dz-stage-tone="active"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+  border-color: color-mix(in oklch, var(--colour-warning) 30%, transparent);
+}
+
+.dz-progress-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+/* ─────────────────────────── bar_track region ───────────────────
+ * Compact horizontal value bars, one per group. Three columns per
+ * row: fixed-width label (right-aligned) | flex-grow track | value. */
+
+.dz-bar-track-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-block-start: var(--space-sm);
+}
+
+.dz-bar-track-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.dz-bar-track-label {
+  width: 7rem;
+  text-align: end;
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-bar-track {
+  flex: 1 1 0;
+  position: relative;
+  height: 1rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.dz-bar-track-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--colour-brand);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.dz-bar-track-value {
+  width: 4rem;
+  text-align: end;
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.dz-bar-track-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
+
+/* ─────────────────────────── profile_card region ────────────────
+ * Identity panel: avatar/initials + primary/secondary text,
+ * optional 3-up stats grid, optional bulleted facts list. */
+
+.dz-profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.dz-profile-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.dz-profile-avatar,
+.dz-profile-initials {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-bg);
+  flex-shrink: 0;
+}
+
+.dz-profile-avatar {
+  object-fit: cover;
+}
+
+.dz-profile-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text-muted);
+}
+
+.dz-profile-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dz-profile-primary {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-profile-secondary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-profile-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  border-block-start: 1px solid var(--colour-border);
+  padding-block-start: var(--space-md);
+  margin: 0;
+}
+
+@media (min-width: 40rem) {
+  .dz-profile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dz-profile-stat-label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.dz-profile-stat-value {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-start: 0.125rem;
+}
+
+.dz-profile-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-block-start: 1px solid var(--colour-border);
+  padding-block-start: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.dz-profile-fact {
+  display: flex;
+  gap: var(--space-sm);
+  line-height: var(--leading-tight);
+}
+
+.dz-profile-fact-bullet {
+  color: var(--colour-text-muted);
+  flex-shrink: 0;
+}
+
+.dz-profile-fact-text {
+  min-width: 0;
+}

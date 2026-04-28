@@ -1054,10 +1054,13 @@ class TestProgressRegionTemplate:
         assert "Done (5)" in html
 
     def test_tristate_colouring_flows_through_tokens(self) -> None:
-        """Gate 4: chips reference --success/--warning/--muted tokens.
+        """Gate 4: chips emit data-dz-stage-tone (complete | active | empty).
 
-        Locks in the cycle 271 migration away from the hardcoded
-        `hsl(142_71%_45%)` green literal.
+        v0.62 CSS refactor: the visual tristate (success / warning /
+        neutral) is now applied via attribute selectors on .dz-progress-chip
+        in components/regions.css, rather than inline `hsl(var(--success))`
+        Tailwind utilities. Locks in the cycle 271 migration away from
+        the hardcoded `hsl(142_71%_45%)` green literal.
         """
         html = render_fragment(
             "workspace/regions/progress.html",
@@ -1072,9 +1075,22 @@ class TestProgressRegionTemplate:
                 progress_total=8,
             ),
         )
-        assert "hsl(var(--success)" in html
-        assert "hsl(var(--warning)" in html
-        assert "hsl(var(--muted)" in html
+        # Three tones, three rendered values
+        assert 'data-dz-stage-tone="complete"' in html
+        assert 'data-dz-stage-tone="active"' in html
+        assert 'data-dz-stage-tone="empty"' in html
+
+        # CSS rules confirm each tone references the right semantic colour
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert 'dz-progress-chip[data-dz-stage-tone="complete"]' in css
+        assert "var(--colour-success)" in css
+        assert 'dz-progress-chip[data-dz-stage-tone="active"]' in css
+        assert "var(--colour-warning)" in css
 
     def test_no_hardcoded_hsl_literals(self) -> None:
         """Gate 4 (negative form): pre-cycle-271 hardcoded green must not reappear."""

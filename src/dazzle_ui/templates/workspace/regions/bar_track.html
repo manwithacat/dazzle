@@ -13,35 +13,37 @@
      `track_max:` is omitted)
 
    Card safety: region emits zero chrome + zero title. The dashboard
-   slot owns both via region_card. #}
+   slot owns both via region_card.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-bar-track-*
+   classes (components/regions.css). #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-bar-track-region">
   {% if bar_track_rows and bar_track_rows | length > 0 %}
-    <div class="dz-bar-track-rows space-y-1.5 mt-2">
+    <div class="dz-bar-track-rows">
       {% for row in bar_track_rows %}
-        <div class="dz-bar-track-row flex items-center gap-2 text-[12px]">
-          <span class="dz-bar-track-label w-28 truncate text-right text-[hsl(var(--foreground))]"
-                title="{{ row.label }}">{{ row.label }}</span>
-          <div class="dz-bar-track flex-1 relative h-4 bg-[hsl(var(--muted))] rounded-full overflow-hidden"
+        <div class="dz-bar-track-row">
+          <span class="dz-bar-track-label" title="{{ row.label }}">{{ row.label }}</span>
+          <div class="dz-bar-track"
                role="progressbar"
                aria-valuemin="0"
                aria-valuemax="{{ bar_track_max }}"
                aria-valuenow="{{ row.value }}"
                aria-label="{{ row.label }}: {{ row.formatted_value }}">
-            <span class="dz-bar-track-fill absolute top-0 bottom-0 left-0 bg-[hsl(var(--primary))] rounded-full transition-[width] duration-200"
+            <span class="dz-bar-track-fill"
                   style="width: {{ row.fill_pct | round(2) }}%;"
                   title="{{ row.label }}: {{ row.formatted_value }}"></span>
           </div>
-          <span class="dz-bar-track-value w-16 text-right font-mono text-[hsl(var(--muted-foreground))]">{{ row.formatted_value }}</span>
+          <span class="dz-bar-track-value">{{ row.formatted_value }}</span>
         </div>
       {% endfor %}
     </div>
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-bar-track-summary">
       {{ bar_track_rows | length }} rows · scale 0–{{ bar_track_max | round(2) }}
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}
