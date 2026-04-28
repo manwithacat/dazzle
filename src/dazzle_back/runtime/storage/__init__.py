@@ -29,6 +29,7 @@ from .protocol import (
     UploadTicket,
 )
 from .registry import StorageRegistry
+from .routes import register_upload_ticket_routes
 from .testing import FakeStorageProvider
 
 __all__ = [
@@ -40,4 +41,5 @@ __all__ = [
     "UploadTicket",
     "extract_env_var_refs",
     "interpolate_env_vars",
+    "register_upload_ticket_routes",
 ]

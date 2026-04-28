@@ -56,7 +56,7 @@ else:
 
 if TYPE_CHECKING:
     from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
-    from dazzle.core.manifest import TenantConfig
+    from dazzle.core.manifest import StorageConfig, TenantConfig
     from dazzle.core.process.adapter import ProcessAdapter
     from dazzle_back.events.framework import EventFramework
     from dazzle_back.runtime.auth_detection import AuthConfig
@@ -171,6 +171,14 @@ class DazzleBackendApp:
         # Consumer apps that mount their own /static AFTER .build() used to be
         # silently shadowed (issue #793); pass paths here to have them served first.
         extra_static_dirs: list[str | Path] | None = None,
+        # v0.61.106 (#932 cycle 3): per-name [storage.<name>] config
+        # blocks loaded from dazzle.toml. When non-empty AND the appspec
+        # has any `field foo: file storage=<name>` bindings, the
+        # framework auto-generates `POST /api/{entity}/upload-ticket`
+        # routes that mint pre-signed POST policies via the
+        # registered StorageProvider for each storage. None / empty
+        # = no auto-routes (existing behaviour preserved).
+        storage_defs: dict[str, "StorageConfig"] | None = None,
     ):
         """
         Initialize the backend application.
@@ -232,6 +240,9 @@ class DazzleBackendApp:
         self._extra_static_dirs: list[Path] = (
             [Path(d) for d in extra_static_dirs] if extra_static_dirs else []
         )
+        # v0.61.106 (#932 cycle 3): storage config + lazy registry.
+        self._storage_defs: dict[str, StorageConfig] = dict(storage_defs or {})
+        self._storage_registry: Any = None  # built in _wire_storage_routes()
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -710,6 +721,64 @@ class DazzleBackendApp:
 
                     self._upload_callbacks.append(_upload_hook)
 
+    def _wire_storage_routes(self) -> None:
+        """Register storage upload-ticket routes (#932 cycle 3).
+
+        For every entity with at least one ``field foo: file
+        storage=<name>`` binding, generate ``POST /api/{entity}/upload-ticket``
+        backed by the configured ``StorageProvider``.
+
+        Validates DSL ↔ manifest cross-references first — unresolved
+        ``storage=<name>`` references raise a clear error at startup
+        rather than at first request. Warnings (e.g. ``storage=`` on
+        a non-file field) are logged but don't block startup.
+
+        Existing projects with no ``[storage.<name>]`` blocks AND no
+        ``storage=`` field bindings see zero behaviour change.
+        """
+        import logging
+
+        from dazzle.core.validator import validate_storage_refs
+        from dazzle_back.runtime.storage import (
+            StorageRegistry,
+            register_upload_ticket_routes,
+        )
+
+        # Fast-out when neither side declares anything storage-related.
+        has_field_refs = any(
+            getattr(f, "storage", None)
+            for entity in self._appspec.domain.entities
+            for f in entity.fields
+        )
+        if not self._storage_defs and not has_field_refs:
+            return
+
+        errors, warnings = validate_storage_refs(self._appspec, self._storage_defs)
+        log = logging.getLogger("dazzle.storage")
+        for warn in warnings:
+            log.warning("storage_validation_warning %s", warn)
+        if errors:
+            joined = "\n  ".join(errors)
+            raise RuntimeError(
+                f"Storage validation failed:\n  {joined}\n"
+                "Either declare the [storage.<name>] block in dazzle.toml "
+                "or remove the `storage=<name>` binding from the DSL field."
+            )
+
+        registry = StorageRegistry.from_manifest(self._storage_defs)
+        self._storage_registry = registry
+
+        if has_field_refs and self._app is not None:
+            paths = register_upload_ticket_routes(
+                app=self._app, appspec=self._appspec, registry=registry
+            )
+            if paths:
+                log.info(
+                    "storage_routes_registered count=%d paths=%s",
+                    len(paths),
+                    paths,
+                )
+
     def _setup_auth(self) -> tuple[Any, Any]:
         """Initialize auth store, middleware, and social auth.
 
@@ -966,6 +1035,14 @@ class DazzleBackendApp:
             service_specs,
         )
         self._app.include_router(router)
+
+        # v0.61.106 (#932 cycle 3): storage upload-ticket auto-routes.
+        # Validates `field foo: file storage=<name>` references against
+        # the loaded `[storage.<name>]` blocks, then registers
+        # `POST /api/{entity}/upload-ticket` for every entity with at
+        # least one storage-bound field. Skips silently when neither
+        # is declared so existing projects see zero behaviour change.
+        self._wire_storage_routes()
 
         # Audit query routes
         if audit_logger:

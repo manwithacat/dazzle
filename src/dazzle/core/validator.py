@@ -5,6 +5,7 @@ Validates entities, surfaces, experiences, services, foreign models, and integra
 for semantic correctness beyond basic reference resolution.
 """
 
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
@@ -2732,4 +2733,52 @@ def validate_fitness_repr_fields(appspec: ir.AppSpec) -> tuple[list[str], list[s
                 f"`fitness:\n  repr_fields: [...]` block with domain-essential "
                 f"fields."
             )
+    return errors, warnings
+
+
+def validate_storage_refs(
+    appspec: ir.AppSpec,
+    storage_defs: Mapping[str, object],
+) -> tuple[list[str], list[str]]:
+    """Validate that every `field foo: file storage=<name>` reference
+    resolves to a `[storage.<name>]` block declared in dazzle.toml (#932).
+
+    Also warns when `storage=<name>` is set on a non-`file` field —
+    the binding is ignored everywhere else but it's a clear authoring
+    mistake.
+
+    Takes ``storage_defs`` separately because the AppSpec is built
+    from DSL alone — the manifest is loaded by a different layer.
+    Runtime call site is `dazzle_back.runtime.server` startup, where
+    both surfaces are available.
+
+    Returns:
+        Tuple of (errors, warnings).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    declared = set(storage_defs)
+    for entity in appspec.domain.entities:
+        for field_spec in entity.fields:
+            ref = getattr(field_spec, "storage", None)
+            if ref is None:
+                continue
+            if ref not in declared:
+                hint = (
+                    f" Available: {sorted(declared)}"
+                    if declared
+                    else " (no [storage.*] blocks declared in dazzle.toml)"
+                )
+                errors.append(
+                    f"Entity {entity.name!r} field {field_spec.name!r}: "
+                    f"storage={ref!r} does not resolve to a declared "
+                    f"[storage.{ref}] block.{hint}"
+                )
+            if field_spec.type.kind != ir.FieldTypeKind.FILE:
+                warnings.append(
+                    f"Entity {entity.name!r} field {field_spec.name!r}: "
+                    f"storage={ref!r} only applies to `file` typed fields; "
+                    f"got type={field_spec.type.kind.value}. The binding "
+                    f"will be ignored at runtime."
+                )
     return errors, warnings

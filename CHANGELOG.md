@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.106] - 2026-04-29
+
+### Added
+- **Storage primitive cycle 3: validator + auto-routes** — third
+  installment of #932. Closes the loop on the upload-ticket path:
+  authors can now declare `[storage.<name>]` blocks in `dazzle.toml`,
+  bind file fields via `field foo: file storage=<name>`, and the
+  framework auto-generates `POST /api/{entity}/upload-ticket` for
+  every entity with at least one bound field.
+
+  - **Validator**: `validate_storage_refs(appspec, storage_defs)` —
+    fails fast at server startup if any `field.storage` reference
+    doesn't resolve to a declared block. Errors list every available
+    storage name to help debug typos. Warns when `storage=` is
+    applied to a non-`file` field (parser allows it; validator
+    flags it).
+  - **`register_upload_ticket_routes(app, appspec, registry)`** —
+    walks every entity, registers `POST /api/{entity}/upload-ticket`
+    for entities with `file storage=...` fields. Single-field
+    entities use a direct handler; multi-field entities use a
+    dispatcher that reads `body["field"]` to pick the binding.
+    Defaults to first-declared field when omitted.
+  - **Server startup wiring** — `DazzleBackendApp.__init__`
+    accepts a new `storage_defs` kwarg. Validation runs before
+    route registration; missing env vars / unresolved references
+    raise loud `RuntimeError` with the offending `[storage.<name>]`
+    name in the message.
+  - **Per-request behaviour**: handler authenticates via #933's
+    `current_user_id`, sanitises filename (path traversal +
+    non-ASCII), validates content-type against the declared
+    allowlist, generates a UUID `record_id`, calls
+    `provider.render_prefix` + `provider.mint_upload_ticket`,
+    returns `{record_id, s3_bucket, s3_key, upload: {url, fields},
+    max_bytes, expires_in_seconds}`. Returns 401 / 400 / 503 / 500
+    based on the failure class.
+
+  14-test suite (`test_storage_cycle3.py`) covers validator
+  correctness (valid pass, unresolved error, available-list hint,
+  non-file warn, no-storage no-op), route registration (single +
+  multi-field + entity-without-storage), and end-to-end request
+  handling with `FakeStorageProvider` (auth gate, ticket minting,
+  filename sanitisation, content-type allowlist, unconfigured
+  storage 503, multi-field dispatcher, unknown-field 400).
+
+### Agent Guidance
+- The framework auto-generates upload-ticket routes; **finalize
+  is project-side for v1**. The clean pattern is ~30 lines:
+  ```python
+  # routes/cohort_finalize.py
+  from dazzle_back.runtime.auth import current_user_id, require_auth
+  from dazzle_back.runtime.storage import StorageRegistry  # accessible via app state
+
+  @require_auth(roles=["teacher"])
+  async def handler(request, auth):
+      user_id = str(auth.user.id)
+      body = await request.json()
+      registry: StorageRegistry = request.app.state.storage_registry
+      provider = registry.get("cohort_pdfs")
+      meta = provider.head_object(body["s3_key"])
+      if meta is None:
+          return JSONResponse({"error": "not uploaded"}, status_code=404)
+      # validate body, INSERT row, return id
+  ```
+  Cycle 4 evaluates whether finalize can be auto-generated cleanly
+  enough to ship; for now keep finalize bespoke.
+- Default backend is `s3`. Other backends (R2, MinIO, GCS) plug in
+  via `endpoint_url` on `[storage.<name>]` — no S3Provider subclass
+  needed for v1. New backends slot in by extending
+  `StorageRegistry._build_from_config`.
+
 ## [0.61.105] - 2026-04-29
 
 ### Added
