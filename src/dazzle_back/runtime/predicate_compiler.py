@@ -141,8 +141,9 @@ def _compile_column_check(
     *,
     entity_name: str = "",
     schema: str | None = None,
+    fk_graph: FKGraph | None = None,
 ) -> tuple[str, list[Any]]:
-    col = _qualify_column(predicate.field, entity_name, schema)
+    col = _qualify_column(predicate.field, entity_name, schema, fk_graph)
     op_sql = _op_to_sql(predicate.op)
     value = predicate.value
 
@@ -164,8 +165,9 @@ def _compile_user_attr_check(
     *,
     entity_name: str = "",
     schema: str | None = None,
+    fk_graph: FKGraph | None = None,
 ) -> tuple[str, list[Any]]:
-    col = _qualify_column(predicate.field, entity_name, schema)
+    col = _qualify_column(predicate.field, entity_name, schema, fk_graph)
     op_sql = _op_to_sql(predicate.op)
     return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
 
@@ -175,6 +177,7 @@ def _compile_column_ref_check(
     *,
     entity_name: str = "",
     schema: str | None = None,
+    fk_graph: FKGraph | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile a same-row column-vs-column comparison.
 
@@ -182,12 +185,17 @@ def _compile_column_ref_check(
     coercion. Used by reporting aggregate where-clauses (#888); not used
     by RBAC scope rules.
     """
-    f1 = _qualify_column(predicate.field, entity_name, schema)
-    f2 = _qualify_column(predicate.other_field, entity_name, schema)
+    f1 = _qualify_column(predicate.field, entity_name, schema, fk_graph)
+    f2 = _qualify_column(predicate.other_field, entity_name, schema, fk_graph)
     return f"{f1} {_op_to_sql(predicate.op)} {f2}", []
 
 
-def _qualify_column(field: str, entity_name: str, schema: str | None) -> str:
+def _qualify_column(
+    field: str,
+    entity_name: str,
+    schema: str | None,
+    fk_graph: FKGraph | None = None,
+) -> str:
     """Qualify a column reference with the source entity table.
 
     v0.61.77 (#909): scope predicates that reference entity columns
@@ -196,18 +204,48 @@ def _qualify_column(field: str, entity_name: str, schema: str | None) -> str:
     later applies a source-table alias to user filters (because FK
     display joins introduced ambiguity), the scope predicate stayed
     unqualified — so `"school"` could bind to a JOINed table's
-    `school` column instead of the source entity's. AegisMark hit
-    this with StudentProfile.school + User.school both joined.
+    `school` column instead of the source entity's.
 
-    Always qualifying with the source entity table makes the scope
-    predicate self-describing and immune to JOIN-induced ambiguity.
+    v0.61.78 (#910): pure qualification (`"StudentProfile"."school"`)
+    blew up when the DSL author wrote a *relation name* (`school`)
+    instead of the FK column (`school_id`) — Postgres errored on the
+    missing column. Mirror the PathCheck heuristic: when the bare
+    name doesn't exist, try `<field>_id`; if neither exists fall
+    back to the bare ref to avoid 500 on legitimate edge cases (the
+    column may live on an entity not in the FK graph, e.g. tests).
+
     Empty entity_name (callers that pre-date the fix) falls back to
     bare column ref for compatibility.
     """
-    col = quote_identifier(field)
     if not entity_name:
-        return col
-    return f"{_qualify_table(entity_name, schema)}.{col}"
+        return quote_identifier(field)
+
+    resolved_field = _resolve_field_on_entity(field, entity_name, fk_graph)
+    return f"{_qualify_table(entity_name, schema)}.{quote_identifier(resolved_field)}"
+
+
+def _resolve_field_on_entity(
+    field: str,
+    entity_name: str,
+    fk_graph: FKGraph | None,
+) -> str:
+    """Resolve `field` to the actual column name on `entity_name`.
+
+    Heuristic mirrored from `_compile_path_check`: if `field` exists
+    as-is on the entity use it; otherwise try `<field>_id` (DSL
+    authors often write the relation name, not the FK column);
+    otherwise fall back to the bare name (the column may live on an
+    entity not in the FK graph — fall through and let SQL surface
+    any genuine schema error rather than fabricating a column name).
+    """
+    if fk_graph is None:
+        return field
+    if fk_graph.field_exists(entity_name, field):
+        return field
+    candidate = f"{field}_id"
+    if fk_graph.field_exists(entity_name, candidate):
+        return candidate
+    return field
 
 
 def _qualify_table(name: str, schema: str | None) -> str:
@@ -509,13 +547,19 @@ def compile_predicate(
             return "FALSE", []
 
         case ColumnCheck():
-            return _compile_column_check(predicate, entity_name=entity_name, schema=schema)
+            return _compile_column_check(
+                predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
+            )
 
         case ColumnRefCheck():
-            return _compile_column_ref_check(predicate, entity_name=entity_name, schema=schema)
+            return _compile_column_ref_check(
+                predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
+            )
 
         case UserAttrCheck():
-            return _compile_user_attr_check(predicate, entity_name=entity_name, schema=schema)
+            return _compile_user_attr_check(
+                predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
+            )
 
         case PathCheck():
             return _compile_path_check(predicate, entity_name, fk_graph, schema=schema)

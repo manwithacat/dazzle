@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.78] - 2026-04-28
+
+Patch bump. **Fix #910** — v0.61.77's #909 fix qualified scope predicate columns with the source entity table (`"StudentProfile"."school" = %s`). That was correct for the JOIN-ambiguity case but broke any DSL where the author wrote a *relation name* as shorthand for the FK column. AegisMark's `school = current_user.school` pre-fix bound (incorrectly) to the User-join's `school` column; post-fix Postgres errored with `column "StudentProfile"."school" does not exist` because the actual column is `school_id`. `display: profile_card` regions on `pupil_dashboard` returned 500 instead of the previous (wrong but non-crashing) empty state.
+
+### Fixed
+- **`src/dazzle_back/runtime/predicate_compiler.py`** — `_qualify_column` now mirrors the `_compile_path_check` heuristic: when the bare field name doesn't exist on the source entity, try `<field>_id`; if neither exists fall back to the bare ref so legitimate edge cases (entity not in the FK graph, ad-hoc tests) don't 500. `fk_graph` is threaded through `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` so every leaf can resolve. Same effect when `fk_graph` is `None` — bare-name passthrough — preserving the v0.61.77 behaviour for callers that don't supply the graph.
+
+### Tests
+- **`test_predicate_qualified_columns.py`** — 7 new tests in `TestRelationNameResolvesToFkColumn`: relation-name → FK-id resolution for `UserAttrCheck` + `ColumnCheck`; field-exists-as-is keeps the bare name (no clobbering scalar columns); neither form exists falls through (genuine schema errors still surface); no FK graph disables resolution; `BoolComposite` threads the graph to every leaf; `ColumnRefCheck` resolves both sides. Plus a small helper that builds an `FKGraph` from a single entity spec for compact test cases.
+
+### Agent Guidance
+- **Defence in depth, not just defence in width.** The #909 fix added column qualification — that closes the ambiguity hole. But qualification by itself is too literal: it assumes the DSL author wrote the actual column name. The DSL allows relation-name shorthand (`school` for `school_id`), so the resolver pass needs the same `_id`-suffix heuristic that `_compile_path_check` already had. Whenever a fix tightens one layer, audit the adjacent compilers for the same shorthand convention so the new strictness doesn't break legitimate inputs.
+- **Mirror established conventions across compilers.** `_compile_path_check` already had the `<segment>_id` fallback for FK terminal fields (lines 268-274). The #909 fix didn't apply the same heuristic to the simpler leaf compilers because the fix was scoped to the JOIN-ambiguity bug. When extending an established compiler family, scan siblings for relevant heuristics — they're usually load-bearing.
+
 ## [0.61.77] - 2026-04-28
 
 Patch bump. **Fix #909** — RBAC scope predicates emitted unqualified column references like `"school" = %s`. When the runtime later applied a source-table alias to user filters (because FK display joins introduced ambiguity), the scope predicate stayed unqualified — `"school"` could bind to a JOINed table's `school` column instead of the source entity's. AegisMark hit this with StudentProfile (the FK display join on `user: ref User` brought in `User.school`, which most pupils' user accounts didn't have set to the teacher's school, so the AND-combined query returned 0 rows).
