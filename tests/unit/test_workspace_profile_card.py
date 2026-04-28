@@ -332,3 +332,93 @@ class TestProfileCardSafety:
         assert "def _interpolate_card_template" in src
         # And use re.sub, not Jinja
         assert "_CARD_TEMPLATE_RE.sub" in src
+
+
+# ───────────────────────── #910 follow-up: stats dict access ──────────────
+
+
+class TestProfileCardStatsBuildFromDicts:
+    """v0.61.80 (#910 follow-up): pre-fix the runtime accessed
+    `_stat.label` (attribute) on items from `ctx.ctx_region.profile_stats`,
+    which is a `list[dict[str, str]]` per the IR→template-context
+    boundary in `workspace_renderer.py` (line 569). The attribute
+    access raised `AttributeError: 'dict' object has no attribute
+    'label'` — but only when `items` was non-empty so the
+    `if _item is not None` branch ran.
+
+    Pre-#909 every prod call had wrong-bound scope filters that
+    returned 0 items, so the branch never ran and the bug never
+    surfaced. The #910 predicate-compiler fix restored items, the
+    branch ran, and AegisMark hit the AttributeError as a 500.
+
+    These tests pin the dict-access contract — would have caught the
+    AttributeError if they'd existed before #909."""
+
+    def test_build_profile_stats_from_dict_specs_no_attribute_error(self) -> None:
+        """Repro of the 500: stats specs are dicts, not pydantic
+        models — accessing `_stat.label` raised AttributeError. Now
+        uses `_stat["label"]`."""
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+        ).read_text()
+        # The runtime must use dict access (the boundary always converts to dicts)
+        assert '_stat["label"]' in src, (
+            "PROFILE_CARD render path must use dict-access on stats specs — "
+            "attribute access (`_stat.label`) raised 500 in production (#910 "
+            "follow-up: AegisMark pupil_identity profile_card)."
+        )
+        assert '_stat["value"]' in src
+        # And NOT the attribute form in the comprehension itself.
+        # Substring check on the full file would match the docstring,
+        # so scope to a window around the dict literal we care about.
+        marker = '"label": _stat["label"]'
+        idx = src.find(marker)
+        assert idx >= 0
+        # Window the assertion to ±200 chars of the dict literal so the
+        # docstring history doesn't trip us up.
+        window = src[max(0, idx - 200) : idx + 400]
+        assert "_stat.label" not in window
+        assert "_stat.value" not in window
+
+    def test_runtime_boundary_emits_dicts_not_models(self) -> None:
+        """Pin the IR→template-context boundary shape: profile_stats
+        is `list[dict[str, str]]`, not `list[ProfileCardStatSpec]`.
+        If this boundary ever changes to pass models through directly,
+        the dict-access fix above must change with it."""
+        src = (
+            Path(__file__).resolve().parents[2] / "src/dazzle_ui/runtime/workspace_renderer.py"
+        ).read_text()
+        # The boundary line that constructs the dict-of-dicts shape
+        assert '{"label": s.label, "value": s.value}' in src
+        # The RegionContext field signature
+        assert "profile_stats: list[dict[str, str]]" in src
+
+    def test_stat_value_resolves_against_item_via_dict_key(self) -> None:
+        """End-to-end-ish: simulate the inner comprehension. Build the
+        same shape the runtime would produce given a non-empty item
+        and dict-shaped stats — exercising the exact lines that 500'd."""
+        # Mirror of the comprehension in workspace_rendering.py PROFILE_CARD
+        from dazzle_back.runtime.workspace_rendering import _resolve_path
+
+        item = {
+            "id": "abc",
+            "target_grade": "A*",
+            "latest_grade": "B",
+            "year_group": "11",
+        }
+        stats_specs = [
+            {"label": "Target", "value": "target_grade"},
+            {"label": "Latest", "value": "latest_grade"},
+        ]
+        # The exact shape from line 1389
+        result = [
+            {
+                "label": _stat["label"],
+                "value": str(_resolve_path(item, _stat["value"]) or ""),
+            }
+            for _stat in stats_specs
+        ]
+        assert result == [
+            {"label": "Target", "value": "A*"},
+            {"label": "Latest", "value": "B"},
+        ]

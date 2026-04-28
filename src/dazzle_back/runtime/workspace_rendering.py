@@ -1377,6 +1377,15 @@ async def _workspace_region_handler(
                 _pv = _resolve_path(_item, _primary_field)
                 _primary_str = str(_pv or "")
             _initials = _initials_from(_primary_str)
+            # v0.61.80 (#910 follow-up): `_stats_specs` is a list of
+            # `{label, value}` dicts coming through the IR→template-context
+            # boundary in `workspace_renderer.py` (see line 569: `profile_stats=
+            # [{"label": s.label, "value": s.value} for s in ...]`). The pre-fix
+            # code accessed `_stat.label` (attribute), which silently worked
+            # only when `items` was empty so the `if _item is not None` branch
+            # never ran — pre-#909 every prod call had wrong-bound scope filters
+            # that emptied items. The #910 fix restored items, surfacing the
+            # AttributeError as a 500. Use dict access to match the boundary.
             profile_card_data = {
                 "avatar_url": _avatar_url,
                 "initials": _initials,
@@ -1384,8 +1393,8 @@ async def _workspace_region_handler(
                 "secondary": _interpolate_card_template(_secondary_tmpl or "", _item),
                 "stats": [
                     {
-                        "label": _stat.label,
-                        "value": str(_resolve_path(_item, _stat.value) or ""),
+                        "label": _stat["label"],
+                        "value": str(_resolve_path(_item, _stat["value"]) or ""),
                     }
                     for _stat in _stats_specs
                 ],

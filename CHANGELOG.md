@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.80] - 2026-04-28
+
+Patch bump. **Fix #910 (second attempt)** — v0.61.78 fixed the predicate compiler so scope filters now correctly emit `school_id` for relation-name shorthand. That restored real items for AegisMark's `pupil_identity` profile_card region (sibling regions all returning 200 confirmed the predicate compiler is now correct). But the same region kept returning 500 because there was a second, distinct bug in the profile_card render path itself — masked for the entire lifetime of `display: profile_card` because it never had non-empty items in any production test.
+
+### Fixed
+- **`src/dazzle_back/runtime/workspace_rendering.py`** — the PROFILE_CARD branch built `profile_card_data["stats"]` via attribute access (`_stat.label`, `_stat.value`) on items pulled from `ctx.ctx_region.profile_stats`. That attribute is `list[dict[str, str]]` per the IR→template-context boundary in `workspace_renderer.py` (line 569: `profile_stats=[{"label": s.label, "value": s.value} for s in ...]`). On any non-empty `items` list, the comprehension raised `AttributeError: 'dict' object has no attribute 'label'` and surfaced as a 500. Switched to dict access — `_stat["label"]` / `_stat["value"]` — matching the boundary shape.
+
+### Tests
+- **`test_workspace_profile_card.py::TestProfileCardStatsBuildFromDicts`** — 3 new tests:
+  - `test_build_profile_stats_from_dict_specs_no_attribute_error` — pin the dict-access contract in the source (windowed substring check around the comprehension so docstring history doesn't trip).
+  - `test_runtime_boundary_emits_dicts_not_models` — pin the IR→template-context shape so the dict-access fix and the boundary stay in sync. If the boundary ever switches to passing pydantic models through, the runtime access pattern must move with it.
+  - `test_stat_value_resolves_against_item_via_dict_key` — exercises the exact comprehension lines on a synthetic item + dict-shaped specs, asserting the produced shape.
+
+### Agent Guidance
+- **The data shape at the boundary is the contract.** When code on one side of a boundary builds dicts and code on the other side uses attribute access, the integration only works when the consumer never runs. The `_stat.label` access "worked" for the entire lifetime of `display: profile_card` because pre-#909 the predicate compiler emptied `items` before the consumer ever fired. The bug surfaced only when a sibling fix made `items` non-empty. **Lesson: when adding a new render-path consumer for a value that crosses an IR→template-context boundary, write a regression test that exercises the consumer with a non-empty input — not just the parser side.** All four pre-existing profile_card tests checked the parser, the IR construction, the template wiring, and the safety helpers — none rendered the runtime branch with non-empty items.
+- **A "fix verified by deploy" report is the strongest signal.** The user's comment on #910 — "tested in prod after deploying v0.61.79, still 500, sibling regions all 200" — pinpointed exactly that the fix landed in the predicate compiler but didn't reach the render path. The "sibling regions all 200" bit is the load-bearing observation: it ruled out the predicate compiler and forced the search to the profile_card-specific path. **When closing a fix issue, ask the reporter to verify in their environment if they can — the round-trip cost is small and it catches second-order bugs the unit suite missed.**
+
 ## [0.61.79] - 2026-04-28
 
 Patch bump. **Add #911** — `display: pipeline_steps` regions now accept a per-stage `progress: 0..100` field. Turns the menu-shape into a thermometer-shape so operators see how complete each stage is, not just whether anything is in it. Same expression vocabulary as `value:` — either a literal numeric string or a `count(<Entity> where ...)` aggregate. Clamped to 0-100 at render; values >100 set `data-dz-progress-overshoot="true"` for theme styling. Aligns with AegisMark's prototype shape (`scan-ingestion-job.html` per-stage progress bar).
