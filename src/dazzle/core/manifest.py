@@ -348,6 +348,60 @@ class ExtensionsConfig:
     routers: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class StorageConfig:
+    """One ``[storage.<name>]`` block from ``dazzle.toml`` (#932).
+
+    Storage configs declare a backing store (currently only ``s3``)
+    that file fields can bind to via ``field foo: file storage=<name>``.
+    The framework's auto-generated upload-ticket / finalize routes
+    read this config to build presigned-POST policies and to
+    sandbox keys to per-user / per-record prefixes.
+
+    String fields support ``${VAR}`` env-var interpolation. Required
+    vars are surfaced via ``dazzle storage env-vars`` and validated
+    at app startup.
+
+    Examples in dazzle.toml::
+
+        [storage.cohort_pdfs]
+        backend = "s3"
+        bucket = "${S3_BUCKET}"
+        region = "${AWS_REGION}"
+        endpoint_url = "${S3_ENDPOINT_URL}"   # optional — R2/MinIO/LocalStack
+        prefix = "production/cohort_assessments/{user_id}/{record_id}/"
+        max_bytes = 200_000_000
+        content_types = ["application/pdf"]
+        ticket_ttl_seconds = 600
+
+    Attributes:
+        name: storage identifier (the ``<name>`` in ``[storage.<name>]``).
+        backend: storage backend type. v1 supports ``"s3"``.
+        bucket: bucket name. May contain ``${VAR}`` references.
+        region: AWS region. May contain ``${VAR}`` references.
+        endpoint_url: optional S3-compatible endpoint URL. ``None`` =
+            real AWS S3. Set to ``${S3_ENDPOINT_URL}`` to support
+            MinIO / Cloudflare R2 / LocalStack.
+        prefix_template: key prefix with ``{user_id}`` / ``{record_id}``
+            substitution. Always ends with ``/``.
+        max_bytes: hard limit on uploaded object size (enforced via
+            content-length-range condition on the presigned policy).
+        content_types: allowlist of acceptable MIME types. Empty list
+            means "no content-type restriction".
+        ticket_ttl_seconds: how long a minted upload ticket is valid.
+    """
+
+    name: str
+    backend: str
+    bucket: str
+    region: str
+    prefix_template: str
+    max_bytes: int
+    content_types: list[str] = field(default_factory=list)
+    ticket_ttl_seconds: int = 600
+    endpoint_url: str | None = None
+
+
 @dataclass
 class ProjectManifest:
     """
@@ -387,6 +441,56 @@ class ProjectManifest:
     # Distinct from [theme] which covers site/marketing-page tokens.
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
     extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
+    # v0.61.104 (#932): per-name `[storage.<name>]` blocks. Keyed by the
+    # storage name. Empty when no storage blocks are declared.
+    storage_defs: dict[str, StorageConfig] = field(default_factory=dict)
+
+
+_STORAGE_VALID_BACKENDS = {"s3"}
+
+
+def _parse_storage_configs(data: dict[str, object]) -> dict[str, StorageConfig]:
+    """Parse ``[storage.<name>]`` blocks from manifest TOML data (#932).
+
+    Validates required keys + backend allowlist. Raises a clear
+    ``ValueError`` if a block is malformed; the caller wraps that in a
+    project-load error so authors see one diagnostic per cycle, not a
+    Pydantic stack trace.
+    """
+    raw = data.get("storage") or {}
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, StorageConfig] = {}
+    for name, block in raw.items():
+        if not isinstance(block, dict):
+            raise ValueError(f"[storage.{name}] must be a TOML table")
+        backend = str(block.get("backend") or "")
+        if backend not in _STORAGE_VALID_BACKENDS:
+            raise ValueError(
+                f"[storage.{name}] backend must be one of "
+                f"{sorted(_STORAGE_VALID_BACKENDS)!r}, got {backend!r}"
+            )
+        for required in ("bucket", "region", "prefix"):
+            if not block.get(required):
+                raise ValueError(f"[storage.{name}] missing required key {required!r}")
+        prefix_template = str(block["prefix"])
+        if not prefix_template.endswith("/"):
+            prefix_template = prefix_template + "/"
+        max_bytes = int(block.get("max_bytes", 50 * 1024 * 1024))  # 50 MB default
+        ticket_ttl = int(block.get("ticket_ttl_seconds", 600))
+        content_types = list(block.get("content_types") or [])
+        out[name] = StorageConfig(
+            name=name,
+            backend=backend,
+            bucket=str(block["bucket"]),
+            region=str(block["region"]),
+            prefix_template=prefix_template,
+            max_bytes=max_bytes,
+            content_types=content_types,
+            ticket_ttl_seconds=ticket_ttl,
+            endpoint_url=str(block["endpoint_url"]) if block.get("endpoint_url") else None,
+        )
+    return out
 
 
 def check_framework_version(manifest: ProjectManifest) -> None:
@@ -615,6 +719,9 @@ def load_manifest(path: Path) -> ProjectManifest:
                 heroku_app=env_config.get("heroku_app", ""),
             )
 
+    # Parse [storage.<name>] blocks (v0.61.104, #932)
+    storage_defs = _parse_storage_configs(data)
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -636,6 +743,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         app_theme=app_theme_name,
         environments=environments,
         extensions=extensions_config,
+        storage_defs=storage_defs,
     )
 
 

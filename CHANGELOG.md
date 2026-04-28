@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.104] - 2026-04-29
+
+### Added
+- **Storage primitive cycle 1: DSL + config + protocol** — first
+  installment of #932 (built-in S3 upload primitive). Cycle 1 lays
+  the foundations with no runtime / boto3 dependency change. Authors
+  can now declare storage targets in `dazzle.toml` and bind file
+  fields to them in DSL; routes + S3 implementation land in cycle 2.
+
+  **`dazzle.toml`** — new `[storage.<name>]` blocks:
+
+      [storage.cohort_pdfs]
+      backend = "s3"
+      bucket = "${S3_BUCKET}"            # ${VAR} interpolation
+      region = "${AWS_REGION}"
+      endpoint_url = "${S3_ENDPOINT_URL}"  # optional — R2/MinIO/LocalStack
+      prefix = "production/{user_id}/{record_id}/"
+      max_bytes = 200_000_000
+      content_types = ["application/pdf"]
+      ticket_ttl_seconds = 600
+
+  **DSL** — new `storage=<name>` field attribute:
+
+      entity Doc:
+        source_pdf_url: file storage=cohort_pdfs
+
+  **Protocol** — `dazzle_back.runtime.storage.StorageProvider`
+  Protocol with four methods (`render_prefix`, `mint_upload_ticket`,
+  `head_object`) + `UploadTicket` / `ObjectMetadata` value types.
+  Cycle-2 backend implementations (real S3, in-memory fake) satisfy
+  this interface. Tight surface chosen so MinIO / R2 / GCS slot in
+  via 50-line subclasses.
+
+  **Env-var interpolation** — `interpolate_env_vars` /
+  `extract_env_var_refs` helpers with loud-on-missing semantics.
+  Mirrors the `env("KEY")` pattern already used by `AuthSpec.credentials`.
+
+  Regression tests in `tests/unit/test_storage_cycle1.py` (24
+  cases) cover toml parsing, env-var interpolation,
+  protocol shape, DSL parser binding, and the FrozenInstanceError
+  immutability invariant on the value types. Snapshots refreshed for
+  the new optional `FieldSpec.storage` IR field (purely additive,
+  defaults to None).
+
+### Agent Guidance
+- Storage config is `dazzle.toml`-only — explicitly NOT a top-level
+  DSL block. Treat storage as deployment configuration, not domain.
+- The `${VAR}` interpolation pattern fails LOUDLY when a referenced
+  env var is missing. No silent empty-string fallback. New
+  `EnvVarMissingError` carries the var name + context for clear
+  diagnostics.
+- `StorageProvider` Protocol is `runtime_checkable` — `isinstance(x,
+  StorageProvider)` works. Cycle 2's S3 impl + in-memory fake will
+  both satisfy it without inheritance.
+
 ## [0.61.103] - 2026-04-28
 
 ### Fixed

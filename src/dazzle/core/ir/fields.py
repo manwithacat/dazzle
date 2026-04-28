@@ -156,6 +156,12 @@ class FieldSpec(BaseModel):
     default_expr: Expr | None = None
     # v0.61.0: PII classification (category + sensitivity). See core/ir/pii.py.
     pii: PIIAnnotation | None = None
+    # v0.61.104 (#932): name of a `[storage.<name>]` block declared in
+    # `dazzle.toml`. Only meaningful for `file` typed fields. The
+    # framework's auto-generated upload-ticket / finalize routes use this
+    # to look up the prefix template, content-type allowlist, max-bytes
+    # policy etc. None = no storage binding (no auto-upload routes).
+    storage: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

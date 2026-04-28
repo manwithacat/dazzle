@@ -43,6 +43,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -65,6 +66,7 @@
               ]),
               'name': 'title',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -86,6 +88,7 @@
               ]),
               'name': 'description',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -107,6 +110,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -133,6 +137,7 @@
               ]),
               'name': 'created_at',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -223,6 +228,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -245,6 +251,7 @@
               ]),
               'name': 'component',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -267,6 +274,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -292,6 +300,7 @@
               ]),
               'name': 'message',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -313,6 +322,7 @@
               ]),
               'name': 'latency_ms',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -334,6 +344,7 @@
               ]),
               'name': 'checked_at',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -422,6 +433,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -444,6 +456,7 @@
               ]),
               'name': 'name',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -466,6 +479,7 @@
               ]),
               'name': 'value',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -487,6 +501,7 @@
               ]),
               'name': 'unit',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -508,6 +523,7 @@
               ]),
               'name': 'tags',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -529,6 +545,7 @@
               ]),
               'name': 'bucket_start',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -550,6 +567,7 @@
               ]),
               'name': 'resolution',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -638,6 +656,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -660,6 +679,7 @@
               ]),
               'name': 'version',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -681,6 +701,7 @@
               ]),
               'name': 'previous_version',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -702,6 +723,7 @@
               ]),
               'name': 'deployed_by',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -723,6 +745,7 @@
               ]),
               'name': 'deployed_at',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,
@@ -744,6 +767,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': list([
@@ -771,6 +795,7 @@
               ]),
               'name': 'rollback_of',
               'pii': None,
+              'storage': None,
               'type': dict({
                 'currency_code': None,
                 'enum_values': None,

@@ -423,21 +423,29 @@ class TypeParserMixin:
 
     def parse_field_modifiers(
         self,
-    ) -> tuple[list[ir.FieldModifier], DefaultValue, "_Expr | None", "ir.PIIAnnotation | None"]:
+    ) -> tuple[
+        list[ir.FieldModifier],
+        DefaultValue,
+        "_Expr | None",
+        "ir.PIIAnnotation | None",
+        str | None,
+    ]:
         """
-        Parse field modifiers, default value, and PII annotation.
+        Parse field modifiers, default value, PII annotation, and storage binding.
 
         Returns:
-            Tuple of (modifiers, default_value, default_expr, pii_annotation)
+            Tuple of (modifiers, default_value, default_expr, pii_annotation, storage_name)
 
         v0.10.2: default can now be a date expression (DateLiteral, DateArithmeticExpr)
         v0.29.0: default_expr for typed expression defaults (e.g., = box1 + box2)
         v0.61.0: pii_annotation for structured PII classification
+        v0.61.104 (#932): storage_name for `file storage=<name>` bindings
         """
         modifiers: list[ir.FieldModifier] = []
         default: DefaultValue = None
         default_expr: _Expr | None = None
         pii: ir.PIIAnnotation | None = None
+        storage_name: str | None = None
 
         _modifier_map: dict[str, ir.FieldModifier] = {
             "required": ir.FieldModifier.REQUIRED,
@@ -482,6 +490,23 @@ class TypeParserMixin:
                 pii = self._parse_pii_annotation()
                 continue
 
+            # storage = <name> — bind a `file` field to a `[storage.<name>]`
+            # block in dazzle.toml (v0.61.104, #932). Detected before the
+            # generic `= <default>` branch because `storage` is plain
+            # IDENTIFIER token — we need to peek before consuming.
+            if token.value == "storage" and self.peek_token().type == TokenType.EQUALS:
+                if storage_name is not None:
+                    raise make_parse_error(
+                        "Duplicate `storage=...` binding on field.",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.advance()  # consume `storage`
+                self.advance()  # consume `=`
+                storage_name = self.expect_identifier_or_keyword().value
+                continue
+
             # default = <value>
             if self.match(TokenType.EQUALS):
                 self.advance()
@@ -490,7 +515,7 @@ class TypeParserMixin:
 
             break
 
-        return modifiers, default, default_expr, pii
+        return modifiers, default, default_expr, pii, storage_name
 
     def _parse_pii_annotation(self) -> "ir.PIIAnnotation":
         """Parse a pii modifier with optional parenthesised kwargs.
@@ -721,7 +746,7 @@ class TypeParserMixin:
         field_name = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)
         field_type = self.parse_type_spec()
-        modifiers, default, default_expr, pii = self.parse_field_modifiers()
+        modifiers, default, default_expr, pii, storage_name = self.parse_field_modifiers()
         return ir.FieldSpec(
             name=field_name,
             type=field_type,
@@ -729,6 +754,7 @@ class TypeParserMixin:
             default=default,
             default_expr=default_expr,
             pii=pii,
+            storage=storage_name,
         )
 
     def _parse_field_path(self) -> list[str]:
