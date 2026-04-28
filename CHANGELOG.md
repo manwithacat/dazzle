@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.77] - 2026-04-28
+
+Patch bump. **Fix #909** — RBAC scope predicates emitted unqualified column references like `"school" = %s`. When the runtime later applied a source-table alias to user filters (because FK display joins introduced ambiguity), the scope predicate stayed unqualified — `"school"` could bind to a JOINed table's `school` column instead of the source entity's. AegisMark hit this with StudentProfile (the FK display join on `user: ref User` brought in `User.school`, which most pupils' user accounts didn't have set to the teacher's school, so the AND-combined query returned 0 rows).
+
+The user reported the symptom as a `display: profile_card` vs `display: summary` divergence; the actual root cause is in the predicate compiler. The summary path "worked" only because it bypassed the region's `filter:` declaration entirely (a separate, broken-but-invisible bug surfaced in the analysis comment on #909 — to be addressed in a follow-up).
+
+### Fixed
+- **`src/dazzle_back/runtime/predicate_compiler.py`** — `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` now qualify column references with the source entity table (e.g. `"StudentProfile"."school" = %s` instead of `"school" = %s`). Schema qualification flows through when set. The dispatch in `compile_predicate` threads `entity_name` + `schema` to all three leaf compilers; `_compile_bool_composite` already recursed via `compile_predicate` so no change needed there. Empty `entity_name` (callers that pre-date the fix) falls back to bare column ref for compatibility.
+
+### Tests
+- **`test_predicate_qualified_columns.py`** — 9 new tests across four classes: `UserAttrCheck` qualification (the #909 case + schema variant + fallback compatibility), `ColumnCheck` qualification (literal-value comparisons + IS NULL), `ColumnRefCheck` qualification (both sides), `BoolComposite` recursive qualification (AND/OR), and a full WHERE-clause integration that simulates the AegisMark scenario (StudentProfile + FK display join + scope predicate + user `id` filter) and asserts both sides end up qualified to `"StudentProfile"`.
+- **`test_aggregate_where_parser.py`** — 7 assertion lines updated. The aggregate where-parser uses `compile_predicate` internally and now produces qualified columns; tests pinning the unqualified shape were updated. One test (`test_where_and_existing_scope_predicate_combine_with_and`) deliberately keeps an unqualified LHS in its hand-built scope predicate input — it's documenting the AND-combine logic, not the column-qualification fix.
+
+### Agent Guidance
+- **A symptom that looks like "feature X is broken vs feature Y" can have a root cause that's neither X nor Y.** The user's report framed #909 as `profile_card` vs `summary` divergence on the same source/filter. The actual bug was in the predicate compiler, several layers down. Don't jump to "fix the divergence" — trace the data flow and find the real fault. The diagnostic comment on the issue saved a speculative fix that would have changed `_workspace_region_handler` semantics for everyone.
+- **JOINs change the meaning of unqualified column references.** When code emits SQL into a context that may or may not have JOINs, always qualify columns with their source table. The cost is a few extra characters per column ref; the benefit is immunity from ambiguity errors AND from silent wrong-binding when the joined table happens to have a column of the same name. The scope-predicate path here had been emitting unqualified references for years — it just happened that no production app's joined tables had colliding column names until AegisMark's StudentProfile + User both had `school`.
+- **Test the produced SQL exactly, including table prefixes.** The pre-existing `test_aggregate_where_parser.py` had 7 assertions of the form `assert sql == '"foo" = %s'`. After my fix they all needed updating to `assert sql == '"X"."foo" = %s'`. That noise IS the point — tests that pin SQL shape catch this class of regression immediately. Don't relax the assertion to "contains the column name"; assert the full string including qualification.
+
 ## [0.61.76] - 2026-04-28
 
 Patch bump. **Fix #908** — `status_list` authored regions rendered "No data available." even when the IR held entries. The route registered correctly post-#907, the parser populated `status_entries`, the template iterated `status_entries` correctly — but `workspace_rendering.py` never forwarded the variable to the `render_fragment(...)` call. Template gate fell through to the empty-state branch every time.

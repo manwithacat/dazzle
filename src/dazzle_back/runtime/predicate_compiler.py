@@ -136,8 +136,13 @@ def _op_to_sql(op: CompOp) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _compile_column_check(predicate: ColumnCheck) -> tuple[str, list[Any]]:
-    col = quote_identifier(predicate.field)
+def _compile_column_check(
+    predicate: ColumnCheck,
+    *,
+    entity_name: str = "",
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    col = _qualify_column(predicate.field, entity_name, schema)
     op_sql = _op_to_sql(predicate.op)
     value = predicate.value
 
@@ -154,22 +159,55 @@ def _compile_column_check(predicate: ColumnCheck) -> tuple[str, list[Any]]:
     return f"{col} {op_sql} %s", params
 
 
-def _compile_user_attr_check(predicate: UserAttrCheck) -> tuple[str, list[Any]]:
-    col = quote_identifier(predicate.field)
+def _compile_user_attr_check(
+    predicate: UserAttrCheck,
+    *,
+    entity_name: str = "",
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    col = _qualify_column(predicate.field, entity_name, schema)
     op_sql = _op_to_sql(predicate.op)
     return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
 
 
-def _compile_column_ref_check(predicate: ColumnRefCheck) -> tuple[str, list[Any]]:
+def _compile_column_ref_check(
+    predicate: ColumnRefCheck,
+    *,
+    entity_name: str = "",
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
     """Compile a same-row column-vs-column comparison.
 
     Both sides are column identifiers — no parameters, no risk of literal
     coercion. Used by reporting aggregate where-clauses (#888); not used
     by RBAC scope rules.
     """
-    f1 = quote_identifier(predicate.field)
-    f2 = quote_identifier(predicate.other_field)
+    f1 = _qualify_column(predicate.field, entity_name, schema)
+    f2 = _qualify_column(predicate.other_field, entity_name, schema)
     return f"{f1} {_op_to_sql(predicate.op)} {f2}", []
+
+
+def _qualify_column(field: str, entity_name: str, schema: str | None) -> str:
+    """Qualify a column reference with the source entity table.
+
+    v0.61.77 (#909): scope predicates that reference entity columns
+    (`school = current_user.school`, `status = active`) used to emit
+    unqualified column names like `"school" = %s`. When the runtime
+    later applies a source-table alias to user filters (because FK
+    display joins introduced ambiguity), the scope predicate stayed
+    unqualified — so `"school"` could bind to a JOINed table's
+    `school` column instead of the source entity's. AegisMark hit
+    this with StudentProfile.school + User.school both joined.
+
+    Always qualifying with the source entity table makes the scope
+    predicate self-describing and immune to JOIN-induced ambiguity.
+    Empty entity_name (callers that pre-date the fix) falls back to
+    bare column ref for compatibility.
+    """
+    col = quote_identifier(field)
+    if not entity_name:
+        return col
+    return f"{_qualify_table(entity_name, schema)}.{col}"
 
 
 def _qualify_table(name: str, schema: str | None) -> str:
@@ -471,13 +509,13 @@ def compile_predicate(
             return "FALSE", []
 
         case ColumnCheck():
-            return _compile_column_check(predicate)
+            return _compile_column_check(predicate, entity_name=entity_name, schema=schema)
 
         case ColumnRefCheck():
-            return _compile_column_ref_check(predicate)
+            return _compile_column_ref_check(predicate, entity_name=entity_name, schema=schema)
 
         case UserAttrCheck():
-            return _compile_user_attr_check(predicate)
+            return _compile_user_attr_check(predicate, entity_name=entity_name, schema=schema)
 
         case PathCheck():
             return _compile_path_check(predicate, entity_name, fk_graph, schema=schema)

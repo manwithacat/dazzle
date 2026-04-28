@@ -175,7 +175,7 @@ class TestSqlRoundTrip:
             known_columns={"latest_grade", "target_grade"},
         )
         sql, params = _compile(pred)
-        assert sql == '"latest_grade" >= "target_grade"'
+        assert sql == '"X"."latest_grade" >= "X"."target_grade"'
         assert params == []  # both sides are columns — no bound params
 
     def test_888_repro_or_clause(self) -> None:
@@ -186,7 +186,7 @@ class TestSqlRoundTrip:
             known_columns={"flagged", "confidence"},
         )
         sql, params = _compile(pred)
-        assert sql == '("flagged" = %s) OR ("confidence" < %s)'
+        assert sql == '("X"."flagged" = %s) OR ("X"."confidence" < %s)'
         assert params == [True, 0.7]
 
     def test_888_repro_range(self) -> None:
@@ -198,7 +198,7 @@ class TestSqlRoundTrip:
             known_columns={"confidence"},
         )
         sql, params = _compile(pred)
-        assert sql == '("confidence" >= %s) AND ("confidence" < %s)'
+        assert sql == '("X"."confidence" >= %s) AND ("X"."confidence" < %s)'
         assert params == [0.85, 0.95]
         assert all(isinstance(p, float) for p in params)
 
@@ -207,7 +207,7 @@ class TestSqlRoundTrip:
         still produce a parameterised single-column comparison."""
         pred = parse_aggregate_where('status = "open"', known_columns={"status"})
         sql, params = _compile(pred)
-        assert sql == '"status" = %s'
+        assert sql == '"X"."status" = %s'
         assert params == ["open"]
 
 
@@ -240,7 +240,7 @@ class TestBuildAggregateFilters:
         assert out is not None
         assert "__scope_predicate" in out
         sql, params = out["__scope_predicate"]
-        assert sql == '"status" = %s'
+        assert sql == '"X"."status" = %s'
         assert params == ["open"]
 
     def test_where_and_existing_scope_predicate_combine_with_and(self) -> None:
@@ -254,7 +254,12 @@ class TestBuildAggregateFilters:
         out = _build_aggregate_filters('status = "open"', scope, repo, "X")
         assert out is not None
         sql, params = out["__scope_predicate"]
-        assert sql == '("tenant_id" = %s) AND ("status" = %s)'
+        # LHS came from the test's hand-built scope predicate (unqualified
+        # — predates the v0.61.77/#909 column-qualification fix). RHS was
+        # compiled freshly so it gets the new qualified form. Real callers
+        # pass scope predicates produced by `compile_predicate` which are
+        # uniformly qualified post-fix.
+        assert sql == '("tenant_id" = %s) AND ("X"."status" = %s)'
         assert params == ["t-1", "open"]
 
     def test_column_vs_column_uses_known_columns(self) -> None:
@@ -266,7 +271,7 @@ class TestBuildAggregateFilters:
         out = _build_aggregate_filters("latest_grade >= target_grade", None, repo, "StudentProfile")
         assert out is not None
         sql, params = out["__scope_predicate"]
-        assert sql == '"latest_grade" >= "target_grade"'
+        assert sql == '"StudentProfile"."latest_grade" >= "StudentProfile"."target_grade"'
         assert params == []
 
     def test_unparseable_clause_falls_back_to_legacy_parser(self) -> None:
