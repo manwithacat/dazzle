@@ -1,26 +1,29 @@
-{# Visual step indicator for multi-step flows — pure Tailwind (cycle 251).
+{# Visual step indicator for multi-step flows (cycle 251).
    Contract: ~/.claude/skills/ux-architect/components/steps-indicator.md (UX-075)
    Parameters: steps (list of {label: str}), current_step (int, 1-based).
    NOTE: experience/_content.html has its OWN inline stepper — do NOT
    collapse into this fragment. The experience shell needs server-state
    flags (is_current, is_completed, is_skipped) that this primitive's
-   position-based model cannot express. #}
+   position-based model cannot express.
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-steps-* classes
+   (components/fragments.css). Per-step completed state via
+   `.is-completed` modifier (server-rendered position check). #}
 {% set current = current_step | default(1) %}
-<ol class="dz-steps flex items-center w-full">
+<ol class="dz-steps">
   {% for step in steps %}
-  <li class="flex items-center{% if not loop.last %} flex-1{% endif %}"
+  <li class="dz-steps-item{% if not loop.last %} is-not-last{% endif %}"
       {% if loop.index == current %}aria-current="step"{% endif %}>
-    <div class="flex items-center gap-2">
-      <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold
-                   {% if loop.index <= current %}bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]{% else %}bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]{% endif %}">
+    <div class="dz-steps-row">
+      <span class="dz-steps-circle{% if loop.index <= current %} is-completed{% endif %}">
         {{ loop.index }}
       </span>
-      <span class="text-[13px] {% if loop.index <= current %}text-[hsl(var(--foreground))] font-medium{% else %}text-[hsl(var(--muted-foreground))]{% endif %}">
+      <span class="dz-steps-label{% if loop.index <= current %} is-completed{% endif %}">
         {{ step.label }}
       </span>
     </div>
     {% if not loop.last %}
-    <div class="flex-1 mx-3 h-px {% if loop.index < current %}bg-[hsl(var(--primary))]{% else %}bg-[hsl(var(--border))]{% endif %}"></div>
+    <div class="dz-steps-connector{% if loop.index < current %} is-completed{% endif %}"></div>
     {% endif %}
   </li>
   {% endfor %}

@@ -54,11 +54,15 @@ class TestToggleGroupFragment:
         assert 'data-dz-multi="true"' in html
 
     def test_uses_design_tokens_not_daisyui(self) -> None:
-        """Gate 2: zero DaisyUI class names in rendered output."""
+        """Gate 2: zero DaisyUI class names + uses semantic CSS classes.
+
+        v0.62 CSS refactor: container/item chrome moved from inline
+        Tailwind to .dz-toggle-group / .dz-toggle-item rules in
+        components/fragments.css."""
         html = self._render(name="view", options=self._default_options())
-        # Canonical design-token classes
-        assert "bg-[hsl(var(--muted)/0.3)]" in html
-        assert "border-[hsl(var(--border))]" in html
+        # Semantic classes in template
+        assert "dz-toggle-group" in html
+        assert "dz-toggle-item" in html
         # Legacy DaisyUI classes MUST NOT appear
         assert '"join"' not in html and " join " not in html
         assert "join-item" not in html
@@ -70,6 +74,16 @@ class TestToggleGroupFragment:
         import re
 
         assert not re.search(r'class="[^"]*\bbtn\b[^-]', html)
+
+        # CSS rule carries border + bg tint
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        group_block = css.split(".dz-toggle-group {")[1].split("}")[0]
+        assert "border: 1px solid var(--colour-border)" in group_block
 
     def test_label_override(self) -> None:
         html = self._render(
@@ -103,12 +117,28 @@ class TestToggleGroupFragment:
         assert "@keydown.right.prevent" in html
 
     def test_focus_visible_ring_present(self) -> None:
-        """Gate 4: keyboard focus ring via focus-visible (not focus)."""
-        html = self._render(name="view", options=self._default_options())
-        assert "focus-visible:ring-1" in html
-        assert "focus-visible:ring-[hsl(var(--ring))]" in html
-        # Regular `focus:` ring must NOT be present — that would show on mouse clicks
-        assert "focus:ring-1" not in html
+        """Gate 4: keyboard focus ring via focus-visible (not focus).
+
+        v0.62 CSS refactor: focus-visible chrome lives on the
+        `.dz-toggle-item:focus-visible` rule rather than inline
+        `focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]`
+        Tailwind. The intent — show the ring on keyboard focus only,
+        not mouse click — is preserved by using :focus-visible rather
+        than :focus."""
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        # The :focus-visible variant must exist
+        assert ".dz-toggle-item:focus-visible {" in css
+        # And must NOT be a plain :focus rule (that would show on click)
+        assert ".dz-toggle-item:focus {" not in css
+
+        focus_block = css.split(".dz-toggle-item:focus-visible {")[1].split("}")[0]
+        # Ring colour comes from the brand token
+        assert "var(--colour-brand)" in focus_block
 
     def test_aria_pressed_per_button(self) -> None:
         """Gate 1: aria-pressed is reactive on every button."""

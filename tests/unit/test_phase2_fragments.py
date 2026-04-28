@@ -14,20 +14,23 @@ def jinja_env():
 
 class TestToastFragment:
     def test_renders_alert_with_level(self, jinja_env):
+        """v0.62 CSS refactor: tone tinting moved from inline
+        `text-[hsl(var(--success))]` / `border-l-[hsl(var(--success))]`
+        Tailwind dictionaries to attribute selectors on
+        `.dz-toast[data-dz-toast-level="success"]` in
+        components/fragments.css."""
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Saved", level="success")
-        # Post-DaisyUI refactor: toast uses design-system tokens, not alert-success
-        assert "text-[hsl(var(--success))]" in html
-        assert "border-l-[hsl(var(--success))]" in html
+        assert 'data-dz-toast-level="success"' in html
         assert "Saved" in html
         assert 'remove-me="5s"' in html
 
     def test_default_level_is_info(self, jinja_env):
+        """info is the default level — tone tinting via
+        data-dz-toast-level attribute selector for `.dz-toast` in CSS."""
         tmpl = jinja_env.from_string('{% include "fragments/toast.html" %}')
         html = tmpl.render(message="Hello")
-        # info level maps to --primary in the token system
-        assert "text-[hsl(var(--primary))]" in html
-        assert "border-l-[hsl(var(--primary))]" in html
+        assert 'data-dz-toast-level="info"' in html
 
 
 class TestAlertBanner:
@@ -76,12 +79,15 @@ class TestBreadcrumbs:
 
 class TestStepsIndicator:
     def test_renders_steps(self, jinja_env):
+        """v0.62 CSS refactor: completed/current step styling moved
+        from inline `bg-[hsl(var(--primary))]` to .is-completed
+        modifier on .dz-steps-circle (components/fragments.css)."""
         steps = [{"label": "Info"}, {"label": "Review"}, {"label": "Done"}]
         tmpl = jinja_env.from_string('{% include "fragments/steps_indicator.html" %}')
         html = tmpl.render(steps=steps, current_step=2)
-        # Cycle 251 — migrated from DaisyUI step-primary to design tokens
         assert "dz-steps" in html
-        assert "bg-[hsl(var(--primary))]" in html  # completed/current steps
+        # 2 circles + 2 labels emit .is-completed (steps 1, 2)
+        assert html.count("dz-steps-circle is-completed") == 2
         assert 'aria-current="step"' in html
 
 

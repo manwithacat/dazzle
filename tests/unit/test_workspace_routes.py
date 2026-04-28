@@ -6716,9 +6716,22 @@ class TestStepsIndicator:
 
     # Gate 1: <ol> root has dz-steps class
     def test_root_has_canonical_class(self) -> None:
+        """v0.62 CSS refactor: layout (flex/items-center/w-full) lives
+        on the .dz-steps CSS rule (components/fragments.css), not inline
+        Tailwind."""
         html = self._render(steps=[{"label": "A"}])
         assert '<ol class="dz-steps' in html
-        assert "flex items-center w-full" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        steps_block = css.split(".dz-steps {")[1].split("}")[0]
+        assert "display: flex" in steps_block
+        assert "align-items: center" in steps_block
+        assert "width: 100%" in steps_block
 
     # Gate 2: N steps → N <li>
     def test_n_steps_produce_n_li(self) -> None:
@@ -6740,73 +6753,82 @@ class TestStepsIndicator:
         assert 'aria-current="step"' in li_matches[0]
         assert 'aria-current="step"' not in li_matches[1]
 
-    # Gate 5: steps <= current use --primary tokens
+    # Gate 5: steps <= current emit .is-completed modifier
     def test_steps_up_to_current_use_primary(self) -> None:
+        """v0.62 CSS refactor: completed-state styling lives on the
+        .is-completed modifier in the CSS rules, not inline
+        `bg-[hsl(var(--primary))]` per element. Pin the modifier
+        emission count + the CSS rule's brand fill."""
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # 3 circles should be primary (steps 1, 2, 3)
-        assert html.count("bg-[hsl(var(--primary))]") >= 3
-        # Current step + completed labels use --foreground
-        assert "text-[hsl(var(--foreground))]" in html
+        # 3 circles + 3 labels emit .is-completed (steps 1, 2, 3)
+        assert html.count("dz-steps-circle is-completed") == 3
+        assert html.count("dz-steps-label is-completed") == 3
 
-    # Gate 6: steps > current use --muted tokens
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_block = css.split(".dz-steps-circle.is-completed {")[1].split("}")[0]
+        assert "background: var(--colour-brand)" in circle_block
+
+    # Gate 6: steps > current omit .is-completed (default state)
     def test_steps_after_current_use_muted(self) -> None:
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # 2 circles muted (steps 4, 5)
-        assert html.count("bg-[hsl(var(--muted))]") >= 2
-        # Muted labels for steps 4, 5
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        # 5 total circles, 3 completed → 2 plain (no is-completed)
+        assert html.count("dz-steps-circle") == 5
+        assert html.count("dz-steps-circle is-completed") == 3
+
+        # Default (non-completed) circle styling uses muted tokens via CSS
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_default = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "color: var(--colour-text-muted)" in circle_default
 
     # Gate 7: connector colour is STRICT less-than current
     def test_connector_threshold_is_strict_less_than(self) -> None:
-        """Connector LEADING INTO current = primary. Connector LEADING OUT = muted."""
+        """Connector LEADING INTO current = brand (.is-completed).
+        Connector LEADING OUT = default border. Strict-less-than
+        threshold preserved post-refactor."""
         html = self._render(
             steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}, {"label": "D"}, {"label": "E"}],
             current_step=3,
         )
-        # Extract connector divs in order
-        import re
-
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px (bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html,
-        )
         # 4 connectors between 5 steps
-        assert len(connectors) == 4
-        # Connectors 1→2, 2→3 (leading INTO current=3) are primary
-        assert connectors[0] == "bg-[hsl(var(--primary))]"
-        assert connectors[1] == "bg-[hsl(var(--primary))]"
-        # Connector 3→4 (leading OUT of current) is border
-        assert connectors[2] == "bg-[hsl(var(--border))]"
-        assert connectors[3] == "bg-[hsl(var(--border))]"
+        assert html.count("dz-steps-connector") == 4
+        # Connectors 1→2, 2→3 (leading INTO current=3) → 2 emit .is-completed
+        assert html.count("dz-steps-connector is-completed") == 2
 
-    # Gate 8: flex-1 on all non-last steps
+    # Gate 8: .is-not-last on all non-last steps (flex grows them)
     def test_flex_1_on_non_last_steps_only(self) -> None:
+        """v0.62 CSS refactor: `flex-1` modifier is now `.is-not-last`
+        emitted by the template gate, with `flex: 1 1 0` in the CSS
+        rule."""
         html = self._render(steps=[{"label": "A"}, {"label": "B"}, {"label": "C"}])
         import re
 
         li_tags = re.findall(r"<li[^>]*>", html)
-        # First two should have flex-1, last shouldn't
-        assert "flex-1" in li_tags[0]
-        assert "flex-1" in li_tags[1]
-        assert "flex-1" not in li_tags[2]
+        # First two get is-not-last; the last one doesn't
+        assert "is-not-last" in li_tags[0]
+        assert "is-not-last" in li_tags[1]
+        assert "is-not-last" not in li_tags[2]
 
     # Gate 9: no connector after last step
     def test_no_connector_after_last_step(self) -> None:
         html = self._render(steps=[{"label": "A"}, {"label": "B"}])
         # Only 1 connector between 2 steps
-        import re
-
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px',
-            html,
-        )
-        assert len(connectors) == 1
+        assert html.count("dz-steps-connector") == 1
 
     # Gate 10: label uses step.label
     def test_label_reads_step_label_key(self) -> None:
@@ -6817,12 +6839,25 @@ class TestStepsIndicator:
         html_wrong = self._render(steps=[{"title": "Should not render"}])
         assert "Should not render" not in html_wrong
 
-    # Gate 11: circles are 6x6, rounded-full, 11px semibold
+    # Gate 11: circle chrome (size, rounded-full, font) lives in CSS rule
     def test_circle_styling_is_canonical(self) -> None:
+        """v0.62 CSS refactor: circle dimensions + typography live on
+        .dz-steps-circle rule rather than inline `w-6 h-6 rounded-full
+        text-[11px] font-semibold` Tailwind utilities."""
         html = self._render(steps=[{"label": "A"}])
-        # The span carrying the number
-        assert "shrink-0 w-6 h-6 rounded-full" in html
-        assert "text-[11px] font-semibold" in html
+        assert "dz-steps-circle" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        circle_block = css.split(".dz-steps-circle {")[1].split("}")[0]
+        assert "width: 1.5rem" in circle_block  # 6 × 0.25rem
+        assert "height: 1.5rem" in circle_block
+        assert "border-radius: var(--radius-full)" in circle_block
+        assert "font-weight: var(--weight-semibold)" in circle_block
 
     # Gate 12: zero Alpine, HTMX, JS
     def test_no_alpine_htmx_or_js(self) -> None:

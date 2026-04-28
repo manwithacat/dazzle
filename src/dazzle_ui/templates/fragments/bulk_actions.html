@@ -1,5 +1,8 @@
-{# Bulk actions toolbar — delete-only, pure Tailwind #}
-{# State managed by dzTable Alpine component — bulkCount, bulkDelete(), clearSelection() #}
+{# Bulk actions toolbar — delete-only.
+   State managed by dzTable Alpine component — bulkCount, bulkDelete(), clearSelection().
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-bulk-* classes
+   (components/fragments.css). #}
 <div x-show="bulkCount > 0"
      x-cloak
      x-transition:enter="transition ease-out duration-100"
@@ -8,13 +11,10 @@
      x-transition:leave="transition ease-in duration-75"
      x-transition:leave-start="opacity-100 translate-y-0"
      x-transition:leave-end="opacity-0 translate-y-1"
-     class="flex items-center gap-3">
+     class="dz-bulk-actions">
 
   {# Delete N items #}
-  <button
-    @click="bulkDelete()"
-    type="button"
-    class="flex items-center gap-1.5 h-8 px-3 rounded-[4px] text-[13px] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.08)] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms]">
+  <button @click="bulkDelete()" type="button" class="dz-bulk-delete">
     {# Trash icon #}
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -29,10 +29,7 @@
   </button>
 
   {# Clear selection #}
-  <button
-    @click="clearSelection()"
-    type="button"
-    class="text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms]">
+  <button @click="clearSelection()" type="button" class="dz-bulk-clear">
     Clear selection
   </button>
 

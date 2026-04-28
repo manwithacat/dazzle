@@ -227,3 +227,284 @@
   background: var(--colour-bg);
   color: var(--colour-text);
 }
+
+/* ─────────────────────────── toast fragment ─────────────────────
+ * Auto-dismissing notification (5s via htmx remove-me). 4 tones
+ * keyed off data-dz-toast-level — replaces two parallel dictionary
+ * lookups for border-l + icon colour. */
+
+.dz-toast {
+  pointer-events: auto;
+  max-width: 24rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  border-inline-start-width: 4px;
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-md);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.dz-toast[data-dz-toast-level="success"] { border-inline-start-color: var(--colour-success); }
+.dz-toast[data-dz-toast-level="error"]   { border-inline-start-color: var(--colour-danger); }
+.dz-toast[data-dz-toast-level="warning"] { border-inline-start-color: var(--colour-warning); }
+.dz-toast[data-dz-toast-level="info"]    { border-inline-start-color: var(--colour-brand); }
+
+.dz-toast-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-block-start: 3px;
+  flex-shrink: 0;
+}
+
+.dz-toast[data-dz-toast-level="success"] .dz-toast-icon { color: var(--colour-success); }
+.dz-toast[data-dz-toast-level="error"]   .dz-toast-icon { color: var(--colour-danger); }
+.dz-toast[data-dz-toast-level="warning"] .dz-toast-icon { color: var(--colour-warning); }
+.dz-toast[data-dz-toast-level="info"]    .dz-toast-icon { color: var(--colour-brand); }
+
+.dz-toast-message {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── bulk_actions fragment ──────────────
+ * Delete-only bulk actions toolbar. Visible via Alpine x-show
+ * gated on bulkCount > 0. */
+
+.dz-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-bulk-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-danger);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-bulk-delete:hover {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+
+.dz-bulk-clear {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-bulk-clear:hover {
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── toggle_group fragment ──────────────
+ * Segmented control: a row of connected buttons, one (or several
+ * with multi=true) "pressed". Selected state via .is-selected
+ * modifier — Alpine `:class` collapses to a single token swap. */
+
+.dz-toggle-group {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  padding: 0.125rem;
+}
+
+.dz-toggle-item {
+  height: 1.75rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-xs, 0.1875rem);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--colour-text-muted);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.dz-toggle-item:hover {
+  color: var(--colour-text);
+}
+
+.dz-toggle-item.is-selected,
+.dz-toggle-item[aria-pressed="true"] {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / 0.08);
+}
+
+.dz-toggle-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* ─────────────────────────── form_stepper fragment ──────────────
+ * Multi-section form progress list. Each <li> is a (number-circle
+ * + label + connector). Active state via .is-active modifier on
+ * the whole li. */
+
+.dz-form-stepper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-block-end: var(--space-xl);
+  gap: var(--space-sm);
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.dz-form-stepper-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.dz-form-stepper-item.is-not-last {
+  flex: 1 1 0;
+}
+
+.dz-form-stepper-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  transition: background var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-form-stepper-circle.is-active {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border-color: var(--colour-brand);
+}
+
+.dz-form-stepper-circle > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-form-stepper-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--colour-text-muted);
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.dz-form-stepper-label.is-active {
+  color: var(--colour-text);
+}
+
+.dz-form-stepper-connector {
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--colour-border);
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.dz-form-stepper-connector.is-active {
+  background: var(--colour-brand);
+}
+
+/* ─────────────────────────── steps_indicator fragment ───────────
+ * Visual step indicator (cycle 251). Position-based — every step at
+ * or before the current is "complete" and rendered with brand fill.
+ * Distinct from form_stepper which uses Alpine + per-step state. */
+
+.dz-steps {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  list-style: none;
+  padding-inline-start: 0;
+  margin: 0;
+}
+
+.dz-steps-item {
+  display: flex;
+  align-items: center;
+}
+
+.dz-steps-item.is-not-last {
+  flex: 1 1 0;
+}
+
+.dz-steps-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dz-steps-circle {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+}
+
+.dz-steps-circle.is-completed {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.dz-steps-label {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-steps-label.is-completed {
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+.dz-steps-connector {
+  flex: 1 1 0;
+  margin-inline: var(--space-md);
+  height: 1px;
+  background: var(--colour-border);
+}
+
+.dz-steps-connector.is-completed {
+  background: var(--colour-brand);
+}
