@@ -6135,12 +6135,25 @@ class TestWorkspaceShellComposition:
 
     # Gate 5
     def test_heading_uses_foreground_token_with_title_fallback(self) -> None:
+        """v0.62 CSS refactor: h2 chrome moved from inline
+        `text-[17px] font-medium ... text-[hsl(var(--foreground))]`
+        Tailwind to the `.dz-workspace-title` rule in
+        components/dashboard.css. The rule sources the foreground
+        colour from --colour-text."""
         html = self._render()
-        # The h2 opening tag and the --foreground token must co-occur
         assert "<h2" in html
-        assert "text-[hsl(var(--foreground))]" in html
+        assert 'class="dz-workspace-title"' in html
         # Title renders ("My Dashboard" — set on the WorkspaceContext)
         assert "My Dashboard" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/dashboard.css"
+        ).read_text()
+        rule = css.split(".dz-workspace-title {")[1].split("}")[0]
+        assert "var(--colour-text)" in rule
 
     # Gate 6
     def test_primary_actions_row_conditional(self) -> None:
@@ -7275,10 +7288,21 @@ class TestExperienceShellComposition:
 
     # Gate 1
     def test_outer_wrapper_has_data_experience_and_centering(self) -> None:
+        """v0.62 CSS refactor: max-width + mx-auto Tailwind utilities
+        moved to .dz-experience rule in components/fragments.css."""
         html = self._render(self._make_experience())
         assert 'data-dz-experience="onboarding"' in html
-        assert "max-w-4xl" in html
-        assert "mx-auto" in html
+        assert 'class="dz-experience"' in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        rule = css.split(".dz-experience {")[1].split("}")[0]
+        assert "max-inline-size:" in rule
+        assert "margin-inline: auto" in rule
 
     # Gate 2
     def test_title_renders_as_h2_with_title_text(self) -> None:
@@ -7315,6 +7339,10 @@ class TestExperienceShellComposition:
 
     # Gate 6 — completed/current steps use --primary, pending use --muted
     def test_step_coloring_uses_correct_tokens(self) -> None:
+        """v0.62 CSS refactor: per-step tone moved from inline class
+        ternary to `.is-completed` / `.is-current` modifier classes on
+        the <li>; CSS rules in components/fragments.css resolve the
+        bullet + label colour for each state."""
         exp = self._make_experience(
             steps=[
                 {"name": "step_one", "title": "One", "is_completed": True},
@@ -7324,16 +7352,37 @@ class TestExperienceShellComposition:
             current_step="step_two",
         )
         html = self._render(exp)
-        # Current/completed: --primary
-        assert "bg-[hsl(var(--primary))]" in html
-        assert "text-[hsl(var(--primary-foreground))]" in html
-        # Pending: --muted
-        assert "bg-[hsl(var(--muted))]" in html
-        assert "text-[hsl(var(--muted-foreground))]" in html
+        # Modifier classes on <li> drive the state-tone CSS
+        assert "is-completed" in html
+        assert "is-current" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        # Active rule references the brand token (was --primary)
+        assert ".dz-steps-item.is-completed .dz-steps-bullet" in css
+        assert ".dz-steps-item.is-current .dz-steps-bullet" in css
+        active_block = css.split(
+            ".dz-steps-item.is-completed .dz-steps-bullet,\n"
+            ".dz-steps-item.is-current .dz-steps-bullet {"
+        )[1].split("}")[0]
+        assert "var(--colour-brand)" in active_block
+
+        # Pending bullet rule references the muted bg
+        bullet_block = css.split(".dz-steps-bullet {")[1].split("}")[0]
+        assert "var(--colour-bg)" in bullet_block
+        assert "var(--colour-text-muted)" in bullet_block
 
     # Gate 7 — connector line colour reflects LEFT step's completion
     def test_connector_line_colour_by_left_step(self) -> None:
-        # Left step completed → connector uses --primary
+        """v0.62 CSS refactor: connector tone moved from per-element
+        `bg-[hsl(var(--primary))]` ternary to `.dz-steps-item.is-completed
+        .dz-steps-connector` cascade selector. The CSS rule applies to
+        the connector whose parent <li> is marked is-completed (= the
+        LEFT step is done)."""
         exp_completed_left = self._make_experience(
             steps=[
                 {"name": "a", "title": "A", "is_completed": True},
@@ -7342,41 +7391,44 @@ class TestExperienceShellComposition:
             current_step="b",
         )
         html = self._render(exp_completed_left)
-        # Look for the connector <div class="flex-1 mx-3 h-px ..."> with --primary
-        assert "flex-1 mx-3 h-px" in html
-        # With completed left, --primary line colour appears on the connector
-        # (and also on the left step's chip — we just verify at least one primary occurrence)
-        # Stronger assertion: search for the pattern specifically
-        import re
+        # The completed <li> carries the is-completed class which the
+        # CSS rule keys off
+        assert "dz-steps-item is-completed" in html
+        assert 'class="dz-steps-connector"' in html
 
-        connectors = re.findall(
-            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html,
-        )
-        assert connectors, f"no connector line matched — got: {html[:500]}"
-        assert connectors[0] == "bg-[hsl(var(--primary))]"
+        from pathlib import Path
 
-        # Left step NOT completed → connector uses --border
-        exp_pending_left = self._make_experience(
-            steps=[
-                {"name": "a", "title": "A", "is_current": True},
-                {"name": "b", "title": "B"},
-            ],
-            current_step="a",
-        )
-        html2 = self._render(exp_pending_left)
-        connectors2 = re.findall(
-            r'<div class="flex-1 mx-3 h-px [^"]*?(bg-\[hsl\(var\(--[^)]+\)\)\])',
-            html2,
-        )
-        assert connectors2 == ["bg-[hsl(var(--border))]"]
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        # Pending connector — base rule uses --colour-border
+        connector_block = css.split(".dz-steps-connector {")[1].split("}")[0]
+        assert "var(--colour-border)" in connector_block
+        # Completed connector — descendant rule uses --colour-brand
+        assert ".dz-steps-item.is-completed .dz-steps-connector" in css
+        completed_block = css.split(".dz-steps-item.is-completed .dz-steps-connector {")[1].split(
+            "}"
+        )[0]
+        assert "var(--colour-brand)" in completed_block
 
     # Gate 13 — non-surface step renders muted placeholder
     def test_non_surface_step_renders_muted_placeholder(self) -> None:
+        """v0.62 CSS refactor: non-surface placeholder chrome moved to
+        `.dz-experience-placeholder` rule in components/fragments.css."""
         # page_context=None → non-surface branch
         html = self._render(self._make_experience(page_context=None))
-        assert "bg-[hsl(var(--muted))]" in html
+        assert "dz-experience-placeholder" in html
         assert "Step in progress" in html
+
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/fragments.css"
+        ).read_text()
+        rule = css.split(".dz-experience-placeholder {")[1].split("}")[0]
+        assert "var(--colour-bg)" in rule
 
     # Gate 14 — transition buttons resolve 3 styles, rendered via hx-post (cycle 292: EX-053 fix)
     def test_transition_buttons_three_styles(self) -> None:

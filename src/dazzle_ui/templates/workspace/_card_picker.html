@@ -1,5 +1,7 @@
 {# Card picker popover — lists available regions from the catalog
-   Contract: ~/.claude/skills/ux-architect/components/workspace-card-picker.md (UX-038) #}
+   Contract: ~/.claude/skills/ux-architect/components/workspace-card-picker.md (UX-038)
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-card-picker* family
+   (components/fragments.css). #}
 <div x-show="showPicker"
      x-transition:enter="transition duration-[140ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
      x-transition:enter-start="opacity-0 -translate-y-1"
@@ -8,28 +10,20 @@
      x-transition:leave-start="opacity-100"
      x-transition:leave-end="opacity-0"
      @click.away="showPicker = false"
-     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80
-            bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))]
-            shadow-[0_4px_8px_rgb(0_0_0/0.08),0_2px_4px_rgb(0_0_0/0.04)]
-            rounded-md border border-[hsl(var(--border))]
-            p-3 z-50 max-h-64 overflow-y-auto">
-  <h4 class="text-[12px] font-medium uppercase tracking-[0.04em] text-[hsl(var(--muted-foreground))] mb-2">Add a card</h4>
+     class="dz-card-picker">
+  <h4 class="dz-card-picker-title">Add a card</h4>
   <template x-for="item in catalog" :key="item.name">
     <button @click="addCard(item.name)"
             data-test-id="dz-card-picker-entry"
             :data-test-region="item.name"
-            class="w-full text-left px-3 py-2 rounded-[4px]
-                   hover:bg-[hsl(var(--muted))]
-                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
-                   flex items-center gap-2 text-[13px]">
-      <span class="px-1.5 py-0.5 rounded-[4px] bg-[hsl(var(--muted))] text-[11px] font-medium text-[hsl(var(--muted-foreground))]"
-            x-text="item.display.toLowerCase()"></span>
-      <span x-text="item.title" class="text-[hsl(var(--foreground))]"></span>
-      <span class="text-[11px] text-[hsl(var(--muted-foreground))] ml-auto" x-text="item.entity"></span>
+            class="dz-card-picker-entry">
+      <span class="dz-card-picker-display-tag" x-text="item.display.toLowerCase()"></span>
+      <span class="dz-card-picker-title-text" x-text="item.title"></span>
+      <span class="dz-card-picker-entity" x-text="item.entity"></span>
     </button>
   </template>
   {# x-cloak — see #866. Hide "No widgets available" until Alpine hydrates
      `catalog` from the layout-JSON data island. Otherwise a failed alpine:init
      leaves this string visible even when the catalog is non-empty. #}
-  <div x-cloak x-show="catalog.length === 0" class="text-[13px] text-[hsl(var(--muted-foreground))] py-2">No widgets available.</div>
+  <div x-cloak x-show="catalog.length === 0" class="dz-card-picker-empty">No widgets available.</div>
 </div>

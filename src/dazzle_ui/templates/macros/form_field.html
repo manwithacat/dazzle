@@ -1,16 +1,12 @@
 {# Form field macros — render the appropriate input for each field type.
    Contract: ~/.claude/skills/ux-architect/components/form-field.md (UX-017)
 
-   v0.62 CSS refactor (partial): the checkbox + core else-block
-   branches (label / hint / textarea / select / date / datetime /
-   money / number / email / file / default text) emit semantic
-   classes from `components/form.css`. Widget branches (combobox,
-   multi_select, tags, picker, range, color, rich_text, slider)
-   keep their original Tailwind markup until the per-widget JS
-   dependencies are migrated alongside — they have non-trivial
-   internal structure that vendored libs (TomSelect, Flatpickr,
-   Quill, Pickr) bind to. See dev_docs/css-refactor-phase-0-notes.md
-   for the migration boundary.
+   v0.62 CSS refactor (complete): every branch (search-select, ref-entity,
+   combobox, multi_select, tags, picker, range, color, rich_text, slider,
+   plus the standard else-block) now emits semantic classes from
+   `components/form.css`. The `aria-invalid="true"` attribute drives the
+   destructive-border state via `.dz-form-input[aria-invalid="true"]`
+   in CSS — no more conditional border-class concatenation per branch.
 #}
 
 {% macro render_field(field, values={}, errors={}) %}
@@ -20,12 +16,6 @@
 {% set error_id = "error-" ~ field.name %}
 {% set hint_id = "hint-" ~ field.name if field.hint is defined and field.hint else "" %}
 {% set described_by = ([error_id] if error else []) + ([hint_id] if hint_id else []) %}
-{# Legacy Tailwind class strings retained for the widget branches that
-   haven't been migrated yet (see header comment). The else-block
-   below uses semantic classes from components/form.css. #}
-{% set base_input = "w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]" %}
-{% set border_idle = "border-[hsl(var(--border))]" %}
-{% set border_error = "border-[hsl(var(--destructive))]" %}
 
 <div class="dz-form-field">
   {% if field.type == "checkbox" %}
@@ -43,19 +33,19 @@
 
   {% elif field.source %}
     {# UX-028: search-select dynamic search with autofill #}
-    <label for="search-input-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+    <label for="search-input-{{ field.name }}" class="dz-form-label">
       {{ field.label }}
       {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
+        <span class="dz-form-required" aria-hidden="true">*</span>
+        <span class="visually-hidden">(required)</span>
       {% endif %}
     </label>
     {% if field.hint is defined and field.hint %}
-    <p id="{{ hint_id }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    <p id="{{ hint_id }}" class="dz-form-hint">{{ field.hint }}</p>
     {% endif %}
     {% include "fragments/search_select.html" %}
     {% if error %}
-    <p id="{{ error_id }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ error }}</p>
+    <p id="{{ error_id }}" class="dz-form-error" role="alert">{{ error }}</p>
     {% endif %}
 
   {% elif field.ref_entity %}
@@ -65,23 +55,23 @@
        the IR and the form renders a select that hydrates options from the
        entity's list endpoint. Mirrors the Alpine fetch pattern already
        used by filter_bar.html for ref/belongs_to column filters. #}
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+    <label for="field-{{ field.name }}" class="dz-form-label">
       {{ field.label }}
       {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
+        <span class="dz-form-required" aria-hidden="true">*</span>
+        <span class="visually-hidden">(required)</span>
       {% endif %}
     </label>
     {% if field.hint is defined and field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
     {% endif %}
     <select id="field-{{ field.name }}" name="{{ field.name }}"
             data-dazzle-field="{{ field.name }}"
             data-dz-ref-entity="{{ field.ref_entity }}"
             data-dz-ref-api="{{ field.ref_api }}"
+            class="dz-form-input"
             {% if field.required %}required aria-required="true"{% endif %}
             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-            class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
             x-data='{ options: [], loading: true, current: {{ (values.get(field.name) if values else "") | tojson }} }'
             x-init="
               fetch('{{ field.ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
@@ -107,234 +97,219 @@
       </template>
     </select>
     {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
+    <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
     {% endif %}
 
   {# ── Vendored widget overrides (Phase 4) ─────────────────────────── #}
   {% elif field.widget == "combobox" %}
-  {# UX-009: combobox widget — TomSelect wrapper, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-009: combobox widget — TomSelect wrapper #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <select id="field-{{ field.name }}" name="{{ field.name }}"
-            data-dz-widget="combobox"
-            data-dz-options='{}'
-            {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-            {% if field.required %}required aria-required="true"{% endif %}
-            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-            class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-      <option value="">{{ field.placeholder or 'Select...' }}</option>
-      {% for opt in field.options %}
-      <option value="{{ opt.value }}" {% if values.get(field.name) == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
-      {% endfor %}
-    </select>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-  </div>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <select id="field-{{ field.name }}" name="{{ field.name }}"
+          data-dz-widget="combobox"
+          data-dz-options='{}'
+          class="dz-form-input"
+          {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+          {% if field.required %}required aria-required="true"{% endif %}
+          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+    <option value="">{{ field.placeholder or 'Select...' }}</option>
+    {% for opt in field.options %}
+    <option value="{{ opt.value }}" {% if values.get(field.name) == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
+    {% endfor %}
+  </select>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "multi_select" %}
-  {# UX-021: multiselect widget — TomSelect with remove_button plugin, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-021: multiselect widget — TomSelect with remove_button plugin #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <select id="field-{{ field.name }}" name="{{ field.name }}"
-            data-dz-widget="multiselect"
-            data-dz-options='{"plugins":["remove_button"]}'
-            multiple
-            {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-            {% if field.required %}required aria-required="true"{% endif %}
-            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-            class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-      {% for opt in field.options %}
-      <option value="{{ opt.value }}" {% if opt.value|string in (values.get(field.name) or []) %}selected{% endif %}>{{ opt.label }}</option>
-      {% endfor %}
-    </select>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-  </div>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <select id="field-{{ field.name }}" name="{{ field.name }}"
+          data-dz-widget="multiselect"
+          data-dz-options='{"plugins":["remove_button"]}'
+          class="dz-form-input"
+          multiple
+          {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+          {% if field.required %}required aria-required="true"{% endif %}
+          {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+    {% for opt in field.options %}
+    <option value="{{ opt.value }}" {% if opt.value|string in (values.get(field.name) or []) %}selected{% endif %}>{{ opt.label }}</option>
+    {% endfor %}
+  </select>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "tags" %}
-  {# UX-022: tags widget — TomSelect with create:true, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-022: tags widget — TomSelect with create:true #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
-           data-dz-widget="tags"
-           data-dz-options='{"create":true,"plugins":["remove_button"]}'
-           value="{{ values.get(field.name, '') }}"
-           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-           {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-           class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-  </div>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
+         data-dz-widget="tags"
+         data-dz-options='{"create":true,"plugins":["remove_button"]}'
+         class="dz-form-input"
+         value="{{ values.get(field.name, '') }}"
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.required %}required aria-required="true"{% endif %}
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "picker" and field.type in ("date", "datetime") %}
-  {# UX-010: datepicker widget (single) — Flatpickr wrapper, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-010: datepicker widget (single) — Flatpickr wrapper #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
-           data-dz-widget="datepicker"
-           data-dz-options='{"dateFormat":"{{ "Y-m-d H:i" if field.type == "datetime" else "Y-m-d" }}"{% if field.type == "datetime" %},"enableTime":true{% endif %}}'
-           value="{{ values.get(field.name, field.default or '') }}"
-           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-           {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-           class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-  </div>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
+         data-dz-widget="datepicker"
+         data-dz-options='{"dateFormat":"{{ "Y-m-d H:i" if field.type == "datetime" else "Y-m-d" }}"{% if field.type == "datetime" %},"enableTime":true{% endif %}}'
+         class="dz-form-input"
+         value="{{ values.get(field.name, field.default or '') }}"
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.required %}required aria-required="true"{% endif %}
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "range" and field.type in ("date", "datetime") %}
-  {# UX-010: datepicker widget (range) — Flatpickr wrapper, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-010: datepicker widget (range) — Flatpickr wrapper #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
-           data-dz-widget="daterange"
-           data-dz-options='{"mode":"range","dateFormat":"Y-m-d"}'
-           value="{{ values.get(field.name, '') }}"
-           placeholder="{{ field.placeholder or 'Select date range...' }}"
-           {% if field.required %}required aria-required="true"{% endif %}
-           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-           class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-  </div>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <input id="field-{{ field.name }}" name="{{ field.name }}" type="text"
+         data-dz-widget="daterange"
+         data-dz-options='{"mode":"range","dateFormat":"Y-m-d"}'
+         class="dz-form-input"
+         value="{{ values.get(field.name, '') }}"
+         placeholder="{{ field.placeholder or 'Select date range...' }}"
+         {% if field.required %}required aria-required="true"{% endif %}
+         {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "color" %}
-  {# UX-024: colorpicker widget — Pickr wrapper, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-024: colorpicker widget — Pickr wrapper #}
+  <label class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <div data-dz-widget="colorpicker" class="flex items-center gap-3">
-      <div class="pcr-trigger h-8 w-8 rounded-[4px] border border-[hsl(var(--border))] cursor-pointer transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] hover:brightness-105"
-           style="background: {{ values.get(field.name, field.default or '#3b82f6') }}"
-           aria-label="Color swatch, click to change">
-      </div>
-      <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
-             value="{{ values.get(field.name, field.default or '#3b82f6') }}"
-             {% if field.required %}required aria-required="true"{% endif %}
-             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
-      <span class="text-[12px] font-mono text-[hsl(var(--muted-foreground))]" aria-hidden="true">{{ values.get(field.name, field.default or '#3b82f6') }}</span>
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <div data-dz-widget="colorpicker" class="dz-form-color-group">
+    <div class="pcr-trigger dz-form-color-swatch"
+         style="background: {{ values.get(field.name, field.default or '#3b82f6') }}"
+         aria-label="Color swatch, click to change">
     </div>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
+    <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
+           value="{{ values.get(field.name, field.default or '#3b82f6') }}"
+           {% if field.required %}required aria-required="true"{% endif %}
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+    <span class="dz-form-color-hex" aria-hidden="true">{{ values.get(field.name, field.default or '#3b82f6') }}</span>
   </div>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "rich_text" %}
-  {# UX-025: richtext widget — Quill editor wrapper, pure Tailwind chrome #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  {# UX-025: richtext widget — Quill editor wrapper #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <div data-dz-widget="richtext" data-dz-options='{}'
-         class="border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} rounded-[4px] overflow-hidden bg-[hsl(var(--background))]">
-      <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
-             value="{{ values.get(field.name, '') }}"
-             {% if field.required %}required aria-required="true"{% endif %}
-             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
-      <div data-dz-editor></div>
-    </div>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <div data-dz-widget="richtext" data-dz-options='{}'
+       class="dz-form-richtext"
+       {% if errors.get(field.name) %}aria-invalid="true"{% endif %}>
+    <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
+           value="{{ values.get(field.name, '') }}"
+           {% if field.required %}required aria-required="true"{% endif %}
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+    <div data-dz-editor></div>
   </div>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% elif field.widget == "slider" %}
   {# UX-023: slider widget — native <input type="range"> + dzRangeTooltip controller #}
-  <div class="w-full space-y-1">
-    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
-        <span class="sr-only">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.hint %}
-    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+  <label for="field-{{ field.name }}" class="dz-form-label">
+    {{ field.label }}
+    {% if field.required %}
+      <span class="dz-form-required" aria-hidden="true">*</span>
+      <span class="visually-hidden">(required)</span>
     {% endif %}
-    <div data-dz-widget="range-tooltip" class="flex items-center gap-3">
-      <input id="field-{{ field.name }}" name="{{ field.name }}" type="range"
-             data-dz-slider
-             min="{{ field.extra.min | default(0) }}"
-             max="{{ field.extra.max | default(100) }}"
-             step="{{ field.extra.step | default(1) }}"
-             value="{{ values.get(field.name, field.default or '50') }}"
-             {% if field.required %}required aria-required="true"{% endif %}
-             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
-             class="w-full">
-      <span data-dz-range-value
-            class="text-[12px] font-mono text-[hsl(var(--foreground))] min-w-8 text-right"
-            aria-hidden="true">{{ values.get(field.name, field.default or '50') }}</span>
-    </div>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
+  </label>
+  {% if field.hint %}
+  <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.hint }}</p>
+  {% endif %}
+  <div data-dz-widget="range-tooltip" class="dz-form-slider-group">
+    <input id="field-{{ field.name }}" name="{{ field.name }}" type="range"
+           data-dz-slider
+           class="dz-form-slider"
+           min="{{ field.extra.min | default(0) }}"
+           max="{{ field.extra.max | default(100) }}"
+           step="{{ field.extra.step | default(1) }}"
+           value="{{ values.get(field.name, field.default or '50') }}"
+           {% if field.required %}required aria-required="true"{% endif %}
+           {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+    <span data-dz-range-value
+          class="dz-form-slider-value"
+          aria-hidden="true">{{ values.get(field.name, field.default or '50') }}</span>
   </div>
+  {% if errors.get(field.name) %}
+  <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
+  {% endif %}
 
   {% else %}
     {# Standard fields: label above #}

@@ -282,3 +282,67 @@
 
 /* No rules needed — search-select inherits .dz-form-label + hint
  * + error from the surrounding macro structure. */
+
+/* ─────────────────────────── colorpicker (UX-024) ───────────────
+ * Pickr wrapper. Swatch + hex display sit inline next to each other. */
+
+.dz-form-color-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-form-color-swatch {
+  block-size: 2rem;
+  inline-size: 2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  cursor: pointer;
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.dz-form-color-swatch:hover {
+  filter: brightness(1.05);
+}
+
+.dz-form-color-hex {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+/* ─────────────────────────── richtext (UX-025) ──────────────────
+ * Quill editor wrapper. Border + radius live on the wrapper; Quill
+ * internals manage their own toolbar/editor styling. */
+
+.dz-form-richtext {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--colour-bg);
+}
+
+.dz-form-richtext[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+/* ─────────────────────────── slider (UX-023) ────────────────────
+ * Native <input type="range"> + dzRangeTooltip controller. */
+
+.dz-form-slider-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-form-slider {
+  inline-size: 100%;
+}
+
+.dz-form-slider-value {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+  min-inline-size: 2rem;
+  text-align: end;
+}

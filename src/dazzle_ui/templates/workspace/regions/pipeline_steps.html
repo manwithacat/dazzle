@@ -19,21 +19,26 @@
 
    Card safety: region emits zero chrome + zero title. The dashboard
    slot owns both via region_card. #}
+{# v0.62 CSS refactor: inline Tailwind on every .dz-pipeline-* element
+   moved to its CSS rule in components/fragments.css. The class-name
+   markers were already in place; only the parallel utility list was
+   removed. Responsive behaviour (stack <md, row >=md) now keyed off
+   a 48rem @media breakpoint inside each rule. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-pipeline-steps-region">
   {% if pipeline_stage_data and pipeline_stage_data | length > 0 %}
-    <ol class="dz-pipeline-stages flex flex-col md:flex-row gap-3 mt-2 list-none">
+    <ol class="dz-pipeline-stages">
       {% for stage in pipeline_stage_data %}
-        <li class="dz-pipeline-stage relative flex-1 flex flex-col gap-1 p-3 rounded-[6px] border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-          <span class="dz-pipeline-stage-label text-[11px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+        <li class="dz-pipeline-stage">
+          <span class="dz-pipeline-stage-label">
             {{ stage.label }}
           </span>
-          <span class="dz-pipeline-stage-value text-[24px] font-semibold leading-none text-[hsl(var(--foreground))]">
+          <span class="dz-pipeline-stage-value">
             {% if stage.value is not none %}{{ stage.value }}{% else %}—{% endif %}
           </span>
           {% if stage.caption %}
-            <span class="dz-pipeline-stage-caption text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
+            <span class="dz-pipeline-stage-caption">
               {{ stage.caption }}
             </span>
           {% endif %}
@@ -47,7 +52,7 @@
              `data-dz-progress-overshoot` flags values that were
              clamped from >100 so themes can surface "over capacity". #}
           {% if stage.progress is not none %}
-            <div class="dz-pipeline-stage-progress flex items-center gap-2 mt-1"
+            <div class="dz-pipeline-stage-progress"
                  data-dz-progress="{{ stage.progress }}"
                  {% if stage.progress_overshoot %}data-dz-progress-overshoot="true"{% endif %}
                  role="progressbar"
@@ -55,11 +60,11 @@
                  aria-valuemax="100"
                  aria-valuenow="{{ stage.progress }}"
                  aria-label="{{ stage.label }} progress">
-              <div class="dz-pipeline-stage-progress-track relative flex-1 h-1 rounded-full bg-[hsl(var(--muted))] overflow-hidden">
-                <div class="dz-pipeline-stage-progress-fill absolute inset-y-0 left-0 bg-[hsl(var(--primary))] rounded-full transition-[width] duration-200"
+              <div class="dz-pipeline-stage-progress-track">
+                <div class="dz-pipeline-stage-progress-fill"
                      style="width: {{ stage.progress }}%;"></div>
               </div>
-              <span class="dz-pipeline-stage-progress-label text-[11px] font-medium text-[hsl(var(--muted-foreground))] tabular-nums">{{ stage.progress }}%</span>
+              <span class="dz-pipeline-stage-progress-label">{{ stage.progress }}%</span>
             </div>
           {% endif %}
 
@@ -67,18 +72,13 @@
              every stage except the last. Pure CSS / SVG triangle, design
              token colour. Hidden on the last stage via :last-child. #}
           {% if not loop.last %}
-            <span class="dz-pipeline-connector absolute hidden md:flex items-center justify-center
-                         right-[-14px] top-1/2 -translate-y-1/2 w-7 h-7 z-[5]
-                         text-[hsl(var(--muted-foreground))]"
-                  aria-hidden="true">
+            <span class="dz-pipeline-connector" aria-hidden="true">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                    xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 1.5L9 7l-6 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </span>
-            <span class="dz-pipeline-connector-mobile flex md:hidden items-center justify-center mt-1
-                         text-[hsl(var(--muted-foreground))]"
-                  aria-hidden="true">
+            <span class="dz-pipeline-connector-mobile" aria-hidden="true">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                    xmlns="http://www.w3.org/2000/svg">
                 <path d="M1.5 3L7 9l5.5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -89,7 +89,7 @@
       {% endfor %}
     </ol>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No pipeline data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No pipeline data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}
