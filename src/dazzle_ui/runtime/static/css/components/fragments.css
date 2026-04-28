@@ -2071,3 +2071,148 @@
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
 }
+
+/* ─────────────────────────── table_rows fragment ────────────────
+ * Inline-editable data table rows with bulk-select checkboxes,
+ * per-cell display/edit modes, and hover-revealed action buttons.
+ * Row state matrix:
+ *   - .is-selected  → bulk-select checkbox checked → 10% brand tint
+ *   - .is-saving    → editing.saving → 70% opacity
+ *   - .is-error     → editing.error  → 2px danger left border
+ *   - default       → hover row tint
+ * Alpine `:class="{...}"` binds these modifiers based on its state. */
+
+.dz-tr-row {
+  height: 2.25rem;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-tr-row:hover {
+  background: var(--colour-surface);
+}
+
+.dz-tr-row.is-selected {
+  background: color-mix(in oklch, var(--colour-brand) 10%, transparent);
+}
+
+.dz-tr-row.is-saving {
+  opacity: 0.7;
+}
+
+.dz-tr-row.is-error {
+  border-inline-start: 2px solid var(--colour-danger);
+}
+
+.dz-tr-checkbox-cell {
+  width: 2.5rem;
+  padding-inline: var(--space-md);
+}
+
+.dz-tr-checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--radius-sm);
+  accent-color: var(--colour-brand);
+  cursor: pointer;
+}
+
+.dz-tr-cell {
+  padding-inline: var(--space-md);
+}
+
+.dz-tr-cell.is-numeric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-tr-cell-display {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  padding-inline: 0.25rem;
+  margin-inline: -0.25rem;
+  padding-block: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: outline var(--duration-fast) var(--ease-out);
+}
+
+.dz-tr-cell-display:hover {
+  outline: 1px solid var(--colour-border);
+  cursor: text;
+}
+
+.dz-tr-cell-truncate {
+  display: block;
+  max-width: 15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-tr-actions-cell {
+  width: 4rem;
+  padding-inline: var(--space-sm);
+  text-align: end;
+}
+
+.dz-tr-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-tr-row:hover .dz-tr-actions {
+  opacity: 1;
+}
+
+.dz-tr-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+}
+
+.dz-tr-action:hover {
+  background: color-mix(in oklch, var(--colour-bg) 50%, transparent);
+  color: var(--colour-text);
+}
+
+.dz-tr-action.is-destructive:hover {
+  background: color-mix(in oklch, var(--colour-danger) 10%, transparent);
+  color: var(--colour-danger);
+}
+
+/* Empty-state row spans the full table */
+.dz-tr-empty-cell {
+  text-align: center;
+  padding-block: var(--space-2xl);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-tr-empty-link {
+  margin-inline-start: var(--space-sm);
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.dz-tr-empty-link:hover {
+  text-decoration: underline;
+}
