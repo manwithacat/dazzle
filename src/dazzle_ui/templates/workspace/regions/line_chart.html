@@ -49,7 +49,7 @@
     {% set plot_h = h - pt - pb %}
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 {{ w }} {{ h }}"
-         class="dz-line-chart-svg w-full h-auto"
+         class="dz-line-chart-svg dz-chart-svg"
          role="img"
          aria-label="{{ title }} time series — {{ count }} buckets, peak {{ max_val }}">
       {# Grid: single baseline at the bottom of the plot area. #}
@@ -187,34 +187,34 @@
     {# Overlay legend (#883) — only when there's more than one polyline.
        Primary series + each overlay get a swatch + label. #}
     {% if overlay_series_data and overlay_series_data | length > 0 %}
-      <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-        <span class="inline-flex items-center gap-1">
-          <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: hsl(var(--primary))"></span>
-          <span class="font-mono">{{ title }}</span>
+      <div class="dz-chart-legend">
+        <span class="dz-chart-legend-item">
+          <span class="dz-chart-legend-swatch" style="background: hsl(var(--primary))"></span>
+          <span class="dz-chart-legend-name">{{ title }}</span>
         </span>
         {% for ovl in overlay_series_data %}
           {% set ovl_colour = _ovl_palette[loop.index0 % (_ovl_palette | length)] %}
-          <span class="inline-flex items-center gap-1">
-            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ ovl_colour }}"></span>
-            <span class="font-mono">{{ ovl.label }}</span>
+          <span class="dz-chart-legend-item">
+            <span class="dz-chart-legend-swatch" style="background: {{ ovl_colour }}"></span>
+            <span class="dz-chart-legend-name">{{ ovl.label }}</span>
           </span>
         {% endfor %}
       </div>
     {% endif %}
 
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-chart-summary">
       {{ count }} buckets · peak {{ max_val }}{% if overlay_series_data %} · {{ overlay_series_data | length + 1 }} series{% endif %}
     </p>
   {% elif bucketed_metrics and bucketed_metrics | length == 1 %}
     {# Single-point series — fall back to a tall KPI tile rather than draw
        a zero-width line. #}
     {% set b = bucketed_metrics[0] %}
-    <div class="text-center py-4">
-      <div class="text-[28px] font-semibold text-[hsl(var(--foreground))]">{{ b.value }}</div>
-      <div class="text-[11px] text-[hsl(var(--muted-foreground))] mt-1 font-mono">{{ b.label }}</div>
+    <div class="dz-chart-degenerate-tile">
+      <div class="dz-chart-degenerate-tile-value">{{ b.value }}</div>
+      <div class="dz-chart-degenerate-tile-label">{{ b.label }}</div>
     </div>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

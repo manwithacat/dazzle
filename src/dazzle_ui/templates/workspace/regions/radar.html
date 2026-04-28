@@ -80,7 +80,7 @@
 
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 {{ side }} {{ side }}"
-         class="dz-radar-svg w-full h-auto"
+         class="dz-radar-svg dz-chart-svg"
          role="img"
          aria-label="{{ title }} radar — {{ count }} spokes, peak {{ max_val }}">
       {# Concentric polar grid rings — 4 rings at 25/50/75/100% of r_max.
@@ -192,35 +192,35 @@
     {# Series legend — one swatch + name per series. Multi-series only
        needs this; single-series matches the previous "peak X" line. #}
     {% if _series_names | length > 1 %}
-      <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+      <div class="dz-chart-legend">
         {% for series_name in _series_names %}
           {% set series_colour = _palette[loop.index0 % (_palette | length)] %}
-          <span class="inline-flex items-center gap-1">
-            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: {{ series_colour }}; opacity: 0.85"></span>
-            <span class="font-mono">{{ series_name }}</span>
+          <span class="dz-chart-legend-item">
+            <span class="dz-chart-legend-swatch" style="background: {{ series_colour }}; opacity: 0.85"></span>
+            <span class="dz-chart-legend-name">{{ series_name }}</span>
           </span>
         {% endfor %}
       </div>
     {% endif %}
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2 font-mono">
+    <p class="dz-chart-summary">
       {{ count }} spokes · {{ _series_names | length }} {{ 'series' if _series_names | length > 1 else 'series' }} · peak {{ max_val }}
     </p>
   {% elif bucketed_metrics and bucketed_metrics | length > 0 %}
     {# Fewer than 3 spokes is a degenerate radar (line or point); fall
        back to a compact KPI list rather than draw a meaningless shape. #}
-    <div class="dz-radar-degenerate text-[12px] space-y-1 mt-2">
+    <div class="dz-radar-degenerate dz-chart-degenerate-list">
       {% for b in bucketed_metrics %}
-        <div class="flex justify-between font-mono">
+        <div class="dz-chart-degenerate-row">
           <span>{{ b.label }}</span>
-          <span class="text-[hsl(var(--muted-foreground))]">{{ b.value }}</span>
+          <span class="dz-chart-degenerate-value">{{ b.value }}</span>
         </div>
       {% endfor %}
     </div>
-    <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">
+    <p class="dz-chart-summary">
       Radar needs ≥ 3 spokes — showing values list instead.
     </p>
   {% else %}
-    <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+    <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

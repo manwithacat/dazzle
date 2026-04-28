@@ -1966,3 +1966,89 @@ a.dz-action-card:hover {
   margin-block-start: var(--space-sm);
   font-family: var(--font-mono);
 }
+
+/* ─────────────────────────── chart legend / summary ─────────────
+ * Shared across the SVG chart family (line / area / radar). Each
+ * chart template renders its own SVG body but ends with a legend
+ * row of (swatch + series-name) chips and a summary line of
+ * sample/series counts. Single class set instead of duplicating
+ * inline `flex flex-wrap gap-x-3 ...` Tailwind across every
+ * template. */
+
+.dz-chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+.dz-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-md);
+  row-gap: 0.25rem;
+  margin-block-start: var(--space-sm);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dz-chart-legend-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-sm);
+}
+
+.dz-chart-legend-name {
+  font-family: var(--font-mono);
+}
+
+.dz-chart-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
+
+/* Degenerate (single-bucket / single-point) fallback shapes used by
+ * radar (table-of-spokes) and line_chart (single-value KPI tile). */
+
+.dz-chart-degenerate-list {
+  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-block-start: var(--space-sm);
+}
+
+.dz-chart-degenerate-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+}
+
+.dz-chart-degenerate-value {
+  color: var(--colour-text-muted);
+}
+
+.dz-chart-degenerate-tile {
+  text-align: center;
+  padding-block: var(--space-md);
+}
+
+.dz-chart-degenerate-tile-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-chart-degenerate-tile-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.25rem;
+  font-family: var(--font-mono);
+}
