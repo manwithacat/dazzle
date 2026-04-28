@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.89] - 2026-04-28
+
+### Fixed
+- **`static/js/dashboard-builder.js`** — closes #919. The component
+  now listens for `htmx:afterSettle` instead of `htmx:afterSwap` to
+  decide when to re-hydrate `cards` / `catalog` / `workspaceName` from
+  the `<script id="dz-workspace-layout">` JSON island. Under the
+  `morph:innerHTML` extension, `htmx:afterSwap` fires before
+  idiomorph commits child-node `textContent`, so the previous
+  workspace's layout JSON was being read and the destination
+  workspace rendered with an empty cards array. `afterSettle` fires
+  after all DOM mutations are complete, including child-node text
+  updates. Tests in
+  `tests/unit/test_dashboard_builder_triggers.py::TestRehydrateOnHtmxAfterSettle`.
+
 ## [0.61.88] - 2026-04-28
 
 ### Added

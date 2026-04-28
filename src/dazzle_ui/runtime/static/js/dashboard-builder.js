@@ -75,9 +75,13 @@ document.addEventListener("alpine:init", () => {
       // x-data="dzDashboardBuilder()" element across same-route nav
       // re-clicks — so init() doesn't re-run, and cards/catalog stay
       // stale while the data island below has been replaced with fresh
-      // JSON. Listen for htmx:afterSwap globally and re-read the island
-      // when it lands inside the swap target.
-      this._onHtmxAfterSwap = (e) => {
+      // JSON. Listen for htmx:afterSettle (NOT afterSwap) — with the
+      // morph: extension, afterSwap fires before idiomorph has fully
+      // committed child-node textContent, so reading the
+      // #dz-workspace-layout <script> too early returns stale JSON and
+      // hydrates an empty cards array (#919). afterSettle fires once
+      // all DOM mutations + textContent updates are visible.
+      this._onHtmxAfterSettle = (e) => {
         const target = e && e.detail && e.detail.target;
         if (!target) return;
         // Only re-hydrate when the swap target contains our data island
@@ -88,7 +92,10 @@ document.addEventListener("alpine:init", () => {
         if (!island) return;
         this._hydrateFromLayout();
       };
-      document.body.addEventListener("htmx:afterSwap", this._onHtmxAfterSwap);
+      document.body.addEventListener(
+        "htmx:afterSettle",
+        this._onHtmxAfterSettle,
+      );
 
       this._hydrateFromLayout();
     },
@@ -133,12 +140,12 @@ document.addEventListener("alpine:init", () => {
         window.removeEventListener("pointerup", this._onPointerUp);
         this._onPointerUp = null;
       }
-      if (this._onHtmxAfterSwap) {
+      if (this._onHtmxAfterSettle) {
         document.body.removeEventListener(
-          "htmx:afterSwap",
-          this._onHtmxAfterSwap,
+          "htmx:afterSettle",
+          this._onHtmxAfterSettle,
         );
-        this._onHtmxAfterSwap = null;
+        this._onHtmxAfterSettle = null;
       }
     },
 

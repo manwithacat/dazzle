@@ -72,11 +72,14 @@ class TestFoldCountHydration:
         assert "data.fold_count" in source
 
 
-class TestRehydrateOnHtmxAfterSwap:
-    """#875 — re-clicking the active workspace nav link triggers an
-    HTMX morph that doesn't re-run init(). The component must listen for
-    htmx:afterSwap and re-hydrate cards/catalog/state from the data
-    island when the swap target contains it.
+class TestRehydrateOnHtmxAfterSettle:
+    """#875 / #919 — re-clicking the active workspace nav link triggers
+    an HTMX morph that doesn't re-run init(). The component must listen
+    for htmx:afterSettle (NOT afterSwap — see #919: the morph: extension
+    fires afterSwap before idiomorph commits child-node textContent, so
+    the <script id="dz-workspace-layout"> island still reads as the
+    previous workspace's JSON) and re-hydrate cards/catalog/state from
+    the data island when the swap target contains it.
     """
 
     def test_helper_extracted(self) -> None:
@@ -90,11 +93,18 @@ class TestRehydrateOnHtmxAfterSwap:
         # init() should invoke the helper rather than inlining the JSON read.
         assert "this._hydrateFromLayout();" in source
 
-    def test_listens_for_htmx_after_swap(self) -> None:
+    def test_listens_for_htmx_after_settle(self) -> None:
         source = _load()
-        assert 'addEventListener("htmx:afterSwap"' in source, (
-            "component must listen for htmx:afterSwap to detect re-entry "
-            "morphs of the workspace content"
+        # #919: must be afterSettle, not afterSwap — the morph extension
+        # fires afterSwap before child textContent is fully committed.
+        assert '"htmx:afterSettle"' in source, (
+            "component must listen for htmx:afterSettle (not afterSwap) to "
+            "detect re-entry morphs after idiomorph fully commits the "
+            "data-island textContent"
+        )
+        assert '"htmx:afterSwap"' not in source, (
+            "must not listen for htmx:afterSwap — fires too early under "
+            "the morph extension and reads stale layout JSON (#919)"
         )
 
     def test_filters_swap_to_layout_island(self) -> None:
@@ -105,10 +115,10 @@ class TestRehydrateOnHtmxAfterSwap:
 
     def test_destroy_removes_listener(self) -> None:
         source = _load()
-        # The htmx:afterSwap listener must be torn down on destroy() to
+        # The htmx:afterSettle listener must be torn down on destroy() to
         # avoid leaking across navigations (#797 / #795 pattern).
-        assert 'removeEventListener(\n          "htmx:afterSwap"' in source or (
-            'removeEventListener("htmx:afterSwap"' in source
+        assert 'removeEventListener(\n          "htmx:afterSettle"' in source or (
+            'removeEventListener("htmx:afterSettle"' in source
         )
 
     def test_resets_save_state_on_rehydrate(self) -> None:
