@@ -1,4 +1,4 @@
-/* dazzle v0.61.96 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.97 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2036,7 +2036,10 @@ margin-block-start: var(--space-xs);
 }
 .dz-form-input {
 width: 100%;
-height: 2rem;
+height: auto;
+min-height: 2.5rem;
+line-height: 1.4;
+padding-block: var(--space-sm);
 padding-inline: var(--space-md);
 font-size: var(--text-sm);
 color: var(--colour-text);
@@ -2088,7 +2091,7 @@ width: 100%;
 .dz-form-money-prefix {
 display: inline-flex;
 align-items: center;
-height: 2rem;
+min-height: 2.5rem;
 padding-inline: var(--space-md);
 background: var(--colour-bg);
 font-size: var(--text-sm);
@@ -2100,7 +2103,10 @@ border-start-start-radius: var(--radius-sm);
 border-end-start-radius: var(--radius-sm);
 }
 .dz-form-money-select {
-height: 2rem;
+height: auto;
+min-height: 2.5rem;
+line-height: 1.4;
+padding-block: var(--space-sm);
 width: 7rem;
 padding-inline: var(--space-sm);
 background: var(--colour-surface);

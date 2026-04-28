@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.98] - 2026-04-28
+
+### Fixed
+- **`static/css/components/form.css`** — closes #930. The canonical
+  `.dz-form-input` class shipped with `height: 2rem` (32px) and only
+  `padding-inline`, leaving ~16px of vertical content area for a
+  ~22px line-box. Result: descenders on `g`/`p`/`y` clipped against
+  the border on every input + select placeholder. Switched to
+  `height: auto; min-height: 2.5rem; line-height: 1.4;` plus
+  `padding-block` so the line-box always fits and future multi-line
+  content (group labels in selects, wrapped placeholders) scales
+  naturally. Updated `.dz-form-money-prefix` and
+  `.dz-form-money-select` to the same `min-height: 2.5rem` so the
+  currency-prefixed amount input stays flush. Regression tests in
+  `tests/unit/test_form_input_height.py` pin the input + money-prefix
+  + money-select rules so the descender clip can't recur.
+
 ## [0.61.97] - 2026-04-28
 
 ### Fixed
