@@ -2216,3 +2216,339 @@
 .dz-tr-empty-link:hover {
   text-decoration: underline;
 }
+
+/* ─────────────────────────── layouts/app_shell ──────────────────
+ * Main application shell with collapsible left sidebar, sticky top
+ * bar, and main content area. Sidebar open/collapsed state is
+ * exposed on the shell root via `data-dz-sidebar="open"` so CSS
+ * selectors can drive both the slide transform AND the content
+ * area's left padding offset. */
+
+.dz-app-shell {
+  /* Root container — sidebarOpen attribute lives here. */
+}
+
+.dz-app-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: padding var(--duration-base) var(--ease-out);
+}
+
+@media (min-width: 64rem) {
+  [data-dz-sidebar="open"] .dz-app-content {
+    padding-inline-start: 16rem;  /* matches sidebar width */
+  }
+}
+
+/* Top bar */
+.dz-topbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  padding-inline: var(--space-md);
+  gap: var(--space-md);
+  background: color-mix(in oklch, var(--colour-bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  border-block-end: 1px solid
+    color-mix(in oklch, var(--colour-border) 50%, transparent);
+  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.04);
+}
+
+@media (min-width: 64rem) {
+  .dz-topbar {
+    padding-inline: var(--space-lg);
+  }
+}
+
+.dz-topbar-leading,
+.dz-topbar-trailing {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dz-topbar-title {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dz-topbar-title-text {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-topbar-user {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12.5rem;
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .dz-topbar-user {
+    display: inline;
+  }
+}
+
+/* Generic icon button used in top bar + sidebar header */
+.dz-icon-button {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-icon-button:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-icon-button > svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Mobile-only and desktop-only icon variants */
+.dz-icon-button.is-mobile-only { display: inline-flex; }
+@media (min-width: 64rem) {
+  .dz-icon-button.is-mobile-only { display: none; }
+}
+
+.dz-icon-button.is-desktop-only { display: none; }
+@media (min-width: 64rem) {
+  .dz-icon-button.is-desktop-only { display: inline-flex; }
+}
+
+/* Main content area */
+.dz-app-main {
+  flex: 1 1 0;
+  padding: var(--space-md);
+}
+
+@media (min-width: 64rem) {
+  .dz-app-main {
+    padding: var(--space-lg);
+  }
+}
+
+.dz-page-purpose {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block: 0.25rem var(--space-md);
+}
+
+/* Mobile backdrop overlay */
+.dz-app-backdrop {
+  position: fixed;
+  inset: 0;
+  background: oklch(0% 0 0 / 0.4);
+  z-index: 30;
+}
+
+@media (min-width: 64rem) {
+  .dz-app-backdrop {
+    display: none !important;
+  }
+}
+
+/* Sidebar */
+.dz-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 40;
+  width: 16rem;
+  background: var(--colour-surface);
+  border-inline-end: 1px solid var(--colour-border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+[data-dz-sidebar="open"] .dz-sidebar {
+  transform: translateX(0);
+}
+
+.dz-sidebar-brand {
+  padding: var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dz-sidebar-brand-text {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-sidebar-nav {
+  flex: 1 1 0;
+  overflow-y: auto;
+}
+
+.dz-sidebar-nav-list {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  list-style: none;
+  margin: 0;
+}
+
+.dz-sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-sidebar-nav-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* Active link — keys off aria-current="page" so the visual state
+ * and the accessibility attribute share one source of truth. */
+.dz-sidebar-nav-link[aria-current="page"] {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+.dz-sidebar-nav-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.dz-sidebar-nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsible nav group */
+.dz-sidebar-nav-group-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-sidebar-nav-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dz-sidebar-nav-group-summary:hover {
+  background: var(--colour-bg);
+}
+
+.dz-sidebar-nav-group-children {
+  padding-inline-start: var(--space-md);
+  margin-block-start: 0.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  list-style: none;
+}
+
+/* Sidebar footer */
+.dz-sidebar-footer {
+  margin-block-start: auto;
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.dz-sidebar-user-block {
+  padding: 0.75rem;
+  padding-block-end: 0.25rem;
+}
+
+.dz-sidebar-user-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: var(--space-md);
+}
+
+.dz-sidebar-action-row {
+  margin-block-start: 0.25rem;
+}
+
+.dz-sidebar-action-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-sidebar-action-button:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-sidebar-action-button > svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.dz-sidebar-darkmode {
+  padding: 0.75rem;
+  padding-block-start: 0.25rem;
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .dz-sidebar-darkmode {
+    display: block;
+  }
+}
