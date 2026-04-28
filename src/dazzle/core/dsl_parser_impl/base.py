@@ -889,4 +889,13 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.DIRECTED,
     TokenType.ACYCLIC,
     TokenType.EDGES,
+    # v0.61.91 (#922) — reserved keywords from #918 (`help:`, `note:`) and
+    # the older `question:` declaration must remain usable as identifiers
+    # so they don't shadow hyphenated Lucide icon names like
+    # `help-circle`, `file-question`, `sticky-note`. The hyphenated-icon
+    # parser falls back to `expect_identifier_or_keyword`; the keyword
+    # only resolves there if it appears in this list.
+    TokenType.HELP,
+    TokenType.QUESTION_DECL,
+    TokenType.NOTE,
 )

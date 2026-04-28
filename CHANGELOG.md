@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.92] - 2026-04-28
+
+### Fixed
+- **`core/dsl_parser_impl/base.py`** — closes #922. The
+  `_parse_hyphenated_identifier` helper falls back to
+  `expect_identifier_or_keyword` for parts after a hyphen, but that
+  helper only accepts keywords listed in `KEYWORD_AS_IDENTIFIER_TYPES`.
+  v0.61.88 (#918) added two new reserved keywords (`help`, `note`)
+  that weren't added to that set, and the older `question` declaration
+  keyword was already missing. As a result hyphenated identifiers
+  used in value positions (e.g. `icon=help-circle`,
+  `icon=file-question`, `icon=sticky-note` on `nav_group`) failed to
+  parse. Added `HELP`, `QUESTION_DECL`, and `NOTE` to the identifier
+  set; common Lucide icon names now parse again. Regression test in
+  `tests/unit/test_parser.py::TestNavGroupParsing::test_nav_group_icon_with_keyword_substring`.
+- **`tests/integration/__snapshots__/test_golden_master.ambr` +
+  `tests/parser_corpus/__snapshots__/test_appspec_corpus.ambr`** —
+  refresh golden-master snapshots for the new IR fields introduced by
+  #918 (`SurfaceSpec.layout: 'wizard'` and `FormElementSpec.help`).
+  The change is purely additive — both fields default to None /
+  'wizard'. CI was failing on every push since v0.61.88 from this
+  drift; bundling the snapshot refresh here.
+
 ## [0.61.91] - 2026-04-28
 
 ### Fixed

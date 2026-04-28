@@ -950,6 +950,7 @@
         ]),
         'entity_ref': 'Task',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -962,6 +963,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'help': None,
                 'label': 'Title',
                 'options': dict({
                 }),
@@ -970,6 +972,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'help': None,
                 'label': 'Status',
                 'options': dict({
                 }),
@@ -978,6 +981,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': 'Tasks',
             'visible': None,
           }),
@@ -997,6 +1001,7 @@
         ]),
         'entity_ref': 'Task',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1009,6 +1014,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'help': None,
                 'label': 'Title',
                 'options': dict({
                 }),
@@ -1017,6 +1023,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'help': None,
                 'label': 'Description',
                 'options': dict({
                 }),
@@ -1025,6 +1032,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'help': None,
                 'label': 'Status',
                 'options': dict({
                 }),
@@ -1033,6 +1041,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': 'Task',
             'visible': None,
           }),
@@ -1052,6 +1061,7 @@
         ]),
         'entity_ref': 'Task',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1064,6 +1074,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'help': None,
                 'label': 'Title',
                 'options': dict({
                 }),
@@ -1072,6 +1083,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'help': None,
                 'label': 'Description',
                 'options': dict({
                 }),
@@ -1080,6 +1092,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': 'New Task',
             'visible': None,
           }),
@@ -1099,6 +1112,7 @@
         ]),
         'entity_ref': 'Task',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1111,6 +1125,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'help': None,
                 'label': 'Title',
                 'options': dict({
                 }),
@@ -1119,6 +1134,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'help': None,
                 'label': 'Description',
                 'options': dict({
                 }),
@@ -1127,6 +1143,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'help': None,
                 'label': 'Status',
                 'options': dict({
                 }),
@@ -1135,6 +1152,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': 'Edit Task',
             'visible': None,
           }),
@@ -1163,6 +1181,7 @@
         ]),
         'entity_ref': 'SystemHealth',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_health',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1175,6 +1194,7 @@
             'elements': list([
               dict({
                 'field_name': 'component',
+                'help': None,
                 'label': 'Component',
                 'options': dict({
                 }),
@@ -1183,6 +1203,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'help': None,
                 'label': 'Status',
                 'options': dict({
                 }),
@@ -1191,6 +1212,7 @@
               }),
               dict({
                 'field_name': 'message',
+                'help': None,
                 'label': 'Message',
                 'options': dict({
                 }),
@@ -1199,6 +1221,7 @@
               }),
               dict({
                 'field_name': 'checked_at',
+                'help': None,
                 'label': 'Checked',
                 'options': dict({
                 }),
@@ -1207,6 +1230,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': None,
             'visible': None,
           }),
@@ -1257,6 +1281,7 @@
         ]),
         'entity_ref': 'DeployHistory',
         'headless': False,
+        'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_deploys',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
@@ -1269,6 +1294,7 @@
             'elements': list([
               dict({
                 'field_name': 'version',
+                'help': None,
                 'label': 'Version',
                 'options': dict({
                 }),
@@ -1277,6 +1303,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'help': None,
                 'label': 'Status',
                 'options': dict({
                 }),
@@ -1285,6 +1312,7 @@
               }),
               dict({
                 'field_name': 'deployed_by',
+                'help': None,
                 'label': 'Deployed By',
                 'options': dict({
                 }),
@@ -1293,6 +1321,7 @@
               }),
               dict({
                 'field_name': 'deployed_at',
+                'help': None,
                 'label': 'Deployed At',
                 'options': dict({
                 }),
@@ -1301,6 +1330,7 @@
               }),
             ]),
             'name': 'main',
+            'note': None,
             'title': None,
             'visible': None,
           }),

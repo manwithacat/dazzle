@@ -2583,6 +2583,46 @@ workspace dashboard "Dashboard":
         ws = fragment.workspaces[0]
         assert ws.nav_groups == []
 
+    def test_nav_group_icon_with_keyword_substring(self):
+        """Issue #922: hyphenated icon names that contain a reserved keyword
+        as a sub-token must still parse. `help-circle`, `circle-help`,
+        `file-question`, `sticky-note` are common Lucide icon names."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Question "Question":
+  id: uuid pk
+
+entity Note "Note":
+  id: uuid pk
+
+entity Topic "Topic":
+  id: uuid pk
+
+entity Doc "Doc":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Questions" icon=help-circle:
+    Question icon=circle-help
+  nav_group "Reverse" icon=circle-help:
+    Topic icon=file-question
+  nav_group "Notes" icon=sticky-note:
+    Note icon=note-pencil
+  questions:
+    source: Question
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert len(ws.nav_groups) == 3
+        assert ws.nav_groups[0].icon == "help-circle"
+        assert ws.nav_groups[0].items[0].icon == "circle-help"
+        assert ws.nav_groups[1].icon == "circle-help"
+        assert ws.nav_groups[1].items[0].icon == "file-question"
+        assert ws.nav_groups[2].icon == "sticky-note"
+        assert ws.nav_groups[2].items[0].icon == "note-pencil"
+
 
 class TestContextSelectorParsing:
     """Test context_selector parsing within workspaces (#432)."""
