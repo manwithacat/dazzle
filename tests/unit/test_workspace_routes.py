@@ -1460,7 +1460,13 @@ class TestHeatmapRegionTemplate:
         assert thead_html.count("<th") == 4  # 1 empty corner + 3 column labels
 
     def test_three_tier_threshold_colouring_uses_tokens(self) -> None:
-        """Gate 5 (positive): 2-threshold path references all 3 design tokens."""
+        """Gate 5 (positive): 2-threshold path emits the three tone bands.
+
+        v0.62 CSS refactor: cells now carry data-dz-heatmap-tone="bad"
+        / "warn" / "good" attributes; the tint colours
+        (destructive / warning / success) live on attribute selectors
+        in components/regions.css. Pin both the data-attribute
+        emission and the CSS rules' colour tokens."""
         html = render_fragment(
             "workspace/regions/heatmap.html",
             **self._heatmap_kwargs(
@@ -1469,13 +1475,13 @@ class TestHeatmapRegionTemplate:
                         "row": "Low",
                         "row_id": "low",
                         "cells": [{"value": 1.0}],
-                    },  # below first (destructive)
-                    {"row": "Mid", "row_id": "mid", "cells": [{"value": 5.0}]},  # between (warning)
+                    },  # below first (bad)
+                    {"row": "Mid", "row_id": "mid", "cells": [{"value": 5.0}]},  # between (warn)
                     {
                         "row": "High",
                         "row_id": "high",
                         "cells": [{"value": 9.0}],
-                    },  # at/above second (success)
+                    },  # at/above second (good)
                 ],
                 heatmap_col_values=["val"],
                 heatmap_thresholds=[3.0, 8.0],
@@ -1483,9 +1489,24 @@ class TestHeatmapRegionTemplate:
                 total=3,
             ),
         )
-        assert "hsl(var(--destructive)" in html
-        assert "hsl(var(--warning)" in html
-        assert "hsl(var(--success)" in html
+        # Three tone bands rendered as data-attributes
+        assert 'data-dz-heatmap-tone="bad"' in html
+        assert 'data-dz-heatmap-tone="warn"' in html
+        assert 'data-dz-heatmap-tone="good"' in html
+
+        # CSS rules route each tone to the right semantic colour token
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+        ).read_text()
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="bad"]' in css
+        assert "var(--colour-danger)" in css
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="warn"]' in css
+        assert "var(--colour-warning)" in css
+        assert 'dz-heatmap-cell[data-dz-heatmap-tone="good"]' in css
+        assert "var(--colour-success)" in css
 
     def test_no_hardcoded_hsl_literals(self) -> None:
         """Gate 5 (negative): pre-cycle-273 red/green literals must not reappear."""

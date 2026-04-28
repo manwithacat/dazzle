@@ -1,29 +1,31 @@
-{# Activity feed region — UX-035 adopter #10. #}
+{# Activity feed region — UX-035 adopter #10.
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-activity-* classes
+   (components/regions.css). Bubble gets .is-clickable when wired to
+   action_url so the hover state lives in CSS. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
   {% if items %}
-  <ul class="relative pl-4 border-l border-[hsl(var(--border))] space-y-3">
+  <ul class="dz-activity-feed">
     {% for item in items %}
-    <li class="relative">
-      <span class="absolute -left-[21px] top-1.5 flex h-3 w-3 items-center justify-center">
-        <svg class="h-3 w-3 text-[hsl(var(--primary))]" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+    <li class="dz-activity-row">
+      <span class="dz-activity-dot">
+        <svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <circle cx="10" cy="10" r="6"/>
         </svg>
       </span>
-      <div class="flex gap-3">
-        <div class="text-[11px] text-[hsl(var(--muted-foreground))] min-w-[80px] pt-1">
+      <div class="dz-activity-row-inner">
+        <div class="dz-activity-time">
           {{ item.created_at|timeago if item.created_at else '' }}
         </div>
         {# No full `border` here — the dashboard slot already owns card
            chrome (#852 follow-on). Border + rounded reads as a nested
-           card per the card-safety invariants. Background alone is fine
-           for visual grouping. #}
-        <div class="flex-1 py-1 px-2 rounded-[4px] bg-[hsl(var(--muted)/0.3)] text-[13px] text-[hsl(var(--foreground))]
-          {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.4)] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]{% endif %}"
+           card per the card-safety invariants. Background tint alone
+           is fine for visual grouping. #}
+        <div class="dz-activity-bubble{% if action_url %} is-clickable{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|resolve_fk_id) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           {% if item.actor or item.get('actor') %}
-            <span class="font-medium">{{ item.actor or item.get('user', '') }}</span>
+            <span class="dz-activity-actor">{{ item.actor or item.get('user', '') }}</span>
           {% endif %}
           {{ item.description or item.get('action', '') or item.get('title', '') }}
         </div>
@@ -32,8 +34,6 @@
     {% endfor %}
   </ul>
   {% else %}
-  <div class="text-center text-[13px] text-[hsl(var(--muted-foreground))] py-8">
-    {{ empty_message or "No activity yet" }}
-  </div>
+  <div class="dz-activity-empty">{{ empty_message or "No activity yet" }}</div>
   {% endif %}
 {% endcall %}

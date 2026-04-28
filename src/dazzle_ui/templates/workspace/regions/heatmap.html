@@ -1,16 +1,21 @@
 {# Heatmap region — UX-035 adopter #13.
-   Contract: ~/.claude/skills/ux-architect/components/heatmap-region.md (UX-064) #}
+   Contract: ~/.claude/skills/ux-architect/components/heatmap-region.md (UX-064)
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-heatmap-* classes.
+   Threshold-banded cell tints route through data-dz-heatmap-tone
+   (bad / warn / good) attribute selectors so the template emits a
+   single data-attribute instead of three Tailwind class strings. #}
 {% from 'macros/region_wrapper.html' import region_card %}
 {% call region_card(title) %}
 <div class="dz-heatmap-region">
   {% if heatmap_matrix %}
-  <div class="dz-heatmap-scroll overflow-x-auto">
-    <table class="dz-heatmap-grid w-full text-[13px] border-collapse">
+  <div class="dz-heatmap-scroll">
+    <table class="dz-heatmap-grid">
       <thead>
-        <tr class="border-b border-[hsl(var(--border))]">
-          <th class="py-1 px-2"></th>
+        <tr>
+          <th></th>
           {% for col in heatmap_col_values %}
-          <th class="py-1 px-2 text-center font-medium text-[hsl(var(--muted-foreground))]">{{ col }}</th>
+          <th>{{ col }}</th>
           {% endfor %}
         </tr>
       </thead>
@@ -19,21 +24,21 @@
         {# action_url is row-scoped — attached to the <tr> so clicking the
            row label (leftmost <td>) navigates too (#845). Per-cell hover
            feedback stays for the threshold-colour cells below. #}
-        <tr class="border-b border-[hsl(var(--border))] last:border-0 {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.3)]{% endif %}"
-            {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-          <td class="py-1 px-2 font-medium text-[hsl(var(--foreground))]">{{ row.row }}</td>
+        <tr {% if action_url %}class="is-clickable"
+            hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+          <td class="dz-heatmap-row-label">{{ row.row }}</td>
           {% for cell in row.cells %}
-          <td class="dz-heatmap-cell py-1 px-2 text-center transition-opacity duration-[80ms]
-            {%- if heatmap_thresholds|length >= 2 -%}
-              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
-              {%- elif cell.value < heatmap_thresholds[1] %} bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))]
-              {%- else %} bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]
-              {%- endif -%}
-            {%- elif heatmap_thresholds|length == 1 -%}
-              {%- if cell.value < heatmap_thresholds[0] %} bg-[hsl(var(--destructive)/0.15)] text-[hsl(var(--destructive))]
-              {%- else %} bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]
-              {%- endif -%}
-            {%- endif -%}">
+          <td class="dz-heatmap-cell"
+              {%- if heatmap_thresholds|length >= 2 -%}
+                {%- if cell.value < heatmap_thresholds[0] %} data-dz-heatmap-tone="bad"
+                {%- elif cell.value < heatmap_thresholds[1] %} data-dz-heatmap-tone="warn"
+                {%- else %} data-dz-heatmap-tone="good"
+                {%- endif -%}
+              {%- elif heatmap_thresholds|length == 1 -%}
+                {%- if cell.value < heatmap_thresholds[0] %} data-dz-heatmap-tone="bad"
+                {%- else %} data-dz-heatmap-tone="good"
+                {%- endif -%}
+              {%- endif %}>
             {{ "%.1f"|format(cell.value) }}
           </td>
           {% endfor %}
@@ -43,10 +48,10 @@
     </table>
   </div>
   {% if total > items|length %}
-  <p class="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">Showing {{ items|length }} of {{ total }}</p>
+  <p class="dz-heatmap-overflow">Showing {{ items|length }} of {{ total }}</p>
   {% endif %}
   {% else %}
-  <p class="dz-empty-dense text-[13px] text-[hsl(var(--muted-foreground))]" role="status">{{ empty_message | default("No data available.") }}</p>
+  <p class="dz-empty-dense" role="status">{{ empty_message | default("No data available.") }}</p>
   {% endif %}
 </div>
 {% endcall %}

@@ -255,3 +255,245 @@
 .dz-profile-fact-text {
   min-width: 0;
 }
+
+/* ─────────────────────────── activity_feed region ───────────────
+ * Vertical timeline: dot on a left rail, time on the left of each
+ * row, message bubble on the right. Bubble gets a hover-shadow
+ * when wired to an action_url (HTMX-driven detail drawer open). */
+
+.dz-activity-feed {
+  position: relative;
+  padding-inline-start: var(--space-md);
+  border-inline-start: 1px solid var(--colour-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  list-style: none;
+  margin: 0;
+}
+
+.dz-activity-row {
+  position: relative;
+}
+
+.dz-activity-dot {
+  position: absolute;
+  inset-inline-start: -1.3125rem;
+  top: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-activity-dot > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--colour-brand);
+}
+
+.dz-activity-row-inner {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.dz-activity-time {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  min-width: 5rem;
+  padding-block-start: 0.25rem;
+}
+
+/* Bubble — no border (the dashboard slot already owns card chrome,
+ * adding a border re-creates a card-within-a-card per #852). Subtle
+ * background tint provides visual grouping. */
+.dz-activity-bubble {
+  flex: 1 1 0;
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-activity-bubble.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-activity-bubble.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-activity-actor {
+  font-weight: var(--weight-medium);
+}
+
+.dz-activity-empty {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  padding-block: var(--space-2xl);
+}
+
+/* ─────────────────────────── heatmap region ─────────────────────
+ * Matrix table with row labels and column labels, value cells
+ * tinted by threshold band (success / warning / destructive).
+ * Tints route through data-dz-heatmap-tone so the threshold
+ * branching can stay in CSS (template emits the data-attribute,
+ * not a class string). */
+
+.dz-heatmap-scroll {
+  overflow-x: auto;
+}
+
+.dz-heatmap-grid {
+  width: 100%;
+  font-size: var(--text-sm);
+  border-collapse: collapse;
+}
+
+.dz-heatmap-grid > thead > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-heatmap-grid th {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  text-align: center;
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+}
+
+.dz-heatmap-grid > tbody > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-heatmap-grid > tbody > tr:last-child {
+  border-block-end: 0;
+}
+
+.dz-heatmap-grid > tbody > tr.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-heatmap-grid > tbody > tr.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-heatmap-row-label {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-heatmap-cell {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  text-align: center;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="bad"] {
+  background: color-mix(in oklch, var(--colour-danger) 15%, transparent);
+  color: var(--colour-danger);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="warn"] {
+  background: color-mix(in oklch, var(--colour-warning) 15%, transparent);
+  color: var(--colour-warning);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="good"] {
+  background: color-mix(in oklch, var(--colour-success) 15%, transparent);
+  color: var(--colour-success);
+}
+
+.dz-heatmap-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+/* ─────────────────────────── status_list region ─────────────────
+ * Vertical list of icon + title + caption + state pill rows.
+ * Pill colour keys off data-dz-state on the row (positive /
+ * warning / destructive / accent / neutral). Pill is omitted for
+ * neutral entries — the row reads as plain info rather than a
+ * status row. */
+
+.dz-status-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.dz-status-list > li + li {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.dz-status-list-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding-block: var(--space-md);
+}
+
+.dz-status-list-entry:first-child {
+  padding-block-start: 0.25rem;
+}
+
+.dz-status-list-entry:last-child {
+  padding-block-end: 0.25rem;
+}
+
+.dz-status-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+}
+
+.dz-status-list-icon-spacer {
+  width: 1.25rem;
+  flex-shrink: 0;
+}
+
+.dz-status-list-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dz-status-list-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.dz-status-list-caption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-status-list-pill {
+  flex-shrink: 0;
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
