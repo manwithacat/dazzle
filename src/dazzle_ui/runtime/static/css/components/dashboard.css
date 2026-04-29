@@ -356,10 +356,69 @@
   margin-block-start: 0.125rem;
 }
 
-/* Card body — HTMX-loaded region content slot. */
+/* Card body — HTMX-loaded region content slot.
+ *
+ * #962 — `min-height` per display mode reserves space before the htmx
+ * region fetch lands so the page doesn't bounce as content arrives.
+ * Web Vitals classifies CLS > 0.1 as "needs improvement"; pre-fix
+ * surveyed surfaces hit 0.18–0.37. The values below approximate the
+ * eventual content height for each display mode — generous enough to
+ * cover typical content, tight enough to avoid wasting screen real
+ * estate. If content exceeds the reservation, only that card grows
+ * (one shift, bounded). If content fits, no shift.
+ *
+ * data-display is emitted by `_content.html` from RegionContext.display
+ * (string: "list" / "metrics" / "chart" / etc, lowercased). Unknown
+ * values fall through to the default rule (matches the LIST shape).
+ */
 .dz-card-body {
   padding-inline: var(--space-md);
   padding-block-end: var(--space-md);
+  min-height: 280px; /* default — matches LIST / TABBED_LIST shape */
+}
+
+.dz-card-body[data-display="summary"],
+.dz-card-body[data-display="summary_row"] {
+  min-height: 96px;
+}
+
+.dz-card-body[data-display="metrics"],
+.dz-card-body[data-display="metric"] {
+  min-height: 140px;
+}
+
+.dz-card-body[data-display="bar_chart"],
+.dz-card-body[data-display="chart"],
+.dz-card-body[data-display="line_chart"],
+.dz-card-body[data-display="bar_track"],
+.dz-card-body[data-display="bullet"],
+.dz-card-body[data-display="funnel"],
+.dz-card-body[data-display="heatmap"],
+.dz-card-body[data-display="radar"] {
+  min-height: 280px;
+}
+
+.dz-card-body[data-display="kanban"] {
+  min-height: 480px;
+}
+
+.dz-card-body[data-display="diagram"] {
+  min-height: 360px;
+}
+
+.dz-card-body[data-display="profile_card"] {
+  min-height: 200px;
+}
+
+.dz-card-body[data-display="action_grid"],
+.dz-card-body[data-display="pipeline_steps"],
+.dz-card-body[data-display="status_list"] {
+  min-height: 200px;
+}
+
+.dz-card-body[data-display="pivot_table"],
+.dz-card-body[data-display="timeline"] {
+  min-height: 320px;
 }
 
 /* Skeleton loader (shown until HTMX swap completes) */

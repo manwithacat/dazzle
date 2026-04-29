@@ -1,4 +1,4 @@
-/* dazzle v0.61.143 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.62.1 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1756,6 +1756,43 @@ margin-block-start: 0.125rem;
 .dz-card-body {
 padding-inline: var(--space-md);
 padding-block-end: var(--space-md);
+min-height: 280px;
+}
+.dz-card-body[data-display="summary"],
+.dz-card-body[data-display="summary_row"] {
+min-height: 96px;
+}
+.dz-card-body[data-display="metrics"],
+.dz-card-body[data-display="metric"] {
+min-height: 140px;
+}
+.dz-card-body[data-display="bar_chart"],
+.dz-card-body[data-display="chart"],
+.dz-card-body[data-display="line_chart"],
+.dz-card-body[data-display="bar_track"],
+.dz-card-body[data-display="bullet"],
+.dz-card-body[data-display="funnel"],
+.dz-card-body[data-display="heatmap"],
+.dz-card-body[data-display="radar"] {
+min-height: 280px;
+}
+.dz-card-body[data-display="kanban"] {
+min-height: 480px;
+}
+.dz-card-body[data-display="diagram"] {
+min-height: 360px;
+}
+.dz-card-body[data-display="profile_card"] {
+min-height: 200px;
+}
+.dz-card-body[data-display="action_grid"],
+.dz-card-body[data-display="pipeline_steps"],
+.dz-card-body[data-display="status_list"] {
+min-height: 200px;
+}
+.dz-card-body[data-display="pivot_table"],
+.dz-card-body[data-display="timeline"] {
+min-height: 320px;
 }
 .dz-card-skeleton {
 display: flex;

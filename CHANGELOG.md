@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.1] - 2026-04-29
+
+### Fixed
+- **#962 — workspace card-body height reservation eliminates CLS
+  spikes.** AegisMark's automated site sweep on Heroku v504
+  measured Cumulative Layout Shift scores of 0.18-0.37 across
+  workspace + list surfaces (Web Vitals classifies >0.1 as
+  "needs improvement"; >0.25 as "poor"). Root cause: each region
+  card body started with the skeleton's natural height (~50px)
+  and grew to the actual content height (200-500px) when the
+  htmx fetch landed, pushing every card below it down the page.
+
+  **Fix**: per-display-mode `min-height` on `.dz-card-body`,
+  driven by a `data-display="{{ r.display | lower }}"` attribute
+  the template populates from `RegionContext.display`:
+
+  | display | min-height |
+  |---|---|
+  | summary / summary_row | 96px |
+  | metrics / metric | 140px |
+  | profile_card | 200px |
+  | action_grid / pipeline_steps / status_list | 200px |
+  | bar_chart / line_chart / heatmap / radar / etc. | 280px |
+  | list / tabbed_list (default) | 280px |
+  | pivot_table / timeline | 320px |
+  | diagram | 360px |
+  | kanban | 480px |
+
+  The card's parent reserves the height before the fetch lands;
+  when content arrives, only the card's own internal layout
+  shifts (bounded), not the surrounding cards. Web Vitals score
+  drops below the 0.1 threshold across the board.
+
+  Runtime-added cards (via `addCard`) get the same treatment:
+  `dashboard-builder.js`'s `_buildCardElement` reads the
+  display mode from the catalog entry and emits the same
+  `data-display` attribute.
+
+  7 new unit tests pin the contract: template emits the
+  attribute lowercased, CSS reserves min-height for every
+  well-known display mode, rendered HTML carries the attribute,
+  defaults to "list" when display is unset, runtime-added cards
+  set it too.
+
+### Agent Guidance
+- When a new region display mode is added (`display: foo`),
+  also add a `min-height` reservation in
+  `static/css/components/dashboard.css` matching the typical
+  content height. Without it, the new display mode regresses
+  CLS on workspaces that adopt it. The
+  `test_min_height_reservations_for_known_display_modes` gate
+  enumerates the known modes; add yours to the list when shipping.
+
 ## [0.62.0] - 2026-04-29
 
 ### Notes
