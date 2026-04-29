@@ -455,3 +455,124 @@ class TestDarkModeParity:
             )
             assert bg["body"] != bg["footer"], f"{theme}: body bg {bg['body']!r} equals footer bg"
             page.close()
+
+
+# ---------------------------------------------------------------------------
+# Gate 7 — focus visibility (#942 cycle 1f)
+# ---------------------------------------------------------------------------
+
+
+def _focus_signature(page: Any, selector: str) -> dict[str, str]:
+    """Read every focus-relevant computed style off ``selector`` —
+    used to compare unfocused vs focused state. If at least one
+    property differs, the element has a visible focus indicator.
+    If ALL match, focus is invisible (regression)."""
+    return page.evaluate(
+        """(sel) => {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            const cs = getComputedStyle(el);
+            return {
+                outlineStyle: cs.outlineStyle,
+                outlineWidth: cs.outlineWidth,
+                outlineColor: cs.outlineColor,
+                boxShadow: cs.boxShadow,
+                borderColor: cs.borderColor,
+                background: cs.backgroundColor,
+            };
+        }""",
+        selector,
+    )
+
+
+class TestFocusVisibility:
+    """Every interactive element in the chrome must show a focus
+    indicator when reached by Tab. The default UA stylesheet draws
+    a focus ring; component CSS often nukes it with ``outline: none``
+    without providing a replacement (``box-shadow``, custom outline,
+    border colour change). Without a visible indicator, keyboard-only
+    users can't tell where focus lives — a hard accessibility gate.
+
+    Strategy: snapshot the computed styles before focus, focus the
+    element via ``page.focus()``, snapshot again. Assert at least
+    one focus-related property changed.
+    """
+
+    _SELECTORS = [
+        ".dz-pdf-viewer-back",
+        "#harness-prev",
+        "#harness-next",
+    ]
+
+    def test_back_link_focus_visible(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        sel = ".dz-pdf-viewer-back"
+        before = _focus_signature(page, sel)
+        page.focus(sel)
+        page.wait_for_timeout(20)
+        after = _focus_signature(page, sel)
+        assert before != after, (
+            f"focus on {sel!r} produced no visible style change; "
+            f"computed styles before == after: {before}. "
+            "Replace `outline: none` with a focus indicator "
+            "(e.g. box-shadow: 0 0 0 1px var(--colour-brand))."
+        )
+        page.close()
+
+    def test_prev_nav_focus_visible(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        sel = "#harness-prev"
+        before = _focus_signature(page, sel)
+        page.focus(sel)
+        page.wait_for_timeout(20)
+        after = _focus_signature(page, sel)
+        assert before != after, f"focus on {sel!r} produced no visible style change; {before}"
+        page.close()
+
+    def test_next_nav_focus_visible(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        sel = "#harness-next"
+        before = _focus_signature(page, sel)
+        page.focus(sel)
+        page.wait_for_timeout(20)
+        after = _focus_signature(page, sel)
+        assert before != after, f"focus on {sel!r} produced no visible style change; {before}"
+        page.close()
+
+    def test_focus_visible_in_dark_mode(self, browser: Any, server: str) -> None:
+        """Focus indicators must remain visible in dark mode too —
+        the brand colour token is theme-independent so a brand-tinted
+        ring works in both themes, but a fix that uses an undefined
+        token (or a literal dark colour) would fail this gate."""
+        page = _new_page(browser, server, dark=True)
+        for sel in self._SELECTORS:
+            before = _focus_signature(page, sel)
+            page.focus(sel)
+            page.wait_for_timeout(20)
+            after = _focus_signature(page, sel)
+            assert before != after, f"dark mode: focus on {sel!r} invisible — {before}"
+        page.close()
+
+    def test_focus_uses_real_ring_indicator(self, browser: Any, server: str) -> None:
+        """Stricter accessibility contract: focus must produce either
+        a non-``none`` outline OR a non-``none`` box-shadow — not
+        just a subtle background tint. Aligns the PDF viewer chrome
+        with the framework convention (``outline: none; box-shadow:
+        0 0 0 1px var(--colour-brand)``) already used by
+        ``.dz-workspace-context-select``, ``.dz-toggle-item``, etc."""
+        page = _new_page(browser, server)
+        for sel in self._SELECTORS:
+            page.focus(sel)
+            page.wait_for_timeout(20)
+            sig = _focus_signature(page, sel)
+            has_outline = sig["outlineStyle"] not in ("none", "") and sig["outlineWidth"] not in (
+                "0px",
+                "",
+            )
+            has_shadow = sig["boxShadow"] not in ("none", "")
+            assert has_outline or has_shadow, (
+                f"focus on {sel!r} has neither outline nor box-shadow ring; "
+                f"sig={sig}. Subtle background changes alone don't meet "
+                "WCAG focus-visibility expectations."
+            )
+        page.close()

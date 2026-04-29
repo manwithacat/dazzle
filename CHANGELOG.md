@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.119] - 2026-04-29
+
+### Fixed
+- **PDF viewer focus rings now match framework convention (#942
+  cycle 1f).** Cycle 1b's chrome shipped with `outline: none` on
+  `:focus-visible` and only a subtle background tint as a
+  replacement. Existing visual gates passed (the styles DID
+  change), but the change was too subtle for keyboard users to
+  spot at a glance — luminance shift well under WCAG focus-
+  visibility expectations. Switched both focus-visible rules to
+  the framework's established pattern (`outline: none; box-shadow:
+  0 0 0 2px var(--colour-brand)`), matching `.dz-workspace-context-
+  select`, `.dz-toggle-item`, `.dz-form-input`, and others.
+
+  Hover state preserved as-is — the background tint is a hover
+  indicator, not a focus indicator. Splitting the rules makes the
+  intent clearer.
+
+### Added
+- **Focus-visibility gates.** 5 new Playwright tests under the
+  cycle 1c suite:
+  - Each interactive chrome element (back link, prev nav, next
+    nav) shows a visible focus indicator when reached by Tab —
+    snapshot computed styles before vs after focus, assert at
+    least one property changed
+  - Same gate run in dark mode so brand-tinted rings stay visible
+  - **Strict ring gate** (`test_focus_uses_real_ring_indicator`):
+    requires either non-`none` outline OR non-`none` box-shadow,
+    not just a background change. Caught the cycle 1b focus
+    weakness immediately when added; the fix landed alongside.
+
+### Agent Guidance
+- Component CSS that overrides default focus rings (`outline: none`
+  on `:focus-visible`) MUST replace it with a visible indicator
+  (`box-shadow` ring, custom outline, etc). Background-tint-only
+  doesn't meet the framework's focus-visibility bar. Convention:
+  `box-shadow: 0 0 0 2px var(--colour-brand)`.
+
 ## [0.61.118] - 2026-04-29
 
 ### Added

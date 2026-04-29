@@ -45,11 +45,21 @@
   transition: background var(--duration-base) var(--ease-out);
 }
 
-.dz-pdf-viewer-back:hover,
+.dz-pdf-viewer-back:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
 .dz-pdf-viewer-back:focus-visible {
+  /* Framework focus-ring convention — same shape as
+   * `.dz-workspace-context-select`, `.dz-toggle-item`, etc. The
+   * brand-tinted box-shadow stays visible in both light and dark
+   * themes; a bare `outline: none` left keyboard users guessing
+   * where focus lived (#942 cycle 1f). */
   background: var(--colour-bg);
   color: var(--colour-text);
   outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 .dz-pdf-viewer-title {
@@ -80,11 +90,17 @@
   transition: background var(--duration-base) var(--ease-out);
 }
 
-.dz-pdf-viewer-nav-link:hover,
+.dz-pdf-viewer-nav-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
 .dz-pdf-viewer-nav-link:focus-visible {
+  /* Same framework focus-ring convention as the back button. */
   background: var(--colour-bg);
   color: var(--colour-text);
   outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 .dz-pdf-viewer-nav-link[aria-disabled="true"] {
