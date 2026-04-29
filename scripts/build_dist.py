@@ -75,6 +75,11 @@ JS_SOURCES = [
     # get the chrome wired automatically when they adopt the
     # `display: pdf_viewer` DSL hook or the `pdf_viewer.html` include.
     STATIC / "js" / "pdf-viewer.js",
+    # #947: dz-debug introspection helper for the Alpine × HTMX bridge.
+    # Exposes window.dzDebug for tests (proxy identity, last settle
+    # timestamp, component root listing). Bundle cost ~1KB; methods
+    # only do work when called.
+    STATIC / "js" / "dz-debug.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -89,6 +94,7 @@ FRAMEWORK_JS = {
     "dz-a11y.js",
     "dz-islands.js",
     "pdf-viewer.js",
+    "dz-debug.js",
     "site.js",
 }
 

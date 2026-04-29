@@ -99,6 +99,12 @@
   <script defer src="{{ 'js/dz-component-bridge.js' | static_url }}"></script>
   <script defer src="{{ 'js/dz-widget-registry.js' | static_url }}"></script>
   <script defer src="{{ 'js/pdf-viewer.js' | static_url }}"></script>
+  {# #947 cycle 1 — Alpine × HTMX introspection helper. Exposes
+     window.dzDebug for test introspection (proxy identity, last
+     settle timestamp, component root listing). Cheap and dormant
+     until called; production deployments that don't need it can
+     omit this script tag without runtime impact. #}
+  <script defer src="{{ 'js/dz-debug.js' | static_url }}"></script>
 
   {# CSRF token injection for HTMX requests (v1.0.0) #}
   <script>

@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.131] - 2026-04-29
+
+### Added
+- **#947 cycle 1 — `window.dzDebug` introspection helper for the
+  Alpine × HTMX bridge.** New \`static/js/dz-debug.js\` exposes a
+  small introspection surface for verifying invariants about the
+  bridge between HTMX morphs and Alpine reactivity:
+
+  - \`dataIdentity(selector)\` — stable string id for the \`$data\`
+    proxy at \`selector\`. Two calls return the same id iff the same
+    proxy is active. After \`Alpine.destroyTree\` + \`initTree\` (the
+    #945 fix) a fresh proxy lands and the id changes — that's how
+    tests verify the watcher graph actually re-attached, not just
+    "values look right" (which the cycle 936 fix achieved without
+    the watcher graph reattaching).
+  - \`componentRoots()\` — list \`[x-data]\` roots in the current DOM
+    with their proxy ids; spots zombie roots after morph.
+  - \`lastSettleAt()\` / \`lastSettleTarget()\` — timestamp + target
+    of the most recent \`htmx:afterSettle\`. Tests poll on these
+    rather than \`setTimeout\`-and-pray.
+  - \`reset()\` — drops the proxy registry between test cases.
+
+  Loaded from \`base.html\` and bundled into \`dist/dazzle.min.js\`
+  (~1KB minified). Methods only do work when called; production
+  deployments that don't want the surface can omit the script tag.
+
+  Unblocks the cycle 2-3 stress + cross-URL morph gates by giving
+  Playwright tests a stable handle on proxy identity. Without this
+  the gates can only see "cards count is right" — exactly the
+  signal #945 demonstrated wasn't sufficient.
+
+### Agent Guidance
+- When writing Playwright tests against the Alpine × HTMX bridge,
+  use \`page.evaluate('window.dzDebug.dataIdentity(...)')\` to
+  verify the proxy actually re-attached after morph rather than
+  relying on data-shape assertions. The cycle 936/945 sequence
+  showed that "values look correct" can mask "watchers detached."
+
 ## [0.61.130] - 2026-04-29
 
 ### Fixed
