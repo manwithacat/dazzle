@@ -557,6 +557,24 @@ def assemble_post_build_routes(
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
 
+        # #951: register shell state on app.state so project-side
+        # routes can call `render_in_app_shell()` to render their
+        # template inside the standard framework chrome (sidebar +
+        # topbar + nav).
+        from dazzle_back.runtime.shell import (
+            build_shell_state,
+            register_shell_state,
+        )
+
+        register_shell_state(
+            app,
+            build_shell_state(
+                appspec,
+                get_auth_context=get_auth_context,
+                app_prefix="/app",
+            ),
+        )
+
         # ---- 4. Experience routes (/app/experiences/*) ----
         if appspec.experiences:
             try:

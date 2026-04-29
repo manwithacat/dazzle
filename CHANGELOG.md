@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.144] - 2026-04-29
+
+### Added
+- **#951 — `render_in_app_shell` public helper for project routes.**
+  Project-side FastAPI handlers (added via `# dazzle:route-override`
+  or any other route registration) can now render their templates
+  inside the framework's standard `dz://layouts/app_shell.html`
+  with one call:
+
+  ```python
+  from dazzle_back.runtime.shell import render_in_app_shell
+
+  @register_route("GET", "/fastmark/upload")
+  async def handler(request: Request):
+      return render_in_app_shell(
+          request,
+          template="fastmark/upload.html",
+          title="Upload your own scan",
+          purpose="Fast Mark BYO PDF upload",
+          active_nav_route="/app/workspaces/fastmark",
+          context={"subjects": subjects, "year_groups": year_groups},
+      )
+  ```
+
+  The helper resolves auth + persona-aware nav per-request and
+  threads everything `app_shell.html` reads (app_name, nav_items,
+  nav_groups, user identity, surface metadata) into the template
+  context. The project template just needs
+  `{% extends "layouts/app_shell.html" %}` and a
+  `{% block content %}…{% endblock %}` body.
+
+  Three exports in `dazzle_back.runtime.shell`:
+  - `ShellState` — dataclass carrying nav + auth callables, attached
+    to `app.state.shell_state` at framework boot
+  - `build_shell_state(appspec, ...)` — computes a `ShellState`
+    from an AppSpec; same nav-derivation logic as `template_compiler`
+  - `register_shell_state(app, state)` — attaches it to a FastAPI app
+  - `render_in_app_shell(request, *, template, ...)` — the
+    one-liner project authors call
+
+  Wired into `app_factory.py` so every Dazzle app automatically
+  has the registered state available — no project-side setup
+  required beyond importing the helper.
+
+### Agent Guidance
+- When a project route needs the framework chrome (sidebar,
+  topbar, persona-aware nav), use `render_in_app_shell()` rather
+  than rolling a full `<!doctype html>` response. The helper is
+  defer-safe in unit-test contexts (returns a usable empty
+  `ShellState` if no app state is registered) and integrates
+  with the existing auth + persona nav resolution paths.
+
 ## [0.61.143] - 2026-04-29
 
 ### Added
