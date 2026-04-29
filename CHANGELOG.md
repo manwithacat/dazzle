@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.138] - 2026-04-29
+
+### Changed
+- **`tests/conftest.py`: load `.env` automatically.** Previously
+  pytest didn't pick up the repo-root `.env`, so opt-in
+  integration tests like `tests/unit/test_grant_store.py` (gated on
+  `TEST_DATABASE_URL`) silently skipped unless the developer
+  remembered to `export $(cat .env | xargs)` first. Conftest now
+  parses `.env` at collection time and sets any missing vars on
+  `os.environ`. Explicit `TEST_DATABASE_URL=... pytest` invocations
+  still win — the loader only fills in vars that aren't already
+  present.
+
+  **Result**: 33 previously-skipped tests now run by default
+  (12961 unit tests pass, was 12928). Grant store + RBAC
+  integration coverage is on by default for any developer with a
+  local Postgres + `TEST_DATABASE_URL` set in `.env`.
+
+### Agent Guidance
+- Tests that need a Postgres connection should gate on
+  `TEST_DATABASE_URL` (skip if missing), not `DATABASE_URL` (which
+  is the runtime DB and is set in production environments where
+  destructive test setup would be catastrophic). Set
+  `TEST_DATABASE_URL=postgresql://localhost/dazzle_test` in `.env`
+  for local development; CI passes it explicitly.
+
 ## [0.61.137] - 2026-04-29
 
 ### Added
