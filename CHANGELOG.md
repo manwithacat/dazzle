@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.2] - 2026-04-29
+
+### Added
+- **#961 cycle 3 — MCP-tools API-surface snapshot.** New
+  `dazzle inspect-api mcp-tools` subcommand walks the consolidated
+  MCP tool registry (`get_all_consolidated_tools()`) and emits a
+  deterministic JSON-shape snapshot of every tool's name + input
+  schema. Description is pinned by SHA-256 hash so wording changes
+  are visible without bloating the diff. Baseline at
+  `docs/api-surface/mcp-tools.txt` (1518 lines, 32 tools).
+
+### Agent Guidance
+- After any change to a `Tool(...)` definition in
+  `src/dazzle/mcp/server/tools_consolidated.py` — adding/removing
+  an operation enum value, changing a property type, renaming a
+  property — the `test_mcp_tools_match_baseline` gate fires. Run
+  `dazzle inspect-api mcp-tools --write` and commit the regenerated
+  baseline alongside the schema change. The diff IS the
+  breaking-change record for MCP clients.
+
 ## [0.63.1] - 2026-04-29
 
 ### Added

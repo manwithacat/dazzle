@@ -1,0 +1,1518 @@
+# DAZZLE MCP Tools — API Surface (cycle 3 of #961)
+#
+# Source of truth: dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()
+# Regenerate: dazzle inspect-api mcp-tools --write
+# Drift gate: tests/unit/test_api_surface_drift.py
+#
+# Each tool's input schema is the load-bearing public API. The description
+# is pinned by SHA-256 hash (12 hex chars) — wording changes are visible
+# in the diff without bloating it. Adding/removing an operation enum value,
+# changing a property type, or renaming a tool are all breaking changes.
+
+# Count: 32 tools
+
+tool: agent_commands
+  description_hash: 21ccbeb48222
+  description_len: 164
+  {
+    "properties": {
+      "command": {
+        "description": "Command name (for 'get' operation)",
+        "type": "string"
+      },
+      "commands_version": {
+        "description": "Local commands_version from .manifest.json (for 'check_updates')",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "get",
+          "check_updates"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: api_pack
+  description_hash: 6dbb2e5a29bd
+  description_len: 106
+  {
+    "properties": {
+      "category": {
+        "description": "Filter by category (for search)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "search",
+          "get"
+        ],
+        "type": "string"
+      },
+      "pack_name": {
+        "description": "Pack name (for get)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "provider": {
+        "description": "Filter by provider (for search)",
+        "type": "string"
+      },
+      "query": {
+        "description": "Search query (for search)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: bootstrap
+  description_hash: cc00a8ea6dd4
+  description_len: 488
+  {
+    "properties": {
+      "project_path": {
+        "description": "Optional: project directory to scan for specs",
+        "type": "string"
+      },
+      "spec_path": {
+        "description": "Optional: path to spec file",
+        "type": "string"
+      },
+      "spec_text": {
+        "description": "Optional: spec text if provided directly by user",
+        "type": "string"
+      }
+    },
+    "required": [],
+    "type": "object"
+  }
+
+tool: compliance
+  description_hash: f127b49ca7c1
+  description_len: 273
+  {
+    "properties": {
+      "framework": {
+        "description": "Framework ID: iso27001 or soc2 (default: iso27001)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "compile",
+          "evidence",
+          "gaps",
+          "summary",
+          "review"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: composition
+  description_hash: b463d73bcde5
+  description_len: 944
+  {
+    "properties": {
+      "base_url": {
+        "description": "Server URL (required for capture, e.g. http://localhost:3000)",
+        "type": "string"
+      },
+      "focus": {
+        "description": "Visual eval dimensions to focus on (for analyze). Options: content_rendering, icon_media, color_consistency, layout_overflow, visual_hierarchy, responsive_fidelity",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "audit",
+          "capture",
+          "analyze",
+          "report",
+          "bootstrap",
+          "inspect_styles"
+        ],
+        "type": "string"
+      },
+      "overwrite": {
+        "description": "Overwrite existing reference library (for bootstrap, default: false)",
+        "type": "boolean"
+      },
+      "pages": {
+        "description": "Filter to specific page routes (e.g. [\"/\", \"/about\"])",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "properties": {
+        "description": "CSS properties to inspect (for inspect_styles). Defaults to layout properties: display, flex-direction, position, width, height, overflow, gap, etc.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "route": {
+        "description": "Page route to inspect (for inspect_styles, default: \"/\")",
+        "type": "string"
+      },
+      "selectors": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Label-to-CSS-selector mapping (for inspect_styles). E.g. {\"hero\": \".dz-hero-with-media\", \"media\": \".dz-hero-media\"}",
+        "type": "object"
+      },
+      "token_budget": {
+        "description": "Max tokens for visual analysis (default: 50000)",
+        "type": "integer"
+      },
+      "viewports": {
+        "description": "Viewport names for capture (default: [\"desktop\"]). Options: desktop, mobile",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: conformance
+  description_hash: fbc455aeb849
+  description_len: 418
+  {
+    "properties": {
+      "auth_enabled": {
+        "description": "Include unauthenticated (401) cases (default: true)",
+        "type": "boolean"
+      },
+      "entity_name": {
+        "description": "Entity name (required for cases)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "summary",
+          "cases",
+          "gaps",
+          "monitor_status"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: db
+  description_hash: be6dc96ae956
+  description_len: 114
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "status",
+          "verify"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: demo_data
+  description_hash: cbf5c4c844fd
+  description_len: 68
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: discovery
+  description_hash: 1c513f0efaa7
+  description_len: 97
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "coherence"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: dsl
+  description_hash: f031b49924ad
+  description_len: 385
+  {
+    "properties": {
+      "entities": {
+        "description": "Filter to specific entity names (for export_frontend_spec)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "entity_names": {
+        "description": "Entity names to fetch full details for (for get_spec). Omit for summary.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "extended": {
+        "description": "Run extended checks (for lint)",
+        "type": "boolean"
+      },
+      "format": {
+        "description": "Output format (for export_frontend_spec, default: markdown)",
+        "enum": [
+          "markdown",
+          "json"
+        ],
+        "type": "string"
+      },
+      "gaps_only": {
+        "description": "Omit surfaces with fidelity=1.0 (for fidelity)",
+        "type": "boolean"
+      },
+      "name": {
+        "description": "Entity or surface name (for inspect_entity/inspect_surface)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "validate",
+          "list_modules",
+          "inspect_entity",
+          "inspect_surface",
+          "analyze",
+          "lint",
+          "get_spec",
+          "fidelity",
+          "list_fragments",
+          "export_frontend_spec"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "sections": {
+        "description": "Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "surface_filter": {
+        "description": "Filter to a specific surface name (for fidelity)",
+        "type": "string"
+      },
+      "surface_names": {
+        "description": "Surface names to fetch full details for (for get_spec). Omit for summary.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: e2e
+  description_hash: 1edccc5bc8d9
+  description_len: 297
+  {
+    "properties": {
+      "name": {
+        "description": "Mode name (for describe_mode)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list_modes",
+          "describe_mode",
+          "status",
+          "list_baselines"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "project_root": {
+        "description": "Path to an example app (for status/list_baselines)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: feedback
+  description_hash: e21079223443
+  description_len: 198
+  {
+    "properties": {
+      "agent_classification": {
+        "description": "Classification (triage only)",
+        "type": "string"
+      },
+      "agent_notes": {
+        "description": "Agent notes (triage/resolve)",
+        "type": "string"
+      },
+      "assigned_to": {
+        "description": "Assign to (triage only)",
+        "type": "string"
+      },
+      "category": {
+        "description": "Filter by category (list only)",
+        "type": "string"
+      },
+      "id": {
+        "description": "Feedback report ID (required for get/triage/resolve)",
+        "type": "string"
+      },
+      "limit": {
+        "description": "Max results (list only, default 20)",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "get",
+          "triage",
+          "resolve"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "resolved_by": {
+        "description": "Who resolved (resolve only)",
+        "type": "string"
+      },
+      "severity": {
+        "description": "Filter by severity (list only)",
+        "type": "string"
+      },
+      "status": {
+        "description": "Filter by status (list only)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: fitness
+  description_hash: d8ca4ec46996
+  description_len: 174
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "queue"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "project_root": {
+        "description": "Path to an example app project",
+        "type": "string"
+      },
+      "top": {
+        "default": 10,
+        "description": "Max clusters to return (default 10)",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "operation",
+      "project_root"
+    ],
+    "type": "object"
+  }
+
+tool: graph
+  description_hash: ca6de56ab378
+  description_len: 736
+  {
+    "properties": {
+      "data": {
+        "description": "JSON export data to import (for import)",
+        "type": "object"
+      },
+      "depth": {
+        "description": "Traversal depth (for neighbourhood, default: 1)",
+        "type": "integer"
+      },
+      "entity": {
+        "description": "Entity name (for triggers, e.g. 'Ticket')",
+        "type": "string"
+      },
+      "entity_id": {
+        "description": "Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)",
+        "type": "string"
+      },
+      "entity_types": {
+        "description": "Filter by entity types: file, module, class, function",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "event": {
+        "description": "Event type (for triggers, default: created)",
+        "enum": [
+          "created",
+          "updated",
+          "deleted"
+        ],
+        "type": "string"
+      },
+      "file_path": {
+        "description": "Path to JSON file to import (for import, alternative to data)",
+        "type": "string"
+      },
+      "limit": {
+        "description": "Max results (default: 20)",
+        "type": "integer"
+      },
+      "mode": {
+        "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
+        "enum": [
+          "merge",
+          "replace"
+        ],
+        "type": "string"
+      },
+      "name": {
+        "description": "Entity or concept name (for concept, related, triggers)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "query",
+          "dependencies",
+          "dependents",
+          "neighbourhood",
+          "paths",
+          "stats",
+          "populate",
+          "concept",
+          "inference",
+          "related",
+          "export",
+          "import",
+          "triggers",
+          "topology"
+        ],
+        "type": "string"
+      },
+      "relation_types": {
+        "description": "Filter by relation types: imports, contains, inherits, depends_on",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "root_path": {
+        "description": "Path to populate from (for populate)",
+        "type": "string"
+      },
+      "source_id": {
+        "description": "Source entity ID (for paths)",
+        "type": "string"
+      },
+      "target_id": {
+        "description": "Target entity ID (for paths)",
+        "type": "string"
+      },
+      "text": {
+        "description": "Search text (for query)",
+        "type": "string"
+      },
+      "transitive": {
+        "description": "Include transitive deps (for dependencies, dependents)",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: knowledge
+  description_hash: 349331c68e93
+  description_len: 160
+  {
+    "properties": {
+      "command": {
+        "description": "CLI command (for cli_help)",
+        "type": "string"
+      },
+      "complexity": {
+        "description": "Complexity level (for examples)",
+        "enum": [
+          "beginner",
+          "intermediate",
+          "advanced"
+        ],
+        "type": "string"
+      },
+      "detail": {
+        "description": "Detail level (for inference)",
+        "enum": [
+          "minimal",
+          "full"
+        ],
+        "type": "string"
+      },
+      "features": {
+        "description": "Features to search (for examples)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "list_all": {
+        "description": "List all triggers (for inference)",
+        "type": "boolean"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "concept",
+          "examples",
+          "cli_help",
+          "workflow",
+          "inference",
+          "changelog",
+          "get_spec",
+          "search_commands"
+        ],
+        "type": "string"
+      },
+      "query": {
+        "description": "Search query (for inference)",
+        "type": "string"
+      },
+      "since": {
+        "description": "Version filter (for changelog, e.g. '0.48.0')",
+        "type": "string"
+      },
+      "term": {
+        "description": "Concept/pattern name (for concept)",
+        "type": "string"
+      },
+      "workflow": {
+        "description": "Workflow name (for workflow)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: llm
+  description_hash: 78fb63369c1c
+  description_len: 183
+  {
+    "properties": {
+      "name": {
+        "description": "Intent name (for inspect_intent)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list_intents",
+          "list_models",
+          "inspect_intent",
+          "get_config"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: mock
+  description_hash: 45d9610dc968
+  description_len: 112
+  {
+    "properties": {
+      "limit": {
+        "description": "Max results (for request_log, default: 20)",
+        "type": "integer"
+      },
+      "method": {
+        "description": "Filter by HTTP method (for request_log)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "status",
+          "request_log"
+        ],
+        "type": "string"
+      },
+      "path": {
+        "description": "Filter by path substring (for request_log)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "vendor": {
+        "description": "API pack name (e.g. 'sumsub_kyc')",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: param
+  description_hash: 427e7b141671
+  description_len: 150
+  {
+    "properties": {
+      "key": {
+        "description": "Parameter key (for 'get' operation)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "get"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: pitch
+  description_hash: 62b13cf6d41f
+  description_len: 59
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: policy
+  description_hash: f051d74ef46c
+  description_len: 414
+  {
+    "properties": {
+      "entity_names": {
+        "description": "Filter to specific entity names (optional)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "analyze",
+          "conflicts",
+          "coverage",
+          "simulate",
+          "access_matrix",
+          "verify_status"
+        ],
+        "type": "string"
+      },
+      "operation_kind": {
+        "description": "CRUD operation to simulate (required for simulate)",
+        "enum": [
+          "create",
+          "read",
+          "update",
+          "delete",
+          "list"
+        ],
+        "type": "string"
+      },
+      "persona": {
+        "description": "Persona ID (required for simulate)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: process
+  description_hash: 67b79931c067
+  description_len: 63
+  {
+    "properties": {
+      "limit": {
+        "description": "Max results (for list_runs, coverage; default: 50)",
+        "type": "integer"
+      },
+      "offset": {
+        "description": "Skip N results for pagination (for coverage, default: 0)",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "inspect",
+          "list_runs",
+          "get_run",
+          "coverage"
+        ],
+        "type": "string"
+      },
+      "process_name": {
+        "description": "Process name (for inspect)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "run_id": {
+        "description": "Run ID (for get_run)",
+        "type": "string"
+      },
+      "status": {
+        "description": "Filter by status (for list_runs)",
+        "enum": [
+          "pending",
+          "running",
+          "draining",
+          "suspended",
+          "waiting",
+          "completed",
+          "failed",
+          "compensating",
+          "cancelled"
+        ],
+        "type": "string"
+      },
+      "status_filter": {
+        "description": "Filter by coverage status (for coverage, default: all)",
+        "enum": [
+          "all",
+          "covered",
+          "partial",
+          "uncovered"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: rhythm
+  description_hash: 09d5a19249f7
+  description_len: 174
+  {
+    "properties": {
+      "name": {
+        "description": "Rhythm name (for get)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get",
+          "list",
+          "coverage"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: semantics
+  description_hash: 59b3c45353ad
+  description_len: 91
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "extract",
+          "validate_events",
+          "tenancy",
+          "compliance",
+          "analytics",
+          "extract_guards"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: sentinel
+  description_hash: e198eee8756b
+  description_len: 290
+  {
+    "properties": {
+      "agent": {
+        "description": "Filter findings by agent ID (for findings).",
+        "type": "string"
+      },
+      "limit": {
+        "description": "Max scans to return (for history). Default: 10.",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "findings",
+          "status",
+          "history",
+          "fuzz_summary"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "samples": {
+        "description": "Samples per layer for fuzz_summary. Default: 10.",
+        "type": "integer"
+      },
+      "scan_id": {
+        "description": "Specific scan ID (for findings).",
+        "type": "string"
+      },
+      "severity": {
+        "description": "Filter findings by severity (for findings).",
+        "type": "string"
+      },
+      "severity_threshold": {
+        "description": "Minimum severity to include (for findings). Default: info.",
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low",
+          "info"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: sitespec
+  description_hash: 133de5af18d2
+  description_len: 468
+  {
+    "properties": {
+      "brand_chroma": {
+        "description": "Brand chroma 0-0.4 (for scaffold_theme)",
+        "type": "number"
+      },
+      "brand_hue": {
+        "description": "Brand hue 0-360 on OKLCH wheel (for scaffold_theme)",
+        "type": "number"
+      },
+      "business_context": {
+        "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
+        "type": "string"
+      },
+      "check_content_files": {
+        "description": "Check content files (for validate)",
+        "type": "boolean"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get",
+          "validate",
+          "scaffold",
+          "get_copy",
+          "scaffold_copy",
+          "review_copy",
+          "coherence",
+          "review",
+          "get_theme",
+          "scaffold_theme",
+          "validate_theme",
+          "generate_tokens",
+          "generate_imagery_prompts",
+          "advise"
+        ],
+        "type": "string"
+      },
+      "overwrite": {
+        "description": "Overwrite existing (for scaffold, scaffold_copy, scaffold_theme)",
+        "type": "boolean"
+      },
+      "product_name": {
+        "description": "Product name (for scaffold, scaffold_copy)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "use_defaults": {
+        "description": "Use defaults when missing (for get, get_theme)",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: spec_analyze
+  description_hash: 60b430c5e80f
+  description_len: 331
+  {
+    "properties": {
+      "answers": {
+        "description": "Answers to generated questions (for refine_spec)",
+        "type": "object"
+      },
+      "entities": {
+        "description": "Entity names (for identify_lifecycles, generate_questions)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "discover_entities",
+          "identify_lifecycles",
+          "extract_personas",
+          "surface_rules",
+          "generate_questions",
+          "refine_spec"
+        ],
+        "type": "string"
+      },
+      "spec_text": {
+        "description": "The narrative spec text to analyze",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: status
+  description_hash: 780c96d0bc8d
+  description_len: 184
+  {
+    "properties": {
+      "count": {
+        "description": "Number of entries (for logs, telemetry, activity)",
+        "type": "integer"
+      },
+      "cursor_epoch": {
+        "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+        "type": "integer"
+      },
+      "cursor_seq": {
+        "description": "Sequence number to read after (for activity, 0 = from start)",
+        "type": "integer"
+      },
+      "errors_only": {
+        "description": "Show only errors (for logs)",
+        "type": "boolean"
+      },
+      "format": {
+        "description": "Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)",
+        "enum": [
+          "structured",
+          "formatted"
+        ],
+        "type": "string"
+      },
+      "level": {
+        "description": "Filter by level (for logs)",
+        "enum": [
+          "DEBUG",
+          "INFO",
+          "WARNING",
+          "ERROR"
+        ],
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "mcp",
+          "logs",
+          "active_project",
+          "telemetry",
+          "activity"
+        ],
+        "type": "string"
+      },
+      "reload": {
+        "description": "Reload modules (for mcp)",
+        "type": "boolean"
+      },
+      "since_minutes": {
+        "description": "Only show invocations from the last N minutes (for telemetry)",
+        "type": "integer"
+      },
+      "stats_only": {
+        "description": "Only return aggregate stats, no individual invocations (for telemetry)",
+        "type": "boolean"
+      },
+      "tool_name": {
+        "description": "Filter by tool name (for telemetry)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: story
+  description_hash: aef5fbb3e8fa
+  description_len: 265
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get",
+          "coverage",
+          "scope_fidelity"
+        ],
+        "type": "string"
+      },
+      "persona": {
+        "description": "Filter stories by persona/actor name (for get with view=wall)",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "status_filter": {
+        "description": "Filter by status (for get)",
+        "enum": [
+          "all",
+          "accepted",
+          "rejected",
+          "draft"
+        ],
+        "type": "string"
+      },
+      "story_ids": {
+        "description": "Story IDs (for get: fetch full details)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "view": {
+        "description": "View mode for get operation. 'wall' groups stories by implementation status (working/needs polish/not started)",
+        "enum": [
+          "wall"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: test_design
+  description_hash: e81d17dc5311
+  description_len: 81
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "get",
+          "gaps"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "status_filter": {
+        "description": "Filter by status (for get)",
+        "enum": [
+          "all",
+          "proposed",
+          "accepted",
+          "implemented",
+          "verified",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "test_ids": {
+        "description": "Test design IDs to fetch full details (for get)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: test_intelligence
+  description_hash: c81ca5297a45
+  description_len: 417
+  {
+    "properties": {
+      "category": {
+        "description": "Filter by test category (for failures)",
+        "type": "string"
+      },
+      "failure_type": {
+        "description": "Filter by failure type (for failures)",
+        "enum": [
+          "rbac_denied",
+          "validation_error",
+          "dsl_surface_gap",
+          "state_machine",
+          "timeout",
+          "framework_bug",
+          "unknown"
+        ],
+        "type": "string"
+      },
+      "limit": {
+        "description": "Number of recent runs to analyze (default: 10)",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "summary",
+          "failures",
+          "regression",
+          "coverage",
+          "context",
+          "journey"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "run_id": {
+        "description": "Specific run ID to query test cases for",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: user_management
+  description_hash: 9bd3ba65df22
+  description_len: 177
+  {
+    "properties": {
+      "active_only": {
+        "description": "Only active users/sessions (for list, list_sessions; default: true)",
+        "type": "boolean"
+      },
+      "email": {
+        "description": "User email (for create, get)",
+        "type": "string"
+      },
+      "is_active": {
+        "description": "Active status (for update)",
+        "type": "boolean"
+      },
+      "is_superuser": {
+        "description": "Superuser flag (for create, update)",
+        "type": "boolean"
+      },
+      "limit": {
+        "description": "Max results (for list, list_sessions; default: 50)",
+        "type": "integer"
+      },
+      "name": {
+        "description": "Display name (for create)",
+        "type": "string"
+      },
+      "offset": {
+        "description": "Pagination offset (for list; default: 0)",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "create",
+          "get",
+          "update",
+          "reset_password",
+          "deactivate",
+          "list_sessions",
+          "revoke_session",
+          "config"
+        ],
+        "type": "string"
+      },
+      "password": {
+        "description": "Explicit password (for create, reset_password). If omitted, a random password is generated.",
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "role": {
+        "description": "Filter by role (for list)",
+        "type": "string"
+      },
+      "roles": {
+        "description": "Role names (for create, update)",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "session_id": {
+        "description": "Session ID (for revoke_session)",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "User UUID (for get, update, reset_password, deactivate, list_sessions)",
+        "type": "string"
+      },
+      "username": {
+        "description": "New display name (for update)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: user_profile
+  description_hash: 9913b5b35a7c
+  description_len: 229
+  {
+    "properties": {
+      "limit": {
+        "description": "Max invocations to analyze (for observe; default: 50)",
+        "type": "integer"
+      },
+      "message_text": {
+        "description": "User message text (for observe_message)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "observe",
+          "observe_message",
+          "get",
+          "reset"
+        ],
+        "type": "string"
+      },
+      "since_minutes": {
+        "description": "Only analyze invocations from last N minutes (for observe; default: 30)",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }

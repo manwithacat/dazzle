@@ -13,6 +13,7 @@ To accept drift on any cycle:
 
 from dazzle.api_surface import dsl_constructs_module as dsl_mod
 from dazzle.api_surface import ir_types_module as ir_mod
+from dazzle.api_surface import mcp_tools_module as mcp_mod
 
 # ───────────────────────── Cycle 1: DSL constructs ─────────────────────────
 
@@ -84,3 +85,38 @@ def test_ir_types_includes_known_types():
         assert f"ir_class: {cls}\n" in snapshot, f"Missing ir_class: {cls}"
     for enum_name in ("FieldTypeKind", "ArchetypeKind"):
         assert f"enum: {enum_name}\n" in snapshot, f"Missing enum: {enum_name}"
+
+
+# ───────────────────────── Cycle 3: MCP tools ─────────────────────────
+
+
+def test_mcp_tools_baseline_exists():
+    assert mcp_mod.BASELINE_PATH.exists(), (
+        f"Missing baseline at {mcp_mod.BASELINE_PATH}. "
+        "Run `dazzle inspect-api mcp-tools --write` to create it."
+    )
+
+
+def test_mcp_tools_match_baseline():
+    diff = mcp_mod.diff_against_baseline()
+    assert not diff, (
+        "MCP-tools API surface drifted from the baseline.\n\n"
+        f"{diff}\n\n"
+        "If this drift is intentional:\n"
+        "  1. Run: dazzle inspect-api mcp-tools --write\n"
+        "  2. Review the diff above\n"
+        "  3. Add a CHANGELOG entry under Added / Changed / Removed\n"
+        "  4. Commit the regenerated docs/api-surface/mcp-tools.txt\n"
+    )
+
+
+def test_mcp_tools_snapshot_is_deterministic():
+    a = mcp_mod.snapshot_mcp_tools()
+    b = mcp_mod.snapshot_mcp_tools()
+    assert a == b, "snapshot_mcp_tools() is not deterministic"
+
+
+def test_mcp_tools_includes_known_tools():
+    snapshot = mcp_mod.snapshot_mcp_tools()
+    for tool in ("dsl", "graph", "knowledge", "story", "rhythm", "discovery"):
+        assert f"tool: {tool}\n" in snapshot, f"Missing tool: {tool}"

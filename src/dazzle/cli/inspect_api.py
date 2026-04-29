@@ -14,7 +14,11 @@ from pathlib import Path
 
 import typer
 
-from dazzle.api_surface import dsl_constructs_module, ir_types_module
+from dazzle.api_surface import (
+    dsl_constructs_module,
+    ir_types_module,
+    mcp_tools_module,
+)
 
 inspect_api_app = typer.Typer(
     help="Inspect and snapshot the framework's public API surface.",
@@ -77,6 +81,20 @@ def ir_types_command(
     _emit(
         ir_types_module.snapshot_ir_types(),
         ir_types_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+@inspect_api_app.command("mcp-tools")
+def mcp_tools_command(
+    write: bool = typer.Option(False, "--write", help="Overwrite the on-disk baseline"),
+    diff: bool = typer.Option(False, "--diff", help="Print unified diff vs baseline"),
+) -> None:
+    """Cycle 3: snapshot the MCP tool registry (names + input schemas)."""
+    _emit(
+        mcp_tools_module.snapshot_mcp_tools(),
+        mcp_tools_module.BASELINE_PATH,
         write,
         diff,
     )
