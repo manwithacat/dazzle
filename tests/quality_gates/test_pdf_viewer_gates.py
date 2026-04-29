@@ -80,17 +80,21 @@ def _new_page(
     *,
     variant: str = "both",
     dark: bool = False,
+    embed: bool = False,
 ) -> Any:
     """Open the harness in a fresh page and wait for the bridge to
-    register the pdf-viewer widget. Variant query string controls
-    sibling-nav presence; ``dark`` mirrors the cycle-1d theme toggle
-    (sets ``?dark=1`` which the harness translates to
-    ``data-theme="dark"`` on ``<html>``)."""
+    register the pdf-viewer widget. ``variant`` controls sibling-
+    nav presence; ``dark`` mirrors the cycle-1d theme toggle;
+    ``embed`` swaps the body's div stub for an actual
+    ``<embed type="application/pdf" src="about:blank">`` so cycle
+    1h gates can exercise the production layout pathway."""
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
     qs = f"?variant={variant}"
     if dark:
         qs += "&dark=1"
+    if embed:
+        qs += "&embed=1"
     page.goto(f"{server}{qs}")
     # Bridge is loaded `defer`; wait for the registry to be present.
     page.wait_for_function(
@@ -612,4 +616,67 @@ class TestFocusVisibility:
                 f"sig={sig}. Subtle background changes alone don't meet "
                 "WCAG focus-visibility expectations."
             )
+        page.close()
+
+
+# ---------------------------------------------------------------------------
+# Gate 8 — production embed layout (#942 cycle 1h)
+# ---------------------------------------------------------------------------
+
+
+class TestEmbedLayout:
+    """The chrome's body slot ships a ``<embed type="application/pdf">``
+    in production but the harness uses a ``<div>`` stub for visual
+    stability across browsers (each ships its own PDF renderer
+    chrome). The stub passes layout assertions; that doesn't prove
+    the real ``<embed>`` lays out the same way.
+
+    These gates run against ``?embed=1``, which swaps in the actual
+    ``<embed type="application/pdf" src="about:blank">``. The empty
+    src renders a blank plugin frame but the layout box is real —
+    the gates pin that box to the same dimensions the stub had."""
+
+    def test_embed_element_replaces_stub(self, browser: Any, server: str) -> None:
+        """Sanity: ?embed=1 inserts <embed>, removes the div stub."""
+        page = _new_page(browser, server, embed=True)
+        embed_count = page.locator("#harness-body-embed").count()
+        stub_count = page.locator("#harness-body-stub").count()
+        assert embed_count == 1, f"expected 1 embed, found {embed_count}"
+        assert stub_count == 0, f"stub should be removed, found {stub_count}"
+        page.close()
+
+    def test_embed_fills_body_container(self, browser: Any, server: str) -> None:
+        """The <embed> must occupy the entire body slot —
+        width: 100% / height: 100% from .dz-pdf-viewer-embed CSS.
+        If the embed renders smaller than the container (some
+        browsers default <embed> to 300×150), there'd be a
+        background gap visible behind it."""
+        page = _new_page(browser, server, embed=True)
+        body_rect = page.evaluate("document.getElementById('harness-body').getBoundingClientRect()")
+        embed_rect = page.evaluate(
+            "document.getElementById('harness-body-embed').getBoundingClientRect()"
+        )
+        assert embed_rect["width"] == pytest.approx(body_rect["width"], abs=1), (
+            f"embed width {embed_rect['width']} ≠ body width {body_rect['width']}"
+        )
+        assert embed_rect["height"] == pytest.approx(body_rect["height"], abs=1), (
+            f"embed height {embed_rect['height']} ≠ body height {body_rect['height']}"
+        )
+        page.screenshot(path=str(SCREENSHOT_DIR / "real-embed.png"))
+        page.close()
+
+    def test_embed_variant_preserves_chrome_layout(self, browser: Any, server: str) -> None:
+        """Three-band stack invariant must still hold when the body
+        slot contains a real <embed> rather than the div stub.
+        Catches the class of bug where the embed plugin frame
+        nudges the layout (rare but possible across browsers)."""
+        page = _new_page(browser, server, embed=True)
+        rects = page.evaluate("window.pdfViewerGates.chromeRectangles()")
+        host = rects["host"]
+        header = rects["header"]
+        body = rects["body"]
+        footer = rects["footer"]
+        assert header["bottom"] == pytest.approx(body["top"], abs=1)
+        assert body["bottom"] == pytest.approx(footer["top"], abs=1)
+        assert footer["bottom"] == pytest.approx(host["bottom"], abs=1)
         page.close()

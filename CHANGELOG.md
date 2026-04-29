@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.121] - 2026-04-29
+
+### Added
+- **#942 cycle 1h — production-embed layout coverage.** The cycle
+  1c+1d+1f+1g gates verify the chrome layout against a `<div>`
+  stub for the body slot (browser-independent, no PDF plugin
+  invoked). Production renders an actual `<embed
+  type="application/pdf">`. Three new gates run against
+  `?embed=1`, which swaps in a real `<embed src="about:blank">`
+  and verifies:
+
+  - The embed element actually replaces the stub on opt-in
+  - The embed fills the body container exactly (catches the
+    class of bug where `<embed>` defaults to 300×150 and leaves
+    a background gap behind it)
+  - The three-band chrome stack invariant still holds with a
+    real embed in the body — header/body/footer dimensions
+    unchanged from the stub variant
+
+  No new bugs surfaced — the production embed lays out identically
+  to the stub at 1280×800. Three permanent regression gates added
+  for the embed-specific layout pathway.
+
+### Out of scope for this cycle
+- End-to-end test against a real PDF served through the cycle 1a
+  proxy (requires backend setup; `about:blank` is sufficient for
+  layout verification)
+
 ## [0.61.120] - 2026-04-29
 
 ### Fixed

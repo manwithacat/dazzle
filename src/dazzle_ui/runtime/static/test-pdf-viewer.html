@@ -131,13 +131,15 @@
         </nav>
       </header>
 
-      <div class="dz-pdf-viewer-body">
+      <div class="dz-pdf-viewer-body" id="harness-body">
         <!--
-          Real component uses `<embed type="application/pdf">` for the
-          body. For visual stability across browsers (each ships its
-          own PDF renderer chrome) the harness instead renders a
-          flat colour panel — the chrome is what we're pinning here,
-          not the embedded viewer.
+          Default: a flat colour div stub (browser-independent, no
+          PDF plugin invoked). Real component uses
+          ``<embed type="application/pdf">``; ``?embed=1`` swaps in
+          the real embed element so the gates exercise the
+          production layout pathway. Chrome stability is verified
+          by gates against the stub; embed-specific layout by gates
+          against the real-embed variant.
         -->
         <div
           style="
@@ -193,6 +195,25 @@
         var params = new URLSearchParams(window.location.search);
         var variant = params.get("variant") || "both";
         var dark = params.get("dark") === "1";
+        var useEmbed = params.get("embed") === "1";
+
+        // Real-embed variant: swap the harness's body stub for an
+        // actual <embed type="application/pdf"> pointing at
+        // about:blank. Browsers handle the empty source by showing
+        // a blank plugin frame, but the LAYOUT BOX is still there
+        // and respects the container's dimensions — that's what
+        // the cycle 1h embed-layout gate verifies.
+        if (useEmbed) {
+          var stub = document.getElementById("harness-body-stub");
+          if (stub) {
+            var embed = document.createElement("embed");
+            embed.setAttribute("type", "application/pdf");
+            embed.setAttribute("src", "about:blank");
+            embed.setAttribute("class", "dz-pdf-viewer-embed");
+            embed.id = "harness-body-embed";
+            stub.parentNode.replaceChild(embed, stub);
+          }
+        }
 
         // Dark-mode opt-in mirrors what the in-app shell does on
         // toggle (see app_shell.html applyDark): set both
