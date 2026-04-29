@@ -175,7 +175,11 @@ class TestServerRenderedTemplate:
 
     def test_template_iterates_workspace_regions(self) -> None:
         source = _load_template()
-        assert "{% for r in workspace.regions %}" in source
+        # Either form (whitespace-stripped or plain) is acceptable
+        assert (
+            "{% for r in workspace.regions %}" in source
+            or "{%- for r in workspace.regions %}" in source
+        )
 
     def test_template_emits_data_card_attributes(self) -> None:
         source = _load_template()

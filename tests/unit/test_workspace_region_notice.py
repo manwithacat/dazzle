@@ -223,7 +223,11 @@ class TestNoticeTemplateBinding:
         leak vertical space into existing dashboards."""
         text = self._template_text()
         # Server-rendered guard: `{% if r.notice and r.notice.title %}`
-        assert "{% if r.notice and r.notice.title %}" in text
+        # (with or without whitespace-stripping markers).
+        assert (
+            "{% if r.notice and r.notice.title %}" in text
+            or "{%- if r.notice and r.notice.title %}" in text
+        )
 
     def test_template_emits_data_dz_notice_tone_attribute(self) -> None:
         """v0.61.70 (#906): tone tints come from `dz-tones.css` keyed

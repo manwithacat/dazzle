@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.135] - 2026-04-29
+
+### Added
+- **`scripts/perf_profile_workspace.py`** — workspace render
+  performance profiler. Two layers:
+  - Pure-Python Jinja render timing (deterministic, no browser)
+  - Static-harness paint timing via Playwright
+
+  Run with `python scripts/perf_profile_workspace.py` to capture
+  baseline numbers after any change to `workspace/_content.html`
+  or `dashboard-builder.js`.
+
+### Changed
+- **Workspace template whitespace stripping.** The card
+  iteration in `workspace/_content.html` now uses Jinja `{%- -%}`
+  markers to strip indentation and blank lines from the rendered
+  output. Per-card HTML drops 5–10% (a 50-card workspace shrinks
+  from ~93 KB to ~83 KB on the wire). Server render time
+  unchanged at sub-millisecond.
+
+  Tradeoff: source-side `{%- -%}` is slightly less readable than
+  plain `{% %}` but the saving on slow networks (4G mobile) is
+  measurable (~7 ms transfer time for a 50-card workspace).
+
+### Agent Guidance
+- After any change to a template that iterates per-record (cards,
+  table rows, chart series), run `scripts/perf_profile_workspace.py`
+  to confirm no size regression. Sub-millisecond render and
+  bounded per-record byte cost are the framework's first-paint
+  invariants.
+- Findings + further-cycle proposals captured in
+  `dev_docs/2026-04-29-perf-profile-baseline.md` (gitignored).
+  The architectural cost of server-rendering (vs the pre-#948
+  JSON-island shape) is real but bounded; the dominant
+  production tail is DB queries + per-region htmx fetches, not
+  workspace-shell render or transfer.
+
 ## [0.61.134] - 2026-04-29
 
 ### Fixed

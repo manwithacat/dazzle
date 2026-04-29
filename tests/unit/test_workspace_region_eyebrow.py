@@ -179,7 +179,7 @@ class TestEyebrowTemplateBinding:
         assert "r.eyebrow" in contents, (
             "Card panel header missing `r.eyebrow` binding — AegisMark roadmap item #1 lost"
         )
-        assert "{% if r.eyebrow %}" in contents
+        assert "{% if r.eyebrow %}" in contents or "{%- if r.eyebrow %}" in contents
         assert "dz-card-eyebrow" in contents
 
 
