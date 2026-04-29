@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.134] - 2026-04-29
+
+### Fixed
+- **#949 — workspace card-picker `@click` HTML escaping.** Cycle 1
+  of #948 introduced the picker as `@click="addCard({{ item.name | tojson }})"`.
+  Jinja's `tojson` filter emits Markup-wrapped JSON that bypasses
+  autoescape, so the inner `"` from the JSON string terminated the
+  surrounding double-quoted attribute mid-expression. The browser
+  parsed `@click="addCard("` as a complete attribute and the rest
+  (`ingestion_journey")"`) as a garbage attribute name. Console
+  errored on every interaction; the picker buttons were inert.
+
+  Fix: single-quote the `@click` attribute (the framework
+  convention for Alpine attributes that may contain double quotes,
+  used elsewhere in toasts, pdf-viewer panels, dz-table directives).
+
+  Regression coverage in `tests/unit/test_card_picker_attributes.py`
+  pins the contract source-side AND end-to-end via a rendered-HTML
+  check that asserts the @click expression is complete and matches
+  the catalog entry name exactly.
+
+### Agent Guidance
+- When emitting Alpine `@event="..."` attributes that interpolate
+  Jinja `tojson` output, single-quote the attribute. `tojson` is
+  Markup and bypasses autoescape, so its inner `"` will terminate
+  a double-quoted attribute mid-expression. The framework
+  convention: `@click='addCard({{ item.name | tojson }})'`.
+
 ## [0.61.133] - 2026-04-29
 
 ### Changed

@@ -20,7 +20,15 @@
      class="dz-card-picker">
   <h4 class="dz-card-picker-title">Add a card</h4>
   {% for item in (catalog or []) %}
-  <button @click="addCard({{ item.name | tojson }})"
+  {# #949: single-quote the @click attribute so the JSON-encoded
+     `tojson` value (which carries its own double quotes) doesn't
+     terminate the attribute mid-expression. Jinja's `tojson` filter
+     emits Markup that bypasses autoescape, so it can't be relied on
+     to entity-encode the inner `"`. Single-quoting the attribute is
+     the convention used elsewhere in the framework where Alpine
+     expressions may contain double quotes (toasts, pdf-viewer
+     panels, dz-table directives). #}
+  <button @click='addCard({{ item.name | tojson }})'
           data-test-id="dz-card-picker-entry"
           data-test-region="{{ item.name }}"
           class="dz-card-picker-entry">
