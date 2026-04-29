@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.109] - 2026-04-29
+
+### Added
+- **#937 — CSS clip-check regression gate for the framework bundle.**
+  Static detector for the height-vs-line-box overflow bug class first
+  hit at `.dz-form-input` (#930) and `.dz-list-filter-select`. Pure
+  stdlib (`scripts/css_clip_check.py`, ~250 LOC, sub-100ms). For every
+  rule that declares `height` + `font-size` + `line-height` + padding
+  in px/rem, computes content-area vs line-box; flags rules where the
+  line-box overflows by more than 0.5px (sub-pixel tolerance).
+
+  Conservative by design: skips rules with `var()`, `em`, `%`, or
+  `calc()` because resolving those needs cascade context the scanner
+  doesn't have. Selector ignore-list covers non-text-bearing chrome
+  (`*-icon`, `*-skeleton`, `*-spinner`, `*-bar`, `*-divider`,
+  `svg`, `img`, etc). Comma-separated selectors filter chrome out
+  per-selector — a multi-selector rule with one icon and one input
+  flags only the input.
+
+  CI gate: framework `lint` job now runs the scanner against
+  `src/dazzle_ui/runtime/static/css/**/*.css` and fails on any
+  finding. Current baseline: zero. New rules introducing a clip will
+  fail framework CI rather than ship to projects.
+
+  29-test suite (`test_css_clip_check.py`) covers detection (pre-#930
+  pattern flags, post-#930 fix passes), the ignore-list, parser
+  robustness (comments, `@media` inner blocks, padding shorthand 1/2/
+  3/4 values, `padding-block`/`padding-top` precedence), the three
+  line-height forms (unitless, `normal`, absolute px), and a
+  pinned-baseline test that fails CI if any framework rule starts
+  clipping in the future.
+
+  **Out of scope for v1**: project-side adoption (no `dazzle css lint`
+  command yet) and the Tailwind-utility-leakage scanner. Both can come
+  later when a 2nd domain reports the same need — per ROADMAP's
+  anti-eager-extension principle.
+
+### Agent Guidance
+- When a new framework CSS rule trips the clip-check, the typical fix
+  is to switch `height: <fixed>` → `min-height: <fixed>` and let the
+  content drive the box, or to widen `padding-block` so the line-box
+  fits inside the content area. If the selector is non-text-bearing
+  chrome (a divider, a spinner, a sliver), extend
+  `SELECTOR_IGNORE_SUBSTRINGS` in `scripts/css_clip_check.py` —
+  don't suppress with a comment.
+
 ## [0.61.108] - 2026-04-29
 
 ### Fixed
