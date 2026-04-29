@@ -138,6 +138,9 @@ jobs:
     - name: CSS clip-check (framework bundle regression gate, issue 937)
       run: python scripts/css_clip_check.py
 
+    - name: CSS raw-ramp check (component CSS dark-mode contract, issue 942)
+      run: python scripts/css_raw_ramp_check.py
+
     - name: Run bandit security check
       run: |
         pip install bandit[toml]

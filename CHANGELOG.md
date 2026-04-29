@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.118] - 2026-04-29
+
+### Added
+- **Cycle 1e — design-system-wide raw-ramp lint.** New static
+  scanner (`scripts/css_raw_ramp_check.py`) flags raw colour-ramp
+  tokens (`var(--neutral-*)`, `var(--brand-*)`, `var(--success-*)`,
+  `var(--warning-*)`, `var(--danger-*)`) used in component CSS
+  outside theme-scoped selectors. The cycle 1d visual gates caught
+  the dark-mode failure case at runtime; this lint catches the same
+  bug class at source — no Playwright required, runs as a unit test.
+
+  - **Theme-scope exemption**: rules inside `[data-theme="dark"] {…}`
+    or `@media (prefers-color-scheme: dark) {…}` are the
+    *intentional* place to reference ramps and pass cleanly. Brace
+    counter walks nested blocks correctly so post-block code still
+    gets scanned.
+  - **File exemption**: `tokens.css` and `design-system.css` define
+    the semantic family in terms of ramps and stay exempt.
+  - **Comment stripping**: raw ramps mentioned in `/* … */` (e.g. the
+    historical-context comment in pdf-viewer.css) don't fire.
+  - **Pinned baseline**: zero findings against the framework's
+    component CSS today. New raw-ramp regressions fail CI before
+    reaching a browser.
+
+  CI lint job runs `python scripts/css_raw_ramp_check.py` alongside
+  the cycle 1c clip-check from #937 — same shape, both are
+  pure-stdlib source-level gates.
+
+  16-test suite (`test_css_raw_ramp_check.py`) covers detection
+  (every flagged ramp family, line numbers, semantic-token pass),
+  exemptions (theme-scoped blocks, token files, comments), parser
+  robustness, the pinned baseline, and exit codes.
+
+### Agent Guidance
+- New component CSS must use `var(--colour-*)` tokens, never raw
+  ramps. The lint is the source-side enforcer; cycle 1d's visual
+  parity gates are the runtime catch — both fire on the same bug
+  class. If your component genuinely needs a brand-fixed colour
+  that shouldn't flip, it's still preferable to bind it via a
+  semantic token (`--colour-brand`, `--colour-accent`) so a project
+  theme override can rebind it without touching every file.
+
 ## [0.61.117] - 2026-04-29
 
 ### Fixed
