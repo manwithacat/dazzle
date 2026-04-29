@@ -9,6 +9,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.125] - 2026-04-29
+
+### Added
+- **#942 cycle 3 — `sibling_urls` helper for detail-view
+  navigation.** Project authors building detail-view pages need
+  prev/next URLs to navigate sequentially through entities in the
+  user's current scope. Computing them by hand requires knowing
+  the `Repository.list` filter / sort grammar AND the ID of the
+  adjacent row — both of which the framework already understands.
+
+  New helper at `dazzle_back.runtime.sibling_nav.sibling_urls`:
+
+  ```python
+  from dazzle_back.runtime.sibling_nav import sibling_urls
+
+  prev_url, next_url = await sibling_urls(
+      repo=manuscript_repo,
+      current_id=manuscript.id,
+      sort="-created_at",
+      filters={"cohort_id": cohort.id},
+      url_for=lambda mid: f"/app/manuscripts/{mid}",
+  )
+  ```
+
+  Two repository queries: closest row above current in sort order,
+  closest row below. Each paginated to a single result. Same
+  filter shape `Repository.list` accepts so projects can scope by
+  cohort, status, owner, etc.
+
+  Pairs with the cycle 1b PDF viewer chrome — pass the resulting
+  URLs as the `prev_url` / `next_url` parameters to the
+  `components/pdf_viewer.html` include. The keyboard handlers from
+  cycle 1c (`j` / `ArrowLeft` for prev, `k` / `ArrowRight` for
+  next) navigate sequentially through the scope.
+
+  Returns `None` for either URL when the current row is first /
+  last in scope, when the current row is missing, or when the
+  sort-key value on the current row is `None` (can't position
+  in ordering).
+
+### Out of scope for this cycle
+- Multi-field composite sort with tie-breaking — current helper
+  uses a single sort field. When the project's ordering key isn't
+  unique, callers should pass `id` (or a unique combination) to
+  avoid skipping rows at tie boundaries. A future revision can
+  add `(sort_field, id)` keysets if real adoption surfaces ties.
+- DSL hook (`display: pdf_viewer` on detail surfaces) — auto-
+  rendering the pdf_viewer include from a DSL declaration is a
+  bigger refactor (parser + IR + validator + renderer). The
+  helper-first approach gets most of the value (sibling URLs are
+  the load-bearing missing piece) at a fraction of the
+  implementation cost.
+
+### Tests
+- 15-test suite (`test_sibling_nav.py`) covers sort parsing
+  (bare / `-` prefix / `+` prefix / whitespace / empty default),
+  ascending vs descending neighbour resolution, first-row /
+  last-row edges, missing current row, missing sort value,
+  filter scoping (siblings limited to same cohort), custom
+  `url_for` callable receives the sibling id, default sort is
+  `id`, and dict-row support (computed-fields repos return dicts
+  not Pydantic models).
+
+### Agent Guidance
+- For project routes that render the PDF viewer chrome (or any
+  detail surface with sequential navigation), call
+  `sibling_urls(repo=..., current_id=..., sort=..., filters=...,
+  url_for=...)` to derive prev/next URLs from the entity's scope.
+  Don't compute these by hand — the framework now owns the
+  closest-neighbour query, including the `<` / `>` filter
+  flipping that goes wrong easily when written manually.
+
 ## [0.61.124] - 2026-04-29
 
 ### Added
