@@ -748,6 +748,7 @@ class DazzleBackendApp:
         from dazzle.core.validator import validate_storage_refs
         from dazzle_back.runtime.storage import (
             StorageRegistry,
+            register_storage_proxy_routes,
             register_upload_ticket_routes,
         )
 
@@ -793,6 +794,18 @@ class DazzleBackendApp:
                     "storage_routes_registered count=%d paths=%s",
                     len(paths),
                     paths,
+                )
+            # #942 cycle 1a: read-side proxy routes (one per storage
+            # referenced by any field). Streams the bytes through the
+            # server under cookie auth — no presigned download URLs.
+            proxy_paths = register_storage_proxy_routes(
+                app=self._app, appspec=self._appspec, registry=registry
+            )
+            if proxy_paths:
+                log.info(
+                    "storage_proxy_routes_registered count=%d paths=%s",
+                    len(proxy_paths),
+                    proxy_paths,
                 )
 
     def _setup_auth(self) -> tuple[Any, Any]:

@@ -162,3 +162,29 @@ class S3Provider:
             content_type=head.get("ContentType"),
             etag=str(head["ETag"]).strip('"') if head.get("ETag") else None,
         )
+
+    def get_object(self, key: str) -> bytes | None:
+        """Fetch the full body of `key`, or None if missing. Buffers
+        in memory — fine for the 200MB cap most projects use; if a
+        future use case needs gigabyte-scale streaming, a separate
+        ``stream_object`` method can land alongside without touching
+        this one."""
+        if self._client is None:
+            raise RuntimeError(
+                "S3Provider initialised without a client; "
+                "use S3Provider.from_config() in production"
+            )
+        try:
+            obj = self._client.get_object(Bucket=self.bucket, Key=key)
+        except Exception as exc:
+            response = getattr(exc, "response", None)
+            if isinstance(response, dict):
+                code = response.get("Error", {}).get("Code")
+                if code in {"404", "NoSuchKey", "NotFound"}:
+                    return None
+            raise
+        body = obj.get("Body")
+        if body is None:
+            return b""
+        result: bytes = body.read()
+        return result

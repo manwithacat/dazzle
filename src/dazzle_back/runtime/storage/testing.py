@@ -93,6 +93,10 @@ class FakeStorageProvider:
             etag=obj.etag,
         )
 
+    def get_object(self, key: str) -> bytes | None:
+        obj = self._objects.get(key)
+        return obj.body if obj is not None else None
+
     # ── Test-only helpers ─────────────────────────────────────────
 
     def put_object(

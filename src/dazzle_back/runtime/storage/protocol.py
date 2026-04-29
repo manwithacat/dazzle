@@ -92,3 +92,12 @@ class StorageProvider(Protocol):
         """Return metadata for an existing object, or None if the
         object doesn't exist. The finalize route uses this to verify
         the client actually uploaded under the key it claims."""
+
+    def get_object(self, key: str) -> bytes | None:
+        """Fetch the full body of an existing object, or None if the
+        object doesn't exist. Used by the framework's auto-generated
+        proxy route (#942) to stream files through the server with
+        cookie auth — the s3_key never leaves the server, no presigned
+        URLs are exposed to the browser. Implementations should buffer
+        the full body in memory; streaming will be added in a
+        subsequent cycle once a real-world streaming need surfaces."""

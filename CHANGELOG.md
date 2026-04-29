@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.114] - 2026-04-29
+
+### Added
+- **#942 cycle 1a — read-side storage proxy auto-routes.** Foundation
+  for the PDF detail-view component. The framework now registers
+  `GET /api/storage/{storage_name}/proxy?key=<s3_key>` for every
+  storage referenced by at least one `file storage=...` field.
+  The handler streams the object's bytes through the server under
+  cookie auth — same security model as the cycle 3 upload-ticket
+  mint route, but for the read path. **No presigned download URLs
+  are exposed to the browser**; the s3_key never leaves the server.
+
+  Added `get_object(key) -> bytes | None` to the `StorageProvider`
+  protocol. Implemented in both `S3Provider` (`boto3.get_object`
+  with 404 handling) and `FakeStorageProvider` (in-memory dict).
+
+  The handler:
+  - Cookie-auth via `current_user_id()` — 401 unauthenticated
+  - Prefix sandbox: same regex builder as the verifier (#941),
+    rejects with 403 if the key falls outside the caller's prefix
+  - `head_object` → 404 if the object is missing
+  - `get_object` → 503 if the provider raises (network / auth error)
+  - Returns `Response(content=bytes, media_type=metadata.content_type)`
+    with `Content-Disposition: inline` so PDFs / images render
+    inline instead of triggering a download
+
+  Shared-asset buckets from #941 (e.g. starter packs with no
+  `{user_id}` placeholder) work naturally — the prefix sandbox just
+  doesn't enforce a user-id segment.
+
+  14-test suite (`test_storage_proxy_routes.py`) covers route
+  registration (one per referenced storage; multi-storage fields
+  register every binding; dedupes when multiple fields share a
+  storage), auth gate, prefix sandbox (cross-user 403), object
+  existence, missing-key 400, provider failure 503, and the
+  shared-asset (no-user-placeholder) path.
+
+### Out of scope for this cycle
+- PDF.js bundle, template chrome, keyboard shortcuts, sibling nav
+  (planned for cycle 1b once the foundation lands)
+- Range request / streaming response (current handler buffers in
+  memory; fine for the 200MB cap most projects use)
+- Per-entity routes that auto-resolve s3_key from a row id (frontend
+  templates already render the key as part of the entity detail
+  surface, so they construct the proxy URL directly)
+
+### Agent Guidance
+- For projects with PDF / image entity fields, replace any custom
+  `routes/<entity>_pdf.py` or similar download-proxy with the
+  built-in `/api/storage/{name}/proxy?key=<s3_key>`. Cookie auth
+  + prefix sandbox already match what your hand-rolled handlers
+  do; the framework owns the security properties going forward.
+
 ## [0.61.113] - 2026-04-29
 
 ### Added

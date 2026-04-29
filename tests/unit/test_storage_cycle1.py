@@ -190,6 +190,9 @@ class _SatisfiesProtocol:
     def head_object(self, key: str) -> ObjectMetadata | None:
         return None
 
+    def get_object(self, key: str) -> bytes | None:
+        return None
+
 
 class TestStorageProviderProtocol:
     def test_runtime_check_accepts_full_impl(self) -> None:

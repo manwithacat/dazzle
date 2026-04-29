@@ -28,6 +28,7 @@ from .protocol import (
     StorageProvider,
     UploadTicket,
 )
+from .proxy_routes import register_storage_proxy_routes
 from .registry import StorageRegistry
 from .routes import register_upload_ticket_routes
 from .testing import FakeStorageProvider
@@ -48,6 +49,7 @@ __all__ = [
     "build_entity_storage_bindings",
     "extract_env_var_refs",
     "interpolate_env_vars",
+    "register_storage_proxy_routes",
     "register_upload_ticket_routes",
     "verify_storage_field_keys",
 ]
