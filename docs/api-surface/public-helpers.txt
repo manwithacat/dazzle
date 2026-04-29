@@ -1,0 +1,46 @@
+# DAZZLE Public Helpers — API Surface (cycle 4 of #961)
+#
+# Source of truth: top-level `__init__.py` of each public package.
+# Regenerate: dazzle inspect-api public-helpers --write
+# Drift gate: tests/unit/test_api_surface_drift.py
+#
+# Resolution order per package:
+#   1. `__all__` if defined
+#   2. `_LOADERS` keys (lazy __getattr__ convention used by dazzle_back)
+#   3. all non-underscore module attributes (fallback)
+#
+# Adding/removing a name in `__all__` or `_LOADERS`, changing a function
+# signature, or repointing an export at a different class will fire the
+# drift gate.
+
+package: dazzle
+  source: __all__
+  count: 7
+  exports:
+  - BackendError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - DazzleError: class (bases=[Exception]) (message: 'str', context: 'ErrorContext | None' = None)
+  - LinkError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - ParseError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - ValidationError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - __version__: str (version-like)
+  - ir: module (dazzle.core.ir)
+
+package: dazzle_back
+  source: _LOADERS
+  count: 9
+  exports:
+  - AuthStore: class (bases=[UserStoreMixin, SessionStoreMixin, TwoFactorMixin]) (database_url: str, user_entity_table: str = '')
+  - MigrationAction: class (bases=[StrEnum]) (*values)
+  - PostgresBackend: class (database_url: str, search_path: str | None = None)
+  - build_metadata: function (entities: 'list[EntitySpec]') -> 'sqlalchemy.MetaData'
+  - convert_appspec_to_backend: function (appspec: 'ir.AppSpec') -> 'BackendSpec'
+  - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle_back.specs.entity.EntitySpec]
+  - create_bus: function (config: 'TierConfig | None' = None) -> 'EventBus'
+  - inspect_schema: function (spec: 'BackendSpec') -> 'dict[str, Any]'
+  - print_schema: function (spec: 'BackendSpec') -> 'str'
+
+package: dazzle_ui
+  source: __all__
+  count: 1
+  exports:
+  - UISpec: class (bases=[BaseModel]) (*, name: str, version: str = '1.0.0', description: str | None = None, shell: dazzle_ui.specs.shell.ShellSpec = <factory>, workspaces: list[dazzle_ui.specs.workspace.WorkspaceSpec] = <factory>, components: list[dazzle_ui.specs.component.ComponentSpec] = <factory>, themes: list[dazzle_ui.specs.theme.ThemeSpec] = <factory>, default_workspace: str | None = None, default_theme: str | None = None, metadata: dict[str, typing.Any] = <factory>) -> None

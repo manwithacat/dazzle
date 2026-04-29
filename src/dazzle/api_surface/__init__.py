@@ -15,6 +15,7 @@ Cycles:
 from . import dsl_constructs as dsl_constructs_module
 from . import ir_types as ir_types_module
 from . import mcp_tools as mcp_tools_module
+from . import public_helpers as public_helpers_module
 from .dsl_constructs import (
     BASELINE_PATH,
     diff_against_baseline,
@@ -26,6 +27,9 @@ from .ir_types import (
 from .mcp_tools import (
     snapshot_mcp_tools,
 )
+from .public_helpers import (
+    snapshot_public_helpers,
+)
 
 __all__ = [
     "BASELINE_PATH",
@@ -33,7 +37,9 @@ __all__ = [
     "dsl_constructs_module",
     "ir_types_module",
     "mcp_tools_module",
+    "public_helpers_module",
     "snapshot_dsl_constructs",
     "snapshot_ir_types",
     "snapshot_mcp_tools",
+    "snapshot_public_helpers",
 ]

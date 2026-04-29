@@ -18,6 +18,7 @@ from dazzle.api_surface import (
     dsl_constructs_module,
     ir_types_module,
     mcp_tools_module,
+    public_helpers_module,
 )
 
 inspect_api_app = typer.Typer(
@@ -95,6 +96,20 @@ def mcp_tools_command(
     _emit(
         mcp_tools_module.snapshot_mcp_tools(),
         mcp_tools_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+@inspect_api_app.command("public-helpers")
+def public_helpers_command(
+    write: bool = typer.Option(False, "--write", help="Overwrite the on-disk baseline"),
+    diff: bool = typer.Option(False, "--diff", help="Print unified diff vs baseline"),
+) -> None:
+    """Cycle 4: snapshot top-level package public exports."""
+    _emit(
+        public_helpers_module.snapshot_public_helpers(),
+        public_helpers_module.BASELINE_PATH,
         write,
         diff,
     )

@@ -14,6 +14,7 @@ To accept drift on any cycle:
 from dazzle.api_surface import dsl_constructs_module as dsl_mod
 from dazzle.api_surface import ir_types_module as ir_mod
 from dazzle.api_surface import mcp_tools_module as mcp_mod
+from dazzle.api_surface import public_helpers_module as helpers_mod
 
 # ───────────────────────── Cycle 1: DSL constructs ─────────────────────────
 
@@ -120,3 +121,40 @@ def test_mcp_tools_includes_known_tools():
     snapshot = mcp_mod.snapshot_mcp_tools()
     for tool in ("dsl", "graph", "knowledge", "story", "rhythm", "discovery"):
         assert f"tool: {tool}\n" in snapshot, f"Missing tool: {tool}"
+
+
+# ───────────────────────── Cycle 4: public helpers ─────────────────────────
+
+
+def test_public_helpers_baseline_exists():
+    assert helpers_mod.BASELINE_PATH.exists(), (
+        f"Missing baseline at {helpers_mod.BASELINE_PATH}. "
+        "Run `dazzle inspect-api public-helpers --write` to create it."
+    )
+
+
+def test_public_helpers_match_baseline():
+    diff = helpers_mod.diff_against_baseline()
+    assert not diff, (
+        "Public-helpers API surface drifted from the baseline.\n\n"
+        f"{diff}\n\n"
+        "If this drift is intentional:\n"
+        "  1. Run: dazzle inspect-api public-helpers --write\n"
+        "  2. Review the diff above\n"
+        "  3. Add a CHANGELOG entry under Added / Changed / Removed\n"
+        "  4. Commit the regenerated docs/api-surface/public-helpers.txt\n"
+    )
+
+
+def test_public_helpers_snapshot_is_deterministic():
+    a = helpers_mod.snapshot_public_helpers()
+    b = helpers_mod.snapshot_public_helpers()
+    assert a == b, "snapshot_public_helpers() is not deterministic"
+
+
+def test_public_helpers_includes_known_packages():
+    snapshot = helpers_mod.snapshot_public_helpers()
+    for pkg in ("dazzle", "dazzle_back", "dazzle_ui"):
+        assert f"package: {pkg}\n" in snapshot, f"Missing package: {pkg}"
+    for export in ("DazzleError", "ParseError", "UISpec"):
+        assert export in snapshot, f"Missing export: {export}"

@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.3] - 2026-04-29
+
+### Added
+- **#961 cycle 4 — public-helpers API-surface snapshot.** New
+  `dazzle inspect-api public-helpers` subcommand walks the
+  top-level `__init__.py` of `dazzle`, `dazzle_back`, `dazzle_ui`
+  and snapshots every public attribute (resolved via `__all__` or
+  the `_LOADERS` lazy convention) with category + signature.
+  Baseline at `docs/api-surface/public-helpers.txt`.
+- 17 public exports total: 7 `dazzle` (errors + ir module +
+  version), 9 `dazzle_back` (lazy-loaded converters / runtime),
+  1 `dazzle_ui` (UISpec).
+
+### Agent Guidance
+- After any change to `__all__` or `_LOADERS` in a top-level
+  package, or to a publicly-exported function's signature, the
+  `test_public_helpers_match_baseline` gate fires. Regenerate via
+  `dazzle inspect-api public-helpers --write`.
+
 ## [0.63.2] - 2026-04-29
 
 ### Added
