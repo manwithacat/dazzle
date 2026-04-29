@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.6] - 2026-04-29
+
+### Fixed
+- **#965 — list-surface CLS regression.** #962 reserved
+  per-display-mode min-height on `.dz-card-body` (workspace
+  dashboard cards) but list surfaces render via a separate
+  `.dz-table-scroll` container that had no reservation, producing
+  CLS in the 0.19–0.48 range on `/app/{entity}` routes.
+
+  Fix: `.dz-table-scroll` now reserves a min-height that scales
+  with `table.page_size` via a `--dz-list-rows` CSS custom property,
+  clamped to 10 rows internally so a `page_size=50` doesn't reserve
+  ~50 rows of vertical space when actual results are typically 5-10.
+
+### Agent Guidance
+- Two CLS contracts now exist: `.dz-card-body` (#962, workspace
+  dashboard) and `.dz-table-scroll` (#965, list surfaces). Any new
+  htmx-fetched container that lands incrementally needs the same
+  pattern: reserve approximate end-state vertical space upfront via
+  CSS `min-height`. Drift gates:
+  `tests/unit/test_workspace_cls_reservation.py` and
+  `tests/unit/test_list_surface_cls_reservation.py`.
+
+## [0.63.5] - 2026-04-29
+
 ### Added
 - **#961 — improve-loop integration: `api_surface_audit`
   sub-strategy.** New playbook at

@@ -125,7 +125,11 @@
   </div>
 
   {# ── Table scroll + loading overlay container ─────────────────────────────── #}
-  <div class="dz-table-scroll">
+  {# --dz-list-rows feeds the min-height reservation in table.css that fixes
+     #965's list-surface CLS. The CSS clamps to 10 internally so very large
+     page_sizes don't reserve absurd vertical space when actual results are
+     small. #}
+  <div class="dz-table-scroll" style="--dz-list-rows: {{ table.page_size or 10 }}">
 
     {# Loading overlay — sits above the table, dimmed backdrop.
        x-cloak suppresses the SSR'd overlay until Alpine hydrates and

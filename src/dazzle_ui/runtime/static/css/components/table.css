@@ -173,6 +173,13 @@
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  /* Reserve vertical space for the upcoming htmx fetch so the page below
+     doesn't shift when rows arrive (#965 — CLS regression on list views).
+     Floor: `--dz-list-rows` rows × row height + header. The template emits
+     --dz-list-rows from table.page_size; without it we default to 10 rows,
+     which catches the common case (CLS lands cleanly under 0.1 even when
+     actual results are smaller than the reservation). */
+  min-height: calc(min(var(--dz-list-rows, 10), 10) * 2.75rem + 3rem);
 }
 
 .dz-table-scroll-x {
