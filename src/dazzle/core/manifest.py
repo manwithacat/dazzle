@@ -433,6 +433,13 @@ class ProjectManifest:
     tenant: TenantConfig = field(default_factory=TenantConfig)
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
+    # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
+    #   "auto"   = bundle when DAZZLE_ENV=production, individual scripts in dev (default)
+    #   "always" = bundle in every environment (perf testing / staging)
+    #   "never"  = individual scripts always (advanced live-reload during prod debugging)
+    # Set via `[ui] assets = "always"` in dazzle.toml. CLI flags
+    # `dazzle serve --bundle` / `--no-bundle` override per-invocation.
+    assets: str = "auto"
     favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
     dark_mode_toggle: bool = True  # #938 — render the dark/light toggle in
     # the app shell (topbar + sidebar footer) and on marketing pages. Set
@@ -705,6 +712,9 @@ def load_manifest(path: Path) -> ProjectManifest:
     favicon_path = ui_data.get("favicon")
     app_theme_name = ui_data.get("theme") or ui_data.get("app_theme")
     dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
+    assets_mode = ui_data.get("assets", "auto")
+    if assets_mode not in ("auto", "always", "never"):
+        raise ValueError(f"[ui] assets must be 'auto', 'always', or 'never'; got {assets_mode!r}")
 
     # Parse [extensions] section (#786)
     extensions_data = data.get("extensions", {})
@@ -746,6 +756,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         tenant=tenant_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
+        assets=assets_mode,
         favicon=favicon_path,
         app_theme=app_theme_name,
         dark_mode_toggle=dark_mode_toggle_enabled,

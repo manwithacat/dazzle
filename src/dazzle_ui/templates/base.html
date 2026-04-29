@@ -66,15 +66,31 @@
   <script type="application/json" id="dz-app-themes">{{ _app_theme_map | tojson }}</script>
   {% endif %}
 
+  {# Asset loading: bundled `dist/dazzle.min.{js,css}` for mature sites
+     where wire/parse efficiency outweighs per-file live-reload visibility,
+     OR individual scripts for development and granular debugging.
+     Resolved by `dazzle_ui.runtime.asset_bundle.should_bundle_assets()`
+     from `[ui] assets` in dazzle.toml + DAZZLE_ENV + CLI overrides;
+     defaults to individual when `_bundle_assets` is unset. #}
+  {% if _bundle_assets %}
+  {# Bundled mode — one CSS, one JS. Eliminates ~24 round-trips on
+     cold connections; loses per-file live-reload visibility (acceptable
+     once a site reaches maturity). Both files ship in the dazzle-dsl
+     wheel under `dist/`, so Heroku slug builds don't need a Node
+     toolchain. #}
+  <link rel="stylesheet" href="{{ 'dist/dazzle.min.css' | static_url }}">
+  <script defer src="{{ 'dist/dazzle.min.js' | static_url }}"></script>
+  {% else %}
+  {# Individual mode (default) — every script is a separate file with
+     `defer` so the parser doesn't block. Trades wire-time efficiency
+     for per-file live-reload during development. #}
   {# HTMX + extensions (vendored). Deferred so they don't block the
      HTML parser — extensions still register before DOMContentLoaded
      because defer scripts run in document order, and htmx's own
-     auto-init waits for DCL anyway. Pre-defer this was 11 sync
-     parser-blocking scripts × ~30 ms script-init time per file on
-     localhost (worse on real network). The inline configRequest
-     listener below uses addEventListener on `document`, which is
-     defer-safe — the listener is attached before htmx fires the
-     event regardless of script load order. #}
+     auto-init waits for DCL anyway. The inline configRequest listener
+     below uses addEventListener on `document`, which is defer-safe —
+     the listener is attached before htmx fires the event regardless
+     of script load order. #}
   <script defer src="{{ 'vendor/htmx.min.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/htmx-ext-json-enc.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/idiomorph-ext.min.js' | static_url }}"></script>
@@ -96,11 +112,7 @@
   <script defer src="{{ 'vendor/alpine.min.js' | static_url }}"></script>
   {# Dazzle framework CSS — single entry point that declares the
      cascade-layer order (reset, vendor, tokens, base, utilities,
-     components, overrides) and @imports every layer + component file
-     including the legacy dz.css / dz-tones.css / dazzle-layer.css
-     friends still relied on by templates. Found broken on v0.62
-     merge (was pointing at the old `dazzle-framework.css` entry that
-     skipped every component family). #}
+     components, overrides) and @imports every layer + component file. #}
   <link rel="stylesheet" href="{{ 'css/dazzle.css' | static_url }}">
   <script defer src="{{ 'js/dz-a11y.js' | static_url }}"></script>
   <script defer src="{{ 'js/dz-islands.js' | static_url }}"></script>
@@ -108,11 +120,11 @@
   <script defer src="{{ 'js/dz-widget-registry.js' | static_url }}"></script>
   <script defer src="{{ 'js/pdf-viewer.js' | static_url }}"></script>
   {# #947 cycle 1 — Alpine × HTMX introspection helper. Exposes
-     window.dzDebug for test introspection (proxy identity, last
-     settle timestamp, component root listing). Cheap and dormant
-     until called; production deployments that don't need it can
-     omit this script tag without runtime impact. #}
+     window.dzDebug for test introspection. Cheap and dormant until
+     called; production deployments that don't need it can omit this
+     script tag without runtime impact. #}
   <script defer src="{{ 'js/dz-debug.js' | static_url }}"></script>
+  {% endif %}
 
   {# CSRF token injection for HTMX requests (v1.0.0) #}
   <script>

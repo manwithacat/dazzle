@@ -9,6 +9,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.137] - 2026-04-29
+
+### Added
+- **Opt-in asset bundling for mature sites.** Projects can now opt
+  into loading `dist/dazzle.min.{js,css}` (one bundled file each)
+  instead of the 24 individual scripts and `dazzle.css` @imports.
+  Trades per-file live-reload visibility for wire/parse efficiency
+  — appropriate once a site reaches maturity and is deployed to
+  production users.
+
+  **Three modes** in `dazzle.toml`:
+
+  ```toml
+  [ui]
+  # "auto"   = bundle when DAZZLE_ENV=production, individual in dev (default)
+  # "always" = bundle in every environment (perf testing / staging)
+  # "never"  = individual scripts always (advanced live-reload during prod debugging)
+  assets = "auto"
+  ```
+
+  **CLI overrides** for one-off testing:
+  ```
+  dazzle serve --bundle      # force bundled regardless of manifest
+  dazzle serve --no-bundle   # force individual regardless of manifest
+  ```
+
+  **Heroku-friendly**: the framework's `dist/dazzle.min.{js,css}`
+  ships in the dazzle-dsl wheel, so Heroku slug builds don't need
+  a Node toolchain or runtime build step. Project sees the bundle
+  as soon as `pip install dazzle-dsl` completes.
+
+- **Drift gate** between `base.html`'s individual-mode script list
+  and `scripts/build_dist.py`'s `JS_SOURCES`. Adding a new script
+  to either side without the matching entry in the other fires
+  a unit-test failure citing the missing files. Mitigates the
+  silent-broken-bundle failure mode where projects on
+  `[ui] assets = "always"` would otherwise get a page missing some
+  framework JS.
+
+### Fixed
+- **`dist/dazzle.min.js` was missing 10 scripts** that `base.html`
+  loaded individually: `htmx-ext-{class-tools,multi-swap,path-deps,
+  remove-me}`, `alpine-{anchor,collapse,focus}.min`,
+  `dashboard-builder`, `dz-component-bridge`, `dz-widget-registry`.
+  The bundle had stale at ~191 KB; complete bundle is now 279 KB
+  (82 KB gzipped). Caught by the new drift gate.
+
+### Agent Guidance
+- When adding a new framework script to `templates/base.html`'s
+  individual-mode branch, ALSO add it to
+  `scripts/build_dist.py`'s `JS_SOURCES` list (in the same execution
+  order). The `TestBundleListParity` gate will fire if you forget.
+- The `[ui] assets` setting is a project decision, not a framework
+  one. Default `"auto"` works for most projects: dev sees
+  individual files (live-reload friendly); production sees the
+  bundle (fast first paint). Override with `"always"` once a site
+  is mature enough that the loss of per-file source-mapping doesn't
+  matter.
+
 ## [0.61.136] - 2026-04-29
 
 ### Changed

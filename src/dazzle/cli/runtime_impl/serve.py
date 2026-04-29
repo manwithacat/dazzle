@@ -124,6 +124,7 @@ class _ServeContext:
         "graphql",
         "workers",
         "local_assets",
+        "bundle",
         "sitespec_data",
         "appspec",
     )
@@ -153,6 +154,7 @@ class _ServeContext:
         self.graphql: bool = False
         self.workers: int | None = 1
         self.local_assets: bool | None = False
+        self.bundle: bool | None = None
         self.sitespec_data: dict[str, Any] | None = None
         self.appspec: Any = None
 
@@ -743,6 +745,16 @@ def serve_command(
         "--local-assets/--cdn-assets",
         help="Serve JS/CSS from local installation instead of CDN. Default: local in dev, CDN in --production.",
     ),
+    bundle: bool | None = typer.Option(
+        None,
+        "--bundle/--no-bundle",
+        help=(
+            "Asset bundling override. --bundle loads dist/dazzle.min.{js,css}; "
+            "--no-bundle loads individual scripts (live-reload friendly). "
+            "Default: resolved from `[ui] assets` in dazzle.toml + DAZZLE_ENV "
+            "('auto' bundles in production, individual in dev)."
+        ),
+    ),
     production: bool = typer.Option(
         False,
         "--production",
@@ -796,9 +808,36 @@ def serve_command(
     ctx.graphql = graphql
     ctx.workers = workers
     ctx.local_assets = local_assets
+    ctx.bundle = bundle
 
     # Phase 1: Load project manifest and .env
     _load_manifest_and_dotenv(ctx, manifest)
+
+    # Resolve asset bundling decision and propagate via environment
+    # variable so the template renderer's Jinja env globals pick it up
+    # at engine init. Resolver order: CLI flag > [ui] assets in
+    # dazzle.toml > DAZZLE_ENV. Set production-mode default to bundle.
+    import os as _os
+
+    from dazzle_ui.runtime.asset_bundle import should_bundle_assets
+
+    _assets_mode = getattr(ctx.mf, "assets", "auto") if ctx.mf is not None else "auto"
+    _cli_override: str | None
+    if ctx.bundle is True:
+        _cli_override = "bundle"
+    elif ctx.bundle is False:
+        _cli_override = "no-bundle"
+    else:
+        _cli_override = None
+    # When --production is set without an explicit DAZZLE_ENV, treat as production
+    # for the bundle decision so `dazzle serve --production` bundles by default.
+    _resolved_env = _os.environ.get("DAZZLE_ENV") or ("production" if production else "")
+    _bundle_decision = should_bundle_assets(
+        _assets_mode,  # type: ignore[arg-type]
+        env=_resolved_env,
+        cli_override=_cli_override,  # type: ignore[arg-type]
+    )
+    _os.environ["DAZZLE_BUNDLE_ASSETS"] = "1" if _bundle_decision else "0"
 
     # Phase 2: Configure mode (production vs development)
     if production:

@@ -52,7 +52,12 @@ CSS_UNLAYERED: list[Path] = [
     STATIC / "css" / "dz-tones.css",
 ]
 
+# JS_SOURCES order MUST match base.html's individual-branch script order
+# so the bundled execution order is identical to the unbundled. Any new
+# script added to base.html must also land here. The drift gate in
+# tests/unit/test_asset_bundle.py::TestBundleListParity catches omissions.
 JS_SOURCES = [
+    # HTMX core + extensions (vendored). Order: core first, then extensions.
     STATIC / "vendor" / "htmx.min.js",
     STATIC / "vendor" / "htmx-ext-json-enc.js",
     STATIC / "vendor" / "idiomorph-ext.min.js",
@@ -60,16 +65,26 @@ JS_SOURCES = [
     STATIC / "vendor" / "htmx-ext-response-targets.js",
     STATIC / "vendor" / "htmx-ext-loading-states.js",
     STATIC / "vendor" / "htmx-ext-sse.js",
-    # Alpine.js + plugins + components (order matters: plugins before core)
+    STATIC / "vendor" / "htmx-ext-remove-me.js",
+    STATIC / "vendor" / "htmx-ext-class-tools.js",
+    STATIC / "vendor" / "htmx-ext-multi-swap.js",
+    STATIC / "vendor" / "htmx-ext-path-deps.js",
+    # Alpine plugins + Alpine core (order matters: plugins before core)
     STATIC / "vendor" / "sortable.min.js",
     STATIC / "vendor" / "alpine-sort.min.js",
     STATIC / "vendor" / "alpine-persist.min.js",
+    STATIC / "vendor" / "alpine-anchor.min.js",
+    STATIC / "vendor" / "alpine-collapse.min.js",
+    STATIC / "vendor" / "alpine-focus.min.js",
     STATIC / "js" / "dz-alpine.js",
+    STATIC / "js" / "dashboard-builder.js",
     STATIC / "js" / "workspace-editor.js",
     STATIC / "vendor" / "alpine.min.js",
-    # Dazzle runtime (a11y + islands)
+    # Dazzle runtime (a11y + islands + bridge + widget registry)
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
+    STATIC / "js" / "dz-component-bridge.js",
+    STATIC / "js" / "dz-widget-registry.js",
     # #946: pdf-viewer bridge handler. Bundled (rather than loaded as
     # a standalone <script> tag) so projects using `dist/dazzle.min.js`
     # get the chrome wired automatically when they adopt the

@@ -408,6 +408,16 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.globals["_dazzle_version"] = _dz_version
     env.globals["_use_cdn"] = False  # local-first; opt-in via [ui] cdn = true
 
+    # Asset bundling toggle. Resolved by `should_bundle_assets()` from
+    # `[ui] assets` in dazzle.toml + DAZZLE_ENV + CLI overrides; the
+    # CLI writes the resolution to DAZZLE_BUNDLE_ASSETS=0|1 before
+    # starting the server so this read at engine init reflects the
+    # right mode. Default 0 (individual scripts) keeps dev-mode
+    # live-reload behaviour unchanged for projects that haven't opted in.
+    import os as _os
+
+    env.globals["_bundle_assets"] = _os.environ.get("DAZZLE_BUNDLE_ASSETS") == "1"
+
     # Theme variant — resolved per-request by ThemeVariantMiddleware
     # (src/dazzle_ui/runtime/theme.py). Templates call `{{
     # theme_variant() }}` in `<html data-theme="…">` so the correct
