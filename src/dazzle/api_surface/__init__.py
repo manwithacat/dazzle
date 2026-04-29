@@ -1,23 +1,33 @@
 """
-API surface introspection — for the breaking-change pass tooling.
+API surface introspection — for the breaking-change pass tooling (#961).
 
-The framework's public surface is enumerated and snapshotted as a structured
-text artifact. Drift between the live surface and the on-disk baseline is
-caught by tests/unit/test_api_surface_drift.py, forcing every breaking change
-to be a conscious decision.
+Each cycle adds a snapshotable lens on the framework's public surface. The
+snapshots are committed to `docs/api-surface/`; drift between live state
+and baseline is caught by `tests/unit/test_api_surface_drift.py`, forcing
+every breaking change to be a conscious, CHANGELOG-recorded decision.
 
-Cycle 1 covers DSL constructs only. See `docs/api-surface/dsl-constructs.txt`
-for the committed baseline. See issue #961 for cycle 2+ scope.
+Cycles:
+- Cycle 1 (`dsl_constructs`) — DSL constructs → IR class mapping
+- Cycle 2 (`ir_types`) — every IR type re-exported from `dazzle.core.ir`
+- Cycle 3+ — MCP tool schemas, public helpers, runtime URLs (open on #961)
 """
 
+from . import dsl_constructs as dsl_constructs_module
+from . import ir_types as ir_types_module
 from .dsl_constructs import (
     BASELINE_PATH,
     diff_against_baseline,
     snapshot_dsl_constructs,
 )
+from .ir_types import (
+    snapshot_ir_types,
+)
 
 __all__ = [
     "BASELINE_PATH",
     "diff_against_baseline",
+    "dsl_constructs_module",
+    "ir_types_module",
     "snapshot_dsl_constructs",
+    "snapshot_ir_types",
 ]

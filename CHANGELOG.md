@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.1] - 2026-04-29
+
+### Added
+- **#961 cycle 2 — IR-types API-surface snapshot.** New
+  `dazzle inspect-api ir-types` subcommand walks
+  `dazzle.core.ir.__all__` (485 exports: 325 BaseModels, 139 Enums,
+  21 functions/typealiases/constants) and emits a deterministic
+  field-level snapshot. Baseline at
+  `docs/api-surface/ir-types.txt` (4169 lines).
+
+### Changed
+- Cycle 1 baseline (`docs/api-surface/dsl-constructs.txt`) trimmed
+  from 811 → 218 lines. Field listings moved to cycle 2's IR-types
+  baseline; cycle 1 now owns the construct → IR-class mapping
+  exclusively. Two clean lenses, no redundancy.
+
+### Agent Guidance
+- After any change to a Pydantic field on an IR class re-exported
+  from `dazzle.core.ir`, the `test_ir_types_match_baseline` gate
+  fires. Run `dazzle inspect-api ir-types --write`, review the
+  diff, add a CHANGELOG entry under Added / Changed / Removed,
+  commit the regenerated `docs/api-surface/ir-types.txt`. The diff
+  IS the breaking-change record for the Python API surface.
+
 ## [0.63.0] - 2026-04-29
 
 ### Added

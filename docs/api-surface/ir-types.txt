@@ -1,0 +1,4169 @@
+# DAZZLE IR Types — API Surface (cycle 2 of #961)
+#
+# Source of truth: dazzle.core.ir.__all__
+# Regenerate: dazzle inspect-api ir-types --write
+# Drift gate: tests/unit/test_api_surface_drift.py
+#
+# Every IR type re-exported from `dazzle.core.ir` is part of the public
+# Python API. Adding, removing, or changing fields on a BaseModel — or
+# adding/removing enum members — drifts this baseline. To accept drift:
+# regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
+
+# Counts: 325 BaseModels, 139 Enums, 21 other (functions / typealiases / constants)
+
+== BaseModels ==
+
+ir_class: A11yRule
+  required:
+    - id: str
+  optional:
+    - enabled: bool = True
+    - level: str = 'AA'
+
+ir_class: APISpec
+  required:
+    - auth_profile: AuthProfile
+    - name: str
+  optional:
+    - owner: str | None = None
+    - spec_inline: str | None = None
+    - spec_url: str | None = None
+    - title: str | None = None
+
+ir_class: AccessSpec
+  required: (none)
+  optional:
+    - permissions: list[PermissionRule] = []
+    - scopes: list[ScopeRule] = []
+    - visibility: list[VisibilityRule] = []
+
+ir_class: ActionCardSpec
+  required:
+    - label: str
+  optional:
+    - action: str = ''
+    - count_aggregate: str = ''
+    - icon: str = ''
+    - tone: str = 'neutral'
+
+ir_class: ActionTriple
+  required:
+    - action: str
+    - permission: str
+  optional: (none)
+
+ir_class: AggregateCall
+  required:
+    - field: FieldReference
+    - function: AggregateFunction
+  optional: (none)
+
+ir_class: AnalyticsConsentSpec
+  required: (none)
+  optional:
+    - consent_override: str | None = None
+    - default_jurisdiction: str | None = None
+
+ir_class: AnalyticsProviderInstance
+  required:
+    - name: str
+  optional:
+    - params: dict[str, str] = {}
+
+ir_class: AnalyticsServerSideSpec
+  required:
+    - sink: str
+  optional:
+    - bus_topics: list[str] = []
+    - measurement_id: str | None = None
+
+ir_class: AnalyticsSpec
+  required: (none)
+  optional:
+    - consent: AnalyticsConsentSpec | None = None
+    - providers: list[AnalyticsProviderInstance] = []
+    - server_side: AnalyticsServerSideSpec | None = None
+
+ir_class: AppConfigSpec
+  required: (none)
+  optional:
+    - audit_trail: bool = False
+    - description: str | None = None
+    - features: dict[str, Any] = {}
+    - multi_tenant: bool = False
+    - security_profile: str = 'basic'
+    - theme: str | None = None
+
+ir_class: AppSpec
+  required:
+    - domain: DomainSpec
+    - name: str
+  optional:
+    - analytics: AnalyticsSpec | None = None
+    - apis: list[APISpec] = []
+    - app_config: AppConfigSpec | None = None
+    - approvals: list[ApprovalSpec] = []
+    - archetypes: list[ArchetypeSpec] = []
+    - assets: list[AssetSpec] = []
+    - audit_trail: bool = False
+    - channels: list[ChannelSpec] = []
+    - data_products: DataProductsSpec | None = None
+    - documents: list[DocumentSpec] = []
+    - domain_services: list[DomainServiceSpec] = []
+    - e2e_flows: list[FlowSpec] = []
+    - enums: list[EnumSpec] = []
+    - event_model: EventModelSpec | None = None
+    - experiences: list[ExperienceSpec] = []
+    - feedback_widget: FeedbackWidgetSpec | None = None
+    - fixtures: list[FixtureSpec] = []
+    - fk_graph: Any = None
+    - foreign_models: list[ForeignModelSpec] = []
+    - grant_schemas: list[GrantSchemaSpec] = []
+    - hless_mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
+    - hless_pragma: HLESSPragma | None = None
+    - integrations: list[IntegrationSpec] = []
+    - interfaces: InterfacesSpec | None = None
+    - islands: list[IslandSpec] = []
+    - ledgers: list[LedgerSpec] = []
+    - llm_config: LLMConfigSpec | None = None
+    - llm_intents: list[LLMIntentSpec] = []
+    - llm_models: list[LLMModelSpec] = []
+    - messages: list[MessageSpec] = []
+    - metadata: dict[str, Any] = {}
+    - notifications: list[NotificationSpec] = []
+    - params: list[ParamSpec] = []
+    - personas: list[PersonaSpec] = []
+    - policies: PoliciesSpec | None = None
+    - processes: list[ProcessSpec] = []
+    - projections: list[ProjectionSpec] = []
+    - questions: list[QuestionSpec] = []
+    - rhythms: list[RhythmSpec] = []
+    - rules: list[RuleSpec] = []
+    - scenarios: list[ScenarioSpec] = []
+    - schedules: list[ScheduleSpec] = []
+    - security: SecurityConfig | None = None
+    - slas: list[SLASpec] = []
+    - stories: list[StorySpec] = []
+    - streams: list[StreamSpec] = []
+    - subprocessors: list[SubprocessorSpec] = []
+    - subscriptions: list[SubscribeSpec] = []
+    - surfaces: list[SurfaceSpec] = []
+    - templates: list[TemplateSpec] = []
+    - tenancy: TenancySpec | None = None
+    - tests: list[TestSpec] = []
+    - title: str | None = None
+    - transactions: list[TransactionSpec] = []
+    - triples: list[VerifiableTriple] = []
+    - ux: UXLayouts | None = None
+    - version: str = '0.1.0'
+    - views: list[ViewSpec] = []
+    - webhooks: list[WebhookSpec] = []
+    - workspaces: list[WorkspaceSpec] = []
+
+ir_class: ApprovalEscalationSpec
+  required: (none)
+  optional:
+    - after_unit: str = 'hours'
+    - after_value: int = 0
+    - to_role: str = ''
+
+ir_class: ApprovalOutcomeSpec
+  required: (none)
+  optional:
+    - decision: str = ''
+    - target_status: str = ''
+
+ir_class: ApprovalSpec
+  required:
+    - name: str
+  optional:
+    - approver_role: str = ''
+    - auto_approve: ConditionExpr | None = None
+    - entity: str = ''
+    - escalation: ApprovalEscalationSpec | None = None
+    - outcomes: list[ApprovalOutcomeSpec] = []
+    - quorum: int = 1
+    - threshold: ConditionExpr | None = None
+    - title: str | None = None
+    - trigger_field: str = 'status'
+    - trigger_value: str = ''
+
+ir_class: ArchetypeSpec
+  required:
+    - name: str
+  optional:
+    - computed_fields: list[ComputedFieldSpec] = []
+    - fields: list[FieldSpec] = []
+    - invariants: list[InvariantSpec] = []
+
+ir_class: ArithmeticExpr
+  required:
+    - left: AggregateCall | FieldReference | ArithmeticExpr | LiteralValue
+    - operator: ArithmeticOperator
+    - right: AggregateCall | FieldReference | ArithmeticExpr | LiteralValue
+  optional: (none)
+
+ir_class: ArtifactRefSpec
+  required:
+    - artifact_id: str
+    - byte_size: int
+    - content_hash: str
+    - kind: ArtifactKind
+    - storage_uri: str
+  optional: (none)
+
+ir_class: AssetSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - kind: AssetKind = <AssetKind.FILE: 'file'>
+    - path: str = ''
+
+ir_class: AttentionMapSpec
+  required: (none)
+  optional:
+    - rules: list[AttentionRule] = []
+
+ir_class: AttentionRule
+  required:
+    - treatment: VisualTreatment
+  optional:
+    - match_entity_category: str | None = None
+    - match_signal_kind: str | None = None
+    - match_signal_level: str | None = None
+
+ir_class: AttentionSignal
+  required:
+    - condition: ConditionExpr
+    - level: SignalLevel
+    - message: str
+  optional:
+    - action: str | None = None
+
+ir_class: AuditConfig
+  required: (none)
+  optional:
+    - enabled: bool = False
+    - include_field_changes: bool = True
+    - operations: list[PermissionKind] = []
+
+ir_class: AuthEntrySpec
+  required: (none)
+  optional:
+    - primary_entry: str = '/login'
+
+ir_class: AuthPageSpec
+  required:
+    - route: str
+  optional:
+    - enabled: bool = True
+    - mode: AuthPageMode = <AuthPageMode.GENERATED: 'generated'>
+
+ir_class: AuthPagesSpec
+  required: (none)
+  optional:
+    - login: AuthPageSpec = <factory:AuthPagesSpec.<lambda>>
+    - signup: AuthPageSpec = <factory:AuthPagesSpec.<lambda>>
+
+ir_class: AuthProfile
+  required:
+    - kind: AuthKind
+  optional:
+    - options: dict[str, str] = {}
+
+ir_class: AuthSpec
+  required:
+    - auth_type: AuthType
+  optional:
+    - credentials: list[str] = []
+
+ir_class: AutoTransitionSpec
+  required:
+    - delay_unit: TimeUnit
+    - delay_value: int
+  optional:
+    - allow_manual: bool = False
+
+ir_class: BlueprintContainer
+  required:
+    - blueprint: DemoDataBlueprint
+  optional:
+    - version: str = '1.0'
+
+ir_class: BoolComposite
+  required:
+    - children: list[Annotated[ColumnCheck | ColumnRefCheck | UserAttrCheck | PathCheck | ExistsCheck | BoolComposite | Tautology | Contradiction, annotation=NoneType required=True discriminator='kind']]
+    - op: BoolOp
+  optional:
+    - kind: Literal[bool_composite] = 'bool_composite'
+
+ir_class: BrandSpec
+  required:
+    - product_name: str
+  optional:
+    - company_legal_name: str | None = None
+    - logo: LogoSpec = <factory:LogoSpec>
+    - support_email: str | None = None
+    - tagline: str | None = None
+
+ir_class: BucketRef
+  required:
+    - field: str
+    - unit: str
+  optional: (none)
+
+ir_class: BulkActionSpec
+  required:
+    - field: str
+    - name: str
+    - target_value: str
+  optional: (none)
+
+ir_class: BulkConfig
+  required: (none)
+  optional:
+    - export_enabled: bool = True
+    - export_fields: list[str] = []
+    - formats: list[BulkFormat] = <factory:BulkConfig.<lambda>>
+    - import_enabled: bool = True
+    - import_fields: list[str] = []
+
+ir_class: BusinessHoursSpec
+  required: (none)
+  optional:
+    - schedule: Any = ''
+    - timezone: Any = 'UTC'
+
+ir_class: CTASpec
+  required:
+    - href: str
+    - label: str
+  optional: (none)
+
+ir_class: ChannelConfigSpec
+  required: (none)
+  optional:
+    - options: dict[str, str] = {}
+
+ir_class: ChannelSpec
+  required:
+    - name: str
+  optional:
+    - config: ChannelConfigSpec = <factory:ChannelConfigSpec>
+    - kind: ChannelKind = <ChannelKind.EMAIL: 'email'>
+    - provider: str = 'auto'
+    - provider_config: ProviderConfigSpec | None = None
+    - receive_operations: list[ReceiveOperationSpec] = []
+    - send_operations: list[SendOperationSpec] = []
+    - title: str | None = None
+
+ir_class: ClassificationSpec
+  required:
+    - classification: DataClassification
+    - entity: str
+    - field: str
+  optional:
+    - notes: str | None = None
+    - retention: RetentionPolicy = <RetentionPolicy.MEDIUM: 'medium'>
+
+ir_class: ColumnCheck
+  required:
+    - field: str
+    - op: CompOp
+    - value: ValueRef
+  optional:
+    - kind: Literal[column_check] = 'column_check'
+
+ir_class: CompanionEntrySpec
+  required:
+    - title: str
+  optional:
+    - caption: str | None = None
+    - icon: str | None = None
+    - state: str | None = None
+
+ir_class: CompanionSpec
+  required:
+    - name: str
+  optional:
+    - aggregate: dict[str, str] = {}
+    - display: str | None = None
+    - entries: list[CompanionEntrySpec] = []
+    - eyebrow: str | None = None
+    - filter: ConditionExpr | None = None
+    - limit: int | None = None
+    - position: CompanionPosition = <CompanionPosition.BOTTOM: 'bottom'>
+    - section_anchor: str | None = None
+    - source: str | None = None
+    - stages: list[CompanionStageSpec] = []
+    - title: str | None = None
+
+ir_class: CompanionStageSpec
+  required:
+    - label: str
+  optional:
+    - caption: str | None = None
+
+ir_class: Comparison
+  required:
+    - operator: ComparisonOperator
+    - value: ConditionValue
+  optional:
+    - field: str | None = None
+    - function: FunctionCall | None = None
+
+ir_class: ComparisonExpr
+  required:
+    - left: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+    - operator: ComparisonOperator
+    - right: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+  optional: (none)
+
+ir_class: CompensationSpec
+  required:
+    - name: str
+  optional:
+    - inputs: list[InputMapping] = []
+    - service: str | None = None
+    - timeout_seconds: int = 30
+
+ir_class: ComputedFieldSpec
+  required:
+    - name: str
+  optional:
+    - computed_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - expression: AggregateCall | FieldReference | ArithmeticExpr | LiteralValue | None = None
+
+ir_class: ConditionExpr
+  required: (none)
+  optional:
+    - comparison: Comparison | None = None
+    - grant_check: GrantCheck | None = None
+    - left: ConditionExpr | None = None
+    - operator: LogicalOperator | None = None
+    - right: ConditionExpr | None = None
+    - role_check: RoleCheck | None = None
+    - via_condition: ViaCondition | None = None
+
+ir_class: ConditionValue
+  required: (none)
+  optional:
+    - date_expr: DateLiteral | DateArithmeticExpr | None = None
+    - literal: str | int | float | bool | None = None
+    - values: list[str | int | float | bool] | None = None
+
+ir_class: ConfirmationItemSpec
+  required:
+    - title: str
+  optional:
+    - caption: str = ''
+    - required: bool = True
+
+ir_class: Constraint
+  required:
+    - fields: list[str]
+    - kind: ConstraintKind
+  optional: (none)
+
+ir_class: ContentSourceSpec
+  required:
+    - path: str
+  optional:
+    - format: ContentFormat = <ContentFormat.MARKDOWN: 'md'>
+
+ir_class: ContextSelectorSpec
+  required:
+    - entity: str
+  optional:
+    - display_field: str = 'name'
+    - scope_field: str | None = None
+
+ir_class: Contradiction
+  required: (none)
+  optional:
+    - kind: Literal[contradiction] = 'contradiction'
+
+ir_class: DataProductSpec
+  required:
+    - name: str
+  optional:
+    - allow_classifications: list[DataClassification] = []
+    - cross_tenant: bool = False
+    - deny_classifications: list[DataClassification] = []
+    - description: str | None = None
+    - output_topic: str | None = None
+    - refresh: str = 'realtime'
+    - retention: str | None = None
+    - source_entities: list[str] = []
+    - source_streams: list[str] = []
+    - title: str | None = None
+    - transforms: list[DataProductTransform] = []
+
+ir_class: DataProductsSpec
+  required: (none)
+  optional:
+    - default_namespace: str = 'curated'
+    - products: list[DataProductSpec] = []
+
+ir_class: DateArithmeticExpr
+  required:
+    - left: DateLiteral | DateArithmeticExpr | str
+    - operator: DateArithmeticOp
+    - right: DurationLiteral
+  optional: (none)
+
+ir_class: DateLiteral
+  required:
+    - kind: DateLiteralKind
+  optional: (none)
+
+ir_class: DeltaSpec
+  required:
+    - period_seconds: int
+  optional:
+    - date_field: str | None = None
+    - period_label: str = 'prior period'
+    - sentiment: str = 'positive_up'
+
+ir_class: DemoDataBlueprint
+  required:
+    - domain_description: str
+    - project_id: str
+  optional:
+    - entities: list[EntityBlueprint] = []
+    - personas: list[PersonaBlueprint] = []
+    - seed: int | None = None
+    - tenants: list[TenantBlueprint] = []
+
+ir_class: DemoFixture
+  required:
+    - entity: str
+  optional:
+    - records: list[dict[str, Any]] = []
+
+ir_class: DerivationLineage
+  required:
+    - derivation_type: DerivationType
+    - source_streams: list[str]
+  optional:
+    - derivation_function: str | None = None
+    - rebuild_strategy: RebuildStrategy = <RebuildStrategy.FULL_REPLAY: 'full_replay'>
+    - window_spec: WindowSpec | None = None
+
+ir_class: DocumentSpec
+  required:
+    - for_entity: str
+    - name: str
+  optional:
+    - description: str | None = None
+    - format: DocumentFormat = <DocumentFormat.PDF: 'pdf'>
+    - layout: str = ''
+
+ir_class: DomainServiceSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - guarantees: list[str] = []
+    - inputs: list[ServiceFieldSpec] = []
+    - kind: DomainServiceKind = <DomainServiceKind.DOMAIN_LOGIC: 'domain_logic'>
+    - outputs: list[ServiceFieldSpec] = []
+    - stub_language: StubLanguage = <StubLanguage.PYTHON: 'python'>
+    - title: str | None = None
+
+ir_class: DomainSpec
+  required: (none)
+  optional:
+    - entities: list[EntitySpec] = []
+
+ir_class: DurationExpr
+  required:
+    - unit: DurationUnit
+    - value: int
+  optional: (none)
+
+ir_class: DurationLiteral
+  required:
+    - unit: DurationUnit
+    - value: int
+  optional: (none)
+
+ir_class: E2ETestSpec
+  required:
+    - app_name: str
+    - version: str
+  optional:
+    - a11y_rules: list[A11yRule] = []
+    - fixtures: list[FixtureSpec] = []
+    - flows: list[FlowSpec] = []
+    - metadata: dict[str, Any] = {}
+    - usability_rules: list[UsabilityRule] = []
+
+ir_class: EmptyMessages
+  required: (none)
+  optional:
+    - collection: str | None = None
+    - filtered: str | None = None
+    - forbidden: str | None = None
+
+ir_class: EntityBlueprint
+  required:
+    - name: str
+  optional:
+    - field_patterns: list[FieldPattern] = []
+    - notes: str | None = None
+    - row_count_default: int = 10
+    - tenant_scoped: bool = False
+
+ir_class: EntitySpec
+  required:
+    - fields: list[FieldSpec]
+    - name: str
+  optional:
+    - access: AccessSpec | None = None
+    - archetype_kind: ArchetypeKind | None = None
+    - audit: AuditConfig | None = None
+    - bulk: BulkConfig | None = None
+    - computed_fields: list[ComputedFieldSpec] = []
+    - constraints: list[Constraint] = []
+    - display_field: str | None = None
+    - domain: str | None = None
+    - examples: list[ExampleRecord] = []
+    - extends: list[str] = []
+    - fitness: FitnessSpec | None = None
+    - graph_edge: GraphEdgeSpec | None = None
+    - graph_node: GraphNodeSpec | None = None
+    - intent: str | None = None
+    - invariants: list[InvariantSpec] = []
+    - is_singleton: bool = False
+    - is_tenant_root: bool = False
+    - lifecycle: LifecycleSpec | None = None
+    - patterns: list[str] = []
+    - publishes: list[PublishSpec] = []
+    - seed_template: SeedTemplateSpec | None = None
+    - soft_delete: bool = False
+    - source: SourceLocation | None = None
+    - state_machine: StateMachineSpec | None = None
+    - title: str | None = None
+
+ir_class: EnumSpec
+  required:
+    - name: str
+  optional:
+    - title: str | None = None
+    - values: list[EnumValueSpec] = []
+
+ir_class: EnumValueSpec
+  required:
+    - name: str
+  optional:
+    - title: str | None = None
+
+ir_class: ErasureSpec
+  required:
+    - entity: str
+    - policy: ErasurePolicy
+  optional:
+    - cascade: bool = False
+    - field: str | None = None
+
+ir_class: ErrorStrategy
+  required: (none)
+  optional:
+    - actions: list[ErrorAction] = []
+    - set_fields: dict[str, str] = {}
+
+ir_class: EventFieldSpec
+  required:
+    - field_type: str
+    - name: str
+  optional:
+    - description: str | None = None
+    - required: bool = True
+
+ir_class: EventHandlerSpec
+  required:
+    - event_name: str
+  optional:
+    - condition: str | None = None
+    - field_mappings: dict[str, str] = {}
+    - service_method: str | None = None
+    - service_name: str | None = None
+
+ir_class: EventModelSpec
+  required: (none)
+  optional:
+    - events: list[EventSpec] = []
+    - topics: list[TopicSpec] = []
+
+ir_class: EventSpec
+  required:
+    - name: str
+    - topic: str
+  optional:
+    - custom_fields: list[EventFieldSpec] = []
+    - description: str | None = None
+    - payload_entity: str | None = None
+    - version: str = '1.0'
+
+ir_class: ExampleRecord
+  required:
+    - values: dict[str, str | int | float | bool | None]
+  optional: (none)
+
+ir_class: ExistsBinding
+  required:
+    - junction_field: str
+    - target: str
+  optional:
+    - operator: str = '='
+
+ir_class: ExistsCheck
+  required:
+    - bindings: list[ExistsBinding]
+    - target_entity: str
+  optional:
+    - kind: Literal[exists_check] = 'exists_check'
+    - negated: bool = False
+
+ir_class: ExpectedOutcome
+  required:
+    - condition: OutcomeCondition
+    - emits: list[str]
+  optional:
+    - target_stream: str | None = None
+
+ir_class: ExperienceSpec
+  required:
+    - name: str
+    - start_step: str
+  optional:
+    - access: SurfaceAccessSpec | None = None
+    - context: list[FlowContextVar] = []
+    - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
+    - source: SourceLocation | None = None
+    - steps: list[ExperienceStep] = []
+    - title: str | None = None
+
+ir_class: ExperienceStep
+  required:
+    - kind: StepKind
+    - name: str
+  optional:
+    - access: SurfaceAccessSpec | None = None
+    - action: str | None = None
+    - entity_ref: str | None = None
+    - fields: list[str] | None = None
+    - integration: str | None = None
+    - prefills: list[StepPrefill] = []
+    - saves_to: str | None = None
+    - surface: str | None = None
+    - transitions: list[StepTransition] = []
+    - when: str | None = None
+
+ir_class: Expression
+  required: (none)
+  optional:
+    - func_args: list[Expression] = []
+    - func_name: str | None = None
+    - literal: str | int | float | bool | None = None
+    - path: str | None = None
+
+ir_class: FAQItem
+  required:
+    - answer: str
+    - question: str
+  optional: (none)
+
+ir_class: FeatureItem
+  required:
+    - body: str
+    - title: str
+  optional:
+    - icon: str | None = None
+
+ir_class: FeedbackWidgetSpec
+  required: (none)
+  optional:
+    - capture: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - categories: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - enabled: bool = False
+    - position: str = 'bottom-right'
+    - severities: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - shortcut: str = 'backtick'
+
+ir_class: FidelityGap
+  required:
+    - actual: str
+    - category: FidelityGapCategory
+    - dimension: str
+    - expected: str
+    - recommendation: str
+    - severity: str
+    - surface_name: str
+    - target: str
+  optional: (none)
+
+ir_class: FidelityReport
+  required:
+    - overall: float
+  optional:
+    - gap_counts: dict[str, int] = {}
+    - integration_fidelity: float = 1.0
+    - story_coverage: float = 0.0
+    - surface_scores: list[SurfaceFidelityScore] = []
+    - total_gaps: int = 0
+
+ir_class: FieldAssignment
+  required:
+    - field_path: str
+    - value: str
+  optional: (none)
+
+ir_class: FieldPattern
+  required:
+    - field_name: str
+    - strategy: FieldStrategy
+  optional:
+    - params: dict[str, Any] = {}
+
+ir_class: FieldReference
+  required:
+    - path: list[str]
+  optional: (none)
+
+ir_class: FieldSpec
+  required:
+    - name: str
+    - type: FieldType
+  optional:
+    - default: str | int | float | bool | DateLiteral | DateArithmeticExpr | None = None
+    - default_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - modifiers: list[FieldModifier] = []
+    - pii: PIIAnnotation | None = None
+    - storage: tuple[str, Ellipsis] = <factory:tuple>
+
+ir_class: FieldType
+  required:
+    - kind: FieldTypeKind
+  optional:
+    - currency_code: str | None = None
+    - enum_values: list[str] | None = None
+    - max_length: int | None = None
+    - max_size: int | None = None
+    - precision: int | None = None
+    - readonly: bool = False
+    - ref_entity: str | None = None
+    - relationship_behavior: RelationshipBehavior | None = None
+    - scale: int | None = None
+    - via_entity: str | None = None
+
+ir_class: FitnessSpec
+  required: (none)
+  optional:
+    - repr_fields: list[str] = []
+
+ir_class: FixtureSpec
+  required:
+    - id: str
+  optional:
+    - data: dict[str, Any] = {}
+    - description: str | None = None
+    - entity: str | None = None
+    - refs: dict[str, str] = {}
+
+ir_class: FlowAssertion
+  required:
+    - kind: FlowAssertionKind
+  optional:
+    - expected: Any | None = None
+    - operator: TestComparisonOperator | None = None
+    - target: str | None = None
+
+ir_class: FlowContextVar
+  required:
+    - entity_ref: str
+    - name: str
+  optional: (none)
+
+ir_class: FlowPrecondition
+  required: (none)
+  optional:
+    - authenticated: bool = True
+    - fixtures: list[str] = []
+    - user_role: str | None = None
+    - view: str | None = None
+
+ir_class: FlowSpec
+  required:
+    - id: str
+  optional:
+    - auto_generated: bool = False
+    - description: str | None = None
+    - entity: str | None = None
+    - preconditions: FlowPrecondition | None = None
+    - priority: FlowPriority = <FlowPriority.MEDIUM: 'medium'>
+    - steps: list[FlowStep] = []
+    - tags: list[str] = []
+
+ir_class: FlowStep
+  required:
+    - kind: FlowStepKind
+  optional:
+    - assertion: FlowAssertion | None = None
+    - description: str | None = None
+    - field_type: str | None = None
+    - fixture_ref: str | None = None
+    - target: str | None = None
+    - value: str | None = None
+
+ir_class: FontStackSpec
+  required: (none)
+  optional:
+    - body: str = 'Inter, system-ui, sans-serif'
+    - heading: str = 'Inter, system-ui, sans-serif'
+    - mono: str = "'JetBrains Mono', 'Fira Code', monospace"
+
+ir_class: FooterColumnSpec
+  required:
+    - title: str
+  optional:
+    - links: list[NavItemSpec] = []
+
+ir_class: FooterSpec
+  required: (none)
+  optional:
+    - columns: list[FooterColumnSpec] = []
+    - disclaimer: str | None = None
+
+ir_class: ForeignConstraint
+  required:
+    - kind: ForeignConstraintKind
+  optional:
+    - options: dict[str, Any] = {}
+
+ir_class: ForeignModelSpec
+  required:
+    - api_ref: str
+    - key_fields: list[str]
+    - name: str
+  optional:
+    - constraints: list[ForeignConstraint] = []
+    - fields: list[FieldSpec] = []
+    - title: str | None = None
+
+ir_class: FunctionCall
+  required:
+    - argument: str
+    - name: str
+  optional: (none)
+
+ir_class: Gap
+  required:
+    - description: str
+    - kind: Literal[capability, surface, workflow, feedback, ambient, unmapped, orphan, unscored]
+    - persona: str
+    - rhythm: str
+    - severity: Literal[blocking, degraded, advisory]
+  optional:
+    - phase: str | None = None
+    - scene: str | None = None
+    - story_ref: str | None = None
+    - surface_ref: str | None = None
+
+ir_class: GapsReport
+  required:
+    - gaps: list[Gap]
+    - roadmap_order: list[Gap]
+    - summary: GapsSummary
+  optional: (none)
+
+ir_class: GapsSummary
+  required:
+    - by_kind: dict[str, int]
+    - by_persona: dict[str, int]
+    - by_severity: dict[str, int]
+    - total: int
+  optional: (none)
+
+ir_class: GrantCheck
+  required:
+    - relation: str
+    - scope_field: str
+  optional: (none)
+
+ir_class: GrantRelationSpec
+  required:
+    - granted_by: ConditionExpr
+    - label: str
+    - name: str
+  optional:
+    - approval: GrantApprovalMode = <GrantApprovalMode.REQUIRED: 'required'>
+    - approved_by: ConditionExpr | None = None
+    - confirmation: str | None = None
+    - description: str | None = None
+    - expiry: GrantExpiryMode = <GrantExpiryMode.REQUIRED: 'required'>
+    - max_duration: Any = None
+    - principal_label: str | None = None
+    - revoke_verb: str | None = None
+    - source_location: SourceLocation | None = None
+
+ir_class: GrantSchemaSpec
+  required:
+    - label: str
+    - name: str
+    - relations: list[GrantRelationSpec]
+    - scope: str
+  optional:
+    - description: str | None = None
+    - source_location: SourceLocation | None = None
+
+ir_class: GraphEdgeSpec
+  required:
+    - source: str
+    - target: str
+  optional:
+    - acyclic: bool = False
+    - directed: bool = True
+    - type_field: str | None = None
+    - weight_field: str | None = None
+
+ir_class: GraphNodeSpec
+  required:
+    - edge_entity: str
+  optional:
+    - display: str | None = None
+    - parent_field: str | None = None
+
+ir_class: HLESSPragma
+  required: (none)
+  optional:
+    - mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
+    - reason: str | None = None
+
+ir_class: HLESSViolation
+  required:
+    - message: str
+    - rule: str
+  optional:
+    - schema_name: str | None = None
+    - severity: Literal[error, warning] = 'error'
+    - stream_name: str | None = None
+    - suggestion: str | None = None
+
+ir_class: HttpRequestSpec
+  required:
+    - method: HttpMethod
+    - url_template: str
+  optional: (none)
+
+ir_class: HumanTaskOutcome
+  required:
+    - goto: str
+    - label: str
+    - name: str
+  optional:
+    - confirm: str | None = None
+    - sets: list[FieldAssignment] = []
+    - style: str = 'primary'
+
+ir_class: HumanTaskSpec
+  required:
+    - surface: str
+  optional:
+    - assignee_expression: str | None = None
+    - assignee_role: str | None = None
+    - entity_path: str | None = None
+    - escalation_timeout_seconds: int | None = None
+    - outcomes: list[HumanTaskOutcome] = []
+    - timeout_seconds: int = 604800
+
+ir_class: IdempotencyStrategy
+  required:
+    - field: str
+    - strategy_type: IdempotencyType
+  optional:
+    - derivation: str | None = None
+    - window: str | None = None
+
+ir_class: ImagerySpec
+  required: (none)
+  optional:
+    - default_aspect_ratio: str = '16:9'
+    - default_resolution: str = '1024x576'
+    - vocabulary: ImageryVocabulary = <factory:ImageryVocabulary>
+
+ir_class: ImageryVocabulary
+  required: (none)
+  optional:
+    - color_reference: str = 'brand palette'
+    - exclusions: list[str] = <factory:ImageryVocabulary.<lambda>>
+    - mood_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
+    - style_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
+
+ir_class: InputMapping
+  required:
+    - source: str
+    - target: str
+  optional: (none)
+
+ir_class: IntegrationAction
+  required:
+    - call_operation: str
+    - call_service: str
+    - name: str
+    - when_surface: str
+  optional:
+    - call_mapping: list[MappingRule] = []
+    - response_entity: str | None = None
+    - response_foreign_model: str | None = None
+    - response_mapping: list[MappingRule] = []
+
+ir_class: IntegrationMapping
+  required:
+    - name: str
+  optional:
+    - cache_ttl: int | None = None
+    - entity_ref: str = ''
+    - on_conflict: str = ''
+    - on_error: ErrorStrategy | None = None
+    - request: HttpRequestSpec | None = None
+    - request_mapping: list[MappingRule] = []
+    - response_mapping: list[MappingRule] = []
+    - source_ref: str = ''
+    - transform: list[MappingRule] = []
+    - triggers: list[MappingTriggerSpec] = []
+
+ir_class: IntegrationSpec
+  required:
+    - name: str
+  optional:
+    - actions: list[IntegrationAction] = []
+    - api_refs: list[str] = []
+    - auth: AuthSpec | None = None
+    - base_url: str | None = None
+    - foreign_model_refs: list[str] = []
+    - mappings: list[IntegrationMapping] = []
+    - source: SourceLocation | None = None
+    - syncs: list[IntegrationSync] = []
+    - title: str | None = None
+
+ir_class: IntegrationSync
+  required:
+    - from_foreign_model: str
+    - from_operation: str
+    - from_service: str
+    - into_entity: str
+    - mode: SyncMode
+    - name: str
+  optional:
+    - match_rules: list[MatchRule] = []
+    - schedule: str | None = None
+
+ir_class: IntegrationsSpec
+  required: (none)
+  optional:
+    - app_mount_route: str = '/app'
+    - auth_provider: AuthProvider = <AuthProvider.DAZZLE: 'dazzle'>
+
+ir_class: InterfaceEndpointSpec
+  required:
+    - method: str
+    - name: str
+    - path: str
+  optional:
+    - description: str | None = None
+    - request_entity: str | None = None
+    - response_entity: str | None = None
+
+ir_class: InterfaceSpec
+  required:
+    - name: str
+  optional:
+    - auth: InterfaceAuthMethod = <InterfaceAuthMethod.API_KEY: 'api_key'>
+    - base_path: str = '/'
+    - endpoints: list[InterfaceEndpointSpec] = []
+    - format: InterfaceFormat = <InterfaceFormat.REST: 'rest'>
+    - rate_limit: str | None = None
+    - title: str | None = None
+    - version: str = 'v1'
+
+ir_class: InterfacesSpec
+  required: (none)
+  optional:
+    - apis: list[InterfaceSpec] = []
+    - default_auth: InterfaceAuthMethod = <InterfaceAuthMethod.API_KEY: 'api_key'>
+    - default_rate_limit: str | None = None
+
+ir_class: InvariantFieldRef
+  required:
+    - path: list[str]
+  optional: (none)
+
+ir_class: InvariantLiteral
+  required:
+    - value: int | float | str | bool | None
+  optional: (none)
+
+ir_class: InvariantSpec
+  required: (none)
+  optional:
+    - code: str | None = None
+    - expression: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr | None = None
+    - invariant_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - message: str | None = None
+
+ir_class: IslandEventSpec
+  required:
+    - name: str
+  optional:
+    - detail_fields: list[str] = []
+
+ir_class: IslandPropSpec
+  required:
+    - name: str
+  optional:
+    - default: str | int | float | bool | None = None
+    - type: str = 'str'
+
+ir_class: IslandSpec
+  required:
+    - name: str
+  optional:
+    - entity: str | None = None
+    - events: list[IslandEventSpec] = []
+    - fallback: str | None = None
+    - props: list[IslandPropSpec] = []
+    - src: str | None = None
+    - title: str | None = None
+
+ir_class: LLMConfigSpec
+  required: (none)
+  optional:
+    - artifact_store: ArtifactStore = <ArtifactStore.LOCAL: 'local'>
+    - budget_alert_usd: Decimal | None = None
+    - concurrency: dict[str, int] | None = None
+    - default_model: str | None = None
+    - default_provider: LLMProvider | None = None
+    - logging: LoggingPolicySpec = <factory:LoggingPolicySpec>
+    - rate_limits: dict[str, int] | None = None
+
+ir_class: LLMIntentSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - model_ref: str | None = None
+    - output_schema: str | None = None
+    - pii: PIIPolicySpec | None = None
+    - prompt_template: str = ''
+    - retry: RetryPolicySpec | None = None
+    - timeout_seconds: int = 30
+    - title: str | None = None
+    - triggers: list[LLMTriggerSpec] = []
+    - vision: bool = False
+
+ir_class: LLMModelSpec
+  required:
+    - model_id: str
+    - name: str
+    - provider: LLMProvider
+  optional:
+    - cost_per_1k_input: Decimal | None = None
+    - cost_per_1k_output: Decimal | None = None
+    - max_tokens: int = 4096
+    - tier: ModelTier = <ModelTier.BALANCED: 'balanced'>
+    - title: str | None = None
+
+ir_class: LLMTriggerSpec
+  required:
+    - on_entity: str
+    - on_event: LLMTriggerEvent
+  optional:
+    - input_map: dict[str, str] = {}
+    - when: str | None = None
+    - write_back: dict[str, str] | None = None
+
+ir_class: LayoutCompositionSpec
+  required: (none)
+  optional:
+    - surfaces: SurfaceCompositionRule = <factory:SurfaceCompositionRule>
+
+ir_class: LayoutPlan
+  required:
+    - stage: Stage
+    - workspace_id: str
+  optional:
+    - metadata: dict[str, Any] = {}
+    - over_budget_signals: list[str] = []
+    - persona_id: str | None = None
+    - surfaces: list[LayoutSurface] = []
+    - warnings: list[str] = []
+
+ir_class: LayoutSignal
+  required:
+    - id: str
+    - kind: AttentionSignalKind
+    - label: str
+    - source: str
+  optional:
+    - attention_weight: float = 0.5
+    - constraints: dict[str, Any] = {}
+    - density_preference: str = 'comfortable'
+    - interaction_frequency: str = 'occasional'
+    - mode: str = 'read'
+    - urgency: str = 'medium'
+
+ir_class: LayoutSpec
+  required: (none)
+  optional:
+    - auth: AuthEntrySpec = <factory:AuthEntrySpec>
+    - footer: FooterSpec = <factory:FooterSpec>
+    - nav: NavSpec = <factory:NavSpec>
+    - section_backgrounds: str = ''
+    - theme: ThemeKind = <ThemeKind.SAAS_DEFAULT: 'saas-default'>
+
+ir_class: LayoutSurface
+  required:
+    - id: str
+    - stage: Stage
+  optional:
+    - assigned_signals: list[str] = []
+    - capacity: float = 1.0
+    - constraints: dict[str, Any] = {}
+    - priority: int = 1
+
+ir_class: LedgerAccountRef
+  required:
+    - ledger_name: str
+  optional:
+    - create_on_entity_create: bool = True
+
+ir_class: LedgerSpec
+  required:
+    - account_code: int
+    - account_type: AccountType
+    - currency: str
+    - ledger_id: int
+    - name: str
+  optional:
+    - flags: list[AccountFlag] = []
+    - intent: str | None = None
+    - label: str | None = None
+    - metadata_mapping: dict[str, str] = {}
+    - sync: LedgerSyncSpec | None = None
+    - tenant_scoped: bool = True
+
+ir_class: LedgerSyncSpec
+  required:
+    - target_entity: str
+    - target_field: str
+  optional:
+    - cron: str | None = None
+    - match_field: str = 'id'
+    - trigger: SyncTrigger = <SyncTrigger.AFTER_TRANSFER: 'after_transfer'>
+
+ir_class: LegalPageSpec
+  required:
+    - route: str
+    - source: ContentSourceSpec
+  optional: (none)
+
+ir_class: LegalPagesSpec
+  required: (none)
+  optional:
+    - privacy: LegalPageSpec | None = None
+    - terms: LegalPageSpec | None = None
+
+ir_class: LifecycleReport
+  required:
+    - current_focus: str
+    - maturity: Literal[new_domain, building, evaluating, mature]
+    - steps: list[LifecycleStep]
+  optional: (none)
+
+ir_class: LifecycleSpec
+  required:
+    - states: list[LifecycleStateSpec]
+    - status_field: str
+  optional:
+    - transitions: list[LifecycleTransitionSpec] = []
+
+ir_class: LifecycleStateSpec
+  required:
+    - name: str
+    - order: int
+  optional: (none)
+
+ir_class: LifecycleStep
+  required:
+    - evidence: str
+    - name: str
+    - status: Literal[complete, partial, not_started]
+    - step: int
+  optional:
+    - suggestions: list[str] = []
+
+ir_class: LifecycleTransitionSpec
+  required:
+    - from_state: str
+    - to_state: str
+  optional:
+    - evidence: str | None = None
+    - roles: list[str] = []
+
+ir_class: LiteralValue
+  required:
+    - value: int | float
+  optional: (none)
+
+ir_class: LoggingPolicySpec
+  required: (none)
+  optional:
+    - log_completions: bool = True
+    - log_prompts: bool = True
+    - redact_pii: bool = True
+
+ir_class: LogicalExpr
+  required:
+    - left: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+    - operator: LogicalOperator
+    - right: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+  optional: (none)
+
+ir_class: LogoItem
+  required:
+    - name: str
+    - src: str
+  optional:
+    - href: str | None = None
+
+ir_class: LogoSpec
+  required: (none)
+  optional:
+    - alt: str | None = None
+    - image_path: str | None = None
+    - mode: LogoMode = <LogoMode.TEXT: 'text'>
+    - text: str | None = None
+
+ir_class: MappingRule
+  required:
+    - source: Expression
+    - target_field: str
+  optional: (none)
+
+ir_class: MappingSpec
+  required:
+    - source_path: str
+    - target_field: str
+  optional:
+    - is_template: bool = False
+
+ir_class: MappingTriggerSpec
+  required:
+    - trigger_type: MappingTriggerType
+  optional:
+    - condition_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - from_state: str | None = None
+    - label: str | None = None
+    - to_state: str | None = None
+
+ir_class: MatchPatternSpec
+  required:
+    - field_name: str
+  optional:
+    - kind: MatchPatternKind = <MatchPatternKind.EXACT: 'exact'>
+    - value: str | list[str] = ''
+
+ir_class: MatchRule
+  required:
+    - entity_field: str
+    - foreign_field: str
+  optional: (none)
+
+ir_class: MediaSpec
+  required: (none)
+  optional:
+    - alt: str | None = None
+    - kind: MediaKind = <MediaKind.NONE: 'none'>
+    - src: str | None = None
+
+ir_class: MessageFieldSpec
+  required:
+    - name: str
+    - type_name: str
+  optional:
+    - default: str | None = None
+    - description: str | None = None
+    - required: bool = True
+
+ir_class: MessageSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - fields: list[MessageFieldSpec] = []
+    - title: str | None = None
+
+ir_class: ModuleFragment
+  required: (none)
+  optional:
+    - analytics: AnalyticsSpec | None = None
+    - apis: list[APISpec] = []
+    - approvals: list[ApprovalSpec] = []
+    - archetypes: list[ArchetypeSpec] = []
+    - assets: list[AssetSpec] = []
+    - channels: list[ChannelSpec] = []
+    - data_products: DataProductsSpec | None = None
+    - documents: list[DocumentSpec] = []
+    - domain_services: list[DomainServiceSpec] = []
+    - e2e_flows: list[FlowSpec] = []
+    - entities: list[EntitySpec] = []
+    - enums: list[EnumSpec] = []
+    - event_model: EventModelSpec | None = None
+    - experiences: list[ExperienceSpec] = []
+    - feedback_widget: FeedbackWidgetSpec | None = None
+    - fixtures: list[FixtureSpec] = []
+    - foreign_models: list[ForeignModelSpec] = []
+    - grant_schemas: list[GrantSchemaSpec] = []
+    - hless_pragma: HLESSPragma | None = None
+    - integrations: list[IntegrationSpec] = []
+    - interfaces: InterfacesSpec | None = None
+    - islands: list[IslandSpec] = []
+    - ledgers: list[LedgerSpec] = []
+    - llm_config: LLMConfigSpec | None = None
+    - llm_intents: list[LLMIntentSpec] = []
+    - llm_models: list[LLMModelSpec] = []
+    - messages: list[MessageSpec] = []
+    - nav_definitions: list[NavDefinitionSpec] = []
+    - notifications: list[NotificationSpec] = []
+    - params: list[ParamSpec] = []
+    - personas: list[PersonaSpec] = []
+    - policies: PoliciesSpec | None = None
+    - processes: list[ProcessSpec] = []
+    - projections: list[ProjectionSpec] = []
+    - questions: list[QuestionSpec] = []
+    - rhythms: list[RhythmSpec] = []
+    - rules: list[RuleSpec] = []
+    - scenarios: list[ScenarioSpec] = []
+    - schedules: list[ScheduleSpec] = []
+    - slas: list[SLASpec] = []
+    - stories: list[StorySpec] = []
+    - streams: list[StreamSpec] = []
+    - subprocessors: list[SubprocessorSpec] = []
+    - subscriptions: list[SubscribeSpec] = []
+    - surfaces: list[SurfaceSpec] = []
+    - templates: list[TemplateSpec] = []
+    - tenancy: TenancySpec | None = None
+    - tests: list[TestSpec] = []
+    - transactions: list[TransactionSpec] = []
+    - views: list[ViewSpec] = []
+    - webhooks: list[WebhookSpec] = []
+    - workspaces: list[WorkspaceSpec] = []
+
+ir_class: ModuleIR
+  required:
+    - file: Path
+    - name: str
+  optional:
+    - app_config: AppConfigSpec | None = None
+    - app_name: str | None = None
+    - app_title: str | None = None
+    - fragment: ModuleFragment = <factory:ModuleFragment>
+    - uses: list[str] = []
+
+ir_class: Money
+  required:
+    - amount_minor: int
+    - currency: str
+  optional: (none)
+
+ir_class: MoneyWithScale
+  required:
+    - amount_minor: int
+    - currency: str
+  optional:
+    - scale_override: int | None = None
+
+ir_class: NavDefinitionSpec
+  required:
+    - name: str
+  optional:
+    - groups: list[NavGroupSpec] = []
+
+ir_class: NavGroupSpec
+  required:
+    - label: str
+  optional:
+    - collapsed: bool = False
+    - icon: str | None = None
+    - items: list[NavItemIR] = []
+
+ir_class: NavItemIR
+  required:
+    - entity: str
+  optional:
+    - icon: str | None = None
+
+ir_class: NavItemSpec
+  required:
+    - href: str
+    - label: str
+  optional: (none)
+
+ir_class: NavSpec
+  required: (none)
+  optional:
+    - authenticated: list[NavItemSpec] = []
+    - public: list[NavItemSpec] = []
+
+ir_class: NotExpr
+  required:
+    - operand: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+  optional: (none)
+
+ir_class: NoticeSpec
+  required:
+    - title: str
+  optional:
+    - body: str = ''
+    - tone: str = 'neutral'
+
+ir_class: NotificationRecipient
+  required: (none)
+  optional:
+    - kind: str = 'role'
+    - value: str = ''
+
+ir_class: NotificationSpec
+  required:
+    - name: str
+    - trigger: NotificationTrigger
+  optional:
+    - channels: list[NotificationChannel] = <factory:NotificationSpec.<lambda>>
+    - message: str = ''
+    - preference: NotificationPreference = <NotificationPreference.OPT_OUT: 'opt_out'>
+    - recipients: NotificationRecipient = <factory:NotificationRecipient>
+    - title: str | None = None
+
+ir_class: NotificationTrigger
+  required:
+    - entity: str
+  optional:
+    - event: str = 'created'
+    - field: str | None = None
+    - to_value: str | None = None
+
+ir_class: Outcome
+  required:
+    - kind: OutcomeKind
+    - target: str
+  optional:
+    - action: str | None = None
+    - new_tab: bool = True
+    - step: str | None = None
+    - url: str | None = None
+
+ir_class: OverlaySeriesSpec
+  required:
+    - aggregate_expr: str
+    - label: str
+  optional:
+    - filter: ConditionExpr | None = None
+    - source: str | None = None
+
+ir_class: PIIAnnotation
+  required: (none)
+  optional:
+    - category: PIICategory | None = None
+    - sensitivity: PIISensitivity = <PIISensitivity.STANDARD: 'standard'>
+
+ir_class: PIIPolicySpec
+  required: (none)
+  optional:
+    - action: PIIAction = <PIIAction.WARN: 'warn'>
+    - patterns: list[str] = []
+    - scan: bool = False
+
+ir_class: PageSpec
+  required:
+    - route: str
+  optional:
+    - redirect_to: str | None = None
+    - sections: list[SectionSpec] = []
+    - source: ContentSourceSpec | None = None
+    - title: str | None = None
+    - type: PageKind = <PageKind.LANDING: 'landing'>
+
+ir_class: PaletteSpec
+  required: (none)
+  optional:
+    - accent_hue_offset: float = 30.0
+    - brand_chroma: float = 0.15
+    - brand_hue: float = 260.0
+    - mode: ColorMode = <ColorMode.LIGHT: 'light'>
+    - neutral_chroma: float = 0.02
+    - semantic_overrides: SemanticColorOverrides = <factory:SemanticColorOverrides>
+
+ir_class: ParamConstraints
+  required: (none)
+  optional:
+    - enum_values: list[str] | None = None
+    - max_length: int | None = None
+    - max_value: float | None = None
+    - min_length: int | None = None
+    - min_value: float | None = None
+    - ordered: str | None = None
+    - pattern: str | None = None
+    - range: list[float] | None = None
+
+ir_class: ParamRef
+  required:
+    - default: Any
+    - key: str
+    - param_type: str
+  optional: (none)
+
+ir_class: ParamSpec
+  required:
+    - default: Any
+    - key: str
+    - param_type: str
+    - scope: Literal[system, tenant, user]
+  optional:
+    - category: str | None = None
+    - constraints: ParamConstraints | None = None
+    - depends_on: list[str] = []
+    - description: str | None = None
+    - sensitive: bool = False
+
+ir_class: PathCheck
+  required:
+    - op: CompOp
+    - path: list[str]
+    - value: ValueRef
+  optional:
+    - kind: Literal[path_check] = 'path_check'
+
+ir_class: PermissionRule
+  required:
+    - operation: PermissionKind
+  optional:
+    - condition: ConditionExpr | None = None
+    - effect: PolicyEffect = <PolicyEffect.PERMIT: 'permit'>
+    - personas: list[str] = []
+    - require_auth: bool = True
+
+ir_class: PersonaBlueprint
+  required:
+    - description: str
+    - persona_name: str
+  optional:
+    - default_role: str | None = None
+    - default_user_count: int = 1
+
+ir_class: PersonaLayout
+  required:
+    - id: str
+    - label: str
+  optional:
+    - attention_biases: dict[str, float] = {}
+    - goals: list[str] = []
+    - proficiency_level: str = 'intermediate'
+    - session_style: str = 'deep_work'
+
+ir_class: PersonaScenarioEntry
+  required:
+    - persona_id: str
+    - start_route: str
+  optional:
+    - seed_script: str | None = None
+
+ir_class: PersonaSpec
+  required:
+    - id: str
+    - label: str
+  optional:
+    - backed_by: str | None = None
+    - default_route: str | None = None
+    - default_workspace: str | None = None
+    - description: str | None = None
+    - goals: list[str] = []
+    - interactive: bool = True
+    - link_via: str = 'email'
+    - proficiency_level: Literal[novice, intermediate, expert] = 'intermediate'
+
+ir_class: PersonaVariant
+  required:
+    - persona: str
+  optional:
+    - action_primary: str | None = None
+    - defaults: dict[str, Any] = {}
+    - empty_message: str | None = None
+    - focus: list[str] = []
+    - hide: list[str] = []
+    - purpose: str | None = None
+    - read_only: bool = False
+    - scope: ConditionExpr | None = None
+    - scope_all: bool = False
+    - show: list[str] = []
+    - show_aggregate: list[str] = []
+
+ir_class: PhaseSpec
+  required:
+    - name: str
+  optional:
+    - cadence: str | None = None
+    - depends_on: str | None = None
+    - kind: PhaseKind | None = None
+    - scenes: list[SceneSpec] = []
+    - source: SourceLocation | None = None
+
+ir_class: PipelineStageSpec
+  required:
+    - label: str
+  optional:
+    - caption: str = ''
+    - progress: str = ''
+    - value: str = ''
+
+ir_class: PoliciesSpec
+  required: (none)
+  optional:
+    - audit_access: bool = True
+    - classifications: list[ClassificationSpec] = []
+    - default_retention: RetentionPolicy = <RetentionPolicy.MEDIUM: 'medium'>
+    - erasures: list[ErasureSpec] = []
+
+ir_class: PricingTier
+  required:
+    - name: str
+    - price: str
+  optional:
+    - cta: CTASpec | None = None
+    - description: str | None = None
+    - features: list[str] = []
+    - highlighted: bool = False
+    - period: str = 'month'
+
+ir_class: ProcessEventEmission
+  required: (none)
+  optional:
+    - on_complete: str | None = None
+    - on_failure: str | None = None
+    - on_start: str | None = None
+
+ir_class: ProcessInputField
+  required:
+    - name: str
+  optional:
+    - default: str | None = None
+    - description: str | None = None
+    - required: bool = False
+    - type: str = 'str'
+
+ir_class: ProcessOutputField
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - satisfies: list[SatisfiesRef] = []
+    - type: str = 'str'
+
+ir_class: ProcessSpec
+  required:
+    - name: str
+  optional:
+    - compensations: list[CompensationSpec] = []
+    - description: str | None = None
+    - events: ProcessEventEmission = <factory:ProcessEventEmission>
+    - implements: list[str] = []
+    - inputs: list[ProcessInputField] = []
+    - outputs: list[ProcessOutputField] = []
+    - overlap_policy: OverlapPolicy = <OverlapPolicy.SKIP: 'skip'>
+    - source: SourceLocation | None = None
+    - steps: list[ProcessStepSpec] = []
+    - timeout_seconds: int = 86400
+    - title: str | None = None
+    - trigger: ProcessTriggerSpec | None = None
+
+ir_class: ProcessStepSpec
+  required:
+    - name: str
+  optional:
+    - channel: str | None = None
+    - compensate_with: str | None = None
+    - condition: str | None = None
+    - effects: list[StepEffect] = []
+    - foreach_source: str | None = None
+    - foreach_steps: list[ProcessStepSpec] = []
+    - human_task: HumanTaskSpec | None = None
+    - inputs: list[InputMapping] = []
+    - kind: StepKind = <StepKind.SERVICE: 'service'>
+    - llm_input_map: dict[str, str] | None = None
+    - llm_intent: str | None = None
+    - message: str | None = None
+    - on_failure: str | None = None
+    - on_false: str | None = None
+    - on_success: str | None = None
+    - on_true: str | None = None
+    - output_mapping: str | None = None
+    - parallel_policy: ParallelFailurePolicy = <ParallelFailurePolicy.FAIL_FAST: 'fail_fast'>
+    - parallel_steps: list[ProcessStepSpec] = []
+    - query_entity: str | None = None
+    - query_filter: dict[str, Any] | None = None
+    - query_limit: int = 1000
+    - retry: RetryConfig | None = None
+    - satisfies: list[SatisfiesRef] = []
+    - service: str | None = None
+    - subprocess: str | None = None
+    - timeout_seconds: int = 30
+    - wait_duration_seconds: int | None = None
+    - wait_for_signal: str | None = None
+
+ir_class: ProcessTriggerSpec
+  required:
+    - kind: ProcessTriggerKind
+  optional:
+    - cron: str | None = None
+    - entity_name: str | None = None
+    - event_type: str | None = None
+    - from_status: str | None = None
+    - interval_seconds: int | None = None
+    - process_name: str | None = None
+    - timezone: str = 'UTC'
+    - to_status: str | None = None
+
+ir_class: ProfileCardStatSpec
+  required:
+    - label: str
+    - value: str
+  optional: (none)
+
+ir_class: ProjectionHandlerSpec
+  required:
+    - action: ProjectionAction
+    - event_name: str
+  optional:
+    - condition: str | None = None
+    - field_mappings: dict[str, Any] = {}
+    - key_field: str | None = None
+
+ir_class: ProjectionSpec
+  required:
+    - name: str
+    - source_topic: str
+  optional:
+    - description: str | None = None
+    - handlers: list[ProjectionHandlerSpec] = []
+    - target_entity: str | None = None
+
+ir_class: ProviderConfigSpec
+  required: (none)
+  optional:
+    - max_concurrent: int | None = None
+    - max_per_minute: int | None = None
+    - options: dict[str, str] = {}
+
+ir_class: PublishSpec
+  required:
+    - entity_name: str
+    - event_name: str
+    - trigger: EventTriggerKind
+  optional:
+    - condition: str | None = None
+    - field_name: str | None = None
+
+ir_class: QuestionSpec
+  required:
+    - question_id: str
+    - title: str
+  optional:
+    - blocks: list[str] = []
+    - description: str | None = None
+    - raised_by: str | None = None
+    - resolution: str | None = None
+    - source: SourceLocation | None = None
+    - status: QuestionStatus = <QuestionStatus.OPEN: 'open'>
+
+ir_class: ReceiveActionSpec
+  required:
+    - kind: ReceiveActionKind
+  optional:
+    - entity_name: str | None = None
+    - service_name: str | None = None
+    - upsert_field: str | None = None
+
+ir_class: ReceiveMappingSpec
+  required:
+    - source_field: str
+    - target_field: str
+  optional: (none)
+
+ir_class: ReceiveOperationSpec
+  required:
+    - message_name: str
+    - name: str
+  optional:
+    - action: ReceiveActionSpec | None = None
+    - mappings: list[ReceiveMappingSpec] = []
+    - match_patterns: list[MatchPatternSpec] = []
+    - options: dict[str, str] = {}
+
+ir_class: ReferenceBand
+  required:
+    - from_value: float
+    - label: str
+    - to_value: float
+  optional:
+    - color: str = 'target'
+
+ir_class: ReferenceLine
+  required:
+    - label: str
+    - value: float
+  optional:
+    - style: str = 'solid'
+
+ir_class: RelatedGroup
+  required:
+    - display: RelatedDisplayMode
+    - name: str
+    - show: list[str]
+  optional:
+    - title: str | None = None
+
+ir_class: RetryConfig
+  required: (none)
+  optional:
+    - backoff: RetryBackoff = <RetryBackoff.EXPONENTIAL: 'exponential'>
+    - backoff_coefficient: float = 2.0
+    - initial_interval_seconds: int = 1
+    - max_attempts: int = 3
+    - max_interval_seconds: int = 60
+
+ir_class: RetryPolicySpec
+  required: (none)
+  optional:
+    - backoff: RetryBackoff = <RetryBackoff.EXPONENTIAL: 'exponential'>
+    - initial_delay_ms: int = 1000
+    - max_attempts: int = 3
+    - max_delay_ms: int = 30000
+
+ir_class: RhythmSpec
+  required:
+    - name: str
+    - persona: str
+  optional:
+    - cadence: str | None = None
+    - phases: list[PhaseSpec] = []
+    - source: SourceLocation | None = None
+    - title: str | None = None
+
+ir_class: RoleCheck
+  required:
+    - role_name: str
+  optional: (none)
+
+ir_class: RuleSpec
+  required:
+    - rule_id: str
+    - title: str
+  optional:
+    - description: str | None = None
+    - invariant: str | None = None
+    - kind: RuleKind = <RuleKind.CONSTRAINT: 'constraint'>
+    - origin: RuleOrigin = <RuleOrigin.TOP_DOWN: 'top_down'>
+    - scope: list[str] = []
+    - source: SourceLocation | None = None
+    - status: RuleStatus = <RuleStatus.DRAFT: 'draft'>
+
+ir_class: SLABreachActionSpec
+  required: (none)
+  optional:
+    - field_assignments: list[FieldAssignment] = []
+    - notify_role: str | None = None
+
+ir_class: SLAConditionSpec
+  required: (none)
+  optional:
+    - field: str = 'status'
+    - operator: str = '->'
+    - value: str = ''
+
+ir_class: SLASpec
+  required:
+    - name: str
+  optional:
+    - business_hours: BusinessHoursSpec | None = None
+    - completes_when: SLAConditionSpec | None = None
+    - entity: str = ''
+    - on_breach: SLABreachActionSpec | None = None
+    - pauses_when: SLAConditionSpec | None = None
+    - starts_when: SLAConditionSpec | None = None
+    - tiers: list[SLATierSpec] = []
+    - title: str | None = None
+
+ir_class: SLATierSpec
+  required: (none)
+  optional:
+    - duration_unit: str = 'hours'
+    - duration_value: int | ParamRef = 0
+    - name: str = ''
+
+ir_class: ScenarioSpec
+  required:
+    - id: str
+    - name: str
+  optional:
+    - demo_fixtures: list[DemoFixture] = []
+    - description: str | None = None
+    - persona_entries: list[PersonaScenarioEntry] = []
+    - seed_data_path: str | None = None
+
+ir_class: SceneDimensionScore
+  required:
+    - dimension: Literal[arrival, orientation, action, completion, confidence]
+    - evidence: str
+    - score: Literal[pass, partial, fail, skip]
+  optional:
+    - root_cause: str | None = None
+
+ir_class: SceneEvaluation
+  required:
+    - dimensions: list[SceneDimensionScore]
+    - gap_type: Literal[capability, surface, workflow, feedback, none]
+    - phase_name: str
+    - scene_name: str
+  optional:
+    - story_ref: str | None = None
+
+ir_class: SceneSpec
+  required:
+    - name: str
+    - surface: str
+  optional:
+    - actions: list[str] = []
+    - entity: str | None = None
+    - expects: str | None = None
+    - source: SourceLocation | None = None
+    - story: str | None = None
+    - title: str | None = None
+
+ir_class: ScheduleSpec
+  required:
+    - name: str
+  optional:
+    - catch_up: bool = False
+    - cron: Any = None
+    - description: str | None = None
+    - events: ProcessEventEmission = <factory:ProcessEventEmission>
+    - implements: list[str] = []
+    - interval_seconds: int | None = None
+    - overlap: OverlapPolicy = <OverlapPolicy.SKIP: 'skip'>
+    - steps: list[ProcessStepSpec] = []
+    - timeout_seconds: Any = 3600
+    - timezone: Any = 'UTC'
+    - title: str | None = None
+
+ir_class: ScopeRule
+  required:
+    - operation: PermissionKind
+  optional:
+    - condition: ConditionExpr | None = None
+    - personas: list[str] = []
+    - predicate: Any = None
+
+ir_class: SectionSpec
+  required:
+    - type: SectionKind
+  optional:
+    - alignment: str | None = None
+    - background: str | None = None
+    - body: str | None = None
+    - columns: list[ComparisonColumn] = []
+    - headline: str | None = None
+    - id: str | None = None
+    - items: list[FeatureItem] | list[FAQItem] | list[TestimonialItem] | list[StatItem] | list[StepItem] | list[LogoItem] | list[ComparisonRow] | list[CardItem] | list[TrustBarItem] | list[TeamMember] = []
+    - media: MediaSpec | None = None
+    - primary_cta: CTASpec | None = None
+    - secondary_cta: CTASpec | None = None
+    - source: ForwardRef('ContentSourceSpec | None') = None
+    - subhead: str | None = None
+    - tiers: list[PricingTier] = []
+
+ir_class: SecurityConfig
+  required: (none)
+  optional:
+    - cors_origins: list[str] | None = None
+    - enable_csp: bool = False
+    - enable_hsts: bool = False
+    - profile: SecurityProfile = <SecurityProfile.BASIC: 'basic'>
+    - require_auth_by_default: bool = False
+    - tenant_isolation: bool = False
+    - two_factor: TwoFactorConfig = TwoFactorConfig(enabled=False, methods=[<TwoFactorMethod.EMAIL_OTP: 'email_otp'>, <TwoFactorMethod.TOTP: 'totp'>], otp_length=6, otp_expiry_seconds=300, recovery_code_count=8, enforce_for_roles=[])
+
+ir_class: SeedFieldTemplate
+  required:
+    - field: str
+    - template: str
+  optional: (none)
+
+ir_class: SeedTemplateSpec
+  required: (none)
+  optional:
+    - fields: list[SeedFieldTemplate] = []
+    - match_field: str | None = None
+    - month_anchor: int = 1
+    - strategy: SeedStrategy = <SeedStrategy.ROLLING_WINDOW: 'rolling_window'>
+    - window_end: int = 3
+    - window_start: int = -1
+
+ir_class: SemanticColorOverrides
+  required: (none)
+  optional:
+    - danger_hue: float | None = None
+    - info_hue: float | None = None
+    - success_hue: float | None = None
+    - warning_hue: float | None = None
+
+ir_class: SendOperationSpec
+  required:
+    - message_name: str
+    - name: str
+  optional:
+    - delivery_mode: DeliveryMode = <DeliveryMode.OUTBOX: 'outbox'>
+    - mappings: list[MappingSpec] = []
+    - options: dict[str, str] = {}
+    - throttle: ThrottleSpec | None = None
+    - trigger: SendTriggerSpec | None = None
+
+ir_class: SendTriggerSpec
+  required:
+    - kind: SendTriggerKind
+  optional:
+    - cron_expression: str | None = None
+    - entity_name: str | None = None
+    - event: EntityEvent | None = None
+    - field_name: str | None = None
+    - field_value: str | None = None
+    - from_state: str | None = None
+    - interval_seconds: int | None = None
+    - service_name: str | None = None
+    - to_state: str | None = None
+
+ir_class: ServiceFieldSpec
+  required:
+    - name: str
+    - type_name: str
+  optional:
+    - description: str | None = None
+    - required: bool = True
+
+ir_class: ShapeSpec
+  required: (none)
+  optional:
+    - border_width_px: int = 1
+    - radius_preset: ShapePreset = <ShapePreset.SUBTLE: 'subtle'>
+    - shadow_preset: ShadowPreset = <ShadowPreset.MEDIUM: 'medium'>
+
+ir_class: SideEffectPolicy
+  required: (none)
+  optional:
+    - allowed_effects: list[str] = []
+    - external_effects_allowed: bool = False
+
+ir_class: SiteSpec
+  required: (none)
+  optional:
+    - auth_pages: AuthPagesSpec = <factory:AuthPagesSpec>
+    - brand: BrandSpec = <factory:SiteSpec.<lambda>>
+    - integrations: IntegrationsSpec = <factory:IntegrationsSpec>
+    - layout: LayoutSpec = <factory:LayoutSpec>
+    - legal: LegalPagesSpec = <factory:LegalPagesSpec>
+    - pages: list[PageSpec] = []
+    - version: int = 1
+
+ir_class: SortSpec
+  required:
+    - field: str
+  optional:
+    - direction: str = 'asc'
+
+ir_class: SourceLocation
+  required:
+    - column: int
+    - file: str
+    - line: int
+  optional: (none)
+
+ir_class: SpacingSpec
+  required: (none)
+  optional:
+    - base_unit_px: int = 4
+    - density: DensityEnum = <DensityEnum.COMFORTABLE: 'comfortable'>
+
+ir_class: StatItem
+  required:
+    - label: str
+    - value: str
+  optional: (none)
+
+ir_class: StateMachineSpec
+  required:
+    - status_field: str
+  optional:
+    - states: list[str] = []
+    - transitions: list[StateTransition] = []
+
+ir_class: StateTransition
+  required:
+    - from_state: str
+    - to_state: str
+  optional:
+    - auto_spec: AutoTransitionSpec | None = None
+    - effects: list[StepEffect] = []
+    - guards: list[TransitionGuard] = []
+    - trigger: TransitionTrigger = <TransitionTrigger.MANUAL: 'manual'>
+
+ir_class: StatusListEntrySpec
+  required:
+    - title: str
+  optional:
+    - caption: str = ''
+    - icon: str = ''
+    - state: str = 'neutral'
+
+ir_class: StepEffect
+  required:
+    - action: EffectAction
+    - entity_name: str
+  optional:
+    - assignments: list[FieldAssignment] = []
+    - where: str | None = None
+
+ir_class: StepItem
+  required:
+    - body: str
+    - step: int
+    - title: str
+  optional: (none)
+
+ir_class: StepPrefill
+  required:
+    - expression: str
+    - field: str
+  optional: (none)
+
+ir_class: StepTransition
+  required:
+    - event: str
+    - next_step: str
+  optional: (none)
+
+ir_class: StoryCondition
+  required:
+    - expression: str
+  optional:
+    - field_path: str | None = None
+
+ir_class: StoryException
+  required:
+    - condition: str
+  optional:
+    - then_outcomes: list[str] = []
+
+ir_class: StorySpec
+  required:
+    - actor: str
+    - story_id: str
+    - title: str
+    - trigger: StoryTrigger
+  optional:
+    - description: str | None = None
+    - given: list[StoryCondition] = []
+    - scope: list[str] = []
+    - source: SourceLocation | None = None
+    - status: StoryStatus = <StoryStatus.DRAFT: 'draft'>
+    - then: list[StoryCondition] = []
+    - unless: list[StoryException] = []
+    - when: list[StoryCondition] = []
+
+ir_class: StreamSchema
+  required:
+    - name: str
+  optional:
+    - compatibility: SchemaCompatibility = <SchemaCompatibility.ADDITIVE: 'additive'>
+    - description: str | None = None
+    - extends: str | None = None
+    - fields: list[FieldSpec] = []
+    - version: str = 'v1'
+
+ir_class: StreamSpec
+  required:
+    - idempotency: IdempotencyStrategy
+    - name: str
+    - ordering_scope: str
+    - partition_key: str
+    - record_kind: RecordKind
+    - time_semantics: TimeSemantics
+  optional:
+    - causality_fields: list[str] = <factory:StreamSpec.<lambda>>
+    - cross_partition: bool = False
+    - description: str | None = None
+    - expected_outcomes: list[ExpectedOutcome] | None = None
+    - invariants: list[str] = []
+    - lineage: DerivationLineage | None = None
+    - notes: list[str] = []
+    - schemas: list[StreamSchema] = []
+    - side_effect_policy: SideEffectPolicy = <factory:SideEffectPolicy>
+
+ir_class: SubprocessorSpec
+  required:
+    - consent_category: ConsentCategory
+    - handler: str
+    - jurisdiction: str
+    - label: str
+    - legal_basis: LegalBasis
+    - name: str
+    - retention: str
+  optional:
+    - cookies: list[str] = []
+    - data_categories: list[DataCategory] = []
+    - dpa_url: str | None = None
+    - handler_address: str | None = None
+    - is_framework_default: bool = False
+    - purpose: str = ''
+    - scc_url: str | None = None
+
+ir_class: SubscribeSpec
+  required:
+    - group_id: str
+    - topic: str
+  optional:
+    - description: str | None = None
+    - handlers: list[EventHandlerSpec] = []
+
+ir_class: SurfaceAccessSpec
+  required: (none)
+  optional:
+    - allow_personas: list[str] = []
+    - deny_personas: list[str] = []
+    - redirect_unauthenticated: str = '/'
+    - require_auth: bool = False
+
+ir_class: SurfaceAction
+  required:
+    - name: str
+    - outcome: Outcome
+    - trigger: SurfaceTrigger
+  optional:
+    - label: str | None = None
+
+ir_class: SurfaceActionTriple
+  required:
+    - action: str
+    - requires_permission: object
+    - visible_to: list[str]
+  optional: (none)
+
+ir_class: SurfaceCompositionRule
+  required: (none)
+  optional:
+    - content_max_width_px: int = 1200
+    - max_columns: int = 3
+    - sidebar_width_px: int = 260
+
+ir_class: SurfaceElement
+  required:
+    - field_name: str
+  optional:
+    - help: str | None = None
+    - label: str | None = None
+    - options: dict[str, Any] = {}
+    - visible: ConditionExpr | None = None
+    - when_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+
+ir_class: SurfaceFidelityScore
+  required:
+    - overall: float
+    - semantic: float
+    - story: float
+    - structural: float
+    - surface_name: str
+  optional:
+    - gaps: list[FidelityGap] = []
+    - interaction: float = 1.0
+
+ir_class: SurfaceFieldTriple
+  required:
+    - field_name: str
+    - is_fk: bool
+    - is_required: bool
+    - ref_entity: str | None
+    - widget: WidgetKind
+  optional: (none)
+
+ir_class: SurfaceSection
+  required:
+    - name: str
+  optional:
+    - elements: list[SurfaceElement] = []
+    - note: str | None = None
+    - title: str | None = None
+    - visible: ConditionExpr | None = None
+
+ir_class: SurfaceSpec
+  required:
+    - mode: SurfaceMode
+    - name: str
+  optional:
+    - access: SurfaceAccessSpec | None = None
+    - actions: list[SurfaceAction] = []
+    - companions: list[CompanionSpec] = []
+    - display: str | None = None
+    - entity_ref: str | None = None
+    - headless: bool = False
+    - layout: str = 'wizard'
+    - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
+    - related_groups: list[RelatedGroup] = []
+    - search_fields: list[str] = []
+    - sections: list[SurfaceSection] = []
+    - source: SourceLocation | None = None
+    - title: str | None = None
+    - ux: UXSpec | None = None
+    - view_ref: str | None = None
+
+ir_class: Tautology
+  required: (none)
+  optional:
+    - kind: Literal[tautology] = 'tautology'
+
+ir_class: TemplateAttachmentSpec
+  required: (none)
+  optional:
+    - asset_name: str | None = None
+    - document_name: str | None = None
+    - entity_arg: str | None = None
+    - filename: str = ''
+
+ir_class: TemplateSpec
+  required:
+    - name: str
+  optional:
+    - attachments: list[TemplateAttachmentSpec] = []
+    - body: str = ''
+    - html_body: str | None = None
+    - subject: str = ''
+
+ir_class: TenancySpec
+  required: (none)
+  optional:
+    - entities_excluded: list[str] = []
+    - isolation: TenantIsolationSpec = <factory:TenantIsolationSpec>
+    - provisioning: TenantProvisioningSpec = <factory:TenantProvisioningSpec>
+
+ir_class: TenantBlueprint
+  required:
+    - name: str
+  optional:
+    - notes: str | None = None
+    - slug: str | None = None
+
+ir_class: TenantIsolationSpec
+  required: (none)
+  optional:
+    - cross_tenant_access: bool = False
+    - enforce_in_queries: bool = True
+    - mode: TenancyMode = <TenancyMode.SHARED_SCHEMA: 'shared_schema'>
+    - partition_key: str = 'tenant_id'
+    - topic_namespace: TopicNamespaceMode = <TopicNamespaceMode.SHARED: 'shared'>
+
+ir_class: TenantProvisioningSpec
+  required: (none)
+  optional:
+    - auto_create: bool = True
+    - default_limits: dict[str, int] = {}
+    - require_approval: bool = False
+
+ir_class: TestAction
+  required:
+    - kind: TestActionKind
+    - target: str
+  optional:
+    - data: dict[str, Any] = {}
+
+ir_class: TestAssertion
+  required:
+    - kind: TestAssertionKind
+  optional:
+    - error_message: str | None = None
+    - expected_value: Any | None = None
+    - field_name: str | None = None
+    - operator: TestComparisonOperator | None = None
+
+ir_class: TestDesignSpec
+  required:
+    - test_id: str
+    - title: str
+  optional:
+    - created_at: datetime = <factory:_utcnow>
+    - description: str | None = None
+    - entities: list[str] = []
+    - expected_outcomes: list[str] = []
+    - implementation_path: str | None = None
+    - notes: str | None = None
+    - persona: str | None = None
+    - prompt_version: str = 'v1'
+    - scenario: str | None = None
+    - status: TestDesignStatus = <TestDesignStatus.PROPOSED: 'proposed'>
+    - steps: list[TestDesignStep] = []
+    - surfaces: list[str] = []
+    - tags: list[str] = []
+    - trigger: TestDesignTrigger = <TestDesignTrigger.USER_CLICK: 'user_click'>
+    - updated_at: datetime = <factory:_utcnow>
+
+ir_class: TestDesignStep
+  required:
+    - action: TestDesignAction
+    - target: str
+  optional:
+    - data: dict[str, Any] | None = None
+    - rationale: str | None = None
+
+ir_class: TestGap
+  required:
+    - category: TestGapCategory
+    - target: str
+  optional:
+    - related_entities: list[str] = []
+    - severity: Literal[high, medium, low] = 'medium'
+    - suggestion: str | None = None
+
+ir_class: TestGapAnalysis
+  required:
+    - project_name: str
+  optional:
+    - coverage_score: float = 0.0
+    - gaps: list[TestGap] = []
+    - suggested_designs: list[TestDesignSpec] = []
+    - total_entities: int = 0
+    - total_personas: int = 0
+    - total_scenarios: int = 0
+    - total_surfaces: int = 0
+
+ir_class: TestSetupStep
+  required:
+    - action: TestActionKind
+    - entity_name: str
+    - variable_name: str
+  optional:
+    - data: dict[str, Any] = {}
+
+ir_class: TestSpec
+  required:
+    - action: TestAction
+    - name: str
+  optional:
+    - assertions: list[TestAssertion] = []
+    - description: str | None = None
+    - setup_steps: list[TestSetupStep] = []
+
+ir_class: TestimonialItem
+  required:
+    - author: str
+    - quote: str
+  optional:
+    - avatar: str | None = None
+    - company: str | None = None
+    - role: str | None = None
+
+ir_class: ThemeMetaSpec
+  required: (none)
+  optional:
+    - agent_editable_fields: list[str] = <factory:ThemeMetaSpec.<lambda>>
+    - generated_at: str | None = None
+    - generated_by: str | None = None
+    - version: int = 1
+
+ir_class: ThemeSpecYAML
+  required: (none)
+  optional:
+    - attention_map: AttentionMapSpec = <factory:AttentionMapSpec>
+    - imagery: ImagerySpec = <factory:ImagerySpec>
+    - layout: LayoutCompositionSpec = <factory:LayoutCompositionSpec>
+    - meta: ThemeMetaSpec = <factory:ThemeMetaSpec>
+    - palette: PaletteSpec = <factory:PaletteSpec>
+    - shape: ShapeSpec = <factory:ShapeSpec>
+    - spacing: SpacingSpec = <factory:SpacingSpec>
+    - typography: TypographySpec = <factory:TypographySpec>
+
+ir_class: ThrottleSpec
+  required:
+    - max_messages: int
+    - scope: ThrottleScope
+    - window_seconds: int
+  optional:
+    - on_exceed: ThrottleExceedAction = <ThrottleExceedAction.DROP: 'drop'>
+
+ir_class: TimeSemantics
+  required:
+    - t_event_field: str
+  optional:
+    - t_log_field: str = '_t_log'
+    - t_process_field: str | None = None
+
+ir_class: TopicSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - partition_key: str = 'entity_id'
+    - retention_days: int = 7
+
+ir_class: TransactionSpec
+  required:
+    - idempotency_key: str
+    - name: str
+  optional:
+    - execution: TransactionExecution = <TransactionExecution.SYNC: 'sync'>
+    - intent: str | None = None
+    - label: str | None = None
+    - priority: TransactionPriority = <TransactionPriority.NORMAL: 'normal'>
+    - timeout_ms: int = 5000
+    - transfers: list[TransferSpec] = []
+    - validation: list[ValidationRule] = []
+
+ir_class: TransferSpec
+  required:
+    - amount: FieldReference | ArithmeticExpr | LiteralValue
+    - code: int
+    - credit_ledger: str
+    - debit_ledger: str
+    - name: str
+  optional:
+    - flags: list[TransferFlag] = []
+    - pending_id: str | None = None
+    - user_data: dict[str, str] = {}
+
+ir_class: TransitionGuard
+  required: (none)
+  optional:
+    - condition: str | None = None
+    - guard_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - guard_message: str | None = None
+    - requires_field: str | None = None
+    - requires_role: str | None = None
+
+ir_class: TypographySpec
+  required: (none)
+  optional:
+    - base_size_px: int = 16
+    - font_stacks: FontStackSpec = <factory:FontStackSpec>
+    - line_height_body: float = 1.6
+    - line_height_heading: float = 1.2
+    - ratio: TypographyRatioPreset = <TypographyRatioPreset.MAJOR_THIRD: 'major_third'>
+
+ir_class: UXLayouts
+  required: (none)
+  optional:
+    - personas: list[PersonaLayout] = []
+    - workspaces: list[WorkspaceLayout] = []
+
+ir_class: UXSpec
+  required: (none)
+  optional:
+    - attention_signals: list[AttentionSignal] = []
+    - bulk_actions: list[BulkActionSpec] = []
+    - empty_message: str | EmptyMessages | None = None
+    - filter: list[str] = []
+    - persona_variants: list[PersonaVariant] = []
+    - purpose: str | None = None
+    - search: list[str] = []
+    - search_first: bool = False
+    - show: list[str] = []
+    - sort: list[SortSpec] = []
+
+ir_class: UsabilityRule
+  required:
+    - check: str
+    - description: str
+    - id: str
+  optional:
+    - severity: str = 'warning'
+    - target: str | None = None
+    - threshold: int | float | None = None
+
+ir_class: UserAttrCheck
+  required:
+    - field: str
+    - op: CompOp
+    - user_attr: str
+  optional:
+    - kind: Literal[user_attr_check] = 'user_attr_check'
+
+ir_class: ValidationRule
+  required:
+    - expression: str
+  optional:
+    - message: str | None = None
+
+ir_class: ValueRef
+  required: (none)
+  optional:
+    - current_user: bool = False
+    - literal: str | int | float | bool | None = None
+    - literal_null: bool = False
+    - user_attr: str | None = None
+
+ir_class: VerifiableTriple
+  required:
+    - actions: list[ActionTriple]
+    - entity: str
+    - fields: list[SurfaceFieldTriple]
+    - persona: str
+    - surface: str
+    - surface_mode: object
+  optional:
+    - related_groups: list[str] = []
+
+ir_class: ViaBinding
+  required:
+    - junction_field: str
+    - target: str
+  optional:
+    - operator: str = '='
+
+ir_class: ViaCondition
+  required:
+    - bindings: list[ViaBinding]
+    - junction_entity: str
+  optional:
+    - negated: bool = False
+
+ir_class: ViewFieldSpec
+  required:
+    - name: str
+  optional:
+    - expression: AggregateCall | FieldReference | ArithmeticExpr | LiteralValue | None = None
+    - field_type: FieldType | None = None
+    - title: str | None = None
+
+ir_class: ViewSpec
+  required:
+    - name: str
+  optional:
+    - date_field: str | None = None
+    - fields: list[ViewFieldSpec] = []
+    - filter_condition: ConditionExpr | None = None
+    - group_by: list[str] = []
+    - source_entity: str = ''
+    - time_bucket: TimeBucket | None = None
+    - title: str | None = None
+
+ir_class: VisibilityRule
+  required:
+    - condition: ConditionExpr
+    - context: AuthContext
+  optional: (none)
+
+ir_class: VisualTreatment
+  required: (none)
+  optional:
+    - animation: str | None = None
+    - bg_token: str | None = None
+    - border_token: str | None = None
+    - icon: str | None = None
+    - text_token: str | None = None
+
+ir_class: WebhookAuthSpec
+  required: (none)
+  optional:
+    - method: WebhookAuthMethod = <WebhookAuthMethod.HMAC_SHA256: 'hmac_sha256'>
+    - secret_ref: str | None = None
+
+ir_class: WebhookPayloadSpec
+  required: (none)
+  optional:
+    - format: str = 'json'
+    - include_fields: list[str] = []
+
+ir_class: WebhookRetrySpec
+  required: (none)
+  optional:
+    - backoff: str = 'exponential'
+    - max_attempts: int = 3
+
+ir_class: WebhookSpec
+  required:
+    - name: str
+  optional:
+    - auth: WebhookAuthSpec | None = None
+    - entity: str = ''
+    - events: list[WebhookEvent] = []
+    - payload: WebhookPayloadSpec | None = None
+    - retry: WebhookRetrySpec | None = None
+    - title: str | None = None
+    - url: str = ''
+
+ir_class: WindowSpec
+  required:
+    - size: str
+    - type: WindowType
+  optional:
+    - grace_period: str | None = None
+
+ir_class: WorkspaceAccessSpec
+  required: (none)
+  optional:
+    - allow_personas: list[str] = []
+    - deny_personas: list[str] = []
+    - level: WorkspaceAccessLevel = <WorkspaceAccessLevel.AUTHENTICATED: 'authenticated'>
+    - redirect_unauthenticated: str = '/login'
+
+ir_class: WorkspaceLayout
+  required:
+    - id: str
+    - label: str
+  optional:
+    - attention_budget: float = 1.0
+    - attention_signals: list[LayoutSignal] = []
+    - persona_targets: list[str] = []
+    - stage: str | None = None
+    - stage_options: dict[str, Any] = {}
+    - time_horizon: str = 'daily'
+
+ir_class: WorkspaceRegion
+  required:
+    - name: str
+  optional:
+    - action: str | None = None
+    - action_cards: list[ActionCardSpec] = []
+    - aggregates: dict[str, str] = {}
+    - avatar_field: str | None = None
+    - bin_count: int | None = None
+    - bullet_actual: str | None = None
+    - bullet_label: str | None = None
+    - bullet_target: str | None = None
+    - confirmations: list[ConfirmationItemSpec] = []
+    - css_class: str | None = None
+    - date_field: str | None = None
+    - date_range: bool = False
+    - delta: DeltaSpec | None = None
+    - display: DisplayMode = <DisplayMode.LIST: 'list'>
+    - empty_message: str | None = None
+    - eyebrow: str | None = None
+    - facts: list[str] = []
+    - filter: ConditionExpr | None = None
+    - group_by: str | BucketRef | None = None
+    - group_by_dims: list[str | BucketRef] | None = None
+    - heatmap_columns: str | None = None
+    - heatmap_rows: str | None = None
+    - heatmap_thresholds: list[float] | ParamRef = []
+    - heatmap_value: str | None = None
+    - limit: int | None = None
+    - notice: NoticeSpec | None = None
+    - overlay_series: list[OverlaySeriesSpec] = []
+    - pipeline_stages: list[PipelineStageSpec] = []
+    - primary: str | None = None
+    - primary_action: str | None = None
+    - profile_stats: list[ProfileCardStatSpec] = []
+    - progress_complete_at: str | None = None
+    - progress_stages: list[str] = []
+    - reference_bands: list[ReferenceBand] = []
+    - reference_lines: list[ReferenceLine] = []
+    - revoke: str | None = None
+    - secondary: str | None = None
+    - secondary_action: str | None = None
+    - show_outliers: bool = True
+    - sort: list[SortSpec] = []
+    - source: str | None = None
+    - source_filters: dict[str, ConditionExpr] = {}
+    - sources: list[str] = []
+    - state_field: str | None = None
+    - status_entries: list[StatusListEntrySpec] = []
+    - title: str | None = None
+    - tones: dict[str, str] = {}
+    - track_format: str | None = None
+    - track_max: float | None = None
+    - width: int | None = None
+
+ir_class: WorkspaceSpec
+  required:
+    - name: str
+  optional:
+    - access: WorkspaceAccessSpec | None = None
+    - context_selector: ContextSelectorSpec | None = None
+    - nav_groups: list[NavGroupSpec] = []
+    - nav_ref: str | None = None
+    - purpose: str | None = None
+    - regions: list[WorkspaceRegion] = []
+    - source: SourceLocation | None = None
+    - stage: str | None = None
+    - title: str | None = None
+    - ux: UXSpec | None = None
+
+== Enums ==
+
+enum: AccountFlag
+  members:
+    - CREDITS_MUST_NOT_EXCEED_DEBITS = 'credits_must_not_exceed_debits'
+    - DEBITS_MUST_NOT_EXCEED_CREDITS = 'debits_must_not_exceed_credits'
+    - HISTORY = 'history'
+    - LINKED = 'linked'
+
+enum: AccountType
+  members:
+    - ASSET = 'asset'
+    - EQUITY = 'equity'
+    - EXPENSE = 'expense'
+    - LIABILITY = 'liability'
+    - REVENUE = 'revenue'
+
+enum: AggregateFunction
+  members:
+    - AVG = 'avg'
+    - COUNT = 'count'
+    - DAYS_SINCE = 'days_since'
+    - DAYS_UNTIL = 'days_until'
+    - MAX = 'max'
+    - MIN = 'min'
+    - SUM = 'sum'
+
+enum: ArchetypeKind
+  members:
+    - CUSTOM = 'custom'
+    - SETTINGS = 'settings'
+    - TENANT = 'tenant'
+    - TENANT_SETTINGS = 'tenant_settings'
+    - USER = 'user'
+    - USER_MEMBERSHIP = 'user_membership'
+
+enum: ArithmeticOperator
+  members:
+    - ADD = '+'
+    - DIVIDE = '/'
+    - MULTIPLY = '*'
+    - SUBTRACT = '-'
+
+enum: ArtifactKind
+  members:
+    - COMPLETION = 'completion'
+    - PROMPT = 'prompt'
+    - TOOL_CALL = 'tool_call'
+    - TOOL_RESULT = 'tool_result'
+
+enum: ArtifactStore
+  members:
+    - GCS = 'gcs'
+    - LOCAL = 'local'
+    - S3 = 's3'
+
+enum: AssetKind
+  members:
+    - FILE = 'file'
+    - IMAGE = 'image'
+
+enum: AttentionSignalKind
+  members:
+    - ALERT_FEED = 'alert_feed'
+    - CHART = 'chart'
+    - DETAIL_VIEW = 'detail_view'
+    - FILTER = 'filter'
+    - FORM = 'form'
+    - ITEM_LIST = 'item_list'
+    - KPI = 'kpi'
+    - SEARCH = 'search'
+    - TABLE = 'table'
+    - TASK_LIST = 'task_list'
+
+enum: AuthContext
+  members:
+    - ANONYMOUS = 'anonymous'
+    - AUTHENTICATED = 'authenticated'
+
+enum: AuthKind
+  members:
+    - API_KEY_HEADER = 'api_key_header'
+    - API_KEY_QUERY = 'api_key_query'
+    - JWT_STATIC = 'jwt_static'
+    - NONE = 'none'
+    - OAUTH2_LEGACY = 'oauth2_legacy'
+    - OAUTH2_PKCE = 'oauth2_pkce'
+
+enum: AuthPageMode
+  members:
+    - CUSTOM = 'custom'
+    - GENERATED = 'generated'
+
+enum: AuthProvider
+  members:
+    - DAZZLE = 'dazzle'
+    - EXTERNAL = 'external'
+
+enum: AuthType
+  members:
+    - API_KEY = 'api_key'
+    - BASIC = 'basic'
+    - BEARER = 'bearer'
+    - OAUTH2 = 'oauth2'
+
+enum: BoolOp
+  members:
+    - AND = 'and'
+    - NOT = 'not'
+    - OR = 'or'
+
+enum: BulkFormat
+  members:
+    - CSV = 'csv'
+    - JSON = 'json'
+    - XLSX = 'xlsx'
+
+enum: BusinessPriority
+  members:
+    - CRITICAL = 'critical'
+    - HIGH = 'high'
+    - LOW = 'low'
+    - MEDIUM = 'medium'
+
+enum: ChannelKind
+  members:
+    - EMAIL = 'email'
+    - QUEUE = 'queue'
+    - STREAM = 'stream'
+
+enum: ColorMode
+  members:
+    - AUTO = 'auto'
+    - DARK = 'dark'
+    - LIGHT = 'light'
+
+enum: CompOp
+  members:
+    - EQ = '='
+    - GT = '>'
+    - GTE = '>='
+    - IN = 'in'
+    - IS = 'is'
+    - IS_NOT = 'is not'
+    - LT = '<'
+    - LTE = '<='
+    - NEQ = '!='
+    - NOT_IN = 'not in'
+
+enum: CompanionPosition
+  members:
+    - BELOW_SECTION = 'below_section'
+    - BOTTOM = 'bottom'
+    - TOP = 'top'
+
+enum: ComparisonOperator
+  members:
+    - EQUALS = '='
+    - GREATER_EQUAL = '>='
+    - GREATER_THAN = '>'
+    - IN = 'in'
+    - IS = 'is'
+    - IS_NOT = 'is not'
+    - LESS_EQUAL = '<='
+    - LESS_THAN = '<'
+    - NOT_EQUALS = '!='
+    - NOT_IN = 'not in'
+
+enum: ConsentCategory
+  members:
+    - ADVERTISING = 'advertising'
+    - ANALYTICS = 'analytics'
+    - FUNCTIONAL = 'functional'
+    - PERSONALIZATION = 'personalization'
+
+enum: ConstraintKind
+  members:
+    - INDEX = 'index'
+    - UNIQUE = 'unique'
+
+enum: ContentFormat
+  members:
+    - MARKDOWN = 'md'
+    - MDX = 'mdx'
+
+enum: DataCategory
+  members:
+    - BEHAVIORAL = 'behavioral'
+    - CONTACT = 'contact'
+    - CONTENT = 'content'
+    - DEVICE_FINGERPRINT = 'device_fingerprint'
+    - FINANCIAL = 'financial'
+    - HEALTH = 'health'
+    - IDENTITY = 'identity'
+    - LOCATION = 'location'
+    - PAGE_URL = 'page_url'
+    - PSEUDONYMOUS_ID = 'pseudonymous_id'
+    - SESSION_DATA = 'session_data'
+
+enum: DataClassification
+  members:
+    - BUSINESS_CONFIDENTIAL = 'business_confidential'
+    - BUSINESS_INTERNAL = 'business_internal'
+    - FINANCIAL_ACCOUNT = 'financial_account'
+    - FINANCIAL_TXN = 'financial_txn'
+    - PII_DIRECT = 'pii_direct'
+    - PII_INDIRECT = 'pii_indirect'
+    - PII_SENSITIVE = 'pii_sensitive'
+    - PUBLIC = 'public'
+    - UNCLASSIFIED = 'unclassified'
+
+enum: DataProductTransform
+  members:
+    - AGGREGATE = 'aggregate'
+    - MASK = 'mask'
+    - MINIMISE = 'minimise'
+    - NONE = 'none'
+    - PSEUDONYMISE = 'pseudonymise'
+
+enum: DateArithmeticOp
+  members:
+    - ADD = '+'
+    - SUBTRACT = '-'
+
+enum: DateLiteralKind
+  members:
+    - NOW = 'now'
+    - TODAY = 'today'
+
+enum: DeliveryMode
+  members:
+    - DIRECT = 'direct'
+    - OUTBOX = 'outbox'
+
+enum: DensityEnum
+  members:
+    - COMFORTABLE = 'comfortable'
+    - COMPACT = 'compact'
+    - SPACIOUS = 'spacious'
+
+enum: DerivationType
+  members:
+    - AGGREGATE = 'aggregate'
+    - FILTER = 'filter'
+    - JOIN = 'join'
+    - SNAPSHOT = 'snapshot'
+    - TRANSFORM = 'transform'
+    - WINDOW = 'window'
+
+enum: DisplayMode
+  members:
+    - ACTION_GRID = 'action_grid'
+    - ACTIVITY_FEED = 'activity_feed'
+    - AREA_CHART = 'area_chart'
+    - BAR_CHART = 'bar_chart'
+    - BAR_TRACK = 'bar_track'
+    - BOX_PLOT = 'box_plot'
+    - BULLET = 'bullet'
+    - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
+    - DETAIL = 'detail'
+    - DIAGRAM = 'diagram'
+    - FUNNEL_CHART = 'funnel_chart'
+    - GRID = 'grid'
+    - HEATMAP = 'heatmap'
+    - HISTOGRAM = 'histogram'
+    - KANBAN = 'kanban'
+    - LINE_CHART = 'line_chart'
+    - LIST = 'list'
+    - MAP = 'map'
+    - METRICS = 'metrics'
+    - PIPELINE_STEPS = 'pipeline_steps'
+    - PIVOT_TABLE = 'pivot_table'
+    - PROFILE_CARD = 'profile_card'
+    - PROGRESS = 'progress'
+    - QUEUE = 'queue'
+    - RADAR = 'radar'
+    - SPARKLINE = 'sparkline'
+    - STATUS_LIST = 'status_list'
+    - SUMMARY = 'summary'
+    - TABBED_LIST = 'tabbed_list'
+    - TIMELINE = 'timeline'
+    - TREE = 'tree'
+
+enum: DocumentFormat
+  members:
+    - CSV = 'csv'
+    - PDF = 'pdf'
+    - XLSX = 'xlsx'
+
+enum: DomainServiceKind
+  members:
+    - DOMAIN_LOGIC = 'domain_logic'
+    - INTEGRATION = 'integration'
+    - VALIDATION = 'validation'
+    - WORKFLOW = 'workflow'
+
+enum: DurationUnit
+  members:
+    - DAYS = 'days'
+    - HOURS = 'hours'
+    - MINUTES = 'minutes'
+    - MONTHS = 'months'
+    - WEEKS = 'weeks'
+    - YEARS = 'years'
+
+enum: EffectAction
+  members:
+    - CREATE = 'create'
+    - UPDATE = 'update'
+
+enum: EntityEvent
+  members:
+    - CREATED = 'created'
+    - DELETED = 'deleted'
+    - UPDATED = 'updated'
+
+enum: ErasurePolicy
+  members:
+    - ANONYMIZE = 'anonymize'
+    - DELETE = 'delete'
+    - PSEUDONYMIZE = 'pseudonymize'
+    - REDACT = 'redact'
+
+enum: ErrorAction
+  members:
+    - IGNORE = 'ignore'
+    - LOG_WARNING = 'log_warning'
+    - RETRY = 'retry'
+    - REVERT_TRANSITION = 'revert_transition'
+
+enum: EventTriggerKind
+  members:
+    - CREATED = 'created'
+    - DELETED = 'deleted'
+    - FIELD_CHANGED = 'field_changed'
+    - STATUS_CHANGED = 'status_changed'
+    - UPDATED = 'updated'
+
+enum: FidelityGapCategory
+  members:
+    - INCORRECT_HTTP_METHOD = 'incorrect_http_method'
+    - INCORRECT_INPUT_TYPE = 'incorrect_input_type'
+    - MISSING_ACTION_AFFORDANCE = 'missing_action_affordance'
+    - MISSING_DEBOUNCE = 'missing_debounce'
+    - MISSING_DESIGN_TOKENS = 'missing_design_tokens'
+    - MISSING_DISPLAY_NAME = 'missing_display_name'
+    - MISSING_EMPTY_STATE = 'missing_empty_state'
+    - MISSING_ERROR_HANDLER = 'missing_error_handler'
+    - MISSING_FIELD = 'missing_field'
+    - MISSING_HTMX_ATTRIBUTE = 'missing_htmx_attribute'
+    - MISSING_LOADING_INDICATOR = 'missing_loading_indicator'
+    - MISSING_NAVIGATION = 'missing_navigation'
+    - MISSING_SOURCE_WIDGET = 'missing_source_widget'
+    - MISSING_VALIDATION_ATTRIBUTE = 'missing_validation_attribute'
+    - STORY_OUTCOME_MISSING = 'story_outcome_missing'
+    - STORY_PRECONDITION_MISSING = 'story_precondition_missing'
+    - STORY_TRIGGER_MISSING = 'story_trigger_missing'
+
+enum: FieldModifier
+  members:
+    - AUTO_ADD = 'auto_add'
+    - AUTO_UPDATE = 'auto_update'
+    - INDEXED = 'indexed'
+    - OPTIONAL = 'optional'
+    - PK = 'pk'
+    - REQUIRED = 'required'
+    - SEARCHABLE = 'searchable'
+    - SENSITIVE = 'sensitive'
+    - UNIQUE = 'unique'
+    - UNIQUE_NULLABLE = 'unique?'
+
+enum: FieldStrategy
+  members:
+    - BOOLEAN_WEIGHTED = 'boolean_weighted'
+    - COMPANY_NAME = 'company_name'
+    - COMPOSITE = 'composite'
+    - CURRENCY_AMOUNT = 'currency_amount'
+    - CUSTOM_PROMPT = 'custom_prompt'
+    - DATE_RELATIVE = 'date_relative'
+    - EMAIL_FROM_NAME = 'email_from_name'
+    - ENUM_WEIGHTED = 'enum_weighted'
+    - FOREIGN_KEY = 'foreign_key'
+    - FREE_TEXT_LOREM = 'free_text_lorem'
+    - HASHED_PASSWORD_PLACEHOLDER = 'hashed_password_placeholder'
+    - NUMERIC_RANGE = 'numeric_range'
+    - PERSON_NAME = 'person_name'
+    - STATIC_LIST = 'static_list'
+    - USERNAME_FROM_NAME = 'username_from_name'
+    - UUID_GENERATE = 'uuid_generate'
+
+enum: FieldTypeKind
+  members:
+    - BELONGS_TO = 'belongs_to'
+    - BOOL = 'bool'
+    - DATE = 'date'
+    - DATETIME = 'datetime'
+    - DECIMAL = 'decimal'
+    - EMAIL = 'email'
+    - EMBEDS = 'embeds'
+    - ENUM = 'enum'
+    - FILE = 'file'
+    - FLOAT = 'float'
+    - HAS_MANY = 'has_many'
+    - HAS_ONE = 'has_one'
+    - INT = 'int'
+    - JSON = 'json'
+    - MONEY = 'money'
+    - REF = 'ref'
+    - STR = 'str'
+    - TEXT = 'text'
+    - TIMEZONE = 'timezone'
+    - URL = 'url'
+    - UUID = 'uuid'
+
+enum: FlowAssertionKind
+  members:
+    - COMPUTED_VALUE = 'computed_value'
+    - COUNT = 'count'
+    - ENTITY_EXISTS = 'entity_exists'
+    - ENTITY_NOT_EXISTS = 'entity_not_exists'
+    - FIELD_VALUE = 'field_value'
+    - HAS_PERSONA = 'has_persona'
+    - IS_AUTHENTICATED = 'is_authenticated'
+    - IS_NOT_AUTHENTICATED = 'is_not_authenticated'
+    - LOGIN_FAILED = 'login_failed'
+    - LOGIN_SUCCEEDED = 'login_succeeded'
+    - NOT_VISIBLE = 'not_visible'
+    - PERMISSION_DENIED = 'permission_denied'
+    - PERMISSION_GRANTED = 'permission_granted'
+    - REDIRECTS_TO = 'redirects_to'
+    - REF_INVALID = 'ref_invalid'
+    - REF_VALID = 'ref_valid'
+    - ROUTE_PROTECTED = 'route_protected'
+    - STATE_TRANSITION_ALLOWED = 'state_transition_allowed'
+    - STATE_TRANSITION_BLOCKED = 'state_transition_blocked'
+    - TEXT_CONTAINS = 'text_contains'
+    - VALIDATION_ERROR = 'validation_error'
+    - VISIBLE = 'visible'
+
+enum: FlowPriority
+  members:
+    - HIGH = 'high'
+    - LOW = 'low'
+    - MEDIUM = 'medium'
+
+enum: FlowStepKind
+  members:
+    - ASSERT = 'assert'
+    - CLICK = 'click'
+    - FILL = 'fill'
+    - NAVIGATE = 'navigate'
+    - SNAPSHOT = 'snapshot'
+    - WAIT = 'wait'
+
+enum: ForeignConstraintKind
+  members:
+    - BATCH_IMPORT = 'batch_import'
+    - EVENT_DRIVEN = 'event_driven'
+    - READ_ONLY = 'read_only'
+
+enum: GrantApprovalMode
+  members:
+    - IMMEDIATE = 'immediate'
+    - NONE = 'none'
+    - REQUIRED = 'required'
+
+enum: GrantExpiryMode
+  members:
+    - NONE = 'none'
+    - OPTIONAL = 'optional'
+    - REQUIRED = 'required'
+
+enum: HLESSMode
+  members:
+    - OFF = 'off'
+    - STRICT = 'strict'
+    - WARN = 'warn'
+
+enum: HttpMethod
+  members:
+    - DELETE = 'DELETE'
+    - GET = 'GET'
+    - PATCH = 'PATCH'
+    - POST = 'POST'
+    - PUT = 'PUT'
+
+enum: IdempotencyType
+  members:
+    - CONTENT_HASH = 'content_hash'
+    - DEDUPE_WINDOW = 'dedupe_window'
+    - DETERMINISTIC_ID = 'deterministic_id'
+    - EXTERNAL_DEDUP = 'external_dedup'
+
+enum: InterfaceAuthMethod
+  members:
+    - API_KEY = 'api_key'
+    - BASIC = 'basic'
+    - JWT = 'jwt'
+    - MUTUAL_TLS = 'mtls'
+    - NONE = 'none'
+    - OAUTH2 = 'oauth2'
+
+enum: InterfaceFormat
+  members:
+    - ASYNCAPI = 'asyncapi'
+    - EDIFACT = 'edifact'
+    - GRAPHQL = 'graphql'
+    - GRPC = 'grpc'
+    - REST = 'rest'
+    - SOAP = 'soap'
+
+enum: ComparisonOperator
+  members:
+    - EQ = '=='
+    - GE = '>='
+    - GT = '>'
+    - LE = '<='
+    - LT = '<'
+    - NE = '!='
+
+enum: LogicalOperator
+  members:
+    - AND = 'and'
+    - OR = 'or'
+
+enum: LLMProvider
+  members:
+    - ANTHROPIC = 'anthropic'
+    - GOOGLE = 'google'
+    - LOCAL = 'local'
+    - OPENAI = 'openai'
+
+enum: LLMTriggerEvent
+  members:
+    - CREATED = 'created'
+    - DELETED = 'deleted'
+    - UPDATED = 'updated'
+
+enum: Stage
+  members:
+    - COMMAND_CENTER = 'command_center'
+    - DUAL_PANE_FLOW = 'dual_pane_flow'
+    - FOCUS_METRIC = 'focus_metric'
+    - MONITOR_WALL = 'monitor_wall'
+    - SCANNER_TABLE = 'scanner_table'
+
+enum: LegalBasis
+  members:
+    - CONSENT = 'consent'
+    - CONTRACT = 'contract'
+    - LEGAL_OBLIGATION = 'legal_obligation'
+    - LEGITIMATE_INTEREST = 'legitimate_interest'
+    - PUBLIC_TASK = 'public_task'
+    - VITAL_INTERESTS = 'vital_interests'
+
+enum: LogicalOperator
+  members:
+    - AND = 'and'
+    - NOT = 'not'
+    - OR = 'or'
+
+enum: LogoMode
+  members:
+    - IMAGE = 'image'
+    - TEXT = 'text'
+
+enum: MappingTriggerType
+  members:
+    - MANUAL = 'manual'
+    - ON_CREATE = 'on_create'
+    - ON_DELETE = 'on_delete'
+    - ON_TRANSITION = 'on_transition'
+    - ON_UPDATE = 'on_update'
+
+enum: MatchPatternKind
+  members:
+    - CONTAINS = 'contains'
+    - EXACT = 'exact'
+    - IN = 'in'
+    - PREFIX = 'prefix'
+    - REGEX = 'regex'
+    - SUFFIX = 'suffix'
+
+enum: MediaKind
+  members:
+    - IMAGE = 'image'
+    - NONE = 'none'
+    - VIDEO = 'video'
+
+enum: ModelTier
+  members:
+    - BALANCED = 'balanced'
+    - FAST = 'fast'
+    - QUALITY = 'quality'
+
+enum: NotificationChannel
+  members:
+    - EMAIL = 'email'
+    - IN_APP = 'in_app'
+    - SLACK = 'slack'
+    - SMS = 'sms'
+
+enum: NotificationPreference
+  members:
+    - MANDATORY = 'mandatory'
+    - OPT_IN = 'opt_in'
+    - OPT_OUT = 'opt_out'
+
+enum: OutcomeCondition
+  members:
+    - FAILURE = 'failure'
+    - PARTIAL = 'partial'
+    - SUCCESS = 'success'
+    - TIMEOUT = 'timeout'
+
+enum: OutcomeKind
+  members:
+    - EXPERIENCE = 'experience'
+    - EXTERNAL = 'external'
+    - INTEGRATION = 'integration'
+    - SURFACE = 'surface'
+
+enum: OverlapPolicy
+  members:
+    - ALLOW = 'allow'
+    - CANCEL_PREVIOUS = 'cancel_previous'
+    - QUEUE = 'queue'
+    - SKIP = 'skip'
+
+enum: PIIAction
+  members:
+    - REDACT = 'redact'
+    - REJECT = 'reject'
+    - WARN = 'warn'
+
+enum: PIICategory
+  members:
+    - BEHAVIORAL = 'behavioral'
+    - BIOMETRIC = 'biometric'
+    - CONTACT = 'contact'
+    - FINANCIAL = 'financial'
+    - FREEFORM = 'freeform'
+    - HEALTH = 'health'
+    - IDENTITY = 'identity'
+    - LOCATION = 'location'
+
+enum: PIISensitivity
+  members:
+    - HIGH = 'high'
+    - SPECIAL_CATEGORY = 'special_category'
+    - STANDARD = 'standard'
+
+enum: PageKind
+  members:
+    - AUTH = 'auth'
+    - LANDING = 'landing'
+    - LEGAL = 'legal'
+    - MARKDOWN = 'markdown'
+    - PRICING = 'pricing'
+    - REDIRECT = 'redirect'
+
+enum: ParallelFailurePolicy
+  members:
+    - FAIL_FAST = 'fail_fast'
+    - ROLLBACK = 'rollback'
+    - WAIT_ALL = 'wait_all'
+
+enum: PermissionKind
+  members:
+    - CREATE = 'create'
+    - DELETE = 'delete'
+    - LIST = 'list'
+    - READ = 'read'
+    - UPDATE = 'update'
+
+enum: PhaseKind
+  members:
+    - ACTIVE = 'active'
+    - AMBIENT = 'ambient'
+    - GATE = 'gate'
+    - OFFBOARDING = 'offboarding'
+    - ONBOARDING = 'onboarding'
+    - PERIODIC = 'periodic'
+
+enum: PolicyEffect
+  members:
+    - FORBID = 'forbid'
+    - PERMIT = 'permit'
+
+enum: RetryBackoff
+  members:
+    - EXPONENTIAL = 'exponential'
+    - FIXED = 'fixed'
+    - LINEAR = 'linear'
+
+enum: StepKind
+  members:
+    - CONDITION = 'condition'
+    - FOREACH = 'foreach'
+    - HUMAN_TASK = 'human_task'
+    - LLM_INTENT = 'llm_intent'
+    - PARALLEL = 'parallel'
+    - QUERY = 'query'
+    - SEND = 'send'
+    - SERVICE = 'service'
+    - SIDE_EFFECT = 'side_effect'
+    - SUBPROCESS = 'subprocess'
+    - WAIT = 'wait'
+
+enum: ProcessTriggerKind
+  members:
+    - ENTITY_EVENT = 'entity_event'
+    - ENTITY_STATUS_TRANSITION = 'entity_status_transition'
+    - MANUAL = 'manual'
+    - PROCESS_COMPLETED = 'process_completed'
+    - SCHEDULE_CRON = 'schedule_cron'
+    - SCHEDULE_INTERVAL = 'schedule_interval'
+    - SIGNAL = 'signal'
+
+enum: ProjectionAction
+  members:
+    - AGGREGATE = 'aggregate'
+    - DELETE = 'delete'
+    - INCREMENT = 'increment'
+    - UPDATE = 'update'
+    - UPSERT = 'upsert'
+
+enum: QuestionStatus
+  members:
+    - DEFERRED = 'deferred'
+    - OPEN = 'open'
+    - RESOLVED = 'resolved'
+
+enum: RebuildStrategy
+  members:
+    - FULL_REPLAY = 'full_replay'
+    - INCREMENTAL = 'incremental'
+    - WINDOWED = 'windowed'
+
+enum: ReceiveActionKind
+  members:
+    - CALL_SERVICE = 'call_service'
+    - CREATE = 'create'
+    - UPDATE = 'update'
+    - UPSERT = 'upsert'
+
+enum: RecordKind
+  members:
+    - DERIVATION = 'derivation'
+    - FACT = 'fact'
+    - INTENT = 'intent'
+    - OBSERVATION = 'observation'
+
+enum: RelatedDisplayMode
+  members:
+    - FILE_LIST = 'file_list'
+    - STATUS_CARDS = 'status_cards'
+    - TABLE = 'table'
+
+enum: RelationshipBehavior
+  members:
+    - CASCADE = 'cascade'
+    - NULLIFY = 'nullify'
+    - RESTRICT = 'restrict'
+
+enum: RetentionPolicy
+  members:
+    - EPHEMERAL = 'ephemeral'
+    - LEGAL_HOLD = 'legal_hold'
+    - LONG = 'long'
+    - MEDIUM = 'medium'
+    - PERMANENT = 'permanent'
+    - SESSION = 'session'
+    - SHORT = 'short'
+
+enum: RetryBackoff
+  members:
+    - EXPONENTIAL = 'exponential'
+    - LINEAR = 'linear'
+
+enum: RuleKind
+  members:
+    - AUTHORIZATION = 'authorization'
+    - CONSTRAINT = 'constraint'
+    - DERIVATION = 'derivation'
+    - PRECONDITION = 'precondition'
+
+enum: RuleOrigin
+  members:
+    - BOTTOM_UP = 'bottom_up'
+    - TOP_DOWN = 'top_down'
+
+enum: RuleStatus
+  members:
+    - ACCEPTED = 'accepted'
+    - DRAFT = 'draft'
+    - REJECTED = 'rejected'
+
+enum: SchemaCompatibility
+  members:
+    - ADDITIVE = 'additive'
+    - BREAKING = 'breaking'
+
+enum: SectionKind
+  members:
+    - CARD_GRID = 'card_grid'
+    - COMPARISON = 'comparison'
+    - CTA = 'cta'
+    - FAQ = 'faq'
+    - FEATURES = 'features'
+    - FEATURE_GRID = 'feature_grid'
+    - HERO = 'hero'
+    - LOGO_CLOUD = 'logo_cloud'
+    - MARKDOWN = 'markdown'
+    - PRICING = 'pricing'
+    - SPLIT_CONTENT = 'split_content'
+    - STATS = 'stats'
+    - STEPS = 'steps'
+    - TEAM = 'team'
+    - TESTIMONIALS = 'testimonials'
+    - TRUST_BAR = 'trust_bar'
+    - VALUE_HIGHLIGHT = 'value_highlight'
+
+enum: SecurityProfile
+  members:
+    - BASIC = 'basic'
+    - STANDARD = 'standard'
+    - STRICT = 'strict'
+
+enum: SeedStrategy
+  members:
+    - ROLLING_WINDOW = 'rolling_window'
+
+enum: SendTriggerKind
+  members:
+    - ENTITY_EVENT = 'entity_event'
+    - ENTITY_FIELD_CHANGED = 'entity_field_changed'
+    - ENTITY_STATUS_TRANSITION = 'entity_status_transition'
+    - MANUAL = 'manual'
+    - SCHEDULE = 'schedule'
+    - SERVICE_CALLED = 'service_called'
+    - SERVICE_FAILED = 'service_failed'
+    - SERVICE_SUCCEEDED = 'service_succeeded'
+
+enum: ShadowPreset
+  members:
+    - DRAMATIC = 'dramatic'
+    - MEDIUM = 'medium'
+    - NONE = 'none'
+    - SUBTLE = 'subtle'
+
+enum: ShapePreset
+  members:
+    - PILL = 'pill'
+    - ROUNDED = 'rounded'
+    - SHARP = 'sharp'
+    - SUBTLE = 'subtle'
+
+enum: SignalLevel
+  members:
+    - CRITICAL = 'critical'
+    - INFO = 'info'
+    - NOTICE = 'notice'
+    - WARNING = 'warning'
+
+enum: Stage
+  members:
+    - COMMAND_CENTER = 'command_center'
+    - DUAL_PANE_FLOW = 'dual_pane_flow'
+    - FOCUS_METRIC = 'focus_metric'
+    - MONITOR_WALL = 'monitor_wall'
+    - SCANNER_TABLE = 'scanner_table'
+
+enum: StepKind
+  members:
+    - INTEGRATION = 'integration'
+    - PROCESS = 'process'
+    - SURFACE = 'surface'
+
+enum: StoryStatus
+  members:
+    - ACCEPTED = 'accepted'
+    - DRAFT = 'draft'
+    - REJECTED = 'rejected'
+
+enum: StoryTrigger
+  members:
+    - CRON_DAILY = 'cron_daily'
+    - CRON_HOURLY = 'cron_hourly'
+    - EXTERNAL_EVENT = 'external_event'
+    - FORM_SUBMITTED = 'form_submitted'
+    - STATUS_CHANGED = 'status_changed'
+    - TIMER_ELAPSED = 'timer_elapsed'
+    - USER_CLICK = 'user_click'
+
+enum: StubLanguage
+  members:
+    - PYTHON = 'python'
+    - TYPESCRIPT = 'typescript'
+
+enum: SurfaceMode
+  members:
+    - CREATE = 'create'
+    - CUSTOM = 'custom'
+    - EDIT = 'edit'
+    - LIST = 'list'
+    - REVIEW = 'review'
+    - VIEW = 'view'
+
+enum: SurfaceTrigger
+  members:
+    - AUTO = 'auto'
+    - CLICK = 'click'
+    - SUBMIT = 'submit'
+
+enum: SyncMode
+  members:
+    - EVENT_DRIVEN = 'event_driven'
+    - SCHEDULED = 'scheduled'
+
+enum: SyncTrigger
+  members:
+    - AFTER_TRANSFER = 'after_transfer'
+    - ON_DEMAND = 'on_demand'
+    - SCHEDULED = 'scheduled'
+
+enum: TenancyMode
+  members:
+    - DATABASE_PER_TENANT = 'database_per_tenant'
+    - SCHEMA_PER_TENANT = 'schema_per_tenant'
+    - SHARED_SCHEMA = 'shared_schema'
+    - SINGLE = 'single'
+
+enum: TestActionKind
+  members:
+    - CALL = 'call'
+    - CREATE = 'create'
+    - DELETE = 'delete'
+    - GET = 'get'
+    - UPDATE = 'update'
+
+enum: TestAssertionKind
+  members:
+    - COUNT = 'count'
+    - CREATED = 'created'
+    - ERROR = 'error'
+    - FIELD = 'field'
+    - STATUS = 'status'
+
+enum: TestComparisonOperator
+  members:
+    - CONTAINS = 'contains'
+    - EQUALS = 'equals'
+    - GREATER_THAN = 'greater_than'
+    - LESS_THAN = 'less_than'
+    - NOT_CONTAINS = 'not_contains'
+    - NOT_EQUALS = 'not_equals'
+
+enum: TestDesignAction
+  members:
+    - ASSERT_COUNT = 'assert_count'
+    - ASSERT_NOT_VISIBLE = 'assert_not_visible'
+    - ASSERT_TEXT = 'assert_text'
+    - ASSERT_VISIBLE = 'assert_visible'
+    - CLICK = 'click'
+    - CREATE = 'create'
+    - DELETE = 'delete'
+    - DOWNLOAD = 'download'
+    - FILL = 'fill'
+    - FILL_FORM = 'fill_form'
+    - LOGIN_AS = 'login_as'
+    - LOGOUT = 'logout'
+    - NAVIGATE_TO = 'navigate_to'
+    - SELECT = 'select'
+    - SUBMIT_FORM = 'submit_form'
+    - TRIGGER_TRANSITION = 'trigger_transition'
+    - UPDATE = 'update'
+    - UPLOAD = 'upload'
+    - WAIT_FOR = 'wait_for'
+
+enum: TestDesignStatus
+  members:
+    - ACCEPTED = 'accepted'
+    - IMPLEMENTED = 'implemented'
+    - PROPOSED = 'proposed'
+    - REJECTED = 'rejected'
+    - VERIFIED = 'verified'
+
+enum: TestDesignTrigger
+  members:
+    - CRON_DAILY = 'cron_daily'
+    - CRON_HOURLY = 'cron_hourly'
+    - EXTERNAL_EVENT = 'external_event'
+    - FORM_SUBMITTED = 'form_submitted'
+    - PAGE_LOAD = 'page_load'
+    - STATUS_CHANGED = 'status_changed'
+    - TIMER_ELAPSED = 'timer_elapsed'
+    - USER_CLICK = 'user_click'
+
+enum: TestGapCategory
+  members:
+    - LOW_COVERAGE_ENTITY = 'low_coverage_entity'
+    - UNTESTED_ENTITY = 'untested_entity'
+    - UNTESTED_PERSONA_GOAL = 'untested_persona_goal'
+    - UNTESTED_SCENARIO = 'untested_scenario'
+    - UNTESTED_STATE_TRANSITION = 'untested_state_transition'
+    - UNTESTED_SURFACE = 'untested_surface'
+
+enum: ThemeKind
+  members:
+    - CUSTOM = 'custom'
+    - MINIMAL = 'minimal'
+    - SAAS_DEFAULT = 'saas-default'
+
+enum: ThrottleExceedAction
+  members:
+    - DROP = 'drop'
+    - ERROR = 'error'
+    - LOG = 'log'
+
+enum: ThrottleScope
+  members:
+    - PER_CHANNEL = 'per_channel'
+    - PER_ENTITY = 'per_entity'
+    - PER_RECIPIENT = 'per_recipient'
+
+enum: TimeBucket
+  members:
+    - DAY = 'day'
+    - MONTH = 'month'
+    - QUARTER = 'quarter'
+    - WEEK = 'week'
+    - YEAR = 'year'
+
+enum: TimeUnit
+  members:
+    - DAYS = 'days'
+    - HOURS = 'hours'
+    - MINUTES = 'minutes'
+
+enum: TopicNamespaceMode
+  members:
+    - NAMESPACE_PER_TENANT = 'namespace_per_tenant'
+    - SHARED = 'shared'
+
+enum: TransactionExecution
+  members:
+    - ASYNC = 'async'
+    - SYNC = 'sync'
+
+enum: TransactionPriority
+  members:
+    - CRITICAL = 'critical'
+    - HIGH = 'high'
+    - LOW = 'low'
+    - NORMAL = 'normal'
+
+enum: TransferFlag
+  members:
+    - BALANCING = 'balancing'
+    - LINKED = 'linked'
+    - PENDING = 'pending'
+    - POST_PENDING = 'post_pending'
+    - VOID_PENDING = 'void_pending'
+
+enum: TransitionEvent
+  members:
+    - APPROVE = 'approve'
+    - BACK = 'back'
+    - CANCEL = 'cancel'
+    - CONTINUE = 'continue'
+    - FAILURE = 'failure'
+    - REJECT = 'reject'
+    - SKIP = 'skip'
+    - SUCCESS = 'success'
+
+enum: TransitionTrigger
+  members:
+    - AUTO = 'auto'
+    - MANUAL = 'manual'
+
+enum: TypographyRatioPreset
+  members:
+    - AUGMENTED_FOURTH = 'augmented_fourth'
+    - GOLDEN_RATIO = 'golden_ratio'
+    - MAJOR_SECOND = 'major_second'
+    - MAJOR_THIRD = 'major_third'
+    - MINOR_SECOND = 'minor_second'
+    - MINOR_THIRD = 'minor_third'
+    - PERFECT_FIFTH = 'perfect_fifth'
+    - PERFECT_FOURTH = 'perfect_fourth'
+
+enum: WebhookAuthMethod
+  members:
+    - BASIC = 'basic'
+    - BEARER = 'bearer'
+    - HMAC_SHA256 = 'hmac_sha256'
+
+enum: WebhookEvent
+  members:
+    - CREATED = 'created'
+    - DELETED = 'deleted'
+    - UPDATED = 'updated'
+
+enum: WidgetKind
+  members:
+    - CHECKBOX = 'checkbox'
+    - DATETIME_PICKER = 'datetime_picker'
+    - DATE_PICKER = 'date_picker'
+    - EMAIL_INPUT = 'email_input'
+    - ENUM_SELECT = 'enum_select'
+    - FILE_UPLOAD = 'file_upload'
+    - MONEY_INPUT = 'money_input'
+    - NUMBER_INPUT = 'number_input'
+    - SEARCH_SELECT = 'search_select'
+    - TEXTAREA = 'textarea'
+    - TEXT_INPUT = 'text_input'
+
+enum: WindowType
+  members:
+    - SESSION = 'session'
+    - SLIDING = 'sliding'
+    - TUMBLING = 'tumbling'
+
+enum: WorkspaceAccessLevel
+  members:
+    - AUTHENTICATED = 'authenticated'
+    - PERSONA = 'persona'
+    - PUBLIC = 'public'
+
+== Other Exports ==
+# Functions, type aliases, and module constants. Field-level details are not
+# snapshotted; only the export name + category is pinned (so removal/rename
+# fires the drift gate).
+
+category: class_other
+  - HLESSValidator (class, bases=[])
+  - ValidationResult (class, bases=[])
+
+category: constant
+  - AI_JOB_FIELDS: list (len=14)
+  - CURRENCY_SCALES: dict (len=29)
+  - DEFAULT_CURRENCY_SCALE: int = 2
+  - FEEDBACK_REPORT_FIELDS: tuple (len=27)
+  - MONEY_FIELD_PATTERNS: frozenset (len=24)
+
+category: function
+  - DateExpr (callable, type=_AnnotatedAlias)
+  - ScopePredicate (callable, type=_AnnotatedAlias)
+  - create_default_sitespec (callable, type=function)
+  - from_money (callable, type=function)
+  - get_currency_scale (callable, type=function)
+  - get_default_idempotency (callable, type=function)
+  - is_money_field_name (callable, type=function)
+  - money_from_dict (callable, type=function)
+  - to_money (callable, type=function)
+  - validate_stream (callable, type=function)
+  - validate_streams_with_cross_references (callable, type=function)
+
+category: typealias
+  - AmountExpr (typealias = FieldReference | ArithmeticExpr | LiteralValue)
+  - ComputedExpr (typealias = AggregateCall | FieldReference | ArithmeticExpr | LiteralValue)
+  - InvariantExpr (typealias = InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr)

@@ -178,22 +178,6 @@ def snapshot_dsl_constructs() -> str:
 
     construct_map = _construct_to_fragment_fields()
 
-    # Collect every IR class reachable from a fragment field that has at
-    # least one construct pointing at it. Sorted by class name for stable
-    # output.
-    referenced_fields: set[str] = set()
-    for fields in construct_map.values():
-        referenced_fields.update(fields)
-
-    ir_classes: dict[str, type[BaseModel]] = {}
-    for field_name in sorted(referenced_fields):
-        info = ModuleFragment.model_fields.get(field_name)
-        if info is None:
-            continue
-        cls = _ir_class_for_field(info.annotation)
-        if cls is not None:
-            ir_classes[cls.__name__] = cls
-
     lines: list[str] = []
     lines.append("# DAZZLE DSL Constructs — API Surface (cycle 1 of #961)")
     lines.append("#")
@@ -201,8 +185,12 @@ def snapshot_dsl_constructs() -> str:
     lines.append("# Regenerate: dazzle inspect-api dsl-constructs --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
-    lines.append("# To accept drift: regenerate, review the diff, add a CHANGELOG entry")
-    lines.append("# under Added / Changed / Removed (the DSL is part of the public API).")
+    lines.append("# This snapshot pins the construct → IR-class mapping. Field-level")
+    lines.append("# details for each IR class live in `docs/api-surface/ir-types.txt`")
+    lines.append("# (cycle 2). Together they form the DSL surface contract.")
+    lines.append("#")
+    lines.append("# To accept drift: regenerate, review, add a CHANGELOG entry under")
+    lines.append("# Added / Changed / Removed (the DSL is part of the public API).")
     lines.append("")
     lines.append("== Constructs ==")
     lines.append("")
@@ -219,12 +207,6 @@ def snapshot_dsl_constructs() -> str:
                 ir_names.append(cls.__name__)
         if ir_names:
             lines.append(f"  ir_classes: {', '.join(sorted(set(ir_names)))}")
-        lines.append("")
-
-    lines.append("== IR Classes ==")
-    lines.append("")
-    for cls_name in sorted(ir_classes):
-        lines.extend(_render_ir_class(ir_classes[cls_name]))
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
