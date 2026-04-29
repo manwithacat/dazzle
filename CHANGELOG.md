@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.130] - 2026-04-29
+
+### Fixed
+- **#946 — pdf-viewer assets bundled into framework CSS/JS.**
+  Adopting `display: pdf_viewer` (cycle 4) or the
+  `pdf_viewer.html` include used to require projects with custom
+  base templates to add two explicit asset references:
+
+  ```html
+  <link rel="stylesheet" href="/static/css/components/pdf-viewer.css">
+  <script defer src="/static/js/pdf-viewer.js"></script>
+  ```
+
+  Without these, panels rendered inline (no slide-in chrome) and
+  every keyboard shortcut was inert (no bridge handler). The
+  cycle 1b shape only added `pdf-viewer.js` to `templates/base.html`
+  via a standalone `<script>` tag — projects with their own base
+  template lost the bridge entirely.
+
+  The fix wires both assets into the framework bundles:
+  - `dazzle.css` @imports `components/pdf-viewer.css`
+  - `css_loader.py` `CSS_SOURCE_FILES` includes pdf-viewer.css
+  - `build_dist.py` `JS_SOURCES` includes pdf-viewer.js
+  - `build_dist.py` `FRAMEWORK_JS` includes pdf-viewer.js (for
+    comment-stripping)
+
+  Now any project loading the framework via `dist/dazzle.min.css`
+  + `dist/dazzle.min.js` OR via the runtime bundle from
+  `css_loader.get_bundled_css()` gets the chrome wired
+  automatically. Bundle cost: ~3kb CSS + ~2kb JS (minified).
+
+### Agent Guidance
+- When adding a new framework component with its own CSS / JS,
+  five places need updating in lockstep:
+  1. `static/css/dazzle.css` — `@import`
+  2. `runtime/css_loader.py` — `CSS_SOURCE_FILES`
+  3. `tests/unit/test_css_delivery.py` — `LAYERED_ORDER` and
+     the `test_output_includes_every_component_family` list
+  4. `scripts/build_dist.py` — `CSS_SOURCES` (already covered
+     since #920) and `JS_SOURCES` if the component ships JS
+  5. `scripts/build_dist.py` — `FRAMEWORK_JS` set if the JS
+     should be comment-stripped
+
+  The pdf-viewer regression in #946 surfaced because step 1 was
+  missed and step 4's JS half wasn't wired. A regression gate in
+  `tests/unit/test_pdf_viewer_component.py::TestBundleIntegration`
+  now pins all five.
+
 ## [0.61.129] - 2026-04-29
 
 ### Fixed

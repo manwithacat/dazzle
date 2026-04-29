@@ -36,6 +36,7 @@ LAYERED_ORDER: tuple[tuple[str, str], ...] = (
     ("components", "css/components/form.css"),
     ("components", "css/components/fragments.css"),
     ("components", "css/components/htmx-states.css"),
+    ("components", "css/components/pdf-viewer.css"),
     ("components", "css/components/regions.css"),
     ("components", "css/components/table.css"),
     ("components", "css/dazzle-layer.css"),
@@ -154,6 +155,7 @@ class TestCssLoader:
             "components/form.css",
             "components/fragments.css",
             "components/htmx-states.css",
+            "components/pdf-viewer.css",
             "components/regions.css",
             "components/table.css",
         ):
@@ -237,6 +239,7 @@ class TestDazzleCssEntry:
             "components/form.css",
             "components/fragments.css",
             "components/htmx-states.css",
+            "components/pdf-viewer.css",
             "components/regions.css",
             "components/table.css",
         ):

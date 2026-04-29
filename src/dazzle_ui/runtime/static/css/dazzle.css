@@ -36,6 +36,7 @@
 @import url("components/form.css") layer(components);
 @import url("components/fragments.css") layer(components);
 @import url("components/htmx-states.css") layer(components);
+@import url("components/pdf-viewer.css") layer(components);
 @import url("components/regions.css") layer(components);
 @import url("components/table.css") layer(components);
 

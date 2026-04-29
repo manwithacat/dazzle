@@ -70,6 +70,11 @@ JS_SOURCES = [
     # Dazzle runtime (a11y + islands)
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
+    # #946: pdf-viewer bridge handler. Bundled (rather than loaded as
+    # a standalone <script> tag) so projects using `dist/dazzle.min.js`
+    # get the chrome wired automatically when they adopt the
+    # `display: pdf_viewer` DSL hook or the `pdf_viewer.html` include.
+    STATIC / "js" / "pdf-viewer.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -78,7 +83,14 @@ ICONS_SOURCES = [
 ]
 
 # Framework JS files get comment stripping; vendor files are left as-is.
-FRAMEWORK_JS = {"dz-alpine.js", "workspace-editor.js", "dz-a11y.js", "dz-islands.js", "site.js"}
+FRAMEWORK_JS = {
+    "dz-alpine.js",
+    "workspace-editor.js",
+    "dz-a11y.js",
+    "dz-islands.js",
+    "pdf-viewer.js",
+    "site.js",
+}
 
 
 def read_version() -> str:
