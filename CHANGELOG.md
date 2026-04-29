@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.122] - 2026-04-29
+
+### Added
+- **#942 cycle 2a — slide-in panel slot for related-entity content.**
+  Optional right-side panel for the PDF viewer chrome; opt-in via
+  a new `panel_html` parameter on the include:
+
+  ```jinja
+  {% include "components/pdf_viewer.html" with
+       src=...,
+       back_url=...,
+       panel_html=marking_html,
+       panel_label="Marking" %}
+  ```
+
+  The framework wraps `panel_html` in chrome (titled `<aside
+  role="complementary">`, close button, body scroll area) and wires
+  the toggle. CSS-only show/hide via `:has(:checked)` on a hidden
+  checkbox — preserves the cycle 1 widget contract from #940 (no
+  `x-data` on the wrapper).
+
+  - **Keyboard**: `p` toggles the panel; respects the existing
+    editable / modifier suppression (Cmd+P stays as the browser's
+    print shortcut)
+  - **Esc** with panel open: closes the panel only. Esc with
+    panel closed: navigates to back URL. Matches the dialog/modal
+    convention users expect.
+  - **Close button**: native `<label for="dz-panel-toggle">`
+    binding flips the checkbox; CSS-only path works for mouse
+    users without any JS
+  - **Mobile**: panel goes full-width below 768px (drawer pattern)
+  - **Reduced motion**: slide animation respects the existing
+    `prefers-reduced-motion` rule in reset.css
+  - **Forced colors**: focus ring on the close button picks up
+    `Highlight` system colour (same pattern as cycle 1g)
+  - **A11y**: labelled `role="complementary"` landmark; close
+    button focusable via `<input>` toggle; visually-hidden
+    checkbox preserves keyboard accessibility (uses `clip-path`
+    rather than `display: none` so `:has(:checked)` works)
+
+### Caught by visual gates
+- Panel was initially placed OUTSIDE `.dz-pdf-viewer-body` in the
+  test harness; `position: absolute` pinned to wrapper instead of
+  body, so the panel extended over the header. Caught by
+  `test_panel_geometry_when_open` immediately. Fixed by aligning
+  harness placement with the production template (panel inside
+  body).
+
+### Tests
+- 5 new template-rendering unit tests in
+  `test_pdf_viewer_component.py`: `panel_html`-omitted hides the
+  whole panel block; provided value renders chrome + content;
+  `panel_label` defaults to "Related"; HTML passes through
+  unescaped; close affordance correctly bound to the toggle.
+- 9 new Playwright gates in `test_pdf_viewer_gates.py`: hidden by
+  default, p-key toggle (open and close), Esc-closes-before-back,
+  mouse close-button, editable suppression, modifier suppression
+  (Cmd+P / Ctrl+P), open-state geometry (anchored trailing edge,
+  360px wide, full body height), mobile full-width drawer.
+
+  38 PDF viewer gates total pass (29 cycle 1 + 9 cycle 2a).
+
+### Agent Guidance
+- Project authors render their related-entity content (marking
+  results, feedback rows, AO breakdowns) into HTML strings via
+  their own templates, then pass the resulting string to the
+  include via `panel_html`. The framework owns the chrome /
+  toggle / keyboard plumbing; what goes IN the panel stays
+  project-shaped (each domain renders different facts).
+
 ## [0.61.121] - 2026-04-29
 
 ### Added

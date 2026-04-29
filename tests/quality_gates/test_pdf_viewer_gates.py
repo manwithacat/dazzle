@@ -680,3 +680,145 @@ class TestEmbedLayout:
         assert body["bottom"] == pytest.approx(footer["top"], abs=1)
         assert footer["bottom"] == pytest.approx(host["bottom"], abs=1)
         page.close()
+
+
+# ---------------------------------------------------------------------------
+# Gate 9 — panel slot (#942 cycle 2a)
+# ---------------------------------------------------------------------------
+
+
+def _panel_visible(page: Any) -> bool:
+    """A panel is visible when its bounding-rect left edge is
+    on-screen — hidden state has it translated off-screen via
+    ``transform: translateX(100%)``."""
+    return bool(
+        page.evaluate(
+            """() => {
+                const panel = document.getElementById('harness-panel');
+                if (!panel) return false;
+                const rect = panel.getBoundingClientRect();
+                return rect.left < window.innerWidth - 10;
+            }"""
+        )
+    )
+
+
+class TestPanelSlot:
+    """Cycle 2a — optional right-side panel for related-entity content.
+    CSS-only show/hide via a hidden checkbox toggled by the bridge
+    keyboard handler. Panel structure is always rendered in the
+    harness; production renders it conditionally on ``panel_html``
+    (covered by tests/unit/test_pdf_viewer_component.py)."""
+
+    def test_panel_hidden_by_default(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        assert not _panel_visible(page), "panel must start hidden (translateX(100%))"
+        page.close()
+
+    def test_p_key_opens_panel(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        assert not _panel_visible(page)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert _panel_visible(page), "p key must toggle the panel open"
+        page.screenshot(path=str(SCREENSHOT_DIR / "panel-open.png"))
+        page.close()
+
+    def test_p_key_closes_panel_when_open(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert _panel_visible(page)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert not _panel_visible(page), "second p press must close the panel"
+        page.close()
+
+    def test_escape_closes_panel_before_navigating_back(self, browser: Any, server: str) -> None:
+        """Esc with panel open: close the panel, DON'T navigate back.
+        Esc with panel closed: navigate to back URL. Matches the
+        dialog/modal convention users expect."""
+        page = _new_page(browser, server)
+        page.evaluate("window.location.hash = 'sentinel'")
+        page.wait_for_timeout(20)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert _panel_visible(page)
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(250)
+        assert not _panel_visible(page), "first Esc must close the panel"
+        assert "#sentinel" in str(page.url), (
+            f"Esc with open panel must NOT navigate back; it closes the panel first. url={page.url}"
+        )
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(50)
+        assert page.url.endswith("#back"), "second Esc must navigate to back URL"
+        page.close()
+
+    def test_close_button_closes_panel(self, browser: Any, server: str) -> None:
+        """Native checkbox+label binding: clicking the close
+        affordance flips the toggle without any JS."""
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert _panel_visible(page)
+        page.locator("#harness-panel-close").click()
+        page.wait_for_timeout(250)
+        assert not _panel_visible(page), "close-button click must hide the panel"
+        page.close()
+
+    def test_p_in_input_does_not_toggle(self, browser: Any, server: str) -> None:
+        """Editable suppression must extend to the panel toggle —
+        typing 'p' into a search field shouldn't yank the panel
+        open."""
+        page = _new_page(browser, server)
+        page.locator("#harness-text-input").click()
+        page.locator("#harness-text-input").fill("")
+        page.keyboard.type("ppp")
+        page.wait_for_timeout(250)
+        assert not _panel_visible(page), "typing 'p' into an input must NOT toggle the panel"
+        page.close()
+
+    def test_modifier_p_does_not_toggle(self, browser: Any, server: str) -> None:
+        """Cmd+P / Ctrl+P are the browser's print shortcuts — the
+        viewer must not hijack them."""
+        page = _new_page(browser, server)
+        page.keyboard.press("Meta+p")
+        page.wait_for_timeout(50)
+        assert not _panel_visible(page), "Cmd+P must pass through to the browser"
+        page.keyboard.press("Control+p")
+        page.wait_for_timeout(50)
+        assert not _panel_visible(page), "Ctrl+P must pass through to the browser"
+        page.close()
+
+    def test_panel_geometry_when_open(self, browser: Any, server: str) -> None:
+        """When open: anchored to the trailing edge, full-height of
+        the body, 360px wide on desktop."""
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        rect = page.evaluate("document.getElementById('harness-panel').getBoundingClientRect()")
+        body_rect = page.evaluate(
+            "document.querySelector('.dz-pdf-viewer-body').getBoundingClientRect()"
+        )
+        viewport = page.viewport_size
+        assert rect["right"] == pytest.approx(viewport["width"], abs=1)
+        assert rect["width"] == pytest.approx(360, abs=2)
+        assert rect["top"] == pytest.approx(body_rect["top"], abs=1)
+        assert rect["bottom"] == pytest.approx(body_rect["bottom"], abs=1)
+        page.close()
+
+    def test_panel_full_width_on_mobile(self, browser: Any, server: str) -> None:
+        """At ≤768px the panel goes full-width (drawer pattern)."""
+        page = browser.new_page(viewport={"width": 480, "height": 800})
+        page.goto(f"{server}?variant=both")
+        page.wait_for_function(
+            "window.pdfViewerGates && window.pdfViewerGates.widgetMounted().bridgePresent",
+            timeout=5000,
+        )
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        rect = page.evaluate("document.getElementById('harness-panel').getBoundingClientRect()")
+        assert rect["width"] == pytest.approx(480, abs=2)
+        page.screenshot(path=str(SCREENSHOT_DIR / "panel-mobile.png"))
+        page.close()

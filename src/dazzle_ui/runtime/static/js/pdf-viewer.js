@@ -47,6 +47,16 @@
         if (isEditableTarget(e.target)) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
         if (e.key === "Escape") {
+          // #942 cycle 2a: if the panel is open, Esc closes the
+          // panel rather than navigating back. One Esc = close;
+          // a second Esc (with panel now closed) = back. Matches
+          // the dialog/modal convention users expect.
+          var toggleEsc = document.getElementById("dz-panel-toggle");
+          if (toggleEsc && toggleEsc.checked) {
+            e.preventDefault();
+            toggleEsc.click();
+            return;
+          }
           e.preventDefault();
           navigate(el.getAttribute("data-dz-back-url"));
           return;
@@ -64,6 +74,17 @@
           if (next) {
             e.preventDefault();
             navigate(next);
+          }
+          return;
+        }
+        if (e.key === "p" || e.key === "P") {
+          // #942 cycle 2a: toggle the right-side panel via the
+          // hidden checkbox — CSS-only show/hide. No-op when no
+          // panel is rendered (no checkbox in DOM).
+          var togglePanel = document.getElementById("dz-panel-toggle");
+          if (togglePanel) {
+            e.preventDefault();
+            togglePanel.click();
           }
           return;
         }

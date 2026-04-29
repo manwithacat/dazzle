@@ -185,3 +185,115 @@
     display: none;
   }
 }
+
+/* ── #942 cycle 2a — right-side panel ─────────────────────────
+ *
+ * Optional slide-in panel for related-entity content. Toggle is a
+ * hidden checkbox; CSS-only show/hide via the parent's :has(:checked).
+ * Keeps the wrapper free of x-data (preserves the widget contract
+ * from #940 — the bridge mounts the keyboard handler; Alpine doesn't
+ * touch this node).
+ *
+ * Drawer behaviour: panel `position: absolute`, slides in from the
+ * trailing edge; default `transform: translateX(100%)` hides it
+ * off-screen, `:has(:checked)` swaps to `translateX(0)`. CSS
+ * transition respects the global `prefers-reduced-motion` rule
+ * already in reset.css. Mobile (≤768px): panel goes full-width
+ * over the content (drawer pattern). */
+
+.dz-pdf-viewer-panel-toggle {
+  /* Visually hidden but keyboard-accessible (the keyboard handler
+   * .click()s it). Don't use display:none — that removes the
+   * input from the DOM, breaking :has(:checked). */
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dz-pdf-viewer-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 360px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--colour-surface);
+  border-inline-start: 1px solid var(--colour-border);
+  box-shadow: -4px 0 12px hsl(0 0% 0% / 0.06);
+  transform: translateX(100%);
+  transition: transform var(--duration-base) var(--ease-out);
+  z-index: 1;
+}
+
+.dz-pdf-viewer:has(.dz-pdf-viewer-panel-toggle:checked) .dz-pdf-viewer-panel {
+  transform: translateX(0);
+}
+
+.dz-pdf-viewer-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-lg);
+  background: var(--colour-bg);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-pdf-viewer-panel-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.dz-pdf-viewer-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  color: var(--colour-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.dz-pdf-viewer-panel-close:hover {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+}
+
+.dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
+  .dz-pdf-viewer-panel-close {
+  /* Surface focus on the toggle as a ring on the close affordance —
+   * the toggle itself is visually-hidden so its native ring is
+   * invisible. Same brand-coloured pattern as cycle 1f. */
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+@media (forced-colors: active) {
+  .dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
+    .dz-pdf-viewer-panel-close {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.dz-pdf-viewer-panel-body {
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .dz-pdf-viewer-panel {
+    inline-size: 100%;
+  }
+}

@@ -156,6 +156,55 @@
         >
           PDF body (test stub)
         </div>
+
+        <!--
+          Optional panel slot (#942 cycle 2a). Lives INSIDE
+          .dz-pdf-viewer-body so position: absolute pins it to the
+          body's bounds, not the wrapper's. Mirrors production
+          template (components/pdf_viewer.html). Always rendered
+          in the harness; production renders conditionally on the
+          ``panel_html`` parameter.
+        -->
+        <input
+          type="checkbox"
+          id="dz-panel-toggle"
+          class="dz-pdf-viewer-panel-toggle"
+          aria-label="Toggle related panel"
+        />
+        <aside
+          class="dz-pdf-viewer-panel"
+          role="complementary"
+          aria-label="Related"
+          id="harness-panel"
+        >
+          <header class="dz-pdf-viewer-panel-header">
+            <h2 class="dz-pdf-viewer-panel-title">Related</h2>
+            <label
+              for="dz-panel-toggle"
+              class="dz-pdf-viewer-panel-close"
+              id="harness-panel-close"
+              aria-label="Close panel"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+              </svg>
+            </label>
+          </header>
+          <div class="dz-pdf-viewer-panel-body">
+            <p>Test panel content (harness)</p>
+          </div>
+        </aside>
       </div>
 
       <footer

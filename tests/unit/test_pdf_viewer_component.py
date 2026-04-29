@@ -254,3 +254,76 @@ class TestBundleIntegration:
         and ships under the static/js URL."""
         base = (REPO_ROOT / "src/dazzle_ui/templates/base.html").read_text()
         assert "pdf-viewer.js" in base
+
+
+# ---------------------------------------------------------------------------
+# Panel slot (#942 cycle 2a)
+# ---------------------------------------------------------------------------
+
+
+class TestPanelSlot:
+    def _render(self, jinja_env: Any, **kwargs: Any) -> str:
+        tmpl = jinja_env.from_string('{% include "components/pdf_viewer.html" %}')
+        return tmpl.render(**kwargs)
+
+    def test_panel_omitted_when_no_panel_html(self, jinja_env: Any) -> None:
+        """No `panel_html` parameter ⇒ no panel chrome at all —
+        toggle checkbox absent, aside absent, footer kbd hint absent.
+        Matches cycle 1b's include-is-opt-in pattern."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        assert "dz-pdf-viewer-panel" not in html
+        assert "dz-panel-toggle" not in html
+        assert ">p<" not in html  # footer keyboard hint
+
+    def test_panel_renders_when_panel_html_provided(self, jinja_env: Any) -> None:
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html="<p>Marking summary</p>",
+            panel_label="Marking",
+        )
+        assert 'class="dz-pdf-viewer-panel"' in html
+        assert 'role="complementary"' in html
+        assert 'aria-label="Marking"' in html
+        assert "<p>Marking summary</p>" in html
+        assert ">\n          Marking\n        <" in html or ">Marking<" in html
+        assert ">p<" in html  # footer kbd hint
+        assert 'id="dz-panel-toggle"' in html
+        assert 'for="dz-panel-toggle"' in html
+
+    def test_panel_label_defaults_to_related(self, jinja_env: Any) -> None:
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html="<div>content</div>",
+        )
+        assert "Related" in html
+        assert 'aria-label="Related"' in html
+
+    def test_panel_html_renders_unescaped(self, jinja_env: Any) -> None:
+        """``panel_html`` is project-rendered markup; the framework
+        passes it through `| safe` so HTML structure survives. The
+        project is responsible for autoescape inside their own
+        template."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html='<ul><li class="x">item</li></ul>',
+        )
+        assert '<ul><li class="x">item</li></ul>' in html
+
+    def test_panel_close_label_links_to_toggle(self, jinja_env: Any) -> None:
+        """The close affordance is a `<label for="dz-panel-toggle">` —
+        clicking it flips the checkbox via the native browser binding.
+        No JS required for the close path."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html="<p>x</p>",
+        )
+        assert 'for="dz-panel-toggle"' in html
+        assert "dz-pdf-viewer-panel-close" in html

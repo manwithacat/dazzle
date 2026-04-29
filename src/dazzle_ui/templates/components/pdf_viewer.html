@@ -117,6 +117,57 @@
       class="dz-pdf-viewer-embed"
       aria-label="{{ title | default('Document') }} PDF"
     />
+
+    {# #942 cycle 2a — optional right-side panel.
+       Project renders the content into a string and passes it via
+       ``panel_html``; the framework wraps it in chrome and wires
+       the toggle. CSS-only show/hide via :has(:checked) so the
+       wrapper stays free of x-data (preserves the widget contract
+       from #940). Project HTML is trusted ({{ ... | safe }}) — the
+       project renders its own templates with autoescape, then
+       passes the resulting HTML in as a string. #}
+    {% if panel_html %}
+    <input
+      type="checkbox"
+      id="dz-panel-toggle"
+      class="dz-pdf-viewer-panel-toggle"
+      aria-label="Toggle {{ panel_label | default('Related panel') }}"
+    />
+    <aside
+      class="dz-pdf-viewer-panel"
+      role="complementary"
+      aria-label="{{ panel_label | default('Related') }}"
+    >
+      <header class="dz-pdf-viewer-panel-header">
+        <h2 class="dz-pdf-viewer-panel-title">
+          {{ panel_label | default("Related") }}
+        </h2>
+        <label
+          for="dz-panel-toggle"
+          class="dz-pdf-viewer-panel-close"
+          aria-label="Close panel"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </label>
+      </header>
+      <div class="dz-pdf-viewer-panel-body">
+        {{ panel_html | safe }}
+      </div>
+    </aside>
+    {% endif %}
   </div>
 
   <footer class="dz-pdf-viewer-footer" aria-label="Keyboard shortcuts">
@@ -128,6 +179,11 @@
     <span class="dz-pdf-viewer-kbd-label">Previous</span>
     <kbd class="dz-pdf-viewer-kbd">k</kbd>
     <span class="dz-pdf-viewer-kbd-label">Next</span>
+    {% endif %}
+    {% if panel_html %}
+    <span class="dz-pdf-viewer-kbd-sep">·</span>
+    <kbd class="dz-pdf-viewer-kbd">p</kbd>
+    <span class="dz-pdf-viewer-kbd-label">{{ panel_label | default("Panel") }}</span>
     {% endif %}
   </footer>
 </div>
