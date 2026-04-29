@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-04-29
+
+### Notes
+
+Minor version bump marking the **feature-stabilisation phase before 1.0**.
+No breaking changes in this release — every 0.61.x feature ships
+forward unchanged. The 0.62 line is where the framework's public
+API surface is being hardened ahead of the 1.0 commitment.
+
+The 1.0 readiness gap analysis (recorded as concept issues
+#952–#961) covers operational primitives for SaaS completeness
+(notifications, background jobs, search, i18n, audit log,
+multi-tenancy completeness) plus React-style polish gaps
+(mobile-native feel, optimistic UI, richer animations) and the
+breaking-change pass tooling that's load-bearing for the 1.0
+freeze. None of those land in 0.62 itself; 0.62 is the
+checkpoint, not the destination.
+
 ## [0.61.144] - 2026-04-29
 
 ### Added
