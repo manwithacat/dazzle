@@ -523,6 +523,15 @@ def _serve_combined(ctx: _ServeContext) -> None:
     typer.echo(f"Starting Dazzle server for '{appspec.name}'...")
 
     assert mf is not None, "Manifest must be loaded for combined server mode"
+
+    # #938 — wire `[ui] dark_mode_toggle` into the theme module so
+    # both layouts (app shell + marketing) gate the toggle button on
+    # the same flag, and a stale `dz_theme=dark` cookie can't trap a
+    # newly opted-out project's users in dark-mode.
+    from dazzle_ui.runtime.theme import configure_dark_mode_toggle
+
+    configure_dark_mode_toggle(mf.dark_mode_toggle)
+
     ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
 
     typer.echo(f"  • {len(appspec.domain.entities)} entities")

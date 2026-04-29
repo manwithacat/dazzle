@@ -173,6 +173,23 @@
   color-scheme: light dark;
 }
 
+/* #938 — bind `data-theme="dark"` (the JS toggle's output) to the
+ * actual `color-scheme` property so `light-dark()` flips when the
+ * user toggles. Without this, the toggle would set `data-theme` but
+ * `light-dark()` would still resolve based on `prefers-color-scheme`,
+ * leaving framework components stuck on the light variant of
+ * `--colour-bg` / `--colour-text` / `--colour-border` even though
+ * the topbar swapped its sun/moon icon. The marketing-site `site.js`
+ * sets `style.colorScheme` imperatively for the same reason; this
+ * CSS rule covers the in-app shell whose Alpine controller only
+ * sets `data-theme`. */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  color-scheme: light;
+}
+
 /* Fallback for browsers without light-dark() support. Modern
  * Chrome / Firefox / Safari all support it as of 2024 but the
  * @supports gate keeps the door open for outliers. */

@@ -414,9 +414,13 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     # attribute renders on first paint and returning dark-mode users
     # don't see a flash-of-light. Falls back to "light" when called
     # outside a request context (e.g. unit-test rendering).
-    from dazzle_ui.runtime.theme import get_theme_variant
+    from dazzle_ui.runtime.theme import get_theme_variant, is_dark_mode_toggle_enabled
 
     env.globals["theme_variant"] = get_theme_variant
+    # #938 — gate the topbar/sidebar/marketing dark-mode toggle button
+    # on `[ui] dark_mode_toggle`. Defaults to True; projects with a
+    # deliberately light-only brand set `dark_mode_toggle = false`.
+    env.globals["dark_mode_toggle_enabled"] = is_dark_mode_toggle_enabled
 
     # v0.62 CSS refactor (Phase 4 teardown): Tailwind compiled bundle
     # removed — the `_tailwind_bundled` Jinja global and the per-request

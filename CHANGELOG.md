@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.111] - 2026-04-29
+
+### Fixed
+- **#938 — in-app dark-mode toggle now actually flips the palette.**
+  The Alpine controller in `app_shell.html` set `data-theme="dark"`
+  on `<html>` but tokens.css's `light-dark()` colour tokens kept
+  resolving against the OS `prefers-color-scheme`, leaving the
+  framework chrome stuck on the light variant of `--colour-bg`,
+  `--colour-text`, `--colour-border`, etc. Only the design-system.css
+  HSL variants flipped, which is why the toggle "looked broken" —
+  half the chrome moved, half didn't.
+
+  Bound `[data-theme="dark"] { color-scheme: dark; }` (and the
+  light counterpart) in tokens.css so `light-dark()` follows the
+  toggle. Marketing pages already set `style.colorScheme`
+  imperatively in `site.js`; this CSS rule covers the in-app shell
+  whose Alpine controller only sets `data-theme`.
+
+### Added
+- **#938 — `[ui] dark_mode_toggle` config flag (default `true`).**
+  Projects whose brand is deliberately light-only (e.g. paper /
+  academic themes like AegisMark's) can set
+  `[ui] dark_mode_toggle = false` to:
+  - Hide the toggle button in the topbar
+  - Hide the toggle in the sidebar footer
+  - Hide the toggle on marketing nav (`site/includes/nav.html`)
+  - Force `data-theme="light"` on first-paint render so a stale
+    `dz_theme=dark` cookie from before the project opted out
+    cannot trap users in a dark-mode render they have no UI
+    affordance to undo
+
+  The Alpine controller's `applyDark()` is left intact for any
+  programmatic / keyboard callers; with no rendered button to
+  invoke it the surface is gone. Theming is wired at server
+  startup via `configure_dark_mode_toggle(manifest.dark_mode_toggle)`
+  in both the CLI serve path and the production
+  `create_app_factory()` entrypoint. `is_dark_mode_toggle_enabled`
+  is exposed as a Jinja global so layout templates gate the
+  buttons consistently.
+
+  11-test suite (`test_dark_mode_toggle_config.py`) covers manifest
+  parse (default + explicit true/false), the theme module's
+  short-circuit behaviour (stale-cookie scenario), the Jinja global
+  registration, and a CSS regression that pins the
+  `[data-theme="dark"]` → `color-scheme: dark` binding.
+
+### Agent Guidance
+- For projects whose brand is light-only, `[ui] dark_mode_toggle =
+  false` is now the right place to disable the toggle. Hiding the
+  button via CSS (the `aria-label` selector workaround) leaves the
+  design-system.css HSL variants still active and the cookie still
+  poisoned across sessions — both fixed by the manifest flag.
+
 ## [0.61.110] - 2026-04-29
 
 ### Added

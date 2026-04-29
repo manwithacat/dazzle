@@ -434,6 +434,12 @@ class ProjectManifest:
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
+    dark_mode_toggle: bool = True  # #938 — render the dark/light toggle in
+    # the app shell (topbar + sidebar footer) and on marketing pages. Set
+    # `[ui] dark_mode_toggle = false` for projects whose brand is
+    # deliberately light-only (e.g. paper / academic themes) so the toggle
+    # is hidden everywhere AND the server forces `data-theme="light"` on
+    # first paint regardless of any stale cookie state.
     app_theme: str | None = None  # v0.61.36: app-shell theme preset (overrides
     # the default shadcn-zinc tokens with an alternate :root block). One of
     # the presets shipped in src/dazzle_ui/runtime/static/css/themes/<name>.css
@@ -698,6 +704,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     cdn_enabled = ui_data.get("cdn", False)
     favicon_path = ui_data.get("favicon")
     app_theme_name = ui_data.get("theme") or ui_data.get("app_theme")
+    dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
 
     # Parse [extensions] section (#786)
     extensions_data = data.get("extensions", {})
@@ -741,6 +748,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         cdn=cdn_enabled,
         favicon=favicon_path,
         app_theme=app_theme_name,
+        dark_mode_toggle=dark_mode_toggle_enabled,
         environments=environments,
         extensions=extensions_config,
         storage_defs=storage_defs,

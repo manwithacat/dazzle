@@ -1,4 +1,4 @@
-/* dazzle v0.61.109 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.110 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -183,6 +183,12 @@ Consolas, "Liberation Mono", monospace;
 --colour-danger-soft: oklch(from var(--colour-danger) 95% 0.05 h);
 --colour-brand-soft: oklch(from var(--colour-brand) 95% 0.05 h);
 color-scheme: light dark;
+}
+[data-theme="dark"] {
+color-scheme: dark;
+}
+[data-theme="light"] {
+color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
 @supports not (color: light-dark(white, black)) {

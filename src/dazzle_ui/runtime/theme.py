@@ -55,13 +55,51 @@ VALID_VARIANTS: frozenset[str] = frozenset({"light", "dark"})
 theme_variant_ctxvar: ContextVar[str] = ContextVar("dz_theme_variant", default=DEFAULT_VARIANT)
 
 
+# #938 — process-wide flag set once at server startup from
+# ``[ui] dark_mode_toggle`` in dazzle.toml. When ``False``:
+#   - get_theme_variant() returns "light" regardless of the cookie,
+#     so a stale ``dz_theme=dark`` cookie from before the project
+#     opted out cannot leave the user trapped in a dark-mode render
+#     they have no UI affordance to undo.
+#   - is_dark_mode_toggle_enabled() returns False so layout
+#     templates skip rendering the toggle button in the topbar,
+#     sidebar footer, and marketing nav.
+_DARK_MODE_TOGGLE_ENABLED = True
+
+
+def configure_dark_mode_toggle(enabled: bool) -> None:
+    """Set the process-wide dark-mode-toggle flag from manifest data.
+
+    Call once at server startup after loading ``dazzle.toml``. Safe
+    to call multiple times — the last call wins. No-op when the
+    framework is used without a manifest (e.g. unit tests).
+    """
+    global _DARK_MODE_TOGGLE_ENABLED
+    _DARK_MODE_TOGGLE_ENABLED = bool(enabled)
+
+
+def is_dark_mode_toggle_enabled() -> bool:
+    """Return whether the dark/light toggle should render in the
+    app shell + marketing nav. Exposed as a Jinja global so layout
+    templates can gate the button render on it.
+    """
+    return _DARK_MODE_TOGGLE_ENABLED
+
+
 def get_theme_variant() -> str:
     """Return the current request's theme variant, or the default
     when called outside a request context (e.g. in unit tests).
 
     Used as a Jinja global so templates can call ``{{ theme_variant()
     }}`` to populate ``<html data-theme="…">`` on first paint.
+
+    When ``[ui] dark_mode_toggle = false`` (#938), always returns
+    ``"light"`` — a stale cookie from before the project opted out
+    cannot trap the user in dark-mode without a toggle button to
+    undo it.
     """
+    if not _DARK_MODE_TOGGLE_ENABLED:
+        return DEFAULT_VARIANT
     return theme_variant_ctxvar.get()
 
 

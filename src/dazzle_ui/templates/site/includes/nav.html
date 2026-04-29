@@ -10,7 +10,11 @@
       {% elif nav_cta %}
       <a href="{{ nav_cta.href }}" class="dz-button dz-button-primary">{{ nav_cta.label }}</a>
       {% endif %}
+      {# #938 — `[ui] dark_mode_toggle = false` hides the marketing
+         theme toggle alongside the in-app shell toggles. #}
+      {% if dark_mode_toggle_enabled() %}
       {% include "site/includes/theme_toggle.html" %}
+      {% endif %}
     </div>
   </nav>
 </header>

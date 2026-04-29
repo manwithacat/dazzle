@@ -67,7 +67,13 @@
         {% if is_authenticated %}
         <span class="dz-topbar-user">{{ user_name or user_email }}</span>
         {% endif %}
-        {# Dark mode toggle #}
+        {# Dark mode toggle — #938: gated on `[ui] dark_mode_toggle`.
+           Defaults to true; projects with a deliberately light-only
+           brand (paper / academic) set the flag to false to hide the
+           toggle everywhere. The Alpine `applyDark()` is still wired
+           so existing keyboard / programmatic callers don't break,
+           but with no button to invoke it the surface is gone. #}
+        {% if dark_mode_toggle_enabled() %}
         <button type="button"
                 class="dz-icon-button"
                 @click="toggleDark()" aria-label="Toggle dark mode">
@@ -79,6 +85,7 @@
           </svg>
           <span class="visually-hidden">Toggle dark mode</span>
         </button>
+        {% endif %}
       </div>
     </div>
     {% endblock navbar %}
@@ -208,7 +215,9 @@
       </div>
       {% endif %}
 
-      {# Dark mode toggle (sidebar, visible on desktop) #}
+      {# Dark mode toggle (sidebar, visible on desktop) — #938 gated on
+         `[ui] dark_mode_toggle`. #}
+      {% if dark_mode_toggle_enabled() %}
       <div class="dz-sidebar-darkmode">
         <button type="button"
                 class="dz-sidebar-action-button"
@@ -223,6 +232,7 @@
           <span x-text="dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
         </button>
       </div>
+      {% endif %}
     </div>
     {% endblock sidebar_footer %}
   </aside>
