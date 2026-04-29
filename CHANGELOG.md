@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.7] - 2026-04-29
+
+### Fixed
+- **#964 — InvalidCharacterError on `setAttribute('@click')`
+  during htmx morph.** Idiomorph's attribute-morph loop calls
+  `setAttribute(s.name, s.value)` for every attribute on the new
+  node. Alpine's event-listener shorthand uses `@`-prefixed names
+  (`@click`, `@click.away`). Chromium enforces the HTML
+  attribute-name production strictly and rejects `@` — Firefox /
+  Safari accept it silently. Result: a `InvalidCharacterError` once
+  per workspace morph in Chromium console, even though the page
+  still rendered correctly.
+
+  Fix: `dz-alpine.js` installs a one-time `beforeAttributeUpdated`
+  callback on `Idiomorph.defaults.callbacks` that returns `false`
+  for any `@`-prefixed attribute, signalling idiomorph to skip the
+  setAttribute call. Safe because Alpine event directives are
+  `addEventListener` registrations, not attribute state — there's
+  nothing to morph. Drift gate at
+  `tests/unit/test_idiomorph_alpine_patch.py` (5 tests pinning
+  presence, target shape, skip semantics, idempotency, chaining).
+
+### Agent Guidance
+- Browser-specific HTML attribute-name validation matters: Chrome's
+  console errors on `setAttribute('@x', ...)` even when functional.
+  When debugging "different browsers behave differently" in an htmx
+  morph context, check `Idiomorph.defaults.callbacks` first — that
+  callback table is the right hook for skipping attribute morphs
+  selectively (`value` / `ignoreActiveValue` already use the same
+  surface internally).
+
 ## [0.63.6] - 2026-04-29
 
 ### Fixed

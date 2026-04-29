@@ -1338,3 +1338,53 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
     window.Alpine.initTree(root);
   }
 });
+
+// #964: skip Alpine event-listener directives during idiomorph attribute morph.
+//
+// idiomorph's attribute-morph loop (`s.value of newElement.attributes`) calls
+// `target.setAttribute(s.name, s.value)` for every attribute. Alpine's
+// event-listener shorthand uses `@`-prefixed attribute names (`@click`,
+// `@click.away`, etc.). Chromium enforces the HTML attribute-name production
+// strictly and rejects `@` — Firefox / Safari accept it silently. The
+// resulting `InvalidCharacterError` is logged once per morph; functionally
+// the page still renders because Alpine has already wired the event listener
+// at init time and doesn't need the attribute mirrored.
+//
+// The fix is to install a one-time `beforeAttributeUpdated` callback on
+// `Idiomorph.defaults.callbacks` that returns `false` for any `@`-prefixed
+// attribute name. The skip is safe because Alpine event directives are
+// `addEventListener` registrations, not attribute state — there's nothing
+// to morph. The same callback is the idiomatic surface for `value` /
+// `ignoreActiveValue` skips inside idiomorph itself, so this isn't a hack.
+//
+// Guard for late Idiomorph loads via DOMContentLoaded; in practice Idiomorph
+// is bundled in `dazzle.min.js` ahead of this file, so the patch installs
+// synchronously on first script execution.
+(function patchIdiomorphForAlpineDirectives() {
+  function install() {
+    const Idiomorph = /** @type {any} */ (window).Idiomorph;
+    if (!Idiomorph || !Idiomorph.defaults || !Idiomorph.defaults.callbacks) {
+      return false;
+    }
+    const callbacks = Idiomorph.defaults.callbacks;
+    const original = callbacks.beforeAttributeUpdated;
+    if (callbacks.__dzAlpinePatched) return true;
+    callbacks.beforeAttributeUpdated = function (name, element, mutationType) {
+      // Alpine event directives never need to be morphed — they're managed
+      // via addEventListener. Returning false signals idiomorph to skip.
+      if (typeof name === "string" && name.charCodeAt(0) === 64 /* '@' */) {
+        return false;
+      }
+      // Defer to any previously-installed callback for non-@ attributes.
+      if (typeof original === "function") {
+        return original.call(this, name, element, mutationType);
+      }
+      return undefined;
+    };
+    callbacks.__dzAlpinePatched = true;
+    return true;
+  }
+  if (!install()) {
+    document.addEventListener("DOMContentLoaded", install, { once: true });
+  }
+})();

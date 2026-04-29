@@ -1,4 +1,4 @@
-/* dazzle v0.63.1 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.6 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7425,6 +7425,7 @@ position: relative;
 border: 1px solid var(--colour-border);
 border-radius: var(--radius-md);
 overflow: hidden;
+min-height: calc(min(var(--dz-list-rows, 10), 10) * 2.75rem + 3rem);
 }
 .dz-table-scroll-x {
 overflow-x: auto;
