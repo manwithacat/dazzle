@@ -51,13 +51,22 @@
     <p id="{{ error_id }}" class="dz-form-error" role="alert">{{ error }}</p>
     {% endif %}
 
-  {% elif field.ref_entity and field.widget == "combobox" %}
-    {# Entity-ref + combobox: TomSelect with remote load (#927).
-       The combobox widget needs a populated <select> at mount time;
-       Alpine's async x-for would populate options AFTER TomSelect had
-       already wrapped an empty select, leaving zero items. So instead
-       we hand the FK API URL to TomSelect via data-dz-ref-api and let
-       its built-in `load` callback fetch + render options. #}
+  {% elif field.ref_entity %}
+    {# Entity-ref fields render as TomSelect comboboxes with remote
+       load (#939). The framework previously had two paths here — one
+       Alpine + x-for that populated an empty select, one TomSelect
+       that loaded via its own callback. The Alpine path was the
+       implicit default and the TomSelect path opt-in via
+       widget=combobox; both fetched the same FK list endpoint with
+       different lifecycles, contending over the same DOM node when
+       both fired (the wrapper-on-wrapper smell from #927).
+
+       The single path now: empty <select> + data-dz-ref-api, the
+       widget registry's combobox load callback fetches options from
+       `__display__` (#928) at first focus / preload. Removes ~50
+       LOC of bespoke client display-field fallback that's now stale
+       (`__display__` covers it server-side) and eliminates the
+       three-lifecycle contention by deleting the contention. #}
     <label for="field-{{ field.name }}" class="dz-form-label">
       {{ field.label }}
       {% if field.required %}
@@ -78,62 +87,13 @@
             {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
             {% if field.required %}required aria-required="true"{% endif %}
             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
-      {# Optional pre-selected value — TomSelect's load callback fills the rest. #}
+      {# Pre-selected value: the TomSelect load callback resolves
+         the human label on first focus/preload; until then this
+         option preserves form integrity (the right ID is submitted)
+         across re-render. #}
       {% if values.get(field.name) %}
       <option value="{{ values.get(field.name) }}" selected>{{ values.get(field.name) }}</option>
       {% endif %}
-    </select>
-    {% if errors.get(field.name) %}
-    <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>
-    {% endif %}
-
-  {% elif field.ref_entity %}
-    {# Entity-ref auto-wiring (cycle 236 — closes EX-044).
-       When a DSL field is a plain `ref Entity` with no explicit `source:`
-       override, the template compiler populates ref_entity + ref_api from
-       the IR and the form renders a select that hydrates options from the
-       entity's list endpoint. Mirrors the Alpine fetch pattern already
-       used by filter_bar.html for ref/belongs_to column filters. #}
-    <label for="field-{{ field.name }}" class="dz-form-label">
-      {{ field.label }}
-      {% if field.required %}
-        <span class="dz-form-required" aria-hidden="true">*</span>
-        <span class="visually-hidden">(required)</span>
-      {% endif %}
-    </label>
-    {% if field.help is defined and field.help %}
-    <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
-    {% endif %}
-    <select id="field-{{ field.name }}" name="{{ field.name }}"
-            data-dazzle-field="{{ field.name }}"
-            data-dz-ref-entity="{{ field.ref_entity }}"
-            data-dz-ref-api="{{ field.ref_api }}"
-            class="dz-form-input"
-            {% if field.required %}required aria-required="true"{% endif %}
-            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}
-            x-data='{ options: [], loading: true, current: {{ (values.get(field.name) if values else "") | tojson }} }'
-            x-init="
-              fetch('{{ field.ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
-                .then(r => r.json())
-                .then(data => {
-                  const items = data.items || [];
-                  const display = (item) => {
-                    return item.__display__ || item.name || item.company_name
-                      || ((item.first_name || '') + ' ' + (item.last_name || '')).trim()
-                      || item.title || item.label || item.email || item.id || '';
-                  };
-                  options = items.map(i => ({ value: i.id, label: display(i) }));
-                  loading = false;
-                })
-                .catch(() => { loading = false; })
-            ">
-      <option value="">{{ field.placeholder or ('Select ' + field.label + '…') }}</option>
-      <template x-for="opt in options" :key="opt.value">
-        <option :value="opt.value"
-                x-text="opt.label"
-                :selected="current === opt.value">
-        </option>
-      </template>
     </select>
     {% if errors.get(field.name) %}
     <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>

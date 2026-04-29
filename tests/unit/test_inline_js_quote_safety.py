@@ -84,24 +84,6 @@ class TestInlineJsQuoteSafety:
                 f"Found legacy `| e` HTML-escape in JS-string position: {line.strip()}"
             )
 
-    def test_form_field_combobox_uses_tojson_for_initial_value(self):
-        """form_field.html combobox branch: x-data initial `current` value
-        must be tojson-encoded so apostrophes in stored values don't break
-        the Alpine component initialisation."""
-        source = _read("macros/form_field.html")
-        # Find the x-data line for the combobox (it has 'current:' in the object literal)
-        xdata_lines = [
-            line for line in source.splitlines() if "x-data=" in line and "current:" in line
-        ]
-        assert xdata_lines, (
-            "Could not find the combobox x-data line; if the template was "
-            "refactored, update the test to point at the new location."
-        )
-        for line in xdata_lines:
-            assert "tojson" in line, (
-                f"Expected `| tojson` in combobox x-data current value, got: {line.strip()}"
-            )
-
     def test_search_select_wrapper_carries_widget_decorator(self):
         """Closes #878: the search_select fragment must stamp
         ``data-dz-widget="search_select"`` on its wrapper div so the fidelity

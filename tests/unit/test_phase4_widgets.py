@@ -237,6 +237,44 @@ class TestFormFieldWidgets:
         assert 'type="text"' in html
         assert "data-dz-widget" not in html
 
+    def test_ref_field_default_uses_tomselect_combobox(self, jinja_env):
+        """#939: a `ref Entity` field with no explicit widget renders
+        as a TomSelect combobox with the FK API wired via
+        `data-dz-ref-api` — single code path, no Alpine + x-for
+        contention with the vendor lifecycle."""
+        field = _FakeField(
+            "assignee",
+            "Assignee",
+            "ref",
+            ref_entity="User",
+            ref_api="/api/users",
+        )
+        html = self._render(jinja_env, field)
+        assert 'data-dz-widget="combobox"' in html
+        assert 'data-dz-ref-entity="User"' in html
+        assert 'data-dz-ref-api="/api/users"' in html
+        # No Alpine controller co-located on the FK select — the
+        # widget bridge owns the lifecycle alone (closes the
+        # wrapper-on-wrapper contention from #927).
+        assert "x-data" not in html
+        assert "x-for" not in html
+
+    def test_ref_field_preserves_pre_selected_value(self, jinja_env):
+        """An edit form that re-renders with an existing FK value
+        must still POST that value back even before TomSelect's load
+        callback resolves the human label — the <option selected>
+        keeps form integrity intact."""
+        field = _FakeField(
+            "assignee",
+            "Assignee",
+            "ref",
+            ref_entity="User",
+            ref_api="/api/users",
+        )
+        html = self._render(jinja_env, field, values={"assignee": "user-uuid-123"})
+        assert 'value="user-uuid-123"' in html
+        assert "selected" in html
+
     def test_ref_entity_combobox_emits_widget_attr_and_ref_api(self, jinja_env):
         """#927: an FK field with widget=combobox must render as a
         TomSelect-bound select with the ref-api hook so the widget
@@ -256,10 +294,12 @@ class TestFormFieldWidgets:
         # No Alpine x-for fallback — TomSelect's load callback owns option population.
         assert "x-for=" not in html
 
-    def test_ref_entity_without_combobox_keeps_alpine_fallback(self, jinja_env):
-        """When widget is NOT combobox, the existing Alpine fetch path
-        must still render — don't accidentally route everything to the
-        combobox branch."""
+    def test_ref_entity_without_widget_now_renders_as_combobox(self, jinja_env):
+        """#939: the prior Alpine + x-for fallback for FK fields was
+        removed. Every `ref Entity` field now renders through the
+        TomSelect combobox path, regardless of whether the DSL author
+        wrote `widget=combobox` explicitly. Single code path, no more
+        wrapper-on-wrapper contention with the bridge lifecycle."""
         field = _FakeField(
             "owner",
             "Owner",
@@ -268,9 +308,11 @@ class TestFormFieldWidgets:
             ref_api="/api/user/",
         )
         html = self._render(jinja_env, field)
-        # Alpine x-for renders options reactively for the non-combobox path
-        assert "x-for=" in html
-        assert 'data-dz-widget="combobox"' not in html
+        assert 'data-dz-widget="combobox"' in html
+        assert 'data-dz-ref-api="/api/user/"' in html
+        # No Alpine x-for / x-data fallback any more — the bridge owns it.
+        assert "x-for=" not in html
+        assert "x-data=" not in html
 
 
 class TestFieldHelpRendering:

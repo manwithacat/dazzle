@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.112] - 2026-04-29
+
+### Changed
+- **#939 — `ref Entity` form fields now render as TomSelect comboboxes
+  by default.** The previous template had two implementations of the
+  same feature: an Alpine `x-data` + `<template x-for>` path that
+  fetched the FK API and populated options imperatively, and an opt-in
+  `widget=combobox` path that handed the API URL to TomSelect's
+  remote-load callback. Same data, different chrome, two lifecycles
+  contending over the same `<select>` whenever both fired (#927).
+
+  The Alpine path is gone. Every `ref Entity` field now renders with
+  `data-dz-widget="combobox"` + `data-dz-ref-api`; TomSelect's load
+  callback owns option population and the bespoke client-side
+  display-field fallback chain (`item.name || item.company_name ||
+  …`) is replaced by the API's authoritative `__display__` (#928).
+  ~50 LOC of template + JS removed from `form_field.html`.
+
+  **User-visible change**: every FK `<select>` in a generated form
+  now has the type-to-search dropdown chrome, even when the DSL
+  doesn't write `widget=combobox` explicitly. The opt-in form is
+  still accepted (it's the same code path).
+
+### Added
+- **#940 — contract test: vendor-mounted `data-dz-widget` cannot
+  co-exist with `x-data` on the same element.** Lexical scan over
+  every Jinja template in `src/dazzle_ui/templates/`; fails CI when
+  a node carries both a bridge-mounted widget kind (combobox,
+  multiselect, tags, datepicker, daterange, colorpicker, richtext,
+  range-tooltip) AND `x-data`. Pure-Alpine markers like
+  `data-dz-widget="search_select"` (no bridge handler — the
+  attribute serves the fidelity scorer's input attribution) stay
+  exempt via the explicit allowlist.
+
+  Companion test cross-checks the allowlist against
+  `dz-widget-registry.js` so a future `bridge.registerWidget(...)`
+  addition that doesn't update the allowlist fails loudly with the
+  fix instructions, rather than silently bypassing the contract.
+
+### Agent Guidance
+- For a node that needs both reactive state AND vendor chrome, use
+  `data-*` attributes to pass options/state to the vendor handler
+  rather than co-locating `x-data`. The bridge mount path expects
+  to own its node alone.
+- All `ref Entity` form fields now render as comboboxes. If your
+  application needs a plain `<select>` for an FK (no type-to-search,
+  no remote load), file a follow-up issue with the use case — there
+  isn't a recommended escape hatch in the framework today.
+
 ## [0.61.111] - 2026-04-29
 
 ### Fixed
