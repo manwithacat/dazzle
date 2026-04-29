@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.110] - 2026-04-29
+
+### Added
+- **#932 cycle 4 — storage upload auto-verification on create/update.**
+  Closes the security loop on the upload-ticket flow. Every entity
+  with at least one `field foo: file storage=<name>` binding now has
+  its auto-generated `POST /api/{entity}` and `PUT /api/{entity}/{id}`
+  routes enforce two checks before the body reaches Pydantic:
+  - **Prefix sandbox** — the body's s3_key must match the regex
+    derived from `provider.prefix_template` with `{user_id}` bound
+    to the authenticated caller (other placeholders treated as
+    no-slash wildcards). Rejects with 403 when a request tries to
+    claim another user's already-uploaded object. Regex
+    metacharacters in user ids are escaped exactly so collisions
+    like `u1` / `u11` cannot pass.
+  - **Object existence** — `provider.head_object(s3_key)` must
+    return non-None. Rejects with 400 when the upload either
+    failed or has not committed yet (premature finalize).
+
+  Skips cleanly when:
+  - the body has no value for the storage-bound field (optional or
+    not-being-touched-by-this-update)
+  - the entity has no storage-bound fields at all (zero overhead for
+    every existing project)
+  - storage is wired but the field value is null/empty
+
+  Other failure classes map cleanly: 401 if the caller is
+  unauthenticated, 503 if the storage isn't registered or the
+  provider raises, 500 if `app.state.storage_registry` is missing.
+
+  **Registry surfaced on `app.state.storage_registry`** — the doc'd
+  "30-line custom finalize" pattern from v0.61.106 now actually
+  works (cycle 3 documented the path but never wired the registry
+  through). Project-side custom routes can resolve providers via
+  `request.app.state.storage_registry.get(<name>)`.
+
+  19-test suite (`test_storage_cycle4.py`, 85 tests across cycles
+  1-4 total): the verifier helper (skips, happy path, every failure
+  class, multi-storage entity, regex-metachar user ids, substring
+  collisions like u1/u11) + the binding builder (empty domain, mixed
+  fields, multi-file entity).
+
+### Agent Guidance
+- For projects adopting the storage primitive: drop hand-rolled
+  finalize handlers entirely. The framework's auto-generated
+  `POST /api/{entity}` already does the verification + INSERT in one
+  request. Custom finalize handlers are now an escape hatch, not the
+  expected path.
+- The verifier runs BEFORE Pydantic validation. If a Pydantic schema
+  rejects the body for unrelated reasons (missing required field,
+  type mismatch), the storage check has already passed — its 4xx is
+  authoritative for the s3_key path.
+
 ## [0.61.109] - 2026-04-29
 
 ### Added

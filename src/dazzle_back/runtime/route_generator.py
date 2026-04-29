@@ -2112,6 +2112,7 @@ def create_create_handler(
     optional_auth_dep: Callable[..., Any] | None = None,
     user_ref_fields: list[str] | None = None,
     persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
+    storage_bindings: dict[str, str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -2146,6 +2147,33 @@ def create_create_handler(
         **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
+
+        # #932 cycle 4: verify any storage-bound s3_key in the body
+        # against the caller's prefix sandbox + object existence. Runs
+        # BEFORE Pydantic validation so an invalid key short-circuits
+        # the create with the right 4xx/5xx and a precise message
+        # rather than silently persisting an unverified key.
+        if storage_bindings:
+            from fastapi import HTTPException
+
+            from dazzle_back.runtime.storage import (
+                StorageVerificationError,
+                verify_storage_field_keys,
+            )
+
+            registry = getattr(request.app.state, "storage_registry", None)
+            try:
+                verify_storage_field_keys(body, storage_bindings, registry, current_user)
+            except StorageVerificationError as exc:
+                raise HTTPException(
+                    status_code=exc.status_code,
+                    detail={
+                        "error": "storage_verification_failed",
+                        "field": exc.field,
+                        "storage": exc.storage,
+                        "reason": exc.reason,
+                    },
+                ) from exc
 
         # Inject idempotency key from header if present (#693)
         idem_key = request.headers.get("x-idempotency-key")
@@ -2211,6 +2239,7 @@ def create_update_handler(
     cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     include_field_changes: bool = False,
+    storage_bindings: dict[str, str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control."""
 
@@ -2225,6 +2254,32 @@ def create_update_handler(
         **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
+
+        # #932 cycle 4: same verification gate as the create path —
+        # an update that swaps in a new s3_key must satisfy the
+        # caller's prefix sandbox + object existence. Body fields not
+        # present (or null) are skipped: an update that doesn't touch
+        # the file column re-uses the previously-stored key.
+        if storage_bindings:
+            from dazzle_back.runtime.storage import (
+                StorageVerificationError,
+                verify_storage_field_keys,
+            )
+
+            registry = getattr(request.app.state, "storage_registry", None)
+            try:
+                verify_storage_field_keys(body, storage_bindings, registry, current_user)
+            except StorageVerificationError as exc:
+                raise HTTPException(
+                    status_code=exc.status_code,
+                    detail={
+                        "error": "storage_verification_failed",
+                        "field": exc.field,
+                        "storage": exc.storage,
+                        "reason": exc.reason,
+                    },
+                ) from exc
+
         data = input_schema.model_validate(body)
         kwargs: dict[str, Any] = {"operation": "update", "id": id, "data": data}
         if current_user is not None:
@@ -2796,6 +2851,7 @@ class RouteGenerator:
         node_graph_specs: dict[str, dict[str, Any]] | None = None,
         entity_display_fields: dict[str, str] | None = None,
         db_manager: Any | None = None,
+        entity_storage_bindings: dict[str, dict[str, str]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -2851,6 +2907,10 @@ class RouteGenerator:
         # injection that `relation_loader` does when eager-loading FKs.
         self.entity_display_fields = entity_display_fields or {}
         self.db_manager = db_manager
+        # #932 cycle 4: per-entity storage-bound field map. Empty dict
+        # for entities without `field foo: file storage=<name>` bindings;
+        # the create/update handlers no-op cheaply in that case.
+        self.entity_storage_bindings = entity_storage_bindings or {}
         # Cycle 249 (EX-049): persona-backed entity map.
         # Maps entity_name → (persona_id, link_via) for each persona that
         # declares ``backed_by``. Built by the caller from appspec.personas.
@@ -2967,6 +3027,7 @@ class RouteGenerator:
                     optional_auth_dep=self.optional_auth_dep,
                     user_ref_fields=_user_ref_fields or None,
                     persona_ref_map=_persona_ref_map,
+                    storage_bindings=self.entity_storage_bindings.get(entity_name or "") or None,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -3121,6 +3182,7 @@ class RouteGenerator:
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
                     include_field_changes=_include_fc,
+                    storage_bindings=self.entity_storage_bindings.get(entity_name or "") or None,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:

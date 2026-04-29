@@ -775,6 +775,15 @@ class DazzleBackendApp:
         registry = StorageRegistry.from_manifest(self._storage_defs)
         self._storage_registry = registry
 
+        # #932 cycle 4: expose registry on app.state so:
+        #   1. The auto-verifier in route_generator's create/update
+        #      handlers can resolve providers per-request.
+        #   2. Project-side custom finalize handlers (the documented
+        #      "30-line pattern") can call
+        #      ``request.app.state.storage_registry.get(<name>)``.
+        if self._app is not None:
+            self._app.state.storage_registry = registry
+
         if has_field_refs and self._app is not None:
             paths = register_upload_ticket_routes(
                 app=self._app, appspec=self._appspec, registry=registry
@@ -1002,6 +1011,12 @@ class DazzleBackendApp:
             if ir_entity.display_field
         }
 
+        # #932 cycle 4: compute storage-bound field bindings so the
+        # create/update handlers can auto-verify uploaded s3_keys.
+        from dazzle_back.runtime.storage import build_entity_storage_bindings
+
+        entity_storage_bindings = build_entity_storage_bindings(self._appspec)
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -1025,6 +1040,7 @@ class DazzleBackendApp:
             node_graph_specs=node_graph_specs,
             entity_display_fields=entity_display_fields,
             db_manager=self._db_manager,
+            entity_storage_bindings=entity_storage_bindings,
         )
 
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec

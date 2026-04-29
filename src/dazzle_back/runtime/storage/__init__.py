@@ -31,6 +31,11 @@ from .protocol import (
 from .registry import StorageRegistry
 from .routes import register_upload_ticket_routes
 from .testing import FakeStorageProvider
+from .verify import (
+    StorageVerificationError,
+    build_entity_storage_bindings,
+    verify_storage_field_keys,
+)
 
 __all__ = [
     "EnvVarMissingError",
@@ -38,8 +43,11 @@ __all__ = [
     "ObjectMetadata",
     "StorageProvider",
     "StorageRegistry",
+    "StorageVerificationError",
     "UploadTicket",
+    "build_entity_storage_bindings",
     "extract_env_var_refs",
     "interpolate_env_vars",
     "register_upload_ticket_routes",
+    "verify_storage_field_keys",
 ]
