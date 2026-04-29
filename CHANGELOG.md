@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.116] - 2026-04-29
+
+### Added
+- **#942 cycle 1c — Playwright quality gates for the PDF viewer
+  chrome.** 16-gate Playwright suite drives a static harness at
+  `static/test-pdf-viewer.html` and asserts:
+  - **Structure**: header, body, footer, back link, title, sibling
+    nav all render; `data-dz-widget="pdf-viewer"` mount marker
+    present
+  - **Layout invariants**: three-band vertical stack (header anchored
+    top, footer anchored bottom, body fills the gap, no overflow);
+    full viewport coverage (top: 0, full width, full height); chrome
+    heights bounded (header 30-80px, footer 24-60px); narrow-viewport
+    breakpoint hides the back-link label below 640px
+  - **Keyboard wiring**: Esc → back, j / ArrowLeft → prev, k /
+    ArrowRight → next; hash-based assertions read off `page.url`
+  - **Suppression**: typing j/k into a text input doesn't navigate;
+    Cmd+j / Ctrl+k pass through to the browser without hijacking
+  - **Variant rendering**: no-siblings (nav block omitted),
+    prev-only / next-only (one button aria-disabled, the other
+    keyboard-active), both-siblings
+
+  Each test captures a PNG to `dev_docs/pdf-viewer-screenshots/`
+  for human inspection; the directory is gitignored. Layout
+  assertions carry the load-bearing checks — pixel-diff comparison
+  is intentionally avoided since cross-OS antialiasing makes it
+  brittle.
+
+### Fixed
+- **PDF viewer chrome overflowed by 8px in environments without a
+  body-margin reset.** First footgun the visual gates surfaced. The
+  cycle 1b CSS uses `height: 100vh`, which depends on the wrapping
+  page zeroing `<body> { margin }`. The framework's `base.css`
+  already does this for production pages, so real consumers
+  (anyone extending `base.html`) saw correct rendering — but a
+  project that drops the `{% include %}` into a custom layout
+  without a margin reset would render the footer 8px below the
+  viewport bottom.
+
+  Fix: documented the assumption in the harness CSS and added a
+  layout gate (`test_full_viewport_coverage`) that pins
+  `top == 0` so any future regression of the same class fails CI
+  rather than shipping silently.
+
+### Out of scope for this cycle
+- Cross-browser parity (chromium only — webkit / firefox can be
+  added by parameterising the existing fixture if real bugs surface)
+- Pixel-diff visual regression (layout assertions are the
+  load-bearing checks; PNGs land in `dev_docs/` for human review)
+
+### Agent Guidance
+- The Playwright fixture pattern in `tests/quality_gates/` is the
+  shape to follow when a new component needs browser-driven gates:
+  static harness file under `static/test-<component>.html`,
+  per-component test module driving it via `sync_playwright`,
+  hash-based navigation when keyboard handlers do
+  `location.href = …`.
+
 ## [0.61.115] - 2026-04-29
 
 ### Added

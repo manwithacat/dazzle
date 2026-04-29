@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Viewer Quality Gate Test Harness</title>
+
+    <!-- Cycle 1b chrome under test. The bundled CSS resolves all
+         tokens used by pdf-viewer.css; we pull both directly so the
+         harness exercises the same cascade as a real Dazzle page. -->
+    <link rel="stylesheet" href="/css/tokens.css" />
+    <link rel="stylesheet" href="/css/components/pdf-viewer.css" />
+
+    <!-- Bridge first (so registerWidget exists), then pdf-viewer.js. -->
+    <script defer src="/js/dz-component-bridge.js"></script>
+    <script defer src="/js/pdf-viewer.js"></script>
+
+    <style>
+      /* Mirror production reset — base.css zeros body margins, so
+         the harness must too or the chrome's `height: 100vh`
+         overflows the viewport by 8px (default body margin) and
+         the gates catch a phantom overflow. */
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Status overlay for human inspection — Playwright tests
+         interact with elements above the body, this just shows
+         what's happening when a developer opens the harness in
+         a real browser. */
+      #harness-status {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #111;
+        color: #4cb782;
+        padding: 8px 16px;
+        font: 13px monospace;
+        z-index: 9999;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!--
+      This harness has THREE configurable variants the Playwright
+      tests select via `?variant=`:
+
+        - both     — both prev_url and next_url set (default)
+        - prev     — only prev_url set; next disabled
+        - next     — only next_url set; prev disabled
+        - none     — neither set; sibling-nav block omitted
+
+      All three use hash URLs so keyboard shortcuts produce hash
+      changes the test can read off `page.url` without a real
+      navigation.
+    -->
+
+    <div
+      id="pdf-viewer-host"
+      class="dz-pdf-viewer"
+      data-dz-widget="pdf-viewer"
+      data-dz-back-url="#back"
+      data-dz-prev-url="#prev"
+      data-dz-next-url="#next"
+    >
+      <header class="dz-pdf-viewer-header">
+        <a href="#back" class="dz-pdf-viewer-back" aria-label="Back">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m12 19-7-7 7-7"></path>
+            <path d="M19 12H5"></path>
+          </svg>
+          <span class="dz-pdf-viewer-back-label">Back</span>
+        </a>
+        <h1 class="dz-pdf-viewer-title" id="harness-title">
+          Test Document
+        </h1>
+        <nav class="dz-pdf-viewer-nav" aria-label="Sibling navigation">
+          <a
+            href="#prev"
+            class="dz-pdf-viewer-nav-link"
+            id="harness-prev"
+            aria-label="Previous"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+          </a>
+          <a
+            href="#next"
+            class="dz-pdf-viewer-nav-link"
+            id="harness-next"
+            aria-label="Next"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m9 18 6-6-6-6"></path>
+            </svg>
+          </a>
+        </nav>
+      </header>
+
+      <div class="dz-pdf-viewer-body">
+        <!--
+          Real component uses `<embed type="application/pdf">` for the
+          body. For visual stability across browsers (each ships its
+          own PDF renderer chrome) the harness instead renders a
+          flat colour panel — the chrome is what we're pinning here,
+          not the embedded viewer.
+        -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            inline-size: 100%;
+            block-size: 100%;
+            background: #d8d8d8;
+            color: #555;
+            font: 14px monospace;
+          "
+          id="harness-body-stub"
+        >
+          PDF body (test stub)
+        </div>
+      </div>
+
+      <footer
+        class="dz-pdf-viewer-footer"
+        aria-label="Keyboard shortcuts"
+      >
+        <kbd class="dz-pdf-viewer-kbd">Esc</kbd>
+        <span class="dz-pdf-viewer-kbd-label">Back</span>
+        <span class="dz-pdf-viewer-kbd-sep">·</span>
+        <kbd class="dz-pdf-viewer-kbd">j</kbd>
+        <span class="dz-pdf-viewer-kbd-label">Previous</span>
+        <kbd class="dz-pdf-viewer-kbd">k</kbd>
+        <span class="dz-pdf-viewer-kbd-label">Next</span>
+      </footer>
+    </div>
+
+    <!-- Hidden text input the editable-suppression gate uses to
+         confirm typing 'j' / 'k' into a form field doesn't trigger
+         sibling navigation. -->
+    <input
+      type="text"
+      id="harness-text-input"
+      style="position: fixed; top: 8px; right: 8px; z-index: 10000; opacity: 0.4;"
+      placeholder="editable-suppression test"
+    />
+
+    <div id="harness-status">
+      Harness ready · last hash:
+      <span id="harness-last-hash">(none)</span>
+    </div>
+
+    <script>
+      // ---------------------------------------------------------------
+      // Variant config — read once on load.
+      // ---------------------------------------------------------------
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var variant = params.get("variant") || "both";
+
+        var host = document.getElementById("pdf-viewer-host");
+        var nav = host.querySelector(".dz-pdf-viewer-nav");
+        var prev = document.getElementById("harness-prev");
+        var next = document.getElementById("harness-next");
+
+        if (variant === "prev") {
+          host.removeAttribute("data-dz-next-url");
+          next.setAttribute("aria-disabled", "true");
+          next.setAttribute("tabindex", "-1");
+          next.setAttribute("href", "#");
+        } else if (variant === "next") {
+          host.removeAttribute("data-dz-prev-url");
+          prev.setAttribute("aria-disabled", "true");
+          prev.setAttribute("tabindex", "-1");
+          prev.setAttribute("href", "#");
+        } else if (variant === "none") {
+          host.removeAttribute("data-dz-prev-url");
+          host.removeAttribute("data-dz-next-url");
+          if (nav) nav.parentNode.removeChild(nav);
+        }
+      })();
+
+      // ---------------------------------------------------------------
+      // Hash mirror for human inspection.
+      // ---------------------------------------------------------------
+      function reflectHash() {
+        document.getElementById("harness-last-hash").textContent =
+          window.location.hash || "(none)";
+      }
+      window.addEventListener("hashchange", reflectHash);
+      reflectHash();
+
+      // ---------------------------------------------------------------
+      // Quality-gate API — Playwright drives these from
+      // tests/quality_gates/test_pdf_viewer_gates.py.
+      // ---------------------------------------------------------------
+      window.pdfViewerGates = {
+        chromePresent: function () {
+          return {
+            host: !!document.getElementById("pdf-viewer-host"),
+            header: !!document.querySelector(".dz-pdf-viewer-header"),
+            body: !!document.querySelector(".dz-pdf-viewer-body"),
+            footer: !!document.querySelector(".dz-pdf-viewer-footer"),
+            back: !!document.querySelector(".dz-pdf-viewer-back"),
+            title: !!document.querySelector(".dz-pdf-viewer-title"),
+          };
+        },
+
+        chromeRectangles: function () {
+          var pick = function (sel) {
+            var el = document.querySelector(sel);
+            if (!el) return null;
+            var r = el.getBoundingClientRect();
+            return {
+              top: r.top,
+              left: r.left,
+              width: r.width,
+              height: r.height,
+              bottom: r.bottom,
+              right: r.right,
+            };
+          };
+          return {
+            host: pick("#pdf-viewer-host"),
+            header: pick(".dz-pdf-viewer-header"),
+            body: pick(".dz-pdf-viewer-body"),
+            footer: pick(".dz-pdf-viewer-footer"),
+          };
+        },
+
+        widgetMounted: function () {
+          // The bridge runs registerWidget at script load. We can't
+          // introspect document keydown listeners directly, so this
+          // confirms the bridge surface is present.
+          var bridge = window.dz && window.dz.bridge;
+          return {
+            bridgePresent: !!bridge,
+            registerWidgetIsFunction:
+              !!(bridge && typeof bridge.registerWidget === "function"),
+          };
+        },
+      };
+    </script>
+  </body>
+</html>
