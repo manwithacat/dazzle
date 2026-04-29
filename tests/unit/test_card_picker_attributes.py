@@ -50,6 +50,59 @@ class TestPickerAttributeQuoting:
         )
 
 
+class TestNoDoubleQuotedTojsonAcrossTemplates:
+    """#963 generalisation of #949: NO template anywhere may
+    interpolate a `tojson` filter inside a double-quoted attribute.
+
+    `tojson` emits Markup (autoescape-bypassing) so the inner `"`
+    chars terminate a double-quoted attribute mid-value. Chrome
+    silently coerces the resulting garbage attribute names; Safari
+    rejects them via `setAttribute` per spec, surfacing the latent
+    bug as a console `InvalidCharacterError` on every htmx morph.
+
+    Convention: single-quote the attribute when the value contains
+    `tojson`. The picker's `data-card-catalog` (#963) and the
+    picker's `@click=` (#949) both follow this rule; new templates
+    must too."""
+
+    @staticmethod
+    def _templates_dir() -> Path:
+        return Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates"
+
+    def test_no_template_double_quotes_a_tojson_attribute(self) -> None:
+        bad: list[str] = []
+        # Match: <whitespace><attr-name>="<anything-not-quote><tojson-filter>"
+        # The negative lookahead ensures we're inside a double-quoted
+        # attribute (not a script tag or HTML body content).
+        pattern = re.compile(r'\s([\w@:.-]+)="[^"]*\|\s*tojson(?:\([^)]*\))?[^"]*"')
+        for template in self._templates_dir().rglob("*.html"):
+            text = template.read_text()
+            for match in pattern.finditer(text):
+                attr_name = match.group(1)
+                # Skip script-tag content (matches inside <script
+                # type="application/json">…{{ x | tojson }}…</script>
+                # are content, not attributes — but our regex anchors
+                # on `="` so script bodies don't hit it). Still, be
+                # defensive: ignore any match where the surrounding
+                # 80 chars contain "<script".
+                start = max(0, match.start() - 80)
+                if "<script" in text[start : match.start()]:
+                    continue
+                bad.append(
+                    f"  {template.relative_to(self._templates_dir())} — "
+                    f"attribute `{attr_name}` is double-quoted with a "
+                    f"`tojson` interpolation"
+                )
+        assert not bad, (
+            "Templates with double-quoted attributes that interpolate "
+            "`tojson` (the #949/#963 bug class):\n"
+            + "\n".join(bad)
+            + "\n\nSwitch the attribute to single quotes so `tojson`'s "
+            "inner `\"` chars don't terminate the attribute. See "
+            "_card_picker.html for the canonical pattern."
+        )
+
+
 class TestPickerRenderedHtml:
     """Render the picker against a fake catalog and verify the
     resulting attributes parse correctly. This catches the bug

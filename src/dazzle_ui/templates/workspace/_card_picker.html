@@ -16,7 +16,15 @@
      x-transition:leave-start="opacity-100"
      x-transition:leave-end="opacity-0"
      @click.away="showPicker = false"
-     data-card-catalog="{{ (catalog or []) | tojson }}"
+     {# #963: single-quote the data-card-catalog attribute (same
+        rationale as #949 below) — `tojson` emits Markup which
+        bypasses autoescape, so the inner `"` chars terminate a
+        double-quoted attribute mid-value. Chrome silently coerces
+        the resulting garbage attribute names; Safari rejects them
+        via `setAttribute` per spec, surfacing the latent bug as a
+        console InvalidCharacterError on every htmx morph that
+        walks the picker's attributes. #}
+     data-card-catalog='{{ (catalog or []) | tojson }}'
      class="dz-card-picker">
   <h4 class="dz-card-picker-title">Add a card</h4>
   {% for item in (catalog or []) %}

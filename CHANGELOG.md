@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.3] - 2026-04-29
+
+### Fixed
+- **#963 — Safari `InvalidCharacterError` on cross-workspace
+  htmx morph.** The picker's `data-card-catalog` attribute was
+  double-quoted with a `tojson` interpolation; `tojson` emits
+  Markup (autoescape-bypassing) so the inner `"` chars terminated
+  the attribute mid-value. Browser parsed the rest of the JSON as
+  garbage attribute names (e.g. `"status_list",`). Chrome
+  silently coerces; Safari rejects via `setAttribute` per spec,
+  surfacing the latent bug as a console error on every htmx
+  morph that walked the picker.
+
+  Same bug class as #949 (which fixed the picker's `@click=`).
+  Generalised the regression gate so any future template can't
+  reintroduce the pattern.
+
+### Changed
+- **Generic `tojson`-in-double-quoted-attribute lint** added to
+  `tests/unit/test_card_picker_attributes.py::TestNoDoubleQuotedTojsonAcrossTemplates`.
+  Walks every `*.html` under `src/dazzle_ui/templates/` and fails
+  if any attribute is double-quoted with a `tojson` filter inside.
+  Convention: single-quote the attribute when the value carries
+  `tojson`.
+
+### Agent Guidance
+- When emitting Jinja `tojson` output inside an HTML attribute,
+  single-quote the attribute. Double-quoting works in Chrome but
+  silently corrupts the DOM tree (Chrome treats inner `"` as
+  attribute terminators), and Safari surfaces the bug as a
+  console `InvalidCharacterError`. The lint above catches this at
+  test time across the whole template tree.
+
 ## [0.62.2] - 2026-04-29
 
 ### Fixed
