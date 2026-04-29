@@ -9,6 +9,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.128] - 2026-04-29
+
+### Added
+- **#943 cycle 5a — multi-panel slide-in support on the PDF
+  viewer.** Cycle 2a shipped a single right-side panel with a
+  hardcoded `p` keyboard binding; real adoption (e.g. AegisMark's
+  three-panel marking workflow: Marking Result, Feedback, AO
+  Breakdown) wants N panels each with its own toggle key.
+
+  New include parameter `panels` accepts a list of dicts:
+
+  ```jinja
+  {% include "components/pdf_viewer.html" with
+       src=src,
+       back_url=back_url,
+       panels=[
+         {"name": "marking",  "label": "Marking Result", "key": "m", "html": marking_html},
+         {"name": "feedback", "label": "Feedback",       "key": "f", "html": feedback_html},
+         {"name": "ao",       "label": "AO Breakdown",   "key": "a", "html": ao_html},
+       ] %}
+  ```
+
+  - **Toggle exclusivity** — opening one panel auto-closes the
+    others. Single visible panel at a time keeps the geometry
+    simple (one fixed-width drawer slot).
+  - **Per-panel key dispatch** — each panel's `data-dz-panel-key`
+    attribute drives the keyboard handler. The cycle 1c suppression
+    rules (editable target + modifier keys) carry over.
+  - **Esc closes the open panel first** — dialog convention from
+    cycle 2a/2b preserved across N panels.
+  - **Footer chips auto-render** — one `<kbd>` chip per panel,
+    replacing the cycle 2a static `p` chip.
+  - **Focus management per panel** — cycle 2b's capture-and-restore
+    + inert-on-chrome works per panel; closed panels stay inert
+    while another is open so Tab doesn't escape into hidden DOM.
+
+  Backwards compatible: cycle 2a's `panel_html` + `panel_label`
+  parameters still work. The framework normalises them internally
+  to a one-element `panels` list with the conventional `p` key.
+
+### Changed
+- **PDF viewer panel CSS** now uses the adjacent-sibling combinator
+  (`.dz-pdf-viewer-panel-toggle:checked + .dz-pdf-viewer-panel`)
+  rather than `:has(.dz-pdf-viewer-panel-toggle:checked)` from
+  cycle 2a. The cycle 2a pattern would slide every panel in when
+  any toggle was checked — the adjacent-sibling form scopes
+  visibility to the toggle's own panel. No behaviour change for
+  cycle 2a's single-panel adopters.
+- **Panel toggle IDs** are now namespaced per-panel
+  (`dz-panel-toggle-<name>` rather than `dz-panel-toggle`). The
+  cycle 2a single-panel backwards-compat case lands as
+  `dz-panel-toggle-panel`. The static harness was updated; any
+  project test selectors that hardcoded the old ID need to switch
+  to the class selector `.dz-pdf-viewer-panel-toggle` or the
+  namespaced ID.
+
+### Agent Guidance
+- The PDF viewer accepts multiple panels via `panels=[…]` of
+  dicts shaped `{name, label, key, html}`. Pick distinct keys per
+  panel; the framework can't enforce uniqueness across chrome
+  shortcuts (`p`, `m`, `f`, `a`, … are all available; `j`/`k`/`Esc`
+  are reserved). For a single-panel surface, `panel_html` +
+  `panel_label` continue to work as a one-element shorthand.
+
 ## [0.61.127] - 2026-04-29
 
 ### Added

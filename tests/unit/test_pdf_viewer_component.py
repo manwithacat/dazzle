@@ -289,7 +289,10 @@ class TestPanelSlot:
         assert "<p>Marking summary</p>" in html
         assert ">\n          Marking\n        <" in html or ">Marking<" in html
         assert ">p<" in html  # footer kbd hint
-        assert 'id="dz-panel-toggle"' in html
+        # Cycle 5a: toggle ID is namespaced per-panel; cycle 2a's
+        # single-panel backwards-compat case lands as "dz-panel-toggle-panel".
+        assert 'id="dz-panel-toggle-panel"' in html
+        assert 'class="dz-pdf-viewer-panel-toggle"' in html
         # Cycle 2b: close affordance is now a `<button data-dz-panel-close>`
         # (was `<label for>` in cycle 2a) so it's tabbable and receives
         # focus correctly when the panel opens.
@@ -401,3 +404,173 @@ class TestFooterSlot:
         slot_idx = html.index("dz-pdf-viewer-footer-slot")
         legend_idx = html.index('class="dz-pdf-viewer-kbd">Esc<')
         assert slot_idx < legend_idx
+
+
+# ---------------------------------------------------------------------------
+# #943 cycle 5a — multi-panel via panels=[…]
+# ---------------------------------------------------------------------------
+
+
+class TestMultiPanel:
+    def _render(self, jinja_env: Any, **kwargs: Any) -> str:
+        tmpl = jinja_env.from_string('{% include "components/pdf_viewer.html" %}')
+        return tmpl.render(**kwargs)
+
+    def test_multiple_panels_render(self, jinja_env: Any) -> None:
+        """Three panels each get their own toggle, aside, and
+        footer chip."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panels=[
+                {
+                    "name": "marking",
+                    "label": "Marking Result",
+                    "key": "m",
+                    "html": "<p>Score: 42</p>",
+                },
+                {
+                    "name": "feedback",
+                    "label": "Feedback",
+                    "key": "f",
+                    "html": "<p>Strong essay</p>",
+                },
+                {
+                    "name": "ao",
+                    "label": "AO Breakdown",
+                    "key": "a",
+                    "html": "<p>AO1: 80%</p>",
+                },
+            ],
+        )
+        # Per-panel toggle IDs disambiguate
+        assert 'id="dz-panel-toggle-marking"' in html
+        assert 'id="dz-panel-toggle-feedback"' in html
+        assert 'id="dz-panel-toggle-ao"' in html
+        # data-dz-panel hooks for JS
+        assert 'data-dz-panel="marking"' in html
+        assert 'data-dz-panel="feedback"' in html
+        assert 'data-dz-panel="ao"' in html
+        # Per-panel keys
+        assert 'data-dz-panel-key="m"' in html
+        assert 'data-dz-panel-key="f"' in html
+        assert 'data-dz-panel-key="a"' in html
+        # Each panel's content is rendered unescaped
+        assert "<p>Score: 42</p>" in html
+        assert "<p>Strong essay</p>" in html
+        assert "<p>AO1: 80%</p>" in html
+        # Footer shows one chip per panel
+        assert 'class="dz-pdf-viewer-kbd">m<' in html
+        assert 'class="dz-pdf-viewer-kbd">f<' in html
+        assert 'class="dz-pdf-viewer-kbd">a<' in html
+        assert "Marking Result" in html
+        assert "Feedback" in html
+        assert "AO Breakdown" in html
+
+    def test_panel_html_backwards_compat_normalises_to_panels(self, jinja_env: Any) -> None:
+        """Cycle 2a's ``panel_html`` + ``panel_label`` continue to
+        work — internally normalised to a one-element ``panels``
+        list with the conventional ``p`` key."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html="<p>x</p>",
+            panel_label="Marking",
+        )
+        # New ID shape — toggle is named "panel" in the
+        # backwards-compat path
+        assert 'id="dz-panel-toggle-panel"' in html
+        assert 'data-dz-panel="panel"' in html
+        # Default key is "p" (cycle 2a convention)
+        assert 'data-dz-panel-key="p"' in html
+        assert 'class="dz-pdf-viewer-kbd">p<' in html
+        # Label propagates to aria-label and the panel header
+        assert 'aria-label="Marking"' in html
+
+    def test_panels_takes_precedence_over_panel_html(self, jinja_env: Any) -> None:
+        """When both ``panels`` and ``panel_html`` are passed, the
+        explicit ``panels`` list wins — the legacy single-panel
+        parameters are ignored."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panel_html="<p>legacy</p>",
+            panel_label="Legacy",
+            panels=[
+                {"name": "new", "label": "New", "key": "n", "html": "<p>new</p>"},
+            ],
+        )
+        assert "<p>new</p>" in html
+        assert "<p>legacy</p>" not in html
+        assert 'id="dz-panel-toggle-new"' in html
+        assert 'id="dz-panel-toggle-panel"' not in html
+
+    def test_no_panels_no_toggle_no_chip(self, jinja_env: Any) -> None:
+        """No ``panels`` and no ``panel_html`` ⇒ no panel chrome
+        anywhere in the rendered output."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        assert "dz-pdf-viewer-panel-toggle" not in html
+        assert "dz-pdf-viewer-panel" not in html
+        # Default key chip absent
+        assert 'class="dz-pdf-viewer-kbd">p<' not in html
+
+    def test_each_panel_has_its_own_close_button(self, jinja_env: Any) -> None:
+        """Cycle 2b: every panel gets a close button with the
+        ``data-dz-panel-close`` hook so the bridge JS can find them.
+        Cycle 5a: per-panel ``aria-label`` references the panel
+        title so screen readers say "Close Marking panel" rather
+        than a generic "Close panel"."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panels=[
+                {"name": "a", "label": "A", "key": "a", "html": "x"},
+                {"name": "b", "label": "B", "key": "b", "html": "y"},
+            ],
+        )
+        assert html.count("data-dz-panel-close") == 2
+        assert 'aria-label="Close A panel"' in html
+        assert 'aria-label="Close B panel"' in html
+
+
+# ---------------------------------------------------------------------------
+# #943 cycle 5a — JS controller updates
+# ---------------------------------------------------------------------------
+
+
+class TestMultiPanelJsController:
+    def _load(self) -> str:
+        return JS_PATH.read_text()
+
+    def test_queries_toggles_by_class_not_id(self) -> None:
+        """Cycle 5a: the JS must work with N panels, so it can't
+        rely on the cycle 2a ``getElementById('dz-panel-toggle')``
+        pattern — that only finds one element. Switch to
+        ``querySelectorAll('.dz-pdf-viewer-panel-toggle')``."""
+        source = self._load()
+        assert ".dz-pdf-viewer-panel-toggle" in source
+
+    def test_dispatches_keys_via_data_attr(self) -> None:
+        """Each toggle's key comes from ``data-dz-panel-key``. The
+        JS reads that and matches against the keypress event so any
+        configured key (m/f/a/p/...) routes correctly."""
+        source = self._load()
+        assert "data-dz-panel-key" in source
+
+    def test_finds_open_toggle_for_esc(self) -> None:
+        """Cycle 5a: Esc closes the open panel — but only the open
+        one. With N panels the handler must search for the checked
+        toggle rather than hardcoding a single element."""
+        source = self._load()
+        assert "findOpenToggle" in source
+
+    def test_close_others_on_open(self) -> None:
+        """Multi-panel exclusivity: opening one panel closes the
+        others. The single fixed-width drawer slot can only show
+        one at a time."""
+        source = self._load()
+        assert "closeOtherPanels" in source

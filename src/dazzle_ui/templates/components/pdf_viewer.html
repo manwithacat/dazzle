@@ -118,29 +118,45 @@
       aria-label="{{ title | default('Document') }} PDF"
     />
 
-    {# #942 cycle 2a — optional right-side panel.
-       Project renders the content into a string and passes it via
-       ``panel_html``; the framework wraps it in chrome and wires
-       the toggle. CSS-only show/hide via :has(:checked) so the
-       wrapper stays free of x-data (preserves the widget contract
-       from #940). Project HTML is trusted ({{ ... | safe }}) — the
-       project renders its own templates with autoescape, then
-       passes the resulting HTML in as a string. #}
-    {% if panel_html %}
+    {# #942 cycle 2a / #943 cycle 5a — optional right-side panels.
+       Project renders the content into a string per panel and
+       passes them via ``panels=[{name, label, key, html}, …]``;
+       the framework wraps each in chrome and wires the toggle.
+       CSS-only show/hide via the adjacent-sibling combinator so
+       the wrapper stays free of x-data (preserves the widget
+       contract from #940). Project HTML is trusted ({{ ... | safe }}) —
+       the project renders its own templates with autoescape, then
+       passes the resulting HTML in as a string.
+
+       Backwards compat: cycle 2a's ``panel_html`` + ``panel_label``
+       still work — they're normalised to a one-element ``panels``
+       list with the conventional ``p`` key so cycle 2a adopters
+       see no behaviour change. #}
+    {% if panels %}
+      {% set _panels = panels %}
+    {% elif panel_html %}
+      {% set _panels = [{'name': 'panel', 'label': panel_label or 'Related', 'key': 'p', 'html': panel_html}] %}
+    {% else %}
+      {% set _panels = [] %}
+    {% endif %}
+    {% for panel in _panels %}
     <input
       type="checkbox"
-      id="dz-panel-toggle"
+      id="dz-panel-toggle-{{ panel.name }}"
       class="dz-pdf-viewer-panel-toggle"
-      aria-label="Toggle {{ panel_label | default('Related panel') }}"
+      data-dz-panel-name="{{ panel.name }}"
+      data-dz-panel-key="{{ panel.key }}"
+      aria-label="Toggle {{ panel.label }}"
     />
     <aside
       class="dz-pdf-viewer-panel"
+      data-dz-panel="{{ panel.name }}"
       role="complementary"
-      aria-label="{{ panel_label | default('Related') }}"
+      aria-label="{{ panel.label }}"
     >
       <header class="dz-pdf-viewer-panel-header">
         <h2 class="dz-pdf-viewer-panel-title">
-          {{ panel_label | default("Related") }}
+          {{ panel.label }}
         </h2>
         {# Close button — `<button>` (not `<label for>`) so it's
            tabbable and receives keyboard focus correctly when the
@@ -152,7 +168,7 @@
           type="button"
           class="dz-pdf-viewer-panel-close"
           data-dz-panel-close
-          aria-label="Close panel"
+          aria-label="Close {{ panel.label }} panel"
         >
           <svg
             width="14"
@@ -171,10 +187,10 @@
         </button>
       </header>
       <div class="dz-pdf-viewer-panel-body">
-        {{ panel_html | safe }}
+        {{ panel.html | safe }}
       </div>
     </aside>
-    {% endif %}
+    {% endfor %}
   </div>
 
   <footer class="dz-pdf-viewer-footer" aria-label="Keyboard shortcuts">
@@ -201,11 +217,11 @@
     <kbd class="dz-pdf-viewer-kbd">k</kbd>
     <span class="dz-pdf-viewer-kbd-label">Next</span>
     {% endif %}
-    {% if panel_html %}
+    {% for panel in _panels %}
     <span class="dz-pdf-viewer-kbd-sep">·</span>
-    <kbd class="dz-pdf-viewer-kbd">p</kbd>
-    <span class="dz-pdf-viewer-kbd-label">{{ panel_label | default("Panel") }}</span>
-    {% endif %}
+    <kbd class="dz-pdf-viewer-kbd">{{ panel.key }}</kbd>
+    <span class="dz-pdf-viewer-kbd-label">{{ panel.label }}</span>
+    {% endfor %}
     {% endif %}
   </footer>
 </div>

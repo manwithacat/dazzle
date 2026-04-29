@@ -1,17 +1,23 @@
 /**
  * pdf-viewer.js — bridge handler for the PDF detail-view component
- * (#942 cycle 1b).
+ * (#942 cycle 1b; multi-panel support added in #943 cycle 5a).
  *
  * Mounts on `data-dz-widget="pdf-viewer"`. Listens for keyboard
  * shortcuts:
- *   - Esc → navigate to data-dz-back-url
+ *   - Esc → navigate to data-dz-back-url (or close the open panel
+ *     first, if any — dialog-convention: one Esc closes, second
+ *     Esc navigates back)
  *   - j or ArrowLeft → navigate to data-dz-prev-url (if set)
  *   - k or ArrowRight → navigate to data-dz-next-url (if set)
+ *   - Each panel's `data-dz-panel-key` → toggle its panel
+ *
+ * Multi-panel exclusivity: opening one panel auto-closes the others.
+ * Pressing the key of an already-open panel closes it (native
+ * checkbox toggle behaviour).
  *
  * Keys are ignored when an editable element has focus (input,
  * textarea, contenteditable) so the shortcuts don't hijack form
- * input. Listener is attached to `document` and removed on unmount
- * — same lifecycle the bridge uses for every other widget.
+ * input. Listener is attached to `document` and removed on unmount.
  *
  * Note: the wrapper element carries `data-dz-widget` only — NOT
  * `x-data`. The widget contract from #940 forbids co-locating both
@@ -36,37 +42,43 @@
   }
 
   // ---------------------------------------------------------------
-  // #942 cycle 2b — panel focus management.
+  // #942 cycle 2b / #943 cycle 5a — panel focus management.
   //
-  // When the panel opens, move focus to the close button so screen-
-  // reader and keyboard users know it appeared. Mark the rest of
-  // the chrome as `inert` so Tab stays within the panel — without
-  // this, Tab would land on the back link / nav / `<embed>` behind
-  // the panel and the user would lose the visual context.
+  // When a panel opens, move focus to its close button. Mark every
+  // chrome band (header, footer, embed) AND every other panel as
+  // `inert` so Tab stays inside the active panel. When the panel
+  // closes, undo `inert` and restore focus to whichever element
+  // had it before the panel opened.
   //
-  // When the panel closes, undo `inert` and restore focus to
-  // whichever element had it before the panel opened (typically
-  // the back link or the body, depending on what the user
-  // pressed `p` from).
-  //
-  // CSS-only show/hide (cycle 2a's :has(:checked)) is preserved —
-  // this layer only adds focus + inert side effects, triggered by
-  // the toggle's native `change` event. Mouse users clicking the
-  // close <label> trigger the same change event; keyboard users
-  // get the same treatment via the `p`/Esc handlers.
+  // CSS-only show/hide via the adjacent-sibling combinator
+  // (cycle 5a) is preserved — this layer only adds focus + inert
+  // side effects, triggered by the toggle's native `change` event.
   // ---------------------------------------------------------------
 
-  function setBackgroundInert(viewerEl, inert) {
+  function setBackgroundInert(viewerEl, openPanelEl, inert) {
     var bands = viewerEl.querySelectorAll(
       ".dz-pdf-viewer-header, .dz-pdf-viewer-footer, .dz-pdf-viewer-embed",
     );
     for (var i = 0; i < bands.length; i++) {
       bands[i].inert = inert;
     }
+    // #943 cycle 5a: also mark every OTHER panel as inert when one
+    // opens. Without this, Tab from the open panel's close button
+    // could land on a closed-but-still-in-DOM sibling panel's
+    // contents (display:none isn't used here — visibility is
+    // transform-based — so Tab order still includes them).
+    var asides = viewerEl.querySelectorAll(".dz-pdf-viewer-panel");
+    for (var j = 0; j < asides.length; j++) {
+      if (asides[j] !== openPanelEl) {
+        asides[j].inert = inert;
+      } else {
+        asides[j].inert = false;
+      }
+    }
   }
 
-  function focusFirstInPanel(viewerEl) {
-    var closeBtn = viewerEl.querySelector("[data-dz-panel-close]");
+  function focusFirstInPanel(panelEl) {
+    var closeBtn = panelEl.querySelector("[data-dz-panel-close]");
     if (closeBtn && typeof closeBtn.focus === "function") {
       closeBtn.focus();
     }
@@ -80,58 +92,122 @@
         }
       }
 
-      // Captured at open time, restored at close time. Reset each
-      // time the panel toggles so successive open/close cycles
-      // each remember their own caller.
-      var prevFocus = null;
+      // All panel toggles in render order. Cycle 2a's single-panel
+      // case is just a length-1 list. Cycle 5a's multi-panel case
+      // iterates the same way.
+      var toggles = el.querySelectorAll(".dz-pdf-viewer-panel-toggle");
 
-      var toggle = document.getElementById("dz-panel-toggle");
-      function onToggleChange() {
-        if (toggle.checked) {
-          prevFocus = document.activeElement;
-          setBackgroundInert(el, true);
-          focusFirstInPanel(el);
-        } else {
-          setBackgroundInert(el, false);
-          if (prevFocus && typeof prevFocus.focus === "function") {
-            prevFocus.focus();
+      // Captured at open time, restored at close time. Keyed by
+      // toggle so successive open/close cycles each remember the
+      // element that triggered them.
+      var prevFocusByToggle = {};
+
+      function panelForToggle(toggle) {
+        // Adjacent-sibling combinator in CSS; mirror in JS by
+        // reading the next element sibling.
+        return toggle.nextElementSibling;
+      }
+
+      function closeOtherPanels(activeToggle) {
+        for (var i = 0; i < toggles.length; i++) {
+          var t = toggles[i];
+          if (t !== activeToggle && t.checked) {
+            t.checked = false;
+            t.dispatchEvent(new Event("change"));
           }
-          prevFocus = null;
         }
-      }
-      if (toggle) {
-        toggle.addEventListener("change", onToggleChange);
       }
 
-      // Close-button click handler — the button is `<button type="button">`
-      // (not `<label for="dz-panel-toggle">`) so it's tabbable and
-      // receives focus on panel open. JS bridges the click back to
-      // the toggle: flip `checked` and dispatch `change` so the
-      // focus-management listener above runs. Same code path the
-      // keyboard `p` shortcut uses.
-      var closeBtn = el.querySelector("[data-dz-panel-close]");
-      function onCloseClick() {
-        if (toggle) {
-          toggle.checked = false;
-          toggle.dispatchEvent(new Event("change"));
-        }
+      function makeOnToggleChange(toggle) {
+        var name = toggle.getAttribute("data-dz-panel-name") || toggle.id;
+        return function onToggleChange() {
+          var panelEl = panelForToggle(toggle);
+          if (toggle.checked) {
+            // Exclusivity: close any other open panels.
+            closeOtherPanels(toggle);
+            prevFocusByToggle[name] = document.activeElement;
+            setBackgroundInert(el, panelEl, true);
+            if (panelEl) focusFirstInPanel(panelEl);
+          } else {
+            setBackgroundInert(el, null, false);
+            var pf = prevFocusByToggle[name];
+            if (pf && typeof pf.focus === "function") {
+              pf.focus();
+            }
+            prevFocusByToggle[name] = null;
+          }
+        };
       }
-      if (closeBtn) {
-        closeBtn.addEventListener("click", onCloseClick);
+
+      var toggleListeners = [];
+      for (var i = 0; i < toggles.length; i++) {
+        var listener = makeOnToggleChange(toggles[i]);
+        toggles[i].addEventListener("change", listener);
+        toggleListeners.push({ toggle: toggles[i], listener: listener });
+      }
+
+      // Close-button click handler — bridge clicks back to the
+      // toggle for each panel. Each close button's parent <aside>
+      // carries `data-dz-panel`, which matches the toggle's
+      // `data-dz-panel-name`.
+      function findToggleForCloseBtn(btn) {
+        var aside = btn.closest(".dz-pdf-viewer-panel");
+        if (!aside) return null;
+        var name = aside.getAttribute("data-dz-panel");
+        return el.querySelector(
+          '.dz-pdf-viewer-panel-toggle[data-dz-panel-name="' + name + '"]',
+        );
+      }
+
+      var closeBtns = el.querySelectorAll("[data-dz-panel-close]");
+      var closeListeners = [];
+      function makeOnCloseClick(btn) {
+        return function onCloseClick() {
+          var toggle = findToggleForCloseBtn(btn);
+          if (toggle) {
+            toggle.checked = false;
+            toggle.dispatchEvent(new Event("change"));
+          }
+        };
+      }
+      for (var k = 0; k < closeBtns.length; k++) {
+        var ccl = makeOnCloseClick(closeBtns[k]);
+        closeBtns[k].addEventListener("click", ccl);
+        closeListeners.push({ btn: closeBtns[k], listener: ccl });
+      }
+
+      function findOpenToggle() {
+        for (var i = 0; i < toggles.length; i++) {
+          if (toggles[i].checked) return toggles[i];
+        }
+        return null;
+      }
+
+      function findToggleByKey(key) {
+        for (var i = 0; i < toggles.length; i++) {
+          var k = toggles[i].getAttribute("data-dz-panel-key");
+          // #943 cycle 5a: keys are case-insensitive (`p` matches
+          // `P`) — same convention as the cycle 2a single-panel
+          // handler that accepted both.
+          if (k && (k === key || k.toLowerCase() === key.toLowerCase())) {
+            return toggles[i];
+          }
+        }
+        return null;
       }
 
       function handler(e) {
         if (isEditableTarget(e.target)) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
         if (e.key === "Escape") {
-          // #942 cycle 2a: if the panel is open, Esc closes the
-          // panel rather than navigating back. One Esc = close;
-          // a second Esc (with panel now closed) = back. Matches
-          // the dialog/modal convention users expect.
-          var toggleEsc = document.getElementById("dz-panel-toggle");
-          if (toggleEsc && toggleEsc.checked) {
+          // #942 cycle 2a / #943 cycle 5a: if any panel is open,
+          // Esc closes it rather than navigating back. One Esc =
+          // close; a second Esc (with all panels closed) = back.
+          // Matches the dialog/modal convention users expect.
+          var openToggle = findOpenToggle();
+          if (openToggle) {
             e.preventDefault();
-            toggleEsc.click();
+            openToggle.click();
             return;
           }
           e.preventDefault();
@@ -154,41 +230,43 @@
           }
           return;
         }
-        if (e.key === "p" || e.key === "P") {
-          // #942 cycle 2a: toggle the right-side panel via the
-          // hidden checkbox — CSS-only show/hide. No-op when no
-          // panel is rendered (no checkbox in DOM).
-          var togglePanel = document.getElementById("dz-panel-toggle");
-          if (togglePanel) {
+        // Per-panel key dispatch. The cycle 2a single-panel case
+        // registers `p` via `data-dz-panel-key="p"` on its toggle,
+        // so this branch covers both shapes.
+        if (e.key && e.key.length === 1) {
+          var panelToggle = findToggleByKey(e.key);
+          if (panelToggle) {
             e.preventDefault();
-            togglePanel.click();
+            panelToggle.click();
+            return;
           }
-          return;
         }
       }
 
       document.addEventListener("keydown", handler);
       return {
         handler: handler,
-        toggleEl: toggle,
-        toggleListener: onToggleChange,
-        closeEl: closeBtn,
-        closeListener: onCloseClick,
+        toggleListeners: toggleListeners,
+        closeListeners: closeListeners,
       };
     },
 
     unmount: function (_el, instance) {
-      if (instance && instance.handler) {
+      if (!instance) return;
+      if (instance.handler) {
         document.removeEventListener("keydown", instance.handler);
       }
-      if (instance && instance.toggleEl && instance.toggleListener) {
-        instance.toggleEl.removeEventListener(
-          "change",
-          instance.toggleListener,
-        );
+      if (instance.toggleListeners) {
+        for (var i = 0; i < instance.toggleListeners.length; i++) {
+          var tl = instance.toggleListeners[i];
+          tl.toggle.removeEventListener("change", tl.listener);
+        }
       }
-      if (instance && instance.closeEl && instance.closeListener) {
-        instance.closeEl.removeEventListener("click", instance.closeListener);
+      if (instance.closeListeners) {
+        for (var j = 0; j < instance.closeListeners.length; j++) {
+          var cl = instance.closeListeners[j];
+          cl.btn.removeEventListener("click", cl.listener);
+        }
       }
     },
   });

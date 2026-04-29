@@ -242,7 +242,14 @@
   z-index: 1;
 }
 
-.dz-pdf-viewer:has(.dz-pdf-viewer-panel-toggle:checked) .dz-pdf-viewer-panel {
+/* #943 cycle 5a — multi-panel exclusivity uses the adjacent-sibling
+ * combinator so each toggle's checked state only affects its
+ * immediately-following <aside>. The cycle 2a `:has(:checked)`
+ * pattern can't disambiguate which checkbox is checked when N
+ * exist, so it would slide every panel in. Adjacent-sibling does
+ * the right thing for any N — including the cycle 2a single-panel
+ * case (the toggle is still right before its panel). */
+.dz-pdf-viewer-panel-toggle:checked + .dz-pdf-viewer-panel {
   transform: translateX(0);
 }
 
