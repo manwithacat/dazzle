@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.129] - 2026-04-29
+
+### Fixed
+- **#945 — same-URL workspace morph re-attaches reactivity.**
+  Clicking the currently-active workspace's sidebar link previously
+  collapsed the workspace to its chrome (cards: 18 → 0) even though
+  `Alpine.$data(root).cards.length === 18`. The cycle 936 fix called
+  `_hydrateFromLayout()` on the live `$data`, which updated proxy
+  values but didn't re-fire the watcher graph that
+  `<template x-for="card in cards">` depended on — so x-for stayed
+  inert and the cards collapsed to empty.
+
+  The durable fix: explicit `Alpine.destroyTree(root)` then
+  `Alpine.initTree(root)` after every settle that touched the
+  workspace layout island. `init()` re-runs against fresh proxies,
+  re-attaches the watcher graph, and re-hydrates from the JSON
+  data island. The dashboard's `destroy()` already cleans up the
+  global keydown / pointer listeners, so re-init is cheap and
+  idempotent.
+
+  Falls back to the cycle-936 `$data` + `_hydrateFromLayout()`
+  path on Alpine builds that don't expose `destroyTree`, so older
+  environments don't crash.
+
+### Agent Guidance
+- When same-URL morph keeps an `[x-data]` root in place, the
+  `Alpine.initTree(target)` bridge is a no-op for that root — the
+  watcher graph stays bound to the original proxy. If you mutate
+  the proxy in an `htmx:afterSettle` handler and the template
+  doesn't re-render, the fix is `Alpine.destroyTree(root)` +
+  `Alpine.initTree(root)` so init() re-runs against fresh
+  proxies. Cheaper than it looks if your component is stateless
+  beyond what its init() rebuilds.
+
 ## [0.61.128] - 2026-04-29
 
 ### Added

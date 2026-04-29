@@ -226,8 +226,48 @@ class TestSameUrlRehydrate:
         is present (e.g. non-workspace pages), the handler must no-op
         rather than throw."""
         source = self._load_alpine()
-        # Bound the search to the post-#936 block we just added.
-        idx = source.index("#936:")
+        # Bound the search to the post-#936/#945 block.
+        idx = source.index("#936 → #945")
         block = source[idx : idx + 2500]
         assert "if (!root" in block
         assert "Alpine.$data" in block
+
+    def test_handler_destroys_then_inits_for_fresh_watchers(self) -> None:
+        """#945 — same-URL morph keeps the [x-data] root in place,
+        so the watcher graph that x-for depends on stays bound to the
+        original cards proxy. Just calling _hydrateFromLayout() on
+        the live $data updates values but doesn't re-fire watchers
+        — x-for stays inert and cards collapse to 0.
+
+        Fix: explicitly Alpine.destroyTree(root) then Alpine.initTree(root)
+        so init() re-runs against fresh proxies and the watcher
+        graph reattaches."""
+        source = self._load_alpine()
+        idx = source.index("#936 → #945")
+        block = source[idx : idx + 2500]
+        assert "Alpine.destroyTree(root)" in block
+        assert "Alpine.initTree(root)" in block
+
+    def test_handler_destroyTree_called_before_initTree(self) -> None:
+        """Order matters: destroy first, then re-init. Reverse order
+        would no-op (initTree on already-initialised root) then tear
+        down the freshly-built watcher graph."""
+        source = self._load_alpine()
+        idx = source.index("#936 → #945")
+        block = source[idx : idx + 2500]
+        destroy_idx = block.index("Alpine.destroyTree(root)")
+        init_idx = block.index("Alpine.initTree(root)", destroy_idx)
+        assert destroy_idx < init_idx
+
+    def test_handler_falls_back_when_destroyTree_missing(self) -> None:
+        """Older Alpine builds may not expose destroyTree. Fall back
+        to the cycle-2a $data + _hydrateFromLayout path so non-current
+        environments don't crash."""
+        source = self._load_alpine()
+        idx = source.index("#936 → #945")
+        block = source[idx : idx + 2500]
+        # The fallback branch is gated on destroyTree availability
+        assert 'typeof window.Alpine.destroyTree === "function"' in block
+        # And invokes the same _hydrateFromLayout call the cycle 2a
+        # handler used
+        assert "_hydrateFromLayout()" in block
