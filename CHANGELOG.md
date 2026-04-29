@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-04-29
+
+### Added
+- **#961 cycle 1 — DSL-constructs API-surface snapshot.** New
+  `dazzle inspect-api dsl-constructs` CLI command emits a
+  deterministic text snapshot of every parser-dispatched DSL
+  construct, the `ModuleFragment` field(s) it writes into, and the
+  required/optional fields of every IR class produced. Snapshot
+  committed to `docs/api-surface/dsl-constructs.txt`; drift caught
+  by `tests/unit/test_api_surface_drift.py`. To accept drift:
+  regenerate with `--write`, review, add a CHANGELOG entry under
+  Added / Changed / Removed.
+
+  Foundations for the repeatable breaking-change pass exercise.
+  Cycles 2–6 (IR types, MCP tool schemas, public helpers, runtime
+  URLs, CI gate proper) tracked on #961.
+
+### Agent Guidance
+- After any change to `src/dazzle/core/dsl_parser_impl/__init__.py`
+  (parser dispatch table) or any DSL IR class field, the
+  `tests/unit/test_api_surface_drift.py` gate will fail. Run
+  `dazzle inspect-api dsl-constructs --write` and commit the
+  regenerated `docs/api-surface/dsl-constructs.txt` alongside the
+  code change. The diff IS the breaking-change record.
+
 ## [0.62.3] - 2026-04-29
 
 ### Fixed

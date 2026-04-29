@@ -1,0 +1,811 @@
+# DAZZLE DSL Constructs — API Surface (cycle 1 of #961)
+#
+# Source of truth: parser dispatch table + ModuleFragment.model_fields.
+# Regenerate: dazzle inspect-api dsl-constructs --write
+# Drift gate: tests/unit/test_api_surface_drift.py
+#
+# To accept drift: regenerate, review the diff, add a CHANGELOG entry
+# under Added / Changed / Removed (the DSL is part of the public API).
+
+== Constructs ==
+
+construct: analytics
+  fragment_fields: analytics
+  ir_classes: AnalyticsSpec
+
+construct: approval
+  fragment_fields: approvals
+  ir_classes: ApprovalSpec
+
+construct: archetype
+  fragment_fields: archetypes
+  ir_classes: ArchetypeSpec
+
+construct: asset
+  fragment_fields: assets
+  ir_classes: AssetSpec
+
+construct: channel
+  fragment_fields: channels
+  ir_classes: ChannelSpec
+
+construct: data_products
+  fragment_fields: data_products
+  ir_classes: DataProductsSpec
+
+construct: demo
+  fragment_fields: scenarios
+  ir_classes: ScenarioSpec
+
+construct: document
+  fragment_fields: documents
+  ir_classes: DocumentSpec
+
+construct: entity
+  fragment_fields: entities
+  ir_classes: EntitySpec
+
+construct: enum
+  fragment_fields: enums
+  ir_classes: EnumSpec
+
+construct: event_model
+  fragment_fields: event_model
+  ir_classes: EventModelSpec
+
+construct: experience
+  fragment_fields: experiences
+  ir_classes: ExperienceSpec
+
+construct: feedback_widget
+  fragment_fields: feedback_widget
+  ir_classes: FeedbackWidgetSpec
+
+construct: flow
+  fragment_fields: e2e_flows
+  ir_classes: FlowSpec
+
+construct: foreign_model
+  fragment_fields: foreign_models
+  ir_classes: ForeignModelSpec
+
+construct: grant_schema
+  fragment_fields: grant_schemas
+  ir_classes: GrantSchemaSpec
+
+construct: hless
+  fragment_fields: hless_pragma
+  ir_classes: HLESSPragma
+
+construct: integration
+  fragment_fields: integrations
+  ir_classes: IntegrationSpec
+
+construct: interfaces
+  fragment_fields: interfaces
+  ir_classes: InterfacesSpec
+
+construct: island
+  fragment_fields: islands
+  ir_classes: IslandSpec
+
+construct: ledger
+  fragment_fields: ledgers
+  ir_classes: LedgerSpec
+
+construct: llm_config
+  fragment_fields: llm_config
+  ir_classes: LLMConfigSpec
+
+construct: llm_intent
+  fragment_fields: llm_intents
+  ir_classes: LLMIntentSpec
+
+construct: llm_model
+  fragment_fields: llm_models
+  ir_classes: LLMModelSpec
+
+construct: message
+  fragment_fields: messages
+  ir_classes: MessageSpec
+
+construct: nav
+  fragment_fields: nav_definitions
+  ir_classes: NavDefinitionSpec
+
+construct: notification
+  fragment_fields: notifications
+  ir_classes: NotificationSpec
+
+construct: param
+  fragment_fields: params
+  ir_classes: ParamSpec
+
+construct: persona
+  fragment_fields: personas
+  ir_classes: PersonaSpec
+
+construct: policies
+  fragment_fields: policies
+  ir_classes: PoliciesSpec
+
+construct: process
+  fragment_fields: processes
+  ir_classes: ProcessSpec
+
+construct: project
+  fragment_fields: projections
+  ir_classes: ProjectionSpec
+
+construct: question
+  fragment_fields: questions
+  ir_classes: QuestionSpec
+
+construct: rhythm
+  fragment_fields: rhythms
+  ir_classes: RhythmSpec
+
+construct: rule
+  fragment_fields: rules
+  ir_classes: RuleSpec
+
+construct: scenario
+  fragment_fields: scenarios
+  ir_classes: ScenarioSpec
+
+construct: schedule
+  fragment_fields: schedules
+  ir_classes: ScheduleSpec
+
+construct: service
+  fragment_fields: apis, domain_services
+  ir_classes: APISpec, DomainServiceSpec
+
+construct: sla
+  fragment_fields: slas
+  ir_classes: SLASpec
+
+construct: story
+  fragment_fields: stories
+  ir_classes: StorySpec
+
+construct: stream
+  fragment_fields: streams
+  ir_classes: StreamSpec
+
+construct: subprocessor
+  fragment_fields: subprocessors
+  ir_classes: SubprocessorSpec
+
+construct: subscribe
+  fragment_fields: subscriptions
+  ir_classes: SubscribeSpec
+
+construct: surface
+  fragment_fields: surfaces
+  ir_classes: SurfaceSpec
+
+construct: template
+  fragment_fields: templates
+  ir_classes: TemplateSpec
+
+construct: tenancy
+  fragment_fields: tenancy
+  ir_classes: TenancySpec
+
+construct: test
+  fragment_fields: tests
+  ir_classes: TestSpec
+
+construct: transaction
+  fragment_fields: transactions
+  ir_classes: TransactionSpec
+
+construct: view
+  fragment_fields: views
+  ir_classes: ViewSpec
+
+construct: webhook
+  fragment_fields: webhooks
+  ir_classes: WebhookSpec
+
+construct: workspace
+  fragment_fields: workspaces
+  ir_classes: WorkspaceSpec
+
+== IR Classes ==
+
+ir_class: APISpec
+  required:
+    - auth_profile: AuthProfile
+    - name: str
+  optional:
+    - owner: str | None = None
+    - spec_inline: str | None = None
+    - spec_url: str | None = None
+    - title: str | None = None
+
+ir_class: AnalyticsSpec
+  required: (none)
+  optional:
+    - consent: AnalyticsConsentSpec | None = None
+    - providers: list[AnalyticsProviderInstance] = []
+    - server_side: AnalyticsServerSideSpec | None = None
+
+ir_class: ApprovalSpec
+  required:
+    - name: str
+  optional:
+    - approver_role: str = ''
+    - auto_approve: ConditionExpr | None = None
+    - entity: str = ''
+    - escalation: ApprovalEscalationSpec | None = None
+    - outcomes: list[ApprovalOutcomeSpec] = []
+    - quorum: int = 1
+    - threshold: ConditionExpr | None = None
+    - title: str | None = None
+    - trigger_field: str = 'status'
+    - trigger_value: str = ''
+
+ir_class: ArchetypeSpec
+  required:
+    - name: str
+  optional:
+    - computed_fields: list[ComputedFieldSpec] = []
+    - fields: list[FieldSpec] = []
+    - invariants: list[InvariantSpec] = []
+
+ir_class: AssetSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - kind: AssetKind = <AssetKind.FILE: 'file'>
+    - path: str = ''
+
+ir_class: ChannelSpec
+  required:
+    - name: str
+  optional:
+    - config: ChannelConfigSpec = <factory:ChannelConfigSpec>
+    - kind: ChannelKind = <ChannelKind.EMAIL: 'email'>
+    - provider: str = 'auto'
+    - provider_config: ProviderConfigSpec | None = None
+    - receive_operations: list[ReceiveOperationSpec] = []
+    - send_operations: list[SendOperationSpec] = []
+    - title: str | None = None
+
+ir_class: DataProductsSpec
+  required: (none)
+  optional:
+    - default_namespace: str = 'curated'
+    - products: list[DataProductSpec] = []
+
+ir_class: DocumentSpec
+  required:
+    - for_entity: str
+    - name: str
+  optional:
+    - description: str | None = None
+    - format: DocumentFormat = <DocumentFormat.PDF: 'pdf'>
+    - layout: str = ''
+
+ir_class: DomainServiceSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - guarantees: list[str] = []
+    - inputs: list[ServiceFieldSpec] = []
+    - kind: DomainServiceKind = <DomainServiceKind.DOMAIN_LOGIC: 'domain_logic'>
+    - outputs: list[ServiceFieldSpec] = []
+    - stub_language: StubLanguage = <StubLanguage.PYTHON: 'python'>
+    - title: str | None = None
+
+ir_class: EntitySpec
+  required:
+    - fields: list[FieldSpec]
+    - name: str
+  optional:
+    - access: AccessSpec | None = None
+    - archetype_kind: ArchetypeKind | None = None
+    - audit: AuditConfig | None = None
+    - bulk: BulkConfig | None = None
+    - computed_fields: list[ComputedFieldSpec] = []
+    - constraints: list[Constraint] = []
+    - display_field: str | None = None
+    - domain: str | None = None
+    - examples: list[ExampleRecord] = []
+    - extends: list[str] = []
+    - fitness: FitnessSpec | None = None
+    - graph_edge: GraphEdgeSpec | None = None
+    - graph_node: GraphNodeSpec | None = None
+    - intent: str | None = None
+    - invariants: list[InvariantSpec] = []
+    - is_singleton: bool = False
+    - is_tenant_root: bool = False
+    - lifecycle: LifecycleSpec | None = None
+    - patterns: list[str] = []
+    - publishes: list[PublishSpec] = []
+    - seed_template: SeedTemplateSpec | None = None
+    - soft_delete: bool = False
+    - source: SourceLocation | None = None
+    - state_machine: StateMachineSpec | None = None
+    - title: str | None = None
+
+ir_class: EnumSpec
+  required:
+    - name: str
+  optional:
+    - title: str | None = None
+    - values: list[EnumValueSpec] = []
+
+ir_class: EventModelSpec
+  required: (none)
+  optional:
+    - events: list[EventSpec] = []
+    - topics: list[TopicSpec] = []
+
+ir_class: ExperienceSpec
+  required:
+    - name: str
+    - start_step: str
+  optional:
+    - access: SurfaceAccessSpec | None = None
+    - context: list[FlowContextVar] = []
+    - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
+    - source: SourceLocation | None = None
+    - steps: list[ExperienceStep] = []
+    - title: str | None = None
+
+ir_class: FeedbackWidgetSpec
+  required: (none)
+  optional:
+    - capture: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - categories: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - enabled: bool = False
+    - position: str = 'bottom-right'
+    - severities: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
+    - shortcut: str = 'backtick'
+
+ir_class: FlowSpec
+  required:
+    - id: str
+  optional:
+    - auto_generated: bool = False
+    - description: str | None = None
+    - entity: str | None = None
+    - preconditions: FlowPrecondition | None = None
+    - priority: FlowPriority = <FlowPriority.MEDIUM: 'medium'>
+    - steps: list[FlowStep] = []
+    - tags: list[str] = []
+
+ir_class: ForeignModelSpec
+  required:
+    - api_ref: str
+    - key_fields: list[str]
+    - name: str
+  optional:
+    - constraints: list[ForeignConstraint] = []
+    - fields: list[FieldSpec] = []
+    - title: str | None = None
+
+ir_class: GrantSchemaSpec
+  required:
+    - label: str
+    - name: str
+    - relations: list[GrantRelationSpec]
+    - scope: str
+  optional:
+    - description: str | None = None
+    - source_location: SourceLocation | None = None
+
+ir_class: HLESSPragma
+  required: (none)
+  optional:
+    - mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
+    - reason: str | None = None
+
+ir_class: IntegrationSpec
+  required:
+    - name: str
+  optional:
+    - actions: list[IntegrationAction] = []
+    - api_refs: list[str] = []
+    - auth: AuthSpec | None = None
+    - base_url: str | None = None
+    - foreign_model_refs: list[str] = []
+    - mappings: list[IntegrationMapping] = []
+    - source: SourceLocation | None = None
+    - syncs: list[IntegrationSync] = []
+    - title: str | None = None
+
+ir_class: InterfacesSpec
+  required: (none)
+  optional:
+    - apis: list[InterfaceSpec] = []
+    - default_auth: InterfaceAuthMethod = <InterfaceAuthMethod.API_KEY: 'api_key'>
+    - default_rate_limit: str | None = None
+
+ir_class: IslandSpec
+  required:
+    - name: str
+  optional:
+    - entity: str | None = None
+    - events: list[IslandEventSpec] = []
+    - fallback: str | None = None
+    - props: list[IslandPropSpec] = []
+    - src: str | None = None
+    - title: str | None = None
+
+ir_class: LLMConfigSpec
+  required: (none)
+  optional:
+    - artifact_store: ArtifactStore = <ArtifactStore.LOCAL: 'local'>
+    - budget_alert_usd: Decimal | None = None
+    - concurrency: dict[str, int] | None = None
+    - default_model: str | None = None
+    - default_provider: LLMProvider | None = None
+    - logging: LoggingPolicySpec = <factory:LoggingPolicySpec>
+    - rate_limits: dict[str, int] | None = None
+
+ir_class: LLMIntentSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - model_ref: str | None = None
+    - output_schema: str | None = None
+    - pii: PIIPolicySpec | None = None
+    - prompt_template: str = ''
+    - retry: RetryPolicySpec | None = None
+    - timeout_seconds: int = 30
+    - title: str | None = None
+    - triggers: list[LLMTriggerSpec] = []
+    - vision: bool = False
+
+ir_class: LLMModelSpec
+  required:
+    - model_id: str
+    - name: str
+    - provider: LLMProvider
+  optional:
+    - cost_per_1k_input: Decimal | None = None
+    - cost_per_1k_output: Decimal | None = None
+    - max_tokens: int = 4096
+    - tier: ModelTier = <ModelTier.BALANCED: 'balanced'>
+    - title: str | None = None
+
+ir_class: LedgerSpec
+  required:
+    - account_code: int
+    - account_type: AccountType
+    - currency: str
+    - ledger_id: int
+    - name: str
+  optional:
+    - flags: list[AccountFlag] = []
+    - intent: str | None = None
+    - label: str | None = None
+    - metadata_mapping: dict[str, str] = {}
+    - sync: LedgerSyncSpec | None = None
+    - tenant_scoped: bool = True
+
+ir_class: MessageSpec
+  required:
+    - name: str
+  optional:
+    - description: str | None = None
+    - fields: list[MessageFieldSpec] = []
+    - title: str | None = None
+
+ir_class: NavDefinitionSpec
+  required:
+    - name: str
+  optional:
+    - groups: list[NavGroupSpec] = []
+
+ir_class: NotificationSpec
+  required:
+    - name: str
+    - trigger: NotificationTrigger
+  optional:
+    - channels: list[NotificationChannel] = <factory:NotificationSpec.<lambda>>
+    - message: str = ''
+    - preference: NotificationPreference = <NotificationPreference.OPT_OUT: 'opt_out'>
+    - recipients: NotificationRecipient = <factory:NotificationRecipient>
+    - title: str | None = None
+
+ir_class: ParamSpec
+  required:
+    - default: Any
+    - key: str
+    - param_type: str
+    - scope: Literal[system, tenant, user]
+  optional:
+    - category: str | None = None
+    - constraints: ParamConstraints | None = None
+    - depends_on: list[str] = []
+    - description: str | None = None
+    - sensitive: bool = False
+
+ir_class: PersonaSpec
+  required:
+    - id: str
+    - label: str
+  optional:
+    - backed_by: str | None = None
+    - default_route: str | None = None
+    - default_workspace: str | None = None
+    - description: str | None = None
+    - goals: list[str] = []
+    - interactive: bool = True
+    - link_via: str = 'email'
+    - proficiency_level: Literal[novice, intermediate, expert] = 'intermediate'
+
+ir_class: PoliciesSpec
+  required: (none)
+  optional:
+    - audit_access: bool = True
+    - classifications: list[ClassificationSpec] = []
+    - default_retention: RetentionPolicy = <RetentionPolicy.MEDIUM: 'medium'>
+    - erasures: list[ErasureSpec] = []
+
+ir_class: ProcessSpec
+  required:
+    - name: str
+  optional:
+    - compensations: list[CompensationSpec] = []
+    - description: str | None = None
+    - events: ProcessEventEmission = <factory:ProcessEventEmission>
+    - implements: list[str] = []
+    - inputs: list[ProcessInputField] = []
+    - outputs: list[ProcessOutputField] = []
+    - overlap_policy: OverlapPolicy = <OverlapPolicy.SKIP: 'skip'>
+    - source: SourceLocation | None = None
+    - steps: list[ProcessStepSpec] = []
+    - timeout_seconds: int = 86400
+    - title: str | None = None
+    - trigger: ProcessTriggerSpec | None = None
+
+ir_class: ProjectionSpec
+  required:
+    - name: str
+    - source_topic: str
+  optional:
+    - description: str | None = None
+    - handlers: list[ProjectionHandlerSpec] = []
+    - target_entity: str | None = None
+
+ir_class: QuestionSpec
+  required:
+    - question_id: str
+    - title: str
+  optional:
+    - blocks: list[str] = []
+    - description: str | None = None
+    - raised_by: str | None = None
+    - resolution: str | None = None
+    - source: SourceLocation | None = None
+    - status: QuestionStatus = <QuestionStatus.OPEN: 'open'>
+
+ir_class: RhythmSpec
+  required:
+    - name: str
+    - persona: str
+  optional:
+    - cadence: str | None = None
+    - phases: list[PhaseSpec] = []
+    - source: SourceLocation | None = None
+    - title: str | None = None
+
+ir_class: RuleSpec
+  required:
+    - rule_id: str
+    - title: str
+  optional:
+    - description: str | None = None
+    - invariant: str | None = None
+    - kind: RuleKind = <RuleKind.CONSTRAINT: 'constraint'>
+    - origin: RuleOrigin = <RuleOrigin.TOP_DOWN: 'top_down'>
+    - scope: list[str] = []
+    - source: SourceLocation | None = None
+    - status: RuleStatus = <RuleStatus.DRAFT: 'draft'>
+
+ir_class: SLASpec
+  required:
+    - name: str
+  optional:
+    - business_hours: BusinessHoursSpec | None = None
+    - completes_when: SLAConditionSpec | None = None
+    - entity: str = ''
+    - on_breach: SLABreachActionSpec | None = None
+    - pauses_when: SLAConditionSpec | None = None
+    - starts_when: SLAConditionSpec | None = None
+    - tiers: list[SLATierSpec] = []
+    - title: str | None = None
+
+ir_class: ScenarioSpec
+  required:
+    - id: str
+    - name: str
+  optional:
+    - demo_fixtures: list[DemoFixture] = []
+    - description: str | None = None
+    - persona_entries: list[PersonaScenarioEntry] = []
+    - seed_data_path: str | None = None
+
+ir_class: ScheduleSpec
+  required:
+    - name: str
+  optional:
+    - catch_up: bool = False
+    - cron: Any = None
+    - description: str | None = None
+    - events: ProcessEventEmission = <factory:ProcessEventEmission>
+    - implements: list[str] = []
+    - interval_seconds: int | None = None
+    - overlap: OverlapPolicy = <OverlapPolicy.SKIP: 'skip'>
+    - steps: list[ProcessStepSpec] = []
+    - timeout_seconds: Any = 3600
+    - timezone: Any = 'UTC'
+    - title: str | None = None
+
+ir_class: StorySpec
+  required:
+    - actor: str
+    - story_id: str
+    - title: str
+    - trigger: StoryTrigger
+  optional:
+    - description: str | None = None
+    - given: list[StoryCondition] = []
+    - scope: list[str] = []
+    - source: SourceLocation | None = None
+    - status: StoryStatus = <StoryStatus.DRAFT: 'draft'>
+    - then: list[StoryCondition] = []
+    - unless: list[StoryException] = []
+    - when: list[StoryCondition] = []
+
+ir_class: StreamSpec
+  required:
+    - idempotency: IdempotencyStrategy
+    - name: str
+    - ordering_scope: str
+    - partition_key: str
+    - record_kind: RecordKind
+    - time_semantics: TimeSemantics
+  optional:
+    - causality_fields: list[str] = <factory:StreamSpec.<lambda>>
+    - cross_partition: bool = False
+    - description: str | None = None
+    - expected_outcomes: list[ExpectedOutcome] | None = None
+    - invariants: list[str] = []
+    - lineage: DerivationLineage | None = None
+    - notes: list[str] = []
+    - schemas: list[StreamSchema] = []
+    - side_effect_policy: SideEffectPolicy = <factory:SideEffectPolicy>
+
+ir_class: SubprocessorSpec
+  required:
+    - consent_category: ConsentCategory
+    - handler: str
+    - jurisdiction: str
+    - label: str
+    - legal_basis: LegalBasis
+    - name: str
+    - retention: str
+  optional:
+    - cookies: list[str] = []
+    - data_categories: list[DataCategory] = []
+    - dpa_url: str | None = None
+    - handler_address: str | None = None
+    - is_framework_default: bool = False
+    - purpose: str = ''
+    - scc_url: str | None = None
+
+ir_class: SubscribeSpec
+  required:
+    - group_id: str
+    - topic: str
+  optional:
+    - description: str | None = None
+    - handlers: list[EventHandlerSpec] = []
+
+ir_class: SurfaceSpec
+  required:
+    - mode: SurfaceMode
+    - name: str
+  optional:
+    - access: SurfaceAccessSpec | None = None
+    - actions: list[SurfaceAction] = []
+    - companions: list[CompanionSpec] = []
+    - display: str | None = None
+    - entity_ref: str | None = None
+    - headless: bool = False
+    - layout: str = 'wizard'
+    - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
+    - related_groups: list[RelatedGroup] = []
+    - search_fields: list[str] = []
+    - sections: list[SurfaceSection] = []
+    - source: SourceLocation | None = None
+    - title: str | None = None
+    - ux: UXSpec | None = None
+    - view_ref: str | None = None
+
+ir_class: TemplateSpec
+  required:
+    - name: str
+  optional:
+    - attachments: list[TemplateAttachmentSpec] = []
+    - body: str = ''
+    - html_body: str | None = None
+    - subject: str = ''
+
+ir_class: TenancySpec
+  required: (none)
+  optional:
+    - entities_excluded: list[str] = []
+    - isolation: TenantIsolationSpec = <factory:TenantIsolationSpec>
+    - provisioning: TenantProvisioningSpec = <factory:TenantProvisioningSpec>
+
+ir_class: TestSpec
+  required:
+    - action: TestAction
+    - name: str
+  optional:
+    - assertions: list[TestAssertion] = []
+    - description: str | None = None
+    - setup_steps: list[TestSetupStep] = []
+
+ir_class: TransactionSpec
+  required:
+    - idempotency_key: str
+    - name: str
+  optional:
+    - execution: TransactionExecution = <TransactionExecution.SYNC: 'sync'>
+    - intent: str | None = None
+    - label: str | None = None
+    - priority: TransactionPriority = <TransactionPriority.NORMAL: 'normal'>
+    - timeout_ms: int = 5000
+    - transfers: list[TransferSpec] = []
+    - validation: list[ValidationRule] = []
+
+ir_class: ViewSpec
+  required:
+    - name: str
+  optional:
+    - date_field: str | None = None
+    - fields: list[ViewFieldSpec] = []
+    - filter_condition: ConditionExpr | None = None
+    - group_by: list[str] = []
+    - source_entity: str = ''
+    - time_bucket: TimeBucket | None = None
+    - title: str | None = None
+
+ir_class: WebhookSpec
+  required:
+    - name: str
+  optional:
+    - auth: WebhookAuthSpec | None = None
+    - entity: str = ''
+    - events: list[WebhookEvent] = []
+    - payload: WebhookPayloadSpec | None = None
+    - retry: WebhookRetrySpec | None = None
+    - title: str | None = None
+    - url: str = ''
+
+ir_class: WorkspaceSpec
+  required:
+    - name: str
+  optional:
+    - access: WorkspaceAccessSpec | None = None
+    - context_selector: ContextSelectorSpec | None = None
+    - nav_groups: list[NavGroupSpec] = []
+    - nav_ref: str | None = None
+    - purpose: str | None = None
+    - regions: list[WorkspaceRegion] = []
+    - source: SourceLocation | None = None
+    - stage: str | None = None
+    - title: str | None = None
+    - ux: UXSpec | None = None
