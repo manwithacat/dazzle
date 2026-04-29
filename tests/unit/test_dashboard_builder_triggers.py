@@ -1,18 +1,17 @@
-"""Source-regression tests for dashboard-builder.js trigger helpers (#864).
+"""Source-regression tests for dashboard-builder.js (#864, #936, #945, #948).
 
-The `cardHxTrigger` / `isEagerCard` helpers are Alpine methods — proper
-JS unit tests would require a bundler + jsdom. These source-grep tests
-pin the contract:
+Pre-#948 these tests pinned the JSON-island + reactive-cards-array
+shape (`cardHxTrigger`, `_hydrateFromLayout`, `foldCount`). After
+#948 cards are server-rendered HTML and the DOM is the source of
+truth for layout — the helpers above don't exist, but their job is
+done by Jinja interpolation in `workspace/_content.html` and by
+DOM-direct manipulation in dashboard-builder.js.
 
-1. `cardHxTrigger` exists and accepts `(card, sseEnabled)`.
-2. Above-fold cards get `"load"` only (no intersect trigger).
-3. Below-fold cards get `"intersect once"` only (no load trigger).
-4. SSE triggers are appended when `sseEnabled` is true.
-
-Full behaviour is verified by the dashboard Playwright gates in
-``tests/quality_gates/test_dashboard_gates.py``; these source tests
-catch unintended regressions between Python releases without booting
-a browser.
+The tests below pin the post-#948 contract: dashboard-builder.js no
+longer carries reactive cards/catalog/foldCount, the htmx:afterSettle
+bridge survives as defense-in-depth for ephemeral state, and the
+template emits the correct `data-card-*` attributes for the JS to
+read.
 """
 
 from __future__ import annotations
@@ -28,96 +27,6 @@ JS_PATH = (
     / "js"
     / "dashboard-builder.js"
 )
-
-
-def _load() -> str:
-    return JS_PATH.read_text()
-
-
-class TestCardHxTrigger:
-    """v0.61.1 (#864) — above-fold/below-fold trigger split."""
-
-    def test_helper_exists(self) -> None:
-        source = _load()
-        assert "cardHxTrigger(card, sseEnabled)" in source
-        assert "isEagerCard(card)" in source
-
-    def test_eager_branch_uses_load_only(self) -> None:
-        source = _load()
-        # The helper returns "load" for eager and "intersect once" for lazy.
-        assert 'this.isEagerCard(card) ? "load" : "intersect once"' in source
-
-    def test_sse_triggers_appended(self) -> None:
-        source = _load()
-        assert "sse:entity.created" in source
-        assert "sse:entity.updated" in source
-        assert "sse:entity.deleted" in source
-
-    def test_fold_count_default_preserves_legacy(self) -> None:
-        """isEagerCard falls back to True when foldCount is 0 so legacy
-        workspaces (before #864) behave the same as before."""
-        source = _load()
-        # Matches the guard: `if (!this.foldCount) return true;`
-        assert "if (!this.foldCount) return true;" in source
-
-
-class TestFoldCountHydration:
-    def test_state_field_declared(self) -> None:
-        source = _load()
-        assert "foldCount: 0," in source
-
-    def test_reads_fold_count_from_island(self) -> None:
-        source = _load()
-        # The init reads fold_count from the layout data island.
-        assert "data.fold_count" in source
-
-
-class TestRehydrateOnHtmxAfterSettle:
-    """#875 / #919 / #936 — re-clicking a workspace nav link triggers an
-    HTMX morph. As of #936, the per-component htmx:afterSettle listener
-    has been removed: it captured `this` at init time and went stale
-    whenever idiomorph re-created the workspace root, leaving cards
-    permanently empty after a same-URL sidebar re-click. The global
-    handler in dz-alpine.js now drives re-hydration through
-    `Alpine.$data(root)` so it always finds the live instance.
-    """
-
-    def test_helper_extracted(self) -> None:
-        source = _load()
-        assert "_hydrateFromLayout()" in source, (
-            "init/re-entry path expected to share a _hydrateFromLayout helper"
-        )
-
-    def test_init_calls_hydrate(self) -> None:
-        source = _load()
-        # init() should invoke the helper rather than inlining the JSON read.
-        assert "this._hydrateFromLayout();" in source
-
-    def test_no_per_component_after_settle_listener(self) -> None:
-        """#936: the per-component listener was removed. Re-hydration is
-        now driven by the global handler in dz-alpine.js, which looks up
-        the live Alpine instance fresh on every settle."""
-        source = _load()
-        assert "htmx:afterSettle" not in source, (
-            "dashboard-builder must NOT register its own afterSettle "
-            "listener — captured `this` went stale on same-URL morph "
-            "(#936). The global handler in dz-alpine.js owns this."
-        )
-
-    def test_resets_save_state_on_rehydrate(self) -> None:
-        source = _load()
-        # The "all five state labels stack vertically" symptom = saveState
-        # somewhere other than 'clean' on re-entry. Reset to clean when
-        # the data island is re-read.
-        # Find the body of _hydrateFromLayout: substring between its
-        # signature and the next bare-method definition.
-        idx = source.find("_hydrateFromLayout() {")
-        assert idx >= 0, "method definition missing"
-        # Bound the search to the helper body (next 1500 chars cover it).
-        body = source[idx : idx + 1500]
-        assert 'this.saveState = "clean";' in body
-
-
 DZ_ALPINE_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
@@ -127,147 +36,285 @@ DZ_ALPINE_PATH = (
     / "js"
     / "dz-alpine.js"
 )
+TEMPLATE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "dazzle_ui"
+    / "templates"
+    / "workspace"
+    / "_content.html"
+)
+
+
+def _load_js() -> str:
+    return JS_PATH.read_text()
+
+
+def _load_alpine() -> str:
+    return DZ_ALPINE_PATH.read_text()
+
+
+def _load_template() -> str:
+    return TEMPLATE_PATH.read_text()
+
+
+class TestNoReactiveCardsArray:
+    """#948 — the cards reactive array is gone. Cards are server-rendered
+    HTML; the DOM is the source of truth for layout."""
+
+    def test_no_cards_field_in_alpine_state(self) -> None:
+        source = _load_js()
+        # The component's data() must NOT declare a reactive cards array.
+        # Pre-#948 it had `cards: [],` near the top of the data block.
+        assert "cards: []" not in source
+        assert "cards: [" not in source
+
+    def test_no_catalog_reactive_field(self) -> None:
+        source = _load_js()
+        # Catalog is now a `data-card-catalog` JSON blob on the picker;
+        # the JS reads it on demand via `_catalog()`. The reactive
+        # field is gone.
+        assert "catalog: []" not in source
+
+    def test_no_workspace_name_reactive_field(self) -> None:
+        source = _load_js()
+        # workspaceName comes from `data-workspace-name` on the root.
+        assert 'workspaceName: ""' not in source
+
+    def test_no_fold_count_reactive_field(self) -> None:
+        source = _load_js()
+        # foldCount is gone. The eager-vs-lazy split is decided at
+        # template render time and baked into each card's hx-trigger.
+        assert "foldCount: 0," not in source
+
+    def test_no_hydrate_from_layout_method(self) -> None:
+        source = _load_js()
+        # _hydrateFromLayout existed to read the JSON island. The
+        # method definition is gone — comments may still reference it
+        # historically, so we only check that the method body is
+        # absent.
+        assert "_hydrateFromLayout() {" not in source
+        assert "this._hydrateFromLayout()" not in source
+
+    def test_no_card_hx_trigger_helper(self) -> None:
+        source = _load_js()
+        # The eager/lazy split is decided server-side now.
+        assert "cardHxTrigger" not in source
+        assert "isEagerCard" not in source
+
+    def test_no_drag_transform_reactive_helper(self) -> None:
+        source = _load_js()
+        # Pre-#948 dragTransform(cardId) returned a CSS string consumed
+        # by `:style="..."`. Post-#948 we apply transforms via
+        # _applyDragTransform() directly to the dragged element.
+        assert "dragTransform(cardId)" not in source
+
+
+class TestDomDirectHelpers:
+    """The DOM-direct helpers replace the array operations of the
+    pre-#948 architecture."""
+
+    def test_helper_for_all_cards(self) -> None:
+        source = _load_js()
+        assert "_allCards()" in source
+
+    def test_helper_for_card_by_id(self) -> None:
+        source = _load_js()
+        assert "_cardById(cardId)" in source
+
+    def test_workspace_name_read_from_dom_attr(self) -> None:
+        source = _load_js()
+        # `_workspaceName()` reads the data-workspace-name attribute.
+        assert "data-workspace-name" in source
+
+    def test_catalog_read_from_dom_attr(self) -> None:
+        source = _load_js()
+        # `_catalog()` parses data-card-catalog when the picker opens.
+        assert "data-card-catalog" in source
+
+    def test_apply_drag_transform_targets_dom_directly(self) -> None:
+        """Drag preview now mutates `cardEl.style.cssText` rather than
+        reactively binding via `:style`. Same CSS shape, imperative
+        application."""
+        source = _load_js()
+        assert "_applyDragTransform" in source
+        assert "cardEl.style.cssText" in source
+
+
+class TestEventDelegation:
+    """Card events (drag-start, click-remove, keydown) wire via
+    delegation on the grid container so dynamically-added cards work
+    without re-init."""
+
+    def test_grid_pointerdown_delegation(self) -> None:
+        source = _load_js()
+        assert "_onGridPointerDown" in source
+        assert 'data-test-id="dz-card-drag-handle"' in source
+
+    def test_grid_click_delegation(self) -> None:
+        source = _load_js()
+        assert "_onGridClick" in source
+        assert 'data-test-id="dz-card-remove"' in source
+
+    def test_grid_keydown_delegation(self) -> None:
+        source = _load_js()
+        assert "_onGridKeydown" in source
+
+    def test_destroy_removes_grid_listeners(self) -> None:
+        source = _load_js()
+        # destroy() must clean up the grid-container delegations
+        # alongside the document/window ones.
+        assert 'grid.removeEventListener("pointerdown"' in source
+        assert 'grid.removeEventListener("click"' in source
+        assert 'grid.removeEventListener("keydown"' in source
+
+
+class TestServerRenderedTemplate:
+    """The template emits each card as static HTML with `data-card-*`
+    attributes the JS reads on demand."""
+
+    def test_template_iterates_workspace_regions(self) -> None:
+        source = _load_template()
+        assert "{% for r in workspace.regions %}" in source
+
+    def test_template_emits_data_card_attributes(self) -> None:
+        source = _load_template()
+        assert "data-card-id=" in source
+        assert "data-card-region=" in source
+        assert "data-card-col-span=" in source
+
+    def test_template_emits_workspace_name_on_root(self) -> None:
+        source = _load_template()
+        assert 'data-workspace-name="{{ workspace.name }}"' in source
+
+    def test_template_drops_json_island(self) -> None:
+        source = _load_template()
+        # The cycle 936 JSON-island data script is gone.
+        assert 'id="dz-workspace-layout"' not in source
+
+    def test_template_drops_x_for(self) -> None:
+        source = _load_template()
+        # No reactive cards iteration on the workspace template.
+        assert 'x-for="card in cards"' not in source
+
+    def test_eager_lazy_trigger_split_server_rendered(self) -> None:
+        """The hx-trigger choice is baked into each card at render time
+        based on `loop.index0 < (fold_count or 0)`. Post-#948 there's
+        no client-side cardHxTrigger helper."""
+        source = _load_template()
+        assert "loop.index0 < (fold_count or 0)" in source
+        assert "_trigger = 'load' if _eager else 'intersect once'" in source
+
+    def test_sse_triggers_appended_when_workspace_has_sse_url(self) -> None:
+        source = _load_template()
+        assert "{% if workspace.sse_url %}" in source
+        assert "sse:entity.created" in source
+        assert "sse:entity.updated" in source
+        assert "sse:entity.deleted" in source
+
+
+class TestSameUrlRehydrate:
+    """#945 → #948 — the destroy + re-init pattern survives as
+    defense-in-depth. Pre-#948 it was load-bearing for the cards
+    array's watcher graph; post-#948 it covers ephemeral state
+    (saveState, showPicker) and re-attaches the grid-container event
+    delegation listeners."""
+
+    def test_destroy_then_init_pattern_present(self) -> None:
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        assert "Alpine.destroyTree(root)" in block
+        assert "Alpine.initTree(root)" in block
+
+    def test_destroy_called_before_init(self) -> None:
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        destroy_idx = block.index("Alpine.destroyTree(root)")
+        init_idx = block.index("Alpine.initTree(root)", destroy_idx)
+        assert destroy_idx < init_idx
+
+    def test_handler_finds_root_via_data_workspace_name(self) -> None:
+        """The trigger is now the `data-workspace-name` attribute on
+        the workspace root (the JSON island's `#dz-workspace-layout`
+        was removed in #948)."""
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        assert "data-workspace-name" in block
+
+    def test_handler_drops_dz_workspace_layout_selector_call(self) -> None:
+        """The pre-#948 `target.querySelector('#dz-workspace-layout')`
+        selector call is gone — the JSON island was removed. The
+        comment block may still reference the historical id, so we
+        check for the selector-call form rather than the bare id."""
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        assert 'querySelector("#dz-workspace-layout")' not in block
+
+    def test_handler_guards_missing_root(self) -> None:
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        assert "if (!root" in block
+
+    def test_handler_skips_unrelated_swap_targets(self) -> None:
+        """The destroy + re-init only fires when the swap target
+        actually contains (or is) the workspace root. Drawer-content
+        swaps and other unrelated targets must no-op."""
+        source = _load_alpine()
+        idx = source.index("#936 → #945 → #948")
+        block = source[idx : idx + 2500]
+        # The contains-check guards against unrelated swaps.
+        assert "target.contains(root)" in block or "root.contains(target)" in block
 
 
 class TestGlobalInitTreeBridge:
-    """#924: the per-component htmx:afterSettle listener (#919) only re-
-    hydrates when the SAME dzDashboardBuilder Alpine instance survives the
-    morph swap. When the user navigates between *different* workspaces via
-    the sidebar, idiomorph replaces the `<div x-data="dzDashboardBuilder()">`
-    element entirely and Alpine never initializes the new one — so the
-    new x-for renders nothing and the JSON layout island shows as raw
-    text. The fix is a global htmx:afterSettle listener in dz-alpine.js
-    that calls Alpine.initTree(target) on every swap so any new x-data
-    elements get initialized."""
-
-    def _load_alpine(self) -> str:
-        return DZ_ALPINE_PATH.read_text()
+    """#924 — the global `htmx:afterSettle` listener wires
+    `Alpine.initTree(target)` so newly-arrived `[x-data]` roots get
+    initialised. This survives the #948 migration unchanged."""
 
     def test_global_listener_exists(self) -> None:
-        source = self._load_alpine()
+        source = _load_alpine()
         assert 'document.body.addEventListener("htmx:afterSettle"' in source
 
     def test_calls_alpine_init_tree(self) -> None:
-        source = self._load_alpine()
+        source = _load_alpine()
         assert "window.Alpine.initTree(target)" in source
 
-    def test_listener_is_outside_alpine_init_block(self) -> None:
-        """The listener must be a module-level registration, not nested
-        inside the alpine:init handler — alpine:init only fires once,
-        but this listener must fire for every htmx swap."""
-        source = self._load_alpine()
-        listener_idx = source.index('document.body.addEventListener("htmx:afterSettle"')
-        last_alpine_init_close = source.rindex("  }));\n});\n")
-        assert listener_idx > last_alpine_init_close, (
-            "the global htmx:afterSettle listener must live AFTER the "
-            "alpine:init block closes — otherwise it never registers"
-        )
-
     def test_uses_after_settle_not_after_swap(self) -> None:
-        """Same #919 reasoning — afterSwap fires before idiomorph commits
-        child textContent under the morph extension."""
-        source = self._load_alpine()
-        # The bridge listener uses afterSettle. (Other afterSwap mentions
-        # may exist elsewhere, so we only assert the bridge uses settle.)
+        source = _load_alpine()
         bridge_block_idx = source.index("HTMX morph-swap → Alpine.initTree bridge")
         bridge_block = source[bridge_block_idx : bridge_block_idx + 2000]
         assert "htmx:afterSettle" in bridge_block
         assert "htmx:afterSwap" not in bridge_block
 
     def test_guards_missing_alpine(self) -> None:
-        """If Alpine isn't loaded yet (race during boot), the listener
-        must no-op rather than throw."""
-        source = self._load_alpine()
+        source = _load_alpine()
         bridge_block_idx = source.index("HTMX morph-swap → Alpine.initTree bridge")
         bridge_block = source[bridge_block_idx : bridge_block_idx + 2000]
         assert "if (window.Alpine" in bridge_block
 
 
-class TestSameUrlRehydrate:
-    """#936 — sidebar re-click on the active workspace link must restore
-    cards. The global afterSettle handler in dz-alpine.js looks up the
-    live dzDashboardBuilder Alpine instance via `Alpine.$data(root)` and
-    calls `_hydrateFromLayout()` on it. The previous per-component
-    listener captured `this` at init time and pointed at a dead Alpine
-    proxy after same-URL morph, so cards collapsed to empty even though
-    the JSON island had fresh data."""
+class TestEphemeralStatePreserved:
+    """The Alpine reactive surface that survives #948 — the toolbar's
+    save state, the picker visibility, the drag/resize mid-flight
+    state, the keyboard move/resize markers."""
 
-    def _load_alpine(self) -> str:
-        return DZ_ALPINE_PATH.read_text()
+    def test_save_state_field_present(self) -> None:
+        source = _load_js()
+        assert 'saveState: "clean"' in source
 
-    def test_handler_filters_to_workspace_layout_island(self) -> None:
-        source = self._load_alpine()
-        # The handler skips when the swap target has no workspace layout
-        # island — a region card swap shouldn't re-hydrate the dashboard.
-        assert '"#dz-workspace-layout"' in source
+    def test_show_picker_field_present(self) -> None:
+        source = _load_js()
+        assert "showPicker: false" in source
 
-    def test_handler_uses_alpine_data_lookup(self) -> None:
-        """`Alpine.$data(root)` always returns the live proxy, even after
-        idiomorph re-creates the element. Capturing `this` at init time
-        (the previous approach) went stale on same-URL morph."""
-        source = self._load_alpine()
-        assert "Alpine.$data(root)" in source
+    def test_drag_field_initialises_null(self) -> None:
+        source = _load_js()
+        assert "drag: null" in source
 
-    def test_handler_calls_hydrate_on_live_instance(self) -> None:
-        source = self._load_alpine()
-        assert "_hydrateFromLayout()" in source, (
-            "global handler must invoke _hydrateFromLayout() on the "
-            "live Alpine instance to populate cards after same-URL morph"
-        )
-
-    def test_handler_finds_dashboard_root_via_x_data_attr(self) -> None:
-        """Selector targets the workspace's x-data root, not any random
-        Alpine root in the swapped subtree."""
-        source = self._load_alpine()
-        assert '[x-data*="dzDashboardBuilder"]' in source
-
-    def test_handler_guards_missing_alpine_data(self) -> None:
-        """During boot (Alpine not yet loaded) or when no dashboard root
-        is present (e.g. non-workspace pages), the handler must no-op
-        rather than throw."""
-        source = self._load_alpine()
-        # Bound the search to the post-#936/#945 block.
-        idx = source.index("#936 → #945")
-        block = source[idx : idx + 2500]
-        assert "if (!root" in block
-        assert "Alpine.$data" in block
-
-    def test_handler_destroys_then_inits_for_fresh_watchers(self) -> None:
-        """#945 — same-URL morph keeps the [x-data] root in place,
-        so the watcher graph that x-for depends on stays bound to the
-        original cards proxy. Just calling _hydrateFromLayout() on
-        the live $data updates values but doesn't re-fire watchers
-        — x-for stays inert and cards collapse to 0.
-
-        Fix: explicitly Alpine.destroyTree(root) then Alpine.initTree(root)
-        so init() re-runs against fresh proxies and the watcher
-        graph reattaches."""
-        source = self._load_alpine()
-        idx = source.index("#936 → #945")
-        block = source[idx : idx + 2500]
-        assert "Alpine.destroyTree(root)" in block
-        assert "Alpine.initTree(root)" in block
-
-    def test_handler_destroyTree_called_before_initTree(self) -> None:
-        """Order matters: destroy first, then re-init. Reverse order
-        would no-op (initTree on already-initialised root) then tear
-        down the freshly-built watcher graph."""
-        source = self._load_alpine()
-        idx = source.index("#936 → #945")
-        block = source[idx : idx + 2500]
-        destroy_idx = block.index("Alpine.destroyTree(root)")
-        init_idx = block.index("Alpine.initTree(root)", destroy_idx)
-        assert destroy_idx < init_idx
-
-    def test_handler_falls_back_when_destroyTree_missing(self) -> None:
-        """Older Alpine builds may not expose destroyTree. Fall back
-        to the cycle-2a $data + _hydrateFromLayout path so non-current
-        environments don't crash."""
-        source = self._load_alpine()
-        idx = source.index("#936 → #945")
-        block = source[idx : idx + 2500]
-        # The fallback branch is gated on destroyTree availability
-        assert 'typeof window.Alpine.destroyTree === "function"' in block
-        # And invokes the same _hydrateFromLayout call the cycle 2a
-        # handler used
-        assert "_hydrateFromLayout()" in block
+    def test_resize_field_initialises_null(self) -> None:
+        source = _load_js()
+        assert "resize: null" in source

@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.132] - 2026-04-29
+
+### Changed
+- **#948 cycle 1 — workspace cards are server-rendered HTML.** The
+  reactive `cards` array, the `<script id="dz-workspace-layout">`
+  JSON data island, and the `<template x-for="card in cards">`
+  iteration are gone. Cards are emitted directly by the Jinja
+  template (`workspace/_content.html`) as
+  `<div class="dz-card-wrapper" data-card-id="..." data-card-region="..."
+  data-card-col-span="...">` elements. The DOM is the source of truth
+  for layout.
+
+  The Alpine reactive surface contracts to ephemeral state only:
+
+  | Field | Purpose |
+  |---|---|
+  | `drag` | mid-flight pointer state during card drag |
+  | `resize` | mid-flight pointer state during card resize |
+  | `saveState` | clean / dirty / saving / saved / error |
+  | `_saveError` | error message for the save button title |
+  | `showPicker` | add-card picker visibility |
+  | `_keyboardMoveCardId` / `_keyboardResizeCardId` / `_keyboardResizeOriginal` | keyboard interaction modes |
+  | `undoStack` | DOM-snapshot operations (was JSON snapshots) |
+
+  Card events (drag-start, click-remove, keydown) wire via
+  delegation on the grid container, so dynamically-added cards
+  (`addCard`, undo) work without re-init. The
+  `cardHxTrigger` / `isEagerCard` / `_hydrateFromLayout` /
+  `dragTransform` helpers are removed — eager-vs-lazy hx-trigger
+  is decided at render time based on `loop.index0 < (fold_count or 0)`,
+  and drag preview applies CSS directly to the dragged element.
+
+  Drag/resize/keyboard move/resize behaviour is preserved end-to-end.
+  Save layout reads card order from the DOM. Undo replays
+  structured operations (add / remove / reorder / resize) rather
+  than swapping JSON snapshots.
+
+### Fixed
+- **The watcher-staleness bug class (#945) is structurally
+  eliminated.** Without a reactive `cards` array, the
+  `<template x-for>` watcher graph that broke on same-URL morph
+  doesn't exist. The `Alpine.destroyTree(root)` + `initTree(root)`
+  defense-in-depth pattern in `dz-alpine.js` stays as
+  belt-and-braces for ephemeral state (saveState, showPicker) and
+  re-attaches the grid-container event delegation on morph, but the
+  load-bearing role it played pre-#948 is gone.
+
+### Agent Guidance
+- The `dzDashboardBuilder` Alpine component no longer holds any
+  card content — only ephemeral interaction state. When extending
+  the dashboard:
+  - Read card data from `[data-card-id]` / `[data-card-region]` /
+    `[data-card-col-span]` attributes on DOM elements, not from a
+    reactive Alpine array.
+  - Card events go through delegation on `[data-grid-container]`,
+    so HTML-only card markup is sufficient — no per-card Alpine
+    `@` directives needed.
+  - The catalog for the add-card picker is a JSON blob on
+    `[data-card-catalog]`. Read it on demand in `addCard()`.
+  - The workspace name lives at `[data-workspace-name]` on the
+    workspace root.
+  - When in doubt, prefer server-rendering and let HTMX morph
+    handle updates. The migration eliminated #945's bug class by
+    removing the reactive surface that made it possible.
+
 ## [0.61.131] - 2026-04-29
 
 ### Added

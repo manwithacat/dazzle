@@ -7,9 +7,15 @@
    state grammar (saveState, isDragging, isResizing, showPicker) preserved
    verbatim — :class bindings now toggle .is-dragging / .is-resizing /
    data-dz-save-state and CSS resolves the visual delta. #}
-{# Layout JSON embedded as a data island (#635) #}
-<script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
-<div class="dz-workspace" x-data="dzDashboardBuilder()">
+{# #948: cards are server-rendered HTML (no JSON island, no x-for).
+   Alpine state contracts to ephemeral fields only (drag/resize/save/picker);
+   the DOM is the source of truth for layout. The workspace name and
+   the catalog flow through `data-*` attributes that JS reads on demand
+   rather than capturing reactively at init time. #}
+<div class="dz-workspace"
+     x-data="dzDashboardBuilder()"
+     data-workspace-name="{{ workspace.name }}"
+     {% if fold_count is defined %}data-fold-count="{{ fold_count }}"{% endif %}>
   {# Workspace heading — title + primary actions row. `purpose:` is
      developer intent (e.g. "Personal dashboard for support agents")
      and leaks into user-facing copy when rendered verbatim, with no
@@ -138,116 +144,83 @@
        aria-label="Dashboard card grid"
        {% if workspace.sse_url %}hx-ext="sse" sse-connect="{{ workspace.sse_url }}"{% endif %}>
 
-    <template x-for="card in cards" :key="card.id">
-      {# Outer wrapper is a layout/positioning element only. The visible
-         card chrome lives on the inner <article>. Keeping `rounded-md`
-         here (in addition to the article's own) made the layers read
-         as a card-within-a-card — the wrapper is kept square so the
-         focus ring traces a simple offset rectangle around the card
-         (issue #794). #}
-      <div :data-card-id="card.id"
-           :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
-           {# Single concatenated string output — Alpine's array form
-              `[obj, str]` was dropping the string element on some
-              card-iteration paths (#900). Filtering and joining to
-              one string is unambiguous: Alpine appends the entire
-              expression to the static `class=` attribute. #}
-           :class="[
-             card.css_class,
-             (!isDragging(card.id) && !drag) ? 'is-animating' : ''
-           ].filter(Boolean).join(' ')"
-           tabindex="0"
-           @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
-           class="dz-card-wrapper">
+    {# #948: server-rendered cards. The DOM is the source of truth for
+       layout — drag/resize/add/delete mutate it directly. Card events
+       wire via delegation on the grid container (see dashboard-builder.js
+       init), so neither this server-rendered iteration nor any
+       runtime-added card needs per-element Alpine `@` directives.
 
-        {# Card chrome #}
-        <article class="dz-card"
-                 :class="{ 'is-resizing': isResizing(card.id) }"
-                 role="article"
-                 :aria-labelledby="'card-title-' + card.id">
+       v0.62 invariants preserved:
+       - data-test-id="dz-card-drag-handle" still anchors INTERACTION_WALK
+       - card-title-{id} still id-matches the card chrome (was an x-text
+         binding; now a direct id attribute)
+       - notice band shape preserved including data-dz-notice-tone keyed
+         off dz-tones.css (#906)
+       - eager vs lazy hx-trigger split (#864) honoured per-card via
+         {{ loop.index0 < (fold_count or 0) }} #}
+    {% for r in workspace.regions %}
+    {% set _card_id = 'card-' ~ loop.index0 %}
+    {% set _eager = loop.index0 < (fold_count or 0) %}
+    {% set _trigger = 'load' if _eager else 'intersect once' %}
+    {% if workspace.sse_url %}
+    {% set _trigger = _trigger ~ ', sse:entity.created, sse:entity.updated, sse:entity.deleted' %}
+    {% endif %}
+    <div data-card-id="{{ _card_id }}"
+         data-card-region="{{ r.name }}"
+         data-card-col-span="{{ r.col_span }}"
+         data-card-row-order="{{ loop.index0 }}"
+         class="dz-card-wrapper{% if r.css_class %} {{ r.css_class }}{% endif %} is-animating"
+         style="grid-column: span {{ r.col_span }} / span {{ r.col_span }};"
+         tabindex="0">
 
-          {# Card header — drag handle zone. data-test-id targets this
-             as the stable pointer-start anchor for INTERACTION_WALK
-             (see docs/proposals/interaction-walk-harness.md). Don't
-             rename without updating the harness. #}
-          <div class="dz-card-header"
-               :class="{ 'is-dragging': isDragging(card.id) }"
-               data-test-id="dz-card-drag-handle"
-               @pointerdown="startDrag(card.id, $event)">
-            {# v0.61.60: optional kicker line above the title (AegisMark
-               UX patterns roadmap item #1). Hidden when card.eyebrow
-               is empty so existing dashboards render unchanged. #}
-            <div class="dz-card-titles">
-              <span x-show="card.eyebrow"
-                    x-text="card.eyebrow"
-                    class="dz-card-eyebrow"></span>
-              <h3 :id="'card-title-' + card.id"
-                  class="dz-card-title"
-                  x-text="card.title"></h3>
-            </div>
-            {# Primary actions stay visible (issue #799): opacity-60 at rest so
-               they're discoverable on touch and via keyboard focus, fading up
-               to full on mouse hover or any focus within the card. The old
-               pattern (opacity-0 + group-hover only) made the remove button
-               invisible to touch users and anyone doing keyboard navigation. #}
-            <div class="dz-card-actions">
-              <button @click.stop="removeCard(card.id)"
-                      data-test-id="dz-card-remove"
-                      class="dz-card-action-button"
-                      aria-label="Remove card">
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                <span class="visually-hidden">Remove card</span>
-              </button>
-            </div>
+      <article class="dz-card"
+               role="article"
+               aria-labelledby="card-title-{{ _card_id }}">
+
+        <div class="dz-card-header" data-test-id="dz-card-drag-handle">
+          <div class="dz-card-titles">
+            {% if r.eyebrow %}
+            <span class="dz-card-eyebrow">{{ r.eyebrow }}</span>
+            {% endif %}
+            <h3 id="card-title-{{ _card_id }}" class="dz-card-title">{{ r.title or r.name.replace('_', ' ').title() }}</h3>
           </div>
-
-          {# v0.61.68 (#7) optional notice band between card header
-             and body, v0.61.70 (#906) static-class fix. Tint applied
-             via dz-tones.css keyed off data-dz-notice-tone — the
-             previous dynamic Tailwind `:class` arbitrary values were
-             JIT-invisible and shipped without rules. Hidden via
-             x-show when no notice is configured — the dashboard
-             frame shape stays unchanged for existing apps. #}
-          <div x-show="card.notice && card.notice.title"
-               x-cloak
-               class="dz-notice-band dz-card-notice"
-               :data-dz-notice-tone="card.notice ? (card.notice.tone || 'neutral') : 'neutral'"
-               role="note">
-            <div class="dz-card-notice-title" x-text="card.notice && card.notice.title"></div>
-            <div x-show="card.notice && card.notice.body"
-                 x-text="card.notice && card.notice.body"
-                 class="dz-card-notice-body"></div>
+          <div class="dz-card-actions">
+            <button data-test-id="dz-card-remove"
+                    class="dz-card-action-button"
+                    aria-label="Remove card">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              <span class="visually-hidden">Remove card</span>
+            </button>
           </div>
+        </div>
 
-          {# Card body — HTMX-loaded region content.
-             v0.61.1 (#864): above-fold cards use hx-trigger="load" only;
-             below-fold cards use "intersect once" only. Combining both
-             previously double-fetched every above-fold region on first
-             paint (3-4s apart, ~20% wasted backend work per login).
-             See dashboard-builder.js::cardHxTrigger for the decision.
-             #798 preserved: eager "load" still handles cards already
-             in-viewport at observation time (IntersectionObserver fires
-             for NEW intersections only). #}
-          <div class="dz-card-body"
-               :id="'region-' + card.region + '-' + card.id"
-               :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
-               :hx-trigger="cardHxTrigger(card, {{ 'true' if workspace.sse_url else 'false' }})"
-               hx-swap="innerHTML">
-            {# Skeleton loading state #}
-            <div class="dz-card-skeleton">
-              <div class="dz-card-skeleton-line w-3-4"></div>
-              <div class="dz-card-skeleton-line is-thin"></div>
-              <div class="dz-card-skeleton-line is-thin w-5-6"></div>
-            </div>
+        {% if r.notice and r.notice.title %}
+        <div class="dz-notice-band dz-card-notice"
+             data-dz-notice-tone="{{ r.notice.tone or 'neutral' }}"
+             role="note">
+          <div class="dz-card-notice-title">{{ r.notice.title }}</div>
+          {% if r.notice.body %}
+          <div class="dz-card-notice-body">{{ r.notice.body }}</div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="dz-card-body"
+             id="region-{{ r.name }}-{{ _card_id }}"
+             hx-get="/api/workspaces/{{ workspace.name }}/regions/{{ r.name }}"
+             hx-trigger="{{ _trigger }}"
+             hx-swap="innerHTML">
+          <div class="dz-card-skeleton">
+            <div class="dz-card-skeleton-line w-3-4"></div>
+            <div class="dz-card-skeleton-line is-thin"></div>
+            <div class="dz-card-skeleton-line is-thin w-5-6"></div>
           </div>
-        </article>
+        </div>
+      </article>
 
-        {# Resize handle — right edge, visible on hover #}
-        <div @pointerdown="startResize(card.id, $event)"
-             class="dz-card-resize"
-             aria-hidden="true"></div>
-      </div>
-    </template>
+      <div class="dz-card-resize" aria-hidden="true"></div>
+    </div>
+    {% endfor %}
   </div>
 
   {# ── Add Card ── #}

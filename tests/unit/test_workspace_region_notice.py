@@ -197,8 +197,12 @@ class TestNoticeRuntimeWiring:
 
 
 class TestNoticeTemplateBinding:
-    """The dashboard panel template must surface `card.notice` as a
-    band between the header and HTMX-loaded body."""
+    """The dashboard panel template must surface the region's notice
+    as a band between the header and HTMX-loaded body.
+
+    #948: cards are server-rendered HTML now (was Alpine `card.notice`
+    pre-#948). The Jinja branch reads `r.notice.title` directly and
+    emits the `dz-notice-band` markup at render time."""
 
     def _template_text(self) -> str:
         path = (
@@ -206,10 +210,11 @@ class TestNoticeTemplateBinding:
         )
         return path.read_text()
 
-    def test_template_emits_card_notice_band(self) -> None:
+    def test_template_emits_region_notice_band(self) -> None:
         text = self._template_text()
-        assert "card.notice" in text, (
-            "_content.html dropped `card.notice` binding — AegisMark roadmap item #7 lost"
+        # Server-rendered: Jinja reads r.notice directly
+        assert "r.notice" in text, (
+            "_content.html dropped the region notice binding — AegisMark roadmap item #7 lost"
         )
         assert "dz-notice-band" in text
 
@@ -217,15 +222,14 @@ class TestNoticeTemplateBinding:
         """Empty/missing notice must not render an empty band — would
         leak vertical space into existing dashboards."""
         text = self._template_text()
-        assert 'x-show="card.notice && card.notice.title"' in text
+        # Server-rendered guard: `{% if r.notice and r.notice.title %}`
+        assert "{% if r.notice and r.notice.title %}" in text
 
     def test_template_emits_data_dz_notice_tone_attribute(self) -> None:
         """v0.61.70 (#906): tone tints come from `dz-tones.css` keyed
         off `data-dz-notice-tone`, NOT from inline Tailwind arbitrary
-        values inside an Alpine `:class="{...}"` binding (those were
-        JIT-invisible and shipped without rules). The template must
-        still emit the attribute so the CSS can match it. Per-tone
-        branches pinned in `test_dz_tones_css.py`."""
+        values. The template must emit the attribute so the CSS can
+        match it. Per-tone branches pinned in `test_dz_tones_css.py`."""
         text = self._template_text()
         assert "data-dz-notice-tone" in text, (
             "_content.html must emit data-dz-notice-tone — dz-tones.css keys off it"

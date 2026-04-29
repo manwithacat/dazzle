@@ -1,63 +1,67 @@
 /**
  * dashboard-builder.js — Alpine.js controller for spec-governed dashboards.
  *
- * Implements: ux-architect/components/dashboard-grid.md
- * Tokens: ux-architect/tokens/linear.md (structural only; colours via --dz-* CSS vars)
- * No external dependencies (SortableJS removed).
+ * #948 server-render migration: cards are server-rendered HTML via
+ * `<div class="dz-card-wrapper" data-card-id="..." data-card-region="..."
+ * data-card-col-span="...">`. Alpine no longer projects from a JSON
+ * island; the DOM is the source of truth for layout. The reactive
+ * surface contracts to ephemeral state only:
  *
- * Tasks 2+3+4: Core state + save lifecycle + drag + resize
+ *   - `drag`: mid-flight pointer state during card drag
+ *   - `resize`: mid-flight pointer state during card resize
+ *   - `saveState`: clean | dirty | saving | saved | error
+ *   - `_saveError`: error string for the Save button title attr
+ *   - `showPicker`: add-card picker visibility
+ *   - `_keyboardMoveCardId` / `_keyboardResizeCardId` / `_keyboardResizeOriginal`
+ *   - `undoStack`: list of undo operations (DOM-snapshot, not array)
+ *
+ * The cards array, catalog reactive list, workspaceName, foldCount,
+ * and `_hydrateFromLayout()` from the cycle 936/945 architecture are
+ * all gone — the morph-staleness bug class (#945) can't manifest
+ * without a reactive cards array. The destroy+init handler in
+ * dz-alpine.js stays as defense-in-depth for the picker / save-state.
+ *
+ * Card events are wired via delegation on the grid container so that
+ * dynamically-added cards (addCard, undo) work without re-init.
+ *
+ * Implements: ux-architect/components/dashboard-grid.md
  */
 document.addEventListener("alpine:init", () => {
   Alpine.data("dzDashboardBuilder", () => ({
-    // ── Data (from layout JSON data island) ──
-    cards: [],
-    catalog: [],
-    workspaceName: "",
-    // v0.61.1 (#864): count of above-fold cards hydrated from the layout
-    // JSON. isEager() uses it to split hx-trigger between "load" (above
-    // fold) and "intersect once" (below fold) — previously both triggers
-    // fired for every card, doubling backend work on first paint.
-    foldCount: 0,
-
-    // ── UI state ──
+    // ── Ephemeral UI state ──
     showPicker: false,
     saveState: "clean", // clean | dirty | saving | saved | error
     _saveError: "",
     undoStack: [],
 
-    // ── Drag state (null when idle) ──
+    // Mid-flight pointer state (null when idle)
     drag: null,
-
-    // ── Resize state (null when idle) ──
     resize: null,
 
-    // ── Keyboard move/resize state ──
+    // Keyboard move/resize state
     _keyboardMoveCardId: null,
     _keyboardResizeCardId: null,
     _keyboardResizeOriginal: null,
 
-    // ── Resize snap points ──
+    // Resize snap points (in 12-col grid)
     _resizeSnaps: [3, 4, 6, 8, 12],
 
-    // ── Timers ──
+    // Timers
     _savedTimer: null,
 
-    // ── Init ──
+    // Listener handles (for explicit cleanup in destroy())
+    _onKeydown: null,
+    _onPointerMove: null,
+    _onPointerUp: null,
+    _onGridPointerDown: null,
+    _onGridClick: null,
+    _onGridKeydown: null,
+
+    // ── Init / destroy ──
     init() {
-      // Register keyboard + pointer listeners FIRST (issue #797): if the
-      // layout-JSON parse below failed for any reason, the early return
-      // used to skip listener installation entirely, leaving drag/resize
-      // dead. Lifecycle is driven by the Alpine component, not the data
-      // load, so decouple them.
       this._onKeydown = this._handleKeydown.bind(this);
       document.addEventListener("keydown", this._onKeydown);
 
-      // Pointer drag/resize listeners live on window so they survive
-      // mouse excursions outside the grid. We own the lifecycle
-      // explicitly — using Alpine's @pointermove.window in the template
-      // leaked the listener across HTMX morph navigations and threw
-      // ReferenceError on the next move (same pattern as dzTable
-      // issue #795).
       this._onPointerMove = (e) => {
         this.onPointerMoveDrag(e);
         this.onPointerMoveResize(e);
@@ -69,40 +73,41 @@ document.addEventListener("alpine:init", () => {
       window.addEventListener("pointermove", this._onPointerMove);
       window.addEventListener("pointerup", this._onPointerUp);
 
-      // #936 — post-morph re-hydration is driven by the global
-      // afterSettle handler in dz-alpine.js, which looks up the LIVE
-      // Alpine instance via `Alpine.$data(root)` and calls
-      // `_hydrateFromLayout()` on it. The previous per-component
-      // listener captured `this` at init time and went stale whenever
-      // idiomorph re-created the workspace root, leaving cards
-      // permanently empty after a same-URL sidebar re-click.
-      this._hydrateFromLayout();
-    },
-
-    _hydrateFromLayout() {
-      const el = document.getElementById("dz-workspace-layout");
-      if (!el) return;
-      try {
-        const data = JSON.parse(el.textContent);
-        this.cards = data.cards || [];
-        this.catalog = data.catalog || [];
-        this.workspaceName = data.workspace_name || "";
-        this.foldCount = Number.isInteger(data.fold_count)
-          ? data.fold_count
-          : 0;
-        // Reset transient UI state so the multi-state saveState labels
-        // don't stack visibly after a re-entry morph (#875). Any pending
-        // saved-banner timer is cancelled because the workspace just
-        // re-hydrated from server truth.
-        this.saveState = "clean";
-        this.undoStack = [];
-        if (this._savedTimer) {
-          clearTimeout(this._savedTimer);
-          this._savedTimer = null;
+      // Event delegation on the grid container so cards added at
+      // runtime (addCard, undo) automatically get drag/resize/click
+      // handling without re-init. The cards themselves are pure
+      // server-rendered HTML — no Alpine `@` directives on them.
+      this._onGridPointerDown = (e) => {
+        const dragHandle = e.target.closest(
+          '[data-test-id="dz-card-drag-handle"]',
+        );
+        const resizeHandle = e.target.closest(".dz-card-resize");
+        if (dragHandle) {
+          const cardEl = dragHandle.closest("[data-card-id]");
+          if (cardEl) this.startDrag(cardEl, e);
+        } else if (resizeHandle) {
+          const cardEl = resizeHandle.closest("[data-card-id]");
+          if (cardEl) this.startResize(cardEl, e);
         }
-      } catch {
-        // Leave listeners in place — the user can still drag / keyboard-
-        // edit a stale layout even if the JSON payload was malformed.
+      };
+      this._onGridClick = (e) => {
+        const removeBtn = e.target.closest('[data-test-id="dz-card-remove"]');
+        if (removeBtn) {
+          e.stopPropagation();
+          const cardEl = removeBtn.closest("[data-card-id]");
+          if (cardEl) this.removeCard(cardEl);
+        }
+      };
+      this._onGridKeydown = (e) => {
+        const cardEl = e.target.closest("[data-card-id]");
+        if (cardEl) this.handleCardKeydown(cardEl, e);
+      };
+
+      const grid = document.querySelector("[data-grid-container]");
+      if (grid) {
+        grid.addEventListener("pointerdown", this._onGridPointerDown);
+        grid.addEventListener("click", this._onGridClick);
+        grid.addEventListener("keydown", this._onGridKeydown);
       }
     },
 
@@ -119,6 +124,65 @@ document.addEventListener("alpine:init", () => {
         window.removeEventListener("pointerup", this._onPointerUp);
         this._onPointerUp = null;
       }
+      const grid = document.querySelector("[data-grid-container]");
+      if (grid) {
+        if (this._onGridPointerDown) {
+          grid.removeEventListener("pointerdown", this._onGridPointerDown);
+          this._onGridPointerDown = null;
+        }
+        if (this._onGridClick) {
+          grid.removeEventListener("click", this._onGridClick);
+          this._onGridClick = null;
+        }
+        if (this._onGridKeydown) {
+          grid.removeEventListener("keydown", this._onGridKeydown);
+          this._onGridKeydown = null;
+        }
+      }
+    },
+
+    // ── DOM helpers ──
+    _allCards() {
+      const grid = document.querySelector("[data-grid-container]");
+      if (!grid) return [];
+      return Array.from(grid.querySelectorAll("[data-card-id]"));
+    },
+
+    _cardById(cardId) {
+      const grid = document.querySelector("[data-grid-container]");
+      if (!grid) return null;
+      return grid.querySelector('[data-card-id="' + cardId + '"]');
+    },
+
+    _cardIndex(cardEl) {
+      const all = this._allCards();
+      return all.indexOf(cardEl);
+    },
+
+    _cardSpan(cardEl) {
+      return parseInt(cardEl.getAttribute("data-card-col-span"), 10) || 6;
+    },
+
+    _setCardSpan(cardEl, span) {
+      cardEl.setAttribute("data-card-col-span", String(span));
+      cardEl.style.gridColumn = "span " + span + " / span " + span;
+    },
+
+    _workspaceName() {
+      const root = document.querySelector("[data-workspace-name]");
+      return root ? root.getAttribute("data-workspace-name") : "";
+    },
+
+    _catalog() {
+      // Catalog is a JSON blob on the picker — only consumed at
+      // open-picker time, so it doesn't need to be reactive.
+      const el = document.querySelector("[data-card-catalog]");
+      if (!el) return [];
+      try {
+        return JSON.parse(el.getAttribute("data-card-catalog") || "[]");
+      } catch {
+        return [];
+      }
     },
 
     // ── Save lifecycle ──
@@ -128,31 +192,19 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    _pushUndo() {
-      this.undoStack.push(JSON.parse(JSON.stringify(this.cards)));
-      // Cap at 20 entries
-      if (this.undoStack.length > 20) this.undoStack.shift();
-    },
-
-    undo() {
-      if (this.undoStack.length === 0) return;
-      this.cards = this.undoStack.pop();
-      this._markDirty();
-    },
-
     async save() {
       if (this.saveState !== "dirty" && this.saveState !== "error") return;
       this.saveState = "saving";
-      const layout = {
-        version: 2,
-        cards: this.cards.map((c, i) => ({
-          id: c.id,
-          region: c.region,
-          col_span: c.col_span,
-          row_order: i,
-        })),
-      };
-      const key = "workspace." + this.workspaceName + ".layout";
+
+      const cards = this._allCards().map((el, i) => ({
+        id: el.getAttribute("data-card-id"),
+        region: el.getAttribute("data-card-region"),
+        col_span: this._cardSpan(el),
+        row_order: i,
+      }));
+      const layout = { version: 2, cards };
+      const wsName = this._workspaceName();
+      const key = "workspace." + wsName + ".layout";
       const prefs = {};
       prefs[key] = JSON.stringify(layout);
 
@@ -179,7 +231,9 @@ document.addEventListener("alpine:init", () => {
       if (this.saveState === "dirty" && !confirm("Discard unsaved changes?")) {
         return;
       }
-      const key = "workspace." + this.workspaceName + ".layout";
+      const wsName = this._workspaceName();
+      if (!wsName) return;
+      const key = "workspace." + wsName + ".layout";
       fetch("/auth/preferences/" + encodeURIComponent(key), {
         method: "DELETE",
       }).then(() => location.reload());
@@ -187,75 +241,177 @@ document.addEventListener("alpine:init", () => {
 
     // ── Card management ──
     addCard(regionName) {
-      this._pushUndo();
-      const nextId = "card-" + Date.now();
-      const entry = this.catalog.find((c) => c.name === regionName);
-      this.cards.push({
-        id: nextId,
-        region: regionName,
-        title: entry ? entry.title : regionName,
-        col_span: 6,
-        row_order: this.cards.length,
-      });
+      const wsName = this._workspaceName();
+      if (!wsName) return;
+      const catalog = this._catalog();
+      const entry = catalog.find((c) => c.name === regionName);
+      if (!entry) return;
+
+      const grid = document.querySelector("[data-grid-container]");
+      if (!grid) return;
+
+      const newId = "card-" + Date.now();
+      const cardEl = this._buildCardElement(
+        {
+          id: newId,
+          region: regionName,
+          title: entry.title || regionName,
+          col_span: 6,
+        },
+        wsName,
+      );
+
+      grid.appendChild(cardEl);
+      this._pushUndo({ type: "add", cardId: newId });
+
+      if (typeof htmx !== "undefined") {
+        htmx.process(cardEl);
+        const bodyEl = cardEl.querySelector(".dz-card-body");
+        if (bodyEl) {
+          htmx.ajax(
+            "GET",
+            "/api/workspaces/" + wsName + "/regions/" + regionName,
+            { target: "#" + bodyEl.id, swap: "innerHTML" },
+          );
+        }
+      }
       this.showPicker = false;
       this._markDirty();
-
-      // v0.57.62's CI diagnostic proved the cause of the region-
-      // fetch silence: inside a single $nextTick the x-for template
-      // has NOT yet inserted the new card — `this.$el.querySelector`
-      // returns null, so htmx.process + htmx.ajax never run. Alpine
-      // needs multiple frames before x-for finishes DOM insertion
-      // and :hx-get / :id bindings have been evaluated.
-      //
-      // Fix: poll via requestAnimationFrame up to ~500ms for both
-      // the wrapper (data-card-id) AND the body slot (computed id
-      // matches Alpine's :id="'region-' + card.region + '-' + card.id").
-      // Once both exist, htmx.process registers the new subtree and
-      // htmx.ajax fires the region fetch explicitly (not relying on
-      // hx-trigger="load" which the de-duping MutationObserver may
-      // have already consumed before bindings were live).
-      if (!this.workspaceName) return;
-      const bodyId = "region-" + regionName + "-" + nextId;
-      const url =
-        "/api/workspaces/" + this.workspaceName + "/regions/" + regionName;
-
-      let attempts = 0;
-      const maxAttempts = 30; // ~500ms at 60fps
-      const tryFetch = () => {
-        attempts += 1;
-        const cardEl = document.querySelector(
-          '[data-card-id="' + nextId + '"]',
-        );
-        const bodyEl = document.getElementById(bodyId);
-        if (!cardEl || !bodyEl) {
-          if (attempts < maxAttempts) {
-            requestAnimationFrame(tryFetch);
-          } else {
-            console.log(
-              "[dz-addcard] giving up after " +
-                attempts +
-                " frames, cardEl=" +
-                !!cardEl +
-                " bodyEl=" +
-                !!bodyEl,
-            );
-          }
-          return;
-        }
-        if (typeof htmx !== "undefined") {
-          htmx.process(cardEl);
-          htmx.ajax("GET", url, {
-            target: "#" + bodyId,
-            swap: "innerHTML",
-          });
-        }
-      };
-      requestAnimationFrame(tryFetch);
     },
 
-    removeCard(cardId) {
-      this._pushUndo();
-      this.cards = this.cards.filter((c) => c.id !== cardId);
+    removeCard(cardEl) {
+      // Capture a structured snapshot for undo. We rebuild from
+      // attributes rather than serialising outerHTML — innerHTML
+      // round-trips can pick up cross-site script payloads from
+      // user-supplied content (cycle 942 had a similar concern with
+      // panel_html). All card content is server-rendered initially,
+      // so the data attributes are the trustworthy source of truth.
+      const titleEl = cardEl.querySelector(".dz-card-title");
+      const snapshot = {
+        type: "remove",
+        index: this._cardIndex(cardEl),
+        card: {
+          id: cardEl.getAttribute("data-card-id"),
+          region: cardEl.getAttribute("data-card-region"),
+          col_span: this._cardSpan(cardEl),
+          title: titleEl
+            ? titleEl.textContent
+            : cardEl.getAttribute("data-card-region"),
+        },
+      };
+      this._pushUndo(snapshot);
+      cardEl.remove();
+      this._markDirty();
+    },
+
+    _buildCardElement(card, wsName) {
+      // Build a card DOM tree using safe DOM methods (no innerHTML)
+      // so the title and any project-controlled fields can't smuggle
+      // markup. The chrome shape mirrors the server-rendered template
+      // in `workspace/_content.html`. Drag/resize/remove handlers
+      // reach this card via delegation on the grid container, so no
+      // per-card listener wiring is needed here.
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute("data-card-id", card.id);
+      wrapper.setAttribute("data-card-region", card.region);
+      wrapper.setAttribute("data-card-col-span", String(card.col_span));
+      wrapper.setAttribute("tabindex", "0");
+      wrapper.className = "dz-card-wrapper";
+      wrapper.style.gridColumn =
+        "span " + card.col_span + " / span " + card.col_span;
+
+      const article = document.createElement("article");
+      article.className = "dz-card";
+      article.setAttribute("role", "article");
+
+      const header = document.createElement("div");
+      header.className = "dz-card-header";
+      header.setAttribute("data-test-id", "dz-card-drag-handle");
+
+      const titles = document.createElement("div");
+      titles.className = "dz-card-titles";
+      const titleH3 = document.createElement("h3");
+      titleH3.className = "dz-card-title";
+      titleH3.textContent = card.title;
+      titles.appendChild(titleH3);
+      header.appendChild(titles);
+
+      const actions = document.createElement("div");
+      actions.className = "dz-card-actions";
+      const removeBtn = document.createElement("button");
+      removeBtn.setAttribute("data-test-id", "dz-card-remove");
+      removeBtn.setAttribute("aria-label", "Remove card");
+      removeBtn.className = "dz-card-action-button";
+      removeBtn.textContent = "×";
+      actions.appendChild(removeBtn);
+      header.appendChild(actions);
+
+      article.appendChild(header);
+
+      const body = document.createElement("div");
+      body.className = "dz-card-body";
+      body.id = "region-" + card.region + "-" + card.id;
+      body.setAttribute(
+        "hx-get",
+        "/api/workspaces/" + wsName + "/regions/" + card.region,
+      );
+      body.setAttribute("hx-trigger", "load");
+      body.setAttribute("hx-swap", "innerHTML");
+
+      const skeleton = document.createElement("div");
+      skeleton.className = "dz-card-skeleton";
+      ["w-3-4", "is-thin", "is-thin w-5-6"].forEach((cls) => {
+        const line = document.createElement("div");
+        line.className = "dz-card-skeleton-line " + cls;
+        skeleton.appendChild(line);
+      });
+      body.appendChild(skeleton);
+      article.appendChild(body);
+
+      wrapper.appendChild(article);
+
+      const resize = document.createElement("div");
+      resize.className = "dz-card-resize";
+      resize.setAttribute("aria-hidden", "true");
+      wrapper.appendChild(resize);
+
+      return wrapper;
+    },
+
+    // ── Undo ──
+    _pushUndo(op) {
+      this.undoStack.push(op);
+      if (this.undoStack.length > 20) this.undoStack.shift();
+    },
+
+    undo() {
+      const op = this.undoStack.pop();
+      if (!op) return;
+      const grid = document.querySelector("[data-grid-container]");
+      if (!grid) return;
+
+      if (op.type === "add") {
+        const cardEl = this._cardById(op.cardId);
+        if (cardEl) cardEl.remove();
+      } else if (op.type === "remove") {
+        // Rebuild from the structured snapshot rather than from a
+        // serialised HTML string. Defends against any drift if the
+        // template shape changes between snapshot and undo.
+        const wsName = this._workspaceName();
+        const cardEl = this._buildCardElement(op.card, wsName);
+        const refNode = grid.children[op.index] || null;
+        grid.insertBefore(cardEl, refNode);
+        if (typeof htmx !== "undefined") htmx.process(cardEl);
+      } else if (op.type === "reorder") {
+        const cardEl = this._cardById(op.cardId);
+        if (cardEl) {
+          const refNode = grid.children[op.fromIndex] || null;
+          grid.insertBefore(cardEl, refNode);
+        }
+      } else if (op.type === "resize") {
+        const cardEl = this._cardById(op.cardId);
+        if (cardEl) this._setCardSpan(cardEl, op.fromSpan);
+      }
       this._markDirty();
     },
 
@@ -287,200 +443,77 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    // ── Drag ──
-    startDrag(cardId, e) {
-      console.log(
-        "[dz-drag] startDrag fired cardId=" +
-          cardId +
-          " button=" +
-          e.button +
-          " pointerType=" +
-          e.pointerType,
-      );
-      if (e.button && e.button !== 0) return; // left click only
-      e.preventDefault();
-      // Query `document` not `this.$el` — when this method is called
-      // from `@pointerdown="startDrag(...)"` on the drag handle,
-      // Alpine's `$el` magic resolves to the handle element (where the
-      // directive lives), not the component root. The card wrapper is
-      // an ANCESTOR of the handle, so handle.querySelector for the
-      // wrapper always returns null. v0.57.64 CI log line
-      // "[dz-drag] startDrag: cardEl NOT FOUND for card-0" pinpointed
-      // this. Same bug class that killed addCard before #798 fix.
-      const cardEl = document.querySelector('[data-card-id="' + cardId + '"]');
-      if (!cardEl) {
-        console.log("[dz-drag] startDrag: cardEl NOT FOUND for " + cardId);
+    handleCardKeydown(cardEl, e) {
+      const cardId = cardEl.getAttribute("data-card-id");
+
+      // Space toggles keyboard move; Enter confirms move
+      if (e.key === " " || e.key === "Enter") {
+        if (e.key === " ") {
+          e.preventDefault();
+          this._toggleKeyboardMove(cardId);
+        } else if (this._keyboardMoveCardId === cardId) {
+          e.preventDefault();
+          this._keyboardMoveCardId = null;
+          this._announce("Position confirmed");
+        }
         return;
       }
 
-      const rect = cardEl.getBoundingClientRect();
-      this.drag = {
-        cardId,
-        startX: e.clientX,
-        startY: e.clientY,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
-        width: rect.width,
-        height: rect.height,
-        currentX: e.clientX,
-        currentY: e.clientY,
-        phase: "pressed",
-        placeholderIndex: this.cards.findIndex((c) => c.id === cardId),
-      };
-
-      this._dragPointerId = e.pointerId;
-      console.log(
-        "[dz-drag] drag state set, startY=" +
-          e.clientY +
-          " placeholderIndex=" +
-          this.drag.placeholderIndex,
-      );
-      // Note: we do NOT use setPointerCapture here — it would route
-      // pointermove events to the card element instead of window,
-      // breaking our @pointermove.window handler on the grid container.
-    },
-
-    onPointerMoveDrag(e) {
-      if (!this.drag) return;
-
-      // Update cursor position via top-level assignment so Alpine's
-      // :style binding on the card (which reads drag.currentX/Y
-      // through dragTransform) re-evaluates. Nested-property
-      // mutation (this.drag.currentX = ...) can be missed by the
-      // effect tree under certain Alpine configurations — pinning
-      // reactivity to the top-level `this.drag` write is defensive
-      // and costs one object spread per move (issue #797).
-      let nextDrag = {
-        ...this.drag,
-        currentX: e.clientX,
-        currentY: e.clientY,
-      };
-
-      // Phase transition: pressed → dragging (4px threshold)
-      if (nextDrag.phase === "pressed") {
-        const dx = e.clientX - nextDrag.startX;
-        const dy = e.clientY - nextDrag.startY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 4) {
-          this.drag = nextDrag;
+      // Escape exits move mode
+      if (e.key === "Escape") {
+        if (this._keyboardMoveCardId === cardId) {
+          e.preventDefault();
+          this._keyboardMoveCardId = null;
+          this._announce("Move cancelled");
           return;
         }
-        console.log(
-          "[dz-drag] phase transition pressed→dragging, dist=" +
-            dist.toFixed(1),
-        );
-        this._pushUndo();
-        nextDrag = { ...nextDrag, phase: "dragging" };
-        document.body.classList.add("select-none");
       }
 
-      this.drag = nextDrag;
-      if (this.drag.phase !== "dragging") return;
-
-      // Find which card the pointer is over (by midpoint comparison).
-      // Query `document` not `this.$el` for the same Alpine `$el`
-      // scope reason documented in startDrag — this callback runs via
-      // the window `pointermove` listener installed in init, not via
-      // a directive, so `this.$el` resolution is unreliable.
-      const grid = document.querySelector("[data-grid-container]");
-      if (!grid) return;
-      const wrappers = grid.querySelectorAll("[data-card-id]");
-      let targetIndex = this.drag.placeholderIndex;
-
-      wrappers.forEach((wrapper, i) => {
-        if (wrapper.dataset.cardId === this.drag.cardId) return;
-        const rect = wrapper.getBoundingClientRect();
-        const midY = rect.top + rect.height / 2;
-        if (e.clientY > midY) {
-          // Find this card's index in the array
-          const cardIndex = this.cards.findIndex(
-            (c) => c.id === wrapper.dataset.cardId,
-          );
-          if (cardIndex >= 0) targetIndex = cardIndex + 1;
+      // Arrow keys — move (when in keyboard-move mode)
+      if (this._keyboardMoveCardId === cardId) {
+        const idx = this._cardIndex(cardEl);
+        let newIdx = idx;
+        if (e.key === "ArrowUp" && idx > 0) newIdx = idx - 1;
+        if (e.key === "ArrowDown" && idx < this._allCards().length - 1) {
+          newIdx = idx + 1;
         }
-      });
-
-      // Move placeholder in array if position changed
-      if (targetIndex !== this.drag.placeholderIndex) {
-        console.log(
-          "[dz-drag] reorder " +
-            this.drag.placeholderIndex +
-            " → " +
-            targetIndex +
-            " (wrappers=" +
-            wrappers.length +
-            ")",
-        );
-        const card = this.cards.find((c) => c.id === this.drag.cardId);
-        if (card) {
-          const filtered = this.cards.filter((c) => c.id !== this.drag.cardId);
-          filtered.splice(Math.min(targetIndex, filtered.length), 0, card);
-          this.cards = filtered;
-          this.drag.placeholderIndex = this.cards.findIndex(
-            (c) => c.id === this.drag.cardId,
-          );
+        if (newIdx !== idx) {
+          e.preventDefault();
+          this._pushUndo({ type: "reorder", cardId, fromIndex: idx });
+          const grid = document.querySelector("[data-grid-container]");
+          if (grid) {
+            // To move down: insert before the (newIdx+1)th element
+            // so we land in the (newIdx)th slot. To move up: insert
+            // before the (newIdx)th. The +1 adjustment for downward
+            // moves accounts for the dragged element occupying its
+            // current slot before the reorder.
+            const refNode =
+              newIdx > idx
+                ? grid.children[newIdx + 1] || null
+                : grid.children[newIdx];
+            grid.insertBefore(cardEl, refNode);
+          }
+          this._markDirty();
+          this._announce("Card moved to position " + (newIdx + 1));
+          // Restore focus after the move
+          this.$nextTick(() => cardEl.focus());
         }
+        return;
+      }
+
+      // 'r' — toggle keyboard resize mode
+      if (e.key === "r" || e.key === "R") {
+        this._toggleKeyboardResize(cardEl);
+        return;
+      }
+
+      // Resize mode: arrows change col_span via snap points
+      if (this._keyboardResizeCardId === cardId) {
+        this._handleResizeArrow(cardEl, e);
       }
     },
 
-    endDrag(e) {
-      if (!this.drag) return;
-      const wasDragging = this.drag.phase === "dragging";
-      console.log(
-        "[dz-drag] endDrag wasDragging=" +
-          wasDragging +
-          " finalIndex=" +
-          this.drag.placeholderIndex,
-      );
-      this.drag = null;
-      this._dragPointerId = null;
-      document.body.classList.remove("select-none");
-
-      if (wasDragging) {
-        this._markDirty();
-        // Announce for screen readers
-        this._announce("Card moved");
-      }
-    },
-
-    cancelDrag() {
-      if (!this.drag) return;
-      if (this.drag.phase === "dragging" && this.undoStack.length > 0) {
-        this.cards = this.undoStack.pop();
-      }
-      this.drag = null;
-      this._dragPointerId = null;
-      document.body.classList.remove("select-none");
-    },
-
-    isDragging(cardId) {
-      return (
-        this.drag &&
-        this.drag.phase === "dragging" &&
-        this.drag.cardId === cardId
-      );
-    },
-
-    dragTransform(cardId) {
-      if (!this.isDragging(cardId)) return "";
-      const x = this.drag.currentX - this.drag.offsetX;
-      const y = this.drag.currentY - this.drag.offsetY;
-      return (
-        "position:fixed;left:0;top:0;width:" +
-        this.drag.width +
-        "px;height:" +
-        this.drag.height +
-        "px;transform:translate(" +
-        x +
-        "px," +
-        y +
-        "px) scale(1.02);z-index:500;opacity:0.95;pointer-events:none;" +
-        "box-shadow:0 12px 24px rgb(0 0 0/0.12),0 4px 8px rgb(0 0 0/0.06);"
-      );
-    },
-
-    // ── Keyboard card move (Space to enter, arrows to move, Enter/Esc to exit) ──
-    toggleKeyboardMove(cardId) {
+    _toggleKeyboardMove(cardId) {
       if (this._keyboardMoveCardId === cardId) {
         this._keyboardMoveCardId = null;
         this._announce("Move mode exited");
@@ -492,99 +525,243 @@ document.addEventListener("alpine:init", () => {
       );
     },
 
-    handleCardKeydown(cardId, e) {
-      if (e.key === " " || e.key === "Enter") {
-        if (e.key === " ") {
-          e.preventDefault();
-          this.toggleKeyboardMove(cardId);
-        } else if (this._keyboardMoveCardId === cardId) {
-          e.preventDefault();
-          this._keyboardMoveCardId = null;
-          this._announce("Position confirmed");
-        }
+    _toggleKeyboardResize(cardEl) {
+      const cardId = cardEl.getAttribute("data-card-id");
+      if (this._keyboardResizeCardId === cardId) {
+        this._keyboardResizeCardId = null;
+        this._announce("Resize mode exited");
         return;
       }
+      this._keyboardResizeCardId = cardId;
+      this._announce(
+        "Resize mode. Left/Right arrow to change width. Enter to confirm, Escape to cancel. Current: " +
+          this._cardSpan(cardEl) +
+          " columns.",
+      );
+    },
 
-      if (this._keyboardMoveCardId !== cardId) return;
+    _handleResizeArrow(cardEl, e) {
+      const cardId = cardEl.getAttribute("data-card-id");
 
       if (e.key === "Escape") {
         e.preventDefault();
-        this._keyboardMoveCardId = null;
-        this._announce("Move cancelled");
+        if (this._keyboardResizeOriginal !== null) {
+          this._setCardSpan(cardEl, this._keyboardResizeOriginal);
+        }
+        this._keyboardResizeCardId = null;
+        this._keyboardResizeOriginal = null;
+        this._announce("Resize cancelled");
         return;
       }
 
-      const idx = this.cards.findIndex((c) => c.id === cardId);
-      if (idx < 0) return;
-
-      let newIdx = idx;
-      if (e.key === "ArrowUp" && idx > 0) newIdx = idx - 1;
-      if (e.key === "ArrowDown" && idx < this.cards.length - 1)
-        newIdx = idx + 1;
-
-      if (newIdx !== idx) {
+      if (e.key === "Enter") {
         e.preventDefault();
-        this._pushUndo();
-        const [card] = this.cards.splice(idx, 1);
-        this.cards.splice(newIdx, 0, card);
-        this._markDirty();
-        this._announce("Card moved to position " + (newIdx + 1));
+        const span = this._cardSpan(cardEl);
+        if (
+          this._keyboardResizeOriginal !== null &&
+          span !== this._keyboardResizeOriginal
+        ) {
+          this._pushUndo({
+            type: "resize",
+            cardId,
+            fromSpan: this._keyboardResizeOriginal,
+          });
+          this._markDirty();
+        }
+        this._keyboardResizeCardId = null;
+        this._keyboardResizeOriginal = null;
+        this._announce("Resize confirmed: " + span + " columns");
+        return;
+      }
 
-        // Re-focus the card after Alpine re-renders
-        this.$nextTick(() => {
-          const el = document.querySelector('[data-card-id="' + cardId + '"]');
-          if (el) el.focus();
-        });
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        const currentSpan = this._cardSpan(cardEl);
+        if (this._keyboardResizeOriginal === null) {
+          this._keyboardResizeOriginal = currentSpan;
+        }
+        const snaps = this._resizeSnaps;
+        const currentIdx = snaps.indexOf(currentSpan);
+        let newIdx = currentIdx;
+        if (e.key === "ArrowRight" && currentIdx < snaps.length - 1) newIdx++;
+        if (e.key === "ArrowLeft" && currentIdx > 0) newIdx--;
+        if (newIdx !== currentIdx) {
+          this._setCardSpan(cardEl, snaps[newIdx]);
+          this._announce(snaps[newIdx] + " columns");
+        }
       }
     },
 
-    // ── Resize ──
-    startResize(cardId, e) {
+    // ── Drag (pointer) ──
+    startDrag(cardEl, e) {
+      if (e.button && e.button !== 0) return;
+      e.preventDefault();
+      const rect = cardEl.getBoundingClientRect();
+      this.drag = {
+        cardId: cardEl.getAttribute("data-card-id"),
+        startX: e.clientX,
+        startY: e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        width: rect.width,
+        height: rect.height,
+        currentX: e.clientX,
+        currentY: e.clientY,
+        phase: "pressed",
+        originalIndex: this._cardIndex(cardEl),
+      };
+    },
+
+    onPointerMoveDrag(e) {
+      if (!this.drag) return;
+      const drag = this.drag;
+      drag.currentX = e.clientX;
+      drag.currentY = e.clientY;
+
+      // Phase transition: pressed → dragging (4px threshold)
+      if (drag.phase === "pressed") {
+        const dx = e.clientX - drag.startX;
+        const dy = e.clientY - drag.startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 4) return;
+        drag.phase = "dragging";
+        document.body.classList.add("select-none");
+        this._pushUndo({
+          type: "reorder",
+          cardId: drag.cardId,
+          fromIndex: drag.originalIndex,
+        });
+      }
+
+      if (drag.phase !== "dragging") return;
+
+      // Apply transform directly to the dragged card (no reactive
+      // binding; same CSS shape as the cycle 2a `dragTransform()`
+      // helper — this is just imperative instead of declarative).
+      this._applyDragTransform();
+
+      // Reorder DOM if pointer crossed a sibling's midpoint
+      const grid = document.querySelector("[data-grid-container]");
+      if (!grid) return;
+      const dragEl = this._cardById(drag.cardId);
+      if (!dragEl) return;
+
+      const wrappers = this._allCards();
+      let targetIndex = wrappers.indexOf(dragEl);
+      wrappers.forEach((wrapper, i) => {
+        if (wrapper === dragEl) return;
+        const rect = wrapper.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY > midY) {
+          targetIndex = i + 1;
+        }
+      });
+
+      const currentIndex = wrappers.indexOf(dragEl);
+      if (targetIndex !== currentIndex) {
+        let ref;
+        if (targetIndex >= wrappers.length) {
+          ref = null;
+        } else {
+          ref = wrappers[targetIndex] || null;
+          // Skip past the dragged element if it lands at the ref
+          if (ref === dragEl) ref = wrappers[targetIndex + 1] || null;
+        }
+        grid.insertBefore(dragEl, ref);
+      }
+    },
+
+    _applyDragTransform() {
+      if (!this.drag || this.drag.phase !== "dragging") return;
+      const cardEl = this._cardById(this.drag.cardId);
+      if (!cardEl) return;
+      const x = this.drag.currentX - this.drag.offsetX;
+      const y = this.drag.currentY - this.drag.offsetY;
+      cardEl.style.cssText =
+        "position:fixed;left:0;top:0;width:" +
+        this.drag.width +
+        "px;height:" +
+        this.drag.height +
+        "px;transform:translate(" +
+        x +
+        "px," +
+        y +
+        "px) scale(1.02);z-index:500;opacity:0.95;pointer-events:none;" +
+        "box-shadow:0 12px 24px rgb(0 0 0/0.12),0 4px 8px rgb(0 0 0/0.06);";
+    },
+
+    endDrag(_e) {
+      if (!this.drag) return;
+      const wasDragging = this.drag.phase === "dragging";
+      const cardEl = this._cardById(this.drag.cardId);
+      if (cardEl) {
+        // Restore default styling, restore grid-column.
+        cardEl.style.cssText = "";
+        this._setCardSpan(cardEl, this._cardSpan(cardEl));
+      }
+      this.drag = null;
+      document.body.classList.remove("select-none");
+
+      if (wasDragging) {
+        this._markDirty();
+        this._announce("Card moved");
+      }
+    },
+
+    cancelDrag() {
+      if (!this.drag) return;
+      const cardEl = this._cardById(this.drag.cardId);
+      if (cardEl) {
+        cardEl.style.cssText = "";
+        this._setCardSpan(cardEl, this._cardSpan(cardEl));
+      }
+      // Pop the undo to restore the original position
+      if (this.drag.phase === "dragging" && this.undoStack.length > 0) {
+        this.undo();
+      }
+      this.drag = null;
+      document.body.classList.remove("select-none");
+    },
+
+    // ── Resize (pointer) ──
+    startResize(cardEl, e) {
       if (e.button && e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
 
       const grid = document.querySelector("[data-grid-container]");
       if (!grid) return;
-      const card = this.cards.find((c) => c.id === cardId);
-      if (!card) return;
 
-      this._pushUndo();
+      const startSpan = this._cardSpan(cardEl);
+      this._pushUndo({
+        type: "resize",
+        cardId: cardEl.getAttribute("data-card-id"),
+        fromSpan: startSpan,
+      });
+
       const gridRect = grid.getBoundingClientRect();
-
       this.resize = {
-        cardId,
+        cardId: cardEl.getAttribute("data-card-id"),
         startX: e.clientX,
-        startColSpan: card.col_span,
-        currentColSpan: card.col_span,
+        startColSpan: startSpan,
+        currentColSpan: startSpan,
         gridWidth: gridRect.width,
         gridLeft: gridRect.left,
       };
 
-      // No setPointerCapture — we use @pointermove.window on the grid container
       document.body.classList.add("select-none");
       document.body.style.cursor = "col-resize";
     },
 
     onPointerMoveResize(e) {
       if (!this.resize) return;
-
-      const card = this.cards.find((c) => c.id === this.resize.cardId);
-      if (!card) return;
-
-      // Find the card element's left edge
-      const cardEl = document.querySelector(
-        '[data-card-id="' + this.resize.cardId + '"]',
-      );
+      const cardEl = this._cardById(this.resize.cardId);
       if (!cardEl) return;
       const cardLeft = cardEl.getBoundingClientRect().left;
-
-      // Width from card left to current pointer
       const width = e.clientX - cardLeft;
       const colWidth = this.resize.gridWidth / 12;
       const rawCols = Math.round(width / colWidth);
 
-      // Snap to nearest allowed value
       let best = this._resizeSnaps[0];
       let bestDist = Math.abs(rawCols - best);
       for (const snap of this._resizeSnaps) {
@@ -595,145 +772,38 @@ document.addEventListener("alpine:init", () => {
         }
       }
 
-      card.col_span = best;
+      this._setCardSpan(cardEl, best);
       this.resize.currentColSpan = best;
     },
 
-    endResize(e) {
+    endResize(_e) {
       if (!this.resize) return;
       const changed = this.resize.currentColSpan !== this.resize.startColSpan;
-      const resizedCardId = this.resize.cardId;
+      const span = this.resize.currentColSpan;
       this.resize = null;
       document.body.classList.remove("select-none");
       document.body.style.cursor = "";
 
       if (changed) {
         this._markDirty();
-        const card = this.cards.find((c) => c.id === resizedCardId);
-        this._announce(
-          "Card resized to " + (card ? card.col_span : "") + " columns",
-        );
+        this._announce("Card resized to " + span + " columns");
       } else {
-        // No change — pop the undo we pushed
+        // No change — drop the undo we pushed
         this.undoStack.pop();
       }
     },
 
     cancelResize() {
       if (!this.resize) return;
-      const card = this.cards.find((c) => c.id === this.resize.cardId);
-      if (card) card.col_span = this.resize.startColSpan;
+      const cardEl = this._cardById(this.resize.cardId);
+      if (cardEl) this._setCardSpan(cardEl, this.resize.startColSpan);
       this.resize = null;
       document.body.classList.remove("select-none");
       document.body.style.cursor = "";
       this.undoStack.pop();
     },
 
-    isResizing(cardId) {
-      return this.resize && this.resize.cardId === cardId;
-    },
-
-    handleResizeKeydown(cardId, e) {
-      if (e.key !== "r" && e.key !== "R") return;
-      // Toggle keyboard resize mode
-      const card = this.cards.find((c) => c.id === cardId);
-      if (!card) return;
-
-      if (this._keyboardResizeCardId === cardId) {
-        this._keyboardResizeCardId = null;
-        this._announce("Resize mode exited");
-        return;
-      }
-      this._keyboardResizeCardId = cardId;
-      this._announce(
-        "Resize mode. Left/Right arrow to change width. Enter to confirm, Escape to cancel. Current: " +
-          card.col_span +
-          " columns.",
-      );
-    },
-
-    handleResizeArrow(cardId, e) {
-      if (this._keyboardResizeCardId !== cardId) return;
-      const card = this.cards.find((c) => c.id === cardId);
-      if (!card) return;
-
-      if (e.key === "Escape") {
-        e.preventDefault();
-        if (this._keyboardResizeOriginal !== null) {
-          card.col_span = this._keyboardResizeOriginal;
-        }
-        this._keyboardResizeCardId = null;
-        this._keyboardResizeOriginal = null;
-        this._announce("Resize cancelled");
-        return;
-      }
-
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (
-          this._keyboardResizeOriginal !== null &&
-          card.col_span !== this._keyboardResizeOriginal
-        ) {
-          this._pushUndo();
-          this._markDirty();
-        }
-        this._keyboardResizeCardId = null;
-        this._keyboardResizeOriginal = null;
-        this._announce("Resize confirmed: " + card.col_span + " columns");
-        return;
-      }
-
-      const snaps = this._resizeSnaps;
-      const currentIdx = snaps.indexOf(card.col_span);
-
-      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-        e.preventDefault();
-        if (this._keyboardResizeOriginal === null) {
-          this._keyboardResizeOriginal = card.col_span;
-        }
-        let newIdx = currentIdx;
-        if (e.key === "ArrowRight" && currentIdx < snaps.length - 1) newIdx++;
-        if (e.key === "ArrowLeft" && currentIdx > 0) newIdx--;
-        if (newIdx !== currentIdx) {
-          card.col_span = snaps[newIdx];
-          this._announce(card.col_span + " columns");
-        }
-      }
-    },
-
     // ── Helpers ──
-    _colSpanClass(span) {
-      const s = Math.min(Math.max(span, 3), 12);
-      return "grid-column: span " + s + " / span " + s;
-    },
-
-    /**
-     * v0.61.1 (#864): return True when `card` is above the fold and
-     * should use the eager `hx-trigger="load"`. Below-fold cards use
-     * `intersect once` only — combining the two triggers previously
-     * double-fetched every above-fold region on first paint.
-     *
-     * row_order is the authoritative fold position (index in the sorted
-     * card list). Falls back to True when foldCount is 0 to preserve
-     * the pre-fix behaviour for legacy workspaces.
-     */
-    isEagerCard(card) {
-      if (!this.foldCount) return true;
-      return (card.row_order ?? 0) < this.foldCount;
-    },
-
-    /**
-     * Build the hx-trigger expression for one card (#864). SSE triggers
-     * always append; the load/intersect split is the only decision.
-     */
-    cardHxTrigger(card, sseEnabled) {
-      const base = this.isEagerCard(card) ? "load" : "intersect once";
-      if (!sseEnabled) return base;
-      return (
-        base + ", sse:entity.created, sse:entity.updated, sse:entity.deleted"
-      );
-    },
-
     _announce(message) {
       let el = document.getElementById("dz-live-region");
       if (!el) {

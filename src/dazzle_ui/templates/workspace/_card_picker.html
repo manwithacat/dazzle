@@ -1,7 +1,13 @@
-{# Card picker popover — lists available regions from the catalog
+{# Card picker popover — lists available regions from the catalog.
    Contract: ~/.claude/skills/ux-architect/components/workspace-card-picker.md (UX-038)
-   v0.62 CSS refactor: inline Tailwind → semantic .dz-card-picker* family
-   (components/fragments.css). #}
+
+   v0.62 CSS refactor: inline Tailwind → semantic .dz-card-picker* family.
+   #948: catalog is server-rendered (Jinja for-loop over `catalog`) AND
+   serialised to a `data-card-catalog` JSON blob the JS reads when the
+   user picks an entry. No more `<template x-for="item in catalog">`
+   binding to a reactive array — the catalog doesn't change at runtime,
+   so making it reactive bought nothing and tied us to Alpine's bind
+   timing for #866 ("No widgets available" flash on alpine:init failure). #}
 <div x-show="showPicker"
      x-transition:enter="transition duration-[140ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
      x-transition:enter-start="opacity-0 -translate-y-1"
@@ -10,20 +16,20 @@
      x-transition:leave-start="opacity-100"
      x-transition:leave-end="opacity-0"
      @click.away="showPicker = false"
+     data-card-catalog="{{ (catalog or []) | tojson }}"
      class="dz-card-picker">
   <h4 class="dz-card-picker-title">Add a card</h4>
-  <template x-for="item in catalog" :key="item.name">
-    <button @click="addCard(item.name)"
-            data-test-id="dz-card-picker-entry"
-            :data-test-region="item.name"
-            class="dz-card-picker-entry">
-      <span class="dz-card-picker-display-tag" x-text="item.display.toLowerCase()"></span>
-      <span class="dz-card-picker-title-text" x-text="item.title"></span>
-      <span class="dz-card-picker-entity" x-text="item.entity"></span>
-    </button>
-  </template>
-  {# x-cloak — see #866. Hide "No widgets available" until Alpine hydrates
-     `catalog` from the layout-JSON data island. Otherwise a failed alpine:init
-     leaves this string visible even when the catalog is non-empty. #}
-  <div x-cloak x-show="catalog.length === 0" class="dz-card-picker-empty">No widgets available.</div>
+  {% for item in (catalog or []) %}
+  <button @click="addCard({{ item.name | tojson }})"
+          data-test-id="dz-card-picker-entry"
+          data-test-region="{{ item.name }}"
+          class="dz-card-picker-entry">
+    <span class="dz-card-picker-display-tag">{{ (item.display or '') | lower }}</span>
+    <span class="dz-card-picker-title-text">{{ item.title }}</span>
+    <span class="dz-card-picker-entity">{{ item.entity }}</span>
+  </button>
+  {% endfor %}
+  {% if not (catalog or []) %}
+  <div class="dz-card-picker-empty">No widgets available.</div>
+  {% endif %}
 </div>

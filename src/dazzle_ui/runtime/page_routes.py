@@ -1348,45 +1348,15 @@ async def _workspace_handler(
     render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
     catalog = build_catalog(ws_context)
 
-    # Build v2 card list for the template data island
-    cards_for_json = []
-    for i, r in enumerate(render_ws_ctx.regions):
-        cards_for_json.append(
-            {
-                "id": f"card-{i}",
-                "region": r.name,
-                "title": r.title or r.name.replace("_", " ").title(),
-                "col_span": r.col_span,
-                "row_order": i,
-                # #894: project CSS hook on the wrapper. Empty string when
-                # the region didn't declare `class:` — Alpine binding then
-                # contributes nothing.
-                "css_class": getattr(r, "css_class", "") or "",
-                # v0.61.60: kicker line above the region title in the
-                # dashboard panel header. Empty string when omitted —
-                # template's `x-show` hides the kicker element.
-                "eyebrow": getattr(r, "eyebrow", "") or "",
-                # v0.61.68: notice band rendered between header and
-                # body. Empty dict when omitted — Alpine `x-show` on
-                # truthy `card.notice.title` hides the band entirely.
-                # AegisMark UX patterns roadmap item #7.
-                "notice": getattr(r, "notice", {}) or {},
-            }
-        )
-
-    layout_json = json.dumps(
-        {
-            "version": 2,
-            "cards": cards_for_json,
-            "catalog": catalog,
-            "workspace_name": render_ws_ctx.name,
-            # v0.61.1 (#864): the number of above-fold cards. Eager load
-            # hx-trigger="load" fires for these; below-fold cards use
-            # "intersect once" only. Splitting the triggers avoids the
-            # double-fetch every region suffered when both were combined.
-            "fold_count": getattr(render_ws_ctx, "fold_count", 0) or 0,
-        }
-    )
+    # #948 server-render migration: cards come from the workspace IR
+    # directly (server-rendered HTML in `_content.html`), so the JSON
+    # data island and `cards_for_json` projection are gone. The
+    # template iterates `workspace.regions` and emits each card with
+    # `data-card-*` attributes the JS reads on demand. `catalog` is
+    # passed straight through — picker template iterates it
+    # server-side AND serialises it to a `data-card-catalog` JSON blob
+    # the JS reads on `addCard()`.
+    fold_count = getattr(render_ws_ctx, "fold_count", 0) or 0
 
     ws_title = render_ws_ctx.title or render_ws_ctx.name.replace("_", " ").title()
 
@@ -1413,7 +1383,8 @@ async def _workspace_handler(
             "workspace/_content.html",
             workspace=render_ws_ctx,
             user_preferences=user_preferences,
-            layout_json=layout_json,
+            catalog=catalog,
+            fold_count=fold_count,
             primary_actions=primary_actions,
         )
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
@@ -1431,7 +1402,8 @@ async def _workspace_handler(
         user_email=user_email,
         user_name=user_name,
         user_preferences=user_preferences,
-        layout_json=layout_json,
+        catalog=catalog,
+        fold_count=fold_count,
         primary_actions=primary_actions,
         _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
     )

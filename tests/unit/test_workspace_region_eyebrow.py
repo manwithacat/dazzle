@@ -163,22 +163,24 @@ class TestEyebrowRuntimeWiring:
 
 
 class TestEyebrowTemplateBinding:
-    """The `_content.html` panel header must surface `card.eyebrow`
-    above the title, hidden when empty so existing dashboards render
-    unchanged."""
+    """The `_content.html` panel header must surface the region's
+    eyebrow above the title, hidden when empty so existing dashboards
+    render unchanged.
 
-    def test_template_emits_card_eyebrow(self) -> None:
+    #948: cards are server-rendered HTML now (was Alpine `card.eyebrow`
+    pre-#948). The Jinja branch reads `r.eyebrow` directly."""
+
+    def test_template_emits_region_eyebrow(self) -> None:
         path = (
             Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
         )
         contents = path.read_text()
-        # The eyebrow span must be present and bound to card.eyebrow
-        assert "card.eyebrow" in contents, (
-            "Card panel header missing `card.eyebrow` binding — AegisMark roadmap item #1 lost"
+        # Server-rendered: Jinja reads r.eyebrow directly inside an `if`
+        assert "r.eyebrow" in contents, (
+            "Card panel header missing `r.eyebrow` binding — AegisMark roadmap item #1 lost"
         )
-        # And gated on truthy via x-show so empty doesn't render an
-        # empty kicker line above existing dashboards
-        assert 'x-show="card.eyebrow"' in contents
+        assert "{% if r.eyebrow %}" in contents
+        assert "dz-card-eyebrow" in contents
 
 
 # ───────────────────────── invariants ──────────────────────────

@@ -128,47 +128,53 @@ class TestRegionContextCssClass:
 
 
 class TestCssClassTemplateBinding:
-    """The Alpine card wrapper in `_content.html` must merge
-    `card.css_class` into its `:class` binding without clobbering
-    the existing transition/drag-state classes — AND the binding must
-    actually output the class onto the rendered DOM element (#900
-    regressed the v0.61.52 hook with an array-form binding that
-    silently dropped the string element)."""
+    """The card wrapper in `_content.html` must merge the region's
+    `css_class` into the rendered class attribute alongside the
+    framework-supplied transition class.
 
-    def test_template_binding_references_card_css_class(self) -> None:
-        """Static check on the template — the `:class` binding must
-        reference `card.css_class` so the project hook composes with
-        the framework-supplied transition class."""
+    #948: cards are server-rendered HTML now (was Alpine `:class`
+    binding pre-#948). The Jinja template emits both classes via
+    static interpolation — no binding shape, no #900-style array-form
+    drop, no `.filter(Boolean).join(' ')` ceremony required. The
+    project class composes with `dz-card-wrapper` and `is-animating`
+    via plain space-separated class output."""
+
+    def test_template_emits_region_css_class(self) -> None:
+        """The Jinja template emits `r.css_class` into the rendered
+        class attribute so the project hook is present in the DOM."""
         path = (
             Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
         )
         contents = path.read_text()
-        assert "card.css_class" in contents, (
-            "Alpine card wrapper missing `card.css_class` binding — #894 hook lost"
+        assert "r.css_class" in contents, (
+            "Card wrapper missing `r.css_class` binding — #894 hook lost"
         )
-        # v0.62 CSS refactor: the inline transition utility class moved to
-        # the .is-animating semantic state modifier (resolved in dashboard.css).
-        # The Alpine ternary still toggles a class, just a semantic one.
+        # v0.62 CSS refactor: the inline transition utility class
+        # moved to the .is-animating semantic state modifier
+        # (resolved in dashboard.css).
         assert "is-animating" in contents, (
-            "Existing transition state binding regressed by #894 hook — "
-            ".is-animating modifier missing from the :class ternary."
+            "Existing transition state class missing from server-rendered "
+            "card wrapper. The .is-animating modifier must apply to the "
+            "outer wrapper alongside dz-card-wrapper."
         )
 
-    def test_template_binding_uses_string_concat_pattern(self) -> None:
-        """Pin the #900 fix — the binding must collapse to a single
-        concatenated string via `.filter(Boolean).join(' ')` so Alpine
-        unambiguously sets the className. The previous array form
-        `[obj, str]` was dropping the string element silently in some
-        card-iteration paths."""
+    def test_template_renders_class_via_jinja_interpolation(self) -> None:
+        """Pin the #948 server-render shape — the binding is a Jinja
+        `{% if r.css_class %}` branch that emits the project class
+        verbatim into the `class=` attribute. No `:class` Alpine
+        binding, no array form, no string-concat helper. Plain HTML."""
         path = (
             Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/_content.html"
         )
         contents = path.read_text()
-        assert ".filter(Boolean).join(' ')" in contents, (
-            "Alpine card wrapper :class binding regressed to array form — "
-            "#900 returns. Use the `.filter(Boolean).join(' ')` string-output "
-            "pattern so the css_class string element actually applies."
+        assert "{% if r.css_class %}" in contents, (
+            "Card wrapper class hook regressed — must use a Jinja "
+            "`{% if r.css_class %}` guard so the project class only "
+            "appears when set."
         )
+        # No leftover `:class=` Alpine binding on the card wrapper
+        assert ':class="[' not in contents
+        assert ".filter(Boolean).join" not in contents
 
     def test_alpine_binding_simulation_includes_css_class(self) -> None:
         """Simulate the Alpine binding evaluation in pure Python —

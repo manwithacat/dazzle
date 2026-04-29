@@ -1298,32 +1298,37 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
     window.Alpine.initTree(target);
   }
 
-  // #936 → #945: workspace data island re-hydration on same-URL morph.
+  // #936 → #945 → #948: workspace component re-hydration on same-URL morph.
   //
   // Same-URL morph (clicking the active workspace's sidebar link)
   // keeps the `<div x-data="dzDashboardBuilder()">` element in place.
   // The initial `Alpine.initTree(target)` above is a no-op for it
   // (Alpine sees the root as already-initialised), so the watcher
-  // graph that `<template x-for="card in cards">` depends on stays
-  // bound to the ORIGINAL Alpine proxy. The framework's previous
-  // #936 fix called `_hydrateFromLayout()` on the live $data — that
-  // updated the proxy values, but the new proxy and the captured
-  // x-for watcher were no longer reactively connected, so x-for
-  // never re-iterated. Visible symptom: 18 cards collapse to 0
-  // even though `Alpine.$data(root).cards.length === 18`.
+  // graph stays bound to the ORIGINAL Alpine proxy.
   //
-  // The durable fix is explicit destroy + re-init: tear down the
-  // stale watcher graph, re-init the root so init() runs again
-  // with fresh proxies and re-hydrates from the JSON island. The
-  // dashboard component is stateless beyond what _hydrateFromLayout
-  // can rebuild from the data island, and the destroy() method
-  // already cleans up the global keydown / pointer listeners, so
-  // re-init is cheap and idempotent.
-  const island =
-    target.querySelector && target.querySelector("#dz-workspace-layout");
-  if (!island) return;
-  const root = document.querySelector('[x-data*="dzDashboardBuilder"]');
+  // Pre-#948 this would silently break `<template x-for="card in cards">`
+  // because the cards reactive array's watcher detached from the new
+  // proxy. Cards collapsed to 0. Cycle 945 fixed it via destroy +
+  // re-init.
+  //
+  // Post-#948: cards are server-rendered HTML and the DOM is the
+  // source of truth for layout — no cards array, no x-for, no
+  // staleness bug class. The destroy + re-init still does the right
+  // thing for ephemeral state (resets stale `saveState` / `showPicker`
+  // and re-attaches the grid-container event delegation listeners),
+  // so we keep the pattern as defense-in-depth. The trigger is now
+  // the workspace root's `data-workspace-name` attribute rather than
+  // the (removed) `#dz-workspace-layout` data island.
+  const root =
+    (target.querySelector && target.querySelector("[data-workspace-name]")) ||
+    document.querySelector("[data-workspace-name]");
   if (!root || !window.Alpine) return;
+  // Skip when the swap target isn't the root or its parent — avoids
+  // re-init on unrelated swaps (e.g. drawer content) that happen to
+  // share a page with the workspace root.
+  if (target !== root && !target.contains(root) && !root.contains(target)) {
+    return;
+  }
 
   if (
     typeof window.Alpine.destroyTree === "function" &&
@@ -1331,18 +1336,5 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
   ) {
     window.Alpine.destroyTree(root);
     window.Alpine.initTree(root);
-    return;
-  }
-
-  // Fallback for environments where destroyTree isn't available
-  // (older Alpine builds): drive re-hydration through the live
-  // $data instance. Doesn't re-attach watchers — the cycle 2a #936
-  // path that #945 documents as broken — but at least keeps the
-  // data fresh for any direct $data.cards reads.
-  if (typeof window.Alpine.$data === "function") {
-    const data = window.Alpine.$data(root);
-    if (data && typeof data._hydrateFromLayout === "function") {
-      data._hydrateFromLayout();
-    }
   }
 });

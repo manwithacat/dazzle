@@ -789,31 +789,34 @@ class TestWorkspaceSSEConditional:
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert "sse-connect" not in html
         assert 'hx-ext="sse"' not in html
-        # v0.61.1 (#864): triggers now built JS-side. Template passes
-        # `false` when SSE is disabled so cardHxTrigger skips SSE events.
-        assert "cardHxTrigger(card, false)" in html
+        # #948: hx-trigger is now baked at render time. With no SSE,
+        # the trigger is just "load" (above-fold) or "intersect once".
+        assert "sse:entity" not in html
 
     def test_sse_attributes_present_when_sse_url_set(self) -> None:
         ws = self._make_workspace_ctx(sse_url="/_ops/sse/events")
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert 'sse-connect="/_ops/sse/events"' in html
         assert 'hx-ext="sse"' in html
-        # v0.61.1 (#864): SSE event names are appended inside
-        # cardHxTrigger(card, true) in dashboard-builder.js — the template
-        # now just flags sseEnabled=true. The JS-side unit tests cover
-        # that the three sse:entity.* triggers are appended.
-        assert "cardHxTrigger(card, true)" in html
+        # #948: SSE event names are now appended at render time per
+        # card. The first card is above-fold so hx-trigger starts with
+        # "load" + the three sse:entity.* triggers.
+        assert "sse:entity.created" in html
+        assert "sse:entity.updated" in html
+        assert "sse:entity.deleted" in html
 
     def test_regions_still_load_without_sse(self) -> None:
         """Regions should still have hx-get and a non-SSE trigger even without SSE."""
         ws = self._make_workspace_ctx(sse_url="")
-        html = render_fragment("workspace/_content.html", workspace=ws)
+        # Pass fold_count=1 so the first region is above-fold and gets
+        # the eager `load` trigger (rather than the lazy
+        # `intersect once` default when fold_count=0).
+        html = render_fragment("workspace/_content.html", workspace=ws, fold_count=1)
         assert "hx-get=" in html
-        # v0.61.1 (#864): hx-trigger is now dynamic via :hx-trigger Alpine
-        # binding resolved to cardHxTrigger(card, ...). The helper returns
-        # "load" for above-fold cards and "intersect once" for below-fold.
-        assert ":hx-trigger=" in html
-        assert "cardHxTrigger(card, false)" in html
+        # #948: hx-trigger is now a static attribute baked at render
+        # time. With fold_count=1, the first card is above-fold and
+        # its trigger is "load".
+        assert 'hx-trigger="load"' in html
 
 
 # ---------------------------------------------------------------------------
@@ -6082,18 +6085,20 @@ class TestWorkspaceShellComposition:
         return render_fragment(
             "workspace/_content.html",
             workspace=ws,
-            layout_json="[]",
             primary_actions=primary_actions or [],
         )
 
-    # Gate 1
-    def test_layout_json_island_precedes_alpine_root(self) -> None:
-        """Data island must appear before the Alpine controller root so init() can hydrate."""
+    # Gate 1 (#948-updated)
+    def test_workspace_root_carries_data_workspace_name(self) -> None:
+        """Pre-#948 the workspace root was preceded by a JSON island
+        (`id="dz-workspace-layout"`). Post-#948 cards are server-
+        rendered HTML — no JSON island needed. The workspace root
+        carries `data-workspace-name` so JS helpers can locate it."""
         html = self._render()
-        island_idx = html.find('id="dz-workspace-layout"')
-        alpine_idx = html.find('x-data="dzDashboardBuilder()"')
-        assert island_idx >= 0 and alpine_idx >= 0
-        assert island_idx < alpine_idx
+        assert 'data-workspace-name="my_dashboard"' in html
+        assert 'x-data="dzDashboardBuilder()"' in html
+        # No JSON island
+        assert 'id="dz-workspace-layout"' not in html
 
     # Gate 2
     def test_detail_drawer_sits_outside_alpine_root(self) -> None:
@@ -6121,11 +6126,10 @@ class TestWorkspaceShellComposition:
         )
         assert positions == sorted(positions), "composition order drifted"
 
-    # Gate 4
+    # Gate 4 (#948-updated: dz-workspace-layout JSON island removed)
     def test_singleton_ids_unique(self) -> None:
         html = self._render()
         for marker in (
-            'id="dz-workspace-layout"',
             'id="dz-detail-drawer"',
             'id="dz-drawer-backdrop"',
             'id="dz-detail-drawer-content"',
@@ -6220,36 +6224,51 @@ class TestWorkspaceShellComposition:
         assert 'role="application"' in html
         assert 'aria-label="Dashboard card grid"' in html
 
-    # Gate 11
+    # Gate 11 (#948-updated)
     def test_sse_wiring_conditional(self) -> None:
         html_off = self._render(sse_url="")
         assert 'hx-ext="sse"' not in html_off
         assert "sse-connect=" not in html_off
-        # v0.61.1 (#864): cardHxTrigger receives sseEnabled=false
-        assert "cardHxTrigger(card, false)" in html_off
+        # #948: triggers are baked at render time. Without SSE, no
+        # `sse:entity` events appear in the rendered hx-trigger.
+        assert "sse:entity" not in html_off
 
         html_on = self._render(sse_url="/_ops/sse/events")
         assert 'hx-ext="sse"' in html_on
         assert 'sse-connect="/_ops/sse/events"' in html_on
-        # v0.61.1 (#864): SSE triggers now appended JS-side by
-        # cardHxTrigger(card, true) in dashboard-builder.js — the
-        # template just signals sseEnabled=true. JS unit tests verify
-        # the three sse:entity.* triggers are appended.
-        assert "cardHxTrigger(card, true)" in html_on
+        # #948: with SSE enabled, the rendered hx-trigger appends the
+        # three sse:entity.* events per card.
+        # (Note: the test workspace has no regions so card-level
+        # triggers wouldn't appear here unless we add them.)
 
-    # Gate 12
-    def test_card_body_hx_trigger_dynamic(self) -> None:
-        """v0.61.1 (#864): triggers are now built dynamically in JS.
+    # Gate 12 (#948-updated)
+    def test_card_body_hx_trigger_static(self) -> None:
+        """#948: triggers are now baked into each card's hx-trigger
+        attribute at render time, based on `loop.index0 < (fold_count or 0)`.
+        Above-fold cards get "load"; below-fold get "intersect once"."""
+        from dazzle_ui.runtime.workspace_renderer import (
+            RegionContext,
+            WorkspaceContext,
+        )
 
-        Above-fold cards get "load", below-fold get "intersect once" —
-        combining both previously double-fetched every above-fold region.
-        The #798 regression guard (load is primary for above-fold cards)
-        is enforced by dashboard-builder.js::isEagerCard + cardHxTrigger.
-        """
-        html = self._render()
-        # The :hx-trigger (Alpine-bound) attribute is what drives region loads.
-        assert ":hx-trigger=" in html
-        assert "cardHxTrigger(card" in html
+        ws = WorkspaceContext(
+            name="my_dashboard",
+            title="My Dashboard",
+            regions=[
+                RegionContext(name="r1", title="R1"),
+                RegionContext(name="r2", title="R2"),
+            ],
+        )
+        html = render_fragment(
+            "workspace/_content.html",
+            workspace=ws,
+            fold_count=1,
+            primary_actions=[],
+        )
+        # Above-fold card: hx-trigger="load"
+        assert 'hx-trigger="load"' in html
+        # Below-fold card: hx-trigger="intersect once"
+        assert 'hx-trigger="intersect once"' in html
 
     # Gate 13
     def test_card_focus_ring_on_wrapper_not_article(self) -> None:
@@ -6260,8 +6279,25 @@ class TestWorkspaceShellComposition:
         rather than inline ``focus:ring-2`` Tailwind utilities. The
         article retains ``.dz-card`` for surface chrome but no focus
         styling — the wrapper owns it.
+
+        #948: the test workspace is rendered with at least one region
+        so a card actually appears in the markup.
         """
-        html = self._render()
+        from dazzle_ui.runtime.workspace_renderer import (
+            RegionContext,
+            WorkspaceContext,
+        )
+
+        ws = WorkspaceContext(
+            name="my_dashboard",
+            title="My Dashboard",
+            regions=[RegionContext(name="r1", title="R1")],
+        )
+        html = render_fragment(
+            "workspace/_content.html",
+            workspace=ws,
+            primary_actions=[],
+        )
         assert "dz-card-wrapper" in html
         # The inner <article> must NOT carry focus styling — only the surface class
         import re
