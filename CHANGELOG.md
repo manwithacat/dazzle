@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.133] - 2026-04-29
+
+### Changed
+- **#948 cycle 2 — dashboard Playwright gates updated for the
+  server-rendered architecture.** The `test-dashboard.html` static
+  harness was rewritten to ship cards as static HTML (matching the
+  production `_content.html` Jinja output) rather than a JSON island
+  + `<template x-for>` projection. The 5 `qualityGates` tests were
+  updated to:
+  - `testDragTransform` — call `_applyDragTransform()` and read
+    `cardEl.style.cssText` rather than the removed `dragTransform()`
+    helper return value.
+  - `testPersistenceBoundary` — assert against the DOM card count +
+    ids rather than against a JSON-island round-trip.
+  - `testKeyboardAccessibility` — read DOM card order after move
+    rather than `comp.cards[1].id`. Restore via `comp.undo()`
+    rather than mutating a reactive `cards` array.
+  - `testDragThreshold` / `testSaveLifecycle` — unchanged conceptually;
+    minor cleanup to clear `cardEl.style.cssText` after.
+
+  The `TestDashboardIntegrationGates` class also switched
+  `comp.startDrag('card-1', ...)` (string id) to
+  `comp.startDrag(cardEl, ...)` (DOM element) — same DOM-direct
+  contract as the production code.
+
+  All 10 dashboard Playwright gates pass against the new
+  architecture. Combined with the data-table (9) and pdf-viewer (47)
+  gates, 66 quality gates green end-to-end.
+
+### Agent Guidance
+- The `test-dashboard.html` harness is the canonical example of
+  the post-#948 server-render-first shape: static HTML cards with
+  `data-card-id` / `data-card-region` / `data-card-col-span`
+  attributes, no JSON island, Alpine reserved for ephemeral state.
+  When porting other dashboards or building new ones, mirror this
+  shape — not the pre-#948 JSON-island pattern still referenced in
+  legacy comments.
+
 ## [0.61.132] - 2026-04-29
 
 ### Changed

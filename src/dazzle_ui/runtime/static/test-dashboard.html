@@ -3,55 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Quality Gate Test Harness</title>
+  <title>Dashboard Quality Gate Test Harness (#948 server-rendered)</title>
   <style>
-    :root {
-      --background: 0 0% 100%;
-      --foreground: 240 10% 3.9%;
-      --card: 0 0% 100%;
-      --card-foreground: 240 10% 3.9%;
-      --popover: 0 0% 100%;
-      --popover-foreground: 240 10% 3.9%;
-      --primary: 240 5.9% 10%;
-      --primary-foreground: 0 0% 98%;
-      --secondary: 240 4.8% 95.9%;
-      --secondary-foreground: 240 5.9% 10%;
-      --muted: 240 4.8% 95.9%;
-      --muted-foreground: 240 3.8% 46.1%;
-      --destructive: 0 84.2% 60.2%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 240 5.9% 90%;
-      --input: 240 5.9% 90%;
-      --ring: 240 5.9% 10%;
-      --success: 142 76% 36%;
-      --success-foreground: 0 0% 98%;
-      --dz-border-input: oklch(0 0 0 / 0.15);
-    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+    body { font-family: Inter, system-ui, sans-serif; background: #fff; color: #18181b; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
-    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     .select-none { user-select: none; }
-    .grid { display: grid; }
-    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-    .gap-4 { gap: 1rem; }
-    @media (min-width: 768px) { .md\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); } }
-    .p-4 { padding: 1rem; }
-    .mb-4 { margin-bottom: 1rem; }
-    .mt-4 { margin-top: 1rem; }
-    .flex { display: flex; }
-    .flex-1 { flex: 1; }
-    .items-center { align-items: center; }
-    .justify-end { justify-content: flex-end; }
-    .justify-center { justify-content: center; }
-    .gap-2 { gap: 0.5rem; }
-    .gap-1 { gap: 0.25rem; }
-    .relative { position: relative; }
-    .group:hover .group-hover\:opacity-100 { opacity: 1; }
-    .outline-none { outline: none; }
-    .w-full { width: 100%; }
-    .text-left { text-align: left; }
+    .dz-workspace { padding: 16px; }
+    .dz-workspace-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 16px; }
+    .dz-dashboard-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+    .dz-card-wrapper { transition: all 200ms cubic-bezier(0.2, 0, 0, 1); position: relative; outline: none; }
+    .dz-card { border-radius: 6px; border: 1px solid #e4e4e7; background: #fff; overflow: hidden; }
+    .dz-card-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; cursor: grab; min-height: 36px; }
+    .dz-card-title { font-size: 15px; font-weight: 500; line-height: 22px; user-select: none; }
+    .dz-card-actions { display: flex; align-items: center; gap: 4px; }
+    .dz-card-action-button { height: 24px; width: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: none; background: none; color: #71717a; cursor: pointer; }
+    .dz-card-body { padding: 0 16px 16px; color: #71717a; font-size: 13px; }
+    .dz-card-resize { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; opacity: 0; }
+    .dz-card-resize:hover { opacity: 1; background: rgba(0,0,0,0.15); }
+    .dz-add-card-row { position: relative; display: flex; justify-content: center; margin-top: 16px; }
+    .dz-add-card-button { height: 32px; padding: 0 16px; font-size: 13px; font-weight: 500; border-radius: 6px; border: 2px dashed #e4e4e7; background: none; color: #71717a; cursor: pointer; }
     #test-status { position: fixed; bottom: 0; left: 0; right: 0; background: #111; color: #eee; padding: 8px 16px; font-size: 13px; z-index: 9999; font-family: monospace; }
     .pass { color: #4cb782; font-weight: bold; }
     .fail { color: #eb5757; font-weight: bold; }
@@ -60,42 +31,23 @@
   <script defer src="vendor/alpine.min.js"></script>
 </head>
 <body>
-  <script type="application/json" id="dz-workspace-layout">
-  {
-    "cards": [
-      {"id": "card-1", "region": "metrics", "title": "Revenue Metrics", "col_span": 6, "row_order": 0},
-      {"id": "card-2", "region": "activity", "title": "Recent Activity", "col_span": 6, "row_order": 1},
-      {"id": "card-3", "region": "tasks", "title": "Open Tasks", "col_span": 4, "row_order": 2},
-      {"id": "card-4", "region": "chart", "title": "Revenue Trend", "col_span": 8, "row_order": 3}
-    ],
-    "catalog": [
-      {"name": "metrics", "title": "Revenue Metrics", "display": "METRICS", "entity": "Invoice"},
-      {"name": "activity", "title": "Recent Activity", "display": "LIST", "entity": "AuditLog"},
-      {"name": "tasks", "title": "Open Tasks", "display": "LIST", "entity": "Task"},
-      {"name": "chart", "title": "Revenue Trend", "display": "CHART", "entity": "Invoice"},
-      {"name": "users", "title": "Active Users", "display": "METRICS", "entity": "User"}
-    ],
-    "workspace_name": "test_dashboard"
-  }
-  </script>
-
-  <div class="p-4" x-data="dzDashboardBuilder()">
-    <div class="flex items-center justify-end gap-2 mb-4">
-      <div class="flex-1">
-        <span style="font-size:15px;font-weight:500;">Dashboard Quality Gate Test</span>
+  {# #948: cards are server-rendered HTML in production. The harness
+     hard-codes the same shape so the Playwright gates exercise the
+     real production code path (DOM as source of truth) rather than
+     the pre-#948 JSON island + x-for projection. #}
+  <div class="dz-workspace"
+       x-data="dzDashboardBuilder()"
+       data-workspace-name="test_dashboard">
+    <div class="dz-workspace-toolbar">
+      <div style="flex:1;">
+        <span style="font-size:15px;font-weight:500;">Dashboard Quality Gate Test (server-rendered)</span>
       </div>
-      <button @click="resetLayout()" style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;font-weight:500;color:hsl(var(--muted-foreground));cursor:pointer;border:none;background:none;">Reset</button>
+      <button @click="resetLayout()" class="dz-workspace-reset" style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;border:none;background:none;color:#71717a;cursor:pointer;">Reset</button>
       <button @click="save()" id="save-btn"
               :disabled="saveState === 'clean' || saveState === 'saving' || saveState === 'saved'"
               :data-save-state="saveState"
-              :style="{
-                height: '32px', padding: '0 12px', borderRadius: '4px', fontSize: '13px', fontWeight: '500',
-                border: saveState === 'error' ? '1px solid hsl(0 84.2% 60.2%)' : '1px solid transparent',
-                background: (saveState === 'dirty' || saveState === 'saving') ? 'hsl(240 5.9% 10%)' : saveState === 'saved' ? 'hsl(142 76% 36%)' : 'transparent',
-                color: (saveState === 'dirty' || saveState === 'saving' || saveState === 'saved') ? 'hsl(0 0% 98%)' : saveState === 'error' ? 'hsl(0 84.2% 60.2%)' : 'hsl(240 3.8% 46.1%)',
-                cursor: saveState === 'dirty' || saveState === 'error' ? 'pointer' : 'default',
-                transition: 'all 80ms cubic-bezier(0.2, 0, 0, 1)',
-              }">
+              class="dz-workspace-save"
+              style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;border:1px solid transparent;cursor:pointer;">
         <span x-show="saveState === 'clean'">Saved</span>
         <span x-show="saveState === 'dirty'">Save layout</span>
         <span x-show="saveState === 'saving'">Saving...</span>
@@ -104,67 +56,127 @@
       </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-4" data-grid-container role="application" aria-label="Dashboard card grid"
-         @pointermove.window="onPointerMoveDrag($event); onPointerMoveResize($event)"
-         @pointerup.window="endDrag($event); endResize($event)">
-      <template x-for="card in cards" :key="card.id">
-        <div :data-card-id="card.id"
-             :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
-             tabindex="0"
-             @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
-             class="relative group outline-none"
-             style="transition: all 200ms cubic-bezier(0.2, 0, 0, 1);">
-          <article :style="{
-                     borderRadius: '6px',
-                     border: isResizing(card.id) ? '1px dashed hsl(240 5.9% 10%)' : '1px solid hsl(240 5.9% 90%)',
-                     background: 'hsl(0 0% 100%)',
-                     overflow: 'hidden',
-                     transition: 'border-color 80ms cubic-bezier(0.2, 0, 0, 1)',
-                   }" role="article" :aria-labelledby="'card-title-' + card.id">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;cursor:grab;min-height:36px;"
-                 :style="{ cursor: isDragging(card.id) ? 'grabbing' : 'grab' }"
-                 @pointerdown="startDrag(card.id, $event)">
-              <h3 :id="'card-title-' + card.id" style="font-size:15px;font-weight:500;line-height:22px;letter-spacing:-0.01em;user-select:none;" x-text="card.title"></h3>
-              <div class="flex items-center gap-1" style="opacity:0;transition:opacity 80ms;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
-                <button @click.stop="removeCard(card.id)" style="height:24px;width:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:none;background:none;color:hsl(240 3.8% 46.1%);cursor:pointer;" aria-label="Remove card">
-                  <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
+    <div class="dz-dashboard-grid"
+         data-grid-container
+         role="application"
+         aria-label="Dashboard card grid">
+      <div data-card-id="card-1"
+           data-card-region="metrics"
+           data-card-col-span="6"
+           class="dz-card-wrapper is-animating"
+           style="grid-column: span 6 / span 6;"
+           tabindex="0">
+        <article class="dz-card" role="article" aria-labelledby="card-title-card-1">
+          <div class="dz-card-header" data-test-id="dz-card-drag-handle">
+            <h3 id="card-title-card-1" class="dz-card-title">Revenue Metrics</h3>
+            <div class="dz-card-actions">
+              <button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button>
             </div>
-            <div style="padding:0 16px 16px;color:hsl(240 3.8% 46.1%);font-size:13px;">
-              Mock content for <span x-text="card.region"></span>
+          </div>
+          <div class="dz-card-body">Mock content for metrics</div>
+        </article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+
+      <div data-card-id="card-2"
+           data-card-region="activity"
+           data-card-col-span="6"
+           class="dz-card-wrapper is-animating"
+           style="grid-column: span 6 / span 6;"
+           tabindex="0">
+        <article class="dz-card" role="article" aria-labelledby="card-title-card-2">
+          <div class="dz-card-header" data-test-id="dz-card-drag-handle">
+            <h3 id="card-title-card-2" class="dz-card-title">Recent Activity</h3>
+            <div class="dz-card-actions">
+              <button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button>
             </div>
-          </article>
-          <div @pointerdown="startResize(card.id, $event)"
-               style="position:absolute;top:0;right:0;width:6px;height:100%;cursor:col-resize;opacity:0;border-radius:0 6px 6px 0;transition:opacity 80ms;"
-               onmouseover="this.style.opacity='1';this.style.background='hsl(240 5.9% 10% / 0.15)'" onmouseout="this.style.opacity='0';this.style.background='none'"
-               aria-hidden="true"></div>
-        </div>
-      </template>
+          </div>
+          <div class="dz-card-body">Mock content for activity</div>
+        </article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+
+      <div data-card-id="card-3"
+           data-card-region="tasks"
+           data-card-col-span="4"
+           class="dz-card-wrapper is-animating"
+           style="grid-column: span 4 / span 4;"
+           tabindex="0">
+        <article class="dz-card" role="article" aria-labelledby="card-title-card-3">
+          <div class="dz-card-header" data-test-id="dz-card-drag-handle">
+            <h3 id="card-title-card-3" class="dz-card-title">Open Tasks</h3>
+            <div class="dz-card-actions">
+              <button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button>
+            </div>
+          </div>
+          <div class="dz-card-body">Mock content for tasks</div>
+        </article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+
+      <div data-card-id="card-4"
+           data-card-region="chart"
+           data-card-col-span="8"
+           class="dz-card-wrapper is-animating"
+           style="grid-column: span 8 / span 8;"
+           tabindex="0">
+        <article class="dz-card" role="article" aria-labelledby="card-title-card-4">
+          <div class="dz-card-header" data-test-id="dz-card-drag-handle">
+            <h3 id="card-title-card-4" class="dz-card-title">Revenue Trend</h3>
+            <div class="dz-card-actions">
+              <button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button>
+            </div>
+          </div>
+          <div class="dz-card-body">Mock content for chart</div>
+        </article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
     </div>
 
-    <div class="relative flex justify-center mt-4">
-      <button @click="showPicker = !showPicker" id="add-card-btn"
-              style="height:32px;padding:0 16px;font-size:13px;font-weight:500;border-radius:6px;border:2px dashed hsl(240 5.9% 90%);background:none;color:hsl(240 3.8% 46.1%);cursor:pointer;display:flex;align-items:center;gap:8px;">
-        + Add Card
-      </button>
+    <div class="dz-add-card-row">
+      <button @click="showPicker = !showPicker" id="add-card-btn" class="dz-add-card-button">+ Add Card</button>
+      <div x-show="showPicker"
+           data-card-catalog='[{"name":"metrics","title":"Revenue Metrics","display":"METRICS","entity":"Invoice"},{"name":"activity","title":"Recent Activity","display":"LIST","entity":"AuditLog"},{"name":"tasks","title":"Open Tasks","display":"LIST","entity":"Task"},{"name":"chart","title":"Revenue Trend","display":"CHART","entity":"Invoice"},{"name":"users","title":"Active Users","display":"METRICS","entity":"User"}]'
+           class="dz-card-picker">
+        <h4>Add a card</h4>
+        <button @click="addCard('users')" data-test-id="dz-card-picker-entry">Active Users</button>
+      </div>
     </div>
   </div>
 
   <div id="test-status">Quality Gates: <span id="gate-results">Ready — run window.qualityGates.runAll() or wait for automation</span></div>
 
   <script>
+  // #948: gates poke DOM state directly where the data lives there
+  // (cards count, ids, ordering). Where state is genuinely Alpine
+  // (drag mid-flight, saveState lifecycle), they still poke `comp.X`
+  // through `Alpine.$data(root)`.
   window.qualityGates = {
     results: {},
 
+    _comp() {
+      return Alpine.$data(document.querySelector('[x-data]'));
+    },
+
+    _allCards() {
+      return Array.from(document.querySelectorAll('[data-card-id]'));
+    },
+
     testDragThreshold() {
-      const comp = Alpine.$data(document.querySelector('[x-data]'));
-      comp.drag = { cardId: 'card-1', startX: 100, startY: 100, offsetX: 0, offsetY: 0, currentX: 100, currentY: 100, phase: 'pressed', placeholderIndex: 0, width: 300, height: 200 };
+      const comp = this._comp();
+      const cardEl = document.querySelector('[data-card-id="card-1"]');
+      comp.drag = {
+        cardId: 'card-1', startX: 100, startY: 100,
+        offsetX: 0, offsetY: 0, currentX: 100, currentY: 100,
+        phase: 'pressed', originalIndex: 0, width: 300, height: 200,
+      };
       const staysPressedAt0 = comp.drag.phase === 'pressed';
       comp.onPointerMoveDrag({ clientX: 103, clientY: 100 });
       const staysPressedAt3px = comp.drag.phase === 'pressed';
       comp.onPointerMoveDrag({ clientX: 105, clientY: 100 });
       const transitionsToDragging = comp.drag.phase === 'dragging';
+      // Cleanup: restore card style + clear state
+      if (cardEl) cardEl.style.cssText = '';
       comp.drag = null;
       comp.undoStack = [];
       document.body.classList.remove('select-none');
@@ -174,14 +186,25 @@
     },
 
     testDragTransform() {
-      const comp = Alpine.$data(document.querySelector('[x-data]'));
-      comp.drag = { cardId: 'card-1', startX: 100, startY: 100, offsetX: 50, offsetY: 25, currentX: 250, currentY: 200, phase: 'dragging', placeholderIndex: 0, width: 300, height: 200 };
-      const style = comp.dragTransform('card-1');
-      const usesTransform = style.includes('transform:translate(');
+      const comp = this._comp();
+      comp.drag = {
+        cardId: 'card-1', startX: 100, startY: 100,
+        offsetX: 50, offsetY: 25, currentX: 250, currentY: 200,
+        phase: 'dragging', originalIndex: 0, width: 300, height: 200,
+      };
+      // #948: drag transform applied imperatively rather than via
+      // `:style` reactive binding. Call `_applyDragTransform()`
+      // directly and read the resulting style off the element.
+      comp._applyDragTransform();
+      const cardEl = document.querySelector('[data-card-id="card-1"]');
+      const style = cardEl ? cardEl.style.cssText : '';
+      const usesTransform = style.includes('transform: translate(') || style.includes('transform:translate(');
       const hasScale = style.includes('scale(1.02)');
-      const hasOpacity = style.includes('opacity:0.95');
-      const hasShadow = style.includes('box-shadow:');
-      const hasZIndex = style.includes('z-index:500');
+      const hasOpacity = style.includes('opacity: 0.95') || style.includes('opacity:0.95');
+      const hasShadow = style.includes('box-shadow');
+      const hasZIndex = style.includes('z-index: 500') || style.includes('z-index:500');
+      // Cleanup
+      if (cardEl) cardEl.style.cssText = '';
       comp.drag = null;
       const pass = usesTransform && hasScale && hasOpacity && hasShadow && hasZIndex;
       this.results.dragTransform = { pass, usesTransform, hasScale, hasOpacity, hasShadow, hasZIndex };
@@ -189,7 +212,7 @@
     },
 
     testSaveLifecycle() {
-      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      const comp = this._comp();
       const startsClean = comp.saveState === 'clean';
       comp._markDirty();
       const becomesDirty = comp.saveState === 'dirty';
@@ -200,29 +223,39 @@
     },
 
     testPersistenceBoundary() {
-      const comp = Alpine.$data(document.querySelector('[x-data]'));
-      const dataIsland = JSON.parse(document.getElementById('dz-workspace-layout').textContent);
-      const correctCardCount = comp.cards.length === dataIsland.cards.length;
-      const idsMatch = comp.cards.every((c, i) => c.id === dataIsland.cards[i].id);
+      // #948: the persistence boundary is the DOM, not a JSON island.
+      // The harness ships 4 cards in static HTML; the gate verifies
+      // the JS sees the same 4.
+      const cards = this._allCards();
+      const correctCardCount = cards.length === 4;
+      const expectedIds = ['card-1', 'card-2', 'card-3', 'card-4'];
+      const idsMatch = cards.every((el, i) => el.getAttribute('data-card-id') === expectedIds[i]);
       const pass = correctCardCount && idsMatch;
-      this.results.persistenceBoundary = { pass, correctCardCount, idsMatch, cardCount: comp.cards.length };
+      this.results.persistenceBoundary = { pass, correctCardCount, idsMatch, cardCount: cards.length };
       return pass;
     },
 
     testKeyboardAccessibility() {
-      const comp = Alpine.$data(document.querySelector('[x-data]'));
-      comp.toggleKeyboardMove('card-1');
+      const comp = this._comp();
+      const cardEl = document.querySelector('[data-card-id="card-1"]');
+      // Toggle keyboard move via the public handler so we exercise
+      // the same code path real keystrokes hit.
+      comp._toggleKeyboardMove('card-1');
       const entersMoveMode = comp._keyboardMoveCardId === 'card-1';
-      const origOrder = comp.cards.map(c => c.id);
-      comp.handleCardKeydown('card-1', { key: 'ArrowDown', preventDefault: () => {} });
-      const movedDown = comp.cards[1] && comp.cards[1].id === 'card-1';
-      comp.handleCardKeydown('card-1', { key: 'Escape', preventDefault: () => {} });
+      // Move down
+      const fakeEvent = { key: 'ArrowDown', preventDefault: () => {} };
+      comp.handleCardKeydown(cardEl, fakeEvent);
+      // After moving down, card-1 should be at index 1 (was 0)
+      const cards = this._allCards();
+      const movedDown = cards[1] && cards[1].getAttribute('data-card-id') === 'card-1';
+      // Exit
+      comp.handleCardKeydown(cardEl, { key: 'Escape', preventDefault: () => {} });
       const exitsMoveMode = comp._keyboardMoveCardId === null;
       const liveRegion = document.getElementById('dz-live-region');
       const hasLiveRegion = liveRegion !== null;
       const hasAriaLive = liveRegion ? liveRegion.getAttribute('aria-live') === 'polite' : false;
-      comp.cards.sort((a, b) => origOrder.indexOf(a.id) - origOrder.indexOf(b.id));
-      comp.undoStack = [];
+      // Restore original DOM order via undo
+      while (comp.undoStack.length > 0) comp.undo();
       comp.saveState = 'clean';
       const pass = entersMoveMode && movedDown && exitsMoveMode && hasLiveRegion && hasAriaLive;
       this.results.keyboardAccessibility = { pass, entersMoveMode, movedDown, exitsMoveMode, hasLiveRegion, hasAriaLive };

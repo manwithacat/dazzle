@@ -117,9 +117,15 @@ class TestDashboardIntegrationGates:
     def _seed_drag_state(self, browser_page, start_x=100, start_y=100):
         """Seed a 'pressed' drag state by invoking startDrag directly.
 
-        This bypasses @pointerdown binding (which has an unrelated issue inside
-        <template x-for> that we file separately). The purpose of these tests
-        is to verify the window-level event pipeline, not @pointerdown itself.
+        This bypasses pointerdown delegation (the @pointerdown binding
+        was removed in #948 in favour of grid-container delegation,
+        but the underlying state seeding via startDrag is the same).
+        The purpose of these tests is to verify the window-level event
+        pipeline, not pointerdown delegation itself.
+
+        #948: startDrag now takes a card element rather than a card id
+        string — DOM-direct semantics. The harness has the card
+        rendered as static HTML so we can grab it by selector.
         """
         browser_page.evaluate(f"""
             (() => {{
@@ -128,7 +134,8 @@ class TestDashboardIntegrationGates:
                 comp.resize = null;
                 comp.undoStack = [];
                 comp.saveState = 'clean';
-                comp.startDrag('card-1', {{
+                const cardEl = document.querySelector('[data-card-id="card-1"]');
+                comp.startDrag(cardEl, {{
                     clientX: {start_x},
                     clientY: {start_y},
                     button: 0,
