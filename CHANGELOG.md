@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.143] - 2026-04-29
+
+### Added
+- **#947 cycles 2-4 — Alpine × HTMX bridge gates.** New
+  `tests/quality_gates/test_alpine_htmx_bridge.py` covers:
+  - **Cycle 2 (stress)**: 10 rapid `Alpine.destroyTree` +
+    `Alpine.initTree` cycles produce 11 unique `$data` proxy
+    identities. The watcher graph never re-binds to a stale
+    proxy (the #945 bug class). Includes a single-cycle smoke
+    test and a `lastSettleAt()` advancement check that confirms
+    `dzDebug` updates its timestamp on synthetic settle events.
+  - **Cycle 3 (cross-URL invariants)**: the destroy+init handler
+    in `dz-alpine.js` triggers off `[data-workspace-name]`, not
+    a specific workspace identity — verified by morphing the
+    attribute to a different workspace name and confirming the
+    proxy still refreshes. Same code path runs for same-URL and
+    cross-URL morphs.
+  - **Cycle 4 (audit)**: source-grep tests pin which templates
+    use `<template x-for>` and verify none of the workspace
+    morph-path templates regress to the pre-#948 reactive shape.
+    The known-safe set (toasts, command palette, filter bar,
+    card picker, form-field options) is enumerated; new
+    `x-for` usage outside the set fails the test until reviewed.
+
+  `test-dashboard.html` was updated to load `dz-alpine.js` +
+  `dz-debug.js` so the bridge gates exercise the same code path
+  the framework uses in production.
+
+  **Closes #947.** With #948's structural elimination of the
+  reactive cards array, the bug class can't recur on the
+  workspace; these gates pin defense-in-depth for any future
+  Alpine reactive surface that ends up on a morph path.
+
+### Agent Guidance
+- When adding a new `<template x-for>` directive, ask first
+  whether it could end up inside an htmx swap target. If yes,
+  the framework's destroy+init pattern handles it (cycle 945) —
+  but you should add the template to the `allowed` set in
+  `tests/quality_gates/test_alpine_htmx_bridge.py::TestAuditOtherReactiveSurfaces`
+  so the audit gate stays green. The set is enumerated
+  precisely so future reactivity-on-morph-path additions are a
+  conscious decision, not an accident.
+
 ## [0.61.142] - 2026-04-29
 
 ### Documentation

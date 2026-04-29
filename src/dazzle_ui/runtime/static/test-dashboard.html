@@ -27,8 +27,17 @@
     .pass { color: #4cb782; font-weight: bold; }
     .fail { color: #eb5757; font-weight: bold; }
   </style>
+  {# #947 cycle 2 — dz-alpine.js wires the destroy+init handler
+     on htmx:afterSettle. Loaded so the bridge gates can verify
+     the same handler runs the framework uses in production. #}
+  <script defer src="js/dz-alpine.js"></script>
   <script defer src="js/dashboard-builder.js"></script>
   <script defer src="vendor/alpine.min.js"></script>
+  {# #947 cycle 1 — dz-debug introspection helper. Loaded so the
+     bridge gates in test_alpine_htmx_bridge.py can read proxy
+     identity via window.dzDebug.dataIdentity(). Cheap (~1.5KB);
+     methods are dormant until called. #}
+  <script defer src="js/dz-debug.js"></script>
 </head>
 <body>
   {# #948: cards are server-rendered HTML in production. The harness
