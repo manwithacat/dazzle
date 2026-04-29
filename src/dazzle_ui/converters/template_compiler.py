@@ -28,6 +28,7 @@ from dazzle_ui.runtime.template_context import (
     FormSectionContext,
     NavItemContext,
     PageContext,
+    PdfViewerContext,
     RelatedGroupContext,
     RelatedTabContext,
     ReviewActionContext,
@@ -1184,11 +1185,30 @@ def _compile_view_surface(
             )
 
     page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
+
+    # v0.61.126 (#942): ``display: pdf_viewer`` surface override. Routes
+    # the view surface through the built-in PDF viewer chrome instead of
+    # the generic detail layout. The wrapper template builds the proxy
+    # URL at request time from ``detail.item[file_field]`` and
+    # ``storage_name`` (which both come from the entity's
+    # ``file storage=...`` field).
+    pdf_viewer_ctx: PdfViewerContext | None = None
+    template_name = "components/detail_view.html"
+    if surface.display == "pdf_viewer" and entity is not None:
+        for f in entity.fields:
+            if f.type.kind == FieldTypeKind.FILE and f.storage:
+                pdf_viewer_ctx = PdfViewerContext(
+                    storage_name=f.storage[0],
+                    file_field=f.name,
+                )
+                template_name = "components/pdf_viewer_page.html"
+                break
+
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
-        template="components/detail_view.html",
+        template=template_name,
         detail=DetailContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name} Details",
@@ -1202,6 +1222,7 @@ def _compile_view_surface(
             related_groups=related_groups_ctx,
             external_link_actions=external_links,
         ),
+        pdf_viewer=pdf_viewer_ctx,
     )
 
 

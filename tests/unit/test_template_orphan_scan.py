@@ -75,16 +75,6 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Dormant building-block with contract (island.md, UX-059); "
         "IslandContext dataclass wired but no template include"
     ),
-    # #942 cycle 1b — PDF detail-view component. Awaits a project
-    # consumer (AegisMark migrating from its hand-rolled viewer); the
-    # template is opt-in via `{% include 'components/pdf_viewer.html' %}`
-    # rather than wired into a generated detail surface, so the scanner
-    # can't see a consumer until a project picks it up.
-    "components/pdf_viewer.html": (
-        "PDF detail-view component (#942 cycle 1b); opt-in include, "
-        "first project consumer pending. Contract pinned in "
-        "tests/unit/test_pdf_viewer_component.py."
-    ),
 }
 
 

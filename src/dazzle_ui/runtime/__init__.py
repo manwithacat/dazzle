@@ -43,6 +43,7 @@ from dazzle_ui.runtime.template_context import (
     FormContext,
     NavItemContext,
     PageContext,
+    PdfViewerContext,
     TableContext,
 )
 from dazzle_ui.runtime.template_renderer import (
@@ -58,6 +59,7 @@ __all__ = [
     "TableContext",
     "FormContext",
     "DetailContext",
+    "PdfViewerContext",
     "ColumnContext",
     "FieldContext",
     "NavItemContext",

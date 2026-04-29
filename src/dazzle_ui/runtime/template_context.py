@@ -357,6 +357,19 @@ class IslandContext(BaseModel):
     fallback: str | None = None
 
 
+class PdfViewerContext(BaseModel):
+    """Compile-time configuration for the built-in PDF viewer chrome.
+
+    Set on a VIEW-mode surface via ``display: pdf_viewer`` (#942 cycle 4).
+    The renderer uses ``storage_name`` + ``file_field`` to derive the
+    proxy URL at request time from the fetched record's file-field
+    value: ``/api/storage/<storage_name>/proxy?key=<value>``.
+    """
+
+    storage_name: str
+    file_field: str
+
+
 class PageContext(BaseModel):
     """Top-level page context passed to templates."""
 
@@ -391,6 +404,10 @@ class PageContext(BaseModel):
     form: FormContext | None = None
     detail: DetailContext | None = None
     review: ReviewContext | None = None
+    # v0.61.126 (#942): set when the surface declares ``display: pdf_viewer``.
+    # The detail context still loads with ``item`` populated; the wrapper
+    # template uses ``pdf_viewer`` config to build the proxy URL.
+    pdf_viewer: PdfViewerContext | None = None
 
     # UI islands available on this page
     islands: list[IslandContext] = Field(default_factory=list)

@@ -324,6 +324,10 @@ class SurfaceSpec(BaseModel):
     # Read-only panels rendered at top, bottom, or below a named
     # section. Empty list = no companions (current behaviour).
     companions: list[CompanionSpec] = Field(default_factory=list)
+    # v0.61.126 (#942): optional surface-level display override for VIEW
+    # mode. ``"pdf_viewer"`` routes the detail surface to the built-in PDF
+    # viewer chrome (see #942 cycle 1b/2a/3). ``None`` = generic detail view.
+    display: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

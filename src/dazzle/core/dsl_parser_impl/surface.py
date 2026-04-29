@@ -53,6 +53,7 @@ class SurfaceParserMixin:
         related_groups: list[ir.RelatedGroup] = []
         layout = "wizard"  # v0.61.88 (#918): default render mode for create/edit
         companions: list[ir.CompanionSpec] = []  # v0.61.102 (#923): Part D
+        display: str | None = None  # v0.61.126 (#942): VIEW-mode display override
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -154,6 +155,19 @@ class SurfaceParserMixin:
             elif self.match(TokenType.COMPANION):
                 companions.append(self._parse_companion())
 
+            # v0.61.126 (#942): display: pdf_viewer — surface-level
+            # display override that routes a VIEW-mode detail surface to
+            # the built-in PDF viewer chrome instead of the generic
+            # detail layout. Only "pdf_viewer" is recognised today.
+            elif self.match(TokenType.DISPLAY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                display_token = self.expect_identifier_or_keyword()
+                if display_token.value != "pdf_viewer":
+                    self.error(f"surface display must be 'pdf_viewer', got {display_token.value!r}")
+                display = display_token.value
+                self.skip_newlines()
+
             else:
                 break
 
@@ -192,6 +206,7 @@ class SurfaceParserMixin:
             source=loc,
             layout=layout,  # v0.61.88 (#918)
             companions=companions,  # v0.61.102 (#923)
+            display=display,  # v0.61.126 (#942)
         )
 
     def _parse_related_group(self) -> ir.RelatedGroup:

@@ -1,0 +1,29 @@
+{# PDF viewer page wrapper (#942 cycle 4 — DSL hook).
+
+   Routed to from the template compiler when a VIEW-mode surface
+   declares ``display: pdf_viewer``. Reads the compile-time
+   ``pdf_viewer`` config (storage_name + file_field) and the
+   request-time ``detail.item`` payload to build the proxy URL,
+   then includes the existing ``pdf_viewer.html`` chrome.
+
+   The ``detail`` context is still loaded by ``_handle_detail`` —
+   the wrapper just changes which template renders. ``detail.item``
+   carries the fetched record; ``detail.back_url`` and
+   ``detail.title`` come from the SurfaceSpec the same way they do
+   for the generic detail view.
+
+   Sibling navigation (cycle 3's ``sibling_urls`` helper) and
+   slide-in panels (cycle 2a) are deliberately NOT wired in cycle 4
+   — the helper-first shape lets projects opt in per-route. The
+   DSL hook here covers the load-bearing case (entity + file
+   field → full-bleed viewer) without committing to a
+   one-size-fits-all sibling scope or panel renderer. #}
+{% set _pdf_key = detail.item.get(pdf_viewer.file_field) if detail and detail.item else None %}
+{% set src = "/api/storage/" + pdf_viewer.storage_name + "/proxy?key=" + _pdf_key if _pdf_key else "" %}
+{% set back_url = detail.back_url if detail else "/" %}
+{% set title = detail.title if detail else "Document" %}
+{% set prev_url = none %}
+{% set next_url = none %}
+{% set panel_html = none %}
+{% set panel_label = none %}
+{% include "components/pdf_viewer.html" %}

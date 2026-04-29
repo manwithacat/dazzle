@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.126] - 2026-04-29
+
+### Added
+- **#942 cycle 4 — `display: pdf_viewer` DSL hook on detail
+  surfaces.** The framework now recognises `display: pdf_viewer`
+  as a surface-level keyword on VIEW-mode surfaces. Combined with
+  an entity that has a `file storage=...` field, this auto-routes
+  the detail surface through the built-in PDF viewer chrome —
+  no per-route Jinja `{% include %}` boilerplate required.
+
+  ```dsl
+  entity Manuscript "Manuscript":
+    id: uuid pk
+    title: str(200) required
+    source_pdf: file storage=cohort_pdfs
+
+  surface manuscript_view "View Manuscript":
+    uses entity Manuscript
+    mode: view
+    display: pdf_viewer
+    section main:
+      field title "Title"
+  ```
+
+  At request time the wrapper template (`components/pdf_viewer_page.html`)
+  reads the fetched record's file-field value and the storage
+  binding, then composes the proxy URL:
+  `/api/storage/<storage_name>/proxy?key=<file_field_value>`. The
+  existing `_handle_detail` route still loads `detail.item` so
+  RBAC / persona-visibility enforcement runs unchanged.
+
+  **Scope:** parser + IR + template compiler + wrapper template
+  cover the load-bearing piece (entity + file field → full-bleed
+  viewer). Sibling navigation (cycle 3's `sibling_urls` helper)
+  and slide-in panels (cycle 2a) stay opt-in via the original
+  Jinja-include shape — the helper-first path keeps projects in
+  control of scope rules and panel rendering. Compiler falls
+  back to the generic detail layout when the entity has no
+  file-storage field, so the keyword is a safe no-op rather than
+  a hard error.
+
+### Agent Guidance
+- New surface-level keyword: `display: pdf_viewer` on a VIEW-mode
+  surface routes to the built-in PDF viewer chrome. Entity must
+  have a `file storage=<name>` field for the framework to derive
+  the proxy URL; otherwise the keyword silently falls back to the
+  generic detail view. Only `pdf_viewer` is recognised today —
+  invalid values are rejected at parse time.
+
 ## [0.61.125] - 2026-04-29
 
 ### Added
