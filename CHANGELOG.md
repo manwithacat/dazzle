@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.117] - 2026-04-29
+
+### Fixed
+- **PDF viewer body bg now flips correctly under dark mode.** Cycle
+  1b's `pdf-viewer.css` used `var(--neutral-100)` for the body
+  background — a raw ramp value, not a semantic token. It rendered
+  correctly in light mode but did NOT respect the `[data-theme="dark"]`
+  binding from #938, leaving a jarring pale-grey panel inside an
+  otherwise-dark viewer (luminance 0.97 against the surrounding
+  `--neutral-900` chrome).
+
+  Switched to `var(--colour-bg)`, which resolves through
+  `light-dark()` and flips correctly. The visual hierarchy stays
+  identical (body sits a step darker than the chrome surfaces in
+  both themes).
+
+### Added
+- **#942 cycle 1d — dark-mode parity gates.** Four new Playwright
+  gates exercise the chrome under `?dark=1`:
+  - `test_all_bands_resolve_to_concrete_colours` — every band
+    computes a real colour function (rgb / rgba / oklch / etc) in
+    both themes; transparent fall-through means a token didn't
+    resolve. Modern Chromium preserves source `oklch(...)`, so the
+    parser handles both rgb and oklch shapes.
+  - `test_chrome_flips_between_light_and_dark` — header, body,
+    footer, and the kbd hint all change between themes. Catches
+    raw-ramp regressions like the `--neutral-100` bug above.
+  - `test_dark_mode_chrome_is_actually_dark` — every band's
+    luminance lands < 0.5 in dark mode. Sanity gate against
+    "flip happened but stayed light".
+  - `test_body_distinct_from_header_and_footer` — body bg differs
+    from chrome surfaces in both themes so the content area reads
+    as visually separate from the bars.
+
+  These gates caught the bug at the same moment they were written;
+  the fix landed alongside. Same loop the user wanted: visual
+  analysis → footgun surfaces → pinned permanently.
+
+### Agent Guidance
+- When writing component CSS that needs to support both themes,
+  **never use raw ramp values** (`var(--neutral-100)`,
+  `var(--brand-500)`) for things that should adapt — use the
+  semantic `--colour-*` family. Raw ramps stay frozen at the
+  light-mode value because nothing rebinds them under
+  `[data-theme="dark"]`.
+- The dark-mode gate pattern (parameterise the harness on a
+  `?dark=1` query, assert chrome bands flip + pass a luminance
+  sanity check) is reusable — drop it into any new component
+  test harness when the chrome carries colour.
+
 ## [0.61.116] - 2026-04-29
 
 ### Added

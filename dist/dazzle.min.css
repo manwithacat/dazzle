@@ -1,4 +1,4 @@
-/* dazzle v0.61.115 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.116 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5455,7 +5455,7 @@ pointer-events: none;
 }
 .dz-pdf-viewer-body {
 position: relative;
-background: var(--neutral-100);
+background: var(--colour-bg);
 overflow: hidden;
 }
 .dz-pdf-viewer-embed {

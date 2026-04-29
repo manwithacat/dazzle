@@ -187,11 +187,20 @@
 
     <script>
       // ---------------------------------------------------------------
-      // Variant config — read once on load.
+      // Variant + theme config — read once on load.
       // ---------------------------------------------------------------
       (function () {
         var params = new URLSearchParams(window.location.search);
         var variant = params.get("variant") || "both";
+        var dark = params.get("dark") === "1";
+
+        // Dark-mode opt-in mirrors what the in-app shell does on
+        // toggle (see app_shell.html applyDark): set both
+        // data-theme and the colorScheme binding so light-dark()
+        // flips. Same plumbing as #938.
+        if (dark) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
 
         var host = document.getElementById("pdf-viewer-host");
         var nav = host.querySelector(".dz-pdf-viewer-nav");
@@ -272,6 +281,27 @@
             bridgePresent: !!bridge,
             registerWidgetIsFunction:
               !!(bridge && typeof bridge.registerWidget === "function"),
+          };
+        },
+
+        // #942 cycle 1d — dark-mode parity. Reads the computed
+        // background-color of every chrome band so the gates can
+        // assert (a) every band has a non-empty resolved colour,
+        // (b) the body bg actually differs from the chrome surfaces
+        // (visual separation), (c) all values flip between light
+        // and dark themes.
+        chromeBackgrounds: function () {
+          var read = function (sel) {
+            var el = document.querySelector(sel);
+            if (!el) return null;
+            return getComputedStyle(el).backgroundColor;
+          };
+          return {
+            host: read("#pdf-viewer-host"),
+            header: read(".dz-pdf-viewer-header"),
+            body: read(".dz-pdf-viewer-body"),
+            footer: read(".dz-pdf-viewer-footer"),
+            kbd: read(".dz-pdf-viewer-kbd"),
           };
         },
       };

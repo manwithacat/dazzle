@@ -96,7 +96,14 @@
 
 .dz-pdf-viewer-body {
   position: relative;
-  background: var(--neutral-100);
+  /* Semantic token, not a raw ramp value — flips correctly under
+   * `[data-theme="dark"]` (binding from #938). Earlier draft used
+   * `var(--neutral-100)` which is light-only and left a jarring
+   * pale panel inside an otherwise-dark viewer; #942 cycle 1d's
+   * dark-mode parity gates caught it. The body sits a step darker
+   * than the chrome surfaces in both themes so the content area
+   * reads as distinct from the header/footer. */
+  background: var(--colour-bg);
   overflow: hidden;
 }
 
