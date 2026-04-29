@@ -257,8 +257,6 @@ document.addEventListener("alpine:init", () => {
           region: regionName,
           title: entry.title || regionName,
           col_span: 6,
-          // #962: thread the catalog entry's display mode through to
-          // the new card body so the min-height reservation matches.
           display: entry.display || "list",
         },
         wsName,
@@ -354,13 +352,7 @@ document.addEventListener("alpine:init", () => {
       const body = document.createElement("div");
       body.className = "dz-card-body";
       body.id = "region-" + card.region + "-" + card.id;
-      // #962: data-display drives the per-display-mode min-height
-      // reservation so newly-added cards don't trigger a CLS
-      // shift when their region content lands. Default "list" is
-      // safe — generous min-height that accommodates the typical
-      // table/list shape; if the region's actual display is known
-      // (catalog entry carries it post-cycle), the caller can pass
-      // it through.
+      // #962: data-display drives the per-mode min-height reservation in dashboard.css
       body.setAttribute("data-display", (card.display || "list").toLowerCase());
       body.setAttribute(
         "hx-get",

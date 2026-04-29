@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.2] - 2026-04-29
+
+### Fixed
+- **#962 follow-up — `funnel_chart` display mode missing CSS
+  reservation.** The `DisplayMode` enum value is `funnel_chart`
+  but the v0.62.1 CSS rule used `funnel`. Visible symptom: any
+  workspace with a funnel-chart region would still trigger CLS.
+  Caught by the new enum-driven test gate (see Changed below).
+
+### Changed
+- **CLS reservation test now iterates `DisplayMode` enum.** The
+  v0.62.1 test hardcoded a sample of 6 modes (`summary`,
+  `metrics`, `chart`, `kanban`, `diagram`, `profile_card`); the
+  enum has ~30 values. The new gate iterates every `DisplayMode`
+  value and either requires a CSS rule OR an entry in an
+  explicit `fall_through_ok` allow-list with a one-line rationale
+  for why the 280px default is fine. Adding a new enum value now
+  forces a conscious choice: write a min-height rule or document
+  why the default suffices. This is what caught the
+  `funnel_chart` mismatch above.
+- **Template trimmed**: dropped the dead `or 'list'` fallback in
+  `data-display="{{ r.display | lower }}"` — `RegionContext.display`
+  has a Pydantic default of `\"LIST\"` so the fallback was
+  unreachable.
+- **Comment hygiene** in `dashboard-builder.js`: collapsed two
+  multi-line block comments to single lines pointing at the CSS
+  source-of-truth. CSS file's block comment now references
+  `DisplayMode` (`src/dazzle/core/ir/workspaces.py`) so future
+  maintainers know where the canonical list lives.
+
 ## [0.62.1] - 2026-04-29
 
 ### Fixed

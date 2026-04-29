@@ -1,4 +1,4 @@
-/* dazzle v0.62.1 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.62.2 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1771,7 +1771,7 @@ min-height: 140px;
 .dz-card-body[data-display="line_chart"],
 .dz-card-body[data-display="bar_track"],
 .dz-card-body[data-display="bullet"],
-.dz-card-body[data-display="funnel"],
+.dz-card-body[data-display="funnel_chart"],
 .dz-card-body[data-display="heatmap"],
 .dz-card-body[data-display="radar"] {
 min-height: 280px;

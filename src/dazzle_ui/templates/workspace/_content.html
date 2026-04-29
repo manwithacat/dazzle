@@ -189,7 +189,7 @@
           {%- if r.notice.body %}<div class="dz-card-notice-body">{{ r.notice.body }}</div>{% endif %}
         </div>
         {%- endif %}
-        <div class="dz-card-body" id="region-{{ r.name }}-{{ _card_id }}" data-display="{{ (r.display or 'list') | lower }}" hx-get="/api/workspaces/{{ workspace.name }}/regions/{{ r.name }}" hx-trigger="{{ _trigger }}" hx-swap="innerHTML">
+        <div class="dz-card-body" id="region-{{ r.name }}-{{ _card_id }}" data-display="{{ r.display | lower }}" hx-get="/api/workspaces/{{ workspace.name }}/regions/{{ r.name }}" hx-trigger="{{ _trigger }}" hx-swap="innerHTML">
           <div class="dz-card-skeleton">
             <div class="dz-card-skeleton-line w-3-4"></div>
             <div class="dz-card-skeleton-line is-thin"></div>

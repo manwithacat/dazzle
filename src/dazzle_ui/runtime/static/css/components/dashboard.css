@@ -361,15 +361,14 @@
  * #962 — `min-height` per display mode reserves space before the htmx
  * region fetch lands so the page doesn't bounce as content arrives.
  * Web Vitals classifies CLS > 0.1 as "needs improvement"; pre-fix
- * surveyed surfaces hit 0.18–0.37. The values below approximate the
- * eventual content height for each display mode — generous enough to
- * cover typical content, tight enough to avoid wasting screen real
- * estate. If content exceeds the reservation, only that card grows
- * (one shift, bounded). If content fits, no shift.
+ * surveyed surfaces hit 0.18–0.37. If content exceeds the
+ * reservation, only that card grows (one shift, bounded). If content
+ * fits, no shift.
  *
- * data-display is emitted by `_content.html` from RegionContext.display
- * (string: "list" / "metrics" / "chart" / etc, lowercased). Unknown
- * values fall through to the default rule (matches the LIST shape).
+ * Selector values match `DisplayMode` (src/dazzle/core/ir/workspaces.py)
+ * — lowercased by the template's `| lower` filter. Adding a new
+ * display mode? Either add a rule here OR add the value to the
+ * fall-through allow-list in test_workspace_cls_reservation.py.
  */
 .dz-card-body {
   padding-inline: var(--space-md);
@@ -392,7 +391,7 @@
 .dz-card-body[data-display="line_chart"],
 .dz-card-body[data-display="bar_track"],
 .dz-card-body[data-display="bullet"],
-.dz-card-body[data-display="funnel"],
+.dz-card-body[data-display="funnel_chart"],
 .dz-card-body[data-display="heatmap"],
 .dz-card-body[data-display="radar"] {
   min-height: 280px;

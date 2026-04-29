@@ -37,9 +37,12 @@ class TestTemplateEmitsDataDisplay:
 
     def test_data_display_is_lowercased(self) -> None:
         """The CSS rules match lowercase; the template must lower
-        whatever the IR carries (`LIST`, `METRICS`, etc.)."""
+        whatever the IR carries (`LIST`, `METRICS`, etc.).
+        `RegionContext.display` is always set (Pydantic default
+        \"LIST\"), so no `or 'list'` fallback is needed in the
+        template — the `| lower` filter is the only transform."""
         text = TEMPLATE_PATH.read_text()
-        assert "(r.display or 'list') | lower" in text
+        assert "r.display | lower" in text
 
 
 class TestCssReservesMinHeight:
@@ -57,23 +60,58 @@ class TestCssReservesMinHeight:
         block = text[idx:end]
         assert "min-height:" in block
 
-    def test_min_height_reservations_for_known_display_modes(self) -> None:
-        """Each well-known display mode gets a min-height reservation
-        scoped to its `data-display` attribute. If the framework
-        adds a new display mode, this list grows."""
+    def test_every_display_mode_has_min_height_or_falls_through(self) -> None:
+        """Every value of `DisplayMode` either gets its own
+        `data-display=\"X\"` reservation OR is acknowledged to fall
+        through to the 280px default. The allow-list below
+        enumerates the latter so a new display mode added to the
+        enum without a CSS rule trips this gate.
+
+        Rationale: the pre-#962 fix's hardcoded six-element check
+        was a sample, not a gate — half the enum values were
+        invisible to it. Iterating the enum with an explicit
+        fall-through allow-list converts this into a real
+        regression check."""
+        from dazzle.core.ir.workspaces import DisplayMode
+
         text = self._css()
-        # The display modes are paired with min-height; we just
-        # verify each appears in the CSS as a data-display selector.
-        for mode in (
-            "summary",
-            "metrics",
-            "chart",
-            "kanban",
-            "diagram",
-            "profile_card",
-        ):
-            sel = f'.dz-card-body[data-display="{mode}"]'
-            assert sel in text, f"missing min-height reservation for {mode}"
+
+        # Modes that are intentionally OK to inherit the 280px
+        # default (small KPIs / niche surfaces / list-shaped
+        # display modes that match the default already). Adding a
+        # new mode? Either give it its own min-height in
+        # dashboard.css or add it here with a one-line rationale.
+        fall_through_ok = {
+            "list",  # default 280px is for list shape
+            "grid",  # tile-style content; 280px ok
+            "tabbed_list",  # list-shaped, 280px ok
+            "queue",  # list-shaped review queue
+            "tree",  # variable-height; 280px is a reasonable middle
+            "map",  # rare; 280px placeholder until real adopters surface
+            "detail",  # single-record card; tighter than list but acceptable
+            "progress",  # progress bar; tighter, but rare
+            "activity_feed",  # list-shaped
+            "sparkline",  # compact KPI row; small but rare alone
+            "histogram",  # chart-like; the chart bucket already covers it implicitly
+            "box_plot",  # same — chart-like
+            "area_chart",  # chart-shaped, 280px is right
+            "confirm_action_panel",  # rare modal-style content
+        }
+
+        missing: list[str] = []
+        for mode in DisplayMode:
+            value = mode.value
+            sel = f'.dz-card-body[data-display="{value}"]'
+            if sel in text or value in fall_through_ok:
+                continue
+            missing.append(value)
+
+        assert not missing, (
+            f"DisplayMode values without a CSS reservation AND not in "
+            f"the fall-through allow-list: {sorted(missing)}\n"
+            "Either add a `min-height` rule in dashboard.css for the "
+            "new mode, or extend `fall_through_ok` here with a reason."
+        )
 
 
 class TestRenderedHtmlHasDataDisplay:
