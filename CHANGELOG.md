@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **#961 — improve-loop integration: `api_surface_audit`
+  sub-strategy.** New playbook at
+  `.claude/commands/improve/strategies/api_surface_audit.md` wired
+  into the `framework-ux` lane as a 6th EXPLORE sub-strategy. Each
+  invocation walks one of the five committed baselines top-to-bottom
+  asking "is this what we'd design today?" and files findings as
+  `API-NNN` proposals. Closes the loop on #961 cycle 6 — the
+  1.0-prep walkthrough is now a recurring exercise rather than a
+  one-shot.
+
+### Agent Guidance
+- `dazzle inspect-api <surface> [--write|--diff]` — five surfaces:
+  `dsl-constructs`, `ir-types`, `mcp-tools`, `public-helpers`,
+  `runtime-urls`. Drift gate at
+  `tests/unit/test_api_surface_drift.py` (21 tests). The
+  `framework-ux` improve lane runs `api_surface_audit` opportunistically
+  (≥7 cycles since last audit, or after `dazzle-updated` signal) —
+  pre-1.0 cadence is opportunistic; flip to weekly mandatory as 1.0
+  approaches.
+
 ## [0.63.4] - 2026-04-29
 
 ### Added

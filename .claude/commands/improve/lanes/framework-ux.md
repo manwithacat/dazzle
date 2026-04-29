@@ -115,7 +115,7 @@ The fitness engine's Pass 1 parses the contract and calls `walk_contract` — on
 
 ### 6. EXPLORE (when no actionable rows in Step 1)
 
-Choose one of five sub-strategies based on accumulated state. Pick by judgment, not strict rotation.
+Choose one of six sub-strategies based on accumulated state. Pick by judgment, not strict rotation.
 
 #### Sub-strategy: missing_contracts
 
@@ -174,6 +174,20 @@ Counts against shared explore budget.
 **HEURISTIC 3: Cross-app verification.** Any framework-layer fix must be verified against all 5 example apps before commit.
 
 **HEURISTIC 4: Defaults propagation audit.** When a canonical intent declaration exists, trace it from declaration through resolver to every consumer. Missing propagation is its own defect class.
+
+#### Sub-strategy: api_surface_audit
+
+**No subagent — pure reasoning cycle.** Walk one of the five committed API-surface baselines (DSL constructs, IR types, MCP tools, public helpers, runtime URLs) top-to-bottom asking "is this what we'd design today?". Files findings as `API-NNN` proposals into the framework-ux backlog. Closes the loop on #961 cycle 6 (1.0-prep walkthrough as a recurring exercise).
+
+Use when:
+- Last `api_surface_audit` cycle was ≥7 cycles ago
+- A `dazzle-updated` signal fired since last audit
+- Approaching 1.0 — flip from opportunistic to mandatory weekly cadence
+
+Skip if:
+- ≥3 unresolved `API-NNN` rows already open (consolidate before adding more)
+
+Detailed playbook: `improve/strategies/api_surface_audit.md`. Counts against shared explore budget.
 
 ### Sub-strategy choosing
 

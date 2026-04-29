@@ -156,6 +156,20 @@ dazzle fitness investigate --cluster CL-... --dry-run
 ```
 Proposals land at `.dazzle/fitness-proposals/`. See `docs/reference/fitness-investigator.md`.
 
+### API surface snapshots (#961)
+
+Five committed baselines under `docs/api-surface/` pin the framework's public API:
+
+```bash
+dazzle inspect-api dsl-constructs        # parser → IR class mapping
+dazzle inspect-api ir-types              # 485 entries from dazzle.core.ir.__all__
+dazzle inspect-api mcp-tools             # 32 MCP tool schemas
+dazzle inspect-api public-helpers        # top-level __init__ exports
+dazzle inspect-api runtime-urls          # AST walk of *_routes.py
+```
+
+Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` regenerates the baseline; `--diff` prints unified-diff vs baseline. Any drift requires a CHANGELOG entry under Added/Changed/Removed. The improve loop's `framework-ux` lane has an `api_surface_audit` sub-strategy that walks one baseline per cycle asking "is this what we'd design today?" — the recurring 1.0-prep walkthrough.
+
 ## Examples
 
 Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`
@@ -283,4 +297,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.63.4 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.63.5 | **Python**: 3.12+ | **Status**: Production Ready
