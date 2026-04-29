@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.108] - 2026-04-29
+
+### Fixed
+- **#936 — same-URL workspace re-click no longer empties the dashboard** —
+  clicking the active workspace's sidebar link triggers a same-URL
+  morph swap. The per-component `htmx:afterSettle` listener that drove
+  re-hydration captured `this` at init time. Whether idiomorph morphed
+  the existing `<div x-data>` in place or replaced it, the captured
+  `this` could end up pointing at a dead Alpine proxy — mutations to
+  `cards` no longer flowed into the rendered `<template x-for>`, so
+  the workspace collapsed to zero rendered region cards.
+
+  Re-hydration is now driven by a single global handler in
+  `dz-alpine.js` that runs on every `htmx:afterSettle` whose target
+  contains `<script id="dz-workspace-layout">`. The handler looks up
+  the live Alpine instance via `Alpine.$data(root)` so it always
+  finds the current proxy, and calls `_hydrateFromLayout()` on it.
+  The per-component listener is gone — eliminates the stale-`this`
+  footgun and the listener-stacking risk it carried.
+
+### Agent Guidance
+- For Alpine + HTMX morph integrations, **never capture `this` in a
+  listener registered from `init()`** — same-URL morph can re-create
+  the component root without re-running `init()`/`destroy()`,
+  leaving the captured `this` pointing at a dead proxy. Use
+  `Alpine.$data(root)` from a single global handler instead.
+
 ## [0.61.107] - 2026-04-28
 
 ### Fixed

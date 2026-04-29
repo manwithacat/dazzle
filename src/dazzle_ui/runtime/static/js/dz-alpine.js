@@ -1297,4 +1297,32 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
   if (window.Alpine && typeof window.Alpine.initTree === "function") {
     window.Alpine.initTree(target);
   }
+
+  // #936: workspace data island re-hydration. Same-URL morph (clicking
+  // the active workspace's sidebar link) reuses the existing
+  // `<div x-data="dzDashboardBuilder()">` element. Whether idiomorph
+  // morphs in place (Alpine instance survives, init() does NOT re-run)
+  // or replaces (Alpine destroys + Alpine.initTree above re-creates),
+  // the per-component listener that previously drove re-hydration was
+  // bound with a captured `this` to the ORIGINAL Alpine proxy. After
+  // any same-URL re-creation, that `this` references a dead proxy and
+  // mutations no longer flow into the rendered template — cards
+  // collapse to empty even though the JSON island has fresh data.
+  //
+  // The fix: drive re-hydration through the LIVE Alpine instance,
+  // looked up fresh via `Alpine.$data(root)` after every settle that
+  // touched the workspace layout island. Idempotent — safe to fire
+  // when the layout hasn't changed; the dashboard's hydrate routine
+  // is a JSON.parse + setter only.
+  const island =
+    target.querySelector && target.querySelector("#dz-workspace-layout");
+  if (!island) return;
+  const root = document.querySelector('[x-data*="dzDashboardBuilder"]');
+  if (!root || !window.Alpine || typeof window.Alpine.$data !== "function") {
+    return;
+  }
+  const data = window.Alpine.$data(root);
+  if (data && typeof data._hydrateFromLayout === "function") {
+    data._hydrateFromLayout();
+  }
 });

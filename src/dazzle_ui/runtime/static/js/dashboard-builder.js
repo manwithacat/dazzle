@@ -69,34 +69,13 @@ document.addEventListener("alpine:init", () => {
       window.addEventListener("pointermove", this._onPointerMove);
       window.addEventListener("pointerup", this._onPointerUp);
 
-      // Re-hydrate from the layout JSON island after any HTMX morph that
-      // replaces the workspace content (#875). alpine:init only fires
-      // once per component instance, but idiomorph keeps the existing
-      // x-data="dzDashboardBuilder()" element across same-route nav
-      // re-clicks — so init() doesn't re-run, and cards/catalog stay
-      // stale while the data island below has been replaced with fresh
-      // JSON. Listen for htmx:afterSettle (NOT afterSwap) — with the
-      // morph: extension, afterSwap fires before idiomorph has fully
-      // committed child-node textContent, so reading the
-      // #dz-workspace-layout <script> too early returns stale JSON and
-      // hydrates an empty cards array (#919). afterSettle fires once
-      // all DOM mutations + textContent updates are visible.
-      this._onHtmxAfterSettle = (e) => {
-        const target = e && e.detail && e.detail.target;
-        if (!target) return;
-        // Only re-hydrate when the swap target contains our data island
-        // — avoids work on every region card swap.
-        const island = target.querySelector
-          ? target.querySelector("#dz-workspace-layout")
-          : null;
-        if (!island) return;
-        this._hydrateFromLayout();
-      };
-      document.body.addEventListener(
-        "htmx:afterSettle",
-        this._onHtmxAfterSettle,
-      );
-
+      // #936 — post-morph re-hydration is driven by the global
+      // afterSettle handler in dz-alpine.js, which looks up the LIVE
+      // Alpine instance via `Alpine.$data(root)` and calls
+      // `_hydrateFromLayout()` on it. The previous per-component
+      // listener captured `this` at init time and went stale whenever
+      // idiomorph re-created the workspace root, leaving cards
+      // permanently empty after a same-URL sidebar re-click.
       this._hydrateFromLayout();
     },
 
@@ -139,13 +118,6 @@ document.addEventListener("alpine:init", () => {
       if (this._onPointerUp) {
         window.removeEventListener("pointerup", this._onPointerUp);
         this._onPointerUp = null;
-      }
-      if (this._onHtmxAfterSettle) {
-        document.body.removeEventListener(
-          "htmx:afterSettle",
-          this._onHtmxAfterSettle,
-        );
-        this._onHtmxAfterSettle = null;
       }
     },
 

@@ -73,13 +73,13 @@ class TestFoldCountHydration:
 
 
 class TestRehydrateOnHtmxAfterSettle:
-    """#875 / #919 — re-clicking the active workspace nav link triggers
-    an HTMX morph that doesn't re-run init(). The component must listen
-    for htmx:afterSettle (NOT afterSwap — see #919: the morph: extension
-    fires afterSwap before idiomorph commits child-node textContent, so
-    the <script id="dz-workspace-layout"> island still reads as the
-    previous workspace's JSON) and re-hydrate cards/catalog/state from
-    the data island when the swap target contains it.
+    """#875 / #919 / #936 — re-clicking a workspace nav link triggers an
+    HTMX morph. As of #936, the per-component htmx:afterSettle listener
+    has been removed: it captured `this` at init time and went stale
+    whenever idiomorph re-created the workspace root, leaving cards
+    permanently empty after a same-URL sidebar re-click. The global
+    handler in dz-alpine.js now drives re-hydration through
+    `Alpine.$data(root)` so it always finds the live instance.
     """
 
     def test_helper_extracted(self) -> None:
@@ -93,32 +93,15 @@ class TestRehydrateOnHtmxAfterSettle:
         # init() should invoke the helper rather than inlining the JSON read.
         assert "this._hydrateFromLayout();" in source
 
-    def test_listens_for_htmx_after_settle(self) -> None:
+    def test_no_per_component_after_settle_listener(self) -> None:
+        """#936: the per-component listener was removed. Re-hydration is
+        now driven by the global handler in dz-alpine.js, which looks up
+        the live Alpine instance fresh on every settle."""
         source = _load()
-        # #919: must be afterSettle, not afterSwap — the morph extension
-        # fires afterSwap before child textContent is fully committed.
-        assert '"htmx:afterSettle"' in source, (
-            "component must listen for htmx:afterSettle (not afterSwap) to "
-            "detect re-entry morphs after idiomorph fully commits the "
-            "data-island textContent"
-        )
-        assert '"htmx:afterSwap"' not in source, (
-            "must not listen for htmx:afterSwap — fires too early under "
-            "the morph extension and reads stale layout JSON (#919)"
-        )
-
-    def test_filters_swap_to_layout_island(self) -> None:
-        source = _load()
-        # Only re-hydrate when the swap target actually contains our island
-        # — otherwise every region card swap would trigger a full reload.
-        assert '"#dz-workspace-layout"' in source
-
-    def test_destroy_removes_listener(self) -> None:
-        source = _load()
-        # The htmx:afterSettle listener must be torn down on destroy() to
-        # avoid leaking across navigations (#797 / #795 pattern).
-        assert 'removeEventListener(\n          "htmx:afterSettle"' in source or (
-            'removeEventListener("htmx:afterSettle"' in source
+        assert "htmx:afterSettle" not in source, (
+            "dashboard-builder must NOT register its own afterSettle "
+            "listener — captured `this` went stale on same-URL morph "
+            "(#936). The global handler in dz-alpine.js owns this."
         )
 
     def test_resets_save_state_on_rehydrate(self) -> None:
@@ -198,3 +181,53 @@ class TestGlobalInitTreeBridge:
         bridge_block_idx = source.index("HTMX morph-swap → Alpine.initTree bridge")
         bridge_block = source[bridge_block_idx : bridge_block_idx + 2000]
         assert "if (window.Alpine" in bridge_block
+
+
+class TestSameUrlRehydrate:
+    """#936 — sidebar re-click on the active workspace link must restore
+    cards. The global afterSettle handler in dz-alpine.js looks up the
+    live dzDashboardBuilder Alpine instance via `Alpine.$data(root)` and
+    calls `_hydrateFromLayout()` on it. The previous per-component
+    listener captured `this` at init time and pointed at a dead Alpine
+    proxy after same-URL morph, so cards collapsed to empty even though
+    the JSON island had fresh data."""
+
+    def _load_alpine(self) -> str:
+        return DZ_ALPINE_PATH.read_text()
+
+    def test_handler_filters_to_workspace_layout_island(self) -> None:
+        source = self._load_alpine()
+        # The handler skips when the swap target has no workspace layout
+        # island — a region card swap shouldn't re-hydrate the dashboard.
+        assert '"#dz-workspace-layout"' in source
+
+    def test_handler_uses_alpine_data_lookup(self) -> None:
+        """`Alpine.$data(root)` always returns the live proxy, even after
+        idiomorph re-creates the element. Capturing `this` at init time
+        (the previous approach) went stale on same-URL morph."""
+        source = self._load_alpine()
+        assert "Alpine.$data(root)" in source
+
+    def test_handler_calls_hydrate_on_live_instance(self) -> None:
+        source = self._load_alpine()
+        assert "_hydrateFromLayout()" in source, (
+            "global handler must invoke _hydrateFromLayout() on the "
+            "live Alpine instance to populate cards after same-URL morph"
+        )
+
+    def test_handler_finds_dashboard_root_via_x_data_attr(self) -> None:
+        """Selector targets the workspace's x-data root, not any random
+        Alpine root in the swapped subtree."""
+        source = self._load_alpine()
+        assert '[x-data*="dzDashboardBuilder"]' in source
+
+    def test_handler_guards_missing_alpine_data(self) -> None:
+        """During boot (Alpine not yet loaded) or when no dashboard root
+        is present (e.g. non-workspace pages), the handler must no-op
+        rather than throw."""
+        source = self._load_alpine()
+        # Bound the search to the post-#936 block we just added.
+        idx = source.index("#936:")
+        block = source[idx : idx + 2500]
+        assert "if (!root" in block
+        assert "Alpine.$data" in block
