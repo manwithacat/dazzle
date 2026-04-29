@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.140] - 2026-04-29
+
+### Removed
+- **Stale `JS_SOURCES` entries in `scripts/build_dist.py`.** Three
+  references pointed at files that no longer exist on disk:
+  `vendor/sortable.min.js` and `vendor/alpine-sort.min.js`
+  (SortableJS-based card drag, replaced by pointer-event drag in
+  #948 cycle 1) and `js/workspace-editor.js` (similarly retired).
+  The build silently emitted `WARNING: missing` lines for each.
+  Cleaned up.
+
+### Added
+- **Reverse drift gate**: `test_every_bundle_source_actually_exists`
+  in `tests/unit/test_asset_bundle.py::TestBundleListParity` now
+  verifies every `JS_SOURCES` entry points at a real file on disk.
+  Catches stale entries left behind when a script is removed —
+  the existing forward gate (every base.html script must be in
+  `JS_SOURCES`) couldn't see this direction.
+
 ## [0.61.139] - 2026-04-29
 
 ### Added

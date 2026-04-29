@@ -69,16 +69,20 @@ JS_SOURCES = [
     STATIC / "vendor" / "htmx-ext-class-tools.js",
     STATIC / "vendor" / "htmx-ext-multi-swap.js",
     STATIC / "vendor" / "htmx-ext-path-deps.js",
-    # Alpine plugins + Alpine core (order matters: plugins before core)
-    STATIC / "vendor" / "sortable.min.js",
-    STATIC / "vendor" / "alpine-sort.min.js",
+    # Alpine plugins + Alpine core (order matters: plugins before core).
+    # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
+    # drag in dashboard-builder.js replaced them. workspace-editor.js was
+    # similarly retired. Keep the list tight; the drift gate in
+    # tests/unit/test_asset_bundle.py catches both stale entries (files
+    # in JS_SOURCES that no longer exist on disk OR aren't referenced
+    # from base.html) and missing entries (scripts in base.html that
+    # aren't bundled).
     STATIC / "vendor" / "alpine-persist.min.js",
     STATIC / "vendor" / "alpine-anchor.min.js",
     STATIC / "vendor" / "alpine-collapse.min.js",
     STATIC / "vendor" / "alpine-focus.min.js",
     STATIC / "js" / "dz-alpine.js",
     STATIC / "js" / "dashboard-builder.js",
-    STATIC / "js" / "workspace-editor.js",
     STATIC / "vendor" / "alpine.min.js",
     # Dazzle runtime (a11y + islands + bridge + widget registry)
     STATIC / "js" / "dz-a11y.js",

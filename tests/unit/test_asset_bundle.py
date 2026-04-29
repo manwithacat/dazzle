@@ -246,3 +246,34 @@ class TestBundleListParity:
             "bundled mode picks them up. Otherwise users on "
             "[ui] assets = 'always' will get a broken page."
         )
+
+    def test_every_bundle_source_actually_exists(self) -> None:
+        """Reverse drift: a `JS_SOURCES` entry must point at a real file
+        on disk. Stale entries silently emit warnings during the build
+        and bloat nothing (the file is just absent from the bundle),
+        but they're a maintenance hazard — the next contributor
+        wonders why the entry is there."""
+        text = BUILD_DIST_PATH.read_text()
+        # Pull every `STATIC / "<dir>" / "<file>"` and `SITE_STATIC / ...`
+        # path declared inside JS_SOURCES.
+        sources_idx = text.index("JS_SOURCES = [")
+        sources_end = text.index("]", sources_idx)
+        sources_block = text[sources_idx:sources_end]
+        # Match e.g. STATIC / "vendor" / "alpine.min.js"
+        path_re = re.compile(r'(STATIC|SITE_STATIC)\s*/\s*"([^"]+)"\s*/\s*"([^"]+\.js)"')
+        from pathlib import Path as _P
+
+        repo = REPO_ROOT
+        static = repo / "src/dazzle_ui/runtime/static"
+        site_static = repo / "src/dazzle_ui/static"
+        missing = []
+        for kind, sub, fname in path_re.findall(sources_block):
+            base = static if kind == "STATIC" else site_static
+            full = base / sub / fname
+            if not full.exists():
+                missing.append(str(_P(*full.parts[-3:])))
+        assert not missing, (
+            "JS_SOURCES references files that don't exist on disk:\n"
+            + "\n".join(f"  - {p}" for p in missing)
+            + "\n\nRemove the stale entries from scripts/build_dist.py."
+        )
