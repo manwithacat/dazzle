@@ -15,6 +15,7 @@ from dazzle.api_surface import dsl_constructs_module as dsl_mod
 from dazzle.api_surface import ir_types_module as ir_mod
 from dazzle.api_surface import mcp_tools_module as mcp_mod
 from dazzle.api_surface import public_helpers_module as helpers_mod
+from dazzle.api_surface import runtime_urls_module as urls_mod
 
 # ───────────────────────── Cycle 1: DSL constructs ─────────────────────────
 
@@ -158,3 +159,45 @@ def test_public_helpers_includes_known_packages():
         assert f"package: {pkg}\n" in snapshot, f"Missing package: {pkg}"
     for export in ("DazzleError", "ParseError", "UISpec"):
         assert export in snapshot, f"Missing export: {export}"
+
+
+# ───────────────────────── Cycle 5: runtime URLs ─────────────────────────
+
+
+def test_runtime_urls_baseline_exists():
+    assert urls_mod.BASELINE_PATH.exists(), (
+        f"Missing baseline at {urls_mod.BASELINE_PATH}. "
+        "Run `dazzle inspect-api runtime-urls --write` to create it."
+    )
+
+
+def test_runtime_urls_match_baseline():
+    diff = urls_mod.diff_against_baseline()
+    assert not diff, (
+        "Runtime-URLs API surface drifted from the baseline.\n\n"
+        f"{diff}\n\n"
+        "If this drift is intentional:\n"
+        "  1. Run: dazzle inspect-api runtime-urls --write\n"
+        "  2. Review the diff above\n"
+        "  3. Add a CHANGELOG entry under Added / Changed / Removed\n"
+        "  4. Commit the regenerated docs/api-surface/runtime-urls.txt\n"
+    )
+
+
+def test_runtime_urls_snapshot_is_deterministic():
+    a = urls_mod.snapshot_runtime_urls()
+    b = urls_mod.snapshot_runtime_urls()
+    assert a == b, "snapshot_runtime_urls() is not deterministic"
+
+
+def test_runtime_urls_includes_known_modules():
+    snapshot = urls_mod.snapshot_runtime_urls()
+    for module in ("admin_api_routes", "audit_routes", "search_routes"):
+        assert f"module: {module}\n" in snapshot, f"Missing module: {module}"
+
+
+def test_runtime_urls_no_trailing_whitespace():
+    """Pre-commit strips trailing whitespace; the snapshot must match post-strip."""
+    snapshot = urls_mod.snapshot_runtime_urls()
+    for i, line in enumerate(snapshot.splitlines(), 1):
+        assert line == line.rstrip(), f"Line {i} has trailing whitespace: {line!r}"

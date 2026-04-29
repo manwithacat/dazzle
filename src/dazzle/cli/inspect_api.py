@@ -19,6 +19,7 @@ from dazzle.api_surface import (
     ir_types_module,
     mcp_tools_module,
     public_helpers_module,
+    runtime_urls_module,
 )
 
 inspect_api_app = typer.Typer(
@@ -110,6 +111,20 @@ def public_helpers_command(
     _emit(
         public_helpers_module.snapshot_public_helpers(),
         public_helpers_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+@inspect_api_app.command("runtime-urls")
+def runtime_urls_command(
+    write: bool = typer.Option(False, "--write", help="Overwrite the on-disk baseline"),
+    diff: bool = typer.Option(False, "--diff", help="Print unified diff vs baseline"),
+) -> None:
+    """Cycle 5: snapshot framework runtime route templates (AST walk)."""
+    _emit(
+        runtime_urls_module.snapshot_runtime_urls(),
+        runtime_urls_module.BASELINE_PATH,
         write,
         diff,
     )

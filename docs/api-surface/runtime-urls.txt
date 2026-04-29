@@ -1,0 +1,125 @@
+# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)
+#
+# Source of truth: AST walk of src/dazzle_back/runtime/*_routes.py
+# Regenerate: dazzle inspect-api runtime-urls --write
+# Drift gate: tests/unit/test_api_surface_drift.py
+#
+# Static analysis — no app build, no DB connection. Captures every
+# route the framework *can* register; runtime gating (dev-mode-only,
+# conditional on AppSpec content) is out of scope for an API-surface
+# lens. Adding/removing a route, changing its path template, HTTP
+# method, handler name, or signature all fire the drift gate.
+
+# Counts: 45 routes across 11 modules
+
+module: admin_api_routes
+  POST | /deploys/trigger
+    handler: trigger_deploy(request: Request) -> JSONResponse
+  POST | /deploys/{deploy_id}/rollback
+    handler: rollback_deploy(deploy_id: str, request: Request) -> JSONResponse
+
+module: audit_routes
+  GET | /logs
+    handler: query_logs(auth_context: AuthContext = Depends(auth_dep), entity: str | None = Query(None, description='Filter by entity name'), operation: str | None = Query(None, description='Filter by operation'), user_id: str | None = Query(None, description='Filter by user ID'), since: str | None = Query(None, description='ISO timestamp to filter from'), limit: int = Query(100, ge=1, le=1000, description='Max results')) -> dict[str, Any]
+  GET | /logs
+    handler: query_logs_noauth(entity: str | None = Query(None, description='Filter by entity name'), operation: str | None = Query(None, description='Filter by operation'), user_id: str | None = Query(None, description='Filter by user ID'), since: str | None = Query(None, description='ISO timestamp to filter from'), limit: int = Query(100, ge=1, le=1000, description='Max results')) -> dict[str, Any]
+  GET | /logs/{entity_name}/{entity_id}
+    handler: query_entity_logs(entity_name: str, entity_id: str, auth_context: AuthContext = Depends(auth_dep), limit: int = Query(100, ge=1, le=1000, description='Max results')) -> dict[str, Any]
+  GET | /logs/{entity_name}/{entity_id}
+    handler: query_entity_logs_noauth(entity_name: str, entity_id: str, limit: int = Query(100, ge=1, le=1000, description='Max results')) -> dict[str, Any]
+  GET | /stats
+    handler: query_stats(auth_context: AuthContext = Depends(auth_dep), entity: str | None = Query(None, description='Filter by entity name'), window: int = Query(24, ge=1, le=720, description='Window in hours')) -> dict[str, Any]
+  GET | /stats
+    handler: query_stats_noauth(entity: str | None = Query(None, description='Filter by entity name'), window: int = Query(24, ge=1, le=720, description='Window in hours')) -> dict[str, Any]
+
+module: consent_routes
+  POST | /dz/consent
+    handler: post_consent(request: Request) -> Response
+  GET | /dz/consent/banner
+    handler: get_consent_banner(request: Request) -> Response
+  GET | /dz/consent/state
+    handler: get_consent_state(request: Request) -> JSONResponse
+
+module: fragment_routes
+  GET | /search
+    handler: fragment_search(request: Request, source: str = Query(..., description='Source integration name'), q: str = Query('', description='Search query'), min_chars: int = Query(3, description='Minimum characters before search')) -> Any
+  GET | /select
+    handler: fragment_select(request: Request, source: str = Query(..., description='Source integration name'), id: str = Query(..., description='Selected item ID')) -> Any
+
+module: grant_routes
+  GET | (root)
+    handler: list_grants(auth_context: AuthContext = Depends(auth_dep), scope_entity: str | None = Query(None), scope_id: str | None = Query(None), principal_id: str | None = Query(None), status: str | None = Query(None)) -> dict[str, Any]
+  POST | (root)
+    handler: create_grant(body: dict[str, Any], auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+  DELETE | /{grant_id}
+    handler: revoke_grant(grant_id: str, auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+  POST | /{grant_id}/approve
+    handler: approve_grant(grant_id: str, auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+  POST | /{grant_id}/cancel
+    handler: cancel_grant(grant_id: str, auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+  POST | /{grant_id}/reject
+    handler: reject_grant(grant_id: str, auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+
+module: island_routes
+  GET | /data
+    handler: get_island_data(page: int = Query(default=1, ge=1), page_size: int = Query(default=100, ge=1, le=1000), _entity: str = entity_name, _island: str = island_name) -> dict[str, Any]
+
+module: llm_routes
+  POST | /execute/{intent_name}
+    handler: execute_intent(intent_name: str, request: IntentExecuteRequest, async_mode: bool = False) -> IntentExecuteResponse | AsyncJobResponse
+  GET | /intents
+    handler: list_intents() -> list[dict[str, Any]]
+  GET | /jobs/{job_id}
+    handler: get_job(job_id: str) -> dict[str, Any]
+  GET | /models
+    handler: list_models() -> list[dict[str, Any]]
+
+module: qa_routes
+  POST | /qa/magic-link
+    handler: generate_qa_magic_link(body: MagicLinkRequest, request: Request) -> MagicLinkResponse
+
+module: search_routes
+  GET | /api/search
+    handler: cross_entity_search(q: str = Query(..., description='Search query string', min_length=1), entity: str | None = Query(None, description='Restrict search to a single entity name'), limit: int = Query(per_entity_limit, ge=1, le=100, description='Max results returned per entity')) -> JSONResponse
+
+module: site_routes
+  GET | /
+    handler: serve_root_page(request: Request, r: str = page_route, sitespec: dict[str, Any] = sitespec_data) -> Response
+  GET | /2fa/challenge
+    handler: two_factor_challenge_page(session: str = '', method: str = 'totp', sitespec: dict[str, Any] = sitespec_data) -> str
+  GET | /2fa/settings
+    handler: two_factor_settings_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> Response
+  GET | /2fa/setup
+    handler: two_factor_setup_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> Response
+  GET | /_site/config
+    handler: get_site_config() -> dict[str, Any]
+  GET | /_site/nav
+    handler: get_site_nav() -> dict[str, Any]
+  GET | /_site/page/{route:path}
+    handler: get_page_data(route: str) -> dict[str, Any]
+  GET | /_site/pages
+    handler: list_site_pages() -> dict[str, Any]
+  GET | /forgot-password
+    handler: forgot_password_page(sitespec: dict[str, Any] = sitespec_data) -> str
+  GET | /login
+    handler: login_page(sitespec: dict[str, Any] = sitespec_data) -> str
+  GET | /reset-password
+    handler: reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str
+  GET | /signup
+    handler: signup_page(sitespec: dict[str, Any] = sitespec_data) -> str
+  GET | /site.js
+    handler: serve_site_js() -> Response
+  GET | /styles/dazzle.css
+    handler: serve_dazzle_css() -> Response
+
+module: task_routes
+  GET | (root)
+    handler: list_tasks(assignee_id: str | None = Query(None, description='Filter by assignee'), status: str | None = Query(None, description='Filter by status'), limit: int = Query(100, ge=1, le=1000), services: RuntimeServices = Depends(get_services)) -> TaskListResponse
+  GET | /{task_id}
+    handler: get_task(task_id: str, services: RuntimeServices = Depends(get_services)) -> TaskDetailResponse
+  POST | /{task_id}/complete
+    handler: complete_task(task_id: str, body: CompleteTaskRequest, services: RuntimeServices = Depends(get_services)) -> CompleteTaskResponse
+  POST | /{task_id}/reassign
+    handler: reassign_task(task_id: str, body: ReassignTaskRequest, services: RuntimeServices = Depends(get_services)) -> CompleteTaskResponse
+  GET | /{task_id}/surface-url
+    handler: get_task_surface_url(task_id: str, services: RuntimeServices = Depends(get_services)) -> dict[str, str]

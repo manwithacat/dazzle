@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.4] - 2026-04-29
+
+### Added
+- **#961 cycle 5 — runtime-URLs API-surface snapshot.** New
+  `dazzle inspect-api runtime-urls` subcommand walks
+  `src/dazzle_back/runtime/*_routes.py` via AST and snapshots every
+  `@router.<method>(...)` decoration: HTTP method, path template,
+  handler name, full parameter signature. Static analysis (no app
+  build, no DB connection). Baseline at
+  `docs/api-surface/runtime-urls.txt` (125 lines, 45 routes across
+  11 framework route modules).
+
+### Agent Guidance
+- After any change to a route definition in
+  `src/dazzle_back/runtime/*_routes.py` — adding/removing a route,
+  changing path template, HTTP method, handler name, or signature
+  — the `test_runtime_urls_match_baseline` gate fires. Regenerate
+  via `dazzle inspect-api runtime-urls --write`.
+
 ## [0.63.3] - 2026-04-29
 
 ### Added
