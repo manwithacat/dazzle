@@ -12,7 +12,14 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DIST_DIR = REPO_ROOT / "dist"
+# #950: bundle outputs live UNDER the framework's static tree so the
+# wheel ships them automatically (MANIFEST.in's static/*.{js,css} rule)
+# and the existing `/static/` FastAPI mount serves them at
+# `/static/dist/dazzle.min.{js,css}`. Pre-#950 these were at
+# repo-root `dist/`, which the wheel didn't include — projects on
+# `[ui] assets = "auto"` (default) hard-404'd in production once
+# DAZZLE_ENV=production tipped them into bundled mode.
+DIST_DIR = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "dist"
 
 STATIC = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static"
 SITE_STATIC = REPO_ROOT / "src" / "dazzle_ui" / "static"

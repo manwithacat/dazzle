@@ -277,13 +277,13 @@ class TestBuildDist:
 
     def test_dist_css_contains_layer_declaration(self) -> None:
         repo_root = Path(__file__).resolve().parent.parent.parent
-        css = (repo_root / "dist" / "dazzle.min.css").read_text()
+        css = (repo_root / "src/dazzle_ui/runtime/static/dist" / "dazzle.min.css").read_text()
         # v0.62: layer order matches static/css/dazzle.css (#920).
         assert "@layer reset, vendor, tokens, base, utilities, components, overrides;" in css
 
     def test_dist_css_wraps_files_in_each_layer(self) -> None:
         repo_root = Path(__file__).resolve().parent.parent.parent
-        css = (repo_root / "dist" / "dazzle.min.css").read_text()
+        css = (repo_root / "src/dazzle_ui/runtime/static/dist" / "dazzle.min.css").read_text()
         # Every layer used by the canonical cascade should produce at
         # least one wrapping `@layer <name> {` block in the bundle.
         for layer in ("reset", "vendor", "tokens", "base", "utilities", "components"):
@@ -293,5 +293,5 @@ class TestBuildDist:
         """#920 regression guard: the bundled CDN distribution MUST
         contain a `.dz-button` rule. Pre-#920 it shipped zero."""
         repo_root = Path(__file__).resolve().parent.parent.parent
-        css = (repo_root / "dist" / "dazzle.min.css").read_text()
+        css = (repo_root / "src/dazzle_ui/runtime/static/dist" / "dazzle.min.css").read_text()
         assert ".dz-button" in css

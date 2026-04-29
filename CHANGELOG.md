@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.141] - 2026-04-29
+
+### Fixed
+- **#950 — bundled-mode 404s in production.** v0.61.137 wired
+  the `[ui] assets` toggle to load
+  `/static/dist/dazzle.min.{js,css}` in bundled mode, but the
+  bundle build (`scripts/build_dist.py`) was writing to repo-root
+  `dist/`. The wheel only ships
+  `src/dazzle_ui/runtime/static/**/*.{js,css}` (per
+  `[tool.setuptools.package-data]`), so the bundle never made it
+  to projects on `pip install dazzle-dsl`. The framework's
+  `/static/` mount looks at
+  `dazzle_ui/runtime/static/` only — `/static/dist/...` returned 404.
+
+  **This was a default-on regression for any project running
+  `DAZZLE_ENV=production`** — the resolver defaults `[ui] assets`
+  to `"auto"` which bundles in production. Projects that simply
+  bumped to v0.61.137+ got hard 404s on the framework JS/CSS;
+  htmx/Alpine never loaded.
+
+  **Fix**: `build_dist.py`'s `DIST_DIR` now points at
+  `src/dazzle_ui/runtime/static/dist/` so:
+  1. The wheel ships the bundle (recursive include picks it up)
+  2. The existing `/static/` FastAPI mount serves it as
+     `/static/dist/dazzle.min.{js,css}` — no new mount required
+  3. Heroku slug builds need no Node toolchain (the bundle is
+     already in the wheel)
+
+  Regression test in
+  `tests/unit/test_asset_bundle.py::TestBundleListParity::test_dist_bundle_lives_under_static_tree`
+  pins both source-side (build_dist.py points at static/dist) and
+  on-disk (the bundle files exist there) so this can't recur.
+
+### Agent Guidance
+- Any framework asset that needs to be served at runtime must live
+  under `src/dazzle_ui/runtime/static/` so the wheel ships it AND
+  the existing `/static/` mount serves it. Repo-root `dist/` is
+  not packaged. The new `static/dist/` location is the canonical
+  place for build-time bundle outputs.
+
 ## [0.61.140] - 2026-04-29
 
 ### Removed

@@ -247,6 +247,30 @@ class TestBundleListParity:
             "[ui] assets = 'always' will get a broken page."
         )
 
+    def test_dist_bundle_lives_under_static_tree(self) -> None:
+        """#950 — the wheel ships `src/dazzle_ui/runtime/static/*.{js,css}`
+        (per `[tool.setuptools.package-data]` in pyproject.toml). Bundle
+        outputs must land under that tree so they ship with `pip install`
+        AND get served by the existing `/static/` FastAPI mount as
+        `/static/dist/dazzle.min.{js,css}`.
+
+        Pre-#950 the bundle wrote to repo-root `dist/`, which neither
+        the wheel nor the static mount knew about — projects on
+        `[ui] assets = "auto"` (the default) hard-404'd in production
+        once `DAZZLE_ENV=production` flipped them into bundled mode."""
+        text = BUILD_DIST_PATH.read_text()
+        assert "static/dist" in text, (
+            "build_dist.py must write the framework bundle into "
+            "src/dazzle_ui/runtime/static/dist/ so the wheel + the "
+            "/static/ FastAPI mount both pick it up. Pre-#950 it wrote "
+            "to repo-root dist/, which neither shipped nor served."
+        )
+
+        # Verify the actual files exist on disk.
+        dist = REPO_ROOT / "src/dazzle_ui/runtime/static/dist"
+        assert (dist / "dazzle.min.js").exists()
+        assert (dist / "dazzle.min.css").exists()
+
     def test_every_bundle_source_actually_exists(self) -> None:
         """Reverse drift: a `JS_SOURCES` entry must point at a real file
         on disk. Stale entries silently emit warnings during the build
