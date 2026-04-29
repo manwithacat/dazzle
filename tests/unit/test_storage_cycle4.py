@@ -67,7 +67,7 @@ class TestVerifySkipsEmptyCases:
         registry, _ = _registry_with_provider()
         verify_storage_field_keys(
             body={},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="u1",
         )
@@ -76,7 +76,7 @@ class TestVerifySkipsEmptyCases:
         registry, _ = _registry_with_provider()
         verify_storage_field_keys(
             body={"title": "hello"},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="u1",
         )
@@ -85,7 +85,7 @@ class TestVerifySkipsEmptyCases:
         registry, _ = _registry_with_provider()
         verify_storage_field_keys(
             body={"source_pdf": None},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="u1",
         )
@@ -94,7 +94,7 @@ class TestVerifySkipsEmptyCases:
         registry, _ = _registry_with_provider()
         verify_storage_field_keys(
             body={"source_pdf": ""},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="u1",
         )
@@ -106,7 +106,7 @@ class TestVerifyHappyPath:
         provider.put_object("uploads/u1/r1/file.pdf", b"x", content_type="application/pdf")
         verify_storage_field_keys(
             body={"source_pdf": "uploads/u1/r1/file.pdf"},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="u1",
         )
@@ -135,7 +135,7 @@ class TestVerifyHappyPath:
                 "source_pdf": "primary/u1/r1/x.pdf",
                 "thumbnail": "thumbs/u1/r1/t.png",
             },
-            storage_bindings={"source_pdf": "primary", "thumbnail": "thumbs"},
+            storage_bindings={"source_pdf": ("primary",), "thumbnail": ("thumbs",)},
             registry=reg,
             user_id="u1",
         )
@@ -152,7 +152,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": 42},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -163,7 +163,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=None,
                 user_id="u1",
             )
@@ -176,7 +176,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id=None,
             )
@@ -187,7 +187,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": "missing_storage"},
+                storage_bindings={"source_pdf": ("missing_storage",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -202,7 +202,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u2/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -217,7 +217,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u1/r1/never-uploaded.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -237,7 +237,7 @@ class TestVerifyRejects:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -261,7 +261,7 @@ class TestPrefixSandbox:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/u11/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="u1",
             )
@@ -282,7 +282,7 @@ class TestPrefixSandbox:
         # Same pattern, the literal user_id matches.
         verify_storage_field_keys(
             body={"source_pdf": "uploads/user.with+special/r1/x.pdf"},
-            storage_bindings={"source_pdf": "cohort_pdfs"},
+            storage_bindings={"source_pdf": ("cohort_pdfs",)},
             registry=registry,
             user_id="user.with+special",
         )
@@ -291,7 +291,7 @@ class TestPrefixSandbox:
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
                 body={"source_pdf": "uploads/userXwithYspecial/r1/x.pdf"},
-                storage_bindings={"source_pdf": "cohort_pdfs"},
+                storage_bindings={"source_pdf": ("cohort_pdfs",)},
                 registry=registry,
                 user_id="user.with+special",
             )
@@ -350,8 +350,8 @@ entity TwoFiles:
 
         bindings = build_entity_storage_bindings(spec)
         assert bindings == {
-            "Doc": {"source_pdf": "cohort_pdfs"},
-            "TwoFiles": {"primary": "primary", "thumb": "thumbs"},
+            "Doc": {"source_pdf": ("cohort_pdfs",)},
+            "TwoFiles": {"primary": ("primary",), "thumb": ("thumbs",)},
         }
         # Entity without any storage-bound fields is omitted entirely.
         assert "NoStorage" not in bindings

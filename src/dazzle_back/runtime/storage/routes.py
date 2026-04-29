@@ -156,23 +156,31 @@ def register_upload_ticket_routes(
     registered: list[str] = []
     for entity in appspec.domain.entities:
         storage_fields = [
-            f for f in entity.fields if getattr(f, "storage", None) and f.type.kind.value == "file"
+            f for f in entity.fields if getattr(f, "storage", ()) and f.type.kind.value == "file"
         ]
         if not storage_fields:
             continue
         slug = entity.name.lower()
         path = f"/api/{slug}/upload-ticket"
+        # #941 — when a field declares multiple storages
+        # (`storage=cohort_pdfs|starter_packs`), the FIRST entry is the
+        # canonical *upload* destination. The other names cover
+        # alternate prefixes the verifier accepts at finalize time
+        # (e.g. starter packs the user references but didn't upload).
+        # The upload-ticket route only mints presigned forms for the
+        # primary destination — if a project needs to mint against a
+        # different storage, that's a project-side route.
         if len(storage_fields) == 1:
             f = storage_fields[0]
-            assert f.storage is not None  # guaranteed by the filter above
+            assert f.storage  # non-empty tuple guaranteed by the filter above
             handler = _build_upload_ticket_handler(
-                storage_name=f.storage,
+                storage_name=f.storage[0],
                 field_name=f.name,
                 registry=registry,
             )
         else:
             handler = _build_multi_field_handler(
-                fields_by_name={f.name: f.storage for f in storage_fields if f.storage},
+                fields_by_name={f.name: f.storage[0] for f in storage_fields if f.storage},
                 registry=registry,
             )
         app.post(path, tags=["Storage"])(handler)

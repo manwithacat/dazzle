@@ -605,6 +605,9 @@ class TokenType(Enum):
     SLASH = "/"
     QUESTION = "?"
     DOLLAR = "$"
+    # v0.61.113 (#941) — pipe used by `storage=foo|bar` to bind a `file`
+    # field to multiple `[storage.<name>]` blocks (shared+private fan-in).
+    PIPE = "|"
 
     # Arithmetic operators (for aggregate expressions)
     PLUS = "+"
@@ -931,6 +934,7 @@ class Lexer:
             "*": TokenType.STAR,
             "%": TokenType.PERCENT,
             "$": TokenType.DOLLAR,
+            "|": TokenType.PIPE,
         }
         if ch in _simple:
             self.advance()

@@ -156,12 +156,25 @@ class FieldSpec(BaseModel):
     default_expr: Expr | None = None
     # v0.61.0: PII classification (category + sensitivity). See core/ir/pii.py.
     pii: PIIAnnotation | None = None
-    # v0.61.104 (#932): name of a `[storage.<name>]` block declared in
+    # v0.61.104 (#932): names of `[storage.<name>]` blocks declared in
     # `dazzle.toml`. Only meaningful for `file` typed fields. The
-    # framework's auto-generated upload-ticket / finalize routes use this
-    # to look up the prefix template, content-type allowlist, max-bytes
-    # policy etc. None = no storage binding (no auto-upload routes).
-    storage: str | None = None
+    # framework's auto-generated upload-ticket / finalize routes use the
+    # bindings to look up prefix templates, content-type allowlists,
+    # max-bytes policies, etc. Empty tuple = no storage binding (no
+    # auto-upload routes).
+    #
+    # v0.61.113 (#941) widened from `str | None` to `tuple[str, ...]` to
+    # model fields that accept either a per-user upload OR a shared
+    # asset reference:
+    #
+    #     source_pdf_url: file storage=cohort_pdfs|starter_packs
+    #
+    # The verifier accepts the s3_key against each binding in turn and
+    # passes if any one matches. The first binding is the canonical
+    # *upload* destination — the auto-generated upload-ticket route
+    # mints presigned forms against `storage[0]`. Single-binding fields
+    # are simply tuples of length one.
+    storage: tuple[str, ...] = Field(default_factory=tuple)
 
     model_config = ConfigDict(frozen=True)
 

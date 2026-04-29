@@ -2760,24 +2760,26 @@ def validate_storage_refs(
     declared = set(storage_defs)
     for entity in appspec.domain.entities:
         for field_spec in entity.fields:
-            ref = getattr(field_spec, "storage", None)
-            if ref is None:
+            refs: tuple[str, ...] = getattr(field_spec, "storage", ()) or ()
+            if not refs:
                 continue
-            if ref not in declared:
-                hint = (
-                    f" Available: {sorted(declared)}"
-                    if declared
-                    else " (no [storage.*] blocks declared in dazzle.toml)"
-                )
-                errors.append(
-                    f"Entity {entity.name!r} field {field_spec.name!r}: "
-                    f"storage={ref!r} does not resolve to a declared "
-                    f"[storage.{ref}] block.{hint}"
-                )
+            for ref in refs:
+                if ref not in declared:
+                    hint = (
+                        f" Available: {sorted(declared)}"
+                        if declared
+                        else " (no [storage.*] blocks declared in dazzle.toml)"
+                    )
+                    errors.append(
+                        f"Entity {entity.name!r} field {field_spec.name!r}: "
+                        f"storage={ref!r} does not resolve to a declared "
+                        f"[storage.{ref}] block.{hint}"
+                    )
             if field_spec.type.kind != ir.FieldTypeKind.FILE:
+                rendered = "|".join(refs)
                 warnings.append(
                     f"Entity {entity.name!r} field {field_spec.name!r}: "
-                    f"storage={ref!r} only applies to `file` typed fields; "
+                    f"storage={rendered!r} only applies to `file` typed fields; "
                     f"got type={field_spec.type.kind.value}. The binding "
                     f"will be ignored at runtime."
                 )

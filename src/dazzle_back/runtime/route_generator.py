@@ -2112,7 +2112,7 @@ def create_create_handler(
     optional_auth_dep: Callable[..., Any] | None = None,
     user_ref_fields: list[str] | None = None,
     persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
-    storage_bindings: dict[str, str] | None = None,
+    storage_bindings: dict[str, tuple[str, ...]] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -2239,7 +2239,7 @@ def create_update_handler(
     cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     include_field_changes: bool = False,
-    storage_bindings: dict[str, str] | None = None,
+    storage_bindings: dict[str, tuple[str, ...]] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control."""
 
@@ -2851,7 +2851,7 @@ class RouteGenerator:
         node_graph_specs: dict[str, dict[str, Any]] | None = None,
         entity_display_fields: dict[str, str] | None = None,
         db_manager: Any | None = None,
-        entity_storage_bindings: dict[str, dict[str, str]] | None = None,
+        entity_storage_bindings: dict[str, dict[str, tuple[str, ...]]] | None = None,
     ):
         """
         Initialize the route generator.

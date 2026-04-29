@@ -80,7 +80,7 @@ def _expected_prefix_pattern(prefix_template: str, user_id: str) -> re.Pattern[s
 
 def verify_storage_field_keys(
     body: dict[str, Any],
-    storage_bindings: Mapping[str, str],
+    storage_bindings: Mapping[str, tuple[str, ...]],
     registry: Any,
     user_id: str | None,
 ) -> None:
@@ -89,8 +89,13 @@ def verify_storage_field_keys(
 
     Args:
         body: Parsed request JSON (mutable; not modified).
-        storage_bindings: Map of field_name → storage_name for the
-            entity being created/updated. Empty map = no-op.
+        storage_bindings: Map of field_name → tuple of storage names
+            for the entity being created/updated. Empty map = no-op.
+            v0.61.113 (#941) widened from a single name to a tuple so
+            a field declared ``storage=cohort_pdfs|starter_packs`` can
+            accept an s3_key under EITHER prefix — verifier walks the
+            tuple and passes if any provider's prefix matches AND the
+            object exists there.
         registry: ``StorageRegistry`` instance from
             ``app.state.storage_registry``. ``None`` skips verification
             with a logged warning — the dev hasn't wired storage yet.
@@ -99,12 +104,16 @@ def verify_storage_field_keys(
             you cannot finalise an upload anonymously.
 
     Raises:
-        StorageVerificationError: Any check failed.
+        StorageVerificationError: No binding accepted the s3_key. The
+            error reflects the highest-confidence rejection (prefix
+            sandbox > head_object miss > registry/auth issue).
     """
     if not storage_bindings or not body:
         return
 
-    for field_name, storage_name in storage_bindings.items():
+    for field_name, storage_names in storage_bindings.items():
+        if not storage_names:
+            continue
         raw = body.get(field_name)
         if raw is None or raw == "":
             # Field absent or explicitly empty — not being set this
@@ -114,7 +123,7 @@ def verify_storage_field_keys(
             raise StorageVerificationError(
                 field=field_name,
                 s3_key=str(raw),
-                storage=storage_name,
+                storage="|".join(storage_names),
                 reason="value must be a string s3_key",
                 status_code=400,
             )
@@ -123,7 +132,7 @@ def verify_storage_field_keys(
             raise StorageVerificationError(
                 field=field_name,
                 s3_key=raw,
-                storage=storage_name,
+                storage=storage_names[0],
                 reason=(
                     "no StorageRegistry available — server is missing "
                     "[storage.<name>] config or has not finished startup"
@@ -135,74 +144,99 @@ def verify_storage_field_keys(
             raise StorageVerificationError(
                 field=field_name,
                 s3_key=raw,
-                storage=storage_name,
+                storage=storage_names[0],
                 reason="authentication required to finalise an upload",
                 status_code=401,
             )
 
-        try:
-            provider = registry.get(storage_name)
-        except KeyError:
-            raise StorageVerificationError(
-                field=field_name,
-                s3_key=raw,
-                storage=storage_name,
-                reason=f"storage '{storage_name}' is not registered",
-                status_code=503,
-            ) from None
+        # Walk every binding the field declares; the s3_key passes when
+        # one binding's prefix sandbox matches AND head_object returns
+        # a non-None metadata. Collect rejections so we can surface a
+        # useful error when no binding matches.
+        last_error: StorageVerificationError | None = None
+        accepted = False
+        for storage_name in storage_names:
+            try:
+                provider = registry.get(storage_name)
+            except KeyError:
+                last_error = StorageVerificationError(
+                    field=field_name,
+                    s3_key=raw,
+                    storage=storage_name,
+                    reason=f"storage '{storage_name}' is not registered",
+                    status_code=503,
+                )
+                continue
 
-        prefix_template = getattr(provider, "prefix_template", None)
-        if prefix_template:
-            sandbox = _expected_prefix_pattern(prefix_template, user_id)
-            if not sandbox.match(raw):
-                raise StorageVerificationError(
+            prefix_template = getattr(provider, "prefix_template", None)
+            if prefix_template:
+                sandbox = _expected_prefix_pattern(prefix_template, user_id)
+                if not sandbox.match(raw):
+                    last_error = StorageVerificationError(
+                        field=field_name,
+                        s3_key=raw,
+                        storage=storage_name,
+                        reason=(
+                            "s3_key falls outside the caller's sandbox prefix — "
+                            "did the request reuse another user's key?"
+                        ),
+                        status_code=403,
+                    )
+                    continue
+
+            try:
+                head = provider.head_object(raw)
+            except Exception as exc:  # noqa: BLE001 — provider may raise anything
+                last_error = StorageVerificationError(
+                    field=field_name,
+                    s3_key=raw,
+                    storage=storage_name,
+                    reason=f"head_object raised: {exc}",
+                    status_code=503,
+                )
+                continue
+            if head is None:
+                last_error = StorageVerificationError(
                     field=field_name,
                     s3_key=raw,
                     storage=storage_name,
                     reason=(
-                        "s3_key falls outside the caller's sandbox prefix — "
-                        "did the request reuse another user's key?"
+                        "no object at this key — the upload either failed or has not committed yet"
                     ),
-                    status_code=403,
+                    status_code=400,
                 )
+                continue
 
-        try:
-            head = provider.head_object(raw)
-        except Exception as exc:  # noqa: BLE001 — provider may raise anything
-            raise StorageVerificationError(
-                field=field_name,
-                s3_key=raw,
-                storage=storage_name,
-                reason=f"head_object raised: {exc}",
-                status_code=503,
-            ) from exc
-        if head is None:
-            raise StorageVerificationError(
-                field=field_name,
-                s3_key=raw,
-                storage=storage_name,
-                reason=(
-                    "no object at this key — the upload either failed or has not committed yet"
-                ),
-                status_code=400,
-            )
+            # All checks passed for this binding — accept the key.
+            accepted = True
+            break
+
+        if not accepted:
+            assert last_error is not None  # set whenever the loop ran
+            raise last_error
 
 
-def build_entity_storage_bindings(appspec: Any) -> dict[str, dict[str, str]]:
-    """Compute ``{entity_name: {field_name: storage_name}}`` from the
-    AppSpec. Called once at server startup; consumed by RouteGenerator
-    so create/update handlers know which body fields to verify.
+def build_entity_storage_bindings(appspec: Any) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Compute ``{entity_name: {field_name: (storage_name, ...)}}``
+    from the AppSpec. Called once at server startup; consumed by
+    RouteGenerator so create/update handlers know which body fields to
+    verify and against which storages.
+
+    v0.61.113 (#941): the value is a tuple of storage names — a field
+    annotated ``storage=cohort_pdfs|starter_packs`` produces
+    ``("cohort_pdfs", "starter_packs")``. Single-binding fields are
+    tuples of length one.
     """
-    bindings: dict[str, dict[str, str]] = {}
+    bindings: dict[str, dict[str, tuple[str, ...]]] = {}
     domain = getattr(appspec, "domain", None)
     if domain is None:
         return bindings
     for entity in getattr(domain, "entities", []) or []:
-        per_entity: dict[str, str] = {}
+        per_entity: dict[str, tuple[str, ...]] = {}
         for field in getattr(entity, "fields", []) or []:
-            storage_name = getattr(field, "storage", None)
-            if storage_name:
-                per_entity[field.name] = storage_name
+            storage_names: tuple[str, ...] = getattr(field, "storage", ()) or ()
+            if storage_names:
+                per_entity[field.name] = tuple(storage_names)
         if per_entity:
             bindings[entity.name] = per_entity
     return bindings

@@ -235,11 +235,11 @@ entity Doc:
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         e = fragment.entities[0]
         fields = {f.name: f for f in e.fields}
-        assert fields["source_pdf_url"].storage == "cohort_pdfs"
-        # Non-storage file field still parses, .storage is None.
-        assert fields["thumbnail_url"].storage is None
-        # Non-file fields don't acquire storage attribute.
-        assert fields["notes"].storage is None
+        assert fields["source_pdf_url"].storage == ("cohort_pdfs",)
+        # Non-storage file field still parses; .storage is the empty tuple.
+        assert fields["thumbnail_url"].storage == ()
+        # Non-file fields don't acquire storage bindings.
+        assert fields["notes"].storage == ()
 
     def test_storage_with_other_modifiers(self) -> None:
         """`storage=` composes with `required` and other modifiers
@@ -254,7 +254,7 @@ entity Doc:
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         f = fragment.entities[0].fields[1]
-        assert f.storage == "cohort_pdfs"
+        assert f.storage == ("cohort_pdfs",)
         assert f.is_required
 
     def test_duplicate_storage_rejected(self) -> None:

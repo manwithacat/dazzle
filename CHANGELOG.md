@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.113] - 2026-04-29
+
+### Added
+- **#941 — multi-storage field annotations.** A `file` field can now
+  declare multiple storage bindings via the pipe operator:
+
+  ```dsl
+  source_pdf_url: file storage=cohort_pdfs|starter_packs
+  ```
+
+  Models the shared+private fan-in case from AegisMark — a field
+  that holds either a per-user upload (sandboxed under
+  `{user_id}` in the cohort_pdfs prefix) OR a reference to a
+  shared starter-pack asset (under starter_packs prefix, no user
+  scope). The verifier walks each binding in turn and passes if any
+  one matches both the prefix sandbox AND the head_object check;
+  rejects with the highest-confidence error when none accept.
+
+  The auto-generated `POST /api/{entity}/upload-ticket` route mints
+  presigned forms against the FIRST binding only — that's the
+  canonical upload destination. Other bindings cover keys the
+  client references but didn't upload (read-only shared assets).
+
+  Validator extended to confirm every name in the tuple resolves
+  to a declared `[storage.<name>]` block. Duplicate names within a
+  single binding (`storage=foo|foo`) are rejected at parse time.
+
+### Changed
+- **`FieldSpec.storage`** widened from `str | None` to
+  `tuple[str, ...]` (empty tuple = no binding). Single-binding
+  fields are tuples of length one. ROADMAP no-shim policy: every
+  consumer in the framework was updated in the same commit.
+- **DSL grammar**: `|` is now a tokenised operator (`PIPE`).
+  Previously the lexer rejected it as an unexpected character.
+  Today it's only used by `storage=foo|bar` bindings; future grammar
+  growth (e.g. enum-type unions) can reuse the same token.
+
+### Agent Guidance
+- For a field that can hold either a user-uploaded asset or a
+  reference to a shared, read-only asset (starter packs, demo
+  fixtures, common branding, etc.), use `storage=<private>|<shared>`
+  rather than maintaining separate routes / hand-rolled finalize
+  handlers.
+- The first binding is always the upload destination — order
+  matters. `storage=cohort_pdfs|starter_packs` mints upload tickets
+  against `cohort_pdfs`; reverse the order if your project's
+  primary write target is the shared bucket instead.
+
 ## [0.61.112] - 2026-04-29
 
 ### Changed
