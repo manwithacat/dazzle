@@ -66,18 +66,26 @@
   <script type="application/json" id="dz-app-themes">{{ _app_theme_map | tojson }}</script>
   {% endif %}
 
-  {# HTMX + extensions (vendored) #}
-  <script src="{{ 'vendor/htmx.min.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-json-enc.js' | static_url }}"></script>
-  <script src="{{ 'vendor/idiomorph-ext.min.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-preload.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-response-targets.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-loading-states.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-sse.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-remove-me.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-class-tools.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-multi-swap.js' | static_url }}"></script>
-  <script src="{{ 'vendor/htmx-ext-path-deps.js' | static_url }}"></script>
+  {# HTMX + extensions (vendored). Deferred so they don't block the
+     HTML parser — extensions still register before DOMContentLoaded
+     because defer scripts run in document order, and htmx's own
+     auto-init waits for DCL anyway. Pre-defer this was 11 sync
+     parser-blocking scripts × ~30 ms script-init time per file on
+     localhost (worse on real network). The inline configRequest
+     listener below uses addEventListener on `document`, which is
+     defer-safe — the listener is attached before htmx fires the
+     event regardless of script load order. #}
+  <script defer src="{{ 'vendor/htmx.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-json-enc.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/idiomorph-ext.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-preload.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-response-targets.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-loading-states.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-sse.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-remove-me.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-class-tools.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-multi-swap.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/htmx-ext-path-deps.js' | static_url }}"></script>
   {# Alpine.js + plugins #}
   <script defer src="{{ 'vendor/alpine-persist.min.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/alpine-anchor.min.js' | static_url }}"></script>

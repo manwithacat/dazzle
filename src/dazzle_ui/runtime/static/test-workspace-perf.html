@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workspace Perf Profile Harness</title>
+
+  <!--
+    Mirrors `templates/base.html`'s script chain so the perf profiler
+    measures realistic parser-blocking + script-execution time. The
+    workspace HTML is hard-coded inline so we don't need a live DB.
+  -->
+
+  <link rel="stylesheet" href="css/dazzle.css">
+
+  <!-- HTMX core + extensions — deferred (matches base.html post-perf-fix) -->
+  <script defer src="vendor/htmx.min.js"></script>
+  <script defer src="vendor/htmx-ext-json-enc.js"></script>
+  <script defer src="vendor/idiomorph-ext.min.js"></script>
+  <script defer src="vendor/htmx-ext-preload.js"></script>
+  <script defer src="vendor/htmx-ext-response-targets.js"></script>
+  <script defer src="vendor/htmx-ext-loading-states.js"></script>
+  <script defer src="vendor/htmx-ext-sse.js"></script>
+  <script defer src="vendor/htmx-ext-remove-me.js"></script>
+  <script defer src="vendor/htmx-ext-class-tools.js"></script>
+  <script defer src="vendor/htmx-ext-multi-swap.js"></script>
+  <script defer src="vendor/htmx-ext-path-deps.js"></script>
+
+  <!-- Alpine plugins + Alpine core — deferred -->
+  <script defer src="vendor/alpine-persist.min.js"></script>
+  <script defer src="vendor/alpine-anchor.min.js"></script>
+  <script defer src="vendor/alpine-collapse.min.js"></script>
+  <script defer src="vendor/alpine-focus.min.js"></script>
+  <script defer src="js/dz-alpine.js"></script>
+  <script defer src="js/dashboard-builder.js"></script>
+  <script defer src="vendor/alpine.min.js"></script>
+
+  <!-- Framework runtime + bridges — deferred -->
+  <script defer src="js/dz-a11y.js"></script>
+  <script defer src="js/dz-islands.js"></script>
+  <script defer src="js/dz-component-bridge.js"></script>
+  <script defer src="js/dz-widget-registry.js"></script>
+  <script defer src="js/pdf-viewer.js"></script>
+  <script defer src="js/dz-debug.js"></script>
+
+  <script>
+    // Mark the start timestamp via the User Timing API so the profiler
+    // can correlate against navigationStart.
+    performance.mark("perf-harness:script-tag-evaluated");
+    document.addEventListener("DOMContentLoaded", () => {
+      performance.mark("perf-harness:dom-content-loaded");
+    });
+    document.addEventListener("alpine:init", () => {
+      performance.mark("perf-harness:alpine-init");
+    });
+    window.addEventListener("load", () => {
+      performance.mark("perf-harness:window-load");
+    });
+  </script>
+</head>
+<body>
+  {# 18-card synthetic workspace mirroring AegisMark's teacher_workspace
+     scale. Each card has the production chrome shape. #}
+  <div class="dz-workspace"
+       x-data="dzDashboardBuilder()"
+       data-workspace-name="perf_harness">
+    <div class="dz-workspace-toolbar">
+      <button @click="resetLayout()" class="dz-workspace-reset">Reset</button>
+      <button @click="save()" class="dz-workspace-save">
+        <span x-show="saveState === 'clean'">Saved</span>
+        <span x-show="saveState === 'dirty'">Save</span>
+      </button>
+    </div>
+    <div class="dz-dashboard-grid"
+         data-grid-container
+         role="application"
+         aria-label="Dashboard card grid">
+
+      <!-- 18 cards, 6/4-col mix, no real region content — body skeletons remain visible -->
+      <div data-card-id="card-0" data-card-region="metrics" data-card-col-span="6" class="dz-card-wrapper is-animating" style="grid-column: span 6 / span 6;" tabindex="0">
+        <article class="dz-card" role="article"><div class="dz-card-header" data-test-id="dz-card-drag-handle"><div class="dz-card-titles"><h3 class="dz-card-title">Metric 0</h3></div><div class="dz-card-actions"><button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button></div></div><div class="dz-card-body"><div class="dz-card-skeleton"><div class="dz-card-skeleton-line w-3-4"></div><div class="dz-card-skeleton-line is-thin"></div><div class="dz-card-skeleton-line is-thin w-5-6"></div></div></div></article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+      <div data-card-id="card-1" data-card-region="activity" data-card-col-span="6" class="dz-card-wrapper is-animating" style="grid-column: span 6 / span 6;" tabindex="0">
+        <article class="dz-card" role="article"><div class="dz-card-header" data-test-id="dz-card-drag-handle"><div class="dz-card-titles"><h3 class="dz-card-title">Activity 1</h3></div><div class="dz-card-actions"><button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button></div></div><div class="dz-card-body"><div class="dz-card-skeleton"><div class="dz-card-skeleton-line w-3-4"></div><div class="dz-card-skeleton-line is-thin"></div><div class="dz-card-skeleton-line is-thin w-5-6"></div></div></div></article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+      <div data-card-id="card-2" data-card-region="tasks" data-card-col-span="4" class="dz-card-wrapper is-animating" style="grid-column: span 4 / span 4;" tabindex="0">
+        <article class="dz-card" role="article"><div class="dz-card-header" data-test-id="dz-card-drag-handle"><div class="dz-card-titles"><h3 class="dz-card-title">Tasks 2</h3></div><div class="dz-card-actions"><button data-test-id="dz-card-remove" class="dz-card-action-button" aria-label="Remove card">×</button></div></div><div class="dz-card-body"><div class="dz-card-skeleton"><div class="dz-card-skeleton-line w-3-4"></div></div></div></article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+      <div data-card-id="card-3" data-card-region="chart" data-card-col-span="8" class="dz-card-wrapper is-animating" style="grid-column: span 8 / span 8;" tabindex="0">
+        <article class="dz-card" role="article"><div class="dz-card-header" data-test-id="dz-card-drag-handle"><div class="dz-card-titles"><h3 class="dz-card-title">Chart 3</h3></div></div><div class="dz-card-body"><div class="dz-card-skeleton"><div class="dz-card-skeleton-line w-3-4"></div></div></div></article>
+        <div class="dz-card-resize" aria-hidden="true"></div>
+      </div>
+      <!-- 14 more cards generated by JS to keep file size manageable -->
+    </div>
+  </div>
+
+  <script>
+    // Synthesise 14 more cards by cloning card-3 to reach 18 total.
+    // We're profiling Alpine init + bridge attach time, so card content
+    // doesn't matter — only the DOM size does. This runs INLINE before
+    // any deferred script executes; Alpine's [x-data] discovery sees the
+    // full 18-card grid.
+    (function () {
+      const grid = document.querySelector("[data-grid-container]");
+      const template = document.querySelector('[data-card-id="card-3"]');
+      for (let i = 4; i < 18; i++) {
+        const clone = template.cloneNode(true);
+        clone.setAttribute("data-card-id", "card-" + i);
+        clone.setAttribute("data-card-region", "region_" + i);
+        const title = clone.querySelector(".dz-card-title");
+        if (title) title.textContent = "Region " + i;
+        grid.appendChild(clone);
+      }
+      performance.mark("perf-harness:18-cards-rendered");
+    })();
+  </script>
+</body>
+</html>

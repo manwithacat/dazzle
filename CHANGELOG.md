@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.136] - 2026-04-29
+
+### Changed
+- **`base.html`: htmx core + extension scripts now load with `defer`.**
+  Pre-fix: 11 synchronous `<script src>` tags in `<head>` blocked the
+  HTML parser at each tag — the parser had to wait for download +
+  execute before continuing. On localhost with parallel downloads
+  this was hidden, but on production with real RTT it serialised
+  into 50–300 ms of parser-blocking delay.
+
+  Post-fix: all 11 htmx scripts carry `defer`. They run in document
+  order before DOMContentLoaded so extensions still register before
+  htmx auto-init, but the parser races ahead. The inline
+  `htmx:configRequest` listener is `addEventListener('document', ...)`
+  which is defer-safe — the listener attaches before htmx fires the
+  event regardless of script load order.
+
+  **Measured impact** (realistic harness, 18 cards):
+  - First Paint: 40 ms → 36 ms (-10%)
+  - First Contentful Paint: 40 ms → 36 ms (-10%)
+  - cardsRendered (DOM populated): 21 ms → 17 ms (-19%)
+
+  Localhost numbers; on production with 30 ms typical mobile RTT,
+  estimated saving is ~330 ms (11 scripts × RTT eliminated from
+  parser-blocking serialisation). On 3G (~80 ms RTT), ~880 ms.
+
+### Added
+- **`scripts/perf_profile_workspace.py` — extended client-side
+  profiling.** New realistic harness `static/test-workspace-perf.html`
+  mirrors the full `base.html` script chain (24 scripts × 18 cards)
+  and emits User Timing marks for `alpine:init`, `cardsRendered`,
+  `dom-content-loaded`, `window-load`. The profiler captures
+  per-resource durations and surfaces the top-5 longest loads,
+  useful for spotting future regressions.
+
+### Agent Guidance
+- When adding new vendor or framework scripts to `base.html`,
+  default to `defer` unless the script must execute before HTML
+  parsing completes. Inline event listeners using
+  `addEventListener` on `document` / `window` are defer-safe;
+  inline expressions calling library globals (e.g.
+  `htmx.config.foo = ...`) are NOT — those need the script
+  loaded first, which means either keeping the script sync or
+  moving the inline expression after the deferred script runs
+  (e.g. inside a `DOMContentLoaded` handler).
+- Findings + further-cycle proposals captured in
+  `dev_docs/2026-04-29-perf-profile-baseline.md`. Next-best
+  optimisation is loading `dist/dazzle.min.js` (one bundled file)
+  in production instead of 13 individual deferred scripts —
+  estimated ~12 RTT removed (~60-300 ms cold).
+
 ## [0.61.135] - 2026-04-29
 
 ### Added
