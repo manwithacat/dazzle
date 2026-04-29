@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.107] - 2026-04-28
+
+### Fixed
+- **#932 — `manifest.storage_defs` now reaches `DazzleBackendApp`** —
+  AegisMark hit a wiring gap adopting the v0.61.106 storage primitive:
+  the manifest parsed `[storage.<name>]` blocks correctly and
+  `_wire_storage_routes()` ran the validator, but the dict never
+  travelled from `manifest` → `ServerConfig` → `DazzleBackendApp`,
+  so apps with declared storages crashed at startup with
+  `Storage validation failed: ... (no [storage.*] blocks declared)`.
+
+  Threaded `storage_defs` through every layer:
+  - `ServerConfig.storage_defs` field added
+  - `build_server_config(..., storage_defs=...)` keyword
+  - `run_unified_server(..., storage_defs=...)` keyword + kwarg in
+    `UnifiedServerConfig`
+  - `run_backend_only(..., storage_defs=...)` keyword
+  - `_serve_combined` and `_serve_backend_only` now pass
+    `mf.storage_defs` from the loaded manifest
+  - `DazzleBackendApp.__init__` falls back to `config.storage_defs`
+    when the kwarg is `None` (matches every other field's precedence)
+
+  6 regression tests in `test_storage_cycle3.py` cover the full
+  manifest → config → builder propagation chain.
+
 ## [0.61.106] - 2026-04-29
 
 ### Added

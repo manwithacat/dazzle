@@ -509,6 +509,7 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
         project_root=ctx.project_root,
         redis_url=ctx.redis_url,
         workers=ctx.workers,
+        storage_defs=getattr(ctx.mf, "storage_defs", None) if ctx.mf else None,
     )
 
 
@@ -664,6 +665,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
         workers=ctx.workers,
         tenant_config=mf.tenant if mf.tenant.isolation != "none" else None,
         local_assets=use_local_assets,
+        storage_defs=getattr(mf, "storage_defs", None),
     )
 
 

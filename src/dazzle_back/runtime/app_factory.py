@@ -339,6 +339,7 @@ def build_server_config(
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
     fragment_sources: dict[str, dict[str, Any]] | None = None,
+    storage_defs: Any = None,  # dict[str, StorageConfig] from manifest (#932)
 ) -> ServerConfig:
     """Build a fully-populated ``ServerConfig`` from an AppSpec.
 
@@ -448,6 +449,7 @@ def build_server_config(
         entity_status_fields=entity_status_fields,
         fragment_sources=fragment_sources,
         tenant_config=tenant_config,
+        storage_defs=dict(storage_defs or {}),
     )
 
 
@@ -880,6 +882,7 @@ def create_app_factory(
         scenarios=[],
         sitespec_data=sitespec_data,
         project_root=project_root,
+        storage_defs=getattr(manifest, "storage_defs", None),
     )
 
     # Build and return the FastAPI app

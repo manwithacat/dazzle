@@ -42,6 +42,7 @@ class UnifiedServerConfig:
     theme_overrides: dict[str, Any] | None = None
     redis_url: str = ""
     tenant_config: Any = None
+    storage_defs: dict[str, Any] | None = None  # #932 — propagated from manifest
 
 
 # =============================================================================
@@ -132,6 +133,7 @@ def run_unified_server(
     workers: int | None = None,
     tenant_config: Any = None,
     local_assets: bool = False,
+    storage_defs: dict[str, Any] | None = None,
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -167,6 +169,7 @@ def run_unified_server(
         theme_overrides = config.theme_overrides
         redis_url = config.redis_url
         tenant_config = config.tenant_config
+        storage_defs = config.storage_defs
     try:
         import uvicorn
 
@@ -221,6 +224,7 @@ def run_unified_server(
         scenarios=scenarios or [],
         sitespec_data=sitespec_data,
         project_root=project_root,
+        storage_defs=storage_defs,
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
@@ -405,6 +409,7 @@ def run_backend_only(
     project_root: Path | None = None,
     redis_url: str = "",
     workers: int | None = None,
+    storage_defs: dict[str, Any] | None = None,
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -449,6 +454,7 @@ def run_backend_only(
         enable_dev_mode=enable_dev_mode,
         sitespec_data=sitespec_data,
         project_root=project_root,
+        storage_defs=storage_defs,
     )
     app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()

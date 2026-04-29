@@ -135,6 +135,11 @@ class ServerConfig:
     # FK field → target entity mapping for dotted-path scope resolution (#556)
     entity_ref_targets: dict[str, dict[str, str]] = field(default_factory=dict)
 
+    # v0.61.107 (#932): per-name [storage.<name>] config blocks from dazzle.toml.
+    # Propagated by build_server_config() so DazzleBackendApp can wire upload-ticket
+    # routes when entities have `field foo: file storage=<name>` bindings.
+    storage_defs: "dict[str, StorageConfig]" = field(default_factory=dict)
+
 
 # =============================================================================
 # Application Builder
@@ -241,7 +246,9 @@ class DazzleBackendApp:
             [Path(d) for d in extra_static_dirs] if extra_static_dirs else []
         )
         # v0.61.106 (#932 cycle 3): storage config + lazy registry.
-        self._storage_defs: dict[str, StorageConfig] = dict(storage_defs or {})
+        # Prefer kwarg, fall back to config — matches every other field's precedence.
+        _resolved_storage_defs = storage_defs if storage_defs is not None else config.storage_defs
+        self._storage_defs: dict[str, StorageConfig] = dict(_resolved_storage_defs or {})
         self._storage_registry: Any = None  # built in _wire_storage_routes()
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}

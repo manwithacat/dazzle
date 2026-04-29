@@ -430,3 +430,70 @@ entity Doc:
         assert resp.status_code == 400
         assert "unknown field" in resp.json()["error"]
         assert resp.json()["available"] == ["source_pdf", "thumbnail"]
+
+
+# ---------------------------------------------------------------------------
+# #932 v0.61.107 — manifest → ServerConfig → DazzleBackendApp wiring
+# ---------------------------------------------------------------------------
+
+
+class TestStorageDefsPropagation:
+    """Regression tests for AegisMark report against v0.61.106:
+    `manifest.storage_defs` was loaded correctly but never reached
+    `DazzleBackendApp`, so `_wire_storage_routes()` raised at startup
+    even though the TOML was right."""
+
+    def test_server_config_carries_storage_defs(self) -> None:
+        from dazzle_back.runtime.server import ServerConfig
+
+        cfg = ServerConfig(storage_defs={"cohort_pdfs": _config("cohort_pdfs")})
+        assert "cohort_pdfs" in cfg.storage_defs
+
+    def test_server_config_default_storage_defs_is_empty(self) -> None:
+        from dazzle_back.runtime.server import ServerConfig
+
+        assert ServerConfig().storage_defs == {}
+
+    def test_build_server_config_threads_storage_defs(self) -> None:
+        from dazzle.core import ir
+        from dazzle_back.runtime.app_factory import build_server_config
+
+        spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
+        defs = {"cohort_pdfs": _config("cohort_pdfs")}
+        cfg = build_server_config(spec, storage_defs=defs)
+        assert cfg.storage_defs == defs
+
+    def test_build_server_config_default_storage_defs(self) -> None:
+        from dazzle.core import ir
+        from dazzle_back.runtime.app_factory import build_server_config
+
+        spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
+        cfg = build_server_config(spec)
+        assert cfg.storage_defs == {}
+
+    def test_dazzle_backend_app_reads_storage_defs_from_config(self) -> None:
+        """The load-bearing path: caller passes storage_defs via
+        ``ServerConfig`` (which is how ``_serve_combined`` does it), not
+        as a kwarg. v0.61.106 ignored the config field entirely."""
+        from dazzle.core import ir
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
+
+        spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
+        defs = {"cohort_pdfs": _config("cohort_pdfs")}
+        builder = DazzleBackendApp(spec, config=ServerConfig(storage_defs=defs))
+        assert "cohort_pdfs" in builder._storage_defs
+
+    def test_kwarg_storage_defs_takes_precedence_over_config(self) -> None:
+        from dazzle.core import ir
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
+
+        spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
+        cfg_defs = {"from_config": _config("from_config")}
+        kwarg_defs = {"from_kwarg": _config("from_kwarg")}
+        builder = DazzleBackendApp(
+            spec,
+            config=ServerConfig(storage_defs=cfg_defs),
+            storage_defs=kwarg_defs,
+        )
+        assert "from_kwarg" in builder._storage_defs
+        assert "from_config" not in builder._storage_defs
