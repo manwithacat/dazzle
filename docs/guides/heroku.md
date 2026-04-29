@@ -80,6 +80,47 @@ heroku ps:scale web=1:standard-2x
 
 Horizontal scaling works out of the box — each dyno runs independent workers with their own connection pools. The advisory lock on migrations ensures only one worker runs schema changes.
 
+## Asset Bundling
+
+`DAZZLE_ENV=production` flips the framework's CSS/JS loading mode from individual files (live-reload friendly, dev-only) to a single bundled file (`/static/dist/dazzle.min.{js,css}`). The bundle is precomputed at framework release time and ships in the dazzle-dsl wheel — no Node toolchain required at slug build time.
+
+Configure via `[ui] assets` in `dazzle.toml`:
+
+```toml
+[ui]
+# "auto"   = bundle when DAZZLE_ENV=production, individual in dev (default)
+# "always" = bundle in every environment (perf testing / staging)
+# "never"  = individual scripts always (live-reload during prod debugging)
+assets = "auto"
+```
+
+CLI overrides for one-off testing:
+
+```bash
+dazzle serve --bundle      # force bundled regardless of manifest
+dazzle serve --no-bundle   # force individual regardless of manifest
+```
+
+**Smoke-test bundled mode locally before deploying** so you catch any project-side custom JS/CSS that doesn't survive bundling:
+
+```bash
+DAZZLE_ENV=production dazzle serve --local
+# Then load the app in a browser, open DevTools → Network, verify
+# /static/dist/dazzle.min.js and /static/dist/dazzle.min.css both
+# return 200 with the framework banner at the top.
+```
+
+**On Heroku** the bundle ships in the wheel; no slug-build step is required. Once you've set `DAZZLE_ENV=production` and deployed v0.61.141 or later, every page automatically loads the bundle. If you ever need to revert to individual scripts (e.g. to reproduce a dev-mode bug), set `assets = "never"` in `dazzle.toml` or pass `--no-bundle` to `dazzle serve`.
+
+### Trade-offs
+
+| Mode | Pros | Cons |
+|---|---|---|
+| Bundled | One CSS + one JS request; smaller wire transfer; faster first paint on cold connections | Source maps less granular; live-reload no longer per-file |
+| Individual | Per-file source maps; live-reload reloads only what changed | ~24 separate requests; slower cold first paint on real RTT |
+
+The default `auto` mode picks bundled in production and individual in dev — appropriate for most projects. Override only if you've measured a specific reason.
+
 ## File Storage
 
 Heroku's filesystem is ephemeral. For file uploads, configure S3:

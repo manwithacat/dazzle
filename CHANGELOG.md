@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.142] - 2026-04-29
+
+### Documentation
+- **`docs/guides/heroku.md`: asset-bundling section.** Captures
+  the `[ui] assets` setting introduced in v0.61.137 (and fixed
+  in #950): when each mode applies, how to smoke-test bundled
+  mode locally before deploying, the trade-off table between
+  bundled and individual modes, and the Heroku-specific note that
+  the bundle ships in the wheel (no Node toolchain at slug build).
+
+  Closes the gap between the bundling primitive shipping and
+  project authors knowing when / how to use it. Pre-#950 a project
+  author bumping past v0.61.137 could hit the production 404
+  regression; the docs now document both the feature and how to
+  verify it locally before pushing.
+
 ## [0.61.141] - 2026-04-29
 
 ### Fixed
