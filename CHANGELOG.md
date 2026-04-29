@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.127] - 2026-04-29
+
+### Added
+- **#944 cycle 6a — optional footer slot on the PDF viewer
+  component.** Projects can now compose footer content (page
+  counter, zoom buttons, panel toggle pills, custom action
+  buttons) without overriding the entire `pdf_viewer.html`
+  template. Two new include parameters:
+
+  - `footer_slot_html` — Jinja-safe HTML string rendered before
+    the keyboard legend in the same flex row.
+  - `show_kbd_legend` — defaults to `True`; pass `False` to
+    suppress the static cycle 1b legend (useful when the slot
+    already advertises every binding).
+
+  ```jinja
+  {% include "components/pdf_viewer.html" with
+       src="/api/storage/cohort_pdfs/proxy?key=" + entity.source_pdf,
+       back_url="/app/manuscripts",
+       footer_slot_html=footer_html %}
+  ```
+
+  Backwards compatible: existing adopters who don't pass either
+  parameter see the cycle 1b footer unchanged. Slot HTML carries
+  the same trust contract as cycle 2a's `panel_html` — projects
+  render their own templates with autoescape and pass the
+  resulting string in.
+
+### Agent Guidance
+- The PDF viewer footer now accepts a project-supplied
+  `footer_slot_html` slot. When a project needs page counters,
+  zoom controls, or pill-style toggles in the footer, pass the
+  rendered HTML rather than overriding the whole component. Set
+  `show_kbd_legend=False` only when the slot already advertises
+  every binding the user can press.
+
 ## [0.61.126] - 2026-04-29
 
 ### Added

@@ -178,6 +178,17 @@
   color: var(--colour-border);
 }
 
+/* #944 cycle 6a — optional project-supplied footer slot.
+ * Renders before the keyboard legend in the same flex row. The
+ * slot's children are project-shaped (page counter, zoom buttons,
+ * pill toggles, etc); chrome stays minimal so projects don't have
+ * to compete with framework layout. */
+.dz-pdf-viewer-footer-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 /* Hide the back-link label on narrow viewports to keep the header
  * tidy — the icon alone communicates the action. */
 @media (max-width: 640px) {

@@ -334,3 +334,70 @@ class TestPanelSlot:
         assert "data-dz-panel-close" in html
         assert "dz-pdf-viewer-panel-close" in html
         assert "<button" in html
+
+
+# ---------------------------------------------------------------------------
+# #944 cycle 6a — footer slot
+# ---------------------------------------------------------------------------
+
+
+class TestFooterSlot:
+    def _render(self, jinja_env: Any, **kwargs: Any) -> str:
+        tmpl = jinja_env.from_string('{% include "components/pdf_viewer.html" %}')
+        return tmpl.render(**kwargs)
+
+    def test_slot_omitted_by_default(self, jinja_env: Any) -> None:
+        """No ``footer_slot_html`` ⇒ no slot div. Matches cycle 1b
+        backwards-compat — projects already on the include don't see
+        layout drift."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        assert "dz-pdf-viewer-footer-slot" not in html
+
+    def test_slot_renders_html_unescaped(self, jinja_env: Any) -> None:
+        """``footer_slot_html`` is project-rendered markup; the
+        framework passes it through ``| safe`` so HTML structure
+        survives. Same trust contract as cycle 2a's ``panel_html``."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            footer_slot_html='<span class="page-counter">Page 3 / 14</span>',
+        )
+        assert "dz-pdf-viewer-footer-slot" in html
+        assert '<span class="page-counter">Page 3 / 14</span>' in html
+
+    def test_kbd_legend_renders_by_default(self, jinja_env: Any) -> None:
+        """Default behaviour preserves the cycle 1b legend so existing
+        adopters don't have to opt back into it."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        # The Esc kbd is unique to the legend (back-button has no kbd)
+        assert 'class="dz-pdf-viewer-kbd">Esc<' in html
+
+    def test_kbd_legend_suppressed_when_disabled(self, jinja_env: Any) -> None:
+        """``show_kbd_legend=False`` opts out of the static legend.
+        Used when the slot already advertises every binding."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            show_kbd_legend=False,
+        )
+        assert 'class="dz-pdf-viewer-kbd">Esc<' not in html
+
+    def test_slot_and_legend_can_coexist(self, jinja_env: Any) -> None:
+        """The slot renders before the keyboard legend so projects
+        adding a page counter don't lose the discoverable shortcuts."""
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            footer_slot_html='<button class="zoom-in">+</button>',
+        )
+        # Slot div appears
+        assert "dz-pdf-viewer-footer-slot" in html
+        # Legend still present
+        assert 'class="dz-pdf-viewer-kbd">Esc<' in html
+        # Slot is positioned before the kbd legend
+        slot_idx = html.index("dz-pdf-viewer-footer-slot")
+        legend_idx = html.index('class="dz-pdf-viewer-kbd">Esc<')
+        assert slot_idx < legend_idx

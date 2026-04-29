@@ -178,6 +178,20 @@
   </div>
 
   <footer class="dz-pdf-viewer-footer" aria-label="Keyboard shortcuts">
+    {# #944 cycle 6a — optional footer slot for project-specific
+       controls (page counter, zoom buttons, panel toggle pills,
+       custom action buttons). Renders before the keyboard legend.
+       Project HTML is trusted ({{ ... | safe }}) — projects render
+       their own templates with autoescape, then pass the resulting
+       HTML in as a string. Same trust contract as cycle 2a's
+       ``panel_html``. #}
+    {% if footer_slot_html %}
+    <div class="dz-pdf-viewer-footer-slot">{{ footer_slot_html | safe }}</div>
+    {% endif %}
+    {# ``show_kbd_legend`` defaults to true; pass false explicitly to
+       hide the cycle 1b legend (e.g. when the slot already
+       advertises every binding). #}
+    {% if show_kbd_legend is not defined or show_kbd_legend %}
     <kbd class="dz-pdf-viewer-kbd">Esc</kbd>
     <span class="dz-pdf-viewer-kbd-label">Back</span>
     {% if prev_url or next_url %}
@@ -191,6 +205,7 @@
     <span class="dz-pdf-viewer-kbd-sep">·</span>
     <kbd class="dz-pdf-viewer-kbd">p</kbd>
     <span class="dz-pdf-viewer-kbd-label">{{ panel_label | default("Panel") }}</span>
+    {% endif %}
     {% endif %}
   </footer>
 </div>
