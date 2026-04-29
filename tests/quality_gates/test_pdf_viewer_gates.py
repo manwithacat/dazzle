@@ -553,6 +553,43 @@ class TestFocusVisibility:
             assert before != after, f"dark mode: focus on {sel!r} invisible — {before}"
         page.close()
 
+    def test_focus_visible_in_forced_colors(self, browser: Any, server: str) -> None:
+        """Windows High Contrast / Forced Colors mode: ``box-shadow``
+        is suppressed by user-agent default. A focus indicator
+        relying solely on box-shadow disappears for these users.
+        Component must provide an ``outline`` fallback inside
+        ``@media (forced-colors: active)``.
+
+        Playwright emulates forced colours via the
+        ``forced_colors`` context option. We rebuild the page with
+        that option on and re-check the focus signature: outline
+        MUST be present (system colour), box-shadow may or may not
+        be."""
+        ctx = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            forced_colors="active",
+        )
+        page = ctx.new_page()
+        page.goto(f"{server}?variant=both")
+        page.wait_for_function(
+            "window.pdfViewerGates && window.pdfViewerGates.widgetMounted().bridgePresent",
+            timeout=5000,
+        )
+        for sel in self._SELECTORS:
+            page.focus(sel)
+            page.wait_for_timeout(20)
+            sig = _focus_signature(page, sel)
+            has_outline = sig["outlineStyle"] not in ("none", "") and sig["outlineWidth"] not in (
+                "0px",
+                "",
+            )
+            assert has_outline, (
+                f"forced-colors mode: focus on {sel!r} has no outline; "
+                f"sig={sig}. Add `@media (forced-colors: active)` block "
+                "with outline so Windows High Contrast users see focus."
+            )
+        ctx.close()
+
     def test_focus_uses_real_ring_indicator(self, browser: Any, server: str) -> None:
         """Stricter accessibility contract: focus must produce either
         a non-``none`` outline OR a non-``none`` box-shadow — not

@@ -103,6 +103,20 @@
   box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
+/* Forced-colors / Windows High Contrast mode: the box-shadow rings
+ * above are suppressed by the user agent, leaving keyboard users
+ * with no focus indicator. Re-introduce a real outline using the
+ * system ``Highlight`` colour so the chrome stays accessible.
+ * Same fallback applies to both interactive elements. */
+@media (forced-colors: active) {
+  .dz-pdf-viewer-back:focus-visible,
+  .dz-pdf-viewer-nav-link:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
 .dz-pdf-viewer-nav-link[aria-disabled="true"] {
   opacity: 0.4;
   pointer-events: none;

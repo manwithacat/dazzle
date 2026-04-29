@@ -1,4 +1,4 @@
-/* dazzle v0.61.119 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.120 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5456,6 +5456,14 @@ background: var(--colour-bg);
 color: var(--colour-text);
 outline: none;
 box-shadow: 0 0 0 2px var(--colour-brand);
+}
+@media (forced-colors: active) {
+.dz-pdf-viewer-back:focus-visible,
+.dz-pdf-viewer-nav-link:focus-visible {
+outline: 2px solid Highlight;
+outline-offset: 2px;
+box-shadow: none;
+}
 }
 .dz-pdf-viewer-nav-link[aria-disabled="true"] {
 opacity: 0.4;

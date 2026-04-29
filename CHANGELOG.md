@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.120] - 2026-04-29
+
+### Fixed
+- **#942 cycle 1g — focus rings remain visible in Windows High
+  Contrast / Forced Colors mode.** Cycle 1f's brand-coloured
+  `box-shadow` rings disappear under `forced-colors: active`
+  because the user agent suppresses box-shadows in that mode,
+  leaving keyboard users with zero focus indicator. Added a
+  forced-colors block that swaps in `outline: 2px solid Highlight`
+  (system-respecting colour) with `outline-offset: 2px`. Real
+  outline survives forced-colors stripping; system `Highlight`
+  colour respects user contrast settings.
+
+  This is the framework's first explicit forced-colors handling;
+  no other component CSS references the media query today. The
+  pattern is reusable — drop the same `@media (forced-colors:
+  active)` block into any component whose focus rings rely on
+  `box-shadow`.
+
+### Added
+- **Forced-colors gate** (`test_focus_visible_in_forced_colors`).
+  Playwright's `forced_colors="active"` context option emulates
+  the user-agent forced-colors state. Asserts every interactive
+  chrome element has a non-`none` outline under that mode. Caught
+  the cycle 1f weakness immediately when added; the fix landed
+  alongside.
+
+### Agent Guidance
+- Component CSS that relies on `box-shadow` for focus must include
+  a `@media (forced-colors: active)` fallback that sets a real
+  `outline` using the system `Highlight` colour. Box-shadow alone
+  is invisible to ~5% of users (Windows High Contrast users + any
+  forced-colors active configuration).
+
 ## [0.61.119] - 2026-04-29
 
 ### Fixed
