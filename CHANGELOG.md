@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.124] - 2026-04-29
+
+### Added
+- **#942 cycle 2c — panel scroll containment gates.** Long
+  related-entity content (marking results, audit log entries, AO
+  breakdowns — common in real adoption) must scroll within the
+  panel-body container, leaving the panel header (title + close
+  button) pinned at the top and the chrome behind the panel
+  unaffected.
+
+  Four new Playwright gates pin the contract:
+  - `test_panel_body_overflow_when_content_tall` — verifies
+    `scrollHeight > clientHeight` when the panel body holds a
+    long block (`?long_panel=1` harness variant adds 80
+    paragraphs to the panel body)
+  - `test_panel_header_stays_when_body_scrolls` — programmatically
+    scrolls the panel-body to its bottom; the panel-header's
+    bounding-rect top must not shift
+  - `test_close_button_reachable_after_scroll` — close button
+    stays in viewport after the panel-body scrolls AND remains
+    clickable
+  - `test_chrome_behind_panel_unaffected_by_panel_scroll` —
+    scrolling the panel-body must not move the chrome's
+    header/footer behind it
+
+  No new bugs surfaced — the cycle 2a CSS already gets this right
+  (panel grid with `auto 1fr` rows + `overflow-y: auto` on the
+  body row). Permanent regression coverage now.
+
+  47 PDF viewer gates total pass (29 cycle 1 + 9 cycle 2a + 5
+  cycle 2b + 4 cycle 2c).
+
 ## [0.61.123] - 2026-04-29
 
 ### Fixed

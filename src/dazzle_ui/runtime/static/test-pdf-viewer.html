@@ -202,7 +202,11 @@
               </svg>
             </button>
           </header>
-          <div class="dz-pdf-viewer-panel-body">
+          <div class="dz-pdf-viewer-panel-body" id="harness-panel-body">
+            <!-- Default short content; ?long_panel=1 (handled by
+                 the bootstrap below) replaces with a deliberately
+                 tall block so cycle 2c gates can exercise overflow
+                 scrolling. -->
             <p>Test panel content (harness)</p>
           </div>
         </aside>
@@ -246,6 +250,30 @@
         var variant = params.get("variant") || "both";
         var dark = params.get("dark") === "1";
         var useEmbed = params.get("embed") === "1";
+        var longPanel = params.get("long_panel") === "1";
+
+        // #942 cycle 2c: long-content variant for overflow gates.
+        // Replaces the panel body's default short content with a
+        // deliberately tall block so the gate can confirm the body
+        // scrolls inside its own container, leaving the header
+        // (and close button) pinned at the top.
+        if (longPanel) {
+          var panelBody = document.getElementById("harness-panel-body");
+          if (panelBody) {
+            var paragraphs = [];
+            for (var i = 0; i < 80; i++) {
+              paragraphs.push("<p>Long panel paragraph " + (i + 1) + "</p>");
+            }
+            // textContent on the wrapper, then per-paragraph append
+            // — avoids any innerHTML pattern. Pure DOM construction.
+            panelBody.textContent = "";
+            for (var j = 0; j < 80; j++) {
+              var p = document.createElement("p");
+              p.textContent = "Long panel paragraph " + (j + 1);
+              panelBody.appendChild(p);
+            }
+          }
+        }
 
         // Real-embed variant: swap the harness's body stub for an
         // actual <embed type="application/pdf"> pointing at

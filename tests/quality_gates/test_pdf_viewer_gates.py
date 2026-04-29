@@ -81,13 +81,15 @@ def _new_page(
     variant: str = "both",
     dark: bool = False,
     embed: bool = False,
+    long_panel: bool = False,
 ) -> Any:
     """Open the harness in a fresh page and wait for the bridge to
     register the pdf-viewer widget. ``variant`` controls sibling-
     nav presence; ``dark`` mirrors the cycle-1d theme toggle;
-    ``embed`` swaps the body's div stub for an actual
-    ``<embed type="application/pdf" src="about:blank">`` so cycle
-    1h gates can exercise the production layout pathway."""
+    ``embed`` swaps the body's div stub for a real
+    ``<embed type="application/pdf">``; ``long_panel`` replaces the
+    panel content with a deliberately-tall block so cycle 2c
+    overflow gates can exercise scrolling."""
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
     qs = f"?variant={variant}"
@@ -95,8 +97,9 @@ def _new_page(
         qs += "&dark=1"
     if embed:
         qs += "&embed=1"
+    if long_panel:
+        qs += "&long_panel=1"
     page.goto(f"{server}{qs}")
-    # Bridge is loaded `defer`; wait for the registry to be present.
     page.wait_for_function(
         "window.pdfViewerGates && window.pdfViewerGates.widgetMounted().bridgePresent",
         timeout=5000,
@@ -926,4 +929,124 @@ class TestPanelFocusManagement:
         assert not any(b for b in bands if b is not None), (
             f"background bands must NOT be inert after panel close: {bands}"
         )
+        page.close()
+
+
+# ---------------------------------------------------------------------------
+# Gate 11 — panel scroll containment (#942 cycle 2c)
+# ---------------------------------------------------------------------------
+
+
+class TestPanelScrollContainment:
+    """When project content overflows the panel viewport, the
+    panel-body must scroll within itself — the panel header (with
+    title + close button) stays pinned at the top, and the chrome
+    behind the panel doesn't move. Pinned because long lists of
+    related-entity rows (marking results, audit log entries, AO
+    breakdowns) are common and the chrome must remain reachable
+    however far the user scrolls."""
+
+    def test_panel_body_overflow_when_content_tall(self, browser: Any, server: str) -> None:
+        """Long-content variant: scrollHeight > clientHeight on
+        the panel-body — overflow exists, ready to scroll."""
+        page = _new_page(browser, server, long_panel=True)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        sizes = page.evaluate(
+            """() => {
+                const body = document.getElementById('harness-panel-body');
+                return {
+                    scrollHeight: body.scrollHeight,
+                    clientHeight: body.clientHeight,
+                };
+            }"""
+        )
+        assert sizes["scrollHeight"] > sizes["clientHeight"], (
+            f"long content should overflow panel-body; sizes={sizes}"
+        )
+        page.close()
+
+    def test_panel_header_stays_when_body_scrolls(self, browser: Any, server: str) -> None:
+        """Programmatically scroll the panel-body to its bottom;
+        the panel-header's bounding rect must not shift. Catches
+        the class of bug where the panel scrolls AS A WHOLE
+        (header disappears) rather than the body scrolling within
+        a container."""
+        page = _new_page(browser, server, long_panel=True)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        before = page.evaluate(
+            "document.querySelector('.dz-pdf-viewer-panel-header').getBoundingClientRect().top"
+        )
+        page.evaluate(
+            """() => {
+                const body = document.getElementById('harness-panel-body');
+                body.scrollTop = body.scrollHeight;
+            }"""
+        )
+        page.wait_for_timeout(50)
+        after = page.evaluate(
+            "document.querySelector('.dz-pdf-viewer-panel-header').getBoundingClientRect().top"
+        )
+        assert before == pytest.approx(after, abs=1), (
+            f"panel-header must not move when body scrolls; before={before} after={after}"
+        )
+        page.close()
+
+    def test_close_button_reachable_after_scroll(self, browser: Any, server: str) -> None:
+        """After scrolling the panel-body, the close button must
+        still be visible AND clickable — keyboard users using j/k
+        scroll within the panel rely on the close button staying
+        anchored."""
+        page = _new_page(browser, server, long_panel=True)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        page.evaluate(
+            """() => {
+                const body = document.getElementById('harness-panel-body');
+                body.scrollTop = body.scrollHeight;
+            }"""
+        )
+        page.wait_for_timeout(50)
+        # Close button still in viewport.
+        rect = page.evaluate(
+            "document.getElementById('harness-panel-close').getBoundingClientRect()"
+        )
+        viewport_height = page.viewport_size["height"]
+        assert 0 <= rect["top"] < viewport_height, (
+            f"close button must stay in viewport after scroll; "
+            f"rect={rect} viewport_height={viewport_height}"
+        )
+        # And clicking it actually closes the panel.
+        page.locator("#harness-panel-close").click()
+        page.wait_for_timeout(250)
+        assert not _panel_visible(page), (
+            "close button must remain functional after panel-body scroll"
+        )
+        page.close()
+
+    def test_chrome_behind_panel_unaffected_by_panel_scroll(
+        self, browser: Any, server: str
+    ) -> None:
+        """Scrolling inside the panel must not affect the chrome
+        bands behind it — the body PDF is still rendering at its
+        original scroll position. Only the panel-body's own
+        scroll container moves."""
+        page = _new_page(browser, server, long_panel=True)
+        rects_before = page.evaluate("window.pdfViewerGates.chromeRectangles()")
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        page.evaluate(
+            """() => {
+                const body = document.getElementById('harness-panel-body');
+                body.scrollTop = body.scrollHeight;
+            }"""
+        )
+        page.wait_for_timeout(50)
+        rects_after = page.evaluate("window.pdfViewerGates.chromeRectangles()")
+        for band in ("header", "footer"):
+            assert rects_before[band]["top"] == rects_after[band]["top"], (
+                f"{band} top moved during panel scroll: "
+                f"{rects_before[band]['top']} → {rects_after[band]['top']}"
+            )
         page.close()
