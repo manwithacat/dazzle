@@ -264,23 +264,29 @@
   transition: background var(--duration-base) var(--ease-out);
 }
 
+.dz-pdf-viewer-panel-close {
+  /* `<button>`-styled like a borderless icon affordance. */
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
 .dz-pdf-viewer-panel-close:hover {
   background: var(--colour-surface);
   color: var(--colour-text);
 }
 
-.dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
-  .dz-pdf-viewer-panel-close {
-  /* Surface focus on the toggle as a ring on the close affordance —
-   * the toggle itself is visually-hidden so its native ring is
-   * invisible. Same brand-coloured pattern as cycle 1f. */
+.dz-pdf-viewer-panel-close:focus-visible {
+  /* Same framework focus-ring convention as the back/nav buttons
+   * (cycle 1f). The button is the actual focus target now (not a
+   * visually-hidden checkbox), so the ring lands directly on the
+   * affordance. */
   outline: none;
   box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 @media (forced-colors: active) {
-  .dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
-    .dz-pdf-viewer-panel-close {
+  .dz-pdf-viewer-panel-close:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
     box-shadow: none;

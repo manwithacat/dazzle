@@ -290,7 +290,11 @@ class TestPanelSlot:
         assert ">\n          Marking\n        <" in html or ">Marking<" in html
         assert ">p<" in html  # footer kbd hint
         assert 'id="dz-panel-toggle"' in html
-        assert 'for="dz-panel-toggle"' in html
+        # Cycle 2b: close affordance is now a `<button data-dz-panel-close>`
+        # (was `<label for>` in cycle 2a) so it's tabbable and receives
+        # focus correctly when the panel opens.
+        assert "data-dz-panel-close" in html
+        assert "<button" in html  # close button rendered
 
     def test_panel_label_defaults_to_related(self, jinja_env: Any) -> None:
         html = self._render(
@@ -315,15 +319,18 @@ class TestPanelSlot:
         )
         assert '<ul><li class="x">item</li></ul>' in html
 
-    def test_panel_close_label_links_to_toggle(self, jinja_env: Any) -> None:
-        """The close affordance is a `<label for="dz-panel-toggle">` —
-        clicking it flips the checkbox via the native browser binding.
-        No JS required for the close path."""
+    def test_panel_close_button_carries_data_hook(self, jinja_env: Any) -> None:
+        """Cycle 2b: close affordance is a ``<button>`` with a
+        ``data-dz-panel-close`` hook the bridge JS uses to wire
+        click → toggle. Real button is tabbable and receives
+        ``focus()`` correctly (the cycle 2a label-based form silently
+        no-op'd ``focus()``, leaving keyboard users stranded)."""
         html = self._render(
             jinja_env,
             src="/x",
             back_url="/back",
             panel_html="<p>x</p>",
         )
-        assert 'for="dz-panel-toggle"' in html
+        assert "data-dz-panel-close" in html
         assert "dz-pdf-viewer-panel-close" in html
+        assert "<button" in html

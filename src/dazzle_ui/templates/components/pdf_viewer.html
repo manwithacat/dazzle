@@ -142,9 +142,16 @@
         <h2 class="dz-pdf-viewer-panel-title">
           {{ panel_label | default("Related") }}
         </h2>
-        <label
-          for="dz-panel-toggle"
+        {# Close button — `<button>` (not `<label for>`) so it's
+           tabbable and receives keyboard focus correctly when the
+           panel opens. The bridge handler (#942 cycle 2b) intercepts
+           clicks on this button and flips the toggle. The
+           `data-dz-panel-close` hook lets the JS find the button
+           without coupling to the cosmetic class name. #}
+        <button
+          type="button"
           class="dz-pdf-viewer-panel-close"
+          data-dz-panel-close
           aria-label="Close panel"
         >
           <svg
@@ -161,7 +168,7 @@
             <path d="M18 6 6 18"></path>
             <path d="m6 6 12 12"></path>
           </svg>
-        </label>
+        </button>
       </header>
       <div class="dz-pdf-viewer-panel-body">
         {{ panel_html | safe }}

@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.123] - 2026-04-29
+
+### Fixed
+- **#942 cycle 2b — panel close affordance is now a real
+  `<button>`, not a `<label for="dz-panel-toggle">`.** Cycle 2a
+  used the label-checkbox pattern to keep the close-on-click path
+  CSS-only — but `<label>` isn't focusable by default, so
+  programmatic `focusFirstInPanel()` calls silently no-op'd. The
+  panel "opened" but focus stayed on the visually-hidden checkbox
+  (which `<label>` had just toggled), leaving keyboard users
+  stranded. Caught immediately by the new cycle 2b focus-management
+  gates.
+
+  Switched to `<button type="button" data-dz-panel-close>`. Real
+  button is tabbable, `focus()` works, and the bridge handler
+  intercepts the click to flip the toggle (one extra line of JS,
+  worth it for tabbable focus). The CSS-only-close-for-mouse path
+  is gone, but JS is loaded universally for the keyboard handler
+  anyway.
+
+### Added
+- **Panel focus management.** When the panel opens:
+  - The element that had focus is captured (typically the back link
+    or the body where `p` was pressed)
+  - Focus moves to the close button so screen-reader / keyboard
+    users know the panel appeared
+  - `inert` is set on `.dz-pdf-viewer-header`,
+    `.dz-pdf-viewer-footer`, and `.dz-pdf-viewer-embed` so Tab
+    inside the panel can't leak back to the chrome behind it
+  When it closes (via `p`, `Esc`, or close-button click):
+  - `inert` is cleared on the chrome bands
+  - Focus is restored to the element captured on open
+
+  5 new Playwright gates pin all four behaviours plus the button-
+  vs-label assertion that drove the cycle 2b discovery.
+
+  43 PDF viewer gates total pass (29 cycle 1 + 9 cycle 2a + 5
+  cycle 2b).
+
+### Agent Guidance
+- When wiring focus management into a CSS-only show/hide
+  component, the close affordance must be a tabbable element —
+  `<button>` (not `<label>`) so `focus()` works. The
+  label-checkbox pattern is fine for purely-mouse interactions
+  but breaks down the moment focus management arrives.
+
 ## [0.61.122] - 2026-04-29
 
 ### Added

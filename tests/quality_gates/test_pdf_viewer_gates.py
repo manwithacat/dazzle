@@ -822,3 +822,108 @@ class TestPanelSlot:
         assert rect["width"] == pytest.approx(480, abs=2)
         page.screenshot(path=str(SCREENSHOT_DIR / "panel-mobile.png"))
         page.close()
+
+
+# ---------------------------------------------------------------------------
+# Gate 10 — panel focus management (#942 cycle 2b)
+# ---------------------------------------------------------------------------
+
+
+class TestPanelFocusManagement:
+    """When the panel opens, focus moves INTO the panel so keyboard
+    / screen-reader users know it appeared. When it closes, focus
+    restores to the element that was active when it opened. Tab
+    inside the open panel doesn't leak to the chrome behind
+    (achieved via ``inert`` on header/footer/embed)."""
+
+    def test_close_button_is_focusable_button_element(self, browser: Any, server: str) -> None:
+        """Close affordance must be a real ``<button>`` (not a
+        ``<label>``) so it's tabbable and ``focus()`` works on it.
+        Caught the cycle 2a footgun where the label-based close
+        silently no-op'd ``closeBtn.focus()``."""
+        page = _new_page(browser, server)
+        tag_name = page.evaluate("document.getElementById('harness-panel-close').tagName")
+        assert tag_name == "BUTTON", f"close affordance must be <button>, got <{tag_name.lower()}>"
+        page.close()
+
+    def test_focus_moves_to_close_on_open(self, browser: Any, server: str) -> None:
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        active_class = page.evaluate("document.activeElement.className")
+        assert "panel-close" in active_class, (
+            f"focus must move to close button on panel open; active class={active_class!r}"
+        )
+        page.close()
+
+    def test_focus_restores_on_close(self, browser: Any, server: str) -> None:
+        """Focus snapshot before open → restored after close. Test
+        sets up a known-focusable element (the back link), opens
+        the panel, closes it, asserts focus returned to back link."""
+        page = _new_page(browser, server)
+        page.focus(".dz-pdf-viewer-back")
+        page.wait_for_timeout(20)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        assert "panel-close" in page.evaluate("document.activeElement.className")
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        active_class = page.evaluate("document.activeElement.className")
+        assert "dz-pdf-viewer-back" in active_class, (
+            f"focus must restore to back link after panel close; active class={active_class!r}"
+        )
+        page.close()
+
+    def test_background_is_inert_when_panel_open(self, browser: Any, server: str) -> None:
+        """Header / footer / embed are marked ``inert`` when the
+        panel is open so Tab from inside the panel doesn't leak
+        back to the chrome bands behind it."""
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        bands = page.evaluate(
+            """() => {
+                const sels = [
+                    ".dz-pdf-viewer-header",
+                    ".dz-pdf-viewer-footer",
+                    ".dz-pdf-viewer-embed",
+                ];
+                return sels.map(s => {
+                    const el = document.querySelector(s);
+                    return el ? el.inert : null;
+                });
+            }"""
+        )
+        # Embed may be null in the harness (it's a div stub by
+        # default, no .dz-pdf-viewer-embed selector match), so
+        # filter to non-null and assert all true.
+        observed = [b for b in bands if b is not None]
+        assert observed and all(observed), (
+            f"all background bands present must be inert when panel open: {bands}"
+        )
+        page.close()
+
+    def test_background_inert_clears_on_close(self, browser: Any, server: str) -> None:
+        """Closing the panel must remove ``inert`` so the chrome
+        becomes interactive again."""
+        page = _new_page(browser, server)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        page.keyboard.press("p")
+        page.wait_for_timeout(250)
+        bands = page.evaluate(
+            """() => {
+                const sels = [
+                    ".dz-pdf-viewer-header",
+                    ".dz-pdf-viewer-footer",
+                ];
+                return sels.map(s => {
+                    const el = document.querySelector(s);
+                    return el ? el.inert : null;
+                });
+            }"""
+        )
+        assert not any(b for b in bands if b is not None), (
+            f"background bands must NOT be inert after panel close: {bands}"
+        )
+        page.close()

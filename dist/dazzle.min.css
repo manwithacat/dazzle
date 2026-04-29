@@ -1,4 +1,4 @@
-/* dazzle v0.61.122 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.61.123 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5567,18 +5567,21 @@ border-radius: var(--radius-sm);
 cursor: pointer;
 transition: background var(--duration-base) var(--ease-out);
 }
+.dz-pdf-viewer-panel-close {
+background: transparent;
+border: 0;
+cursor: pointer;
+}
 .dz-pdf-viewer-panel-close:hover {
 background: var(--colour-surface);
 color: var(--colour-text);
 }
-.dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
-.dz-pdf-viewer-panel-close {
+.dz-pdf-viewer-panel-close:focus-visible {
 outline: none;
 box-shadow: 0 0 0 2px var(--colour-brand);
 }
 @media (forced-colors: active) {
-.dz-pdf-viewer-panel-toggle:focus-visible + .dz-pdf-viewer-panel
-.dz-pdf-viewer-panel-close {
+.dz-pdf-viewer-panel-close:focus-visible {
 outline: 2px solid Highlight;
 outline-offset: 2px;
 box-shadow: none;
