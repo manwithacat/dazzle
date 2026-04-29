@@ -608,3 +608,125 @@ class TestMultiPanelJsController:
         one at a time."""
         source = self._load()
         assert "closeOtherPanels" in source
+
+
+# ---------------------------------------------------------------------------
+# #943 cycle 5c — keyboard cheat-sheet overlay
+# ---------------------------------------------------------------------------
+
+
+class TestHelpOverlay:
+    def _render(self, jinja_env: Any, **kwargs: Any) -> str:
+        tmpl = jinja_env.from_string('{% include "components/pdf_viewer.html" %}')
+        return tmpl.render(**kwargs)
+
+    def test_dialog_renders_with_help_overlay_attribute(self, jinja_env: Any) -> None:
+        """The overlay is a `<dialog>` with `data-dz-help-overlay`
+        attribute the bridge JS uses to find it."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        assert "<dialog" in html
+        assert "data-dz-help-overlay" in html
+        assert 'class="dz-pdf-viewer-help"' in html
+
+    def test_help_close_button_carries_data_hook(self, jinja_env: Any) -> None:
+        """Cycle 2b's data-hook convention: the close button carries
+        `data-dz-help-close` so the bridge can find it without
+        coupling to the cosmetic class name."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        assert "data-dz-help-close" in html
+
+    def test_help_lists_question_mark_binding(self, jinja_env: Any) -> None:
+        """The cheat-sheet documents itself: `?` is one of the
+        bindings listed inside the dialog."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        # The footer chip too — both should reference `?`
+        assert "<kbd>?</kbd>" in html
+
+    def test_help_lists_panel_keys_when_panels_set(self, jinja_env: Any) -> None:
+        html = self._render(
+            jinja_env,
+            src="/x",
+            back_url="/back",
+            panels=[
+                {"name": "marking", "label": "Marking", "key": "m", "html": "x"},
+                {"name": "feedback", "label": "Feedback", "key": "f", "html": "y"},
+            ],
+        )
+        # Each panel's key + label appears in the dialog row
+        assert "<kbd>m</kbd>" in html
+        assert "Toggle Marking" in html
+        assert "<kbd>f</kbd>" in html
+        assert "Toggle Feedback" in html
+
+    def test_help_omits_sibling_rows_when_no_prev_or_next(self, jinja_env: Any) -> None:
+        """When neither prev nor next is set, the j/k rows are
+        absent. Avoids advertising shortcuts that won't fire."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        # The dialog content shouldn't list j/k as bindings when there
+        # are no siblings. The footer chips are already gated on
+        # prev_url/next_url; the dialog must follow the same rule.
+        # Find the dialog block and check it.
+        dialog_start = html.index("<dialog")
+        dialog_end = html.index("</dialog>", dialog_start)
+        dialog_block = html[dialog_start:dialog_end]
+        assert "<kbd>j</kbd>" not in dialog_block
+        assert "<kbd>k</kbd>" not in dialog_block
+
+    def test_help_includes_sibling_rows_when_prev_or_next_set(self, jinja_env: Any) -> None:
+        html = self._render(jinja_env, src="/x", back_url="/back", prev_url="/p", next_url="/n")
+        dialog_start = html.index("<dialog")
+        dialog_end = html.index("</dialog>", dialog_start)
+        dialog_block = html[dialog_start:dialog_end]
+        assert "<kbd>j</kbd>" in dialog_block
+        assert "<kbd>k</kbd>" in dialog_block
+
+    def test_footer_advertises_help_chip(self, jinja_env: Any) -> None:
+        """The footer keyboard legend includes a `?` chip so users
+        know the cheat-sheet exists."""
+        html = self._render(jinja_env, src="/x", back_url="/back")
+        # Look in the footer area (between the panel close-button SVG
+        # and the closing </footer>). Easier to just check for the
+        # combination "?</kbd>" + "Help" being present in the footer.
+        assert ">Help<" in html
+
+
+class TestHelpOverlayJsController:
+    def _load(self) -> str:
+        return JS_PATH.read_text()
+
+    def test_dialog_opened_via_show_modal(self) -> None:
+        """The bridge calls .showModal() so the browser provides
+        backdrop + focus trap rather than us hand-rolling them."""
+        source = self._load()
+        assert ".showModal()" in source
+
+    def test_dialog_closed_via_close_method(self) -> None:
+        source = self._load()
+        assert ".close()" in source
+
+    def test_question_mark_key_opens_help(self) -> None:
+        source = self._load()
+        # Handler must reference the literal `?` key
+        assert 'e.key === "?"' in source
+
+    def test_esc_priority_help_then_panel_then_back(self) -> None:
+        """Esc closes layers in priority order: cheat-sheet (if
+        open) → panel (if any open) → back-nav. The handler
+        documents this convention in a comment."""
+        source = self._load()
+        assert "helpIsOpen" in source
+        # The Esc branch must check helpIsOpen before findOpenToggle
+        esc_idx = source.index('e.key === "Escape"')
+        # Look at the next ~600 chars for the priority order
+        block = source[esc_idx : esc_idx + 800]
+        help_idx = block.index("helpIsOpen()")
+        panel_idx = block.index("findOpenToggle()")
+        assert help_idx < panel_idx
+
+    def test_other_keys_suppressed_while_help_open(self) -> None:
+        """j/k/p/m/f/etc are no-ops while the cheat-sheet is open
+        — the user is reading, not driving the viewer."""
+        source = self._load()
+        # The handler should `return` early when helpIsOpen() after
+        # the Esc branch.
+        assert "if (helpIsOpen()) return" in source

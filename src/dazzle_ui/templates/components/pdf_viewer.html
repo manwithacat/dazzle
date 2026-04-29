@@ -222,6 +222,77 @@
     <kbd class="dz-pdf-viewer-kbd">{{ panel.key }}</kbd>
     <span class="dz-pdf-viewer-kbd-label">{{ panel.label }}</span>
     {% endfor %}
+    <span class="dz-pdf-viewer-kbd-sep">·</span>
+    <kbd class="dz-pdf-viewer-kbd">?</kbd>
+    <span class="dz-pdf-viewer-kbd-label">Help</span>
     {% endif %}
   </footer>
+
+  {# #943 cycle 5c — keyboard cheat-sheet overlay. Auto-renders from
+     the chrome bindings and the panel declarations so projects don't
+     have to hand-roll a help modal. ``?`` opens; Esc closes (the
+     bridge handler in pdf-viewer.js dispatches Esc → cheat-sheet
+     close → panel close → back-nav, in that priority order). The
+     dialog is a `<dialog>` element so focus management + backdrop
+     come for free; the bridge calls .showModal() / .close() rather
+     than toggling a CSS class so the browser's accessibility tree
+     reflects the modal state correctly. #}
+  <dialog
+    class="dz-pdf-viewer-help"
+    data-dz-help-overlay
+    aria-labelledby="dz-pdf-viewer-help-title"
+  >
+    <header class="dz-pdf-viewer-help-header">
+      <h2 id="dz-pdf-viewer-help-title" class="dz-pdf-viewer-help-title">
+        Keyboard shortcuts
+      </h2>
+      <button
+        type="button"
+        class="dz-pdf-viewer-help-close"
+        data-dz-help-close
+        aria-label="Close shortcuts"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+    </header>
+    <dl class="dz-pdf-viewer-help-list">
+      <div class="dz-pdf-viewer-help-row">
+        <dt><kbd>Esc</kbd></dt>
+        <dd>Back (or close this overlay first)</dd>
+      </div>
+      {% if prev_url or next_url %}
+      <div class="dz-pdf-viewer-help-row">
+        <dt><kbd>j</kbd> / <kbd>&larr;</kbd></dt>
+        <dd>Previous</dd>
+      </div>
+      <div class="dz-pdf-viewer-help-row">
+        <dt><kbd>k</kbd> / <kbd>&rarr;</kbd></dt>
+        <dd>Next</dd>
+      </div>
+      {% endif %}
+      {% for panel in _panels %}
+      <div class="dz-pdf-viewer-help-row">
+        <dt><kbd>{{ panel.key }}</kbd></dt>
+        <dd>Toggle {{ panel.label }}</dd>
+      </div>
+      {% endfor %}
+      <div class="dz-pdf-viewer-help-row">
+        <dt><kbd>?</kbd></dt>
+        <dd>Show this overlay</dd>
+      </div>
+    </dl>
+  </dialog>
 </div>

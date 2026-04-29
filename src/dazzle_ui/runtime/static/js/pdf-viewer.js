@@ -196,14 +196,55 @@
         return null;
       }
 
+      // #943 cycle 5c — keyboard cheat-sheet overlay. The
+      // `<dialog>` element handles its own modal focus + backdrop;
+      // the bridge just opens / closes it on `?` / Esc and wires
+      // the explicit close button.
+      var helpDialog = el.querySelector("[data-dz-help-overlay]");
+
+      function helpOpen() {
+        if (
+          helpDialog &&
+          typeof helpDialog.showModal === "function" &&
+          !helpDialog.open
+        ) {
+          helpDialog.showModal();
+        }
+      }
+      function helpClose() {
+        if (
+          helpDialog &&
+          typeof helpDialog.close === "function" &&
+          helpDialog.open
+        ) {
+          helpDialog.close();
+        }
+      }
+      function helpIsOpen() {
+        return !!(helpDialog && helpDialog.open);
+      }
+
+      var helpCloseBtn = el.querySelector("[data-dz-help-close]");
+      function onHelpCloseClick() {
+        helpClose();
+      }
+      if (helpCloseBtn) {
+        helpCloseBtn.addEventListener("click", onHelpCloseClick);
+      }
+
       function handler(e) {
         if (isEditableTarget(e.target)) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
         if (e.key === "Escape") {
-          // #942 cycle 2a / #943 cycle 5a: if any panel is open,
-          // Esc closes it rather than navigating back. One Esc =
-          // close; a second Esc (with all panels closed) = back.
-          // Matches the dialog/modal convention users expect.
+          // Esc dispatch priority: cheat-sheet (if open) → panel
+          // (if any open) → back-nav. Each layer absorbs Esc and
+          // returns; user keeps pressing Esc to peel back layers.
+          // #942 cycle 2a / #943 cycle 5a / 5c.
+          if (helpIsOpen()) {
+            e.preventDefault();
+            helpClose();
+            return;
+          }
           var openToggle = findOpenToggle();
           if (openToggle) {
             e.preventDefault();
@@ -212,6 +253,15 @@
           }
           e.preventDefault();
           navigate(el.getAttribute("data-dz-back-url"));
+          return;
+        }
+        // Don't dispatch other shortcuts while the help overlay is
+        // open — the user is reading the cheat-sheet, not driving
+        // the viewer. Esc above closes it.
+        if (helpIsOpen()) return;
+        if (e.key === "?") {
+          e.preventDefault();
+          helpOpen();
           return;
         }
         if (e.key === "j" || e.key === "ArrowLeft") {
@@ -248,6 +298,8 @@
         handler: handler,
         toggleListeners: toggleListeners,
         closeListeners: closeListeners,
+        helpCloseBtn: helpCloseBtn,
+        helpCloseListener: helpCloseBtn ? onHelpCloseClick : null,
       };
     },
 
@@ -267,6 +319,12 @@
           var cl = instance.closeListeners[j];
           cl.btn.removeEventListener("click", cl.listener);
         }
+      }
+      if (instance.helpCloseBtn && instance.helpCloseListener) {
+        instance.helpCloseBtn.removeEventListener(
+          "click",
+          instance.helpCloseListener,
+        );
       }
     },
   });

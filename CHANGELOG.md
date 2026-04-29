@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.139] - 2026-04-29
+
+### Added
+- **#943 cycle 5c — keyboard cheat-sheet overlay on the PDF viewer.**
+  Press `?` while focused inside `data-dz-widget="pdf-viewer"` to
+  open a `<dialog>` listing every keyboard binding: chrome (Esc /
+  back), sibling navigation (j/k/&larr;/&rarr; — only when
+  `prev_url` / `next_url` is set), every panel's toggle key, and
+  the `?` shortcut itself.
+
+  Implementation:
+  - Native `<dialog>` element so backdrop + focus trap come for
+    free; the bridge calls `.showModal()` / `.close()` rather than
+    toggling a CSS class so the browser's accessibility tree
+    reflects the modal state correctly.
+  - Esc dispatch priority: cheat-sheet (if open) → panel (if any
+    open) → back-nav. Each layer absorbs Esc and returns; the user
+    keeps pressing Esc to peel back layers. Same convention as
+    cycle 2a's panel-vs-back disambiguation.
+  - Other shortcuts (j/k/p/m/f/etc.) suppressed while the help
+    overlay is open — the user is reading, not driving.
+  - Footer keyboard legend now includes a `?` chip so users
+    discover the cheat-sheet without reading a manual.
+
+  12 new tests cover the dialog rendering, sibling-row gating
+  (only present when prev/next URLs are set), per-panel row
+  population, and the JS dispatch order.
+
+### Agent Guidance
+- For modal overlays in framework components, prefer the native
+  HTML `<dialog>` element with `.showModal()` over hand-rolled
+  `aria-modal="true"` divs. The browser provides backdrop, focus
+  trap, and Esc-to-close for free, and screen readers know it's a
+  modal.
+
 ## [0.61.138] - 2026-04-29
 
 ### Changed

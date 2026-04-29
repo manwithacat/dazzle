@@ -321,3 +321,105 @@
     inline-size: 100%;
   }
 }
+
+/* #943 cycle 5c — keyboard cheat-sheet overlay. Renders via the
+ * native <dialog> element so backdrop + focus trap come for free. */
+.dz-pdf-viewer-help {
+  inline-size: min(420px, calc(100vw - var(--space-2xl)));
+  max-block-size: 80vh;
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: 0 16px 48px hsl(0 0% 0% / 0.16);
+}
+
+.dz-pdf-viewer-help::backdrop {
+  background: hsl(0 0% 0% / 0.32);
+}
+
+.dz-pdf-viewer-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-lg);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-pdf-viewer-help-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.dz-pdf-viewer-help-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--colour-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.dz-pdf-viewer-help-close:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-pdf-viewer-help-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+@media (forced-colors: active) {
+  .dz-pdf-viewer-help-close:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.dz-pdf-viewer-help-list {
+  margin: 0;
+  padding-block: var(--space-sm);
+  padding-inline: 0;
+  font-size: var(--text-sm);
+}
+
+.dz-pdf-viewer-help-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-lg);
+}
+
+.dz-pdf-viewer-help-row dt {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.dz-pdf-viewer-help-row dd {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+.dz-pdf-viewer-help-row kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-block: 0;
+  padding-inline: var(--space-xs);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+}
