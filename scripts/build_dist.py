@@ -38,6 +38,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("components", STATIC / "css" / "components" / "form.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
     ("components", STATIC / "css" / "components" / "htmx-states.css"),
+    ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
     ("components", STATIC / "css" / "components" / "regions.css"),
     ("components", STATIC / "css" / "components" / "table.css"),
     ("components", STATIC / "css" / "dazzle-layer.css"),

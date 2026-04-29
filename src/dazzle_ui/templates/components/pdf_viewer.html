@@ -1,0 +1,133 @@
+{# PDF detail-view component (#942 cycle 1b).
+
+   Full-bleed PDF viewer with header (back link + title + optional
+   prev/next sibling nav), body (browser-native ``<embed>``), and a
+   footer with keyboard-shortcut hints.
+
+   The ``data-dz-widget="pdf-viewer"`` attribute is the bridge mount
+   point — keyboard handlers (Esc → back, j / ← → prev, k / → →
+   next) live in ``static/js/pdf-viewer.js``. NOT co-located with
+   ``x-data`` on the wrapper; the widget contract from #940 stays
+   intact. Bridge ↔ Alpine separation: chrome state is data-driven,
+   handler is global.
+
+   ## Required parameters
+
+   - ``src`` — proxy URL for the PDF, typically
+     ``/api/storage/<storage>/proxy?key=<s3_key>`` (cycle 1a, #942).
+   - ``back_url`` — where Esc / the back button navigates to.
+
+   ## Optional parameters
+
+   - ``title`` — header title (defaults to "Document").
+   - ``prev_url`` / ``next_url`` — sibling URLs for j/k keyboard
+     nav. When unset, the keys are ignored. Projects derive these
+     from their own scope rules (the framework can't generically
+     know what "the next manuscript" means).
+
+   ## Why ``<embed>`` and not PDF.js?
+
+   Browser-native PDF rendering ships in every modern browser
+   today. PDF.js (~250kb) buys cross-browser consistency for chrome
+   like zoom + page count, but the chrome already lives inside the
+   embedded viewer. v1 keeps the framework footprint tight; if a
+   project reports a real cross-browser inconsistency we'll vendor
+   PDF.js as a follow-up cycle.
+#}
+<div
+  class="dz-pdf-viewer"
+  data-dz-widget="pdf-viewer"
+  data-dz-back-url="{{ back_url }}"
+  {% if prev_url %}data-dz-prev-url="{{ prev_url }}"{% endif %}
+  {% if next_url %}data-dz-next-url="{{ next_url }}"{% endif %}
+>
+  <header class="dz-pdf-viewer-header">
+    <a
+      href="{{ back_url }}"
+      class="dz-pdf-viewer-back"
+      aria-label="Back"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m12 19-7-7 7-7"></path>
+        <path d="M19 12H5"></path>
+      </svg>
+      <span class="dz-pdf-viewer-back-label">Back</span>
+    </a>
+    <h1 class="dz-pdf-viewer-title">{{ title | default("Document") }}</h1>
+    {% if prev_url or next_url %}
+    <nav class="dz-pdf-viewer-nav" aria-label="Sibling navigation">
+      <a
+        href="{{ prev_url or '#' }}"
+        class="dz-pdf-viewer-nav-link"
+        {% if not prev_url %}aria-disabled="true" tabindex="-1"{% endif %}
+        aria-label="Previous"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 18-6-6 6-6"></path>
+        </svg>
+      </a>
+      <a
+        href="{{ next_url or '#' }}"
+        class="dz-pdf-viewer-nav-link"
+        {% if not next_url %}aria-disabled="true" tabindex="-1"{% endif %}
+        aria-label="Next"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6"></path>
+        </svg>
+      </a>
+    </nav>
+    {% endif %}
+  </header>
+
+  <div class="dz-pdf-viewer-body">
+    <embed
+      src="{{ src }}"
+      type="application/pdf"
+      class="dz-pdf-viewer-embed"
+      aria-label="{{ title | default('Document') }} PDF"
+    />
+  </div>
+
+  <footer class="dz-pdf-viewer-footer" aria-label="Keyboard shortcuts">
+    <kbd class="dz-pdf-viewer-kbd">Esc</kbd>
+    <span class="dz-pdf-viewer-kbd-label">Back</span>
+    {% if prev_url or next_url %}
+    <span class="dz-pdf-viewer-kbd-sep">·</span>
+    <kbd class="dz-pdf-viewer-kbd">j</kbd>
+    <span class="dz-pdf-viewer-kbd-label">Previous</span>
+    <kbd class="dz-pdf-viewer-kbd">k</kbd>
+    <span class="dz-pdf-viewer-kbd-label">Next</span>
+    {% endif %}
+  </footer>
+</div>

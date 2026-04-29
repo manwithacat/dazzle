@@ -9,6 +9,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.115] - 2026-04-29
+
+### Added
+- **#942 cycle 1b — PDF detail-view chrome component.** Builds on
+  the cycle 1a proxy route. New opt-in template
+  `components/pdf_viewer.html` renders a full-bleed viewer with:
+  - **Header**: back link (icon + label), centred title, optional
+    prev/next sibling-nav arrows
+  - **Body**: full-bleed `<embed type="application/pdf">` (browser-
+    native rendering — no PDF.js bundle, ~250kb saved)
+  - **Footer**: keyboard-shortcut hints (`Esc` / `j` / `k`)
+  - Token-only chrome via the new `components/pdf-viewer.css`,
+    bundled into the framework CSS via `build_dist.py`
+  - Bridge-mounted JS controller `static/js/pdf-viewer.js` —
+    handles Esc → back, j / ← → previous, k / → → next.
+    Suppresses navigation when an editable element has focus
+    (form input, contenteditable) or when modifier keys are held
+    (Cmd/Ctrl/Alt) so browser shortcuts stay reserved.
+
+  Authors include the component directly:
+  ```jinja
+  {% include "components/pdf_viewer.html" with
+       src="/api/storage/cohort_pdfs/proxy?key=" + entity.source_pdf,
+       back_url="/app/manuscripts",
+       title=entity.title,
+       prev_url=prev,
+       next_url=next %}
+  ```
+
+  No `display: pdf_viewer` DSL hook in cycle 1b — the include-based
+  shape lets project authors choose how/where to render the viewer
+  without forcing a new detail-surface kind. The DSL hook can land
+  later once 2+ projects converge on the same opt-in shape.
+
+  19-test suite (`test_pdf_viewer_component.py`) covers template
+  parameter rendering, default title, sibling-nav presence/absence,
+  the `data-dz-widget="pdf-viewer"` marker (and absence of `x-data`
+  per the #940 contract), the JS handler contract (key dispatch,
+  modifier suppression, editable-target suppression, listener
+  cleanup), token-only CSS, and a clip-check pass on the new
+  stylesheet.
+
+### Out of scope for this cycle
+- PDF.js bundle (browser-native `<embed>` covers v1; we'll vendor
+  PDF.js if a project reports a real cross-browser inconsistency)
+- `display: pdf_viewer` DSL surface kind (waiting for the 2nd
+  domain consumer per ROADMAP's anti-eager-extension)
+- Range request / streaming response (cycle 1a's proxy buffers
+  in memory; fine for the 200MB cap)
+- Touch gestures + mobile-only keyboard hints
+
+### Agent Guidance
+- For an entity with a `file storage=...` PDF field, render the
+  detail surface via `{% include "components/pdf_viewer.html" %}`
+  with the cycle 1a proxy URL as `src`. Sibling navigation is
+  project-driven — pass `prev_url` / `next_url` derived from the
+  entity's scope rules; the framework can't generically know
+  what "the next manuscript" means.
+
 ## [0.61.114] - 2026-04-29
 
 ### Added
