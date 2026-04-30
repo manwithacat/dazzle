@@ -1388,3 +1388,31 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
     document.addEventListener("DOMContentLoaded", install, { once: true });
   }
 })();
+
+// #967: silence console errors from htmx-ext-preload speculative fetches
+// that hit a 401/403.
+//
+// `htmx-ext-preload` fires on hover/mousedown for any link annotated with
+// `hx-boost` (or explicit `preload`), warming the cache so the real
+// navigation feels instant. Each prefetch carries `HX-Preloaded: true` so
+// the server can identify it. When a low-privilege persona hovers a link
+// they don't have permission for, the prefetch returns 401/403 — and
+// htmx's standard `htmx:responseError` event bubbles to the browser
+// console as a logged error. The user never clicked anything; the noise
+// is pure speculative-fetch artifact and drowns real signal.
+//
+// Fix: a `htmx:responseError` listener that consumes (preventDefault) the
+// event when (a) the request was a prefetch (HX-Preloaded header) AND
+// (b) the status is 401 or 403. Real user-clicked navigations to a
+// 401/403 still log normally — those are signal, not noise.
+document.body.addEventListener("htmx:responseError", (e) => {
+  const detail = /** @type {any} */ (e).detail;
+  if (!detail || !detail.xhr || !detail.requestConfig) return;
+  const status = detail.xhr.status;
+  if (status !== 401 && status !== 403) return;
+  const headers = detail.requestConfig.headers || {};
+  if (headers["HX-Preloaded"] !== "true") return;
+  // Speculative prefetch + auth denied — silently consume.
+  e.preventDefault();
+  e.stopPropagation();
+});

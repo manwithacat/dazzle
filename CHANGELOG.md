@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.9] - 2026-04-30
+
+### Fixed
+- **#967 — htmx-ext-preload prefetch console-error noise.**
+  Speculative prefetches (hover/mousedown on a boosted link) carry
+  `HX-Preloaded: true`. When a low-privilege persona hovered a link
+  they didn't have permission for, the prefetch returned 401/403
+  and htmx logged a console error — pure speculative-fetch artifact
+  drowning real signal.
+
+  Fix: `dz-alpine.js` adds an `htmx:responseError` listener that
+  consumes the event (preventDefault + stopPropagation) when both
+  conditions hold:
+  1. Request was a prefetch (`HX-Preloaded: true` header)
+  2. Status is 401 or 403
+
+  Real user-clicked navigations to a 401/403 still log normally —
+  those are signal, not noise.
+
+### Agent Guidance
+- htmx prefetch errors via `htmx-ext-preload` carry `HX-Preloaded: true`
+  in `event.detail.requestConfig.headers`. Use that header, not the
+  request element, to discriminate prefetches from real navigations
+  when filtering events. Drift gate at
+  `tests/unit/test_htmx_preload_silence.py`.
+
 ## [0.63.8] - 2026-04-30
 
 ### Fixed
