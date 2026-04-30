@@ -413,16 +413,13 @@ async def _set_preference(deps: _AuthDeps, key: str, request: FastAPIRequest) ->
     return {"key": key, "value": str(value)}
 
 
-async def _delete_preference(deps: _AuthDeps, key: str, request: FastAPIRequest) -> dict[str, Any]:
-    """Delete a single preference."""
-    from fastapi import HTTPException
-
+async def _delete_preference(deps: _AuthDeps, key: str, request: FastAPIRequest) -> Response:
+    """Delete a single preference. Idempotent — 204 whether the key existed
+    or not, per RFC 7231 §4.3.5 (#971)."""
     ctx = _require_auth(deps, request)
     assert ctx.user is not None
-    deleted = deps.auth_store.delete_preference(ctx.user.id, key)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Preference not found")
-    return {"deleted": key}
+    deps.auth_store.delete_preference(ctx.user.id, key)
+    return Response(status_code=204)
 
 
 # =============================================================================

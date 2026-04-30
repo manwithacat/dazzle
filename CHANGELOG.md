@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.16] - 2026-05-01
+
+### Fixed
+- **#971 — `DELETE /auth/preferences/{key}` now idempotent.**
+  Previously raised `HTTPException(404)` when the key didn't exist;
+  per RFC 7231 §4.3.5, DELETE should be idempotent — repeating it
+  should produce the same observable state (resource absent), with
+  the same status code regardless of prior existence. Now returns
+  `Response(status_code=204)` for both "just deleted" and "already
+  absent" cases. The underlying `auth_store.delete_preference()`
+  was already a no-op for missing keys; only the handler needed
+  fixing.
+
+### Agent Guidance
+- HTTP DELETE handlers should be idempotent. If a project's DELETE
+  returns 404 for missing resources, that's a bug — return 204 (or
+  200 with the deletion record) regardless of prior existence.
+  Drift gate: `tests/unit/test_delete_preference_idempotent.py`.
+
 ## [0.63.15] - 2026-04-30
 
 ### Added
