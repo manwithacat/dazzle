@@ -1479,6 +1479,17 @@ window.dz.filterRefSelect = function (selectEl) {
       selectEl.appendChild(fragment);
     })
     .catch((err) => {
+      // #973: swallow navigation-cancelled fetches. When htmx swap
+      // removes the <select> mid-fetch, browsers reject with a generic
+      // TypeError ("Failed to fetch"). The user has navigated away —
+      // there's nothing to log and nothing to do. Detect via "is the
+      // <select> still in the DOM?" — that's the cleanest discriminator
+      // since AbortError is only emitted when an explicit AbortController
+      // signals; navigation-cancelled fetches surface as plain TypeError.
+      if (!document.body.contains(selectEl)) return;
+      // Also swallow explicit AbortError (future-proof if we add an
+      // AbortController to the helper).
+      if (err && err.name === "AbortError") return;
       console.warn("Filter ref-entity load failed for", refApi, ":", err);
     });
 };

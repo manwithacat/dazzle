@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.17] - 2026-05-01
+
+### Fixed
+- **#973 — `dzFilterRefSelect` no longer logs on
+  navigation-cancelled fetches.** When htmx swap removes the
+  `<select>` mid-fetch, browsers reject the in-flight fetch with
+  generic `TypeError: Failed to fetch`. The user has navigated
+  away — nothing useful to log. The `.catch` now short-circuits on
+  two signals before warning:
+  1. `selectEl` is no longer in the DOM (`document.body.contains`
+     returns false) — navigation removed it
+  2. `err.name === 'AbortError'` — future-proofing for an explicit
+     AbortController if we add one
+
+  Real failures (5xx, JSON parse errors) still log — they arrive
+  while the element is still mounted with a non-AbortError name.
+
+### Agent Guidance
+- Helper functions wired through `x-init` that issue async work
+  (fetch, MutationObserver, intervals) need a "is the element
+  still here?" guard before logging or mutating. The htmx-swap
+  lifecycle can remove an element between when the helper started
+  and when its async result lands. Guard via
+  `document.body.contains(el)` in catch handlers and async
+  callbacks.
+
 ## [0.63.16] - 2026-05-01
 
 ### Fixed
