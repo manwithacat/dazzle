@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.11] - 2026-04-30
+
+### Fixed
+- **#969 (Pattern A) — disable `htmx-ext-preload` to silence
+  speculative-fetch 403 noise.** The preload extension fires raw
+  `fetch()` calls on hover/mousedown to warm the browser cache.
+  Two failure modes:
+  1. **Persona-rejected URLs** — speculative fetches to workspaces
+     the persona can't read returned 403, browser native-logged
+     `Failed to load resource: 403` at the network layer (not
+     suppressible from JS).
+  2. **Racy auth on accessible URLs** — under fast repeat-clicking,
+     speculative fetches landed in gaps between session updates and
+     got 403'd despite access.
+
+  ~130 such errors per 20-min site-fuzz run on v0.63.10.
+
+  Fix: removed `preload` from the body's `hx-ext` list and dropped
+  the `htmx-ext-preload.js` vendor script load. Trade-off: lose
+  ~50-100ms perceived nav improvement on hover→click sequences.
+  Worth it — cache warming was small compared to htmx-boost's
+  full-page-replace speed, and a clean console matters more.
+
+  The `preload="mousedown"` attribute remains on sidebar nav links
+  (harmless when the extension isn't loaded; cheap to re-enable
+  after a per-link access gate is in place).
+
+### Open follow-up (Pattern B of #969)
+- **htmx-boost click race returns 403 on accessible URLs.** When a
+  rapid second click cancels an in-flight boost XHR and starts a
+  new one, the cancelled response sometimes returns 403. Source not
+  yet confirmed — CSRF middleware exempts GETs entirely so the
+  user's "stale CSRF token" hypothesis is ruled out. Likely a
+  session/auth race rather than CSRF rotation. Rare in normal use;
+  visible under fuzz. Filed for follow-up investigation.
+
+### Changed
+- **`/ship` drift-gate suite gains
+  `test_preload_extension_disabled.py`** (52 tests now). Asserts
+  `preload` stays out of `hx-ext` and the vendor script stays
+  unloaded — re-enabling without the access gate would re-introduce
+  the noise.
+
 ## [0.63.10] - 2026-04-30
 
 ### Fixed

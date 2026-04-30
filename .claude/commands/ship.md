@@ -14,6 +14,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_idiomorph_alpine_patch.py \
          tests/unit/test_inline_edit_escape.py \
          tests/unit/test_htmx_preload_silence.py \
+         tests/unit/test_preload_extension_disabled.py \
          tests/unit/test_workspace_cls_reservation.py \
          tests/unit/test_list_surface_cls_reservation.py \
          -q
