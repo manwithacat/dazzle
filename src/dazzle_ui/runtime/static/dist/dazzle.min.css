@@ -1,4 +1,4 @@
-/* dazzle v0.63.16 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.17 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7434,12 +7434,18 @@ overflow-x: auto;
 position: absolute;
 inset: 0;
 z-index: 10;
-display: flex;
+display: none;
 align-items: center;
 justify-content: center;
 background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
 backdrop-filter: blur(1px);
 pointer-events: none;
+opacity: 0;
+transition: opacity 80ms;
+}
+.dz-table:has(.htmx-request) .dz-table-loading {
+display: flex;
+opacity: 1;
 }
 .dz-table-loading-spinner {
 width: 1.25rem;

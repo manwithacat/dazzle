@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.18] - 2026-05-01
+
+### Fixed
+- **#972 — table loading overlay no longer fires "loading is not
+  defined".** `.dz-table-loading` previously used
+  `x-show="loading"` against the ancestor `dzTable()` x-data scope.
+  On htmx morph or Alpine init-order edge cases, the binding
+  evaluated before the parent scope was established — same failure
+  mode as #970 / ADR-0022.
+
+  Fix per ADR-0022's preferred pattern: pure CSS keyed off htmx's
+  `.htmx-request` class. htmx applies that class to the
+  `hx-indicator` element (the SR-only `#{table_id}-loading-sr`
+  inside `.dz-table`) for the duration of the in-flight request;
+  the new `.dz-table:has(.htmx-request) .dz-table-loading` rule
+  reveals the overlay. No Alpine binding, no morph race. The
+  `display: none` default replaces the prior `x-cloak` guard
+  against initial-paint flash.
+
+  Browser support: `:has()` is widely supported (Chrome 105+,
+  Safari 15.4+, Firefox 121+).
+
+### Changed
+- `/ship` drift suite gains `test_delete_preference_idempotent.py`
+  (#971), `test_filter_ref_select_cancellation.py` (#973),
+  `test_table_loading_overlay.py` (#972). Total drift suite: 62 tests.
+
+### Agent Guidance
+- For loading indicators / overlays in htmx-driven UIs, prefer
+  pure-CSS keyed off htmx's `.htmx-request` class (use `:has()`
+  for descendant triggers). Avoids Alpine binding race conditions
+  during morph and is one less thing for ADR-0022 to constrain.
+
 ## [0.63.17] - 2026-05-01
 
 ### Fixed

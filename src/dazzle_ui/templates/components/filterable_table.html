@@ -132,14 +132,14 @@
   <div class="dz-table-scroll" style="--dz-list-rows: {{ table.page_size or 10 }}">
 
     {# Loading overlay — sits above the table, dimmed backdrop.
-       x-cloak suppresses the SSR'd overlay until Alpine hydrates and
-       applies x-show — prevents the ~169ms loading-flash reported in #837
-       that agent-QA tools consistently caught as "stuck Loading". #}
-    <div x-cloak
-         x-show="loading"
-         x-transition.opacity.duration.80ms
-         aria-hidden="true"
-         class="dz-table-loading">
+       #972: pre-fix this used `x-show="loading"` against the ancestor
+       dzTable's `x-data` scope. Idiomorph re-evaluated the binding on
+       morph before Alpine re-established the parent scope, throwing
+       "loading is not defined" — the same failure mode as #970. Fixed
+       per ADR-0022's preferred pattern: pure CSS keyed off htmx's
+       `.htmx-request` class, applied to the request-initiating element
+       (the outer dzTable wrapper). No Alpine binding, no morph race. #}
+    <div aria-hidden="true" class="dz-table-loading">
       {# Spinner #}
       <svg class="dz-table-loading-spinner" viewBox="0 0 24 24" fill="none"
            xmlns="http://www.w3.org/2000/svg">

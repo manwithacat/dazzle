@@ -16,7 +16,10 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_htmx_preload_silence.py \
          tests/unit/test_preload_extension_disabled.py \
          tests/unit/test_filter_bar_no_xfor.py \
+         tests/unit/test_filter_ref_select_cancellation.py \
          tests/unit/test_template_xfor_alpine_children.py \
+         tests/unit/test_table_loading_overlay.py \
+         tests/unit/test_delete_preference_idempotent.py \
          tests/unit/test_workspace_cls_reservation.py \
          tests/unit/test_list_surface_cls_reservation.py \
          -q

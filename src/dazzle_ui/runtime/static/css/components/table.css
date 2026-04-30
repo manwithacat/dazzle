@@ -187,7 +187,16 @@
 }
 
 /* ─────────────────────────── loading overlay ────────────────────
- * Shown via Alpine x-show="loading"; backdrop blur + dimmed
+ * #972: switched from Alpine `x-show="loading"` to pure-CSS keyed off
+ * htmx's `.htmx-request` class on the outer dzTable wrapper. The Alpine
+ * binding tripped ADR-0022 (idiomorph evaluates child bindings before
+ * the ancestor x-data scope rebinds on morph). htmx applies
+ * `.htmx-request` to the request-initiating element for the duration
+ * of the in-flight request — that's the cleanest signal here.
+ *
+ * Default state: hidden (no overlay flash on initial paint, replaces
+ * the prior x-cloak guard). htmx adds .htmx-request when a request is
+ * in flight; CSS reveals the overlay. Backdrop blur + dimmed
  * background + centred spinner. Pointer-events none so the user can
  * still scroll mid-load. */
 
@@ -195,12 +204,24 @@
   position: absolute;
   inset: 0;
   z-index: 10;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
   backdrop-filter: blur(1px);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms;
+}
+
+/* htmx applies `.htmx-request` to the element named by hx-indicator
+ * (the SR-only `#{table_id}-loading-sr` inside .dz-table) for the
+ * duration of the in-flight request. `:has()` lets us trigger the
+ * overlay from any descendant — Chrome 105+, Safari 15.4+, Firefox
+ * 121+ all support it. */
+.dz-table:has(.htmx-request) .dz-table-loading {
+  display: flex;
+  opacity: 1;
 }
 
 .dz-table-loading-spinner {
