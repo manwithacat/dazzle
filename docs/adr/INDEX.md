@@ -23,3 +23,4 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0019](ADR-0019-surface-triple-as-atomic-unit.md) — (Entity, Surface, Persona) triple is the atomic unit of verifiable behaviour.
 - [0020](ADR-0020-lifecycle-evidence-predicates.md) — Lifecycle evidence predicates are orthogonal to state machines.
 - [0021](0021-marketing-via-sitespec.md) — Marketing pages via `sitespec.yaml`. No `# dazzle:route-override` on public paths.
+- [0022](0022-alpine-bindings-vs-idiomorph.md) — Don't put Alpine bindings on idiomorph-morphed elements. Server-render or use `x-init` helpers with direct DOM manipulation.

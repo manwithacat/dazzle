@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.14] - 2026-04-30
+
+### Added
+- **ADR-0022 — Alpine bindings on idiomorph-morphed elements.**
+  Memorialises the lesson from #963 / #964 / #968 / #970: don't
+  put Alpine bindings on elements that idiomorph will morph as
+  children of a reactive parent. Specifically:
+  - `<template x-for>` rendering Alpine-bound children is
+    forbidden — idiomorph evaluates the cloned children's bindings
+    before Alpine re-establishes the x-for scope.
+  - Double-quoted attrs interpolating `tojson` are forbidden — the
+    inner `"` closes the attribute mid-value.
+  - `@`-prefixed attrs require the framework idiomorph patch
+    (`beforeAttributeUpdated` callback) to be tolerated during
+    morph at all.
+  - For dynamic content needing reactivity, prefer `x-init`
+    helpers that populate via `createElement` / `appendChild` over
+    declarative `<template x-for>`. Canonical pattern:
+    `dzFilterRefSelect` in `dz-alpine.js`.
+  - Server-rendered HTML is the default; Alpine is the escape
+    hatch.
+
+### Agent Guidance
+- When generating a region template that will be htmx-morphed,
+  default to server-rendered HTML for static content. Reach for
+  Alpine only for genuinely reactive surfaces. When Alpine is
+  needed, put `x-data` on the morphable element itself (Alpine
+  destroyTree+initTree handles re-binding) but do NOT put Alpine
+  bindings on its morphable children — use an `x-init` helper that
+  populates children imperatively with no Alpine attributes.
+- Helpers go in `dz-alpine.js` under `window.dz.<name>` (and
+  `window.dz<Name>` for bare-name Alpine x-init access). They take
+  `$el` as first arg, read state from `data-*` attributes on the
+  element, and never receive inline tojson interpolation.
+
 ## [0.63.13] - 2026-04-30
 
 ### Fixed
