@@ -6,7 +6,21 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - If the worktree is already clean and there is nothing to commit, say so and stop.
 - Run `ruff check src/ tests/ --fix && ruff format src/ tests/` to auto-fix lint issues.
 - Run `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports` to catch type errors (matches CI).
-- If lint or type errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails lint or type checks.
+- **Run drift gates** — fast (~2s, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class):
+
+  ```bash
+  pytest tests/unit/test_api_surface_drift.py \
+         tests/unit/test_card_picker_attributes.py \
+         tests/unit/test_idiomorph_alpine_patch.py \
+         tests/unit/test_inline_edit_escape.py \
+         tests/unit/test_htmx_preload_silence.py \
+         tests/unit/test_workspace_cls_reservation.py \
+         tests/unit/test_list_surface_cls_reservation.py \
+         -q
+  ```
+
+  If any drift gate fails, **fix the regression** (or regenerate the baseline + add a CHANGELOG entry for API-surface drift). Never bypass.
+- If lint, type, or drift errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
 
 ## 2. Commit
 

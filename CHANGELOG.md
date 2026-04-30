@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.10] - 2026-04-30
+
+### Fixed
+- **#968 — `Unexpected token '}'` Alpine error introduced by
+  the #966 fix.** The #966 fix dropped `{{ value | tojson }}` into
+  a *double-quoted* `@dblclick="..."` attribute. `tojson` outputs
+  `"marked"` (with `"`), and the inner `"` closed the HTML
+  attribute prematurely — the browser then parsed everything from
+  `, "marked"` onward as bare attributes, and Alpine evaluated the
+  truncated expression and threw. 60 page-errors + 60 console
+  warnings + 5 `null.removeChild` per 20-min site-fuzz on every
+  list view in v0.63.9.
+
+  Fix: switch the attribute to single-quoted (`@dblclick='...'`),
+  inner JS strings to double-quoted. Same canonical pattern the
+  existing `TestNoDoubleQuotedTojsonAcrossTemplates` drift gate
+  cites in its error message — and which I bypassed by not running
+  the full suite before shipping #966.
+
+### Changed
+- **`/ship` skill now runs the drift-gate suite before commit.**
+  Adds 49 fast tests (~2s, no DB) covering the recurring Python ↔
+  htmx/Alpine boundary regression class (#949 / #963 / #966 / #968):
+  `test_card_picker_attributes`, `test_inline_edit_escape`,
+  `test_idiomorph_alpine_patch`, `test_htmx_preload_silence`, plus
+  the API-surface drift gates (#961) and CLS reservation gates
+  (#962 / #965). The suite catches all four prior bugs in this
+  class — running it pre-commit is the durable fix for "drift gates
+  exist but get bypassed".
+
+### Agent Guidance
+- **Never put `{{ X | tojson }}` inside a double-quoted HTML
+  attribute.** `tojson` emits `"..."`-quoted JSON; the inner `"`
+  closes the attribute. Use single-quoted attribute when the value
+  contains tojson. Convention is enforced by
+  `TestNoDoubleQuotedTojsonAcrossTemplates` in
+  `tests/unit/test_card_picker_attributes.py` — and by the new
+  `/ship` drift-gate step.
+- **`/ship` runs drift gates pre-commit.** If you bypass `/ship`
+  and use `git commit` directly, you also bypass the gates. Always
+  prefer `/ship`.
+
 ## [0.63.9] - 2026-04-30
 
 ### Fixed

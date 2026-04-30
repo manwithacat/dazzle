@@ -65,7 +65,7 @@
     <template x-if="!isEditing('{{ item.id }}', '{{ col.key }}')">
       <span class="dz-tr-cell-display"
             {% set _edit_val = item[col.key] %}
-            @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', {{ (_edit_val if _edit_val is not none else '') | tojson }})"
+            @dblclick='startEdit("{{ item.id }}", "{{ col.key }}", {{ (_edit_val if _edit_val is not none else "") | tojson }})'
             title="{% if _edit_val is not none %}{{ _edit_val }}{% endif %}">
         {% if col.type == "badge" %}
           {{ render_status_badge(value=item[col.key]) }}
