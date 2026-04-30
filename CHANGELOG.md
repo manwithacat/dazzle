@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.12] - 2026-04-30
+
+### Added
+- **ADR-0021 — Marketing pages via sitespec.** Marketing /
+  legal / blog pages on the same hostname as the authenticated app
+  must be declared in `sitespec.yaml` using a framework page type
+  (`landing`, `markdown`, `legal`). `# dazzle:route-override` on a
+  public path is forbidden — bypassing the framework site router
+  bypasses its cookie / CSRF / consent / auth-aware-nav discipline,
+  which is the failure mode behind #969.
+- **`docs/guides/marketing-conformance.md`** — project-facing
+  conformance checklist. Walks a project from "audit your route
+  overrides" through "verify in dev" with a copy-pasteable bash
+  trace. The prescribed remediation path for the #969 cookie-clear
+  regression class.
+
+### Agent Guidance
+- When generating project code that handles a public-facing path
+  (anything not under `/app/*`, `/api/*`, `/auth/*`, `/webhooks/*`),
+  declare it in `sitespec.yaml`, not as a `# dazzle:route-override`.
+  The override pattern is for app-scoped routes only.
+- Project-side runtime code never writes `dazzle_session` or
+  `dazzle_csrf` cookies. Only the framework's auth routes
+  (`auth/routes.py`, `auth/routes_2fa.py`, `auth/magic_link_routes.py`)
+  may. If you find yourself reaching for `set_cookie(dazzle_session, ...)`
+  in a project handler, stop — file a framework issue instead.
+
 ## [0.63.11] - 2026-04-30
 
 ### Fixed
