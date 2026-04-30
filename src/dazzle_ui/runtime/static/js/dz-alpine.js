@@ -1416,3 +1416,71 @@ document.body.addEventListener("htmx:responseError", (e) => {
   e.preventDefault();
   e.stopPropagation();
 });
+
+// #970: ref-entity filter dropdown population.
+//
+// Previously this was inline `<template x-for="opt in options">` inside
+// the `<select>`. Idiomorph's attribute-morph loop evaluated the cloned
+// `<option>` elements' `:value` / `x-text` bindings before Alpine
+// re-established the x-for scope, throwing
+// `Alpine Expression Error: opt is not defined` once per option per
+// morph (300 errors / 5min in AegisMark site-fuzz on v0.63.11).
+//
+// Fix: render `<option>` elements via direct DOM manipulation in this
+// helper. `x-init="dzFilterRefSelect($el)"` invokes it once when Alpine
+// first hydrates the `<select>`. The morph then sees ordinary DOM nodes
+// with no Alpine attributes — nothing for idiomorph to evaluate
+// prematurely. Same fix shape as #964 (skip Alpine event attrs in
+// morph) and #968 (single-quote attrs containing tojson) — all
+// "remove the surface idiomorph trips on" rather than "make idiomorph
+// understand Alpine."
+//
+// Reads two data-* attributes from the <select>:
+//   - data-ref-api: API endpoint (e.g. /clients) to fetch options from
+//   - data-selected-value: the persisted filter value to pre-select
+//
+// Both are HTML-escaped server-side (no tojson-in-attr footgun).
+window.dz = window.dz || {};
+window.dz.filterRefSelect = function (selectEl) {
+  if (!selectEl || selectEl.tagName !== "SELECT") return;
+  const refApi = selectEl.dataset.refApi;
+  if (!refApi) return;
+  const selectedValue = selectEl.dataset.selectedValue || "";
+  fetch(refApi + "?page_size=100", { headers: { Accept: "application/json" } })
+    .then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then((data) => {
+      const items = data.items || [];
+      const display = (item) => {
+        return (
+          item.__display__ ||
+          item.name ||
+          item.company_name ||
+          ((item.first_name || "") + " " + (item.last_name || "")).trim() ||
+          item.title ||
+          item.label ||
+          item.email ||
+          item.id ||
+          ""
+        );
+      };
+      const fragment = document.createDocumentFragment();
+      for (const item of items) {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = display(item);
+        if (String(item.id) === String(selectedValue)) {
+          opt.selected = true;
+        }
+        fragment.appendChild(opt);
+      }
+      selectEl.appendChild(fragment);
+    })
+    .catch((err) => {
+      console.warn("Filter ref-entity load failed for", refApi, ":", err);
+    });
+};
+// Alpine x-init reads the function from the global scope by bare name.
+window.dzFilterRefSelect = window.dz.filterRefSelect;

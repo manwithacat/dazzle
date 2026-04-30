@@ -14,9 +14,25 @@
     <label class="dz-filter-label">{{ col.label }}</label>
 
     {% if col.filter_type == "select" and col.filter_ref_entity %}
-    {# Ref/belongs_to filter: select with dynamically loaded options #}
+    {# Ref/belongs_to filter: select with dynamically loaded options.
+       #970: previously used `<template x-for="opt in options">` to render
+       options reactively. Idiomorph's attribute-morph loop evaluated the
+       `:value` / `x-text` bindings on the cloned <option> elements before
+       Alpine re-established the x-for scope, throwing
+       `Alpine Expression Error: opt is not defined` once per option per
+       morph. Same bug class as #963/#964/#968 (Alpine bindings vs htmx
+       morph timing).
+
+       Fix: drop x-for. Append plain <option> elements via direct DOM
+       manipulation in x-init. The morph then sees ordinary DOM nodes with
+       no Alpine attributes — nothing for idiomorph to evaluate
+       prematurely. Trade-off: loses reactivity on `options` mutations
+       after first paint (filter dropdowns are static after load anyway,
+       so this is fine). #}
     <select name="filter[{{ col.key }}]"
             class="dz-filter-select"
+            data-ref-api="{{ col.filter_ref_api }}"
+            data-selected-value="{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}"
             hx-get="{{ table.api_endpoint }}"
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
@@ -24,36 +40,8 @@
             hx-include="closest [data-dazzle-table]"
             hx-headers='{"Accept": "text/html"}'
             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading-sr"
-            x-data="{ options: [], refLoading: true, refError: '' }"
-            x-init="
-              fetch('{{ col.filter_ref_api }}?page_size=100', { headers: { 'Accept': 'application/json' } })
-                .then(r => {
-                  if (!r.ok) throw new Error('HTTP ' + r.status);
-                  return r.json();
-                })
-                .then(data => {
-                  const items = data.items || [];
-                  const display = (item) => {
-                    return item.__display__ || item.name || item.company_name
-                      || ((item.first_name || '') + ' ' + (item.last_name || '')).trim()
-                      || item.title || item.label || item.email || item.id || '';
-                  };
-                  options = items.map(i => ({ value: i.id, label: display(i) }));
-                  refLoading = false;
-                })
-                .catch(err => {
-                  console.warn('Filter ref-entity load failed for {{ col.filter_ref_api }}:', err);
-                  refError = err.message || 'load failed';
-                  refLoading = false;
-                })
-            ">
+            x-init="dzFilterRefSelect($el)">
       <option value="">All</option>
-      <template x-for="opt in options" :key="opt.value">
-        <option :value="opt.value"
-                x-text="opt.label"
-                :selected="'{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}' === opt.value">
-        </option>
-      </template>
     </select>
 
     {% elif col.filter_type == "select" %}

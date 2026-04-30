@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.13] - 2026-04-30
+
+### Fixed
+- **#970 — `Alpine Expression Error: opt is not defined` on filter
+  dropdowns during htmx morph.** `fragments/filter_bar.html`
+  ref-entity branch rendered options via
+  `<template x-for="opt in options">` with `:value` / `x-text`
+  bindings on the cloned `<option>`. Idiomorph's attribute-morph
+  loop evaluated those bindings before Alpine re-established the
+  x-for scope, throwing the error once per option per morph (300 in
+  a 5-min site-fuzz on AegisMark v0.63.11).
+
+  Fix: drop `<template x-for>`. Move population logic to a
+  `dzFilterRefSelect(selectEl)` helper in `dz-alpine.js` invoked
+  via `x-init="dzFilterRefSelect($el)"`. Helper reads
+  `data-ref-api` / `data-selected-value` from the `<select>` and
+  appends plain `<option>` DOM nodes — no Alpine bindings on
+  children for idiomorph to evaluate prematurely.
+
+  Same fix shape as #964 (skip `@`-prefixed attrs in morph) and
+  #968 (single-quote attrs containing tojson) — all "remove the
+  surface idiomorph trips on" rather than "make idiomorph
+  understand Alpine."
+
+### Changed
+- `/ship` drift suite gains `test_filter_bar_no_xfor.py` (3 tests
+  pinning no `<template x-for>` in the ref-entity branch + the
+  helper presence in `dz-alpine.js`). Total drift suite: 54 tests.
+
+### Agent Guidance
+- Never put Alpine bindings (`x-text`, `x-model`, `:value`,
+  `:class`, `:selected`) on a child of a `<template x-for>` inside
+  a region that gets htmx-morphed. Idiomorph evaluates the cloned
+  child's bindings before Alpine binds the x-for scope. The
+  bindings will throw "X is not defined" once per cloned element
+  per morph (#970).
+- For dynamic option lists in selects, populate via direct DOM
+  manipulation in `x-init` — see `dzFilterRefSelect` in
+  `dz-alpine.js` for the canonical pattern. Pass server-side state
+  (selected value, API URL) via `data-*` attributes, not inline
+  tojson interpolation.
+
 ## [0.63.12] - 2026-04-30
 
 ### Added
