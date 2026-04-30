@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.8] - 2026-04-30
+
+### Fixed
+- **#966 — Alpine expression error: list-mode inline-edit broke
+  on titles with apostrophes.** `fragments/table_rows.html`
+  interpolated the cell value into an Alpine `@dblclick="startEdit(...)"`
+  call using `'{{ value | e }}'` — HTML-escape inside a JS string
+  literal, which doesn't escape apostrophes. A title like
+  `Alice's report` closed the JS string early and threw "Alpine
+  Expression Error".
+
+  Fix: emit the value via `| tojson` so it becomes a complete JSON
+  string literal (double-quoted, backslash-escaped). Drop the
+  surrounding single quotes — tojson includes its own quoting. Same
+  pattern already used in `inline_edit.html` and `_card_picker.html`.
+
+### Agent Guidance
+- When interpolating Python strings into JavaScript/Alpine
+  expressions inside Jinja templates, use `| tojson` (not `| e`).
+  `| e` is HTML-escape only — it leaves apostrophes / backticks /
+  other JS-significant characters alone. Drift gate at
+  `tests/unit/test_inline_edit_escape.py`.
+
 ## [0.63.7] - 2026-04-29
 
 ### Fixed
