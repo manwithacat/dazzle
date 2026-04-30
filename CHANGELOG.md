@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.15] - 2026-04-30
+
+### Added
+- **Linter for ADR-0022 — `<template x-for>` with Alpine-bound
+  children.** New drift gate at
+  `tests/unit/test_template_xfor_alpine_children.py` walks every
+  `*.html` under `src/dazzle_ui/templates/`, finds every
+  `<template x-for=...>` block, and fails if its first-child
+  element carries any Alpine-style attribute (`x-*`, `:`, or `@`
+  prefixed). Verified end-to-end against a synthetic regression —
+  catches the #970-shape pattern before it ships.
+
+  Two known-OK uses are explicitly allowlisted with rationale:
+  - `base.html` toast container (global, never htmx-morphed)
+  - `command_palette.html` Cmd+K spotlight (overlays document body,
+    morph targets are scoped to `#main-content` / regions)
+
+  Adding to the allowlist requires verifying the location is
+  outside any htmx-morph region and adding a comment in the test
+  file explaining why. A second test verifies allowlist entries
+  still match real template uses (catches stale entries from
+  refactors).
+
+  /ship drift suite now 57 tests.
+
+### Agent Guidance
+- New `<template x-for>` in framework templates trips the linter.
+  Two cures: (a) refactor to an `x-init` helper that populates
+  children imperatively (canonical: `dzFilterRefSelect` in
+  `dz-alpine.js`); or (b) if the region is genuinely never
+  htmx-morphed, add an ALLOWLIST entry to
+  `test_template_xfor_alpine_children.py` with a comment
+  explaining why.
+
 ## [0.63.14] - 2026-04-30
 
 ### Added
