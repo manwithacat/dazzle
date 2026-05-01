@@ -1,4 +1,4 @@
-/* dazzle v0.63.20 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.21 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5185,6 +5185,10 @@ padding: var(--space-md);
 z-index: 50;
 max-block-size: 16rem;
 overflow-y: auto;
+display: none;
+}
+.dz-workspace[data-show-picker="1"] .dz-card-picker {
+display: block;
 }
 .dz-card-picker-title {
 font-size: var(--text-xs);

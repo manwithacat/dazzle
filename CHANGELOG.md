@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.22] - 2026-05-01
+
+### Fixed
+- **#981 — Back button `URL is not a constructor` page-error.**
+  `components/detail_view.html` Back-button onclick called
+  `new URL(document.referrer)` without a try/catch. When
+  `document.referrer` is empty (BFCache restore, direct page load,
+  cross-origin nav with referrer policy stripping it) the
+  constructor throws and surfaces as a page-error in site-fuzz.
+  Fix: wrap the `new URL(...)` call in try/catch — empty-referrer
+  case falls through to the default `<a href>` navigation.
+
+- **#982 — `showPicker is not defined` on workspace nav (fourth
+  ADR-0022 instance).** `_card_picker.html` previously bound
+  `x-show="showPicker"`, `@click.away="showPicker = false"`, and a
+  stack of `x-transition:*` directives on a deep descendant of
+  `<div x-data="dzDashboardBuilder()">`. On htmx workspace
+  navigation morph, idiomorph re-evaluated those bindings before
+  Alpine re-established the parent scope.
+
+  Fix per the established ADR-0022 pattern (matches #970/#972/#978):
+  - `dzDashboardBuilder.init()` installs `$watch("showPicker", v
+    => root.dataset.showPicker = v ? "1" : "")`
+  - CSS reveals `.dz-card-picker` via
+    `.dz-workspace[data-show-picker="1"]` selector
+  - Click-outside handling moves to a document-level listener in
+    `init()` (replaces Alpine's `@click.away`); cleaned up in
+    `destroy()`.
+
+### Changed
+- /ship drift suite gains `test_back_button_url_safety.py` (#981)
+  and `test_show_picker_via_data_attr.py` (#982). Total: 98 tests.
+
+### Agent Guidance
+- Inline `onclick` handlers that call `new URL(...)` need
+  try/catch — empty / opaque referrers + same-origin checks are
+  common ways to trip the constructor in production.
+- Whenever a parent `x-data` property is referenced from a child
+  element (especially across `{% include %}` boundaries), assume
+  the child will be morphed at some point and apply the
+  ADR-0022 data-attribute + CSS pattern from the start. Catalogue
+  of patterns:
+  - Boolean visibility: `$watch` → `data-X` → CSS `[data-X="1"]` selector
+  - Numeric count: `$watch` → `data-X` + textContent mirror to `[data-X-target]`
+  - Click-outside replacement for `@click.away`: document listener in `init()`, cleaned up in `destroy()`
+
 ## [0.63.21] - 2026-05-01
 
 ### Fixed

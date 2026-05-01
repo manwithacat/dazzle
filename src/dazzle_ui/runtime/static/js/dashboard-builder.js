@@ -109,12 +109,50 @@ document.addEventListener("alpine:init", () => {
         grid.addEventListener("click", this._onGridClick);
         grid.addEventListener("keydown", this._onGridKeydown);
       }
+
+      // #982: mirror showPicker to a data attribute on the workspace
+      // root + drive picker visibility from CSS. Pre-fix the picker
+      // div (a deep descendant of `x-data="dzDashboardBuilder()"`)
+      // bound `x-show="showPicker"` and `@click.away="showPicker = false"`;
+      // on htmx morph idiomorph re-evaluated those bindings before
+      // Alpine re-established the parent scope, throwing
+      // "showPicker is not defined" — fourth ADR-0022 instance after
+      // #970 / #972 / #978. Same cure: data-attribute + CSS.
+      const root = this.$el;
+      const syncShowPicker = (v) => {
+        root.dataset.showPicker = v ? "1" : "";
+      };
+      syncShowPicker(this.showPicker);
+      this.$watch("showPicker", syncShowPicker);
+
+      // Click-outside handler for the picker. Replaces the pre-fix
+      // `@click.away="showPicker = false"` Alpine binding which evaluated
+      // its expression on a child of the morphable subtree. This handler
+      // checks the click target against the picker + the toggle button
+      // (so clicking the toggle doesn't immediately close what it just
+      // opened) and toggles `this.showPicker = false` when the click
+      // lands outside both. Detached in destroy().
+      this._onPickerClickOutside = (e) => {
+        if (!this.showPicker) return;
+        const picker = root.querySelector(".dz-card-picker");
+        const toggle = root.querySelector(
+          '[data-test-id="dz-add-card-trigger"]',
+        );
+        if (picker && picker.contains(e.target)) return;
+        if (toggle && toggle.contains(e.target)) return;
+        this.showPicker = false;
+      };
+      document.addEventListener("click", this._onPickerClickOutside);
     },
 
     destroy() {
       if (this._onKeydown) {
         document.removeEventListener("keydown", this._onKeydown);
         this._onKeydown = null;
+      }
+      if (this._onPickerClickOutside) {
+        document.removeEventListener("click", this._onPickerClickOutside);
+        this._onPickerClickOutside = null;
       }
       if (this._onPointerMove) {
         window.removeEventListener("pointermove", this._onPointerMove);

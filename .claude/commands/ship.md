@@ -25,6 +25,8 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_bulk_count_via_data_attr.py \
          tests/unit/test_action_url_surface_resolution.py \
          tests/unit/test_htmx_undefined_guards.py \
+         tests/unit/test_back_button_url_safety.py \
+         tests/unit/test_show_picker_via_data_attr.py \
          tests/unit/test_workspace_cls_reservation.py \
          tests/unit/test_list_surface_cls_reservation.py \
          -q

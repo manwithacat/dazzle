@@ -16,7 +16,7 @@
     <div class="dz-detail-header-title">
       <a href="{{ detail.back_url }}"
          class="dz-button dz-button-ghost"
-         onclick="var d=this.closest('#dz-detail-drawer');if(d&&window.dzDrawer){window.dzDrawer.close();return false}if(document.referrer&&new URL(document.referrer).origin===location.origin){history.back();return false}">&larr; Back</a>
+         onclick="var d=this.closest('#dz-detail-drawer');if(d&&window.dzDrawer){window.dzDrawer.close();return false}try{if(document.referrer&&new URL(document.referrer).origin===location.origin){history.back();return false}}catch(e){}">&larr; Back</a>
       <h2 class="dz-detail-title">{{ detail.title }}</h2>
     </div>
     <div class="dz-detail-actions">

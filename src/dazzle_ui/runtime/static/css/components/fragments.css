@@ -3516,6 +3516,13 @@
  * Popover above the "Add a card" button, listing widget catalog
  * entries. Used by workspace/_card_picker.html. */
 
+/* #982: visibility driven by `[data-show-picker]` on the ancestor
+ * `.dz-workspace[x-data="dzDashboardBuilder()"]` rather than Alpine
+ * `x-show` on this element. dzDashboardBuilder mirrors `showPicker`
+ * to `data-show-picker="1"` via $watch; CSS reveals the picker only
+ * when the flag is set. Default state hidden so there's no flash on
+ * initial paint (replaces the prior `x-cloak`-style guard). */
+
 .dz-card-picker {
   position: absolute;
   bottom: 100%;
@@ -3532,6 +3539,11 @@
   z-index: 50;
   max-block-size: 16rem;
   overflow-y: auto;
+  display: none;
+}
+
+.dz-workspace[data-show-picker="1"] .dz-card-picker {
+  display: block;
 }
 
 .dz-card-picker-title {
