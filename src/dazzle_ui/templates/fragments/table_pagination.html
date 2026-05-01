@@ -6,12 +6,17 @@
 {% set total_pages = (table.total + table.page_size - 1) // table.page_size %}
 <div class="dz-pagination">
 
-  {# Left: selection summary or row count #}
+  {# Left: selection summary or row count.
+     #978: CSS-driven visibility via `[data-dz-bulk-count]` on the
+     outer .dz-table wrapper (no Alpine bindings on children of the
+     dzTable scope — see ADR-0022 + bulk_actions.html). Count text is
+     mirrored to `[data-dz-bulk-count-target]` imperatively by
+     dzTable's $watch. #}
   <span class="dz-pagination-summary">
-    <span x-show="bulkCount > 0" x-cloak>
-      <span x-text="bulkCount">0</span> of {{ table.total }} selected
+    <span class="dz-bulk-summary-selected">
+      <span data-dz-bulk-count-target>0</span> of {{ table.total }} selected
     </span>
-    <span x-show="!bulkCount || bulkCount === 0">
+    <span class="dz-bulk-summary-rows">
       {{ table.total }} row{{ 's' if table.total != 1 else '' }}
     </span>
   </span>

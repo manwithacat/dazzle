@@ -20,6 +20,9 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_template_xfor_alpine_children.py \
          tests/unit/test_table_loading_overlay.py \
          tests/unit/test_delete_preference_idempotent.py \
+         tests/unit/test_alpine_error_handler.py \
+         tests/unit/test_view_transition_swap.py \
+         tests/unit/test_bulk_count_via_data_attr.py \
          tests/unit/test_workspace_cls_reservation.py \
          tests/unit/test_list_surface_cls_reservation.py \
          -q

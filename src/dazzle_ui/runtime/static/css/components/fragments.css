@@ -276,10 +276,43 @@
  * Delete-only bulk actions toolbar. Visible via Alpine x-show
  * gated on bulkCount > 0. */
 
+/* #978: bulk-actions visibility is CSS-driven by `[data-dz-bulk-count]`
+ * on the ancestor .dz-table (set by dzTable's $watch on bulkCount).
+ * Default state: hidden (no flash on initial paint, replaces the prior
+ * Alpine x-cloak guard). Show only when bulkCount > 0. */
+
 .dz-bulk-actions {
-  display: flex;
+  display: none;
   align-items: center;
   gap: var(--space-md);
+}
+
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
+  display: flex;
+}
+
+/* "items" vs "item" — show plural unless count is exactly 1. */
+.dz-bulk-plural {
+  display: inline;
+}
+.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural {
+  display: none;
+}
+
+/* Pagination summary — selected vs row-count visibility, mirrors the
+ * #978 pattern. The two spans render in the same slot; one shows when
+ * the bulk count is positive, the other when it's zero. */
+.dz-bulk-summary-selected {
+  display: none;
+}
+.dz-bulk-summary-rows {
+  display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
+  display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
+  display: none;
 }
 
 .dz-bulk-delete {

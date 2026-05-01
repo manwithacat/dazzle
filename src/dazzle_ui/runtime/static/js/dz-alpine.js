@@ -23,6 +23,33 @@
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
 
+  // #975: convert Alpine's default plain-object error throws into real
+  // `Error` instances so site-fuzz / page-error harnesses get
+  // actionable messages + stacks instead of an opaque "Object" event.
+  //
+  // Alpine 3's default `setErrorHandler` does
+  // `setTimeout(() => { throw {message, el, expression} }, 0)`. The
+  // thrown value is a plain object — Playwright's `page.on('pageerror')`
+  // sees `String(obj)` which strips to `[object Object]`. Real Errors
+  // give us message + stack + cause, which surfaces the failing
+  // expression in fuzzer reports.
+  if (typeof Alpine.setErrorHandler === "function") {
+    Alpine.setErrorHandler((rawError, el, expression) => {
+      const message = (rawError && rawError.message) || String(rawError);
+      const err = new Error(
+        `Alpine expression error: ${message}` +
+          (expression ? ` (expression: ${expression})` : ""),
+      );
+      // @ts-expect-error: cause is widely supported in modern browsers
+      err.cause = rawError;
+      // Preserve Alpine's "throw async via setTimeout" shape so it
+      // doesn't break in-flight evaluation.
+      setTimeout(() => {
+        throw err;
+      }, 0);
+    });
+  }
+
   // ── Toast Notifications ─────────────────────────────────────────────
 
   Alpine.data("dzToast", () => ({
@@ -270,6 +297,27 @@ document.addEventListener("alpine:init", () => {
       this._onEndResize = (e) => this.endResize(e);
       window.addEventListener("pointermove", this._onResizeMove);
       window.addEventListener("pointerup", this._onEndResize);
+
+      // #978: mirror bulkCount to a data attribute on the root + the
+      // textContent of `[data-dz-bulk-count-target]` descendants. Two
+      // fragments (bulk_actions, table_pagination) previously bound
+      // `x-show="bulkCount > 0"` / `x-text="bulkCount"` on children of
+      // this scope; idiomorph re-evaluated those bindings on morph
+      // before Alpine re-established the dzTable scope, throwing
+      // "bulkCount is not defined" — same family as #970/#972. CSS now
+      // shows/hides via `[data-dz-bulk-count="0"]` selectors; count
+      // text comes from textContent (no Alpine binding on the
+      // morphable child).
+      const syncBulkCount = (n) => {
+        const root = this._root;
+        if (!root) return;
+        root.setAttribute("data-dz-bulk-count", String(n));
+        root.querySelectorAll("[data-dz-bulk-count-target]").forEach((el) => {
+          el.textContent = String(n);
+        });
+      };
+      syncBulkCount(this.bulkCount);
+      this.$watch("bulkCount", syncBulkCount);
     },
 
     destroy() {

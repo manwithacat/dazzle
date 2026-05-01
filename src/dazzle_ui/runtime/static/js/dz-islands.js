@@ -19,30 +19,42 @@
       var src = el.dataset.islandSrc;
       if (!src) return;
       var props = {};
-      try { props = JSON.parse(el.dataset.islandProps || "{}"); } catch (_) {}
+      try {
+        props = JSON.parse(el.dataset.islandProps || "{}");
+      } catch (_) {}
       var apiBase = el.dataset.islandApiBase || "";
-      import(src).then(function (mod) {
-        if (typeof mod.mount === "function") {
-          var cleanup = mod.mount({ el: el, props: props, apiBase: apiBase });
-          if (typeof cleanup === "function") {
-            el._dzIslandUnmount = cleanup;
+      import(src)
+        .then(function (mod) {
+          if (typeof mod.mount === "function") {
+            var cleanup = mod.mount({ el: el, props: props, apiBase: apiBase });
+            if (typeof cleanup === "function") {
+              el._dzIslandUnmount = cleanup;
+            }
           }
-        }
-      }).catch(function (e) {
-        console.error('[dz-islands] Failed to mount "' + el.dataset.island + '":', e);
-      });
+        })
+        .catch(function (e) {
+          console.error(
+            '[dz-islands] Failed to mount "' + el.dataset.island + '":',
+            e,
+          );
+        });
     });
   }
 
   function unmountIslands(nodes) {
     nodes.forEach(function (node) {
       if (node.nodeType !== 1) return;
-      var islands = node.matches && node.matches("[data-island]")
-        ? [node]
-        : Array.prototype.slice.call(node.querySelectorAll("[data-island]") || []);
+      var islands =
+        node.matches && node.matches("[data-island]")
+          ? [node]
+          : Array.prototype.slice.call(
+              node.querySelectorAll("[data-island]") || [],
+            );
       islands.forEach(function (el) {
         if (typeof el._dzIslandUnmount === "function") {
-          try { el._dzIslandUnmount(el); } catch (_) {}
+          try {
+            el._dzIslandUnmount(el);
+          } catch (_) {}
         }
       });
     });
@@ -50,9 +62,33 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     mountIslands(document);
-    document.body.addEventListener("htmx:afterSettle", function (e) { mountIslands(e.target); });
+    document.body.addEventListener("htmx:afterSettle", function (e) {
+      mountIslands(e.target);
+      // #974: restore view-transition-name after the swap settles. We
+      // cleared it in beforeSwap (below) to avoid a transient duplicate
+      // when both old and new <main id="main-content"> carry the same
+      // `view-transition-name: main-content` from the CSS rule. The
+      // empty inline style hands authority back to the CSS cascade.
+      if (e.target && e.target.id === "main-content") {
+        e.target.style.viewTransitionName = "";
+      }
+    });
     document.body.addEventListener("htmx:beforeSwap", function (e) {
       if (e.detail && e.detail.target) unmountIslands([e.detail.target]);
+      // #974: strip view-transition-name on the swap target during the
+      // swap window so the new content's same-named element doesn't
+      // collide with the outgoing one. View Transitions API requires
+      // unique transition names per snapshot; if both old + new
+      // <main id="main-content"> carry the name simultaneously the
+      // snapshot silently bails and Chrome console-errors. Restored in
+      // afterSettle above.
+      if (
+        e.detail &&
+        e.detail.target &&
+        e.detail.target.id === "main-content"
+      ) {
+        e.detail.target.style.viewTransitionName = "none";
+      }
     });
   });
 })();

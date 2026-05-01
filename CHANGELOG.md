@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.19] - 2026-05-01
+
+### Fixed
+- **#975 — Alpine errors now surface as real `Error` instances.**
+  Alpine 3's default error handler does
+  `setTimeout(() => { throw {message, el, expression} }, 0)`. The
+  thrown plain object made site-fuzz / Playwright `pageerror`
+  reports show "Object" with no message or stack. Custom
+  `Alpine.setErrorHandler` in `dz-alpine.js` now wraps the raw
+  error in a real `Error` whose message includes the failing
+  expression text, with the original attached as `.cause`.
+  Diagnostic-grade signal for every future Alpine error.
+
+- **#974 — view-transition-name duplicate during htmx swap.**
+  `#main-content` carries `view-transition-name: main-content` from
+  `dz.css:184`. During a morph swap, both outgoing and incoming
+  `<main id="main-content">` briefly carried the name
+  simultaneously — View Transitions API requires unique names per
+  snapshot, so the snapshot silently bailed and Chrome
+  console-errored. Fix: `dz-islands.js` `htmx:beforeSwap` listener
+  sets `viewTransitionName = "none"` on `#main-content` for the
+  swap window; `htmx:afterSettle` restores by setting it to `""`
+  (hands authority back to the CSS cascade).
+
+- **#978 — `bulkCount is not defined` on entity-create surfaces.**
+  `bulk_actions.html` and `table_pagination.html` previously bound
+  `x-show="bulkCount > 0"` and `x-text="bulkCount"` on children of
+  the dzTable x-data scope. Idiomorph re-evaluated those bindings
+  on morph before Alpine re-established the parent scope — same
+  family as #970/#972. Fix per ADR-0022: dzTable's `init()`
+  installs `$watch("bulkCount", ...)` that mirrors to a
+  `data-dz-bulk-count` attribute on the root + `textContent` of
+  `[data-dz-bulk-count-target]` descendants. CSS now drives
+  visibility via `.dz-table[data-dz-bulk-count="0"]` selectors. No
+  Alpine bindings on morphable children.
+
+### Changed
+- /ship drift suite gains `test_alpine_error_handler.py` (#975),
+  `test_view_transition_swap.py` (#974),
+  `test_bulk_count_via_data_attr.py` (#978). Total: 77 tests.
+
+### Agent Guidance
+- New "is not defined" Alpine errors on htmx morph follow a
+  predictable shape: a child binding references a property that
+  lives on an ancestor's `x-data` scope. Per ADR-0022, the cure is
+  to mirror the property to a DOM attribute via `$watch` and
+  consume it via CSS selectors / `textContent` updates rather than
+  Alpine bindings on children. Pattern to follow:
+  `data-dz-<name>` attribute on root + `[data-dz-<name>-target]`
+  descendants for text mirrors + `.dz-<thing>:not([data-dz-<name>="0"])`
+  CSS selectors for visibility.
+- Custom Alpine error handler is installed at `alpine:init` in
+  `dz-alpine.js`. If you find yourself debugging an "Object" page-error
+  in a project, that handler should make it visible.
+
 ## [0.63.18] - 2026-05-01
 
 ### Fixed

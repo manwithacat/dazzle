@@ -1,4 +1,4 @@
-/* dazzle v0.63.17 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.18 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2616,9 +2616,30 @@ font-size: var(--text-sm);
 color: var(--colour-text);
 }
 .dz-bulk-actions {
-display: flex;
+display: none;
 align-items: center;
 gap: var(--space-md);
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
+display: flex;
+}
+.dz-bulk-plural {
+display: inline;
+}
+.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural {
+display: none;
+}
+.dz-bulk-summary-selected {
+display: none;
+}
+.dz-bulk-summary-rows {
+display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
+display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
+display: none;
 }
 .dz-bulk-delete {
 display: inline-flex;

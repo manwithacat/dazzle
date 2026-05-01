@@ -1,17 +1,15 @@
 {# Bulk actions toolbar — delete-only.
-   State managed by dzTable Alpine component — bulkCount, bulkDelete(), clearSelection().
+   State managed by dzTable Alpine component — bulkDelete(), clearSelection().
+
+   #978: visibility is CSS-driven via `[data-dz-bulk-count]` on the
+   outer .dz-table wrapper (set by dzTable's $watch on bulkCount). The
+   count text is mirrored to `[data-dz-bulk-count-target]` descendants
+   imperatively — no Alpine bindings on children that idiomorph could
+   re-evaluate before scope rebinds (ADR-0022).
 
    v0.62 CSS refactor: inline Tailwind → semantic .dz-bulk-* classes
    (components/fragments.css). #}
-<div x-show="bulkCount > 0"
-     x-cloak
-     x-transition:enter="transition ease-out duration-100"
-     x-transition:enter-start="opacity-0 translate-y-1"
-     x-transition:enter-end="opacity-100 translate-y-0"
-     x-transition:leave="transition ease-in duration-75"
-     x-transition:leave-start="opacity-100 translate-y-0"
-     x-transition:leave-end="opacity-0 translate-y-1"
-     class="dz-bulk-actions">
+<div class="dz-bulk-actions">
 
   {# Delete N items #}
   <button @click="bulkDelete()" type="button" class="dz-bulk-delete">
@@ -25,7 +23,7 @@
       <path d="M14 11v6"></path>
       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
     </svg>
-    <span>Delete <span x-text="bulkCount">0</span> item<span x-show="bulkCount !== 1">s</span></span>
+    <span>Delete <span data-dz-bulk-count-target>0</span> item<span class="dz-bulk-plural">s</span></span>
   </button>
 
   {# Clear selection #}
