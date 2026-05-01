@@ -29,16 +29,31 @@ def _entity_to_app_url(entity_name: str) -> str:
     return f"/app/{slug}/{{id}}"
 
 
-def _action_to_url(action: str) -> str:
-    """Resolve an ``action_grid`` card target to a URL (#891).
+def _action_to_url(action: str, app_spec: Any | None = None) -> str:
+    """Resolve an ``action_grid`` card target to a URL (#891, #979).
 
-    Two forms accepted:
-      - Bare surface/entity name (e.g. ``parents_evening_create``)
-        → ``/app/parents-evening-create``. Author can use any
-        underscore-separated identifier; runtime slugifies.
-      - Literal URL prefixed with `/` (e.g. ``"/app/marking-result?status=flagged"``)
-        — used as-is. Authors who need query strings, anchors, or
-        explicit paths choose this form.
+    Three forms accepted, in priority order:
+
+      1. **Literal URL** prefixed with `/` (e.g.
+         ``"/app/marking-result?status=flagged"``) — used as-is.
+         Authors who need query strings, anchors, or explicit paths
+         choose this form.
+
+      2. **Surface name** registered in ``app_spec.surfaces`` (e.g.
+         ``cohort_analysis_list`` resolved against a surface whose
+         ``entity_ref = "CohortAnalysis"``) → ``/app/cohortanalysis``.
+         The slug derives from the *entity*, not from the surface
+         name — entity list routes are registered at
+         ``/app/{entity_name.lower().replace("_", "-")}`` per
+         ``_entity_to_app_url`` and the route generator. Pre-#979
+         we slugified the surface name directly, producing
+         ``/app/cohort-analysis-list`` which doesn't exist.
+
+      3. **Bare slugified fallback** for legacy / literal-path action
+         strings (no matching surface, no matching entity). Same
+         transform as before — `name.lower().replace("_", "-")`.
+         Preserves backward-compat for action targets that mean
+         "send the user to /app/{whatever-this-is}".
 
     Empty input returns empty string (informational card with no
     click-through).
@@ -47,14 +62,31 @@ def _action_to_url(action: str) -> str:
         return ""
     if action.startswith("/"):
         return action
-    # Split optional `?query` suffix so the surface name slugifies
-    # without dragging the query through the kebab-case transform.
+
+    # Split optional `?query` suffix so the surface lookup matches
+    # against the bare name without dragging the query string through.
+    name, query = action, ""
     if "?" in action:
         name, query = action.split("?", 1)
-        slug = name.lower().replace("_", "-")
-        return f"/app/{slug}?{query}"
-    slug = action.lower().replace("_", "-")
-    return f"/app/{slug}"
+
+    # Form 2: surface lookup. Resolve to the surface's entity_ref
+    # slug, which is what the route generator actually registers.
+    if app_spec is not None:
+        surfaces = getattr(app_spec, "surfaces", None) or []
+        for s in surfaces:
+            if getattr(s, "name", None) == name:
+                entity_ref = getattr(s, "entity_ref", None) or ""
+                if entity_ref:
+                    slug = entity_ref.lower().replace("_", "-")
+                    return f"/app/{slug}?{query}" if query else f"/app/{slug}"
+                # Surface exists but has no entity_ref — fall through
+                # to the legacy slugify path on the surface name.
+                break
+
+    # Form 3: legacy slugify fallback. Surface not found — treat the
+    # action string as a literal URL fragment to slugify.
+    slug = name.lower().replace("_", "-")
+    return f"/app/{slug}?{query}" if query else f"/app/{slug}"
 
 
 def _flatten_group_by(value: Any) -> str:
@@ -584,7 +616,7 @@ def build_workspace_context(
                         "label": c.label,
                         "icon": c.icon,
                         "count_aggregate": c.count_aggregate,
-                        "url": _action_to_url(c.action),
+                        "url": _action_to_url(c.action, app_spec),  # #979
                         "tone": c.tone,
                     }
                     for c in (getattr(region, "action_cards", None) or [])
@@ -640,10 +672,14 @@ def build_workspace_context(
                     for c in (getattr(region, "confirmations", None) or [])
                 ],  # v0.61.72 #6
                 state_field=getattr(region, "state_field", None) or "",
-                revoke_url=_action_to_url(getattr(region, "revoke", None) or ""),
-                primary_action_url=_action_to_url(getattr(region, "primary_action", None) or ""),
+                # #979: surface-aware URL resolution — resolve to entity slug
+                # when the action string matches a surface name in app_spec.
+                revoke_url=_action_to_url(getattr(region, "revoke", None) or "", app_spec),
+                primary_action_url=_action_to_url(
+                    getattr(region, "primary_action", None) or "", app_spec
+                ),
                 secondary_action_url=_action_to_url(
-                    getattr(region, "secondary_action", None) or ""
+                    getattr(region, "secondary_action", None) or "", app_spec
                 ),
                 audit_enabled=(
                     getattr(_entities_by_name.get(source_name or ""), "audit", None) is not None

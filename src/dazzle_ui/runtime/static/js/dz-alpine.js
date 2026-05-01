@@ -195,6 +195,19 @@ document.addEventListener("alpine:init", () => {
         }
       }
 
+      // #980: guard against htmx not yet loaded. Both htmx.min.js and
+      // dz-alpine.js use `defer`, so document order should make htmx
+      // available — but cache misses or extension-loaded scripts can
+      // still race. Without the guard, the user clicks "Confirm" and
+      // gets a silent ReferenceError instead of a graceful failure.
+      if (typeof htmx === "undefined") {
+        console.error(
+          "[dzConfirm] htmx not yet loaded — confirm action cannot proceed",
+        );
+        this.loading = false;
+        this._trigger = null;
+        return;
+      }
       try {
         await htmx.ajax(this.method.toUpperCase(), this.action, opts);
         this.$refs.dialog.close();

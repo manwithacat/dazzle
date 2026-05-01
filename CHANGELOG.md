@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.20] - 2026-05-01
+
+### Fixed
+- **#979 — `action: surface_name` resolves to wrong URL.**
+  `_action_to_url("cohort_analysis_list")` returned
+  `/app/cohort-analysis-list` — but entity list routes are
+  registered at `/app/{entity_slug}` (e.g.
+  `/app/cohortanalysis` for entity `CohortAnalysis`). Result:
+  every `action_grid` card and `confirm_action_panel`
+  revoke/primary/secondary action that referenced a surface by
+  name produced a 404.
+
+  Fix: `_action_to_url` now takes the `app_spec` and looks up the
+  named surface to find its `entity_ref`, returning the entity
+  slug (matches the route generator's convention). Falls back to
+  the legacy slugify when no matching surface or entity exists
+  (preserves backward-compat for action targets that were already
+  literal-path-shaped). The same surface-aware resolution pattern
+  was already in use at `workspace_renderer.py:481-499` for
+  region-level `action:` — this fix brings the action_grid card
+  and confirm_action_panel paths into line.
+
+- **#980 — `htmx is not defined` silent ReferenceError on
+  `dzConfirm`.** `dzConfirm.confirm()` called `htmx.ajax(...)`
+  without a guard. If a user clicks "Confirm" before htmx has
+  loaded (cache miss, extension blocking, defer ordering edge),
+  the confirm dialog appeared to do nothing, with a silent
+  ReferenceError in the console. Now early-returns with a
+  console.error after resetting `loading` / `_trigger` state.
+
+### Changed
+- /ship drift suite gains
+  `test_action_url_surface_resolution.py` (8 tests) and
+  `test_htmx_undefined_guards.py` (2 tests). Total: 87 tests.
+
+### Agent Guidance
+- When generating workspace renderer code that resolves an
+  `action:` field to a URL, use `_action_to_url(action, app_spec)`
+  (not the bare-string version). The `app_spec` lookup is what
+  makes `action: cohort_analysis_list` resolve correctly to the
+  entity route.
+- When generating JS that calls `htmx.X(...)`, wrap in
+  `if (typeof htmx !== "undefined")` or early-return when missing.
+  Drift gate at `tests/unit/test_htmx_undefined_guards.py` walks
+  every `htmx.X(...)` call in dz JS files and fails on
+  un-guarded ones.
+
 ## [0.63.19] - 2026-05-01
 
 ### Fixed

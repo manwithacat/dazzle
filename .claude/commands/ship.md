@@ -23,6 +23,8 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_alpine_error_handler.py \
          tests/unit/test_view_transition_swap.py \
          tests/unit/test_bulk_count_via_data_attr.py \
+         tests/unit/test_action_url_surface_resolution.py \
+         tests/unit/test_htmx_undefined_guards.py \
          tests/unit/test_workspace_cls_reservation.py \
          tests/unit/test_list_surface_cls_reservation.py \
          -q
