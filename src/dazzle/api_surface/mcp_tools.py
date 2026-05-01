@@ -9,7 +9,6 @@ changes are visible without bloating the diff.
 
 import hashlib
 import json
-import os
 
 from .dsl_constructs import REPO_ROOT
 
@@ -30,14 +29,20 @@ def _normalize_schema(schema: object) -> object:
 
 
 def snapshot_mcp_tools() -> str:
-    """Render the deterministic MCP-tools API-surface snapshot."""
-    # Force dev-mode so dev-only tools (list_projects, select_project, etc.)
-    # are part of the snapshot. The runtime gate in `tools_consolidated.py`
-    # only filters at request time; the public surface includes them.
-    os.environ.setdefault("DAZZLE_DEV_MODE", "true")
-    from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+    """Render the deterministic MCP-tools API-surface snapshot.
 
-    tools = sorted(get_all_consolidated_tools(), key=lambda t: t.name)
+    Dev-only tools (list_projects, select_project, get_active_project,
+    validate_all_projects) are part of the public surface — the runtime gate
+    in `tools_consolidated.py` only filters at request time. The snapshot
+    therefore unions the consolidated set with the dev-mode set unconditionally
+    so the baseline is reproducible regardless of runtime ServerState.
+    """
+    from dazzle.mcp.server.tools_consolidated import (
+        get_consolidated_tools,
+        get_dev_mode_tools,
+    )
+
+    tools = sorted([*get_dev_mode_tools(), *get_consolidated_tools()], key=lambda t: t.name)
 
     lines: list[str] = []
     lines.append("# DAZZLE MCP Tools — API Surface (cycle 3 of #961)")

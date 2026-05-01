@@ -508,7 +508,9 @@ class TestStatusHandler:
             project_name="test", project_path="/tmp/test", version="0.1.0"
         )
         store = ActivityStore(graph, session_id)
-        monkeypatch.setattr("dazzle.mcp.server.state._activity_store", store)
+        from dazzle.mcp.server import state as _state_mod
+
+        monkeypatch.setattr(_state_mod.get_state(), "activity_store", store)
 
         store.log_event("tool_start", "dsl", "validate")
         store.log_event("tool_end", "dsl", "validate", success=True, duration_ms=50)
@@ -526,7 +528,9 @@ class TestStatusHandler:
             project_name="test", project_path="/tmp/test", version="0.1.0"
         )
         store = ActivityStore(graph, session_id)
-        monkeypatch.setattr("dazzle.mcp.server.state._activity_store", store)
+        from dazzle.mcp.server import state as _state_mod
+
+        monkeypatch.setattr(_state_mod.get_state(), "activity_store", store)
 
         store.log_event("tool_start", "pipeline", "run")
 

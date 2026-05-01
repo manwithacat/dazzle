@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.25] - 2026-05-01
+
+### Fixed
+- **CI green-up after v0.63.24.** Seven failures in `Python Tests`, all
+  resolved:
+  - `test_activity_log.py::TestStatusHandler::*` — followed the v0.63.24
+    `_StateModule` proxy removal: tests now monkeypatch
+    `state.get_state().activity_store` instead of the deleted
+    `state._activity_store` attribute.
+  - `test_api_surface_drift.py::test_mcp_tools_match_baseline` — the
+    `snapshot_mcp_tools()` helper used `os.environ.setdefault(
+    "DAZZLE_DEV_MODE", "true")` which never actually flipped
+    `_state.is_dev_mode`. Snapshot is now deterministic: it unions
+    `get_dev_mode_tools()` with `get_consolidated_tools()` directly,
+    so the baseline reflects the full public surface (36 tools)
+    regardless of runtime ServerState. Baseline regenerated.
+  - `test_ir_field_reader_parity.py` — removed
+    `ux.PersonaVariant.defaults` from
+    `tests/unit/fixtures/ir_reader_baseline.json` (now has a reader).
+  - `test_user_preferences.py::TestPreferenceRoutes::test_delete_preference*`
+    — updated to expect 204 (the route is RFC-7231 §4.3.5 idempotent
+    per #971; previous tests still asserted 200/404).
+  - `test_golden_master.py::test_simple_dsl_to_ir_snapshot` — updated
+    snapshot to include the new `display: None` field on surfaces.
+
+### Agent Guidance
+- The MCP-tools API-surface snapshot is now insensitive to runtime
+  ServerState. If you add a tool, regenerate via
+  `dazzle inspect-api mcp-tools --write`. Both consolidated tools
+  and dev-mode tools are part of the public surface.
+
 ## [0.63.24] - 2026-05-01
 
 ### Changed

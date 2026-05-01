@@ -115,6 +115,7 @@ class TestPreferenceRoutes:
         mock_store.set_preference.assert_called_once_with(uid, "last_workspace", "school_dashboard")
 
     def test_delete_preference(self) -> None:
+        # DELETE is idempotent per RFC 7231 §4.3.5 — always returns 204 (#971).
         uid = uuid4()
         app, mock_store = _make_app_with_prefs(user_id=uid)
         mock_store.delete_preference.return_value = True
@@ -123,11 +124,11 @@ class TestPreferenceRoutes:
             "/auth/preferences/old_key",
             cookies={"dazzle_session": "valid"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["deleted"] == "old_key"
+        assert resp.status_code == 204
         mock_store.delete_preference.assert_called_once_with(uid, "old_key")
 
     def test_delete_preference_not_found(self) -> None:
+        # DELETE on a missing key still returns 204 (idempotent — RFC 7231 §4.3.5).
         app, mock_store = _make_app_with_prefs()
         mock_store.delete_preference.return_value = False
         client = TestClient(app)
@@ -135,7 +136,7 @@ class TestPreferenceRoutes:
             "/auth/preferences/nonexistent",
             cookies={"dazzle_session": "valid"},
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 204
 
     def test_set_preferences_invalid_body(self) -> None:
         app, _ = _make_app_with_prefs()

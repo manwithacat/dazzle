@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 32 tools
+# Count: 36 tools
 
 tool: agent_commands
   description_hash: 21ccbeb48222
@@ -534,6 +534,15 @@ tool: fitness
     "type": "object"
   }
 
+tool: get_active_project
+  description_hash: aa2f4d90bcec
+  description_len: 34
+  {
+    "properties": {},
+    "required": [],
+    "type": "object"
+  }
+
 tool: graph
   description_hash: ca6de56ab378
   description_len: 736
@@ -716,6 +725,15 @@ tool: knowledge
     "required": [
       "operation"
     ],
+    "type": "object"
+  }
+
+tool: list_projects
+  description_hash: 5f98fd682ebc
+  description_len: 65
+  {
+    "properties": {},
+    "required": [],
     "type": "object"
   }
 
@@ -983,6 +1001,22 @@ tool: rhythm
     },
     "required": [
       "operation"
+    ],
+    "type": "object"
+  }
+
+tool: select_project
+  description_hash: 5a00ce31c00f
+  description_len: 38
+  {
+    "properties": {
+      "project_name": {
+        "description": "Name of the example project to select",
+        "type": "string"
+      }
+    },
+    "required": [
+      "project_name"
     ],
     "type": "object"
   }
@@ -1514,5 +1548,14 @@ tool: user_profile
     "required": [
       "operation"
     ],
+    "type": "object"
+  }
+
+tool: validate_all_projects
+  description_hash: fb2f6459ed5a
+  description_len: 37
+  {
+    "properties": {},
+    "required": [],
     "type": "object"
   }

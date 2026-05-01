@@ -176,7 +176,6 @@
   "triples.SurfaceActionTriple.requires_permission",
   "triples.SurfaceActionTriple.visible_to",
   "ux.PersonaVariant.action_primary",
-  "ux.PersonaVariant.defaults",
   "ux.PersonaVariant.scope_all",
   "ux.PersonaVariant.show_aggregate",
   "views.ViewSpec.filter_condition",
