@@ -7,9 +7,12 @@ are blocked — these entities are read-only projections.
 """
 
 import builtins
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class SystemEntityStore:
@@ -161,6 +164,7 @@ class SystemEntityStore:
         if self._event_framework is None:
             return []
         results: list[dict[str, Any]] = []
+        # Best-effort — event bus may not be initialized in all environments (#smells-1.1).
         try:
             bus = self._event_framework.bus
             topics = await bus.list_topics()
@@ -189,5 +193,5 @@ class SystemEntityStore:
                         }
                     )
         except Exception:
-            pass  # best-effort — event bus may not be initialized
+            logger.debug("Event-trace enumeration failed; returning empty list", exc_info=True)
         return results

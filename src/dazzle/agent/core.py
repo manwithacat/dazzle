@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -505,12 +506,10 @@ class DazzleAgent:
             self._history.append(step)
             transcript.steps.append(step)
 
-            # Notify caller of progress
+            # Notify caller of progress — never let callback errors break the agent loop (#smells-1.1).
             if on_step is not None:
-                try:
+                with suppress(Exception):
                     on_step(step_num + 1, step)
-                except Exception:
-                    pass  # Never let callback errors break the agent loop
 
             # 5. Check completion
             if mission.completion_criteria(action, self._history):

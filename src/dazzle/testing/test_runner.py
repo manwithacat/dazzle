@@ -138,10 +138,11 @@ class DazzleClient:
         """
         if self.client.cookies.get("dazzle_csrf"):
             return
+        # Best-effort — server may not be ready yet (#smells-1.1).
         try:
             self.client.get(f"{self.api_url}/health")
         except Exception:
-            pass  # Best-effort — server may not be ready yet
+            logger.debug("CSRF priming health-check failed", exc_info=True)
 
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """HTTP request with automatic retry on timeout.

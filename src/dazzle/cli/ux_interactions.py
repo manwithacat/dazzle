@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import sys
+from contextlib import suppress
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -191,18 +192,17 @@ def run_interaction_walk(
                     page_console: list[str] = []
 
                     def _on_page_request(request: object) -> None:
-                        try:
+                        # Diagnostic capture only; never fail page load if a request
+                        # object is missing the expected attributes (#smells-1.1).
+                        with suppress(Exception):
                             page_xhr.append(getattr(request, "url", ""))
-                        except Exception:
-                            pass
 
                     def _on_console(msg: object) -> None:
-                        try:
+                        # Diagnostic capture only (#smells-1.1).
+                        with suppress(Exception):
                             page_console.append(
                                 f"{getattr(msg, 'type', '?')}: {getattr(msg, 'text', '')}"
                             )
-                        except Exception:
-                            pass
 
                     page.on("request", _on_page_request)
                     page.on("console", _on_console)

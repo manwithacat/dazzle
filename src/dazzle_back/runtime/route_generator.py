@@ -4,7 +4,9 @@ Route generator - generates FastAPI routes from EndpointSpec.
 This module creates FastAPI routers and routes from backend specifications.
 """
 
+import logging
 from collections.abc import Callable
+from contextlib import suppress
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -37,6 +39,8 @@ if TYPE_CHECKING:
     from dazzle_back.runtime.audit_log import AuditLogger
     from dazzle_back.runtime.service_generator import BaseService
     from dazzle_back.specs.auth import EntityAccessSpec
+
+logger = logging.getLogger(__name__)
 
 # Expose APIRouter name for return-type annotations (the real class is
 # imported as _APIRouter to allow a None fallback when FastAPI is absent).
@@ -104,8 +108,8 @@ def _forbidden_detail(
                 for p in getattr(rule, "personas", None) or []:
                     if p not in permitted:
                         permitted.append(p)
-    except Exception:  # pragma: no cover — defensive: never shadow the 403
-        pass
+    except Exception:  # pragma: no cover — defensive: never shadow the 403 (#smells-1.1)
+        logger.debug("Permitted-personas computation failed; omitting from 403", exc_info=True)
 
     return {
         "error": "forbidden",
@@ -1692,7 +1696,8 @@ async def _list_handler_body(
                     elif isinstance(ni, dict):
                         all_nodes.append(ni)
             except Exception:
-                pass  # Node fetch failure — edges returned, nodes omitted
+                # Node fetch failure — edges returned, nodes omitted (#smells-1.1).
+                logger.debug("Graph-node fetch failed; returning edges only", exc_info=True)
 
         # Pick graph_node spec (first available for the serializer)
         gn_spec = next(iter(node_specs.values()), None) if node_specs else None
@@ -3470,12 +3475,10 @@ def generate_crud_routes(
 
         deleted = 0
         for item_id in ids:
-            try:
+            # Skip items the user cannot access or that no longer exist (#smells-1.1).
+            with suppress(Exception):
                 await service.execute(operation="delete", id=item_id)
                 deleted += 1
-            except Exception:
-                # Skip items the user cannot access or that no longer exist
-                pass
 
         return JSONResponse({"deleted": deleted, "total": len(ids)})
 

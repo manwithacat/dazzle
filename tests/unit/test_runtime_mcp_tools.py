@@ -20,8 +20,10 @@ from dazzle.mcp.runtime_tools import (  # noqa: E402
     PATTERN_COMPONENTS,
     PRIMITIVE_COMPONENTS,
     RUNTIME_TOOL_NAMES,
-    get_ui_spec,
     handle_runtime_tool,
+)
+from dazzle.mcp.server.state import (  # noqa: E402
+    get_ui_spec,
     set_appspec_data,
     set_ui_spec,
 )

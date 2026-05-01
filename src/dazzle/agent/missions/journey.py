@@ -259,13 +259,13 @@ async def run_phase1_exploration(
             except Exception:
                 observation_parts.append("Could not inspect form")
 
-        # Screenshot
+        # Screenshot — best-effort; absence shouldn't block journey progress (#smells-1.1).
         screenshot_path: str | None = None
         try:
             png = await page.screenshot()
             screenshot_path = writer.save_screenshot(persona, f"{step_num:03d}", png)
         except Exception:
-            pass
+            logger.debug("Screenshot failed for %s step %s", persona, step_num, exc_info=True)
 
         observation = "; ".join(observation_parts) if observation_parts else "Page loaded"
 

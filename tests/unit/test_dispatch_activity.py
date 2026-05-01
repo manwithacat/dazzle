@@ -213,28 +213,28 @@ class TestInitOrdering:
         dazzle_dir = project_root / ".dazzle"
         dazzle_dir.mkdir(parents=True)
 
-        # Simulate: KG is already initialized
-        old_kg = state._knowledge_graph
-        old_log = state._activity_log
-        old_store = state._activity_store
+        srv = state.get_state()
+        old_kg = srv.knowledge_graph
+        old_log = srv.activity_log
+        old_store = srv.activity_store
         try:
-            state._knowledge_graph = graph
-            state._activity_store = None  # Not yet initialized
+            srv.knowledge_graph = graph
+            srv.activity_store = None  # Not yet initialized
 
             state.init_activity_log(project_root)
 
             # After init, both log and store should be set
-            assert state._activity_log is not None
-            assert state._activity_store is not None
+            assert srv.activity_log is not None
+            assert srv.activity_store is not None
 
             # Verify store actually works
-            state._activity_store.log_event("test", "tool", "op", message="hello")
-            events = state._activity_store.read_since(since_id=0)
+            srv.activity_store.log_event("test", "tool", "op", message="hello")
+            events = srv.activity_store.read_since(since_id=0)
             assert len(events) == 1
         finally:
-            state._knowledge_graph = old_kg
-            state._activity_log = old_log
-            state._activity_store = old_store
+            srv.knowledge_graph = old_kg
+            srv.activity_log = old_log
+            srv.activity_store = old_store
 
     def test_activity_store_none_when_kg_not_ready(self, tmp_path):
         """init_activity_log should leave store as None when KG is not available."""
@@ -244,19 +244,20 @@ class TestInitOrdering:
         dazzle_dir = project_root / ".dazzle"
         dazzle_dir.mkdir(parents=True)
 
-        old_kg = state._knowledge_graph
-        old_log = state._activity_log
-        old_store = state._activity_store
+        srv = state.get_state()
+        old_kg = srv.knowledge_graph
+        old_log = srv.activity_log
+        old_store = srv.activity_store
         try:
-            state._knowledge_graph = None  # KG not initialized
-            state._activity_store = None
+            srv.knowledge_graph = None  # KG not initialized
+            srv.activity_store = None
 
             state.init_activity_log(project_root)
 
             # Log should exist, but store should remain None
-            assert state._activity_log is not None
-            assert state._activity_store is None
+            assert srv.activity_log is not None
+            assert srv.activity_store is None
         finally:
-            state._knowledge_graph = old_kg
-            state._activity_log = old_log
-            state._activity_store = old_store
+            srv.knowledge_graph = old_kg
+            srv.activity_log = old_log
+            srv.activity_store = old_store

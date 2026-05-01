@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations  # required: forward reference
 
 import logging
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -348,11 +349,10 @@ async def run_agent_tests(
                     result = await agent.run_test(page, test, base_url)
                     results.append(result)
 
-                    try:
+                    # localStorage/sessionStorage may not be available on all pages (#smells-1.1).
+                    with suppress(Exception):
                         await page.evaluate("localStorage.clear()")
                         await page.evaluate("sessionStorage.clear()")
-                    except Exception:
-                        pass  # localStorage may not be available on all pages
 
         return results
 

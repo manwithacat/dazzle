@@ -1350,7 +1350,11 @@ async def dispatch_consolidated_tool(
                 resolved = resolve_project_path(arguments.get("project_path"))
                 arguments = {**arguments, "_resolved_project_path": resolved}
             except Exception:
-                pass  # Fall through to per-handler resolution
+                # Fall through to per-handler resolution if pre-resolve fails (#smells-1.1).
+                logger.debug(
+                    "Pre-resolve of project_path failed; per-handler resolution will retry",
+                    exc_info=True,
+                )
 
         from .state import get_activity_store
 
@@ -1441,6 +1445,7 @@ async def dispatch_consolidated_tool(
                         duration_ms=duration_ms,
                     )
             except Exception:
-                pass  # Never fail the tool call due to telemetry
+                # Never fail the tool call due to telemetry (#smells-1.1).
+                logger.debug("KG telemetry log_tool_invocation failed", exc_info=True)
         return result
     return None

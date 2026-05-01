@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.24] - 2026-05-01
+
+### Changed
+- **Smells round 2026-05-01 follow-through — Actions 1 + 2.**
+  - **Action 1 (1.1 bare `except Exception: pass`)**: 28 → 0 production sites.
+    Replaced with `with suppress(Exception):` for cleanup contexts and
+    `except Exception: logger.debug(..., exc_info=True)` for sites with a
+    logger. Touched 19 modules across `src/dazzle/`, `src/dazzle_back/`,
+    `src/dazzle_ui/`.
+  - **Action 2 (P6 ADR-0003 shims)**: removed 2/3 named live shims:
+    - `src/dazzle/mcp/server/state.py` — deleted the `_StateModule` proxy
+      and `_LEGACY_ATTR_MAP`. Tests that read/wrote `state._knowledge_graph`
+      etc. now use `state.get_state()` instead.
+    - `src/dazzle/mcp/runtime_tools/__init__.py` — moved 5 delegating
+      wrappers (`set_appspec_data`, `get_appspec_data`, `set_ui_spec`,
+      `get_ui_spec`, `get_or_create_ui_spec`) into `mcp/server/state.py`
+      as proper public setters/getters. Test imports updated.
+    - `src/dazzle/testing/agent_e2e.py` — deferred (504-line module with
+      3 production callers; needs a focused refactor cycle).
+
+### Added
+- `tests/unit/test_no_bare_except_pass.py` — drift gate asserting zero
+  bare `except Exception: pass` blocks in production code (AST walk).
+- `tests/unit/test_no_shims.py` — drift gate forbidding `# shim` /
+  `backward-compatible shim` markers in production code, with a small
+  `ALLOWED_PATHS` allow-list for genuine alias renames (LayoutArchetype
+  = Stage, RBAC PERMIT_UNPROTECTED text) and the deferred agent_e2e
+  wrapper.
+
+### Agent Guidance
+- Use `with suppress(Exception):` (greppable as intentional) for
+  best-effort cleanup contexts. Use `except Exception: logger.debug(...,
+  exc_info=True)` when a logger is available and a record of the failure
+  is useful. Bare `except Exception: pass` is now a drift-gate failure.
+- ADR-0003 shim/wrapper markers (`# shim`, `backward-compatible shim`)
+  are forbidden by `tests/unit/test_no_shims.py`. If a deliberate alias
+  rename is in flight, add the path to `ALLOWED_PATHS` with a note
+  pointing at the tracking issue or ADR.
+
 ## [0.63.23] - 2026-05-01
 
 ### Fixed

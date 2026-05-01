@@ -2,6 +2,7 @@
 
 import asyncio
 import json as _json
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +40,8 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
 
     runtime_json = project_root / ".dazzle" / "runtime.json"
     if runtime_json.exists():
-        try:
+        # Malformed/partial runtime.json falls through to env/manifest defaults (#smells-1.1).
+        with suppress(Exception):
             data = _json.loads(runtime_json.read_text())
             site = data.get("ui_url", "")
             if site:
@@ -47,8 +49,6 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
                 # runtime.json points at a separate port that only exists
                 # in Docker/split mode.  Use site_url for both.
                 return site.rstrip("/"), site.rstrip("/")
-        except Exception:
-            pass
 
     return resolve_site_url(), resolve_api_url()
 
@@ -242,7 +242,8 @@ def _run_contracts(
 
             if "{id}" in path:
                 if ent_name and ent_name not in entity_ids:
-                    try:
+                    # Best-effort entity-id probe; missing IDs are handled below (#smells-1.1).
+                    with suppress(Exception):
                         import httpx
 
                         async with httpx.AsyncClient() as http:
@@ -258,8 +259,6 @@ def _run_contracts(
                                     if isinstance(items[0], dict)
                                     else items[0]
                                 )
-                    except Exception:
-                        pass
                 eid = entity_ids.get(ent_name, "")
                 if not eid:
                     contract.status = "pending"
@@ -327,7 +326,8 @@ def _run_contracts(
                         eid = entity_ids.get(rc.entity, "")
                         if not eid:
                             # Try to fetch an entity ID
-                            try:
+                            # Best-effort entity-id probe; falls through to "pending" below (#smells-1.1).
+                            with suppress(Exception):
                                 htmx_resp = await persona_client.get_full_page(
                                     f"/__test__/entity/{rc.entity}"
                                 )
@@ -338,8 +338,6 @@ def _run_contracts(
                                     if items:
                                         eid = str(items[0].get("id", ""))
                                         entity_ids[rc.entity] = eid
-                            except Exception:
-                                pass
                         if eid:
                             path = f"/app/{rc.entity.lower()}/{eid}"
                         else:

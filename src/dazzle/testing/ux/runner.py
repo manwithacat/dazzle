@@ -363,7 +363,8 @@ class InteractionRunner:
                     if rows:
                         return str(rows[0].get("id", ""))
         except Exception:
-            pass
+            # Probe is best-effort; callers fall back to creation when no id is returned (#smells-1.1).
+            logger.debug("Test-entity id probe failed for %s", entity, exc_info=True)
         return None
 
     async def _run_create_submit(self, page: Any, interaction: Interaction) -> Interaction:

@@ -381,11 +381,13 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 if result is not None and not result.is_valid and result.error is not None:
                     raise result.error
             finally:
+                # Best-effort connection close; suppressing here doesn't mask the
+                # checked failure inside the with-block above (#smells-1.1).
                 if _grant_store is not None:
                     try:
                         _grant_conn.__exit__(None, None, None)
                     except Exception:
-                        pass
+                        logger.debug("grant_conn cleanup failed", exc_info=True)
 
         # Validate invariants after update (v0.14.2)
         if self.entity_spec and self.entity_spec.invariants:

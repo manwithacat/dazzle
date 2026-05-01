@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -28,16 +29,14 @@ def _resolve_project_dir(app: str | None) -> Path:
     if candidate.is_dir():
         return candidate
 
-    # Try relative to the dazzle package root
-    try:
+    # Best-effort fallback to the dazzle package root (#smells-1.1).
+    with suppress(Exception):
         import dazzle
 
         pkg_root = Path(dazzle.__file__).resolve().parents[2]
         candidate = pkg_root / "examples" / app
         if candidate.is_dir():
             return candidate
-    except Exception:
-        pass
 
     typer.echo(f"App directory not found for '{app}'", err=True)
     raise typer.Exit(code=1)
@@ -122,7 +121,12 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                         typer.echo(f"  ... and {len(errors) - 5} more.", err=True)
                     return
         except Exception:
-            pass  # verifier failure must never block a trial
+            # A bug in the verifier must never block a trial — fall through
+            # to the seed attempt with whatever blueprint exists (#smells-1.1).
+            typer.echo(
+                "Note: blueprint verifier raised; continuing without hard-gate.",
+                err=True,
+            )
 
     if existing_data is None or not any(existing_data.glob("*.jsonl")):
         tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-seed-"))

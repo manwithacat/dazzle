@@ -57,13 +57,16 @@ class PlaywrightExecutor:
         page.on("console", self._on_console)
 
     def _on_console(self, msg: Any) -> None:
-        """Buffer console error messages for action-window diff-slicing."""
+        """Buffer console error messages for action-window diff-slicing.
+
+        Diagnostic capture — a malformed console message must never crash
+        the executor (#smells-1.1).
+        """
         try:
             if msg.type == "error":
                 self._console_errors_buffer.append(msg.text)
         except Exception:
-            # Never let a malformed console message crash the executor
-            pass
+            logger.debug("Malformed console message; skipping", exc_info=True)
 
     def _resolve_locator(self, selector: str) -> Any:
         """Resolve a selector to a Playwright locator.
@@ -98,10 +101,12 @@ class PlaywrightExecutor:
             if action.type == ActionType.CLICK:
                 locator = self._resolve_locator(action.target or "")
                 await locator.click(timeout=5000)
+                # networkidle wait timeout is benign here — long-poll/SSE keeps the
+                # network busy on some apps; click already succeeded (#smells-1.1).
                 try:
                     await self._page.wait_for_load_state("networkidle", timeout=5000)
                 except Exception:
-                    pass  # wait timeout is benign here
+                    logger.debug("networkidle timeout after click %s", action.target, exc_info=True)
                 base = ActionResult(message=f"Clicked {action.target}")
 
             elif action.type == ActionType.TYPE:
@@ -120,10 +125,12 @@ class PlaywrightExecutor:
                     base_parts = self._page.url.split("/")[0:3]
                     target = "/".join(base_parts) + target
                 await self._page.goto(target)
+                # networkidle is best-effort — some apps keep long-poll/SSE open and
+                # never reach idle; the navigation itself has already succeeded (#smells-1.1).
                 try:
                     await self._page.wait_for_load_state("networkidle")
                 except Exception:
-                    pass
+                    logger.debug("networkidle timeout after navigate to %s", target, exc_info=True)
                 base = ActionResult(message=f"Navigated to {target}")
 
             elif action.type == ActionType.WAIT:

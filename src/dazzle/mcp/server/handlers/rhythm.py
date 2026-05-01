@@ -5,6 +5,7 @@ Handles rhythm listing, retrieval, evaluation, coverage, and proposal.
 """
 
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, Literal
 
@@ -852,15 +853,14 @@ def _seed_gap_relations(gaps: list[dict[str, Any]]) -> None:
         if gap.get("scene") and gap.get("rhythm"):
             gap_id = f"gap:{gap['kind']}:{hashlib.md5(gap['description'].encode(), usedforsecurity=False).hexdigest()[:8]}"
             scene_id = f"scene:{gap['rhythm']}.{gap['scene']}"
-            try:
+            # KG seeding is advisory, never blocks (#smells-1.1).
+            with suppress(Exception):
                 graph.create_relation(
                     source_id=gap_id,
                     target_id=scene_id,
                     relation_type="gap_blocks_scene",
                     metadata={"severity": gap["severity"], "kind": gap["kind"]},
                 )
-            except Exception:
-                pass  # KG seeding is advisory, never blocks
 
 
 def _build_gaps_summary(gaps: list[dict[str, Any]]) -> dict[str, Any]:

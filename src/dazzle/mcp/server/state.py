@@ -8,8 +8,6 @@ for project root, dev mode, active project management, and knowledge graph.
 from __future__ import annotations
 
 import logging
-import sys
-import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -467,6 +465,31 @@ def set_mock_orchestrator(orch: MockOrchestrator | None) -> None:
     _state.mock_orchestrator = orch
 
 
+def set_appspec_data(spec: dict[str, Any] | None) -> None:
+    """Store the active AppSpec data on the server state."""
+    _state.appspec_data = spec
+
+
+def get_appspec_data() -> dict[str, Any] | None:
+    """Return the current AppSpec data, or None if none is loaded."""
+    return _state.appspec_data
+
+
+def set_ui_spec(spec: dict[str, Any] | None) -> None:
+    """Store the active UI spec on the server state."""
+    _state.ui_spec = spec
+
+
+def get_ui_spec() -> dict[str, Any] | None:
+    """Return the current UI spec, or None if none is loaded."""
+    return _state.ui_spec
+
+
+def get_or_create_ui_spec() -> dict[str, Any]:
+    """Return the current UI spec, creating an empty default if absent."""
+    return _state.get_or_create_ui_spec()
+
+
 def init_browser_gate(max_concurrent: int | None = None) -> None:
     """Configure the global Playwright browser gate at server startup.
 
@@ -508,56 +531,3 @@ def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:
         max_files=1000,
     )
     return result
-
-
-# ============================================================================
-# Backward-compatible module proxy
-# ============================================================================
-#
-# Some callers (tests) access old module-level globals like
-# ``state._knowledge_graph`` directly.  The mapping below lets reads
-# and writes of the old names proxy through to ``_state`` attributes.
-
-_LEGACY_ATTR_MAP: dict[str, str] = {
-    "_project_root": "project_root",
-    "_is_dev_mode": "is_dev_mode",
-    "_active_project": "active_project",
-    "_available_projects": "available_projects",
-    "_knowledge_graph": "knowledge_graph",
-    "_graph_db_path": "graph_db_path",
-    "_activity_log": "activity_log",
-    "_activity_store": "activity_store",
-    "_mock_orchestrator": "mock_orchestrator",
-}
-
-
-class _StateModule(types.ModuleType):
-    """Module subclass that proxies legacy global attribute names to ``_state``.
-
-    Why: Several callers (especially tests) historically accessed module-level
-    globals like ``state._knowledge_graph`` directly.  Rather than updating
-    every call-site, this proxy intercepts ``__getattr__`` / ``__setattr__``
-    and forwards reads/writes of the old underscore-prefixed names to the
-    corresponding attributes on the ``_state`` singleton.  This keeps the
-    module importable as ``from dazzle.mcp.server import state; state.X``
-    while centralising mutable state inside ``ServerState``.
-    """
-
-    def __getattr__(self, name: str) -> Any:
-        mapped = _LEGACY_ATTR_MAP.get(name)
-        if mapped is not None:
-            return getattr(_state, mapped)
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        mapped = _LEGACY_ATTR_MAP.get(name)
-        if mapped is not None:
-            setattr(_state, mapped, value)
-        else:
-            super().__setattr__(name, value)
-
-
-# Replace this module in sys.modules so attribute access is intercepted.
-_mod = _StateModule(__name__)
-_mod.__dict__.update({k: v for k, v in sys.modules[__name__].__dict__.items() if k != "__class__"})
-sys.modules[__name__] = _mod

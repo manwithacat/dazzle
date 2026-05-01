@@ -8,6 +8,7 @@ Three detection layers:
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -637,7 +638,8 @@ class PythonAuditAgent(DetectionAgent):
         pyproject = self._project_path / "pyproject.toml"
         if not pyproject.exists():
             return (3, 10)  # conservative default
-        try:
+        # Malformed pyproject / missing tomllib falls back to the conservative default (#smells-1.1).
+        with suppress(Exception):
             import re
             import tomllib
 
@@ -646,6 +648,4 @@ class PythonAuditAgent(DetectionAgent):
             match = re.search(r"(\d+)\.(\d+)", requires)
             if match:
                 return (int(match.group(1)), int(match.group(2)))
-        except Exception:
-            pass
         return (3, 10)

@@ -371,7 +371,11 @@ class WorkspaceRouteBuilder:
                                         if scope_result:
                                             scope_filters = scope_result
                                 except Exception:
-                                    pass  # Fall through to unscoped if auth fails
+                                    # Fall through to unscoped filters if auth fails (#smells-1.1).
+                                    logger.debug(
+                                        "Selector scope auth resolution failed; using unscoped filters",
+                                        exc_info=True,
+                                    )
 
                             # Apply scope_field filter: restrict options by
                             # matching FK field to current user's domain attribute (#634, #639).
@@ -400,7 +404,12 @@ class WorkspaceRouteBuilder:
                                         sf[sel_scope_field] = str(user_val)
                                         scope_filters = sf
                                 except Exception:
-                                    pass
+                                    # User attr probe is best-effort — unscoped fallback applies (#smells-1.1).
+                                    logger.debug(
+                                        "Selector user-attr probe failed for field %s",
+                                        sel_scope_field,
+                                        exc_info=True,
+                                    )
 
                             result = await sel_repo.list(
                                 page=1, page_size=500, filters=scope_filters

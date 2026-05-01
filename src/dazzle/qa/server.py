@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -82,11 +83,11 @@ async def _poll_health(
 
     if client is not None:
         while elapsed < timeout:
-            try:
+            # Health-poll: connection errors during boot are expected;
+            # only a clean 200 means ready (#smells-1.1).
+            with suppress(Exception):
                 if await _do_get(client) == 200:
                     return True
-            except Exception:
-                pass
             await asyncio.sleep(interval)
             elapsed += interval
         return False
@@ -98,11 +99,10 @@ async def _poll_health(
 
     async with httpx.AsyncClient() as http:
         while elapsed < timeout:
-            try:
+            # Health-poll: connection errors during boot are expected (#smells-1.1).
+            with suppress(Exception):
                 if (await http.get(health_url)).status_code == 200:
                     return True
-            except Exception:
-                pass
             await asyncio.sleep(interval)
             elapsed += interval
     return False

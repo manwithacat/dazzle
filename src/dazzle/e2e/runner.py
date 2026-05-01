@@ -33,6 +33,7 @@ import os
 import signal
 import subprocess
 import sys
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any, Literal
@@ -349,22 +350,16 @@ class ModeRunner:
             )
 
     def _emergency_cleanup(self) -> None:
-        """Runs from atexit / signal handlers — must never raise."""
-        try:
+        """Runs from atexit / signal handlers — must never raise (#smells-1.1)."""
+        with suppress(Exception):
             if self._proc is not None and self._proc.poll() is None:
-                try:
+                with suppress(ProcessLookupError, OSError):
                     if os.name == "posix":
                         os.killpg(os.getpgid(self._proc.pid), signal.SIGTERM)
                     else:
                         self._proc.terminate()
-                except (ProcessLookupError, OSError):
-                    pass
             if self._log_fh is not None:
-                try:
+                with suppress(OSError):
                     self._log_fh.close()
-                except OSError:
-                    pass
             if self._lock is not None:
                 self._lock.release()
-        except Exception:
-            pass

@@ -13,6 +13,7 @@ the harness must have observed a GET against the region endpoint.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -183,7 +184,7 @@ class CardAddInteraction:
                 },
             )
         finally:
-            try:
+            # Cleanup is best-effort — Playwright already detaches listeners
+            # on page close, so a stale handle here is harmless (#smells-1.1).
+            with suppress(Exception):
                 page.remove_listener("request", _on_request)
-            except Exception:
-                pass

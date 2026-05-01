@@ -312,7 +312,8 @@ def run_unified_server(
 
             get_jinja_env().globals["_use_cdn"] = False
         except Exception:
-            pass
+            # Toggle is non-critical; default CDN behaviour stands if Jinja isn't ready (#smells-1.1).
+            logger.debug("Could not flip _use_cdn=False on jinja env", exc_info=True)
 
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"

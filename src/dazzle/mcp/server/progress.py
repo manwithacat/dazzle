@@ -201,7 +201,8 @@ class ProgressContext:
                     source=self._source,
                 )
             except Exception:
-                pass  # Never fail the handler due to activity logging
+                # Never fail the handler due to activity logging (#smells-1.1).
+                logger.debug("Activity store log_event(log) failed", exc_info=True)
 
     def _write_progress_entry(self, current: int, total: int, message: str | None) -> None:
         """Append a progress entry to the SQLite activity store if attached."""
@@ -217,7 +218,8 @@ class ProgressContext:
                     source=self._source,
                 )
             except Exception:
-                pass  # Never fail the handler due to activity logging
+                # Never fail the handler due to activity logging (#smells-1.1).
+                logger.debug("Activity store log_event(progress) failed", exc_info=True)
 
     # --------------------------------------------------------------------- #
     # Internal async helpers (for sync wrappers to fire-and-forget)

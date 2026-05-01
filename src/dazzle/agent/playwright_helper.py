@@ -50,6 +50,7 @@ import argparse
 import asyncio
 import json
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -93,11 +94,10 @@ async def _launch(state_dir: Path, timeout_ms: int) -> tuple[Any, Any, Any, Any]
     if last_url_path.exists():
         last = last_url_path.read_text().strip()
         if last:
-            try:
+            # Stale URL — leave page at default if nav fails (#smells-1.1)
+            with suppress(Exception):
                 await page.goto(last)
                 await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-            except Exception:
-                pass  # stale URL — leave page at default
 
     return pw, browser, ctx, page
 
@@ -113,14 +113,13 @@ async def _teardown(
 ) -> None:
     state_path, _, last_url_path = _paths(state_dir)
     if save_state:
-        try:
+        # Best-effort persistence — these run during cleanup, after the
+        # action has already produced its effect. Failures here don't
+        # invalidate the action; suppress and continue. (#smells-1.1)
+        with suppress(Exception):
             await ctx.storage_state(path=str(state_path))
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             last_url_path.write_text(page.url)
-        except Exception:
-            pass
     await ctx.close()
     await browser.close()
     await pw.stop()
@@ -225,10 +224,11 @@ async def action_navigate(target: str, state_dir: Path, timeout_ms: int) -> dict
             base = base_url_path.read_text().strip() if base_url_path.exists() else ""
             dest = base.rstrip("/") + (target if target.startswith("/") else f"/{target}")
         await page.goto(dest)
-        try:
+        # networkidle is best-effort — pages with long-poll connections
+        # never settle. Timeout here is fine; the navigation already
+        # succeeded. (#smells-1.1)
+        with suppress(Exception):
             await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-        except Exception:
-            pass
         return {"status": "navigated", "from": before_url, "to": page.url}
     finally:
         await _teardown(pw, browser, ctx, page, state_dir)
@@ -241,10 +241,9 @@ async def action_click(selector: str, state_dir: Path, timeout_ms: int) -> dict[
         try:
             locator = page.locator(selector)
             await locator.first.click(timeout=timeout_ms)
-            try:
+            # networkidle best-effort — see action_navigate above (#smells-1.1)
+            with suppress(Exception):
                 await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-            except Exception:
-                pass
             return {
                 "status": "clicked",
                 "selector": selector,
@@ -443,28 +442,25 @@ async def action_form_submit(
         #    reliable for HTMX because the ajax round-trip may complete
         #    before networkidle kicks in AND the swap runs on the JS
         #    thread after the response settles.
-        try:
+        # All four cleanups below are best-effort post-submit observation —
+        # failures here just mean we don't have richer diagnostics to
+        # return, not that the action itself failed (#smells-1.1).
+        with suppress(Exception):
             await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-        except Exception:
-            pass
         # Give HTMX a beat to run its swap handler. 250ms is generous
         # for any local-network response.
-        try:
+        with suppress(Exception):
             await page.wait_for_timeout(250)
-        except Exception:
-            pass
 
         # Harvest any post-submit error banner so the caller doesn't need
         # a second observe call to see it (a second call would trigger
         # a fresh page.goto which would discard the swapped-in error
         # content — see cycle 229 investigation).
         visible_error_text = ""
-        try:
+        with suppress(Exception):
             error_el = page.locator("[data-dazzle-error]").first
             if await error_el.count() > 0:
                 visible_error_text = (await error_el.inner_text()).strip()
-        except Exception:
-            pass
 
         # Also snapshot the inner HTML of #form-errors if present — this
         # is the target container for HTMX 422 swaps and gives us a
@@ -472,12 +468,10 @@ async def action_form_submit(
         # selector didn't match (e.g. if the error fragment wrapped
         # differently than expected).
         form_errors_inner = ""
-        try:
+        with suppress(Exception):
             target_el = page.locator("#form-errors").first
             if await target_el.count() > 0:
                 form_errors_inner = (await target_el.inner_text()).strip()
-        except Exception:
-            pass
 
         after_url = page.url
         return {
