@@ -1507,7 +1507,29 @@ window.dz.filterRefSelect = function (selectEl) {
   const refApi = selectEl.dataset.refApi;
   if (!refApi) return;
   const selectedValue = selectEl.dataset.selectedValue || "";
-  fetch(refApi + "?page_size=100", { headers: { Accept: "application/json" } })
+  // #973 (round 2): wire AbortController to both htmx:beforeSwap and
+  // pagehide. Round 1 only checked `document.body.contains(selectEl)`
+  // in .catch — that worked for in-page htmx swaps but not for full
+  // browser navigation (Playwright `page.goto`, link clicks, form
+  // submits). On full nav the fetch rejects with `TypeError: Failed
+  // to fetch` BEFORE the element leaves the DOM, so the contains-
+  // check fired too early and the warn still logged.
+  //
+  // The robust discriminator is an explicit AbortController. We trip
+  // it on:
+  //   - htmx:beforeSwap (htmx is about to morph the DOM under us)
+  //   - pagehide (full browser navigation, also covers BFCache)
+  // Both fire BEFORE the fetch is cancelled, so the rejection arrives
+  // as a known AbortError we can swallow cleanly.
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  window.addEventListener("htmx:beforeSwap", onAbort, { once: true });
+  window.addEventListener("pagehide", onAbort, { once: true });
+
+  fetch(refApi + "?page_size=100", {
+    headers: { Accept: "application/json" },
+    signal: controller.signal,
+  })
     .then((r) => {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
@@ -1540,18 +1562,21 @@ window.dz.filterRefSelect = function (selectEl) {
       selectEl.appendChild(fragment);
     })
     .catch((err) => {
-      // #973: swallow navigation-cancelled fetches. When htmx swap
-      // removes the <select> mid-fetch, browsers reject with a generic
-      // TypeError ("Failed to fetch"). The user has navigated away —
-      // there's nothing to log and nothing to do. Detect via "is the
-      // <select> still in the DOM?" — that's the cleanest discriminator
-      // since AbortError is only emitted when an explicit AbortController
-      // signals; navigation-cancelled fetches surface as plain TypeError.
-      if (!document.body.contains(selectEl)) return;
-      // Also swallow explicit AbortError (future-proof if we add an
-      // AbortController to the helper).
+      // Explicit AbortError from our controller — silent. Covers both
+      // htmx swap and full-browser-nav cancellation paths.
       if (err && err.name === "AbortError") return;
+      // Defense-in-depth: if the element is gone (e.g. ancestor
+      // removed without firing one of our abort signals), still
+      // swallow.
+      if (!document.body.contains(selectEl)) return;
       console.warn("Filter ref-entity load failed for", refApi, ":", err);
+    })
+    .finally(() => {
+      // Detach listeners — listener accumulation across many filter
+      // dropdowns on one page would otherwise grow unbounded. After
+      // pagehide this is moot (page going away) but harmless.
+      window.removeEventListener("htmx:beforeSwap", onAbort);
+      window.removeEventListener("pagehide", onAbort);
     });
 };
 // Alpine x-init reads the function from the global scope by bare name.

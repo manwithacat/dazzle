@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.21] - 2026-05-01
+
+### Fixed
+- **#973 round 2 — full browser navigation now cancels filterRefSelect cleanly.**
+  Round 1 (v0.63.17) checked `document.body.contains(selectEl)` in
+  `.catch`; that worked for in-page htmx swaps but missed full browser
+  navigation (Playwright `page.goto`, link clicks, form submits) — the
+  fetch rejected with `TypeError: Failed to fetch` BEFORE the element
+  left the DOM, so the contains-check fired too early and the warn
+  still logged. Reopened by user with site-fuzz evidence (~18 events
+  per 20-min run on v0.63.19, all correlated with the fuzzer's
+  `reseed` action which is a `page.goto`).
+
+  Round 2: explicit `AbortController` per fetch, wired one-shot to
+  both `htmx:beforeSwap` and `pagehide`. Both fire BEFORE the fetch
+  is cancelled, so the rejection arrives as a known `AbortError` we
+  swallow cleanly. Listeners self-detach via `{ once: true }` and
+  `.finally()` removal — bounded by request count, no accumulation
+  across filter dropdowns. The pre-existing `document.body.contains`
+  check stays as defense-in-depth for ancestor-removal edge cases.
+
+### Agent Guidance
+- For `fetch()` calls in helpers wired to a DOM element with a
+  navigation lifecycle: use an `AbortController` and wire
+  `controller.abort()` to both `htmx:beforeSwap` and `pagehide` (one-shot
+  via `{ once: true }`, cleaned up in `.finally()`). The
+  `document.body.contains(el)` check in `.catch` is too late for
+  full-browser-nav cancellation — it only catches in-page htmx swaps.
+  `pagehide` covers `page.goto`, link clicks, form submits, and BFCache.
+
 ## [0.63.20] - 2026-05-01
 
 ### Fixed
