@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.23] - 2026-05-01
+
+### Fixed
+- **#980 round 2 — `htmx is not defined` from inline template scripts.**
+  Round 1 (v0.63.20) guarded `htmx.X(...)` calls in dz JS files,
+  but missed the **inline `<script>` blocks in Jinja templates**.
+  htmx.min.js loads with `defer`; inline scripts in the body run
+  **synchronously at parse time**, BEFORE the deferred htmx
+  script. On post-login first navigation the inline scripts in
+  `workspace/_content.html` raced 100% — three `htmx.X()` calls
+  fired with htmx undefined.
+
+  Fix: guard each call with `typeof htmx === "undefined"` early-
+  return. The context-selector change handler skips the manual
+  `htmx.process` / `htmx.ajax` calls when htmx is missing — the
+  updated `hx-get` attribute will still be honoured by htmx once
+  it loads. The detail-drawer click handler falls back to native
+  `window.location.href` navigation when htmx is missing — better
+  than a dead click.
+
+### Changed
+- /ship drift gate `test_htmx_undefined_guards.py` extended to
+  scan inline `<script>` blocks in `src/dazzle_ui/templates/**`
+  (not just dz JS files). Catches the round-1-missed code path
+  mechanically. Total: 99 tests.
+
+### Agent Guidance
+- Inline `<script>` blocks in Jinja templates that reference
+  `htmx.X()` MUST guard with `typeof htmx === "undefined"`. The
+  defer-script load order doesn't help inline scripts. The drift
+  gate at `tests/unit/test_htmx_undefined_guards.py` now scans
+  templates too, so violations fail pre-commit via /ship.
+
 ## [0.63.22] - 2026-05-01
 
 ### Fixed

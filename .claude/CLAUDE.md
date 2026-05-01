@@ -297,4 +297,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.63.22 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.63.23 | **Python**: 3.12+ | **Status**: Production Ready

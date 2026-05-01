@@ -104,3 +104,53 @@ def test_htmx_calls_in_dashboard_builder_are_guarded() -> None:
         "Unguarded `htmx.X(...)` calls in dashboard-builder.js (#980):\n"
         + "\n".join(f"  - {u}" for u in unguarded)
     )
+
+
+# ───────────────────────── #980 round 2: templates ─────────────────────────
+
+
+_TEMPLATES_DIR = REPO_ROOT / "src" / "dazzle_ui" / "templates"
+
+# Match an inline <script>...</script> block (not src=... loads).
+_INLINE_SCRIPT_RE = re.compile(
+    r"<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)</script>",
+    re.IGNORECASE,
+)
+
+
+def test_htmx_calls_in_inline_template_scripts_are_guarded() -> None:
+    """Every htmx.X(...) call in an inline <script> block in a Jinja template
+    must be guarded.
+
+    Background: htmx.min.js is loaded with `defer`; inline `<script>`
+    blocks in the body run synchronously at parse time. On post-login
+    first navigation the inline script runs BEFORE the deferred htmx
+    script — direct htmx.X() calls race 100% (#980 round 2). Guard
+    each call with `typeof htmx === 'undefined'` early-return (or a
+    `htmx:load`-deferred init).
+
+    Alpine event-handler attributes (e.g. `@click="htmx.trigger(...)"`)
+    only fire on user interaction, by which time htmx is loaded — they
+    are tolerated. The drift gate only flags inline `<script>` blocks.
+    """
+    unguarded: list[str] = []
+    for path in sorted(_TEMPLATES_DIR.rglob("*.html")):
+        raw = path.read_text()
+        for script_match in _INLINE_SCRIPT_RE.finditer(raw):
+            block = _strip_comments(script_match.group(1))
+            for call_match in _HTMX_CALL_RE.finditer(block):
+                if not _is_guarded(block, call_match.start()):
+                    # Approximate line number in the original file.
+                    abs_pos = script_match.start(1) + call_match.start()
+                    line_no = raw[:abs_pos].count("\n") + 1
+                    rel = path.relative_to(_TEMPLATES_DIR)
+                    unguarded.append(f"{rel}:~{line_no}: htmx.{call_match.group(1)}(...)")
+    assert not unguarded, (
+        "Unguarded `htmx.X(...)` calls in inline template scripts "
+        "(#980 round 2 — script load order race on post-login first "
+        "navigation):\n"
+        + "\n".join(f"  - {u}" for u in unguarded)
+        + "\n\nWrap each in `if (typeof htmx === 'undefined') return;` "
+        "(or skip path) so the inline script doesn't race the deferred "
+        "htmx.min.js load."
+    )

@@ -86,6 +86,14 @@
         var qs = params.toString();
         var newUrl = base + (qs ? '?' + qs : '');
         el.setAttribute('hx-get', newUrl);
+        // #980 round 2: guard against htmx not yet loaded. The initial
+        // sel.dispatchEvent(new Event('change')) fires synchronously
+        // when this inline script runs, BEFORE the deferred htmx.min.js
+        // has executed. On post-login first nav this raced 100% of the
+        // time. Skip the manual triggers when htmx is missing — the
+        // updated hx-get attribute will still be honoured by htmx once
+        // it loads and processes the page.
+        if (typeof htmx === 'undefined') return;
         htmx.process(el);
         htmx.ajax('GET', newUrl, {target: '#' + el.id, swap: 'innerHTML'});
       });
@@ -303,6 +311,15 @@
     }
     if (href.startsWith('/')) {
       e.preventDefault();
+      // #980 round 2: guard against htmx not yet loaded. This handler
+      // is registered immediately at script-parse time (before the
+      // deferred htmx.min.js); on a fresh page load + rapid click
+      // before htmx initialises, the call would race.
+      if (typeof htmx === 'undefined') {
+        // Fall back to native navigation — better than a dead click.
+        window.location.href = href;
+        return;
+      }
       htmx.ajax('GET', href, {target: '#dz-detail-drawer-content', swap: 'innerHTML'});
     }
   });
