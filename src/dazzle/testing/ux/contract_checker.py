@@ -537,20 +537,23 @@ def _check_workspace(
 ) -> list[str]:
     errors: list[str] = []
 
-    # Collect regions from two sources:
-    #   1. `data-dz-region-name` attributes in the rendered DOM (classic
-    #      server-rendered workspaces without a dashboard builder).
-    #   2. The `dz-workspace-layout` JSON data island (dashboard workspaces
-    #      using `workspace/_content.html`). The wrappers that carry
-    #      `data-dz-region-name` are client-side only — emitted by Alpine's
-    #      `<template x-for="card in cards">` — so the SSR HTML doesn't
-    #      contain them. The JSON island IS the authoritative declaration
-    #      at that point and matches cards[].region 1:1 to the region names
-    #      the contract expects. Treating the JSON as satisfying the
-    #      contract closes the false-positive reported in #803.
+    # Collect regions from three sources to cover both the classic and
+    # post-#948 server-rendered dashboard templates:
+    #
+    #   1. `data-dz-region-name` attributes — classic non-dashboard workspaces
+    #      and any region wrapper still using the legacy attribute.
+    #   2. `data-card-region` attributes — dashboard workspaces after the
+    #      #948 refactor (`workspace/_content.html` server-renders each card
+    #      with `data-card-id` / `data-card-region` / `data-card-col-span`).
+    #      The JSON data island and Alpine `<template x-for>` were removed
+    #      in that cycle, so this attribute is now the SSR declaration of
+    #      record.
+    #   3. The `dz-workspace-layout` JSON data island — kept for backward
+    #      compatibility with any older template path that still emits it.
+    #      Closes the false-positive originally reported in #803.
     found_regions: set[str] = set()
     for _tag_name, attrs in tags:
-        region = attrs.get("data-dz-region-name")
+        region = attrs.get("data-dz-region-name") or attrs.get("data-card-region")
         if region:
             found_regions.add(region)
 

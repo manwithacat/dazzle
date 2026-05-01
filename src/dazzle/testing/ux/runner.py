@@ -228,8 +228,10 @@ class InteractionRunner:
             await self._capture_screenshot(page, interaction)
             return interaction
 
-        # Check that region containers exist
-        regions = page.locator("[data-dz-region-name]")
+        # Check that region containers exist. The dashboard refactor (#948)
+        # replaced `data-dz-region-name` with `data-card-region` on the SSR
+        # wrapper; accept either so this gate works against both templates.
+        regions = page.locator("[data-dz-region-name], [data-card-region]")
         count = await regions.count()
         if count == 0:
             interaction.status = "failed"
@@ -249,8 +251,12 @@ class InteractionRunner:
         # Wait for HTMX data to load in workspace regions
         await page.wait_for_timeout(2000)
 
-        # Find the target region
-        region = page.locator(f"[data-dz-region-name='{interaction.action}']")
+        # Find the target region — accept legacy `data-dz-region-name` and
+        # post-#948 `data-card-region` (dashboard refactor).
+        region = page.locator(
+            f"[data-dz-region-name='{interaction.action}'], "
+            f"[data-card-region='{interaction.action}']"
+        )
         if await region.count() == 0:
             interaction.status = "skipped"
             interaction.error = f"Region {interaction.action} not found"

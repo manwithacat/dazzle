@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.26] - 2026-05-01
+
+### Fixed
+- **CI green-up cycle 2 — UX Contracts + INTERACTION_WALK after #948.**
+  The dashboard refactor (`c9098d54`) replaced the
+  `#dz-workspace-layout` JSON data island and the Alpine
+  `<template x-for="card in cards">` wrappers with SSR cards carrying
+  `data-card-id` / `data-card-region` / `data-card-col-span` and a
+  picker container exposing `data-card-catalog`. The two harnesses
+  still looked for the legacy attributes / JSON island and saw zero
+  regions on every dashboard workspace. Specifically:
+  - `src/dazzle/testing/ux/contract_checker.py::_check_workspace`
+    now also accepts `data-card-region` when collecting found regions
+    (legacy `data-dz-region-name` and the JSON island remain valid for
+    pre-#948 templates).
+  - `src/dazzle/testing/ux/runner.py` (`_run_workspace_view`,
+    `_run_drawer_open`) now matches both attributes when locating
+    region containers.
+  - `src/dazzle/cli/ux_interactions.py::_layout_card_ids_and_catalog`
+    reads card ids from `[data-card-id][data-card-region]` and
+    catalog entries from `[data-card-catalog]` JSON, falling back to
+    the legacy `#dz-workspace-layout` island only if neither is
+    present. The diagnostic readiness probe was updated to match.
+  No DSL or runtime change required — purely a test-harness fix
+  that's been blocking CI since the refactor merged on 2026-04-29.
+
+### Agent Guidance
+- When the dashboard SSR wrappers change attribute names again,
+  update both `contract_checker._check_workspace` AND the two
+  paths in `testing/ux/runner.py`. Either fork drops a region from
+  the harness's view and turns the contracts gate red on every
+  example app.
+
 ## [0.63.25] - 2026-05-01
 
 ### Fixed

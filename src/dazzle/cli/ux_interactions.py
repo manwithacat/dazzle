@@ -64,13 +64,33 @@ def _default_workspace_path(page: Page) -> str:
 
 
 def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str]]:
-    """Extract the workspace's card ids + catalog region names from
-    the embedded ``#dz-workspace-layout`` JSON.
+    """Extract the workspace's card ids + catalog region names.
+
+    The dashboard refactor (#948) replaced the ``#dz-workspace-layout`` JSON
+    data island with SSR ``data-card-*`` attributes on each card wrapper and
+    a ``data-card-catalog`` JSON blob on the card picker container. This
+    helper tries the SSR attributes first and falls back to the legacy JSON
+    island for any older template still emitting it.
 
     Returns ``([], [])`` if the page isn't a workspace page.
     """
     layout = page.evaluate(
         """() => {
+          // #948 SSR layout — preferred path
+          const cardEls = document.querySelectorAll('[data-card-id][data-card-region]');
+          const cards = Array.from(cardEls).map(el => ({
+            id: el.getAttribute('data-card-id'),
+            region: el.getAttribute('data-card-region'),
+          }));
+          const pickerEl = document.querySelector('[data-card-catalog]');
+          let catalog = [];
+          if (pickerEl) {
+            try { catalog = JSON.parse(pickerEl.getAttribute('data-card-catalog') || '[]'); }
+            catch { catalog = []; }
+          }
+          if (cards.length || catalog.length) return {cards, catalog};
+
+          // Legacy fallback — pre-#948 JSON data island.
           const el = document.getElementById('dz-workspace-layout');
           if (!el) return null;
           try { return JSON.parse(el.textContent); } catch { return null; }
@@ -232,15 +252,20 @@ def run_interaction_walk(
                     card_ids, catalog = _layout_card_ids_and_catalog(page)
                     walk = _build_default_walk(card_ids, catalog)
                     if not walk:
-                        # Diagnostic dump — walk builds against the
-                        # #dz-workspace-layout JSON, so if that's not
-                        # there the harness can't do anything. Print
-                        # enough context to tell whether we're on a
-                        # login page, a workspace with an empty
-                        # layout, or somewhere unexpected.
+                        # Diagnostic dump — walk builds against either the
+                        # post-#948 SSR `data-card-*` attributes or the
+                        # legacy `#dz-workspace-layout` JSON island, so if
+                        # neither is there the harness can't do anything.
+                        # Print enough context to tell whether we're on a
+                        # login page, a workspace with an empty layout, or
+                        # somewhere unexpected.
                         current_url = page.url
                         has_layout = page.evaluate(
-                            "() => !!document.getElementById('dz-workspace-layout')"
+                            """() => {
+                              return !!document.getElementById('dz-workspace-layout')
+                                  || document.querySelectorAll('[data-card-id][data-card-region]').length > 0
+                                  || !!document.querySelector('[data-card-catalog]');
+                            }"""
                         )
                         title = page.title() or "(no title)"
                         print(
