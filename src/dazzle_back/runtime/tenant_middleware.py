@@ -119,11 +119,19 @@ class TenantMiddleware(BaseHTTPMiddleware):
         resolver: TenantResolver,
         registry: Any,
         excluded_prefixes: tuple[str, ...] = _EXCLUDED_PREFIXES,
+        per_tenant_config_schema: dict[str, str] | None = None,
     ) -> None:
         super().__init__(app)
         self._resolver = resolver
         self._cache = _RegistryCache(registry)
         self._excluded_prefixes = excluded_prefixes
+        # #957 cycle 8 — DSL-declared `tenancy: per_tenant_config:`
+        # schema, used to coerce the JSONB config into typed values
+        # exposed via `request.state.tenant_config`. None / empty
+        # means apps without a per_tenant_config block — the request
+        # state attribute is set to {} so callers can index without
+        # guarding for absence.
+        self._per_tenant_config_schema = per_tenant_config_schema or {}
 
     async def dispatch(self, request: Request, call_next: Any) -> Any:
         from .tenant_isolation import _current_tenant_schema, set_current_tenant_schema
@@ -159,6 +167,17 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Set schema context for pg_backend
         token = set_current_tenant_schema(record.schema_name)
         request.state.tenant = record
+
+        # #957 cycle 8 — coerce per-tenant config against the
+        # DSL-declared schema and expose on request.state. Empty
+        # schema produces an empty dict (no risk of KeyError on the
+        # callers' side since they iterate the schema's known keys).
+        from dazzle.tenant.config_coercion import coerce_config
+
+        request.state.tenant_config = coerce_config(
+            getattr(record, "config", None),
+            self._per_tenant_config_schema,
+        )
 
         try:
             response = await call_next(request)

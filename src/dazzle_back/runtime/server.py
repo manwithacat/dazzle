@@ -469,10 +469,19 @@ class DazzleBackendApp:
             assert self._database_url is not None, "database_url required for tenant isolation"
             registry = TenantRegistry(self._database_url)
             registry.ensure_table()
+
+            # #957 cycle 8 — pull per_tenant_config schema off the
+            # linked tenancy spec so the middleware can coerce the
+            # JSONB config and expose `request.state.tenant_config`.
+            _per_tenant_schema: dict[str, str] = {}
+            if self._appspec and self._appspec.tenancy:
+                _per_tenant_schema = dict(self._appspec.tenancy.per_tenant_config)
+
             self._app.add_middleware(
                 TenantMiddleware,
                 resolver=resolver,
                 registry=registry,
+                per_tenant_config_schema=_per_tenant_schema,
             )
 
         # Exception handlers (v0.28.0)

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.50] - 2026-05-01
+
+### Added
+- **#957 cycle 8 — `request.state.tenant_config` populated per request.**
+  `TenantMiddleware` now accepts a `per_tenant_config_schema: dict[str,
+  str]` at construction time and uses it (with the cycle-7 coercion
+  helper) to convert the active tenant's `record.config` JSONB into a
+  typed dict on `request.state.tenant_config`. `server.py` wires the
+  schema from `appspec.tenancy.per_tenant_config`. The attribute is
+  always present on non-excluded paths (empty dict by default), so
+  callers can index without defensive `getattr`. Excluded paths
+  (`/health`, `/docs`, `/static/`, `/auth/`, `/_dazzle/`) skip the
+  middleware entirely and don't touch `request.state.tenant_config`.
+
+  This completes the `per_tenant_config` runtime: a project author's
+  `tenancy: per_tenant_config: { locale: str, theme: str }` declaration
+  is now end-to-end functional. UI handlers can read
+  `request.state.tenant_config["locale"]` without writing storage,
+  coercion, or middleware.
+
 ## [0.63.49] - 2026-05-01
 
 ### Added

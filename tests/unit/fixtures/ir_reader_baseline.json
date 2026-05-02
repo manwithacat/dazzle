@@ -62,7 +62,6 @@
   "governance.InterfacesSpec.default_auth",
   "governance.InterfacesSpec.default_rate_limit",
   "governance.PoliciesSpec.default_retention",
-  "governance.TenancySpec.per_tenant_config",
   "governance.TenancySpec.provisioning",
   "governance.TenantIsolationSpec.cross_tenant_access",
   "governance.TenantIsolationSpec.enforce_in_queries",
