@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.28] - 2026-05-02
+
+### Fixed
+- **#985 — `.dz-workspace-primary-actions` overflows main when total
+  button width exceeds the heading container.** Workspaces with many
+  entities surface a long row of `New <Entity>` buttons that, with
+  `flex-shrink: 0` and no `flex-wrap`, bleed past `<main>`'s right
+  edge (quantified at +213px on a 5-entity teacher workspace at
+  1280px viewport). Fix: drop `flex-shrink: 0` and add `flex-wrap:
+  wrap` + `justify-content: flex-end` on the actions row, plus
+  `flex-wrap: wrap` on the parent `.dz-workspace-heading` so the
+  whole heading can stack title-then-actions on narrow viewports.
+
+### Added
+- `tests/unit/test_workspace_heading_wraps.py` — three drift-gate
+  tests asserting the heading + actions row keep their wrap rules.
+  Test gate 10 in `test_workspace_routes.py` updated to remove the
+  `flex-shrink: 0` assertion that the fix deliberately drops.
+
+### Agent Guidance
+- A flex row that contains user-driven content (button labels from
+  user-defined entities) should default to `flex-wrap: wrap` rather
+  than `flex-shrink: 0`. Squeezing wins on aesthetic edge cases but
+  loses on real workspaces with 5+ primary actions; wrapping is
+  cheaper, predictable, and needs no JS measurement.
+
 ## [0.63.27] - 2026-05-02
 
 ### Security

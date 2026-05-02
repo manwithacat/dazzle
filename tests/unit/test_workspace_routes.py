@@ -7216,8 +7216,12 @@ class TestWorkspaceHeading:
     # Gate 10: asymmetric flex row
     def test_row_uses_asymmetric_flex(self) -> None:
         """v0.62 CSS refactor: heading row layout lives on .dz-workspace-heading
-        (flex / items-start / justify-between / gap), and the actions wrapper
-        shrink-0 lives on .dz-workspace-primary-actions."""
+        (flex / items-start / justify-between / gap). The actions wrapper
+        used to assert ``flex-shrink: 0`` here, but #985 removed that
+        declaration in favour of ``flex-wrap: wrap`` so the row breaks
+        rather than overflowing — see test_workspace_heading_wraps.py for
+        the wrap drift gate.
+        """
         html = self._render(primary_actions=[{"label": "X", "route": "/x"}])
         assert "dz-workspace-heading" in html
         assert "dz-workspace-primary-actions" in html
@@ -7232,8 +7236,6 @@ class TestWorkspaceHeading:
         assert "display: flex" in heading_block
         assert "align-items: flex-start" in heading_block
         assert "justify-content: space-between" in heading_block
-        actions_block = css.split(".dz-workspace-primary-actions {")[1].split("}")[0]
-        assert "flex-shrink: 0" in actions_block
 
     # Gate 11: no Alpine on the heading row
     def test_heading_row_is_alpine_free(self) -> None:

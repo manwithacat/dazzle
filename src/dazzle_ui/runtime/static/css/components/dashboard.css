@@ -35,6 +35,10 @@
   justify-content: space-between;
   gap: var(--space-md);
   margin-block-end: var(--space-md);
+  /* Heading wraps when title + actions exceed the row — actions
+   * fall under the title rather than bleeding past <main>'s right
+   * edge (#985). */
+  flex-wrap: wrap;
 }
 
 .dz-workspace-title {
@@ -48,7 +52,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex-shrink: 0;
+  /* #985: workspaces with many entities surface a long row of
+   * "New <Entity>" buttons. Without flex-wrap the row would bleed
+   * past <main>'s right edge (5 × 200px buttons + gaps overflows a
+   * 1024px content column). flex-shrink:0 is intentionally dropped:
+   * shrinking would squeeze button labels, wrapping is cleaner.
+   * justify-content:flex-end keeps wrapped rows right-aligned to
+   * match the heading's space-between layout. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Workspace-level primary action — same shape as .dz-button-primary
