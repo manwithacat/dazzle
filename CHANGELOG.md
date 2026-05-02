@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.54] - 2026-05-03
+
+### Added
+- **#956 cycle 5 — auth populates `audit_context.current_user_id`.**
+  `_build_access_context` (called per-request from every Cedar / auth
+  handler) now writes the active user's ID into the cycle-4 audit
+  ContextVar. With cycle-4's emitter wired, authenticated mutations
+  on audited entities now produce `AuditEntry` rows with `by_user_id`
+  populated; unauthenticated paths leave the ContextVar at None
+  (system-write semantic preserved).
+
+  No explicit reset is needed in the per-request flow — asyncio
+  gives each request task its own ContextVar copy, so values are
+  task-local and freed when the task ends. Verified by a concurrent-
+  task isolation test.
+
+  After cycle 5 the audit primitive is functional end-to-end at the
+  data layer: a project author can write
+  `audit on Manuscript: track: status` and observe rows in
+  `AuditEntry` with the correct `by_user_id` for every status change.
+  Cycle 6 adds the user-facing history region; cycle 7 gates
+  visibility via `show_to:`; cycle 8 sweeps old rows.
+
 ## [0.63.53] - 2026-05-03
 
 ### Added

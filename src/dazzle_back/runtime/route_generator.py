@@ -721,6 +721,19 @@ def _build_access_context(
         is_superuser=getattr(user, "is_superuser", False) if user else False,
         tenant_admin_personas=admin_personas,
     )
+
+    # #956 cycle 5 — populate the audit-context ContextVar so the
+    # audit emitter (cycle 4) can fill `AuditEntry.by_user_id` for
+    # every mutation in this request. asyncio gives each request task
+    # its own copy of the contextvar, so no explicit reset is needed
+    # — the value is gone when the task ends. Unauthenticated requests
+    # leave the contextvar at its default (None), preserving the
+    # "system write" semantic.
+    if user is not None:
+        from dazzle_back.runtime.audit_context import set_current_user_id
+
+        set_current_user_id(str(user.id))
+
     return user, ctx
 
 
