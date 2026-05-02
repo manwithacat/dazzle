@@ -136,8 +136,20 @@ class LocaleMiddleware(BaseHTTPMiddleware):
         locale = self._resolve(request)
         request.state.locale = locale
         request.state.locale_supported = self._supported
-        response: Response = await call_next(request)
-        return response
+
+        # #955 cycle 2: also set the i18n ContextVar so the `_()` Jinja
+        # filter can read the locale at render time without templates
+        # threading it through their context. The reset on the way out
+        # is good hygiene for test environments where multiple requests
+        # share a worker.
+        from dazzle.i18n import locale_ctxvar
+
+        token = locale_ctxvar.set(locale)
+        try:
+            response: Response = await call_next(request)
+            return response
+        finally:
+            locale_ctxvar.reset(token)
 
     def _resolve(self, request: Request) -> str:
         # 1. Cookie override

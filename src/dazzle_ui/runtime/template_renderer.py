@@ -371,37 +371,43 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
 
 
 def _gettext(message: str, **kwargs: Any) -> str:
-    """gettext-compatible passthrough filter for i18n (#955 cycle 1).
+    """gettext filter — translates against the per-request locale.
 
-    Today this is identity: ``_("Hello {name}", name="world")`` returns
-    ``"Hello world"`` rendered against the supplied keyword arguments. The
-    surface mirrors the gettext signature so cycle 2 can drop in catalogue
-    lookup without templates re-authoring their strings.
+    Cycle 2 (#955): looks up *message* in :class:`~dazzle.i18n.MessageCatalogue`
+    keyed by the locale on :data:`~dazzle.i18n.locale_ctxvar` (set by
+    :class:`~dazzle_back.runtime.locale_middleware.LocaleMiddleware`).
+    Falls back to *message* on miss — projects with no translations
+    registered see the source text everywhere, same as cycle 1.
 
-    Why ship a passthrough now: marking translatable strings is the
-    expensive part of an i18n migration — every template must be visited.
-    Doing it incrementally against a no-op filter means later cycles can
-    extract the catalogue without churn.
+    Reading the locale from a ContextVar (rather than the Jinja render
+    context) means templates don't have to thread ``current_locale``
+    through every render call site. Mirrors the ``theme_variant``
+    ContextVar pattern in :mod:`dazzle_ui.runtime.theme`.
 
-    Use in templates:
+    Templates use either filter or call form::
 
         <h1>{{ _("Welcome, {name}!", name=user.name) }}</h1>
-        <p>{{ _("You have %(count)d unread message(s)") % {"count": n} }}</p>
+        <p>{{ "Sign in" | _ }}</p>
 
-    Future cycles add: per-locale catalogue lookup (cycle 2),
-    ``ngettext`` plural forms (cycle 3), `dazzle i18n extract` CLI
-    (cycle 4).
+    Projects register translations via :func:`dazzle.i18n.register_translations`::
+
+        from dazzle.i18n import register_translations
+
+        register_translations("fr", {"Welcome": "Bienvenue"})
     """
+    from dazzle.i18n import get_catalogue, get_current_locale
+
+    locale = get_current_locale()
+    translation = get_catalogue().lookup(locale, message) if locale else None
+    out = translation if translation is not None else message
     if not kwargs:
-        return message
+        return out
     try:
-        return message.format(**kwargs)
+        return out.format(**kwargs)
     except (KeyError, IndexError, ValueError):
-        # Malformed format string — return the unsubstituted source
-        # rather than raising. Cycle 2 will warn on this once the
-        # catalogue exists; cycle 1 stays quiet to avoid log noise on
-        # every page render of a project that hasn't formatted yet.
-        return message
+        # Malformed format string — return the unsubstituted (translated
+        # or source) text rather than raising.
+        return out
 
 
 def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:

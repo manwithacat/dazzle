@@ -9,6 +9,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.34] - 2026-05-02
+
+### Added
+- **#955 cycle 2 — i18n catalogue + ContextVar wiring.** New
+  \`dazzle.i18n\` package:
+    - \`MessageCatalogue\` — thread-safe in-memory
+      \`dict[locale][msgid] -> translation\` store. Subsequent
+      \`register()\` calls merge onto the existing locale dict so
+      projects can register per-feature bundles without coordination.
+    - \`register_translations(locale, mapping)\` + \`translate(locale,
+      msgid, **kwargs)\` on the global singleton.
+    - \`locale_ctxvar\` / \`get_current_locale()\` — request-scoped
+      \`ContextVar\` mirroring the \`theme_variant\` pattern from
+      \`dazzle_ui.runtime.theme\`. Set by \`LocaleMiddleware\` on
+      dispatch, reset on the way out (even on exception).
+    - Primary-subtag fallback: \`en-GB\` lookups walk to \`en\` when
+      only the latter is registered.
+  The \`_()\` Jinja filter now reads \`locale_ctxvar\` and looks up
+  translations via the catalogue. Templates that have been marking
+  strings since cycle 1 start translating today as soon as a
+  catalogue is registered, with no template re-authoring.
+
+- **#952 cycle 2 — notification dispatcher + provider config.** New
+  \`dazzle.notifications\` package:
+    - \`NotificationProvider\` Protocol — the abstraction every
+      adapter implements (\`send(rendered) -> bool\`).
+    - \`LogProvider\` — default adapter; logs a structured line per
+      send. Useful for dev / CI before SMTP credentials land.
+    - \`NotificationDispatcher.dispatch(spec, payload, recipient=None)\`
+      — renders subject/body/template against the trigger payload
+      (\`{{ name }}\` Jinja-ish placeholders, missing keys become
+      visible \`{name}\` tokens rather than crashing), dispatches one
+      \`RenderedNotification\` per channel. Provider exceptions on
+      one channel don't abort the others.
+    - \`template:\` precedence: when a spec sets \`template:\` and the
+      dispatcher has it registered, the loaded source wins over
+      \`message:\`. Missing template falls back to \`message:\` with
+      a WARNING log so misconfig surfaces.
+    - \`build_dispatcher_from_manifest(NotificationsConfig)\` — wires
+      the dispatcher from the new \`[notifications]\` block. Cycle 2
+      only ships \`log\` provider; \`smtp\` / \`sendgrid\` / \`ses\`
+      keys log a deferred-cycle warning and fall back to
+      \`LogProvider\` so dispatch still runs visibly.
+    - Recipient resolution: \`field(<name>)\` works via payload
+      lookup. \`role(<name>)\` / \`creator\` deferred to cycle 4
+      when the trigger pipeline lands.
+
+- New \`[notifications]\` block in \`dazzle.toml\` (provider +
+  optional \`[notifications.smtp]\` subtable for SMTP credentials).
+
+### Changed
+- \`LocaleMiddleware.dispatch\` now also sets \`locale_ctxvar\` for
+  the request (resets in a \`finally\` so exceptions don't leak the
+  locale across requests on a worker).
+
+### Tests
+- 26 unit tests in \`test_i18n_catalogue.py\` cover catalogue
+  registration, lookup, primary-subtag fallback, ContextVar
+  isolation across copied contexts, \`_()\` filter integration,
+  and middleware-sets-ContextVar behaviour (with exception path).
+- 19 unit tests in \`test_notification_dispatcher.py\` cover
+  \`LogProvider\`, template-vs-message precedence, subject rendering
+  with Jinja-ish placeholders, per-channel dispatch with partial
+  failure handling, recipient resolution forms, manifest parsing
+  (including the SMTP subtable + invalid-provider rejection), and
+  the dispatcher builder.
+
+### Agent Guidance
+- Cycle 3 of #955 ships the \`dazzle i18n extract\` CLI (walks
+  templates, emits a .pot). Today's catalogue API is the
+  substitution target — projects can register translations
+  programmatically now.
+- Cycle 3 of #952 implements \`SmtpProvider\`. The dispatcher
+  contract is pinned by the cycle-2 tests so \`SmtpProvider\` only
+  needs to implement \`send(RenderedNotification) -> bool\`.
+
 ## [0.63.33] - 2026-05-02
 
 ### Added

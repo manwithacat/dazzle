@@ -336,6 +336,40 @@ class TenantConfig:
 
 
 @dataclass
+class NotificationsConfig:
+    """Transactional-notification provider configuration (#952).
+
+    Cycle 2 ships the dataclass + parser; cycle 3+ wires real SMTP /
+    SendGrid / SES adapters that consume it. The default ``log``
+    provider — used when no ``[notifications]`` block is declared —
+    writes every send to the Python logger so adopters can wire
+    notifications into their templates and confirm dispatch shape
+    before turning on real delivery.
+
+    Attributes:
+        provider: Adapter key. ``"log"`` (default) sends to the logger
+            only — no network. ``"smtp"`` (cycle 3) talks to an SMTP
+            server. ``"sendgrid"`` / ``"ses"`` (cycle 6) hit the
+            respective HTTP APIs.
+        from_address: Default ``From:`` for outbound email. Per-
+            notification ``from:`` overrides land in cycle 3.
+        smtp_host / smtp_port / smtp_username / smtp_password: SMTP
+            connection details. Empty in the default config; populated
+            from ``[notifications.smtp]`` block when ``provider="smtp"``.
+        api_key: Provider API token for ``sendgrid`` / ``ses``. Empty
+            when ``provider="log"`` / ``"smtp"``.
+    """
+
+    provider: str = "log"  # log | smtp | sendgrid | ses
+    from_address: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    api_key: str = ""
+
+
+@dataclass
 class I18nConfig:
     """Internationalisation configuration (#955).
 
@@ -456,6 +490,7 @@ class ProjectManifest:
     dev: DevConfig = field(default_factory=DevConfig)
     tenant: TenantConfig = field(default_factory=TenantConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
+    notifications: NotificationsConfig = field(default_factory=NotificationsConfig)  # #952
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
@@ -735,6 +770,29 @@ def load_manifest(path: Path) -> ProjectManifest:
         cookie_name=str(i18n_data.get("cookie_name", "dazzle_locale")),
     )
 
+    # Parse [notifications] config (#952). Allows nested [notifications.smtp]
+    # so SMTP credentials live in a dedicated subtable rather than
+    # cluttering the top level.
+    notif_data = (
+        data.get("notifications", {}) if isinstance(data.get("notifications"), dict) else {}
+    )
+    smtp_data = notif_data.get("smtp", {}) if isinstance(notif_data.get("smtp"), dict) else {}
+    valid_providers = {"log", "smtp", "sendgrid", "ses"}
+    provider = str(notif_data.get("provider", "log")).lower()
+    if provider not in valid_providers:
+        raise ValueError(
+            f"[notifications] provider must be one of {sorted(valid_providers)!r}; got {provider!r}"
+        )
+    notifications_config = NotificationsConfig(
+        provider=provider,
+        from_address=str(notif_data.get("from", "") or notif_data.get("from_address", "")),
+        smtp_host=str(smtp_data.get("host", "")),
+        smtp_port=int(smtp_data.get("port", 587)),
+        smtp_username=str(smtp_data.get("username", "")),
+        smtp_password=str(smtp_data.get("password", "")),
+        api_key=str(notif_data.get("api_key", "")),
+    )
+
     # Parse URLs config
     urls_data = data.get("urls", {})
     urls_config = URLsConfig(
@@ -791,6 +849,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         dev=dev_config,
         tenant=tenant_config,
         i18n=i18n_config,
+        notifications=notifications_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
         assets=assets_mode,
