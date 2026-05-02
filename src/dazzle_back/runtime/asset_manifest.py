@@ -20,13 +20,14 @@ class _HasFields(Protocol):
     fields: list[Any]
 
 
-# Maps (widget, optional type constraint) → vendor asset key
+# Maps (widget, optional type constraint) → vendor asset key.
+# `widget=color` deliberately absent (#976): native `<input type="color">`
+# replaced the Pickr wrapper, so no vendor asset is required.
 _WIDGET_ASSET_MAP: dict[str, str | tuple[str, set[str]]] = {
     "rich_text": "quill",
     "combobox": "tom-select",
     "multi_select": "tom-select",
     "tags": "tom-select",
-    "color": "pickr",
     # picker and range only apply to date/datetime fields
     "picker": ("flatpickr", {"date", "datetime"}),
     "range": ("flatpickr", {"date", "datetime"}),

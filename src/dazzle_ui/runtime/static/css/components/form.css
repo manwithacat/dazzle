@@ -7,7 +7,7 @@
  * textarea, select, money, file, plus widget-driven combobox /
  * multi_select / tags / picker / range / color / rich_text /
  * slider (which delegate to vendored libraries — Tom Select,
- * Flatpickr, Quill, Pickr).
+ * Flatpickr, Quill). Native <input type="color"> covers the colour widget.
  *
  * Pre-CSS-refactor every branch composed its own inline Tailwind
  * class string with conditional Jinja for the error/idle border.
@@ -299,7 +299,9 @@
  * + error from the surrounding macro structure. */
 
 /* ─────────────────────────── colorpicker (UX-024) ───────────────
- * Pickr wrapper. Swatch + hex display sit inline next to each other. */
+ * Native <input type="color"> + hex display sit inline next to each
+ * other. #976 dropped the Pickr wrapper; the native input ships ~36 KB
+ * lighter and covers every actual usage in the example apps. */
 
 .dz-form-color-group {
   display: flex;
@@ -307,17 +309,38 @@
   gap: var(--space-md);
 }
 
-.dz-form-color-swatch {
+.dz-form-color-input {
+  /* Strip the user-agent native chrome down to a flat 2rem swatch
+   * so the button matches the visual rhythm of the other dz-form-*
+   * inputs. Cross-browser quirks: WebKit's swatch renders inside
+   * `::-webkit-color-swatch-wrapper`; Firefox renders the swatch
+   * directly on the input. Both are squared-off here. */
   block-size: 2rem;
   inline-size: 2rem;
+  padding: 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--colour-border);
+  background: transparent;
   cursor: pointer;
   transition: filter var(--duration-fast) var(--ease-out);
 }
 
-.dz-form-color-swatch:hover {
+.dz-form-color-input:hover {
   filter: brightness(1.05);
+}
+
+.dz-form-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.dz-form-color-input::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 1px);
+}
+
+.dz-form-color-input::-moz-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 1px);
 }
 
 .dz-form-color-hex {

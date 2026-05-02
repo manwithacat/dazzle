@@ -5,7 +5,8 @@
  * Each registration maps a data-dz-widget type to a { mount, unmount } pair.
  * The bridge calls mount() on htmx:afterSettle and unmount() on htmx:beforeSwap.
  *
- * Widget types: combobox, multiselect, tags, datepicker, daterange, colorpicker, richtext
+ * Widget types: combobox, multiselect, tags, datepicker, daterange, richtext
+ * (Note: colorpicker dropped in #976 — `widget=color` uses native input)
  */
 (function () {
   var bridge = window.dz && window.dz.bridge;
@@ -152,42 +153,10 @@
     },
   });
 
-  // ── Pickr (color picker) ────────────────────────────────────────────
-
-  bridge.registerWidget("colorpicker", {
-    mount: function (el, options) {
-      if (typeof Pickr === "undefined") return null;
-      var hiddenInput = el.querySelector("input[type=hidden]") || el;
-      var defaults = {
-        el: el.querySelector(".pcr-trigger") || el,
-        theme: "nano",
-        default: hiddenInput.value || options.default || "#3b82f6",
-        components: {
-          preview: true,
-          opacity: options.opacity !== false,
-          hue: true,
-          interaction: {
-            hex: true,
-            input: true,
-            save: true,
-          },
-        },
-      };
-      var pickr = Pickr.create(Object.assign(defaults, options));
-      pickr.on("save", function (color) {
-        if (color && hiddenInput) {
-          hiddenInput.value = color.toHEXA().toString();
-        }
-        pickr.hide();
-      });
-      return pickr;
-    },
-    unmount: function (el, instance) {
-      if (instance && typeof instance.destroyAndRemove === "function") {
-        instance.destroyAndRemove();
-      }
-    },
-  });
+  // ── Color picker — native <input type="color"> (#976 — dropped Pickr).
+  // No bridge registration needed: the form_field.html macro emits a
+  // bare native input wired up via Alpine's `x-model`. The widget
+  // registry entry that lived here was 30+ lines of Pickr glue.
 
   // ── Quill (rich text editor) ────────────────────────────────────────
 

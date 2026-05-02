@@ -29,16 +29,25 @@ class TestVendoredFiles:
             "vendor/tom-select.css",
             "vendor/flatpickr.min.js",
             "vendor/flatpickr.css",
-            "vendor/pickr.min.js",
-            "vendor/pickr.css",
             "vendor/quill.min.js",
             "vendor/quill.snow.css",
+            # Pickr removed in #976 — see test_pickr_vendor_files_absent.
         ],
     )
     def test_vendor_file_exists(self, filename):
         path = STATIC_DIR / filename
         assert path.exists(), f"Missing vendored file: {filename}"
         assert path.stat().st_size > 100, f"Suspiciously small: {filename}"
+
+    def test_pickr_vendor_files_absent(self):
+        """Drift gate (#976): re-introducing Pickr requires explicit work
+        — the colorpicker widget switched to native <input type="color">."""
+        for path in (STATIC_DIR / "vendor" / "pickr.min.js", STATIC_DIR / "vendor" / "pickr.css"):
+            assert not path.exists(), (
+                f"{path.name} re-appeared in vendor/. Pickr was dropped in "
+                "#976 — register a custom widget or update this drift gate "
+                "with the new rationale."
+            )
 
 
 # ── Widget registry ──────────────────────────────────────────────────────
@@ -51,17 +60,29 @@ class TestWidgetRegistry:
 
     def test_registry_has_all_widget_types(self):
         content = (STATIC_DIR / "js" / "dz-widget-registry.js").read_text()
+        # `colorpicker` deliberately absent (#976): native <input type="color">
+        # replaced the Pickr-backed widget; no bridge entry is needed.
         for widget_type in [
             "combobox",
             "multiselect",
             "tags",
             "datepicker",
             "daterange",
-            "colorpicker",
             "richtext",
             "range-tooltip",
         ]:
             assert f'"{widget_type}"' in content, f"Widget type {widget_type} not registered"
+
+    def test_colorpicker_widget_not_registered(self):
+        """Drift gate (#976): re-introducing a `colorpicker` widget needs an
+        explicit decision (and an updated registry test)."""
+        content = (STATIC_DIR / "js" / "dz-widget-registry.js").read_text()
+        assert 'registerWidget("colorpicker"' not in content, (
+            "`colorpicker` widget re-registered. Pickr was dropped in #976 — "
+            'the colour widget uses native <input type="color"> with no '
+            "bridge entry. Update this gate if a new colour-picker library "
+            "is being adopted."
+        )
 
     def test_registry_uses_bridge(self):
         content = (STATIC_DIR / "js" / "dz-widget-registry.js").read_text()
@@ -80,7 +101,9 @@ class TestWidgetCSS:
         content = (STATIC_DIR / "css" / "dz-widgets.css").read_text()
         assert ".ts-wrapper" in content, "Missing Tom Select overrides"
         assert ".flatpickr-calendar" in content, "Missing Flatpickr overrides"
-        assert ".pcr-app" in content or ".pickr" in content, "Missing Pickr overrides"
+        # Pickr (.pcr-app / .pickr) overrides removed in #976 — the colour
+        # widget uses a native <input type="color"> styled via .dz-form-color-*
+        # in components/form.css instead.
         assert ".ql-container" in content or ".ql-toolbar" in content, "Missing Quill overrides"
 
 
@@ -206,10 +229,15 @@ class TestFormFieldWidgets:
         assert 'data-dz-widget="daterange"' in html
 
     def test_colorpicker_renders(self, jinja_env):
+        # #976: native <input type="color">; no Pickr trigger element.
         field = _FakeField("brand_color", "Brand Color", "str", widget="color")
         html = self._render(jinja_env, field)
-        assert 'data-dz-widget="colorpicker"' in html
-        assert "pcr-trigger" in html
+        assert 'type="color"' in html
+        assert "dz-form-color-input" in html
+        assert "dz-form-color-hex" in html
+        # Drift gate: ensure the old Pickr markup didn't sneak back in.
+        assert "pcr-trigger" not in html
+        assert 'data-dz-widget="colorpicker"' not in html
 
     def test_richtext_renders(self, jinja_env):
         field = _FakeField("description", "Description", "text", widget="rich_text")

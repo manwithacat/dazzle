@@ -8,7 +8,7 @@
  *
  * Layer order (DO NOT REORDER):
  *   reset      — modern element reset (Andy Bell + Open Props normalise)
- *   vendor     — vendored widget CSS (Tom Select, Flatpickr, Quill, Pickr)
+ *   vendor     — vendored widget CSS (Tom Select, Flatpickr, Quill)
  *   tokens     — custom property declarations (the design system)
  *   base       — element defaults (typography, links, form controls)
  *   utilities  — small semantic utility layer (.row, .stack, etc.)
@@ -25,7 +25,7 @@
 @import url("../vendor/tom-select.css") layer(vendor);
 @import url("../vendor/flatpickr.css") layer(vendor);
 @import url("../vendor/quill.snow.css") layer(vendor);
-@import url("../vendor/pickr.css") layer(vendor);
+/* vendor/pickr.css removed in #976 — `widget=color` uses native input. */
 @import url("tokens.css") layer(tokens);
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);

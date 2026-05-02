@@ -24,7 +24,7 @@ LAYERED_ORDER: tuple[tuple[str, str], ...] = (
     ("vendor", "vendor/tom-select.css"),
     ("vendor", "vendor/flatpickr.css"),
     ("vendor", "vendor/quill.snow.css"),
-    ("vendor", "vendor/pickr.css"),
+    # vendor/pickr.css removed in #976 — colour widget uses native input.
     ("tokens", "css/tokens.css"),
     ("tokens", "css/design-system.css"),
     ("base", "css/base.css"),

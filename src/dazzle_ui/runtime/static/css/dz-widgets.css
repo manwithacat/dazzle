@@ -1,7 +1,7 @@
 /**
  * dz-widgets.css — DaisyUI-aligned theme overrides for vendored widget libraries.
  *
- * Overrides default styles of Tom Select, Flatpickr, Pickr, and Quill
+ * Overrides default styles of Tom Select, Flatpickr, and Quill
  * to match DaisyUI v4 design tokens. Loaded conditionally via asset_manifest.
  */
 
@@ -125,37 +125,9 @@
   font-weight: 600;
 }
 
-/* ── Pickr ───────────────────────────────────────────────────────────── */
-
-.pickr .pcr-button {
-  border: 1px solid oklch(var(--bc) / 0.2);
-  border-radius: var(--rounded-btn, 0.5rem);
-  height: 2.5rem;
-  width: 2.5rem;
-}
-
-.pcr-app {
-  font-family: inherit;
-  background: oklch(var(--b1));
-  border: 1px solid oklch(var(--bc) / 0.2);
-  border-radius: var(--rounded-box, 1rem);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
-.pcr-app .pcr-interaction input {
-  border: 1px solid oklch(var(--bc) / 0.2);
-  border-radius: var(--rounded-btn, 0.5rem);
-  background: oklch(var(--b1));
-  color: oklch(var(--bc));
-  font-family: inherit;
-  font-size: 0.875rem;
-}
-
-.pcr-app .pcr-interaction .pcr-save {
-  background: oklch(var(--p));
-  color: oklch(var(--pc));
-  border-radius: var(--rounded-btn, 0.5rem);
-}
+/* Pickr theme-overrides removed in #976 — `widget=color` now renders a
+ * native <input type="color">. The .dz-form-color-* rules in
+ * components/form.css handle the small swatch + hex display layout. */
 
 /* ── Quill ───────────────────────────────────────────────────────────── */
 

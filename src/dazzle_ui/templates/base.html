@@ -251,10 +251,10 @@
   <link rel="stylesheet" href="{{ 'vendor/flatpickr.css' | static_url }}">
   <script defer src="{{ 'vendor/flatpickr.min.js' | static_url }}"></script>
   {% endif %}
-  {% if "pickr" in required_assets %}
-  <link rel="stylesheet" href="{{ 'vendor/pickr.css' | static_url }}">
-  <script defer src="{{ 'vendor/pickr.min.js' | static_url }}"></script>
-  {% endif %}
+  {# #976: Pickr removed — `widget=color` now uses native <input type="color">.
+     The conditional asset block + `pickr` key in asset_manifest.py are gone.
+     Adopters who need swatches/alpha can register a custom widget; the
+     default ships zero KB for `widget=color`. #}
   {% if "quill" in required_assets %}
   <link rel="stylesheet" href="{{ 'vendor/quill.snow.css' | static_url }}">
   <script defer src="{{ 'vendor/quill.min.js' | static_url }}"></script>

@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.30] - 2026-05-02
+
+### Removed
+- **#976 — dropped Pickr (\`vendor/pickr.min.js\` + \`vendor/pickr.css\`)
+  for native \`<input type="color">\`.** The 8 example app usages all
+  set basic single-colour input — none used Pickr's swatches, alpha
+  channel, palette UI, or HSL/HSV pickers. Native input covers the
+  whole real surface in every browser the framework supports.
+  Bundle saving: ~36 KB shipped per form page that has a colour
+  widget (~12 KB gzipped). Touched files:
+  - \`src/dazzle_ui/templates/macros/form_field.html\` — \`widget=color\`
+    now emits a \`<input type="color">\` with an Alpine \`x-model\`
+    binding to keep the hex display in sync.
+  - \`src/dazzle_ui/runtime/static/js/dz-widget-registry.js\` — removed
+    the \`colorpicker\` bridge entry (~30 LOC of Pickr glue).
+  - \`src/dazzle_back/runtime/asset_manifest.py\` — \`widget=color\` no
+    longer maps to any vendor asset key.
+  - \`src/dazzle_ui/templates/base.html\`, \`runtime/css_loader.py\`,
+    \`runtime/static/css/dazzle.css\`, \`runtime/static/css/dz-widgets.css\`
+    — removed \`pickr\` conditional asset block + CSS imports + theme
+    overrides.
+  - \`src/dazzle_ui/runtime/static/css/components/form.css\` — \`.dz-form-color-*\`
+    rules now target the native \`<input type="color">\` chrome
+    (cross-browser \`::-webkit-color-swatch\` + \`::-moz-color-swatch\`
+    selectors).
+  - Vendor files \`vendor/pickr.min.js\` and \`vendor/pickr.css\` deleted.
+
+### Added
+- Drift gates pinning the removal:
+  - \`tests/unit/test_phase4_widgets.py::test_pickr_vendor_files_absent\`
+    — vendor/ must not contain Pickr files.
+  - \`tests/unit/test_phase4_widgets.py::test_colorpicker_widget_not_registered\`
+    — registry must not re-register a \`colorpicker\` widget.
+  - \`test_color_requires_no_vendor_asset\` in \`test_asset_manifest.py\`
+    — replaces \`test_color_requires_pickr\`; the manifest must
+    return an empty asset set for \`widget=color\`.
+
+### Changed
+- \`src/dazzle/mcp/semantics_kb/capabilities.toml\` — \`widget_color\`
+  definition updated from "Pickr for hex color values" to "Native
+  \`<input type="color">\` swatch with hex display" so KG-driven
+  bootstrap recommendations match the new surface.
+- Existing widget tests updated:
+  - \`test_phase4_widgets.py::test_widget_css_covers_all_libraries\` —
+    no longer asserts \`.pcr-app\`/\`.pickr\` overrides.
+  - \`test_phase4_widgets.py::test_colorpicker_renders\` — asserts
+    \`type="color"\` + \`dz-form-color-input\` + \`dz-form-color-hex\`,
+    plus drift checks against \`pcr-trigger\` / old \`data-dz-widget\`.
+  - \`test_widget_contract.py::_BRIDGE_MOUNTED_WIDGET_KINDS\` — drops
+    \`colorpicker\` (the dual-lifecycle gate doesn't apply when the
+    widget is a native input with its own Alpine x-data scope).
+  - \`test_css_delivery.py::LAYERED_ORDER\` — Pickr CSS removed from
+    the canonical layer list.
+
+### Agent Guidance
+- Adopters who genuinely need swatches/alpha/palette UI for a
+  colour field can register a custom widget via the project widget
+  registry — the framework default is now native and ships zero KB
+  for \`widget=color\`. Keep the same bar for any other vendored
+  widget: prefer a native control unless the framework actually uses
+  the vendor's surface beyond the native API gap.
+
 ## [0.63.29] - 2026-05-02
 
 ### Fixed

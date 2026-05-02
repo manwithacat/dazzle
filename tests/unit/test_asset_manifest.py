@@ -52,11 +52,16 @@ class TestCollectRequiredAssets:
         surface = _FakeSurface([_FakeField("date", widget="range")])
         assert collect_required_assets(surface) == {"flatpickr"}
 
-    def test_color_requires_pickr(self):
+    def test_color_requires_no_vendor_asset(self):
+        """`widget=color` is now a native <input type=\"color\"> (#976) — no
+        vendor asset is loaded. Drift gate: ensure the colour field doesn't
+        re-introduce a Pickr-style dependency."""
         surface = _FakeSurface([_FakeField("str", widget="color")])
-        assert collect_required_assets(surface) == {"pickr"}
+        assert collect_required_assets(surface) == set()
 
     def test_multiple_widgets_collect_all(self):
+        # `widget=color` deliberately included to confirm it adds nothing
+        # to the required-asset set after the #976 native-input migration.
         surface = _FakeSurface(
             [
                 _FakeField("text", widget="rich_text"),
@@ -69,7 +74,6 @@ class TestCollectRequiredAssets:
             "quill",
             "tom-select",
             "flatpickr",
-            "pickr",
         }
 
     def test_duplicate_widgets_deduplicated(self):

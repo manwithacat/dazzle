@@ -229,8 +229,12 @@
   {% endif %}
 
   {% elif field.widget == "color" %}
-  {# UX-024: colorpicker widget — Pickr wrapper #}
-  <label class="dz-form-label">
+  {# UX-024: native <input type="color"> (#976 — dropped Pickr).
+     Native input covers every actual usage in the example apps. The
+     hex display next to it is a small read-out of the current value;
+     it stays in sync via the dzColorWidget Alpine binding (no JS
+     library needed). #}
+  <label for="field-{{ field.name }}" class="dz-form-label">
     {{ field.label }}
     {% if field.required %}
       <span class="dz-form-required" aria-hidden="true">*</span>
@@ -240,16 +244,15 @@
   {% if field.help %}
   <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
-  <div data-dz-widget="colorpicker" class="dz-form-color-group">
-    <div class="pcr-trigger dz-form-color-swatch"
-         style="background: {{ values.get(field.name, field.default or '#3b82f6') }}"
-         aria-label="Color swatch, click to change">
-    </div>
-    <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
-           value="{{ values.get(field.name, field.default or '#3b82f6') }}"
+  <div class="dz-form-color-group" x-data="{ value: '{{ values.get(field.name, field.default or '#3b82f6') }}' }">
+    <input type="color"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="dz-form-color-input"
+           x-model="value"
            {% if field.required %}required aria-required="true"{% endif %}
            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.help %} hint-{{ field.name }}{% endif %}"{% elif field.help %}aria-describedby="hint-{{ field.name }}"{% endif %}>
-    <span class="dz-form-color-hex" aria-hidden="true">{{ values.get(field.name, field.default or '#3b82f6') }}</span>
+    <span class="dz-form-color-hex" aria-hidden="true" x-text="value">{{ values.get(field.name, field.default or '#3b82f6') }}</span>
   </div>
   {% if errors.get(field.name) %}
   <p id="error-{{ field.name }}" class="dz-form-error" role="alert">{{ errors[field.name] }}</p>

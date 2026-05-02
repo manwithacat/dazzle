@@ -36,7 +36,7 @@ related = ["widget_combobox"]
 
 [concepts.widget_color]
 category = "Widget"
-definition = "Color picker via Pickr for hex color values"
+definition = "Native <input type=\"color\"> swatch with hex display for hex color values"
 syntax = 'field color_hex "Color" widget=color'
 applies_to = "str(7) fields with color semantics on create/edit surfaces"
 demonstrated_in = ["component_showcase"]

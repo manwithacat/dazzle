@@ -39,7 +39,9 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         "tags",
         "datepicker",
         "daterange",
-        "colorpicker",
+        # `colorpicker` removed in #976 — `widget=color` uses native
+        # <input type="color"> with an Alpine x-data scope of its own
+        # (the dual-lifecycle gate this set drives doesn't apply).
         "richtext",
         "range-tooltip",
     }
