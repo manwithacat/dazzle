@@ -9,6 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.31] - 2026-05-02
+
+### Fixed
+- **#986 — INTERACTION_WALK \`card_drag\` regression after #948 SSR
+  refactor.** The walk's fixed \`dy=200\` was too small for workspaces
+  whose first sibling card sits >200 px below the dragged card.
+  \`dashboard-builder.js\`'s reorder logic only fires when the pointer
+  crosses another card's vertical midpoint — on
+  \`support_tickets/ticket_queue\` (queue_metrics → ticket_board midY at
+  +370 px) the gesture completed without triggering any DOM swap, so
+  the bounding box delta was \`dx=0, dy=0\`. Reproduced locally with
+  full method-patching diagnostics: \`startDrag\`, \`onPointerMoveDrag\`
+  (10 calls), and \`endDrag\` all fired correctly with
+  \`phase: pressed → dragging → endDrag(phase=dragging)\`, but the
+  iterate-and-reorder loop in \`onPointerMoveDrag\` correctly did
+  nothing because no sibling's \`midY < e.clientY\`. Not a regression
+  in the dashboard runtime — a test-data dependency in the harness.
+
+  Fix: \`CardDragInteraction.execute()\` now reads the next sibling
+  card's bounding rect via \`page.evaluate\` and computes
+  \`effective_dy = max(self.dy, sibling_midY - start_y + 30)\` so the
+  gesture always crosses the next sibling's midpoint plus a safety
+  margin. Falls back to \`self.dy\` when no next sibling exists
+  (single-card workspace).
+
+  Local repro now reports \`[PASS] card_drag … dy=534, requested_dy=200,
+  effective_dy=420\` against \`support_tickets/ticket_queue\`.
+
+### Added
+- Two new tests in \`tests/unit/test_interaction_walks.py::TestCardDrag\`:
+  \`test_effective_dy_extends_to_pass_sibling_midpoint\` (sibling far
+  below → \`effective_dy\` extends) and \`test_effective_dy_falls_back_when_no_sibling\`
+  (single-card workspace → falls back to \`self.dy\`).
+- \`_StubPage.evaluate\` now accepts the optional second positional arg
+  Playwright passes to \`evaluate(script, arg)\` so the sibling lookup
+  exercised by \`card_drag\` works under the stub.
+
+### Agent Guidance
+- When writing harness gestures that depend on layout-sensitive DOM
+  reorder thresholds (drag past midpoint, scroll past element edge,
+  hover past hotspot), read the relevant sibling's bounding rect at
+  walk-time rather than hardcoding a pixel offset. Hardcoded offsets
+  silently break when example data changes the layout — the failure
+  surfaces as "the action did nothing" rather than a setup error.
+
 ## [0.63.30] - 2026-05-02
 
 ### Removed

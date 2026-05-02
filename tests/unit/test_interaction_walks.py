@@ -95,7 +95,11 @@ class _StubPage:
     def locator(self, selector: str) -> _StubLocator:
         return self.locators.get(selector, _StubLocator())
 
-    def evaluate(self, script: str) -> Any:
+    def evaluate(self, script: str, *args: Any) -> Any:
+        # `*args` accepts the optional second positional Playwright passes
+        # to `evaluate(script, arg)` — `card_drag` uses it to feed the
+        # card_id into a JS lookup, so the stub needs to match the real
+        # signature even though it ignores the value.
         self._eval_history.append(script)
         if self._eval_returns:
             return self._eval_returns.pop(0)
@@ -232,6 +236,49 @@ class TestCardDrag:
         result = CardDragInteraction(card_id="ghost", dy=200).execute(page)
         assert not result.passed
         assert "no bounding box" in result.reason or "not found" in result.reason
+
+    def test_effective_dy_extends_to_pass_sibling_midpoint(self) -> None:
+        """#986: when the next sibling card sits far below the dragged card,
+        the walk's gesture distance must extend to clear that midpoint —
+        otherwise the dashboard reorder logic doesn't fire and the card
+        stays in place. Pin the adaptive computation here so a future
+        refactor can't quietly drop it."""
+        page = _StubPage()
+        # Sibling midY = 600 → required_dy = 600 - start_y(20+min(36/2,20)=30+10=40… actually
+        # start_y = bbox.y(10) + min(height/2,20)=min(18,20)=18 → 28). +30 margin → 602.
+        # The default dy=200 is well below this so adaptive logic must
+        # extend the gesture; a fixed-200 walk would silently fail.
+        page._eval_returns = [600.0]
+        card = self._card_locator_with_handle(
+            bbox_before={"x": 100, "y": 100, "width": 300, "height": 200},
+            bbox_after={"x": 100, "y": 700, "width": 300, "height": 200},
+        )
+        page.locators["[data-card-id='card-0']"] = card
+
+        result = CardDragInteraction(card_id="card-0", dy=200, steps=5).execute(page)
+
+        assert result.passed
+        assert result.evidence["effective_dy"] > result.evidence["requested_dy"], (
+            "effective_dy should exceed requested_dy when the next sibling's "
+            "midY is far below the dragged card."
+        )
+        # 600 (sibling midY) - 28 (start_y) + 30 margin = 602
+        assert result.evidence["effective_dy"] >= 600
+
+    def test_effective_dy_falls_back_when_no_sibling(self) -> None:
+        """When no next sibling exists (single-card workspace), the walk
+        falls back to the default `dy` rather than crashing."""
+        page = _StubPage()
+        page._eval_returns = [None]  # sibling lookup returns None
+        card = self._card_locator_with_handle(
+            bbox_before={"x": 100, "y": 100, "width": 300, "height": 200},
+            bbox_after={"x": 100, "y": 300, "width": 300, "height": 200},
+        )
+        page.locators["[data-card-id='card-0']"] = card
+
+        result = CardDragInteraction(card_id="card-0", dy=250, steps=5).execute(page)
+
+        assert result.evidence["effective_dy"] == 250
 
 
 # ---------------------------------------------------------------------------
