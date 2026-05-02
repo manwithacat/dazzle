@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 325 BaseModels, 139 Enums, 21 other (functions / typealiases / constants)
+# Counts: 328 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -124,6 +124,7 @@ ir_class: AppSpec
     - integrations: list[IntegrationSpec] = []
     - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []
+    - jobs: list[JobSpec] = []
     - ledgers: list[LedgerSpec] = []
     - llm_config: LLMConfigSpec | None = None
     - llm_intents: list[LLMIntentSpec] = []
@@ -1238,6 +1239,33 @@ ir_class: IslandSpec
     - src: str | None = None
     - title: str | None = None
 
+ir_class: JobSchedule
+  required:
+    - cron: str
+  optional:
+    - timezone: str = ''
+
+ir_class: JobSpec
+  required:
+    - name: str
+  optional:
+    - dead_letter: str = ''
+    - retry: int = 3
+    - retry_backoff: JobBackoff = <JobBackoff.EXPONENTIAL: 'exponential'>
+    - run: str = ''
+    - schedule: JobSchedule | None = None
+    - timeout_seconds: int = 60
+    - title: str | None = None
+    - triggers: list[JobTrigger] = []
+
+ir_class: JobTrigger
+  required:
+    - entity: str
+  optional:
+    - event: str = 'created'
+    - field: str | None = None
+    - when_condition: str | None = None
+
 ir_class: LLMConfigSpec
   required: (none)
   optional:
@@ -1531,6 +1559,7 @@ ir_class: ModuleFragment
     - integrations: list[IntegrationSpec] = []
     - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []
+    - jobs: list[JobSpec] = []
     - ledgers: list[LedgerSpec] = []
     - llm_config: LLMConfigSpec | None = None
     - llm_intents: list[LLMIntentSpec] = []
@@ -3530,6 +3559,12 @@ enum: LogicalOperator
   members:
     - AND = 'and'
     - OR = 'or'
+
+enum: JobBackoff
+  members:
+    - EXPONENTIAL = 'exponential'
+    - LINEAR = 'linear'
+    - NONE = 'none'
 
 enum: LLMProvider
   members:

@@ -93,6 +93,10 @@ construct: island
   fragment_fields: islands
   ir_classes: IslandSpec
 
+construct: job
+  fragment_fields: jobs
+  ir_classes: JobSpec
+
 construct: ledger
   fragment_fields: ledgers
   ir_classes: LedgerSpec

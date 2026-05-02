@@ -188,6 +188,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         slas=merged_fragment.slas,  # v0.25.0 SLAs
         islands=merged_fragment.islands,  # UI Islands
         notifications=merged_fragment.notifications,  # v0.34.0 Notifications (#952)
+        jobs=merged_fragment.jobs,  # #953 Background Jobs
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
         params=merged_fragment.params,  # v0.44.0 Runtime Parameters
         feedback_widget=merged_fragment.feedback_widget,  # Feedback Widget

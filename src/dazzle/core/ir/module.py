@@ -37,6 +37,7 @@ from .hless import (
 )
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
+from .jobs import JobSpec
 from .ledgers import (
     LedgerSpec,
     TransactionSpec,
@@ -196,6 +197,8 @@ class ModuleFragment(BaseModel):
     islands: list[IslandSpec] = Field(default_factory=list)
     # Notifications (v0.34.0)
     notifications: list[NotificationSpec] = Field(default_factory=list)
+    # Background Jobs (#953)
+    jobs: list[JobSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Runtime Parameters (v0.44.0)

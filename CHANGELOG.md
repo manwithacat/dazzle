@@ -9,6 +9,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.38] - 2026-05-02
+
+### Added
+- **#953 cycle 1 — \`job\` DSL block.** Generic deferred-task primitive
+  (the LLM-specific \`llm_intent\` is the same shape, specialised).
+  Cycle 1 ships parser + IR + linker propagation only; runtime queue
+  + worker land in cycle 3.
+
+  DSL surface:
+
+      job thumbnail_render "Generate thumbnail":
+        trigger: on_create Manuscript when source_pdf is_set
+        run: scripts/render_thumbnail.py
+        retry: 3
+        retry_backoff: exponential
+        dead_letter: ManuscriptDeadLetter
+        timeout: 60s
+
+      job daily_summary "Daily metrics roll-up":
+        schedule: cron("0 1 * * *")
+        run: scripts/daily_summary.py
+        timeout: 5m
+
+  Trigger forms supported in cycle 1: \`on_create\`, \`on_update\`,
+  \`on_delete\`, \`on_field_changed Entity.field\`, with optional
+  \`when <condition>\` captured as raw text (cycle 3 wires the
+  evaluator). Schedule form: \`cron(\"<expression>\")\`. Either
+  trigger or schedule must be set — both can co-exist.
+
+  New IR types: \`JobSpec\`, \`JobTrigger\`, \`JobSchedule\`,
+  \`JobBackoff\` enum (\`none\`/\`linear\`/\`exponential\`). New
+  parser keyword tokens: \`job\`, \`retry_backoff\`, \`dead_letter\`.
+
+### Changed
+- \`SymbolTable.add_job(spec, module_name)\` propagates jobs from
+  \`module.fragment.jobs\` through to \`AppSpec.jobs\` — same
+  pattern as cycle-1 notifications. Without this, DSL-declared
+  jobs would never reach downstream consumers.
+- API-surface baselines regenerated for the new IR types
+  (\`docs/api-surface/ir-types.txt\`) and DSL constructs
+  (\`docs/api-surface/dsl-constructs.txt\`).
+- \`.claude/CLAUDE.md\` parser-construct list updated to include
+  \`job\` so the docs-drift gate stays green.
+
+### Tests
+- 11 unit tests in \`test_job_dsl.py\` cover triggered jobs (basic /
+  field-changed / when-condition / multiple), scheduled jobs, retry
+  + dead-letter, default values, missing-trigger error, AppSpec
+  propagation, immutability, and IR exports.
+
+### Agent Guidance
+- Naming convention: parser mixin internal helpers should be
+  prefixed with the construct name (\`_parse_job_timeout\` not
+  \`_parse_duration_seconds\`) — multiple mixins compose into a
+  single \`Parser\` class via MRO, and shared helper names silently
+  override each other in surprising ways. The cycle-1 build hit
+  this exact bug: a generic \`_parse_duration_seconds\` shadowed
+  the messaging mixin's version, breaking unrelated tests.
+
 ## [0.63.37] - 2026-05-02
 
 ### Added

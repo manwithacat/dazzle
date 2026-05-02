@@ -153,6 +153,7 @@ class SymbolTable:
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
     notifications: dict[str, ir.NotificationSpec] = field(default_factory=dict)  # #952
+    jobs: dict[str, ir.JobSpec] = field(default_factory=dict)  # #953
     grant_schemas: dict[str, ir.GrantSchemaSpec] = field(default_factory=dict)  # v0.42.0
 
     # Track which module each symbol came from (for error reporting)
@@ -398,6 +399,17 @@ class SymbolTable:
             self.symbol_sources,
         )
 
+    def add_job(self, job: ir.JobSpec, module_name: str) -> None:
+        """Add background job to symbol table, checking for duplicates (#953)."""
+        _add_symbol(
+            self.jobs,
+            job.name,
+            job,
+            "job",
+            module_name,
+            self.symbol_sources,
+        )
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -612,6 +624,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add notifications (#952)
         for notification in module.fragment.notifications:
             symbols.add_notification(notification, module.name)
+
+        # Add jobs (#953)
+        for job in module.fragment.jobs:
+            symbols.add_job(job, module.name)
 
         # Add rhythms (v0.39.0)
         for rhythm in module.fragment.rhythms:
@@ -1355,6 +1371,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
         notifications=list(symbols.notifications.values()),  # #952
+        jobs=list(symbols.jobs.values()),  # #953
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0

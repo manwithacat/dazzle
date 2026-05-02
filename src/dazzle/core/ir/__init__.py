@@ -334,6 +334,14 @@ from .islands import (
     IslandSpec,
 )
 
+# Background Jobs (#953)
+from .jobs import (
+    JobBackoff,
+    JobSchedule,
+    JobSpec,
+    JobTrigger,
+)
+
 # Layout Engine
 from .layout import (
     AttentionSignalKind,
@@ -1253,6 +1261,11 @@ __all__ = [
     "ParamConstraints",
     "ParamRef",
     "ParamSpec",
+    # Background Jobs (#953)
+    "JobBackoff",
+    "JobSchedule",
+    "JobSpec",
+    "JobTrigger",
     # Notifications (v0.34.0)
     "NotificationChannel",
     "NotificationPreference",
