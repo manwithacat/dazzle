@@ -84,24 +84,32 @@ def allocate_ports(
     )
 
 
-def is_port_available(port: int, host: str = "127.0.0.1") -> bool:
+_LOOPBACK = "127.0.0.1"
+
+
+def is_port_available(port: int, host: str = _LOOPBACK) -> bool:
     """
     Check if a port is available for binding.
 
     Args:
-        port: Port number to check
-        host: Host to check on
+        port: Port number to check.
+        host: Logical host the eventual server will bind to. Accepted for
+            API symmetry with callers that pass through the resolved
+            server host, but the actual probe always uses ``127.0.0.1``
+            (see CodeQL py/bind-socket-all-network-interfaces). Binding
+            the temporary check socket on a non-loopback interface would
+            briefly expose it to the network — and the answer (whether
+            *port* is free) doesn't change with the bind interface for
+            our purposes here.
 
     Returns:
-        True if port is available, False if in use
+        True if port is available on loopback, False if in use.
     """
-    # Always bind on loopback when checking availability to avoid exposing
-    # a temporary listening socket on all interfaces (e.g., 0.0.0.0).
-    bind_host = "127.0.0.1" if host in ("0.0.0.0", "") else host
+    del host  # unused — see docstring
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.bind((bind_host, port))
+            s.bind((_LOOPBACK, port))
             return True
         except OSError:
             return False

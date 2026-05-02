@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.32] - 2026-05-02
+
+### Security
+- **CodeQL `py/bind-socket-all-network-interfaces` (#87) —
+  `src/dazzle/cli/runtime_impl/ports.py`.** \`is_port_available()\`
+  remapped \`host="0.0.0.0"\` to \`127.0.0.1\` defensively but still
+  flowed the raw \`host\` parameter into \`socket.bind\` for any other
+  value, so CodeQL's data-flow couldn't prove the bind never reaches
+  a non-loopback interface. Aligned the implementation with the
+  docstring's intent: the availability probe **always** binds to
+  \`127.0.0.1\` regardless of \`host\`. The \`host\` parameter stays
+  in the signature for API symmetry with callers that pass through
+  the resolved server host but is now explicitly unused (\`del host\`).
+  Binding the temporary check socket on a non-loopback interface
+  would briefly expose it to the network, and the answer (whether
+  the port is free) doesn't change with the bind interface.
+
+### Fixed
+- **CodeQL `py/bad-tag-filter` (#88) —
+  `tests/unit/test_htmx_undefined_guards.py`.** Round 2 of the same
+  alert. v0.63.27 fixed \`</script>\` → \`</script\\s*>\` to catch
+  trailing whitespace, but CodeQL re-flagged with a sharper example:
+  \`</script\\t\\n bar>\` is a valid HTML5 close tag (the parser ends
+  the script element on \`</script\` followed by *any* non-letter,
+  then consumes the rest of the tag). Updated to
+  \`</script\\b[^>]*>\` — word-boundary after \`t\` (so \`</scripts>\`
+  doesn't false-positive as a close) plus any non-\`>\` chars up to
+  the closing \`>\`. Matches the HTML5 spec.
+
+### Agent Guidance
+- When CodeQL re-flags a regex with a different example after a
+  partial fix, don't bolt on another character class — re-derive the
+  pattern from the underlying spec. \`</script\\s*>\` looked
+  defensible but missed the HTML5 rule that \`</script\` followed by
+  any non-letter ends the script element. The word-boundary
+  pattern \`</script\\b[^>]*>\` is the correct shape. Same lesson
+  applies to any tag-filter regex: HTML parsing rules are looser
+  than they look.
+
 ## [0.63.31] - 2026-05-02
 
 ### Fixed

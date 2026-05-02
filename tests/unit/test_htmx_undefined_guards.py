@@ -112,11 +112,22 @@ def test_htmx_calls_in_dashboard_builder_are_guarded() -> None:
 _TEMPLATES_DIR = REPO_ROOT / "src" / "dazzle_ui" / "templates"
 
 # Match an inline <script>...</script> block (not src=... loads).
-# `</script\s*>` (rather than literal `</script>`) so we also catch the
-# rare-but-legal `</script >` with trailing whitespace — CodeQL
-# py/bad-tag-filter flagged the literal form as missing those.
+#
+# HTML5 closes a `<script>` element on `</script` followed by any
+# non-letter character; the parser then consumes the rest of the tag
+# (including whitespace, slashes, attributes the spec lets you write
+# but ignores) up to the next `>`. So `</script>`, `</script >`,
+# `</script\t\n>`, and even `</script foo>` are all valid closes
+# whereas `</scripts>` is not.
+#
+# CodeQL py/bad-tag-filter flagged earlier variants of this regex —
+# first the literal `</script>` (missed trailing whitespace, alert
+# #86), then `</script\s*>` (missed `</script\t\n bar>`, alert #88).
+# `</script\b[^>]*>` matches the spec: word-boundary after `t` (so
+# `</scripts` doesn't match), then any non-`>` characters up to the
+# closing `>`.
 _INLINE_SCRIPT_RE = re.compile(
-    r"<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)</script\s*>",
+    r"<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)</script\b[^>]*>",
     re.IGNORECASE,
 )
 
