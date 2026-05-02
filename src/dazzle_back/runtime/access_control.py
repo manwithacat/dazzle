@@ -29,6 +29,11 @@ class AccessContext(BaseModel):
     tenant_id: UUID | None = None
     roles: list[str] = Field(default_factory=list)
     is_superuser: bool = False
+    # #957 cycle 2: persona-based tenant-filter bypass. Populated from the
+    # request middleware off `TenancySpec.admin_personas` × the user's
+    # active personas. Empty by default → no bypass, identical to prior
+    # behaviour.
+    tenant_admin_personas: list[str] = Field(default_factory=list)
 
     @property
     def is_authenticated(self) -> bool:
@@ -39,6 +44,19 @@ class AccessContext(BaseModel):
     def is_tenant_scoped(self) -> bool:
         """Check if context has tenant scope."""
         return self.tenant_id is not None
+
+    @property
+    def bypasses_tenant_filter(self) -> bool:
+        """True if this context should skip the tenant_id row filter.
+
+        Used by `tenant` rules and `get_list_filters` to let admin
+        personas (declared via `tenancy: admin_personas:`) read across
+        tenants — e.g. support staff viewing any customer's records.
+        Superusers also bypass for parity with `evaluate()`.
+        """
+        if self.is_superuser:
+            return True
+        return any(p in self.roles for p in self.tenant_admin_personas)
 
     def has_role(self, role: str) -> bool:
         """Check if user has a specific role."""
@@ -123,6 +141,11 @@ class AccessRule(BaseModel):
             return str(owner_id) == str(context.user_id)
 
         if self.rule == "tenant":
+            # #957 cycle 2: admin personas bypass the tenant scope check.
+            # Superuser already short-circuited above; this path covers
+            # personas listed in `tenancy: admin_personas:`.
+            if context.bypasses_tenant_filter:
+                return True
             if not context.is_tenant_scoped:
                 return False
             if record is None:
@@ -284,7 +307,14 @@ class AccessPolicy(BaseModel):
         if rule.rule == "owner" and self.owner_field and context.user_id:
             filters[self.owner_field] = context.user_id
 
-        if rule.rule == "tenant" and self.tenant_field and context.tenant_id:
+        # #957 cycle 2: admin personas see all tenants — skip the
+        # tenant_id filter so list queries return cross-tenant rows.
+        if (
+            rule.rule == "tenant"
+            and self.tenant_field
+            and context.tenant_id
+            and not context.bypasses_tenant_filter
+        ):
             filters[self.tenant_field] = context.tenant_id
 
         return filters

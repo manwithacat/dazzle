@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.44] - 2026-05-01
+
+### Added
+- **#957 cycle 2 — admin_personas tenant-filter bypass.** `AccessContext`
+  now carries `tenant_admin_personas: list[str]` and exposes a
+  `bypasses_tenant_filter` property. The `tenant` rule in
+  `AccessRule.evaluate` short-circuits to True when any of the
+  context's roles matches an admin persona, and
+  `AccessPolicy.get_list_filters` omits the `tenant_id` filter for
+  those contexts so SELECTs return cross-tenant rows. Cycle 1 declared
+  `TenancySpec.admin_personas` (#957); cycle 2 wires the runtime check.
+  Cycle 3+ will add the request middleware that populates
+  `tenant_admin_personas` from the active `TenancySpec` × the user's
+  personas. Backward compatible: empty default keeps prior behaviour.
+
 ## [0.63.43] - 2026-05-01
 
 ### Added
