@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.49] - 2026-05-01
+
+### Added
+- **#957 cycle 7 — `per_tenant_config` storage + coercion.**
+  `public.tenants` now carries a `config JSONB NOT NULL DEFAULT '{}'`
+  column, back-filled idempotently on existing deployments via
+  `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` from `ensure_table()`.
+  `TenantRecord` exposes the JSON dict as `config: dict[str, Any]`;
+  `TenantRegistry.update_config(slug, dict)` writes it back via JSONB
+  binding (no string interpolation). Cycle 8 will load + coerce per
+  request and expose via `request.state.tenant_config`.
+- **`dazzle.tenant.config_coercion.coerce_config(raw, schema)`** — coerces a
+  JSONB-decoded dict against the `TenancySpec.per_tenant_config`
+  schema declared in DSL. Supports `str`, `int`, `bool`, `locale`
+  (currently aliased to `str`); unknown keys are dropped (forward
+  compat); type errors fall back to the declared-type's zero (request
+  path never raises). Tolerant `bool` coercion handles the
+  `bool("false") == True` trap from form-encoded admin UI submissions.
+
 ## [0.63.48] - 2026-05-01
 
 ### Added
