@@ -2623,8 +2623,10 @@ ir_class: TemplateSpec
 ir_class: TenancySpec
   required: (none)
   optional:
+    - admin_personas: list[str] = []
     - entities_excluded: list[str] = []
     - isolation: TenantIsolationSpec = <factory:TenantIsolationSpec>
+    - per_tenant_config: dict[str, str] = {}
     - provisioning: TenantProvisioningSpec = <factory:TenantProvisioningSpec>
 
 ir_class: TenantBlueprint

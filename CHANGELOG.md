@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.43] - 2026-05-01
+
+### Added
+- **#957 cycle 1 — multi-tenancy completeness primitives.** `TenancySpec`
+  gains two new declarations: `admin_personas: list[str]` (persona names
+  whose grants bypass the tenant scope filter) and
+  `per_tenant_config: dict[str, str]` (key→type map for per-tenant
+  configuration like locale, theme, feature flags). Cycle 1 captures
+  the DSL surface only — cycles 2–5 will wire `admin_personas` into
+  Cedar policy generation, store config values on a framework `Tenant`
+  entity, and expose them via `request.state.tenant_config`.
+
+### Agent Guidance
+- Nested INDENT blocks need explicit `self.advance()` after the INDENT
+  match — `match()` is pure peek and the inner loop will spin on an
+  unconsumed INDENT forever. The same DSL key may also tokenise as a
+  reserved keyword (e.g. `theme` → `TokenType.THEME`), so accept both
+  `IDENTIFIER` and `_is_keyword_as_identifier()` and `break` on
+  anything else to avoid silent infinite loops.
+
 ## [0.63.42] - 2026-05-02
 
 ### Fixed

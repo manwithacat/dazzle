@@ -189,13 +189,35 @@ class TenancySpec(BaseModel):
           mode: shared_schema
           partition_key: tenant_id
           topics: namespace_per_tenant
+          admin_personas: [super_admin, support]
+          per_tenant_config:
+            locale: str
+            theme: str
+            feature_billing: bool
           provisioning:
             auto_create: true
+
+    Attributes:
+        isolation: How tenants are separated (mode + partition key etc).
+        provisioning: How new tenants get created.
+        entities_excluded: Entities that are not tenant-scoped (e.g.
+            framework-shared catalogues).
+        admin_personas: Persona names whose grants bypass the tenant
+            scope filter (#957). Cycle 2 wires this into Cedar policy
+            generation; cycle 1 just captures the declaration.
+        per_tenant_config: Key→type map for per-tenant configuration
+            (#957). Cycle 4 stores these values on a framework
+            ``Tenant`` entity and exposes them via
+            ``request.state.tenant_config``. Type strings: ``str``,
+            ``int``, ``bool``, ``locale``.
     """
 
     isolation: TenantIsolationSpec = Field(default_factory=TenantIsolationSpec)
     provisioning: TenantProvisioningSpec = Field(default_factory=TenantProvisioningSpec)
     entities_excluded: list[str] = Field(default_factory=list)  # Entities not tenant-scoped
+    # #957 cycle 1: persona-bypass + per-tenant config declarations
+    admin_personas: list[str] = Field(default_factory=list)
+    per_tenant_config: dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 

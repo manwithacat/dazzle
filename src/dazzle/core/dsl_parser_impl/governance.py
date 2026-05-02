@@ -62,6 +62,7 @@ class GovernanceParserMixin:
         file: Any
         peek: Any
         check: Any
+        _is_keyword_as_identifier: Any
 
     # =========================================================================
     # Policies Section Parsing
@@ -239,6 +240,9 @@ class GovernanceParserMixin:
         require_approval = False
         default_limits: dict[str, int] = {}
         entities_excluded: list[str] = []
+        # #957 cycle 1
+        admin_personas: list[str] = []
+        per_tenant_config: dict[str, str] = {}
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -308,6 +312,51 @@ class GovernanceParserMixin:
                                 else:
                                     break
                             self.expect(TokenType.RBRACKET)
+                    elif key == "admin_personas":
+                        # #957 cycle 1: persona names that bypass tenant scope
+                        if self.match(TokenType.LBRACKET):
+                            self.advance()  # consume LBRACKET
+                            while not self.match(TokenType.RBRACKET):
+                                if self.match(TokenType.IDENTIFIER):
+                                    admin_personas.append(self.current_token().value)
+                                    self.advance()
+                                elif self.match(TokenType.STRING):
+                                    admin_personas.append(str(self.advance().value))
+                                if self.match(TokenType.COMMA):
+                                    self.advance()
+                                else:
+                                    break
+                            self.expect(TokenType.RBRACKET)
+                    elif key == "per_tenant_config":
+                        # #957 cycle 1: nested key→type map. Explicitly
+                        # consume the INDENT — `match` is pure peek, so
+                        # without an `advance()` here the loop spins on
+                        # the unconsumed INDENT token forever.
+                        self.skip_newlines()
+                        if self.match(TokenType.INDENT):
+                            self.advance()  # consume INDENT
+                            while not self.match(TokenType.DEDENT, TokenType.EOF):
+                                self.skip_newlines()
+                                if self.match(TokenType.DEDENT, TokenType.EOF):
+                                    break
+                                if (
+                                    self.match(TokenType.IDENTIFIER)
+                                    or self._is_keyword_as_identifier()
+                                ):
+                                    cfg_key = self.current_token().value
+                                    self.advance()
+                                    if self.match(TokenType.COLON):
+                                        self.advance()
+                                        cfg_type = self.expect_identifier_or_keyword().value
+                                        per_tenant_config[cfg_key] = cfg_type
+                                else:
+                                    # Unexpected token (not a config key) — bail
+                                    # out instead of spinning. The outer DEDENT
+                                    # match will exit the tenancy block cleanly.
+                                    break
+                                self.skip_newlines()
+                            if self.match(TokenType.DEDENT):
+                                self.advance()
             else:
                 self.advance()
 
@@ -333,6 +382,8 @@ class GovernanceParserMixin:
             isolation=isolation,
             provisioning=provisioning,
             entities_excluded=entities_excluded,
+            admin_personas=admin_personas,
+            per_tenant_config=per_tenant_config,
         )
 
     # =========================================================================
