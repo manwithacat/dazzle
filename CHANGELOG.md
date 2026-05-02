@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.29] - 2026-05-02
+
+### Fixed
+- **#984 — `.dz-pagination-pages` overflows main on lists with many
+  pages.** The pagination fragment was emitting one button per page
+  in a flat flex row (\`for p in range(1, total_pages + 1)\`), so a
+  120-page list produced a 5,652px-wide row that bled past
+  \`<main>\`'s right edge by +4,372px. Replaced with a window-and-
+  ellipsis pattern: \`{first} … {window-around-current} … {last}\`,
+  bounded at ~9 entries regardless of total page count.
+
+### Added
+- \`pagination_pages(current, total, window=2)\` Jinja global —
+  returns a list of page numbers interleaved with \`None\` markers
+  for ellipses. Used by \`fragments/table_pagination.html\`. 14
+  unit tests in \`tests/unit/test_pagination_pages.py\` pin the
+  cardinality bound, the window collapse near edges, and the
+  small-total no-ellipsis behaviour.
+- \`.dz-pagination-ellipsis\` CSS — sized to match the page-button
+  height so the row stays visually flat, \`aria-hidden\` so screen
+  readers skip past it.
+
+### Agent Guidance
+- For any flat list of items rendered with one element per data row,
+  ask whether the list is unbounded in practice. If yes, prefer
+  ellipsis collapse over \`flex-wrap: wrap\` — wrapping just moves
+  the overflow problem to the vertical axis (a 120-button pagination
+  row wraps to 8+ rows, still ugly). The \`pagination_pages\` helper
+  is the canonical pattern; reuse it for any "navigate by index"
+  control rather than inventing bespoke ellipsis logic per surface.
+
 ## [0.63.28] - 2026-05-02
 
 ### Fixed

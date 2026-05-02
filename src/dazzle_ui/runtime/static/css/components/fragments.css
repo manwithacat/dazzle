@@ -108,6 +108,21 @@
   color: var(--colour-brand-contrast);
 }
 
+/* #984: ellipsis marker between non-contiguous page-button ranges. Sized
+ * to match the page-button height so the row stays visually flat, but
+ * non-interactive (no hover, no cursor). aria-hidden in markup — screen
+ * readers skip past it; the surrounding buttons carry the page numbers. */
+.dz-pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  padding-inline: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  user-select: none;
+}
+
 /* ─────────────────────────── breadcrumbs fragment ───────────────
  * Horizontal nav trail with chevron (›) separators. Last crumb is
  * the current page (no link, bold). Native disclosure rather than

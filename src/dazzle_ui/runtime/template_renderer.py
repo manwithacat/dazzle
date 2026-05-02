@@ -370,6 +370,50 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     return text[:length] + "..."
 
 
+def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
+    """Build an ellipsis-collapsed list of page numbers for pagination controls (#984).
+
+    Returns a list of ``int`` page numbers interleaved with ``None`` markers
+    representing ellipses. Always includes page 1 and the last page; shows a
+    window of ``window`` pages on either side of *current*.
+
+    Examples (with the default window=2):
+        current=1,  total=5    → [1, 2, 3, 4, 5]
+        current=7,  total=120  → [1, None, 5, 6, 7, 8, 9, None, 120]
+        current=3,  total=120  → [1, 2, 3, 4, 5, None, 120]
+        current=118, total=120 → [1, None, 116, 117, 118, 119, 120]
+
+    The output length is bounded — for any total it returns at most
+    ``2 * window + 5`` items (1 + ellipsis + 2*window+1 + ellipsis + last).
+    Linear in ``window``, constant w.r.t. ``total``, so the pagination row's
+    rendered width is bounded regardless of how many pages the table has.
+    """
+    if total <= 0:
+        return []
+    if total == 1:
+        return [1]
+
+    # Below this threshold, every page fits without an ellipsis being useful.
+    # 7 = first + last + 2*window+1 window + 2 ellipses; if total is at or
+    # below the explicit page count we'd render anyway, just show all pages.
+    explicit_count = 2 * window + 3  # first + window-around-current + last
+    if total <= explicit_count + 2:  # +2 to absorb both ellipsis slots
+        return list(range(1, total + 1))
+
+    pages: list[int | None] = [1]
+    win_start = max(2, current - window)
+    win_end = min(total - 1, current + window)
+
+    if win_start > 2:
+        pages.append(None)  # left ellipsis
+    pages.extend(range(win_start, win_end + 1))
+    if win_end < total - 1:
+        pages.append(None)  # right ellipsis
+
+    pages.append(total)
+    return pages
+
+
 def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     """Create and configure the Jinja2 environment.
 
@@ -463,6 +507,10 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["ref_display"] = _ref_display_filter
     env.filters["resolve_fk_id"] = _resolve_fk_id_filter
     env.filters["humanize"] = _humanize_filter
+
+    # #984: ellipsis-collapsed pagination — keeps the row's rendered width
+    # bounded regardless of total page count.
+    env.globals["pagination_pages"] = _pagination_pages
 
     # #929: radar widget needs explicit polar-to-cartesian conversion
     # for vertex placement. Jinja can't call cos/sin directly, so the

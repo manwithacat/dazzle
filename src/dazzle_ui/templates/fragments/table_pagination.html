@@ -21,9 +21,18 @@
     </span>
   </span>
 
-  {# Right: page buttons #}
+  {# Right: page buttons.
+
+     #984: rendered page-list is bounded — `pagination_pages(current, total)`
+     returns at most ~9 entries (first + window-around-current + last, with
+     `None` markers for ellipses) regardless of total page count. Pre-fix the
+     template emitted one button per page; on entity lists with many pages
+     the row stretched several thousand pixels past <main>. #}
   <div class="dz-pagination-pages">
-    {% for p in range(1, total_pages + 1) %}
+    {% for p in pagination_pages(table.page, total_pages) %}
+    {% if p is none %}
+    <span class="dz-pagination-ellipsis" aria-hidden="true">…</span>
+    {% else %}
     <button
       class="dz-pagination-page{% if p == table.page %} is-current{% endif %}"
       {% if p == table.page %}aria-current="page"{% endif %}
@@ -34,6 +43,7 @@
       hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
       {{ p }}
     </button>
+    {% endif %}
     {% endfor %}
   </div>
 
