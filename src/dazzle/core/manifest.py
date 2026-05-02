@@ -336,6 +336,30 @@ class TenantConfig:
 
 
 @dataclass
+class I18nConfig:
+    """Internationalisation configuration (#955).
+
+    Cycle 1 — locale-resolution scaffolding only. The ``_()`` Jinja filter
+    is identity-passthrough until cycle 2 wires gettext catalogues.
+
+    Attributes:
+        default_locale: Locale to fall back to when no Accept-Language
+            header / cookie / user pref resolves to a supported locale.
+            Defaults to ``"en"``.
+        supported_locales: Allow-list. The middleware narrows the
+            Accept-Language candidates to this set before picking. An
+            empty list means "every locale is supported" — useful when
+            a project hasn't decided on a translation matrix yet.
+        cookie_name: Name of the cookie that carries an explicit user
+            override (set by the locale-switcher UI primitive in cycle 6).
+    """
+
+    default_locale: str = "en"
+    supported_locales: list[str] = field(default_factory=list)
+    cookie_name: str = "dazzle_locale"
+
+
+@dataclass
 class ExtensionsConfig:
     """Registration of project-supplied extensions (closes #786).
 
@@ -431,6 +455,7 @@ class ProjectManifest:
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
     tenant: TenantConfig = field(default_factory=TenantConfig)
+    i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
@@ -699,6 +724,17 @@ def load_manifest(path: Path) -> ProjectManifest:
         base_domain=tenant_data.get("base_domain", ""),
     )
 
+    # Parse i18n config (#955)
+    i18n_data = data.get("i18n", {}) if isinstance(data.get("i18n"), dict) else {}
+    raw_supported = i18n_data.get("supported", [])
+    if not isinstance(raw_supported, list):
+        raw_supported = []
+    i18n_config = I18nConfig(
+        default_locale=str(i18n_data.get("default", "en")),
+        supported_locales=[str(loc) for loc in raw_supported if isinstance(loc, str)],
+        cookie_name=str(i18n_data.get("cookie_name", "dazzle_locale")),
+    )
+
     # Parse URLs config
     urls_data = data.get("urls", {})
     urls_config = URLsConfig(
@@ -754,6 +790,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         database=database_config,
         dev=dev_config,
         tenant=tenant_config,
+        i18n=i18n_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
         assets=assets_mode,

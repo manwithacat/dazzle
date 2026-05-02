@@ -370,6 +370,40 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     return text[:length] + "..."
 
 
+def _gettext(message: str, **kwargs: Any) -> str:
+    """gettext-compatible passthrough filter for i18n (#955 cycle 1).
+
+    Today this is identity: ``_("Hello {name}", name="world")`` returns
+    ``"Hello world"`` rendered against the supplied keyword arguments. The
+    surface mirrors the gettext signature so cycle 2 can drop in catalogue
+    lookup without templates re-authoring their strings.
+
+    Why ship a passthrough now: marking translatable strings is the
+    expensive part of an i18n migration — every template must be visited.
+    Doing it incrementally against a no-op filter means later cycles can
+    extract the catalogue without churn.
+
+    Use in templates:
+
+        <h1>{{ _("Welcome, {name}!", name=user.name) }}</h1>
+        <p>{{ _("You have %(count)d unread message(s)") % {"count": n} }}</p>
+
+    Future cycles add: per-locale catalogue lookup (cycle 2),
+    ``ngettext`` plural forms (cycle 3), `dazzle i18n extract` CLI
+    (cycle 4).
+    """
+    if not kwargs:
+        return message
+    try:
+        return message.format(**kwargs)
+    except (KeyError, IndexError, ValueError):
+        # Malformed format string — return the unsubstituted source
+        # rather than raising. Cycle 2 will warn on this once the
+        # catalogue exists; cycle 1 stays quiet to avoid log noise on
+        # every page render of a project that hasn't formatted yet.
+        return message
+
+
 def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
     """Build an ellipsis-collapsed list of page numbers for pagination controls (#984).
 
@@ -511,6 +545,14 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     # #984: ellipsis-collapsed pagination — keeps the row's rendered width
     # bounded regardless of total page count.
     env.globals["pagination_pages"] = _pagination_pages
+
+    # #955 cycle 1: identity-passthrough gettext filter. Templates can
+    # mark translatable strings with `_("...")` today; cycle 2 wires the
+    # actual catalogue lookup keyed off `request.state.locale` (set by
+    # LocaleMiddleware). Registered as both global and filter so
+    # `_("Hello")` and `"Hello" | _` both work.
+    env.globals["_"] = _gettext
+    env.filters["_"] = _gettext
 
     # #929: radar widget needs explicit polar-to-cartesian conversion
     # for vertex placement. Jinja can't call cos/sin directly, so the

@@ -1,9 +1,9 @@
 """
 Notification parser mixin for DAZZLE DSL.
 
-Parses in-app notification rules that fire on entity events.
+Parses in-app + email notification rules that fire on entity events.
 
-DSL Syntax (v0.34.0):
+DSL Syntax:
 
     notification invoice_overdue "Invoice Overdue":
       on: Invoice.status -> overdue
@@ -17,6 +17,15 @@ DSL Syntax (v0.34.0):
       channels: [in_app, email, slack]
       message: "You have been assigned {{title}}"
       recipients: field(assigned_to)
+
+    # Email-shaped (#952): `subject:` + `template:` (file path)
+    notification welcome_email "Welcome":
+      on: User created
+      channels: [email]
+      subject: "Welcome to {{ app.title }}"
+      template: emails/welcome.html
+      recipients: field(email)
+      preferences: mandatory
 """
 
 from __future__ import annotations
@@ -56,6 +65,8 @@ class NotificationParserMixin:
         trigger: ir.NotificationTrigger | None = None
         channels: list[ir.NotificationChannel] = [ir.NotificationChannel.IN_APP]
         message = ""
+        subject = ""
+        template = ""
         recipients = ir.NotificationRecipient()
         preference = ir.NotificationPreference.OPT_OUT
 
@@ -83,6 +94,20 @@ class NotificationParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 message = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # subject: "..." (#952 — email subject line)
+            elif self.match(TokenType.SUBJECT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                subject = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # template: emails/welcome.html (#952 — Jinja template path)
+            elif self.match(TokenType.TEMPLATE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                template = self._parse_template_path()
                 self.skip_newlines()
 
             # recipients: role(name) | field(name) | creator
@@ -122,9 +147,40 @@ class NotificationParserMixin:
             trigger=trigger,
             channels=channels,
             message=message,
+            subject=subject,
+            template=template,
             recipients=recipients,
             preference=preference,
         )
+
+    def _parse_template_path(self) -> str:
+        """Parse the value after `template:` — accepts a quoted string or
+        a bare path made of dotted identifiers + slashes (#952).
+
+        Examples accepted:
+            template: "emails/welcome.html"
+            template: emails/welcome.html
+            template: emails/welcome
+        """
+        if self.match(TokenType.STRING):
+            return str(self.advance().value)
+
+        # Bare path — read identifiers separated by `/` and `.` until
+        # we hit a newline / dedent / EOF.
+        parts: list[str] = []
+        while True:
+            tok = self.current_token()
+            if tok.type in (TokenType.IDENTIFIER,):
+                parts.append(str(self.advance().value))
+            elif tok.type == TokenType.SLASH:
+                parts.append("/")
+                self.advance()
+            elif tok.type == TokenType.DOT:
+                parts.append(".")
+                self.advance()
+            else:
+                break
+        return "".join(parts)
 
     def _parse_notification_trigger(self) -> ir.NotificationTrigger:
         """Parse trigger: Entity.field -> value or Entity.field changed or Entity created."""

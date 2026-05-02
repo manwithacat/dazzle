@@ -9,6 +9,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.33] - 2026-05-02
+
+### Added
+- **#952 cycle 1 — email-shaped \`notification\` DSL.** The
+  ``notification`` block already existed for in-app/SMS/Slack
+  channels; cycle 1 extends it with two fields so transactional
+  email sends can be expressed in DSL:
+    - \`subject:\` — email subject line (Jinja interpolation).
+    - \`template:\` — project-relative path to a Jinja template file
+      (e.g. \`emails/welcome.html\`). Accepts both quoted and bare
+      forms. When set, takes precedence over \`message:\` for the
+      email body.
+  Notifications now also flow from \`module.fragment.notifications\`
+  through \`SymbolTable.notifications\` (new) into
+  \`AppSpec.notifications\` — the linker was missing that propagation
+  so DSL-declared notifications were silently dropped from the IR
+  consumed by the runtime.
+  Runtime delivery (SMTP / SES / SendGrid) is **deferred to cycle 2+**
+  and tracked on #952. Cycle 1 is parser + IR + linker only — adopters
+  can author the surface today and the dispatcher lands later without
+  DSL re-authoring.
+
+- **#955 cycle 1 — i18n locale resolution + ``_()`` filter.** The
+  scaffolding for internationalisation:
+    - \`I18nConfig\` dataclass on \`ProjectManifest\` with
+      ``default_locale`` (default ``"en"``), ``supported_locales``
+      (allow-list; empty = "any"), ``cookie_name`` (default
+      ``"dazzle_locale"``).
+    - \`[i18n]\` block in \`dazzle.toml\` parses cleanly:
+      \`\`\`toml
+      [i18n]
+      default = "fr"
+      supported = ["fr", "en", "de"]
+      \`\`\`
+    - \`LocaleMiddleware\` (\`dazzle_back/runtime/locale_middleware.py\`)
+      sets \`request.state.locale\` from cookie → \`Accept-Language\`
+      → default. Quality-weighted parsing per RFC 9110, primary-subtag
+      fallback (\`en-GB\` → \`en\` when only \`en\` is supported),
+      defensive normalisation (rejects malformed BCP-47 input).
+    - \`_()\` Jinja filter + global. Identity passthrough for cycle 1 —
+      ``{{ _("Hello {name}", name="world") }}`` returns
+      ``"Hello world"`` unchanged. Templates can mark translatable
+      strings today; cycle 2 wires gettext-style catalogue lookup
+      keyed off ``request.state.locale`` without templates re-authoring.
+  Runtime catalogue lookup (cycle 2), \`dazzle i18n extract\` CLI
+  (cycle 3-4), Babel date/number formatting (cycle 4), and locale-
+  switcher UI primitive (cycle 6) are deferred and tracked on #955.
+
+### Changed
+- \`SymbolTable.add_notification(spec, module_name)\` is the new
+  symbol-collection method for notifications; the linker's
+  \`build_symbol_table\` and \`merge_fragments\` propagate it through
+  to \`AppSpec\`. This was a pre-existing gap — the parser populated
+  \`module.fragment.notifications\` but no consumer downstream saw
+  the entries.
+
+### Agent Guidance
+- Both #952 and #955 are large multi-cycle 1.0-readiness primitives.
+  When picking up cycle 2 work for either, start by reading the
+  cycle-1 PR's tests (`test_notification_email_shape.py` /
+  `test_locale_middleware.py`) to see the contract the new code must
+  preserve. The DSL/middleware surface is stable; subsequent cycles
+  bolt on runtime behaviour without re-authoring the surface.
+
 ## [0.63.32] - 2026-05-02
 
 ### Security

@@ -152,6 +152,7 @@ class SymbolTable:
     approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
+    notifications: dict[str, ir.NotificationSpec] = field(default_factory=dict)  # #952
     grant_schemas: dict[str, ir.GrantSchemaSpec] = field(default_factory=dict)  # v0.42.0
 
     # Track which module each symbol came from (for error reporting)
@@ -386,6 +387,17 @@ class SymbolTable:
         """Add UI island to symbol table, checking for duplicates."""
         _add_symbol(self.islands, island.name, island, "island", module_name, self.symbol_sources)
 
+    def add_notification(self, notification: ir.NotificationSpec, module_name: str) -> None:
+        """Add notification to symbol table, checking for duplicates (#952)."""
+        _add_symbol(
+            self.notifications,
+            notification.name,
+            notification,
+            "notification",
+            module_name,
+            self.symbol_sources,
+        )
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -596,6 +608,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add UI Islands
         for island in module.fragment.islands:
             symbols.add_island(island, module.name)
+
+        # Add notifications (#952)
+        for notification in module.fragment.notifications:
+            symbols.add_notification(notification, module.name)
 
         # Add rhythms (v0.39.0)
         for rhythm in module.fragment.rhythms:
@@ -1338,6 +1354,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         approvals=list(symbols.approvals.values()),  # v0.25.0
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
+        notifications=list(symbols.notifications.values()),  # #952
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0

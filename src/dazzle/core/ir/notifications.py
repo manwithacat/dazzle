@@ -1,5 +1,5 @@
 """
-Notification types for DAZZLE IR (v0.34.0).
+Notification types for DAZZLE IR.
 
 Defines notification rules that fire on entity events and route
 messages to channels (in_app, email, sms, slack) with per-user
@@ -14,11 +14,18 @@ DSL Syntax:
       recipients: role(accountant)
       preferences: opt_out
 
-    notification task_assigned "Task Assigned":
-      on: Task.assigned_to changed
-      channels: [in_app, email, slack]
-      message: "You have been assigned {{title}}"
-      recipients: field(assigned_to)
+    # Email-shaped variant (#952) — `subject:` + `template:` for
+    # transactional sends. The template path is resolved relative to
+    # the project's `templates/` directory and rendered against the
+    # trigger payload. Either `message:` (inline) or `template:`
+    # (path) may be set; `template:` wins when both are present.
+    notification welcome_email "Welcome":
+      on: User created
+      channels: [email]
+      subject: "Welcome to {{ app.title }}"
+      template: emails/welcome.html
+      recipients: field(email)
+      preferences: mandatory
 """
 
 from enum import StrEnum
@@ -80,13 +87,21 @@ class NotificationSpec(BaseModel):
     A notification rule definition.
 
     Attributes:
-        name: Notification identifier
-        title: Human-readable title
-        trigger: What entity event fires this notification
-        channels: Channels to deliver through
-        message: Template string with {{field}} interpolation
-        recipients: Who receives the notification
-        preference: Per-user preference mode
+        name: Notification identifier.
+        title: Human-readable title.
+        trigger: What entity event fires this notification.
+        channels: Channels to deliver through.
+        message: Inline template string with ``{{ field }}`` interpolation.
+            Used for in-app / SMS / Slack channels and the email body when
+            ``template`` is empty.
+        subject: Email subject line (#952). Supports the same Jinja
+            interpolation as ``message``. Empty for non-email channels.
+        template: Project-relative path to a Jinja template file (#952),
+            e.g. ``emails/welcome.html``. When set, takes precedence over
+            ``message`` for the email body. Resolved by the runtime
+            against the project's ``templates/`` directory.
+        recipients: Who receives the notification.
+        preference: Per-user preference mode.
     """
 
     name: str
@@ -96,6 +111,8 @@ class NotificationSpec(BaseModel):
         default_factory=lambda: [NotificationChannel.IN_APP]
     )
     message: str = ""
+    subject: str = ""
+    template: str = ""
     recipients: NotificationRecipient = Field(default_factory=NotificationRecipient)
     preference: NotificationPreference = NotificationPreference.OPT_OUT
 
