@@ -738,6 +738,11 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.CRON,
     TokenType.UPSERT,
     TokenType.REGEX,
+    # Search-block keywords (#954) — also valid as CSS class identifiers
+    # / field names elsewhere in the DSL.
+    TokenType.HIGHLIGHT,
+    TokenType.RANKING,
+    TokenType.TOKENIZER,
     # Field types that are also keywords
     TokenType.URL,
     # Workspace keywords that can be field names

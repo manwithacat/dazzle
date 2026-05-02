@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.42] - 2026-05-02
+
+### Fixed
+- **CI green-up after v0.63.41 (#954 cycle 1)** — the new
+  \`HIGHLIGHT\`, \`RANKING\`, \`TOKENIZER\` lexer keywords broke
+  three pre-existing \`test_workspace_region_class.py\` tests that
+  used \`highlight\` as a CSS-class identifier. Adding new
+  reserved keywords is a breaking change for any DSL site that
+  previously used the same word as an identifier.
+
+  Fix: added the three tokens to \`KEYWORD_AS_IDENTIFIER_TYPES\`
+  in \`dsl_parser_impl/base.py\` so they're still emitted as their
+  specific token types (parsers that match \`TokenType.HIGHLIGHT\`
+  still work) but \`expect_identifier_or_keyword()\` now also
+  accepts them as identifier values. Same convention as
+  \`STAGE\` / \`KEY\` / \`OPERATION\` / \`CRON\` etc.
+
+### Agent Guidance
+- When adding a new lexer keyword for a construct's argument
+  syntax (e.g. \`highlight: true\` inside \`search\`), default to
+  also adding it to \`KEYWORD_AS_IDENTIFIER_TYPES\` so it stays
+  usable as an identifier elsewhere (CSS class names, enum values,
+  field names). The cost of the extra entry is zero; the cost of
+  forgetting it is a CI red across unrelated parser tests.
+
 ## [0.63.41] - 2026-05-02
 
 ### Added
