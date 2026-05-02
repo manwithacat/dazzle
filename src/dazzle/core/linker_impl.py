@@ -175,6 +175,9 @@ class SymbolTable:
     # Analytics block (v0.61.0 Phase 3)
     analytics: ir.AnalyticsSpec | None = None
 
+    # Tenancy block (#957 cycle 3 — propagated from root module fragment)
+    tenancy: ir.TenancySpec | None = None
+
     # --- Delegated properties for backward compatibility ---
 
     @property
@@ -617,6 +620,17 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
                 )
             symbols.analytics = module.fragment.analytics
             symbols.symbol_sources["analytics"] = module.name
+
+        # Tenancy block (#957 cycle 3) — at most one across all modules.
+        # Same shape as analytics/llm_config above.
+        if module.fragment.tenancy is not None:
+            if symbols.tenancy is not None:
+                raise LinkError(
+                    f"Duplicate tenancy: block — already declared in "
+                    f"module {symbols.symbol_sources.get('tenancy', '?')}."
+                )
+            symbols.tenancy = module.fragment.tenancy
+            symbols.symbol_sources["tenancy"] = module.name
 
         # Add processes (v0.23.0)
         for process in module.fragment.processes:
@@ -1424,4 +1438,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0
         analytics=symbols.analytics,  # v0.61.0 Phase 3
         nav_definitions=nav_definitions,  # v0.61.95 (#926)
+        tenancy=symbols.tenancy,  # #957 cycle 3
     )

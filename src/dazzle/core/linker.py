@@ -188,6 +188,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         slas=merged_fragment.slas,  # v0.25.0 SLAs
         islands=merged_fragment.islands,  # UI Islands
         notifications=merged_fragment.notifications,  # v0.34.0 Notifications (#952)
+        tenancy=merged_fragment.tenancy,  # #957 cycle 3
         jobs=merged_fragment.jobs,  # #953 Background Jobs
         audits=merged_fragment.audits,  # #956 Audit Trail
         searches=merged_fragment.searches,  # #954 Full-Text Search

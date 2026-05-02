@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.45] - 2026-05-01
+
+### Fixed
+- **#957 cycle 3 — linker now propagates `tenancy:` to AppSpec.** The
+  `tenancy:` block was captured on `ModuleFragment` (cycle 1) but
+  silently dropped during linking — `AppSpec.tenancy` defaulted to
+  `None` even when the DSL declared a block, leaving cycle-2's runtime
+  bypass with nothing to read. `SymbolTable` now carries `tenancy`,
+  `merge_fragments` threads it through, and `build_appspec` populates
+  `AppSpec.tenancy`. Duplicate `tenancy:` blocks across modules raise
+  `LinkError` with the source module reported (same shape as
+  `analytics:`/`llm_config`).
+
 ## [0.63.44] - 2026-05-01
 
 ### Added
