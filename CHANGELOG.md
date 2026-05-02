@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.53] - 2026-05-03
+
+### Added
+- **#956 cycle 4 — audit emitter wired against the service generator
+  + per-request user_id ContextVar.** Two new modules complete the
+  audit-write integration:
+
+  - `dazzle_back.runtime.audit_context` — ContextVar
+    `current_user_id` (None default), with set/get/reset helpers.
+    Cycle 5 will populate it from the auth dependency; until then
+    `AuditEntry.by_user_id` is None for every row.
+  - `dazzle_back.runtime.audit_wiring.register_audit_callbacks` —
+    iterates `appspec.audits`, looks up each entity's service, and
+    registers cycle-3's emitter callbacks (on_created / on_updated /
+    on_deleted) against it. The writer closure dispatches each diff
+    row to the AuditEntry service via `create_schema(**row)`. Silent
+    no-op when no audit blocks; warns and skips when AuditEntry or
+    a target service is missing rather than crashing the deploy.
+
+  `server.py` calls `register_audit_callbacks` after the
+  project-hook registration loop.
+
+  After cycle 4, an `audit on Manuscript: track: status` declaration
+  produces an `AuditEntry` row on every status change at runtime.
+  Cycles 5-7 add the auth-context plumbing, the `history` UI
+  region, and the retention sweep.
+
 ## [0.63.52] - 2026-05-03
 
 ### Added

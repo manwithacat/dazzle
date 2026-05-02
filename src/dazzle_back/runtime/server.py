@@ -717,6 +717,13 @@ class DazzleBackendApp:
             for h in registry.get_hooks("entity.post_delete", entity_name):
                 service.on_deleted(h.function)
 
+        # #956 cycle 4 — wire the audit emitter callbacks against
+        # services for every `audit on X:` block. Silent no-op when
+        # the AppSpec has no audit declarations.
+        from dazzle_back.runtime.audit_wiring import register_audit_callbacks
+
+        register_audit_callbacks(self._services, list(self._appspec.audits))
+
         # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
         if hasattr(self, "_upload_callbacks"):
             for _service_name, service in self._services.items():
