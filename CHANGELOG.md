@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.51] - 2026-05-03
+
+### Added
+- **#956 cycle 2 — `AuditEntry` system entity auto-generation.** When
+  any DSL module declares an `audit on Entity:` block, the linker now
+  injects a single shared `AuditEntry` platform entity into the
+  AppSpec — the destination table for cycle-3's repository hooks.
+  Mirrors the AIJob / FeedbackReport injection pattern.
+
+  Schema (9 fields): `id` (uuid pk), `entity_type` + `entity_id` +
+  `field_name` discriminators, `operation` enum
+  (`create`/`update`/`delete`), `before_value` / `after_value` (text,
+  cycle 3 will JSON-encode), `by_user_id`, `at` (datetime, default
+  `now`).
+
+  Permissions: CREATE/READ/LIST permitted for authenticated users;
+  UPDATE and DELETE intentionally absent — audit entries are
+  immutable, retention sweep (cycle 6) uses a different code path.
+  Cycle 5 will tighten READ via the cycle-1 `show_to:` declaration.
+
 ## [0.63.50] - 2026-05-01
 
 ### Added

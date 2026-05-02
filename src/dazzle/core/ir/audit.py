@@ -62,3 +62,29 @@ class AuditSpec(BaseModel):
     retention_days: int = Field(default=0, ge=0, le=36_500)
 
     model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# AuditEntry System Entity Builder (#956 cycle 2)
+# =============================================================================
+
+# Field definitions for the auto-generated AuditEntry entity. Each
+# tuple: ``(name, type_kind, modifiers, default)``. The shape mirrors
+# the AIJob convention so the linker can build it via the shared
+# ``_parse_field_type`` / ``_MODIFIER_MAP`` helpers.
+#
+# `before_value` and `after_value` are stored as text — JSON-encoded
+# at write time by cycle-3's repository hook so any field type
+# (string, number, datetime, FK uuid) can round-trip without a
+# polymorphic column. Cycle-4's history region decodes for display.
+AUDIT_ENTRY_FIELDS: list[tuple[str, str, list[str], str | None]] = [
+    ("id", "uuid", ["pk"], None),
+    ("entity_type", "str(200)", ["required"], None),
+    ("entity_id", "str(200)", ["required"], None),
+    ("field_name", "str(200)", ["required"], None),
+    ("operation", "enum[create,update,delete]", ["required"], "update"),
+    ("before_value", "text", [], None),
+    ("after_value", "text", [], None),
+    ("by_user_id", "str(200)", [], None),
+    ("at", "datetime", ["required"], "now"),
+]

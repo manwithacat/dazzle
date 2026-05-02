@@ -1,6 +1,7 @@
 from . import ir
 from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import LinkError
+from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from .ir.llm import AI_JOB_FIELDS
@@ -112,6 +113,12 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     entities = merged_fragment.entities
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
         entities = [*entities, _build_ai_job_entity()]
+
+    # 9a. Auto-generate AuditEntry entity when any `audit on X:` block is
+    # present (#956 cycle 2). Single shared system entity for all
+    # audited entity types — `entity_type` discriminator on each row.
+    if merged_fragment.audits and not any(e.name == "AuditEntry" for e in entities):
+        entities = [*entities, _build_audit_entry_entity()]
 
     # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
@@ -342,6 +349,58 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         name="AIJob",
         title="AI Job",
         intent="Tracks every AI gateway call with token counts, cost, and audit trail",
+        domain="platform",
+        patterns=["system", "audit"],
+        fields=fields,
+        access=access,
+    )
+
+
+def _build_audit_entry_entity() -> ir.EntitySpec:
+    """Build the auto-generated AuditEntry system entity (#956 cycle 2).
+
+    A single shared system entity captures every tracked field change
+    across all audited entity types. The `entity_type` and `entity_id`
+    columns discriminate; cycle-4's history region filters on those
+    when rendering the per-row history.
+    """
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in AUDIT_ENTRY_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    # Default access: any authenticated user can READ/LIST audit
+    # entries — cycle 5 will tighten this via `show_to`. CREATE is
+    # permitted because cycle 3's repository hook writes through the
+    # standard service layer rather than a privileged path. UPDATE and
+    # DELETE are intentionally absent — audit entries are immutable
+    # records of history; deletion is handled by the cycle-6 retention
+    # sweep, which uses a different code path.
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(
+                operation=ir.PermissionKind.CREATE,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.READ,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.LIST,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+        ]
+    )
+
+    return ir.EntitySpec(
+        name="AuditEntry",
+        title="Audit Entry",
+        intent="Captures one before/after value pair for an audited field change",
         domain="platform",
         patterns=["system", "audit"],
         fields=fields,
