@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.37] - 2026-05-02
+
+### Added
+- **#955 cycle 3 — \`dazzle i18n extract\` CLI.** Walks templates +
+  Python sources for \`_(\"...\")\` calls, emits a gettext .pot file
+  with header metadata + sorted msgids + repo-relative \`#:\`
+  reference comments.
+    - **Source extraction** (\`dazzle.cli.i18n.extract_messages\`) —
+      regex-matches \`_("...")\` / \`_('...')\` calls including
+      escaped quotes and trailing kwargs (\`_(\"Welcome {name}\",
+      name=user.name)\`). Order-preserving with location tracking
+      so the .pot \`#:\` refs map back to source.
+    - **File walking** — defaults to \`.html\`, \`.jinja\`,
+      \`.jinja2\`, \`.py\`. Skips dot-directories (\`.git\` /
+      \`.venv\` / \`.dazzle\`) plus \`node_modules\` and
+      \`__pycache__\`. Binary / undecodable files skipped silently
+      so the extractor doesn't crash on vendor noise.
+    - **.pot rendering** (\`render_pot\`) — emits proper gettext
+      header (\`MIME-Version\`, \`charset=utf-8\`,
+      \`Project-Id-Version\`), sorts msgids alphabetically,
+      escapes double-quotes, dedupes \`(path, line)\` references.
+    - **\`dazzle i18n stats\`** — read-only summary of the in-memory
+      catalogue against a .pot. Prints \`fr: 12/45 (26.7%)\` per
+      registered locale. Cycle 4 will add \`--check\` to fail CI
+      below a coverage threshold.
+
+### Tests
+- 21 unit tests in \`test_i18n_extract.py\` cover: single + double
+  quoted strings, escaped quotes, kwargs trail, deduplication
+  across files, line numbers, .git/.venv/node_modules/__pycache__
+  skipping, binary file resilience, header metadata, sorted
+  output, repo-relative refs, escape-char handling, round-trip
+  read, CLI integration.
+
+### Agent Guidance
+- Adopters with existing \`_(\"...\")\` markers in templates get a
+  free \`.pot\` snapshot — run \`dazzle i18n extract -o
+  locales/messages.pot\` and hand the file to a translator.
+  Cycle 4 will add \`.po\` → in-memory catalogue ingestion so
+  \`register_translations()\` becomes the build-time output of
+  the .po pipeline rather than a hand-authored dict.
+
 ## [0.63.36] - 2026-05-02
 
 ### Added

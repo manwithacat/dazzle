@@ -344,9 +344,11 @@ app.add_typer(test_design_app, name="test-design")
 app.add_typer(overrides_app, name="overrides")
 app.add_typer(param_app, name="param")
 
+from dazzle.cli.i18n import i18n_app  # noqa: E402
 from dazzle.cli.inspect_api import inspect_api_app  # noqa: E402
 
 app.add_typer(inspect_api_app, name="inspect-api")
+app.add_typer(i18n_app, name="i18n")
 
 
 # =============================================================================
