@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.55] - 2026-05-03
+
+### Added
+- **#956 cycle 6 — audit history reader.** New
+  `dazzle_back.runtime.audit_history` module with the read-side
+  primitives the cycle-7 ``history`` region template will consume:
+
+  - `HistoryEntry` — one decoded audit row ready for display
+    (timestamp, field, operation, JSON-decoded before/after,
+    by_user_id).
+  - `decode_audit_row(row)` — converts a raw AuditEntry dict (as
+    returned by the service layer) into a `HistoryEntry`. Falls
+    back to the raw string when JSON parse fails so the UI never
+    blanks out, and tolerates missing keys for forward-compat with
+    future schema versions.
+  - `HistoryChange` + `group_by_change(entries)` — collapses N
+    field-rows from one mutation into a single logical change.
+    Cycle 3 emits one row per tracked field; the UI typically wants
+    one card per user action, not N cards-of-one-field. Splits on
+    different timestamp / user / operation / entity boundaries.
+
+  Pure / synchronous on row data — async DB call left to cycle 7's
+  region renderer so this layer stays trivially mockable.
+
 ## [0.63.54] - 2026-05-03
 
 ### Added
