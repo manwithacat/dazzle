@@ -157,6 +157,7 @@ class SymbolTable:
     audits: list[ir.AuditSpec] = field(
         default_factory=list
     )  # #956 (list — keyed on entity, but multiple audits per entity not allowed; symbol_sources tracks)
+    searches: list[ir.SearchSpec] = field(default_factory=list)  # #954 (one search per entity)
     grant_schemas: dict[str, ir.GrantSchemaSpec] = field(default_factory=dict)  # v0.42.0
 
     # Track which module each symbol came from (for error reporting)
@@ -430,6 +431,22 @@ class SymbolTable:
         self.symbol_sources[symbol_key] = module_name
         self.audits.append(audit)
 
+    def add_search(self, search: ir.SearchSpec, module_name: str) -> None:
+        """Add full-text-search spec to symbol table (#954).
+
+        One search declaration per entity — duplicates raise LinkError
+        (same shape as :meth:`add_audit`).
+        """
+        symbol_key = f"search:{search.entity}"
+        if symbol_key in self.symbol_sources:
+            existing_module = self.symbol_sources[symbol_key]
+            raise LinkError(
+                f"Duplicate search declaration for entity '{search.entity}' in "
+                f"module '{module_name}' (already defined in '{existing_module}')."
+            )
+        self.symbol_sources[symbol_key] = module_name
+        self.searches.append(search)
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -652,6 +669,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add audits (#956)
         for audit in module.fragment.audits:
             symbols.add_audit(audit, module.name)
+
+        # Add searches (#954)
+        for search in module.fragment.searches:
+            symbols.add_search(search, module.name)
 
         # Add rhythms (v0.39.0)
         for rhythm in module.fragment.rhythms:
@@ -1397,6 +1418,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         notifications=list(symbols.notifications.values()),  # #952
         jobs=list(symbols.jobs.values()),  # #953
         audits=symbols.audits,  # #956
+        searches=symbols.searches,  # #954
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0

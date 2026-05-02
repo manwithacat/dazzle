@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.41] - 2026-05-02
+
+### Added
+- **#954 cycle 1 — \`search\` DSL block (Postgres FTS surface).**
+  Per-entity full-text-search definition mapping to a Postgres
+  tsvector + GIN index. Cycle 1 ships parser + IR + linker
+  propagation; cycle 2 adds the Alembic migration; cycle 3 the
+  \`/api/search/<entity>\` endpoint; cycle 4 the search-box region.
+
+  DSL surface:
+
+      search on Manuscript:
+        fields: title, content, author.name
+        ranking:
+          title: 4
+          content: 1
+        highlight: true
+        tokenizer: english
+
+  - **\`fields:\`** — comma-separated field paths. Single-segment
+    (\`title\`) for own-entity columns; dotted (\`author.name\`) for
+    FK-traversal (cycle 2's migration walks the FK graph).
+  - **\`ranking:\`** — indented \`field: weight\` map. Weights are
+    1..4 mapping to Postgres tsvector D..A. Unranked fields default
+    to 1 (D).
+  - **\`highlight: true|false\`** — when on, cycle-3's endpoint
+    returns \`ts_headline\` snippets per hit.
+  - **\`tokenizer:\`** — Postgres FTS configuration name (default
+    \`english\`).
+
+  New IR types: \`SearchSpec\`, \`SearchField\`. Linker enforces one
+  search declaration per entity (duplicates raise \`LinkError\`).
+  New parser keyword tokens: \`ranking\`, \`highlight\`, \`tokenizer\`.
+
+### Changed
+- API-surface baselines regenerated (\`docs/api-surface/ir-types.txt\`,
+  \`docs/api-surface/dsl-constructs.txt\`).
+- Golden-master snapshot updated for the new \`searches:\` field on
+  AppSpec.
+- \`tests/unit/fixtures/ir_reader_baseline.json\` — added
+  \`search.SearchField.weight\` to the orphan baseline (reader
+  arrives in cycle 2's migration generator).
+- \`.claude/CLAUDE.md\` parser-construct list updated to include
+  \`search\`.
+
+### Tests
+- 12 unit tests in \`test_search_dsl.py\` cover minimal search,
+  dotted field paths (FK traversal), ranking with weights,
+  invalid-weight rejection, unranked-field defaults, highlight
+  toggle, custom tokenizer, missing-fields error, AppSpec
+  propagation, duplicate-per-entity rejection, immutability, IR
+  exports.
+
+### Agent Guidance
+- Same MRO-collision finding as #953: parser mixin internal helpers
+  must be prefixed with the construct name. \`_parse_field_path\`
+  exists on \`TypeParserMixin\` (returns \`list[str]\`); my initial
+  \`SearchParserMixin\` declared the same name and silently shadowed
+  it, breaking field-path parsing. Renamed to
+  \`_parse_search_field_path\`. The pattern stands: every mixin
+  helper gets the construct prefix.
+
 ## [0.63.40] - 2026-05-02
 
 ### Added

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 330 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
+# Counts: 332 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -143,6 +143,7 @@ ir_class: AppSpec
     - rules: list[RuleSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
+    - searches: list[SearchSpec] = []
     - security: SecurityConfig | None = None
     - slas: list[SLASpec] = []
     - stories: list[StorySpec] = []
@@ -1593,6 +1594,7 @@ ir_class: ModuleFragment
     - rules: list[RuleSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
+    - searches: list[SearchSpec] = []
     - slas: list[SLASpec] = []
     - stories: list[StorySpec] = []
     - streams: list[StreamSpec] = []
@@ -2221,6 +2223,20 @@ ir_class: ScopeRule
     - condition: ConditionExpr | None = None
     - personas: list[str] = []
     - predicate: Any = None
+
+ir_class: SearchField
+  required:
+    - path: str
+  optional:
+    - weight: int = 1
+
+ir_class: SearchSpec
+  required:
+    - entity: str
+  optional:
+    - fields: list[SearchField] = []
+    - highlight: bool = False
+    - tokenizer: str = 'english'
 
 ir_class: SectionSpec
   required:

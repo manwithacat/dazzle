@@ -70,6 +70,7 @@ from .questions import QuestionSpec
 from .rhythm import RhythmSpec
 from .rules import RuleSpec
 from .scenarios import ScenarioSpec
+from .search import SearchSpec
 from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
 from .sla import SLASpec
@@ -187,6 +188,8 @@ class AppSpec(BaseModel):
     jobs: list[JobSpec] = Field(default_factory=list)
     # Audit trail (#956)
     audits: list[AuditSpec] = Field(default_factory=list)
+    # Full-text search (#954)
+    searches: list[SearchSpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)

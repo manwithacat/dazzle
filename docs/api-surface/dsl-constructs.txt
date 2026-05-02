@@ -169,6 +169,10 @@ construct: schedule
   fragment_fields: schedules
   ir_classes: ScheduleSpec
 
+construct: search
+  fragment_fields: searches
+  ir_classes: SearchSpec
+
 construct: service
   fragment_fields: apis, domain_services
   ir_classes: APISpec, DomainServiceSpec

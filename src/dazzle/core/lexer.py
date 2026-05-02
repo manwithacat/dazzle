@@ -190,6 +190,9 @@ class TokenType(Enum):
     JOB = "job"  # #953 — `schedule` token reused from ScheduleSpec.
     RETRY_BACKOFF = "retry_backoff"  # #953
     DEAD_LETTER = "dead_letter"  # #953
+    RANKING = "ranking"  # #954
+    HIGHLIGHT = "highlight"  # #954
+    TOKENIZER = "tokenizer"  # #954
     CHANNELS = "channels"
     IN_APP = "in_app"
     SMS = "sms"

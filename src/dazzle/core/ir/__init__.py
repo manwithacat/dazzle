@@ -574,6 +574,12 @@ from .scenarios import (
     ScenarioSpec,
 )
 
+# Full-text search (#954)
+from .search import (
+    SearchField,
+    SearchSpec,
+)
+
 # Security (v0.11.0)
 from .security import (
     SecurityConfig,
@@ -1275,6 +1281,9 @@ __all__ = [
     "JobSchedule",
     "JobSpec",
     "JobTrigger",
+    # Full-text search (#954)
+    "SearchField",
+    "SearchSpec",
     # Notifications (v0.34.0)
     "NotificationChannel",
     "NotificationPreference",

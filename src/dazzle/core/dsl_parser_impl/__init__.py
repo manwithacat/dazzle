@@ -46,6 +46,7 @@ from .question import QuestionParserMixin
 from .rhythm import RhythmParserMixin
 from .rule import RuleParserMixin
 from .scenario import ScenarioParserMixin
+from .search import SearchParserMixin
 from .service import ServiceParserMixin
 from .sla import SLAParserMixin
 from .story import StoryParserMixin
@@ -92,6 +93,7 @@ class Parser(
     NotificationParserMixin,
     JobParserMixin,
     AuditParserMixin,
+    SearchParserMixin,
     NavParserMixin,
     GrantParserMixin,
     ParamParserMixin,
@@ -580,6 +582,16 @@ class Parser(
             }
         )
 
+    def _dispatch_search(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        # #954 — `search on <Entity>: ...` blocks (full-text-search DSL)
+        search_spec = self.parse_search()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "searches": [*fragment.searches, search_spec],
+            }
+        )
+
     def _dispatch_grant_schema(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         self.advance()  # consume 'grant_schema' token
         grant_schema = self.parse_grant_schema()
@@ -692,6 +704,7 @@ class Parser(
             TokenType.NOTIFICATION: self._dispatch_notification,
             TokenType.JOB: self._dispatch_job,  # #953
             TokenType.AUDIT: self._dispatch_audit,  # #956
+            TokenType.SEARCH: self._dispatch_search,  # #954
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
             TokenType.PARAM: self._dispatch_param,
             TokenType.FEEDBACK_WIDGET: self._dispatch_feedback_widget,

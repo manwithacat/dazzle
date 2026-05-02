@@ -190,6 +190,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         notifications=merged_fragment.notifications,  # v0.34.0 Notifications (#952)
         jobs=merged_fragment.jobs,  # #953 Background Jobs
         audits=merged_fragment.audits,  # #956 Audit Trail
+        searches=merged_fragment.searches,  # #954 Full-Text Search
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
         params=merged_fragment.params,  # v0.44.0 Runtime Parameters
         feedback_widget=merged_fragment.feedback_widget,  # Feedback Widget

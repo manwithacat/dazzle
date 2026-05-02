@@ -965,6 +965,8 @@
     ]),
     'schedules': list([
     ]),
+    'searches': list([
+    ]),
     'security': dict({
       'cors_origins': list([
         '*',
