@@ -59,6 +59,7 @@ class AccessRuntimeContext:
         roles: list[str] | None = None,
         is_superuser: bool = False,
         entity_resolver: Any = None,
+        tenant_admin_personas: list[str] | None = None,
     ):
         """
         Initialize access context.
@@ -68,16 +69,36 @@ class AccessRuntimeContext:
             roles: List of user's roles
             is_superuser: Whether user is a superuser (bypasses all checks)
             entity_resolver: Callable to resolve related entities by (entity_name, id)
+            tenant_admin_personas: Personas declared in `tenancy: admin_personas:`
+                that bypass the tenant-scope filter when matched against the
+                user's roles (#957 cycle 4). Empty default → identical to
+                pre-cycle-4 behaviour.
         """
         self.user_id = str(user_id) if user_id else None
         self.roles = set(roles or [])
         self.is_superuser = is_superuser
         self.entity_resolver = entity_resolver
+        # Stored as a frozenset for fast intersection with `roles`.
+        self.tenant_admin_personas: frozenset[str] = frozenset(tenant_admin_personas or [])
 
     @property
     def is_authenticated(self) -> bool:
         """Check if user is authenticated."""
         return self.user_id is not None
+
+    @property
+    def bypasses_tenant_filter(self) -> bool:
+        """True if this context should skip the tenant_id row filter.
+
+        #957 cycle 4 — admin personas declared via `tenancy:
+        admin_personas:` short-circuit cross-tenant scope predicates so
+        support / super_admin users can read any tenant's records.
+        Superusers also bypass for parity with `has_role`. Cycle 5 will
+        use this in scope-predicate evaluation.
+        """
+        if self.is_superuser:
+            return True
+        return not self.tenant_admin_personas.isdisjoint(self.roles)
 
     def has_role(self, role: str) -> bool:
         """Check if user has a specific role."""

@@ -697,10 +697,19 @@ def _normalize_role(role: str) -> str:
     return role.removeprefix("role_")
 
 
-def _build_access_context(auth_context: "AuthContext") -> tuple[Any, Any]:
+def _build_access_context(
+    auth_context: "AuthContext",
+    admin_personas: list[str] | None = None,
+) -> tuple[Any, Any]:
     """Build (user, AccessRuntimeContext) from an AuthContext.
 
     Returns (user_or_none, runtime_context) for Cedar policy evaluation.
+
+    `admin_personas` (#957 cycle 4) is the list declared in
+    `tenancy: admin_personas:` on the active AppSpec. Cycle 5 will
+    thread it from each call site's enclosing scope; for now callers
+    that haven't been updated pass None and the bypass simply doesn't
+    apply (identical to pre-cycle-4 behaviour).
     """
     from dazzle.core.access import AccessRuntimeContext
 
@@ -710,6 +719,7 @@ def _build_access_context(auth_context: "AuthContext") -> tuple[Any, Any]:
         user_id=str(user.id) if user else None,
         roles=[_normalize_role(r) for r in raw_roles],
         is_superuser=getattr(user, "is_superuser", False) if user else False,
+        tenant_admin_personas=admin_personas,
     )
     return user, ctx
 

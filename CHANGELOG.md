@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.46] - 2026-05-01
+
+### Added
+- **#957 cycle 4 — `AccessRuntimeContext.tenant_admin_personas`.** The
+  production Cedar context now carries the same admin-persona set as
+  the cycle-2 `AccessContext`, with a parallel `bypasses_tenant_filter`
+  property. `_build_access_context` accepts an optional
+  `admin_personas: list[str]` argument that callers can thread from
+  the active AppSpec. Empty default keeps prior behaviour exactly —
+  call sites unchanged in this cycle. Cycle 5 wires the admin set into
+  scope-predicate evaluation; cycle 6 plumbs it from each
+  route_generator call site's enclosing AppSpec.
+
 ## [0.63.45] - 2026-05-01
 
 ### Fixed
