@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.52] - 2026-05-03
+
+### Added
+- **#956 cycle 3 — audit-trail diff computation + emitter callbacks.**
+  New `dazzle_back.runtime.audit_emitter` module with two pieces:
+
+  - `compute_diff(...)` — pure function; emits one
+    AuditEntry-shaped dict per tracked field that changed. Handles
+    create (`before_value=null`), update (skip unchanged fields),
+    and delete (`after_value=null`) uniformly. `track=[]` captures
+    every field. Values JSON-encoded with `default=str` so UUIDs,
+    datetimes, Decimals round-trip through the TEXT column.
+  - `build_audit_callbacks(...)` — factory returning `on_created`,
+    `on_updated`, `on_deleted` async callbacks shaped for
+    `BaseService` registration. Best-effort: writer exceptions and
+    `user_id_provider` failures are logged but never propagate —
+    audit failures must not break the user's mutation.
+
+  Cycle 4 will register these against the service generator for
+  every entity with an `audit on X:` block, plumbing the writer
+  through the AuditEntry service and the user_id from a request
+  ContextVar.
+
 ## [0.63.51] - 2026-05-03
 
 ### Added
