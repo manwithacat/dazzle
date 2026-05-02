@@ -930,6 +930,8 @@
     'interfaces': None,
     'islands': list([
     ]),
+    'jobs': list([
+    ]),
     'ledgers': list([
     ]),
     'llm_config': None,

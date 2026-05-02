@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.39] - 2026-05-02
+
+### Fixed
+- **CI green-up after v0.63.38 (#953 cycle 1)** — two pre-existing
+  drift gates needed regenerating for the new \`JobSpec\` IR fields:
+    - \`tests/unit/fixtures/ir_reader_baseline.json\` — added
+      \`jobs.JobSpec.dead_letter\`, \`jobs.JobSpec.retry_backoff\`,
+      and \`jobs.JobTrigger.when_condition\` to the orphan baseline.
+      All three are cycle-1 scaffolding with no consumers yet
+      (\`when_condition\` reader lands in cycle 3, the retry/
+      dead-letter readers in cycle 5).
+    - \`tests/integration/__snapshots__/test_golden_master.ambr\` —
+      regenerated to include the new \`jobs:\` field on \`AppSpec\`
+      (empty list for the simple_test fixture which doesn't declare
+      any jobs).
+
 ## [0.63.38] - 2026-05-02
 
 ### Added
