@@ -1133,6 +1133,7 @@ def create_list_handler(
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
     display_field: str | None = None,
+    admin_personas: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -1216,6 +1217,7 @@ def create_list_handler(
                 graph_spec=graph_spec,
                 all_services=all_services,
                 display_field=display_field,
+                admin_personas=admin_personas,
             )
 
         _auth_handler.__annotations__ = {
@@ -1268,6 +1270,7 @@ def create_list_handler(
             graph_spec=graph_spec,
             all_services=all_services,
             display_field=display_field,
+            admin_personas=admin_personas,
         )
 
     _noauth_handler.__annotations__ = {
@@ -1293,6 +1296,7 @@ def _resolve_scope_filters(
     *,
     entity_name: str = "",
     fk_graph: "FKGraph | None" = None,
+    admin_personas: list[str] | None = None,
 ) -> dict[str, Any] | None:
     """Resolve scope rules to SQL filters for the user's matched role.
 
@@ -1361,7 +1365,12 @@ def _resolve_scope_filters(
         if predicate is not None and fk_graph is not None:
             try:
                 return _resolve_predicate_filters(
-                    predicate, entity_name, fk_graph, user_id, auth_context
+                    predicate,
+                    entity_name,
+                    fk_graph,
+                    user_id,
+                    auth_context,
+                    admin_personas=admin_personas,
                 )
             except Exception:
                 # Predicate compilation/resolution failed (e.g. null FK in
@@ -1529,6 +1538,7 @@ async def _list_handler_body(
     graph_spec: tuple[Any, Any | None] | None = None,
     all_services: dict[str, Any] | None = None,
     display_field: str | None = None,
+    admin_personas: list[str] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -1594,6 +1604,7 @@ async def _list_handler_body(
                 ref_targets,
                 entity_name=entity_name,
                 fk_graph=fk_graph,
+                admin_personas=admin_personas,
             )
             if scope_result is None:
                 # No scope rule matched this role — default-deny at scope layer
@@ -2907,6 +2918,7 @@ class RouteGenerator:
         entity_display_fields: dict[str, str] | None = None,
         db_manager: Any | None = None,
         entity_storage_bindings: dict[str, dict[str, tuple[str, ...]]] | None = None,
+        admin_personas: list[str] | None = None,
     ):
         """
         Initialize the route generator.
@@ -2966,6 +2978,11 @@ class RouteGenerator:
         # for entities without `field foo: file storage=<name>` bindings;
         # the create/update handlers no-op cheaply in that case.
         self.entity_storage_bindings = entity_storage_bindings or {}
+        # #957 cycle 6: tenant-admin personas drawn from
+        # `appspec.tenancy.admin_personas`. Threaded into list handlers
+        # so the predicate compiler can short-circuit the scope filter
+        # when the active user matches one of them.
+        self.admin_personas: list[str] = list(admin_personas or [])
         # Cycle 249 (EX-049): persona-backed entity map.
         # Maps entity_name → (persona_id, link_via) for each persona that
         # declares ``backed_by``. Built by the caller from appspec.personas.
@@ -3147,6 +3164,7 @@ class RouteGenerator:
                 graph_spec=_graph_spec,
                 all_services=self.services,
                 display_field=self.entity_display_fields.get(entity_name or ""),
+                admin_personas=self.admin_personas,
             )
             self._add_route(endpoint, handler, response_model=None)
 

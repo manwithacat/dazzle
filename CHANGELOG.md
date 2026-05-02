@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.48] - 2026-05-01
+
+### Added
+- **#957 cycle 6 — DSL `tenancy: admin_personas:` is now end-to-end
+  functional.** `server.py` reads `appspec.tenancy.admin_personas` and
+  forwards the list to `RouteGenerator(admin_personas=...)`, which
+  threads it through `create_list_handler` →
+  `_list_handler_body` → `_resolve_scope_filters` →
+  `_resolve_predicate_filters`. With the cycle-5 bypass already in
+  place at the leaf, a `tenancy: admin_personas: [support]` declaration
+  now lets the `support` persona read records across all tenants
+  without any project-author code changes. `RouteGenerator.admin_personas`
+  defaults to `[]` so apps without a tenancy block — or with a tenancy
+  block that doesn't list any admin personas — see identical
+  pre-cycle-6 behaviour.
+
 ## [0.63.47] - 2026-05-01
 
 ### Added

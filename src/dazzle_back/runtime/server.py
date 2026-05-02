@@ -1030,6 +1030,13 @@ class DazzleBackendApp:
 
         entity_storage_bindings = build_entity_storage_bindings(self._appspec)
 
+        # #957 cycle 6: pull admin_personas off the linked tenancy spec.
+        # `_appspec.tenancy` may be None for apps without a `tenancy:`
+        # block — empty list is the safe default.
+        _admin_personas: list[str] = []
+        if self._appspec and self._appspec.tenancy:
+            _admin_personas = list(self._appspec.tenancy.admin_personas)
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -1054,6 +1061,7 @@ class DazzleBackendApp:
             entity_display_fields=entity_display_fields,
             db_manager=self._db_manager,
             entity_storage_bindings=entity_storage_bindings,
+            admin_personas=_admin_personas,
         )
 
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec
