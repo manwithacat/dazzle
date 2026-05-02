@@ -22,6 +22,7 @@ their entity's existing repository. Cycle 4 evaluates whether the
 finalize pattern can be auto-generated cleanly enough to ship.
 """
 
+import logging
 import re
 import uuid
 from typing import TYPE_CHECKING, Any
@@ -37,6 +38,8 @@ from dazzle_back.runtime.auth import current_user_id
 
 if TYPE_CHECKING:
     from .registry import StorageRegistry
+
+logger = logging.getLogger(__name__)
 
 
 # Filenames are echoed in the S3 key for debugging; keep ASCII-safe.
@@ -86,9 +89,13 @@ def _build_upload_ticket_handler(
                 {"error": f"storage {storage_name!r} not configured"},
                 status_code=503,
             )
-        except Exception as exc:  # missing env var, bad backend, etc.
+        except Exception:  # missing env var, bad backend, etc.
+            # Log full detail server-side; return a generic message to the
+            # client so exception text / stack info doesn't leak (CodeQL
+            # py/stack-trace-exposure).
+            logger.exception("Storage %r unavailable", storage_name)
             return JSONResponse(
-                {"error": f"storage {storage_name!r} unavailable: {exc}"},
+                {"error": f"storage {storage_name!r} unavailable"},
                 status_code=503,
             )
 
@@ -109,9 +116,14 @@ def _build_upload_ticket_handler(
 
         try:
             ticket = provider.mint_upload_ticket(key=key, content_type=content_type)
-        except Exception as exc:  # boto3 errors, signature failures
+        except Exception:  # boto3 errors, signature failures
+            # Log full detail server-side; return generic message to the
+            # client (CodeQL py/stack-trace-exposure).
+            logger.exception(
+                "Failed to mint upload ticket for storage %r key %s", storage_name, key
+            )
             return JSONResponse(
-                {"error": f"failed to mint upload ticket: {exc}"},
+                {"error": "failed to mint upload ticket"},
                 status_code=500,
             )
 

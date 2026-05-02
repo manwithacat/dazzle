@@ -292,7 +292,14 @@ entity Doc:
         assert data["s3_key"].endswith("scan.pdf")
         assert "{user_id}" not in data["s3_key"]  # interpolated
         assert "{record_id}" not in data["s3_key"]
-        assert data["upload"]["url"].startswith("https://fake-storage.local")
+        # Parse + assert against url components rather than substring match
+        # — CodeQL py/incomplete-url-substring-sanitization flags raw
+        # `url.startswith(host)` as a sanitization risk.
+        from urllib.parse import urlparse
+
+        upload_url = urlparse(data["upload"]["url"])
+        assert upload_url.scheme == "https"
+        assert upload_url.netloc == "fake-storage.local"
         assert "Content-Type" in data["upload"]["fields"]
         # The fake captured the ticket — assert the key matches.
         assert fake.minted_tickets[0].s3_key == data["s3_key"]

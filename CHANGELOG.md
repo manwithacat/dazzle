@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.27] - 2026-05-02
+
+### Security
+- **CodeQL `py/stack-trace-exposure` (#82, #83) — storage upload-ticket
+  routes.** `src/dazzle_back/runtime/storage/routes.py` was
+  interpolating raw exception text into JSON error bodies for
+  `storage unavailable` (line 91) and `failed to mint upload ticket`
+  (line 114). Both now `logger.exception(...)` server-side and return
+  a generic message to the client.
+
+### Fixed
+- **CodeQL `py/incomplete-url-substring-sanitization` (#84) —
+  `tests/unit/test_storage_cycle3.py`.** The test asserted
+  `data["upload"]["url"].startswith("https://fake-storage.local")`,
+  which CodeQL flags as a fragile URL-prefix check. Replaced with
+  `urlparse` + scheme/netloc equality assertions.
+- **CodeQL `py/redos` (#85) —
+  `tests/unit/test_template_xfor_alpine_children.py`.** The
+  `_FIRST_CHILD_TAG_RE` pattern \`\\s*(?:<!--.*?-->\\s*)*<...>\` had
+  nested quantifiers that exhibited catastrophic backtracking on
+  inputs like `<!--<!--<!--`. Replaced with a linear-time
+  `_skip_leading_whitespace_and_comments(text)` helper that strips
+  whitespace + comments imperatively before matching the tag regex.
+- **CodeQL `py/bad-tag-filter` (#86) —
+  `tests/unit/test_htmx_undefined_guards.py`.** The
+  `_INLINE_SCRIPT_RE` literal `</script>` close didn't match the
+  rare-but-legal `</script >` (trailing whitespace). Updated to
+  `</script\\s*>`.
+
+### Closed
+- #984 deferred — INTERACTION_WALK `card_drag` regression after
+  the #948 SSR refactor — filed as a separate issue (#986) for
+  focused investigation. The harness fix in v0.63.26 was correct;
+  the remaining failure is a real drag-lifecycle regression.
+
 ## [0.63.26] - 2026-05-01
 
 ### Fixed

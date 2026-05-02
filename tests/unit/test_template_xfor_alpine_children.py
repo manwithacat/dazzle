@@ -42,10 +42,33 @@ _TEMPLATE_XFOR_RE = re.compile(
 # Match the FIRST element after the <template ...> tag. <template x-for>
 # requires exactly one element child; whitespace + comments between
 # template-open and the child element are ignored.
+#
+# We strip leading whitespace + comment runs imperatively (see
+# `_skip_leading_whitespace_and_comments` below) instead of expressing
+# the comment-skip in the regex, because nested quantifiers like
+# `(?:<!--.*?-->\s*)*` exhibit catastrophic backtracking on inputs of
+# the shape `<!--<!--<!--...` (CodeQL py/redos).
 _FIRST_CHILD_TAG_RE = re.compile(
-    r"\s*(?:<!--.*?-->\s*)*<(\w+)((?:\s+[^>]*)?)>",
+    r"<(\w+)((?:\s+[^>]*)?)>",
     re.DOTALL,
 )
+_LEADING_COMMENT_RE = re.compile(r"\s*<!--.*?-->", re.DOTALL)
+
+
+def _skip_leading_whitespace_and_comments(text: str) -> str:
+    """Trim leading whitespace + HTML comment runs from *text*.
+
+    Linear-time alternative to a regex with nested quantifiers — each
+    iteration consumes at least one character, so the worst case is
+    O(n) on the input length.
+    """
+    while True:
+        stripped = text.lstrip()
+        match = _LEADING_COMMENT_RE.match(stripped)
+        if match is None:
+            return stripped
+        text = stripped[match.end() :]
+
 
 # Alpine-style attribute name patterns. Match attribute NAMES at word
 # boundary, before the `=` sign.
@@ -98,8 +121,11 @@ def _find_violations() -> list[str]:
                 for (listed_path, anchor) in ALLOWLIST
             )
             # Slice out the rest of the file after this <template> tag and
-            # find the first element child.
-            tail = text[match.end() :]
+            # find the first element child. Whitespace + HTML comments
+            # between template-open and the child are stripped imperatively
+            # (linear time) before matching the tag regex — avoids the
+            # exponential-backtracking shape CodeQL py/redos warned about.
+            tail = _skip_leading_whitespace_and_comments(text[match.end() :])
             child = _FIRST_CHILD_TAG_RE.match(tail)
             if not child:
                 continue  # ill-formed; not our problem here

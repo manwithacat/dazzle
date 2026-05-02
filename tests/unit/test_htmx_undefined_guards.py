@@ -112,8 +112,11 @@ def test_htmx_calls_in_dashboard_builder_are_guarded() -> None:
 _TEMPLATES_DIR = REPO_ROOT / "src" / "dazzle_ui" / "templates"
 
 # Match an inline <script>...</script> block (not src=... loads).
+# `</script\s*>` (rather than literal `</script>`) so we also catch the
+# rare-but-legal `</script >` with trailing whitespace — CodeQL
+# py/bad-tag-filter flagged the literal form as missing those.
 _INLINE_SCRIPT_RE = re.compile(
-    r"<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)</script>",
+    r"<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)</script\s*>",
     re.IGNORECASE,
 )
 
