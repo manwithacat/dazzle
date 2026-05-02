@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.36] - 2026-05-02
+
+### Added
+- **#952 cycle 3 — \`SmtpProvider\` for real email delivery.**
+  Implements the \`NotificationProvider\` protocol via \`smtplib\`:
+    - Connects to the configured SMTP host (TLS upgrade + login when
+      credentials present).
+    - Sends an \`email.message.EmailMessage\`. Plain-text body stays
+      single-part; HTML body (detected by leading \`<\`) emits a
+      \`multipart/alternative\` with a stripped-tags text/plain
+      alternative for clients that can't render HTML.
+    - **Failure semantics** match the protocol's transient/permanent
+      split: \`SMTPServerDisconnected\` / \`SMTPConnectError\` /
+      \`TimeoutError\` / generic \`OSError\` → return False (dispatcher
+      retries in cycle 5). 4xx \`SMTPResponseException\` → return False.
+      5xx → re-raise so the dispatcher records a permanent failure.
+    - Non-email channels (\`in_app\` / \`sms\` / \`slack\`) skip cleanly
+      so a mixed-channel spec doesn't accidentally email a Slack
+      username.
+  \`SMTPResponseException\` extends \`OSError\` in the stdlib hierarchy,
+  so the catch order matters: response-specific handler comes before
+  the broad-OSError fallback. Pinned by a dedicated test.
+
+- **\`build_dispatcher_from_manifest\` now wires SmtpProvider.** When
+  \`[notifications] provider = \"smtp\"\` and
+  \`[notifications.smtp] host\` is set, the dispatcher uses
+  :class:\`SmtpProvider\`. Missing host falls back to
+  :class:\`LogProvider\` with a warning so dev environments stay
+  visible until configured.
+
+### Tests
+- 17 unit tests in \`test_smtp_provider.py\` cover: happy-path send,
+  TLS / login conditional flow, default \`From:\` fallback, non-email
+  channel skip, empty-recipient skip, transient-failure (disconnect /
+  timeout / OSError / 4xx), permanent-failure (5xx → raise), HTML
+  multipart with text/plain alternative, plain body single-part.
+- 2 builder tests added/replaced in \`test_notification_dispatcher.py\`:
+  \`smtp\` + host → \`SmtpProvider\`; \`smtp\` without host → log
+  fallback with warning. Unknown providers (\`sendgrid\` / \`ses\`)
+  still log + fall back until cycle 6+.
+
+### Agent Guidance
+- For provider-protocol implementations, watch the stdlib exception
+  hierarchy. \`smtplib.SMTPException\` extends \`OSError\`, so an
+  \`except OSError\` clause swallows every SMTP-specific subtype
+  unless a more-specific clause comes first. The
+  \`test_5xx_response_raises\` gate catches this regression
+  mechanically — keep it.
+
 ## [0.63.35] - 2026-05-02
 
 ### Fixed

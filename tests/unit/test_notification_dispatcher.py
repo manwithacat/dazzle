@@ -333,13 +333,45 @@ class TestBuildDispatcherFromManifest:
         assert isinstance(dispatcher.provider, LogProvider)
         assert dispatcher.from_address == "x@y.com"
 
-    def test_smtp_falls_back_to_log_with_warning(self, caplog):
-        """Cycle 2 doesn't ship SmtpProvider yet — falls back to
-        LogProvider with a warning so configured smtp installs still
-        see something in dev."""
+    def test_smtp_provider_returned_when_host_set(self):
+        """Cycle 3 (#952): provider=smtp + smtp_host → SmtpProvider."""
+        from dazzle.core.manifest import NotificationsConfig
+        from dazzle.notifications import SmtpProvider
+
+        cfg = NotificationsConfig(
+            provider="smtp",
+            from_address="noreply@example.com",
+            smtp_host="smtp.example.com",
+            smtp_port=465,
+            smtp_username="user",
+            smtp_password="secret",
+        )
+        dispatcher = build_dispatcher_from_manifest(cfg)
+        assert isinstance(dispatcher.provider, SmtpProvider)
+        assert dispatcher.provider.host == "smtp.example.com"
+        assert dispatcher.provider.port == 465
+        assert dispatcher.provider.username == "user"
+        assert dispatcher.provider.password == "secret"
+        assert dispatcher.provider.from_address == "noreply@example.com"
+        assert dispatcher.from_address == "noreply@example.com"
+
+    def test_smtp_without_host_falls_back_to_log(self, caplog):
+        """provider=smtp but no smtp_host → fall back to LogProvider with
+        a warning. Same dispatch shape; just no real send."""
         from dazzle.core.manifest import NotificationsConfig
 
         cfg = NotificationsConfig(provider="smtp")
+        with caplog.at_level(logging.WARNING, logger="dazzle.notifications"):
+            dispatcher = build_dispatcher_from_manifest(cfg)
+        assert isinstance(dispatcher.provider, LogProvider)
+        assert "requires [notifications.smtp] host" in caplog.text
+
+    def test_unknown_provider_falls_back_to_log(self, caplog):
+        """sendgrid / ses still log a deferred-cycle warning + fall back
+        until cycle 6+ adapters land."""
+        from dazzle.core.manifest import NotificationsConfig
+
+        cfg = NotificationsConfig(provider="sendgrid")
         with caplog.at_level(logging.WARNING, logger="dazzle.notifications"):
             dispatcher = build_dispatcher_from_manifest(cfg)
         assert isinstance(dispatcher.provider, LogProvider)

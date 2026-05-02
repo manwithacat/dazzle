@@ -101,6 +101,148 @@ class LogProvider:
         return True
 
 
+@dataclass
+class SmtpProvider:
+    """SMTP-backed :class:`NotificationProvider` (#952 cycle 3).
+
+    Sends email-channel notifications via :mod:`smtplib`. Non-email
+    channels (``in_app`` / ``sms`` / ``slack``) fall through to the
+    log path so a single mixed-channel spec doesn't accidentally try
+    to email a Slack username.
+
+    Constructed by :func:`build_dispatcher_from_manifest` from the
+    ``[notifications.smtp]`` block in ``dazzle.toml`` — adopters
+    don't normally call this directly.
+
+    Failure semantics follow the :class:`NotificationProvider`
+    protocol:
+
+    * ``smtplib.SMTPServerDisconnected`` / connection errors / 4xx
+      transient codes → return False (dispatcher can retry in cycle 5).
+    * 5xx permanent codes / malformed addresses → raise so the
+      dispatcher logs the audit entry and stops retrying.
+    """
+
+    host: str
+    port: int = 587
+    username: str = ""
+    password: str = ""
+    from_address: str = ""
+    use_tls: bool = True
+    timeout_seconds: int = 30
+
+    def send(self, notification: RenderedNotification) -> bool:
+        # Non-email channels stay on the log path — SMTP can't deliver them.
+        if notification.channel != "email":
+            logger.info(
+                "smtp_provider: skipping non-email channel %s for %s",
+                notification.channel,
+                notification.notification_name,
+            )
+            return True
+
+        if not notification.recipient:
+            logger.warning(
+                "smtp_provider: notification %r has no recipient — skipping",
+                notification.notification_name,
+            )
+            return True
+
+        msg = _build_email_message(
+            sender=self.from_address,
+            recipient=notification.recipient,
+            subject=notification.subject,
+            body=notification.body,
+        )
+
+        import smtplib
+
+        try:
+            with smtplib.SMTP(self.host, self.port, timeout=self.timeout_seconds) as smtp:
+                if self.use_tls:
+                    smtp.starttls()
+                if self.username and self.password:
+                    smtp.login(self.username, self.password)
+                smtp.send_message(msg)
+        except smtplib.SMTPResponseException as exc:
+            # `SMTPResponseException` extends `OSError` in stdlib, so it
+            # must come BEFORE the broader OSError clause below — otherwise
+            # 5xx permanent failures get swallowed as transient.
+            # 4xx → transient (return False so dispatcher retries in cycle 5).
+            # 5xx → permanent (raise so dispatcher records audit entry).
+            if 400 <= exc.smtp_code < 500:
+                logger.warning(
+                    "smtp_provider: 4xx response sending %r: %s %s",
+                    notification.notification_name,
+                    exc.smtp_code,
+                    exc.smtp_error,
+                )
+                return False
+            raise
+        except (
+            smtplib.SMTPServerDisconnected,
+            smtplib.SMTPConnectError,
+            TimeoutError,
+            OSError,
+        ) as exc:
+            # Transient — dispatcher can retry in cycle 5.
+            logger.warning(
+                "smtp_provider: transient error sending %r to %s: %s",
+                notification.notification_name,
+                notification.recipient,
+                exc,
+            )
+            return False
+
+        logger.info(
+            "smtp_provider: sent %r to %s via %s",
+            notification.notification_name,
+            notification.recipient,
+            self.host,
+        )
+        return True
+
+
+def _build_email_message(sender: str, recipient: str, subject: str, body: str) -> Any:
+    """Build an :class:`email.message.EmailMessage` with sane defaults.
+
+    HTML is detected via a leading ``<`` token after stripping
+    whitespace — adopters who want explicit content negotiation
+    can wait for cycle 4's MIME-multipart support, but the simple
+    "starts with a tag → text/html" heuristic covers the welcome /
+    password-reset / receipt patterns that drive 80%+ of
+    transactional email volume.
+    """
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["From"] = sender or "noreply@localhost"
+    msg["To"] = recipient
+    msg["Subject"] = subject
+    if body.strip().startswith("<"):
+        msg.set_content(_strip_html_tags(body))
+        msg.add_alternative(body, subtype="html")
+    else:
+        msg.set_content(body)
+    return msg
+
+
+def _strip_html_tags(html: str) -> str:
+    """Crude HTML-to-text fallback for the ``text/plain`` alternative.
+
+    Strips tags, decodes a couple of common entities. Cycle 4 will
+    let projects supply both halves explicitly; for now the goal is
+    "render something readable in plain-text-only clients" rather
+    than a faithful conversion.
+    """
+    import re as _re
+
+    text = _re.sub(r"<[^>]+>", "", html)
+    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+    text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+    return _re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip() + "\n"
+
+
 def _render(template: str, payload: dict[str, Any]) -> str:
     """Render a single Jinja-ish placeholder string against *payload*.
 
@@ -248,25 +390,46 @@ def build_dispatcher_from_manifest(
     """Build a :class:`NotificationDispatcher` from
     :class:`~dazzle.core.manifest.NotificationsConfig`.
 
-    Cycle 2 only knows how to construct :class:`LogProvider` — the
-    other provider keys (``smtp`` / ``sendgrid`` / ``ses``) log a
-    deferred-cycle message and fall back to :class:`LogProvider` so
-    sends still happen visibly during dev. Cycle 3+ adds the real
-    adapters; the same builder picks them up by key.
+    Provider mapping (#952):
+
+    * ``log`` (default) → :class:`LogProvider`
+    * ``smtp`` (cycle 3) → :class:`SmtpProvider` — requires a non-empty
+      ``smtp_host``; falls back to :class:`LogProvider` with a warning
+      when host is missing so dispatch still runs visibly during dev.
+    * ``sendgrid`` / ``ses`` (cycle 6+) → not yet implemented; logs a
+      deferred-cycle warning and falls back to :class:`LogProvider`.
     """
     provider_key = getattr(manifest_notifications, "provider", "log")
+    from_address = getattr(manifest_notifications, "from_address", "") or ""
+
     if provider_key == "log":
         provider: NotificationProvider = LogProvider()
+    elif provider_key == "smtp":
+        smtp_host = getattr(manifest_notifications, "smtp_host", "") or ""
+        if not smtp_host:
+            logger.warning(
+                "Notification provider 'smtp' requires [notifications.smtp] host "
+                "— falling back to LogProvider until configured."
+            )
+            provider = LogProvider()
+        else:
+            provider = SmtpProvider(
+                host=smtp_host,
+                port=int(getattr(manifest_notifications, "smtp_port", 587) or 587),
+                username=getattr(manifest_notifications, "smtp_username", "") or "",
+                password=getattr(manifest_notifications, "smtp_password", "") or "",
+                from_address=from_address,
+            )
     else:
         logger.warning(
-            "Notification provider %r not yet implemented (cycle 3+) — "
+            "Notification provider %r not yet implemented (cycle 6+) — "
             "falling back to LogProvider so dispatch is still visible.",
             provider_key,
         )
         provider = LogProvider()
     return NotificationDispatcher(
         provider=provider,
-        from_address=getattr(manifest_notifications, "from_address", "") or "",
+        from_address=from_address,
     )
 
 
@@ -275,5 +438,6 @@ __all__ = [
     "NotificationDispatcher",
     "NotificationProvider",
     "RenderedNotification",
+    "SmtpProvider",
     "build_dispatcher_from_manifest",
 ]
