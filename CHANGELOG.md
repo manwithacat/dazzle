@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.40] - 2026-05-02
+
+### Added
+- **#956 cycle 1 — \`audit\` DSL block.** User-visible audit-trail
+  primitive (distinct from the existing compliance pipeline, which
+  captures evidence for ISO 27001 / SOC 2 audits). The \`audit\`
+  block declares per-entity field tracking + history visibility +
+  retention. Cycle 1 ships parser + IR + linker propagation only;
+  runtime auto-generation lands in cycle 2-6.
+
+  DSL surface:
+
+      audit on Manuscript:
+        track: status, source_pdf, marking_result
+        show_to: persona(teacher, admin)
+        retention: 90d
+
+  - **\`track:\`** — comma-separated field names. Empty list means
+    "track every field" (cycle 3's repository hook).
+  - **\`show_to:\`** — \`persona(name1, name2, ...)\` cycle 1 only;
+    cycle 5 expands to \`role(...)\` and \`all\`.
+  - **\`retention:\`** — duration literal (\`90d\`, \`30d\`) or plain
+    integer days. Sub-day durations round down to 0 (cycle 6 sweep
+    runs daily). 0 = keep forever.
+
+  New IR types: \`AuditSpec\`, \`AuditShowTo\`. Linker enforces one
+  audit declaration per entity (duplicates raise \`LinkError\` with
+  the source-module diagnostic).
+
+### Changed
+- API-surface baselines regenerated (\`docs/api-surface/ir-types.txt\`,
+  \`docs/api-surface/dsl-constructs.txt\`).
+- Golden-master snapshot updated for the new \`audits:\` field on
+  AppSpec.
+- \`tests/unit/fixtures/ir_reader_baseline.json\` — added
+  \`audit.AuditSpec.show_to\` to the orphan baseline (reader
+  arrives in cycle 5 RBAC integration).
+- \`.claude/CLAUDE.md\` parser-construct list updated to include
+  \`audit\` so the docs-drift gate stays green.
+
+### Tests
+- 12 unit tests in \`test_audit_dsl.py\` cover minimal audit, multi-
+  field track, persona show_to, unknown show_to kind rejection,
+  retention forms (days literal, sub-day floor, plain integer),
+  AppSpec propagation, duplicate-per-entity rejection, multi-entity
+  coexistence, immutability, IR exports.
+
+### Agent Guidance
+- \`persona\` is a reserved keyword (PERSONA token) not in the
+  \`KEYWORD_AS_IDENTIFIER_TYPES\` allow-list. Match it via
+  \`TokenType.PERSONA\` directly, not \`expect_identifier_or_keyword\`.
+  Same applies to any other reserved keyword used inside a
+  construct's argument syntax.
+
 ## [0.63.39] - 2026-05-02
 
 ### Fixed

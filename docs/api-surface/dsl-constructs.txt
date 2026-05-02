@@ -29,6 +29,10 @@ construct: asset
   fragment_fields: assets
   ir_classes: AssetSpec
 
+construct: audit
+  fragment_fields: audits
+  ir_classes: AuditSpec
+
 construct: channel
   fragment_fields: channels
   ir_classes: ChannelSpec

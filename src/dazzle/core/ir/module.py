@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .analytics import AnalyticsSpec
 from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
+from .audit import AuditSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
 from .enums import EnumSpec
@@ -199,6 +200,8 @@ class ModuleFragment(BaseModel):
     notifications: list[NotificationSpec] = Field(default_factory=list)
     # Background Jobs (#953)
     jobs: list[JobSpec] = Field(default_factory=list)
+    # Audit trail (#956)
+    audits: list[AuditSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Runtime Parameters (v0.44.0)

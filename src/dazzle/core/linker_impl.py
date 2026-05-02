@@ -154,6 +154,9 @@ class SymbolTable:
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
     notifications: dict[str, ir.NotificationSpec] = field(default_factory=dict)  # #952
     jobs: dict[str, ir.JobSpec] = field(default_factory=dict)  # #953
+    audits: list[ir.AuditSpec] = field(
+        default_factory=list
+    )  # #956 (list — keyed on entity, but multiple audits per entity not allowed; symbol_sources tracks)
     grant_schemas: dict[str, ir.GrantSchemaSpec] = field(default_factory=dict)  # v0.42.0
 
     # Track which module each symbol came from (for error reporting)
@@ -410,6 +413,23 @@ class SymbolTable:
             self.symbol_sources,
         )
 
+    def add_audit(self, audit: ir.AuditSpec, module_name: str) -> None:
+        """Add audit-trail spec to symbol table (#956).
+
+        Keyed off the entity name — only one audit declaration per
+        entity is allowed across the project. Cycle 5+ may relax this
+        if per-tenant overrides become a thing.
+        """
+        symbol_key = f"audit:{audit.entity}"
+        if symbol_key in self.symbol_sources:
+            existing_module = self.symbol_sources[symbol_key]
+            raise LinkError(
+                f"Duplicate audit declaration for entity '{audit.entity}' in "
+                f"module '{module_name}' (already defined in '{existing_module}')."
+            )
+        self.symbol_sources[symbol_key] = module_name
+        self.audits.append(audit)
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -628,6 +648,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add jobs (#953)
         for job in module.fragment.jobs:
             symbols.add_job(job, module.name)
+
+        # Add audits (#956)
+        for audit in module.fragment.audits:
+            symbols.add_audit(audit, module.name)
 
         # Add rhythms (v0.39.0)
         for rhythm in module.fragment.rhythms:
@@ -1372,6 +1396,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         islands=list(symbols.islands.values()),  # UI Islands
         notifications=list(symbols.notifications.values()),  # #952
         jobs=list(symbols.jobs.values()),  # #953
+        audits=symbols.audits,  # #956
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0

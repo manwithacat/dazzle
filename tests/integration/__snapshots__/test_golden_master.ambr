@@ -12,6 +12,8 @@
     'assets': list([
     ]),
     'audit_trail': False,
+    'audits': list([
+    ]),
     'channels': list([
     ]),
     'data_products': None,

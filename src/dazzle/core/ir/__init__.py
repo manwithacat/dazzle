@@ -32,6 +32,12 @@ from .archetype import (
     ArchetypeSpec,
 )
 
+# Audit trail (#956)
+from .audit import (
+    AuditShowTo,
+    AuditSpec,
+)
+
 # Computed Fields
 from .computed import (
     AggregateCall,
@@ -1261,6 +1267,9 @@ __all__ = [
     "ParamConstraints",
     "ParamRef",
     "ParamSpec",
+    # Audit trail (#956)
+    "AuditShowTo",
+    "AuditSpec",
     # Background Jobs (#953)
     "JobBackoff",
     "JobSchedule",

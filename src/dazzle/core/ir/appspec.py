@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .analytics import AnalyticsSpec
 from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
+from .audit import AuditSpec
 from .domain import DomainSpec, EntitySpec
 from .e2e import FixtureSpec, FlowPriority, FlowSpec
 from .enums import EnumSpec
@@ -184,6 +185,8 @@ class AppSpec(BaseModel):
     notifications: list[NotificationSpec] = Field(default_factory=list)
     # Background Jobs (#953)
     jobs: list[JobSpec] = Field(default_factory=list)
+    # Audit trail (#956)
+    audits: list[AuditSpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)

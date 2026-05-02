@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 328 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
+# Counts: 330 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -106,6 +106,7 @@ ir_class: AppSpec
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
     - audit_trail: bool = False
+    - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
     - data_products: DataProductsSpec | None = None
     - documents: list[DocumentSpec] = []
@@ -248,6 +249,20 @@ ir_class: AuditConfig
     - enabled: bool = False
     - include_field_changes: bool = True
     - operations: list[PermissionKind] = []
+
+ir_class: AuditShowTo
+  required: (none)
+  optional:
+    - kind: str = 'persona'
+    - personas: list[str] = []
+
+ir_class: AuditSpec
+  required:
+    - entity: str
+  optional:
+    - retention_days: int = 0
+    - show_to: AuditShowTo = <factory:AuditShowTo>
+    - track: list[str] = []
 
 ir_class: AuthEntrySpec
   required: (none)
@@ -1542,6 +1557,7 @@ ir_class: ModuleFragment
     - approvals: list[ApprovalSpec] = []
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
+    - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
     - data_products: DataProductsSpec | None = None
     - documents: list[DocumentSpec] = []
