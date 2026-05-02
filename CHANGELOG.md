@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.47] - 2026-05-01
+
+### Added
+- **#957 cycle 5 — scope-predicate bypass for admin personas.**
+  `_resolve_predicate_filters` now accepts an optional
+  `admin_personas: list[str]` parameter and short-circuits to `{}` (no
+  scope WHERE clause) when the active user matches one of the listed
+  personas, OR when the user is a superuser. The decision lives in the
+  new `_should_bypass_tenant_filter` helper, which normalises the
+  AuthContext's role names (strips the `role_` prefix) before
+  comparing — admin personas in the DSL are bare names. Cycle 6 will
+  thread `admin_personas` from each list/read call site's enclosing
+  AppSpec; default `None` keeps prior behaviour.
+
 ## [0.63.46] - 2026-05-01
 
 ### Added

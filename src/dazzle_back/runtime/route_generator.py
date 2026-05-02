@@ -1397,18 +1397,58 @@ def _resolve_scope_filters(
     return {}  # Matched but no resolvable condition — treat as no filter
 
 
+def _should_bypass_tenant_filter(
+    auth_context: "AuthContext | None",
+    admin_personas: list[str] | None,
+) -> bool:
+    """#957 cycle 5 — does this user's persona bypass the scope filter?
+
+    Returns True when the active `tenancy: admin_personas:` list
+    intersects the authenticated user's roles, OR when the user is a
+    superuser. Otherwise returns False and the scope predicate compiles
+    normally.
+
+    Empty/None ``admin_personas`` (the cycle-5 default for unmigrated
+    call sites) means the bypass never applies — identical to the
+    pre-cycle-5 behaviour.
+    """
+    if auth_context is None or not getattr(auth_context, "is_authenticated", False):
+        return False
+    user = getattr(auth_context, "user", None)
+    if user is None:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    if not admin_personas:
+        return False
+    user_roles = set(getattr(user, "roles", []) or [])
+    # AuthContext roles may carry the `role_` prefix from the auth
+    # backend; predicate compilation works against the bare DSL names.
+    normalised = {_normalize_role(r) for r in user_roles}
+    return not normalised.isdisjoint(admin_personas)
+
+
 def _resolve_predicate_filters(
     predicate: Any,
     entity_name: str,
     fk_graph: "FKGraph",
     user_id: str,
     auth_context: "AuthContext | None",
+    admin_personas: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compile a ScopePredicate to SQL and resolve runtime markers.
 
     Returns a filters dict with the special ``__scope_predicate`` key
     containing a ``(sql, params)`` tuple ready for the QueryBuilder.
+
+    `admin_personas` (#957 cycle 5) — when the active user matches one
+    of these tenant-admin personas, the scope filter is skipped and an
+    empty dict is returned. Cycle 6 will thread this list from each
+    list/read call site's enclosing AppSpec.
     """
+    if _should_bypass_tenant_filter(auth_context, admin_personas):
+        return {}
+
     from dazzle_back.runtime.predicate_compiler import (
         CurrentUserRef,
         UserAttrRef,
