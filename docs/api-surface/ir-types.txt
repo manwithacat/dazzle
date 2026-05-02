@@ -1645,6 +1645,8 @@ ir_class: NotificationSpec
     - message: str = ''
     - preference: NotificationPreference = <NotificationPreference.OPT_OUT: 'opt_out'>
     - recipients: NotificationRecipient = <factory:NotificationRecipient>
+    - subject: str = ''
+    - template: str = ''
     - title: str | None = None
 
 ir_class: NotificationTrigger

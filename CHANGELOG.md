@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.35] - 2026-05-02
+
+### Fixed
+- **CI green-up after v0.63.33's NotificationSpec field additions.**
+  v0.63.33 added \`subject\` and \`template\` fields to
+  \`NotificationSpec\` (#952 cycle 1) but didn't regenerate the
+  \`docs/api-surface/ir-types.txt\` baseline that the
+  \`test_ir_types_match_baseline\` drift gate compares against.
+  Regenerated the baseline; the two new fields now appear under
+  \`ir_class: NotificationSpec\`. CI was green for v0.63.34 except
+  for this single drift gate.
+
 ## [0.63.34] - 2026-05-02
 
 ### Added
