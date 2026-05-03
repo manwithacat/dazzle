@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.64] - 2026-05-03
+
+### Added
+- **#953 cycle 4 — `process_one` worker function (single-job
+  lifecycle).** New `dazzle_back.runtime.job_worker.process_one`
+  ties the cycle-3 queue + handler resolver together with the
+  cycle-2 `JobRun` status state machine:
+
+  1. Look up matching `JobSpec` by name (NO_SPEC if missing).
+  2. Transition `JobRun.status` → `running` + `started_at` +
+     `attempt_number`.
+  3. Resolve handler via cycle-3's `resolve_handler` (handler-not-
+     found → terminal `failed`; never retry — spec is broken).
+  4. Invoke handler — async awaited inline, sync handlers run
+     synchronously in the test path; cycle-5 loop will use
+     `asyncio.to_thread` to keep the worker non-blocking.
+  5. On success: `status="completed"` + `finished_at` +
+     `duration_ms`.
+  6. On exception with retries remaining: re-enqueue with
+     `attempt + 1`; current row marked `failed` with retry note.
+  7. On exception with retries exhausted: terminal status —
+     `dead_letter` if `JobSpec.dead_letter` is set, else `failed`.
+
+  Returns one of `WorkerOutcome.{COMPLETED, FAILED, DEAD_LETTER,
+  RETRIED, NO_SPEC}` for caller observability.
+
+  `JobRun` service updates are best-effort — a DB blip mid-run
+  logs WARNING but doesn't crash the worker or repeatedly
+  re-enqueue the same message. None job_service is tolerated for
+  early-bootstrap paths.
+
+  `JobSpec.dead_letter` baselined as orphan in cycle 1 — now has a
+  reader (the retry-exhausted branch), removed from the orphan
+  baseline.
+
+  Cycle 5 will add the infinite worker loop + `dazzle worker` CLI.
+
 ## [0.63.63] - 2026-05-03
 
 ### Added
