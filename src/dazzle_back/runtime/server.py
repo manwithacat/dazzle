@@ -544,6 +544,35 @@ class DazzleBackendApp:
             except Exception as exc:
                 logger.warning("Failed to migrate tenant schema %s: %s", schema_name, exc)
 
+    def _apply_search_indexes(self, engine: Any) -> None:
+        """Apply #954 cycle 2 search indexes (tsvector + GIN) to *engine*.
+
+        Reads ``self._appspec.searches`` and runs the DDL produced by
+        :func:`build_search_index_ddl`. No-op when the AppSpec has no
+        search blocks. Statements are idempotent (``IF NOT EXISTS``)
+        so dev-mode reboots don't error.
+        """
+        searches = list(getattr(self._appspec, "searches", []) or [])
+        if not searches:
+            return
+        from sqlalchemy import text as _sa_text
+
+        from dazzle_back.runtime.search_schema import build_search_index_ddl
+
+        statements = build_search_index_ddl(self._entities, searches)
+        if not statements:
+            return
+        with engine.begin() as conn:
+            for stmt in statements:
+                conn.execute(_sa_text(stmt))
+        logger.info(
+            "Applied %d FTS index statement%s for %d searchable entit%s",
+            len(statements),
+            "" if len(statements) == 1 else "s",
+            len(searches),
+            "y" if len(searches) == 1 else "ies",
+        )
+
     def _setup_models(self) -> None:
         """Generate Pydantic models and create/update schemas from the spec."""
         self._models = generate_all_entity_models(self._entities)
@@ -583,6 +612,10 @@ class DazzleBackendApp:
                 engine = _sa_create_engine(sa_url)
                 try:
                     metadata.create_all(engine)
+                    # #954 cycle 2 — apply tsvector + GIN index DDL after the
+                    # base schema lands. Idempotent (IF NOT EXISTS); safe to
+                    # re-run on every dev boot.
+                    self._apply_search_indexes(engine)
                 finally:
                     engine.dispose()
             except Exception as exc:

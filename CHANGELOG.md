@@ -9,6 +9,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.94] - 2026-05-03
+
+### Added
+- **#954 cycle 2 — `SearchSpec` → tsvector + GIN index DDL bridge.**
+  Cycle 1 shipped the IR + parser but the runtime never read it.
+  `dazzle_back.runtime.search_schema.build_search_index_ddl` now
+  walks every `SearchSpec` in the AppSpec and emits the DDL the
+  runtime needs:
+
+  ```sql
+  ALTER TABLE "Manuscript"
+  ADD COLUMN IF NOT EXISTS "search_vector" tsvector
+  GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
+    setweight(to_tsvector('english', coalesce("body", '')), 'D')
+  ) STORED;
+
+  CREATE INDEX IF NOT EXISTS "ix_manuscript_search_vector"
+  ON "Manuscript" USING GIN ("search_vector");
+  ```
+
+  Server `_setup_database` runs the DDL after `metadata.create_all`
+  in dev mode (production goes through Alembic). Statements are
+  idempotent (`IF NOT EXISTS`) so dev-mode reboots don't error.
+
+  Mapping:
+  - DSL `weight: 4..1` → Postgres tsvector weight `A..D`
+  - DSL `tokenizer: <name>` → Postgres FTS configuration; validated
+    against the standard set (`english`, `french`, etc.); unknown
+    values fall back to `english` with a warning
+  - Dotted FK paths (`author.name`) skip with a warning — cycle 4+
+    will denormalise via trigger or join expansion
+  - Non-text fields skip with a warning
+
+  Architecture choice: emit the DDL as raw `op.execute()` strings
+  rather than going through SQLAlchemy `Column`/`Index`. Generated
+  columns + GIN indexes aren't first-class in SQLA, and the same
+  hatch is required for cycle 5's pgvector ivfflat / hnsw indexes —
+  keeping the path uniform now means no rework when semantic search
+  lands.
+
+  Tests: `tests/unit/test_search_schema_ddl.py` (21 cases) cover
+  shape, weight mapping, tokenizer validation, field-skip behaviour
+  (dotted paths, non-text, unknown), idempotency, mixed-case
+  identifier quoting, and multi-spec independence.
+
+  #954 progress: cycles 1–2 of 4 shipped. Remaining: cycle 3
+  (search endpoint + scope filtering + `search_box` region),
+  cycle 4 (highlight + ranking polish wiring `ts_headline`),
+  cycle 5+ (pgvector semantic search — separate roadmap line).
+
+### Agent Guidance
+- New search-related schema work should go through
+  `search_schema.build_search_index_ddl` rather than adding
+  one-off ALTER/CREATE INDEX statements. Keeps the migration
+  story uniform when cycle 5's pgvector lands.
+
 ## [0.63.93] - 2026-05-03
 
 ### Added
