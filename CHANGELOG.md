@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.83] - 2026-05-03
+
+### Fixed
+- **#995 — toast container no longer logs three Alpine errors per
+  page render.** The global `htmx:afterSettle` handler in
+  `dz-alpine.js` calls `Alpine.initTree(target)` where `target` can
+  be `document.body` on `hx-boost` navigation. That walked into the
+  `#dz-toast` container and re-evaluated the `x-for` child bindings
+  (`t.message`, `t.type`, `t.leaving`) before the `x-for` scope
+  re-established `t`, logging:
+
+  ```
+  Alpine expression error: t is not defined (expression: t.message)
+  Alpine expression error: t is not defined (expression: t.type || 'info')
+  Alpine expression error: t is not defined (expression: { 'dz-toast-leave': t.leaving })
+  ```
+
+  Fix: add `hx-preserve` to the `#dz-toast` wrapper so HTMX leaves
+  it alone across swaps and morphs. Same bug class as #963/#968/#970
+  (idiomorph/morph timing vs Alpine `x-for`); the ADR-0022 linter
+  allowlist comment is updated to reflect the real protection
+  mechanism.
+
+  Verified by re-running `scripts/site_fuzz.py` after the fix —
+  zero `t is not defined` errors across 106 iterations vs ~25
+  per 100 iterations pre-fix.
+
 ## [0.63.82] - 2026-05-03
 
 ### Fixed

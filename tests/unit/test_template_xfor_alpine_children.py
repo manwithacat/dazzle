@@ -92,10 +92,13 @@ _ALPINE_ATTR_RE = re.compile(
 # Adding to this list requires verifying the location is outside any
 # htmx-morph region AND a comment in the template explaining why.
 ALLOWLIST: set[tuple[str, str]] = {
-    # base.html toast container — global, rendered once outside any
-    # morphable target. dzToast is initialised at app boot and the
-    # toast list is mutated via Alpine reactivity inside that scope;
-    # htmx swaps never touch this region.
+    # base.html toast container — global, protected via `hx-preserve`
+    # on the #dz-toast wrapper (#995). The earlier rationale ("never
+    # htmx-morphed") was wrong: hx-boost navigation runs the global
+    # htmx:afterSettle handler which calls Alpine.initTree(body),
+    # walking into the toast container and re-evaluating x-for child
+    # bindings before the x-for scope re-establishes `t`. hx-preserve
+    # tells htmx to leave the element alone across swaps and morphs.
     ("base.html", "t in toasts"),
     # command_palette.html — Cmd+K spotlight. Rendered at the document
     # body level, opens via Alpine x-show; htmx morph targets are scoped

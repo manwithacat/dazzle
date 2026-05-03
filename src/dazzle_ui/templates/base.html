@@ -198,9 +198,17 @@
      v0.62 CSS refactor: tone tinting moved from inline `border-l-[hsl(...)]`
      ternary to `:data-dz-toast-level` attribute selectors on .dz-toast
      (components/fragments.css). #}
+  {# #995 — hx-preserve protects the toast container from
+     Alpine.initTree(body) re-walking on hx-boost navigation.
+     Without it, the global htmx:afterSettle handler in dz-alpine.js
+     re-evaluates the x-for child bindings (`t.message`, `t.leaving`)
+     before the x-for scope re-establishes `t`, logging three
+     "t is not defined" Alpine errors per page render. Same bug
+     class as #963/#968/#970. #}
   <div id="dz-toast"
        class="dz-toast-stack"
        aria-live="polite"
+       hx-preserve
        x-data="dzToast">
     <template x-for="t in toasts" :key="t.id">
       <div class="dz-toast"
