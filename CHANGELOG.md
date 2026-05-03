@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.78] - 2026-05-03
+
+### Added
+- **`scripts/site_fuzz.py` — continuous click-through fuzzer for
+  `dazzle serve`.** Ported from AegisMark
+  (https://github.com/manwithacat/aegismark) where it surfaced
+  htmx morph race conditions, Alpine listener leaks, and console
+  errors that structured per-surface tests don't see. Brought
+  upstream because the same race conditions live in the framework
+  and this is the cheapest tool we have for finding them —
+  token-efficient because every iteration is one click + one
+  settle, no LLM in the loop.
+
+  Loop shape: pick a random seed surface → load → inventory
+  clickables (a[href], hx-get rows, hx-get/post buttons; skips
+  destructive verbs like delete/logout) → click one at random →
+  with probability 0.15 fire a race-condition probe (click a
+  second element before the first swap settles) → with
+  probability 0.05 hit the back button (htmx history probe) →
+  log every console error / htmx swap-error / network 4xx-5xx /
+  page error / dialog popup to `dev_docs/site-fuzz-findings.jsonl`.
+
+  Auth: uses Dazzle's QA magic-link (`/qa/magic-link` →
+  `/auth/magic/<token>`) so any dev-mode app can be fuzzed
+  without password setup. Falls back to unauthenticated
+  browsing when QA mode is off — public surfaces still get
+  fuzzed; auth-gated surfaces 401 and surface as findings.
+
+  Default seeds bias toward `/app` (3-out-of-4 odds) since that's
+  where the framework's interesting morph behaviour lives;
+  marketing routes get the remaining 1-in-4 slot. Override per
+  app with `--seed-url` (repeatable).
+
+  Usage:
+
+      python scripts/site_fuzz.py --base http://localhost:3000 \
+          --persona admin --duration 600
+
+  Findings JSONL fields include cookie state, hx-headers, and
+  the action that produced the finding so race-vs-RBAC
+  diagnosis is one `jq` filter away.
+
+  11 unit tests in test_site_fuzz_cli.py cover CLI parser
+  (defaults, persona override, seed-url repeatable, --no-race
+  flag), persona id stripping, seed-surface defaults +
+  override, and the Finding dataclass. Tests skip cleanly when
+  playwright isn't installed (CI's base env).
+
 ## [0.63.77] - 2026-05-03
 
 ### Added
