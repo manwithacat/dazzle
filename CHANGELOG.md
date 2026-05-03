@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.67] - 2026-05-03
+
+### Added
+- **#953 cycle 7 — minimal cron parser + matcher.** New
+  `dazzle_back.runtime.cron` module providing the pure
+  primitives the cycle-7b scheduler loop will use to decide when
+  to enqueue purely-scheduled jobs:
+
+  - `parse_cron(expr)` — parses a 5-field cron expression
+    (`minute hour day month weekday`) into a frozen
+    `CronExpression`. Supports `*`, `*/N`, and literal int
+    forms. Comma-lists / ranges intentionally out of scope —
+    they cover < 5% of typical schedules and parsing them adds
+    complexity without unlocking new use cases. `CronParseError`
+    raised at startup for any malformed expression so a
+    misconfigured `JobSpec.schedule` aborts the deploy with a
+    clear error rather than silently never firing.
+  - `cron_matches(cron, when)` — datetime → bool. POSIX weekday
+    convention (0 = Sunday, 6 = Saturday).
+  - `due_jobs(jobs, *, now, last_fired_minute)` — multi-job
+    dispatch with last-fired-this-minute dedupe so a slow
+    scheduler tick doesn't double-fire when the loop catches up.
+
+  Cycle 7b will wrap these in an async loop that reads
+  `JobSpec.schedule.cron` at startup and submits to the cycle-3
+  queue when due. Cycle 8+ will add timezone support
+  (currently UTC-only, matching the cycle-1
+  `JobSchedule.timezone=""` default).
+
 ## [0.63.66] - 2026-05-03
 
 ### Added
