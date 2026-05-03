@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.70] - 2026-05-03
+
+### Added
+- **#953 cycle 9 — `dazzle worker` CLI.** New top-level command
+  starts the cycle-5 worker loop + cycle-7b scheduler loop
+  concurrently. Picks the queue backing per `REDIS_URL` env
+  presence — `RedisJobQueue` when set, `InMemoryJobQueue`
+  otherwise. Empty `REDIS_URL=""` (rather than unset) treated as
+  "in-memory" so a misconfigured env var doesn't try to connect
+  to nothing.
+
+  CLI flags:
+    * `--project / -p` — project root path (default `.`)
+    * `--scheduler-tick` — seconds between scheduler ticks
+      (default 30s)
+    * `--worker-idle` — seconds to wait per dequeue when the
+      queue is empty (default 1.0s)
+    * `--redis-key` — Redis list key (override per environment
+      to avoid collisions)
+
+  SIGINT + SIGTERM tripped to a shared `stop_event` so a Ctrl+C
+  in dev or `kill -TERM` from systemd shuts both loops down
+  cleanly, draining in-flight jobs. On Windows / test envs that
+  don't support asyncio signal handlers, falls back to default
+  Python signal behaviour.
+
+  Apps without `job:` declarations exit immediately with a
+  helpful message (no spinning loop).
+
+  `JobRun` service wiring deferred to a follow-up cycle —
+  standalone worker logs status transitions but doesn't persist
+  to `JobRun` rows yet.
+
 ## [0.63.69] - 2026-05-03
 
 ### Added
