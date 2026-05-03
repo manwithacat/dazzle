@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.72] - 2026-05-03
+
+### Added
+- **#953 cycle 10 — generic `sweep_old_rows` retention helper.**
+  New `dazzle_back.runtime.retention.sweep_old_rows(service, *,
+  date_field, older_than_days, page_size=200)` async helper —
+  bulk-deletes rows from any framework system entity older than
+  the threshold via the standard service `list` + `delete`
+  methods.
+
+  Reusable across both `JobRun` (#953) and `AuditEntry` (#956 —
+  unblocks that issue's cycle 12 retention sweep). Both have the
+  same shape: a date column + a need to prevent unbounded
+  historical growth.
+
+  Conventions matched to the IR:
+    * `older_than_days=0` (the IR's "keep forever" sentinel) is
+      a no-op — function returns 0 immediately without
+      touching the service
+    * `older_than_days < 0` also no-op (defensive)
+    * `service=None` tolerated (early-bootstrap)
+
+  Best-effort: list failures stop the sweep cleanly, per-row
+  delete failures don't kill the loop, malformed rows without
+  `id` are skipped. All failures land in the WARNING log so the
+  cycle-11 scheduled-job wrapper can surface them via
+  `JobRun.error_message`.
+
+  Tolerates list-of-dicts, paged-response (`{"items": [...]}`),
+  and Pydantic-model row shapes from the underlying service.
+
+  Cycle 11 will wire this for `JobRun` via a built-in scheduled
+  job (uses the cycle-7b cron scheduler). #956 cycle 12 will
+  wire it for `AuditEntry` per-spec from
+  `AuditSpec.retention_days`.
+
 ## [0.63.71] - 2026-05-03
 
 ### Fixed
