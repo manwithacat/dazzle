@@ -142,6 +142,20 @@
   --width-content: 56rem;
   --width-page: 80rem;
 
+  /* ─────────────────────────── touch targets ───────────────────────
+   * Minimum hit-area on touch devices. Apple HIG calls for 44×44pt;
+   * Material recommends 48×48dp. We use 44px as a good middle —
+   * matches Apple, hits Material's 80% threshold, doesn't visually
+   * inflate dense desktop UIs.
+   *
+   * The min-size is enforced under `@media (pointer: coarse)` only
+   * (see `components/touch-targets.css`) so desktop pixel-perfect
+   * sizing is preserved while touch users get a comfortable target.
+   *
+   * #958 cycle 1.
+   */
+  --dz-touch-target-min: 44px;
+
   /* ─────────────────────────── colour ramps ────────────────────────
    * Raw OKLCH ramps lifted from Open Props
    * (props.colors-oklch.css), renamed to Dazzle's vocabulary. Use

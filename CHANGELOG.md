@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.99] - 2026-05-03
+
+### Added
+- **#958 cycle 1 — touch-target hit-area enforcement.** Every
+  interactive primitive (`.dz-button` family, icon buttons, close-X
+  buttons, native `<button>`/`[role=button]`) now lands at least
+  44×44px on touch devices — Apple HIG floor.
+
+  - New `--dz-touch-target-min: 44px` token in `tokens.css`.
+  - New `components/touch-targets.css` enforces the floor under
+    `@media (pointer: coarse)` so desktop sizing stays dense and
+    pixel-perfect; mobile/tablet users get the comfortable hit
+    area without visual inflation.
+  - Selector coverage: `.dz-button` + variants, `.dz-icon-button`,
+    `.dz-card-action-button`, `.dz-list-action-button`,
+    `.dz-sidebar-action-button`, `.dz-add-card-button`, all close
+    buttons (`.dz-modal-close-form`, `.dz-pdf-viewer-help-close`,
+    `.dz-slideover-close`, etc.), plus a fallback for bare `<button>`
+    elements.
+
+  Why `pointer: coarse` rather than width-based queries? A touch
+  tablet in landscape looks "wide" but still needs the bigger hit
+  area; a mouse user on a narrow window doesn't. The pointer query
+  is the explicit "primary input is finger" signal.
+
+  Tests: `tests/unit/test_touch_targets_css.py` (20 cases) pin the
+  token, the `pointer: coarse` gating, every selector, and verify
+  the rule lands in the dist bundle (catches a future css_loader
+  regression).
+
+  #958 progress: 1 of 5 cycles shipped. Remaining: cycle 2
+  (pull-to-refresh primitive on list regions), cycle 3 (`x-swipe`
+  Alpine directive), cycle 4 (native scroll containment audit),
+  cycle 5 (haptic opt-in via `navigator.vibrate`).
+
 ## [0.63.98] - 2026-05-03
 
 ### Fixed
