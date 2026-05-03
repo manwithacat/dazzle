@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.73] - 2026-05-03
+
+### Added
+- **#953 cycle 11 / #956 cycle 12 — `run_retention_sweep`
+  orchestrator.** Single async entry point that sweeps both
+  built-in framework retention targets in one pass:
+
+    * `JobRun` rows older than ``jobrun_retention_days`` (default
+      30) — historical worker invocations.
+    * `AuditEntry` rows older than each
+      ``AuditSpec.retention_days``, filtered by `entity_type` so
+      a 90-day Manuscript window doesn't delete a 365-day Order
+      window's rows.
+
+  Returns a per-source delete-count dict (``{"JobRun": N,
+  "AuditEntry:Manuscript": N, ...}``) so the cycle-12 wrapper
+  scheduled job can log + surface failures via
+  ``JobRun.error_message``.
+
+  Honours the IR's "keep forever" sentinel everywhere:
+  ``retention_days <= 0`` → no DB calls, returns 0 / skips the
+  source. Missing services skip silently — apps without jobs
+  or audits don't get retention sweeps for tables they don't
+  have.
+
+  Cycle 12 will register this with the cycle-7b scheduler as a
+  synthetic daily job so the operator gets retention for free
+  without authoring a `job:` block themselves. This commit
+  closes both #953 cycle 11 and #956's cycle 12 dependency on
+  the jobs runtime.
+
 ## [0.63.72] - 2026-05-03
 
 ### Added
