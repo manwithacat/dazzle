@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.63] - 2026-05-03
+
+### Added
+- **#953 cycle 3 — generic job queue + handler resolution.** Two
+  new modules ship the queue / dispatch primitives the cycle-4
+  worker loop will pull from:
+
+  - `dazzle_back.runtime.job_queue` — `JobMessage` (frozen
+    dataclass: job_name, payload, attempt, job_run_id), `JobQueue`
+    Protocol, and `InMemoryJobQueue` (asyncio.Queue-backed). Cycle
+    4 will add a `RedisJobQueue` satisfying the same Protocol so
+    the worker swaps without code changes. Submit returns the
+    fresh `JobRun.id` so callers can poll.
+  - `dazzle_back.runtime.job_handler` — `resolve_handler(run_path)`
+    turns `JobSpec.run` into a callable. Supports both
+    `module:attr` (entry-point convention) and `module.attr`
+    forms. File paths and non-callable attrs are rejected with
+    `JobHandlerNotFound`.
+
+### Security
+- Job handler module names are validated against an allow-list
+  regex (lowercase identifier chars + dots only) before reaching
+  `importlib.import_module`. `JobSpec.run` is sourced from the DSL
+  at AppSpec build time (never request input), but the allow-list
+  defends against a future malformed JobSpec.run reaching the
+  importer. Single `# nosemgrep` on the import line documents that
+  the input is constrained at the boundary above.
+
 ## [0.63.62] - 2026-05-03
 
 ### Added
