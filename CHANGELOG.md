@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.79] - 2026-05-03
+
+### Fixed
+- **#990 — platform-domain entities no longer get plural-redirect
+  routes.** Pre-fix, every entity (including the framework-injected
+  `AuditEntry`, `JobRun`, `AIJob`, `FeedbackReport`) got an
+  automatic `/app/<plural>` → `/app/<singular>` 301 redirect. The
+  redirect targets all 404 because no list surface exists for
+  platform-domain entities, but the redirect itself appeared in
+  OpenAPI making it look like user-navigable pages exist.
+
+  After fix:
+  - `/app/auditentries` no longer in OpenAPI (was a 301 → 404)
+  - `/app/jobruns` no longer in OpenAPI
+  - `/app/aijobs`, `/app/feedbackreports` also gone (had the same
+    leak, surfaced by the same fix)
+  - User entities (Ticket, Comment, etc.) keep their plural
+    redirects unchanged
+
+  Discovered while dogfooding the new primitives; see
+  `dev_docs/2026-05-03-primitive-dogfood-friction.md` (item #4).
+
 ## [0.63.78] - 2026-05-03
 
 ### Added

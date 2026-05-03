@@ -1582,6 +1582,14 @@ def create_page_routes(
         for route_path, _ in sorted_routes
     }
     for _entity in appspec.domain.entities:
+        # #990 — skip platform-domain entities (AuditEntry, JobRun,
+        # AIJob, FeedbackReport, etc.). They're framework-internal
+        # observability tables; surfacing /app/<plural> redirect
+        # routes for them clutters OpenAPI and suggests user-
+        # navigable pages that 404 anyway. Admin nav exposes them
+        # via the dedicated admin workspace under /_admin/.
+        if getattr(_entity, "domain", "") == "platform":
+            continue
         singular_slug = _entity.name.lower().replace("_", "-")
         plural_slug = _to_api_plural(_entity.name).replace("_", "-")
         if singular_slug == plural_slug:
