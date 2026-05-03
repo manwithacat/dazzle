@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.93] - 2026-05-03
+
+### Added
+- **#955 cycle 6 — locale-switcher UI primitive. Closes #955.** The
+  cycle-1 LocaleMiddleware honoured a `dazzle_locale` cookie but
+  nothing on the server actually wrote it. This release adds:
+
+  - `POST /_dazzle/i18n/locale` — validates the locale tag against
+    the project's `supported_locales` allow-list, sets the cookie,
+    redirects back. Returns `HX-Refresh: true` for HTMX requests so
+    the page re-renders against the new locale without losing the
+    URL.
+  - `macros/locale_switcher.html` — Jinja macro renders a `<select>`
+    (default) or `<button>` group (`style="links"`) tied to the
+    endpoint. Reads `request.state.locale` + `locale_supported` set
+    by the middleware so projects don't have to thread either
+    through their template context.
+
+  Security:
+  - Open-redirect defence: `next` parameter is sanitised to
+    same-origin relative paths only (rejects `https://`, `//`, and
+    bare paths).
+  - SameSite=Lax cookie + HttpOnly + 1-year max-age.
+  - `Secure` flag tracks request scheme (`secure=True` on HTTPS,
+    omitted on HTTP localhost so dev still persists the cookie).
+  - CSRF: route exempted in the framework's CSRF middleware
+    prefix list. Justified by the same precedent as
+    `/dz/consent` — idempotent cookie-setter, no privilege
+    escalation, SameSite=Lax blocks cross-site form posts. The
+    route validates the locale tag against the allow-list before
+    writing.
+
+  All 6 cycles of #955 now shipped:
+  1. Locale resolution middleware
+  2. MessageCatalogue + `_()` filter
+  3. `dazzle i18n extract` + `stats` CLI
+  4. Babel-backed `format_date` / `format_number` / `format_currency`
+  5. `.po`/`.mo` workflow + runtime catalogue load
+  6. Locale-switcher endpoint + macro
+
+  Tests: `tests/unit/test_locale_routes.py` (18 cases) cover open-
+  redirect defence, locale validation, supported-locale allow-list,
+  HTMX response, secure-cookie auto-detection, and macro rendering
+  for both `select` and empty-supported-locales modes.
+
+  Drift gates updated: `runtime-urls.txt` baseline regenerated
+  for the new route, `INDIVIDUAL_ALLOWLIST` in
+  `test_template_orphan_scan.py` notes the macro is adopter-opt-in.
+
 ## [0.63.92] - 2026-05-03
 
 ### Added

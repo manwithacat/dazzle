@@ -1209,6 +1209,34 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_history_router)
 
+        # #955 cycle 6 — locale switcher endpoint (`POST /_dazzle/i18n/locale`).
+        # Always mounted; the macro template only renders when supported_locales
+        # is non-empty. Cookie name + supported set come from manifest I18nConfig.
+        try:
+            from dazzle.core.manifest import I18nConfig, load_manifest
+            from dazzle_back.runtime.locale_routes import create_locale_routes
+
+            i18n_cfg = I18nConfig()
+            if self._project_root is not None:
+                manifest_path = self._project_root / "dazzle.toml"
+                if manifest_path.is_file():
+                    try:
+                        i18n_cfg = load_manifest(manifest_path).i18n
+                    except Exception:
+                        logger.debug(
+                            "i18n manifest load skipped — using defaults",
+                            exc_info=True,
+                        )
+            locale_router = create_locale_routes(
+                cookie_name=i18n_cfg.cookie_name,
+                supported_locales=frozenset(i18n_cfg.supported_locales)
+                if i18n_cfg.supported_locales
+                else None,
+            )
+            self._app.include_router(locale_router)
+        except Exception:
+            logger.warning("Locale router mount failed", exc_info=True)
+
         # File uploads
         if self._enable_files:
             from dazzle_back.runtime.file_storage import (

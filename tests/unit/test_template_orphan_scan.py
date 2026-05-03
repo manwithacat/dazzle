@@ -75,6 +75,15 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Dormant building-block with contract (island.md, UX-059); "
         "IslandContext dataclass wired but no template include"
     ),
+    # #955 cycle 6 — locale-switcher macro called by adopter templates
+    # via {% from 'macros/locale_switcher.html' import render_locale_switcher %}.
+    # No framework template imports it because not every project will
+    # run multilingual; opt-in by design.
+    "macros/locale_switcher.html": (
+        "Adopter-opt-in macro; framework provides the template, projects "
+        "import via {% from 'macros/locale_switcher.html' %} when they want "
+        "the switcher"
+    ),
 }
 
 

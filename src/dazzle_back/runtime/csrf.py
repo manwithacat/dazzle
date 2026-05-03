@@ -65,6 +65,13 @@ class CSRFConfig:
             # time check inside the handler. Exempt from CSRF so automated
             # testers (Playwright, curl) can hit it without a session.
             "/qa/",
+            # Locale switcher (#955 cycle 6). Same rationale as
+            # /dz/consent above: idempotent cookie-setter, no privilege
+            # escalation, SameSite=Lax blocks cross-site form posts.
+            # The endpoint validates the locale tag against the
+            # project's supported_locales allow-list before writing
+            # the cookie.
+            "/_dazzle/i18n/",
         ]
     )
 

@@ -1,0 +1,87 @@
+{#
+  Locale switcher macro — #955 cycle 6.
+
+  Renders a small <form> that POSTs the user's chosen locale to
+  /_dazzle/i18n/locale. The router validates against the project's
+  `supported_locales` allow-list, sets the `dazzle_locale` cookie,
+  and refreshes the page (HX-Refresh on htmx; 303 redirect on plain
+  POST).
+
+  Usage:
+      {% from 'macros/locale_switcher.html' import render_locale_switcher %}
+      {{ render_locale_switcher() }}
+
+  The macro reads `request.state.locale` (current locale) and
+  `request.state.locale_supported` (frozenset of supported tags) set
+  by LocaleMiddleware, so projects don't have to thread either
+  through their template context.
+
+  Arguments:
+    label   — visible <label> text. Defaults to "Language" — wrap with
+              `_("Language")` at the call site if you want it localised.
+    style   — "select" (default) renders a <select>; "links" renders
+              one button per locale (lighter chrome, useful for footer).
+    next    — explicit URL to redirect back to. Defaults to the current
+              path (read from request.url).
+    locale_names — optional dict mapping tag → display label
+              (e.g. {"fr": "Français", "de": "Deutsch"}). Tags not in
+              the dict render as the bare tag.
+#}
+{% macro render_locale_switcher(
+    label="Language",
+    style="select",
+    next=None,
+    locale_names=None
+) -%}
+{% set _current = request.state.locale if request and request.state else "en" %}
+{% set _supported = request.state.locale_supported if request and request.state else [] %}
+{% set _next = next or (request.url.path if request else "/") %}
+{% set _names = locale_names or {} %}
+{# CSRF: /_dazzle/i18n/ is in the framework's exempt prefix list (csrf.py).
+   Justification: idempotent cookie-setter, no privilege escalation,
+   SameSite=Lax cookie blocks cross-site form posts. Same precedent
+   as /dz/consent. #}
+{% if _supported %}
+  {% if style == "select" %}
+  <form method="post" {# nosemgrep #}
+        action="/_dazzle/i18n/locale"
+        hx-post="/_dazzle/i18n/locale"
+        hx-swap="none"
+        class="dz-locale-switcher">
+    <label for="dz-locale-switcher-select" class="dz-locale-switcher__label">{{ label }}</label>
+    <input type="hidden" name="next" value="{{ _next }}">
+    <select id="dz-locale-switcher-select"
+            name="locale"
+            onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()"
+            class="dz-locale-switcher__select">
+      {% for tag in _supported|sort %}
+      <option value="{{ tag }}"{% if tag == _current %} selected{% endif %}>
+        {{ _names.get(tag, tag) }}
+      </option>
+      {% endfor %}
+    </select>
+    <noscript>
+      <button type="submit" class="dz-locale-switcher__submit">{{ _("Set") }}</button>
+    </noscript>
+  </form>
+  {% elif style == "links" %}
+  <div class="dz-locale-switcher dz-locale-switcher--links" role="group" aria-label="{{ label }}">
+    {% for tag in _supported|sort %}
+    <form method="post" {# nosemgrep #}
+          action="/_dazzle/i18n/locale"
+          hx-post="/_dazzle/i18n/locale"
+          hx-swap="none"
+          class="dz-locale-switcher__link-form">
+      <input type="hidden" name="next" value="{{ _next }}">
+      <input type="hidden" name="locale" value="{{ tag }}">
+      <button type="submit"
+              class="dz-locale-switcher__link"
+              {% if tag == _current %}aria-current="true"{% endif %}>
+        {{ _names.get(tag, tag) }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endif %}
+{%- endmacro %}
