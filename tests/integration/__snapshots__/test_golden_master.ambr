@@ -1045,6 +1045,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': dict({
           'column': 1,
           'file': 'simple_test.dsl',
@@ -1108,6 +1109,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': dict({
           'column': 1,
           'file': 'simple_test.dsl',
@@ -1162,6 +1164,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': dict({
           'column': 1,
           'file': 'simple_test.dsl',
@@ -1225,6 +1228,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': dict({
           'column': 1,
           'file': 'simple_test.dsl',
@@ -1306,6 +1310,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': None,
         'title': 'System Health',
         'ux': dict({
@@ -1409,6 +1414,7 @@
             'visible': None,
           }),
         ]),
+        'show_history': False,
         'source': None,
         'title': 'Deploy History',
         'ux': dict({

@@ -298,6 +298,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'complex_workspace.dsl',
@@ -335,6 +336,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'complex_workspace.dsl',
@@ -364,6 +366,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'complex_workspace.dsl',
@@ -520,6 +523,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'edge_comments.dsl',
@@ -557,6 +561,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'edge_comments.dsl',
@@ -646,6 +651,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'edge_whitespace.dsl',
@@ -855,6 +861,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'minimal_surface.dsl',
@@ -1153,6 +1160,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'state_machine.dsl',
@@ -1186,6 +1194,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'state_machine.dsl',
@@ -1312,6 +1321,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_crud_app.dsl',
@@ -1353,6 +1363,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_crud_app.dsl',
@@ -1398,6 +1409,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_crud_app.dsl',
@@ -1447,6 +1459,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_crud_app.dsl',
@@ -1710,6 +1723,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',
@@ -1751,6 +1765,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',
@@ -1788,6 +1803,7 @@
               'name': 'main',
             }),
           ]),
+          'show_history': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.59] - 2026-05-03
+
+### Fixed
+- **CI green-up after #956 cycle 8 (v0.63.57).** Cycle 8 added the
+  new `SurfaceSpec.show_history` field with default `False`, which
+  changed every parser-corpus and golden-master snapshot output to
+  include the new key. Regenerated the 8 affected `.ambr` snapshots.
+  No behavioural change — same parser output, just an extra
+  defaulted IR field on each `SurfaceSpec`.
+
 ## [0.63.58] - 2026-05-03
 
 ### Added
