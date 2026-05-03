@@ -129,10 +129,29 @@ surface contact_edit "Edit Contact":
   ux:
     purpose: "Update contact information"
 
+# #954 — full-text search over Contact. Indexed via tsvector + GIN
+# at startup; powers the search_box region below + the
+# /api/fts/Contact endpoint.
+search on Contact:
+  fields: first_name, last_name, email, company
+  ranking:
+    last_name: 4
+    first_name: 3
+    company: 2
+    email: 1
+  highlight: true
+  tokenizer: english
+
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
   purpose: "Browse contacts and view details"
   stage: "dual_pane_flow"
+
+  # Search signal — htmx-driven box that hits /api/fts/Contact.
+  contact_search:
+    source: Contact
+    display: search_box
+    title: "Find a contact"
 
   # List signal - browsable contact list
   contact_list:

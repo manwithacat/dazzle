@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.98] - 2026-05-03
+
+### Fixed
+- **CI green: artefact coverage gate** — added `search on Contact` +
+  `display: search_box` region to `examples/contact_manager` so the
+  framework artefact coverage gate (which requires every DisplayMode
+  to be exercised by at least one example app) passes for the new
+  cycle-4 SEARCH_BOX mode shipped in v0.63.97.
+
+### Agent Guidance
+- The `dazzle coverage --fail-on-uncovered` lint gate enforces "every
+  shipped artefact has a live consumer" — when adding a new
+  DisplayMode / DSL construct / fragment template to the framework,
+  also wire it into at least one example app in the same release.
+  Pre-ship: run `dazzle coverage --fail-on-uncovered` alongside
+  `pytest tests/ -m "not e2e"`. The CI lint job runs both; missing
+  the coverage gate locally is the same class of gap as the
+  unit-only test scope.
+
 ## [0.63.97] - 2026-05-03
 
 ### Added
