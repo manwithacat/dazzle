@@ -398,23 +398,22 @@ document.addEventListener("alpine:init", () => {
       // `dz:optimistic-rollback` if they want custom recovery UI.
       Alpine.directive("optimistic", (el, { expression }) => {
         const action = (expression || "remove").trim();
-        // Parse "remove:<selector>" — selector defaults to the
-        // element itself for the bare "remove" form.
+        // Parse "<verb>:<selector>" — selector defaults to the element
+        // itself for the bare "<verb>" form (most useful for `remove`).
         const colonIdx = action.indexOf(":");
         const verb =
           colonIdx === -1 ? action : action.slice(0, colonIdx).trim();
         const selectorRaw =
           colonIdx === -1 ? "" : action.slice(colonIdx + 1).trim();
 
-        if (verb !== "remove") {
-          // Cycles 2+ will land prepend / append / replace. Until
-          // then, log a warning so adopters using the future shapes
-          // get visible feedback rather than silent no-ops.
+        const KNOWN_VERBS = new Set(["remove", "prepend", "append", "replace"]);
+        if (!KNOWN_VERBS.has(verb)) {
           // eslint-disable-next-line no-console
           console.warn(
             "x-optimistic: shape '" +
               verb +
-              "' is reserved for a future cycle; only 'remove' is implemented today.",
+              "' not recognised. Known shapes: " +
+              [...KNOWN_VERBS].join(", "),
           );
           return;
         }
@@ -429,48 +428,122 @@ document.addEventListener("alpine:init", () => {
           return document.querySelector(selectorRaw);
         };
 
+        // Build a placeholder element for prepend / append / replace.
+        // Sources, in priority order:
+        //   1. `x-optimistic-template="<id>"` → clone of <template id> content
+        //   2. Fallback: a generic "loading" div with aria-busy
+        // Templates are the recommended path — adopters control exactly
+        // what the placeholder looks like (matching row shape, etc.).
+        const buildPlaceholder = () => {
+          const templateId = el.getAttribute("x-optimistic-template");
+          if (templateId) {
+            const tpl = document.getElementById(templateId);
+            if (tpl && tpl.content) {
+              const wrapper = document.createElement("div");
+              wrapper.appendChild(tpl.content.cloneNode(true));
+              const node = wrapper.firstElementChild;
+              if (node) {
+                node.setAttribute("data-dz-optimistic-placeholder", "1");
+                node.setAttribute("aria-busy", "true");
+                return node;
+              }
+            }
+          }
+          const ph = document.createElement("div");
+          ph.className = "dz-optimistic-placeholder";
+          ph.setAttribute("data-dz-optimistic-placeholder", "1");
+          ph.setAttribute("aria-busy", "true");
+          return ph;
+        };
+
+        // State carried across the lifecycle:
+        // - snapshot: captures (node, parent, nextSibling) for `remove`
+        //   and `replace` rollback paths.
+        // - placeholder: the inserted element for prepend / append /
+        //   replace; removed on success or rollback.
         let snapshot = null;
+        let placeholder = null;
+
+        const removePlaceholder = () => {
+          if (placeholder && placeholder.parentNode) {
+            try {
+              placeholder.parentNode.removeChild(placeholder);
+            } catch {
+              // Already detached; nothing to do.
+            }
+          }
+          placeholder = null;
+        };
 
         const onBeforeRequest = (ev) => {
           // Only react to htmx events fired by THIS element. Bubbled
-          // events from children would otherwise rip the row out
-          // mid-handler.
+          // events from children would otherwise mutate the wrong row.
           if (ev.target !== el) return;
           const target = resolveTarget();
-          if (!target || !target.parentNode) return;
-          // Snapshot enough state to reverse: the node, its parent,
-          // and the sibling it was inserted before (or null = end).
-          snapshot = {
-            node: target,
-            parent: target.parentNode,
-            nextSibling: target.nextSibling,
-          };
-          target.parentNode.removeChild(target);
+          if (!target) return;
+
+          if (verb === "remove") {
+            if (!target.parentNode) return;
+            snapshot = {
+              node: target,
+              parent: target.parentNode,
+              nextSibling: target.nextSibling,
+            };
+            target.parentNode.removeChild(target);
+            return;
+          }
+
+          if (verb === "prepend") {
+            placeholder = buildPlaceholder();
+            target.insertBefore(placeholder, target.firstChild);
+            return;
+          }
+
+          if (verb === "append") {
+            placeholder = buildPlaceholder();
+            target.appendChild(placeholder);
+            return;
+          }
+
+          if (verb === "replace") {
+            if (!target.parentNode) return;
+            // Replace combines remove + insert: snapshot the original
+            // for rollback, then drop in the placeholder at its slot.
+            snapshot = {
+              node: target,
+              parent: target.parentNode,
+              nextSibling: target.nextSibling,
+            };
+            placeholder = buildPlaceholder();
+            target.parentNode.replaceChild(placeholder, target);
+          }
         };
 
         const restore = (reason) => {
-          if (!snapshot) return;
-          const { node, parent, nextSibling } = snapshot;
-          // Re-insert at original position. nextSibling may have
-          // been removed by another mutation — fall back to
-          // appendChild so the row at least re-appears somewhere.
-          try {
-            if (nextSibling && nextSibling.parentNode === parent) {
-              parent.insertBefore(node, nextSibling);
-            } else {
-              parent.appendChild(node);
+          // For prepend / append: just drop the placeholder.
+          // For remove / replace: re-insert the original node at its
+          // recorded position.
+          removePlaceholder();
+          if (snapshot) {
+            const { node, parent, nextSibling } = snapshot;
+            try {
+              if (nextSibling && nextSibling.parentNode === parent) {
+                parent.insertBefore(node, nextSibling);
+              } else {
+                parent.appendChild(node);
+              }
+            } catch {
+              // Parent is gone — nothing we can restore.
             }
-          } catch {
-            // Defensive — if the parent is gone we can't restore.
+            snapshot = null;
           }
-          // Surface the rollback so adopters can hook custom recovery UI.
+          // Surface for adopter recovery hooks + user-visible nudge.
           el.dispatchEvent(
             new CustomEvent("dz:optimistic-rollback", {
               bubbles: true,
-              detail: { reason: reason || "error" },
+              detail: { reason: reason || "error", verb: verb },
             }),
           );
-          // And nudge the user that something went wrong.
           document.body.dispatchEvent(
             new CustomEvent("showToast", {
               detail: {
@@ -479,7 +552,6 @@ document.addEventListener("alpine:init", () => {
               },
             }),
           );
-          snapshot = null;
         };
 
         const onAfterRequest = (ev) => {
@@ -490,7 +562,11 @@ document.addEventListener("alpine:init", () => {
               ? ev.detail.successful
               : xhr && xhr.status < 400;
           if (ok) {
-            // Keep the optimistic state. Drop the snapshot — no rollback path.
+            // Success: drop the placeholder (htmx will have inserted
+            // the real content alongside or in its place) and clear
+            // the snapshot so we don't accidentally restore a stale
+            // node on a later event.
+            removePlaceholder();
             snapshot = null;
             return;
           }

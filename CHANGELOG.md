@@ -9,6 +9,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.107] - 2026-05-04
+
+### Added
+- **#959 cycle 2 — `prepend` / `append` / `replace` shapes for
+  `x-optimistic`.** Cycle 1 shipped `remove`; cycle 2 unifies all
+  four shapes under the same directive with shared placeholder
+  builder + rollback machinery.
+
+  ```html
+  <!-- Insert a placeholder at the top of #task-list before the
+       server response lands -->
+  <form hx-post="/api/tasks"
+        hx-target="#task-list"
+        hx-swap="afterbegin"
+        x-optimistic="prepend:#task-list"
+        x-optimistic-template="task-row-placeholder">
+    ...
+  </form>
+
+  <!-- Inline-edit: swap row with a placeholder while saving -->
+  <form hx-put="/api/tasks/{id}"
+        hx-target="closest tr"
+        hx-swap="outerHTML"
+        x-optimistic="replace:closest tr"
+        x-optimistic-template="task-row-skeleton">
+    ...
+  </form>
+
+  <!-- Templates are <template> elements adopters define once -->
+  <template id="task-row-placeholder">
+    <tr class="dz-task-row dz-task-row--pending">
+      <td colspan="3">Saving…</td>
+    </tr>
+  </template>
+  ```
+
+  Behaviour:
+  - **Placeholder source priority:** `x-optimistic-template="<id>"`
+    clones the referenced `<template>` content. Without it, the
+    builder synthesises a generic `<div
+    class="dz-optimistic-placeholder" aria-busy="true">` so the
+    primitive works even when adopters haven't authored a template.
+  - **`prepend`**: `target.insertBefore(placeholder, target.firstChild)`.
+  - **`append`**: `target.appendChild(placeholder)`.
+  - **`replace`**: snapshots the original (parent + nextSibling) +
+    `parent.replaceChild(placeholder, target)`. On rollback,
+    re-inserts the original at its recorded position.
+  - **Success path**: `removePlaceholder()` + `snapshot = null`
+    so a stale state can't be restored by a later event.
+  - **Rollback path**: removes placeholder, restores snapshot if
+    present (`remove`/`replace`), dispatches
+    `dz:optimistic-rollback` (now carries `verb` in detail), emits
+    error toast.
+  - Unknown verb logs a console warning listing all four accepted
+    shapes — no silent no-op.
+
+  Tests: `tests/unit/test_optimistic_directive_shapes.py` (20
+  cases) cover the verb set, placeholder builder (template +
+  fallback), per-verb DOM operations, snapshot capture for
+  replace, success-path cleanup, and the cycle-1 contract still
+  holds. Existing `test_optimistic_directive.py` updated to
+  reflect cycle-2 warning text.
+
+  #959 progress: 2 of 4 cycles shipped. Remaining: cycle 3 (undo
+  stack + Cmd+Z), cycle 4 (server-response reconciliation: merge
+  attributes when shape drifts).
+
 ## [0.63.106] - 2026-05-04
 
 ### Added

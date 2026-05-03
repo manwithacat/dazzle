@@ -32,18 +32,19 @@ def test_directive_registered(js: str) -> None:
 
 def test_remove_shape_implemented(js: str) -> None:
     """Cycle 1 ships the remove shape — the workhorse for instant
-    delete actions. Other shapes (prepend, append, replace) are
-    deferred to cycle 2+."""
+    delete actions. Cycle 2 added prepend/append/replace; remove
+    must still be in the verb set."""
     assert '"remove"' in js
 
 
-def test_unsupported_shape_warns(js: str) -> None:
-    """Future shapes should produce a visible console warning so
-    adopters using them get feedback rather than silent no-ops."""
+def test_unknown_shape_warns(js: str) -> None:
+    """Unknown verbs (typos, future-renamed shapes) should produce
+    a visible console warning so adopters get feedback rather than
+    silent no-ops. Cycle 2 changed the warning text to list all
+    accepted shapes."""
     assert "console.warn" in js
-    # The warning text must mention 'remove' as the implemented shape
-    # so the operator knows what's actually available today.
-    assert "only 'remove' is implemented" in js
+    assert "not recognised" in js
+    assert "Known shapes" in js
 
 
 def test_supports_closest_selector_form(js: str) -> None:
