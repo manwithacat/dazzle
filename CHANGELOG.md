@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.100] - 2026-05-03
+
+### Fixed
+- **Homebrew tap CI green** — formula test scaffold was writing a
+  minimal `dazzle.toml` that omitted `[project] root = "..."`. The
+  linker enforces that field, so `dazzle validate` failed inside
+  the formula's `test do` block, breaking the homebrew-tap CI for
+  every release post-enforcement (~v0.63.x).
+
+  The release pipeline copies this repo's `homebrew/dazzle.rb` into
+  the tap repo on tag push, so bumping + tagging now will sync the
+  fix automatically. Next tap CI run (against v0.63.100) will pass.
+
+  Pre-existing MCP-setup warning (`PermissionError: '/Users/runner/.claude'`)
+  is not blocking — already wrapped in `rescue StandardError` so it
+  emits an `opoo` warning rather than failing post_install. CI
+  environment quirk, not a framework bug.
+
+### Agent Guidance
+- The homebrew/dazzle.rb test block runs `dazzle validate` against
+  a minimal project. When the framework adds new mandatory
+  manifest fields, update the formula's test scaffold in the same
+  release — otherwise the homebrew-tap CI silently rots.
+
 ## [0.63.99] - 2026-05-03
 
 ### Added

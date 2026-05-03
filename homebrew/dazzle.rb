@@ -10,10 +10,10 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.63.99"
+  version "0.63.100"
   license "MIT"
 
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.63.99.tar.gz"
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.63.100.tar.gz"
   sha256 "PLACEHOLDER_SOURCE_SHA256"
 
   # pydantic-core requires Rust to build from source, so use pre-built wheels
@@ -142,11 +142,15 @@ class Dazzle < Formula
     # Test LSP dependencies are installed
     system libexec/"bin/python", "-c", "import dazzle.lsp"
 
-    # Test DSL validation with a minimal project
+    # Test DSL validation with a minimal project.
+    # `root` is required by the linker (#998 — added after the
+    # validator started enforcing it; the formula test was missing
+    # it and silently failing the homebrew-tap CI).
     (testpath/"dazzle.toml").write <<~TOML
       [project]
       name = "test"
       version = "0.1.0"
+      root = "test"
     TOML
 
     (testpath/"dsl").mkpath
