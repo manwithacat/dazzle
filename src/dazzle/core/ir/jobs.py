@@ -121,3 +121,37 @@ class JobSpec(BaseModel):
     timeout_seconds: int = Field(default=60, ge=1, le=86_400)
 
     model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# JobRun System Entity Builder (#953 cycle 2)
+# =============================================================================
+
+# Field definitions for the auto-generated JobRun entity. Each tuple:
+# ``(name, type_kind, modifiers, default)``. Same convention as
+# AIJob (#376) and AuditEntry (#956 cycle 2) — the linker builds it
+# via the shared ``_parse_field_type`` / ``_MODIFIER_MAP`` helpers.
+#
+# `payload` is JSON-encoded args for the worker so any handler can
+# accept a dict shape without polymorphic columns (mirrors AuditEntry's
+# `before_value` / `after_value` cycle-3 design).
+#
+# `dead_letter` status (cycle-1 spec) marks runs that exhausted retries
+# without a JobSpec.dead_letter entity declared — manual triage path.
+JOB_RUN_FIELDS: list[tuple[str, str, list[str], str | None]] = [
+    ("id", "uuid", ["pk"], None),
+    ("job_name", "str(200)", ["required"], None),
+    (
+        "status",
+        "enum[pending,running,completed,failed,dead_letter]",
+        ["required"],
+        "pending",
+    ),
+    ("attempt_number", "int", [], "1"),
+    ("payload", "text", [], None),
+    ("error_message", "text", [], None),
+    ("started_at", "datetime", [], None),
+    ("finished_at", "datetime", [], None),
+    ("duration_ms", "int", [], None),
+    ("created_at", "datetime", ["required"], "now"),
+]

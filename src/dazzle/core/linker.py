@@ -4,6 +4,7 @@ from .errors import LinkError
 from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from .ir.jobs import JOB_RUN_FIELDS
 from .ir.llm import AI_JOB_FIELDS
 from .ir.security import SecurityConfig, SecurityProfile
 from .linker_impl import (
@@ -119,6 +120,14 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # audited entity types — `entity_type` discriminator on each row.
     if merged_fragment.audits and not any(e.name == "AuditEntry" for e in entities):
         entities = [*entities, _build_audit_entry_entity()]
+
+    # 9aa. Auto-generate JobRun entity when any `job X:` block is
+    # present (#953 cycle 2). Single shared platform entity holding
+    # one row per worker invocation — `job_name` discriminator. The
+    # cycle-3 worker writes here; the cycle-4 scheduler reads `status`
+    # to skip already-running scheduled jobs.
+    if merged_fragment.jobs and not any(e.name == "JobRun" for e in entities):
+        entities = [*entities, _build_job_run_entity()]
 
     # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
@@ -349,6 +358,67 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         name="AIJob",
         title="AI Job",
         intent="Tracks every AI gateway call with token counts, cost, and audit trail",
+        domain="platform",
+        patterns=["system", "audit"],
+        fields=fields,
+        access=access,
+    )
+
+
+def _build_job_run_entity() -> ir.EntitySpec:
+    """Build the auto-generated JobRun system entity (#953 cycle 2).
+
+    A single shared platform entity captures every worker invocation
+    across all declared jobs. The `job_name` discriminator + `status`
+    + timing columns make it the read source for cycle-4's scheduler
+    (skip currently-running jobs) and cycle-6's retention sweep.
+
+    Mirrors the AIJob / AuditEntry shape — same access pattern (auth-
+    required CRUD via the standard route generator).
+    """
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in JOB_RUN_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    # Default access: any authenticated user can READ/LIST job runs —
+    # they're internal observability data; admins typically need them
+    # for triage. CREATE is permitted because cycle 3's worker writes
+    # through the standard service layer rather than a privileged
+    # path. UPDATE is permitted so the worker can transition status
+    # (pending → running → completed/failed). DELETE is intentionally
+    # absent — historical job-run rows are evidence; cycle-6 retention
+    # uses a different bulk-delete code path.
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(
+                operation=ir.PermissionKind.CREATE,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.READ,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.LIST,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.UPDATE,
+                require_auth=True,
+                effect=ir.PolicyEffect.PERMIT,
+            ),
+        ]
+    )
+
+    return ir.EntitySpec(
+        name="JobRun",
+        title="Job Run",
+        intent="One worker invocation of a declared background job",
         domain="platform",
         patterns=["system", "audit"],
         fields=fields,

@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.62] - 2026-05-03
+
+### Added
+- **#953 cycle 2 — `JobRun` system entity auto-generation.** When
+  any DSL module declares a `job X:` block, the linker now injects
+  a single shared `JobRun` platform entity into the AppSpec —
+  destination table for cycle-3's worker writes. Mirrors the AIJob
+  / AuditEntry / FeedbackReport injection pattern.
+
+  Schema (10 fields): `id` (uuid pk), `job_name` discriminator,
+  `status` enum (`pending`/`running`/`completed`/`failed`/
+  `dead_letter`, default `pending`), `attempt_number` (int default
+  1), `payload` (text — cycle 3 will JSON-encode handler args),
+  `error_message` (text), `started_at` / `finished_at` /
+  `duration_ms` (timing), `created_at` (datetime, default `now`).
+
+  Permissions: CREATE / READ / LIST / UPDATE permitted for
+  authenticated users — worker needs CREATE+UPDATE for status
+  transitions, admins need READ+LIST for triage. DELETE
+  intentionally absent — cycle-6 retention sweep uses a different
+  bulk-delete code path.
+
 ## [0.63.61] - 2026-05-03
 
 ### Added
