@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.102] - 2026-05-03
+
+### Added
+- **#958 cycle 2 — `x-pull-to-refresh` Alpine directive.** Apply
+  `x-pull-to-refresh` to a list / dashboard container; the directive
+  listens for a touch-pull beyond 80px and fires a `refresh`
+  CustomEvent. Wire to htmx with `hx-trigger="refresh"`:
+
+  ```html
+  <div x-pull-to-refresh
+       hx-get="/users" hx-trigger="refresh"
+       hx-target="this" hx-swap="innerHTML">
+    ...
+  </div>
+  ```
+
+  Behaviour:
+  - Touch-only via `(pointer: coarse)` — desktop mouse drag would
+    hijack scroll, so the directive no-ops on mouse-primary inputs.
+  - Engages only when the container's `scrollTop === 0` — pulling
+    mid-scroll is a scroll, not a refresh.
+  - Damped visual feedback: container translates Y by half the pull
+    distance, capped at 1.5× threshold.
+  - Snap-back animation honours `prefers-reduced-motion: reduce` —
+    transform is skipped but the refresh event still fires.
+  - Passive listeners (`{ passive: true }`) so native scroll stays
+    responsive even if JS hangs.
+  - Handles `touchcancel` alongside `touchend` so a stale `pulling=true`
+    doesn't leak into the next gesture.
+
+  Tests: `tests/unit/test_pull_to_refresh_directive.py` (10 cases)
+  pin registration, touch gating, dispatch contract, threshold,
+  reduced-motion guard, and bundle inclusion.
+
+  #958 progress: 2 of 5 cycles shipped. Remaining: cycle 3 (`x-swipe`
+  Alpine directive), cycle 4 (native scroll containment audit),
+  cycle 5 (haptic opt-in).
+
 ## [0.63.101] - 2026-05-03
 
 ### Fixed

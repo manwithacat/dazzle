@@ -20,7 +20,8 @@
  *  - dzToggleGroup    — exclusive or multi-select button group
  *
  * Directives:
- *  - x-flip           — FLIP-style animations for list reorders (#960)
+ *  - x-flip               — FLIP-style animations for list reorders (#960)
+ *  - x-pull-to-refresh    — touch pull-down → refresh CustomEvent (#958)
  */
 
 document.addEventListener("alpine:init", () => {
@@ -122,6 +123,96 @@ document.addEventListener("alpine:init", () => {
       // Cleanup hook for Alpine teardown (component removed from DOM).
       el._dzFlipObserver = observer;
     });
+
+    // ── x-pull-to-refresh directive (#958 cycle 2) ────────────────────
+    //
+    // Pull-down-to-refresh on touch devices. Apply `x-pull-to-refresh`
+    // to a list / dashboard container; the directive listens for a
+    // touch-pull beyond `--dz-pull-threshold` (default 80px) and
+    // dispatches a `refresh` CustomEvent on the element. Wire it to
+    // an htmx swap by adding `hx-trigger="refresh"`:
+    //
+    //   <div x-pull-to-refresh
+    //        hx-get="/users" hx-trigger="refresh"
+    //        hx-target="this" hx-swap="innerHTML">
+    //
+    // Algorithm: capture touch start at scrollTop===0; track Y delta;
+    // apply a damped translateY for visual feedback as the user pulls;
+    // on release past threshold, fire `refresh`. Below threshold, snap
+    // back. `prefers-reduced-motion: reduce` skips the transform but
+    // still fires the event so the refresh works regardless.
+    //
+    // Touch-only via the same `pointer: coarse` rationale as
+    // touch-targets.css — desktop mouse users don't get the gesture.
+    if (typeof Alpine.directive === "function") {
+      Alpine.directive("pull-to-refresh", (el) => {
+        // Honour pointer:coarse only — desktop mouse drag would
+        // otherwise hijack scroll. Falls back to no-op on
+        // matchMedia-less environments.
+        const isTouch =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(pointer: coarse)").matches;
+        if (!isTouch) return;
+
+        const reduce =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const threshold = 80;
+        let startY = 0;
+        let pulling = false;
+        let pullDistance = 0;
+
+        const onStart = (e) => {
+          // Only engage when the container is scrolled to the top —
+          // otherwise the user wants to scroll up, not refresh.
+          if (el.scrollTop > 0) return;
+          startY = e.touches[0].clientY;
+          pulling = true;
+          pullDistance = 0;
+        };
+
+        const onMove = (e) => {
+          if (!pulling) return;
+          pullDistance = Math.max(0, e.touches[0].clientY - startY);
+          if (pullDistance > 0 && !reduce) {
+            // Damped: pull half the distance, capped at 1.5× threshold.
+            const visual = Math.min(pullDistance / 2, threshold * 1.5);
+            el.style.transform = "translateY(" + visual + "px)";
+          }
+        };
+
+        const onEnd = () => {
+          if (!pulling) return;
+          if (pullDistance >= threshold) {
+            // Fire refresh — htmx (or any listener) picks it up.
+            // `bubbles:true` so a parent's hx-trigger can also catch it.
+            el.dispatchEvent(new CustomEvent("refresh", { bubbles: true }));
+          }
+          if (!reduce) {
+            // Snap back smoothly.
+            el.style.transition =
+              "transform var(--duration-base) var(--ease-out)";
+            el.style.transform = "";
+            setTimeout(() => {
+              el.style.transition = "";
+            }, 200);
+          }
+          pulling = false;
+          pullDistance = 0;
+        };
+
+        // Use { passive: true } so the browser doesn't have to wait
+        // for our handler before handling native scroll — keeps the
+        // page responsive even if the JS hangs.
+        el.addEventListener("touchstart", onStart, { passive: true });
+        el.addEventListener("touchmove", onMove, { passive: true });
+        el.addEventListener("touchend", onEnd, { passive: true });
+        el.addEventListener("touchcancel", onEnd, { passive: true });
+
+        // Stash for potential teardown.
+        el._dzPullToRefresh = { onStart, onMove, onEnd };
+      });
+    }
   }
 
   // ── Toast Notifications ─────────────────────────────────────────────
