@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.65] - 2026-05-03
+
+### Added
+- **#953 cycle 5 — `run_worker_loop` async pump.** New
+  `dazzle_back.runtime.job_loop.run_worker_loop` wraps cycle-4's
+  `process_one` in a long-running async loop with graceful
+  shutdown via `asyncio.Event`. Defensive against queue-side
+  exceptions (Redis-down etc.) and per-message worker plumbing
+  bugs — both counted in `loop_errors`, neither propagates.
+
+  Returns a stats dict pre-initialised with all `WorkerOutcome`
+  keys plus `polled` (idle dequeues) and `loop_errors`, so the
+  cycle-5b CLI / dashboards can rely on every key being present
+  even with zero traffic.
+
+  Cycle-5b will add the `dazzle worker` CLI that wires SIGINT /
+  SIGTERM to the stop event and instantiates this loop with the
+  app's running queue + JobRun service.
+
 ## [0.63.64] - 2026-05-03
 
 ### Added
