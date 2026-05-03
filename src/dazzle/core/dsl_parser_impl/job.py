@@ -41,6 +41,7 @@ class JobParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
+        _is_keyword_as_identifier: Any
 
     def parse_job(self) -> ir.JobSpec:
         """Parse a `job <name> "title": ...` block."""
@@ -194,6 +195,38 @@ class JobParserMixin:
         if self.match(TokenType.DOT):
             self.advance()
             field = self.expect_identifier_or_keyword().value
+        elif event == "field_changed":
+            # #987 fix: `on_field_changed` requires a field name.
+            # Pre-fix, `on_field_changed Ticket status` would parse
+            # cleanly with field=None, then silently never fire at
+            # runtime (cycle-6 should_fire returns False without a
+            # field name). Two common-mistake forms hit this branch:
+            #   1. `on_field_changed Ticket status` — space-separated
+            #      (intuitive but wrong)
+            #   2. `on_field_changed Ticket` — entirely missing
+            tok = self.current_token()
+            # If the next token is anything that *could* be a field
+            # name (identifier or keyword-as-identifier), point the
+            # author at the missing DOT. Otherwise give the generic
+            # "missing field" message.
+            looks_like_field = self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier()
+            if looks_like_field:
+                raise make_parse_error(
+                    f"`on_field_changed` requires a field name with "
+                    f"DOT separator. Use `on_field_changed {entity}.{tok.value}`, "
+                    f"not `on_field_changed {entity} {tok.value}`.",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            raise make_parse_error(
+                f"`on_field_changed` requires a field name. "
+                f"Use `on_field_changed {entity}.<field>` "
+                "(e.g. `on_field_changed Ticket.status`).",
+                self.file,
+                tok.line,
+                tok.column,
+            )
 
         # Optional `when <condition...>` — slurp tokens up to newline.
         # Stored as raw text; cycle 3 wires the evaluator. `when` is a

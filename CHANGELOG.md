@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.75] - 2026-05-03
+
+### Fixed
+- **#987 — `on_field_changed Entity field` (space) silently
+  produced a non-firing trigger.** Pre-fix, the parser captured
+  `JobTrigger(entity='Ticket', event='field_changed',
+  field=None)` and at runtime cycle-6's `should_fire` returned
+  False — silent breakage with no warning, no log line. Now the
+  parser raises a targeted error pointing at the missing DOT
+  separator:
+
+  > `on_field_changed` requires a field name with DOT separator.
+  > Use `on_field_changed Ticket.status`, not
+  > `on_field_changed Ticket status`.
+
+  Same handler for the entirely-missing case
+  (`on_field_changed Ticket\n`) with a generic missing-field
+  message. Other event kinds (`on_create`, `on_update`,
+  `on_delete`) unchanged — they don't take a field name.
+
+  Discovered while dogfooding the v0.63.43 → v0.63.74 primitive
+  sweep against `examples/support_tickets`; see
+  `dev_docs/2026-05-03-primitive-dogfood-friction.md`.
+
+  Filed five sibling issues #988-#992 covering the other
+  frictions found during the same dogfood pass.
+
+### Agent Guidance
+- DSL grammars that drop a token silently into "field=None" are
+  a silent-breakage hazard — parser should require the field
+  when the event semantics depend on it. Pattern: when an event
+  keyword *requires* a follow-on token, raise on the missing
+  case rather than relying on the runtime to no-op.
+
 ## [0.63.74] - 2026-05-03
 
 ### Added
