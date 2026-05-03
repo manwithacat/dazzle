@@ -1,4 +1,4 @@
-"""`dazzle worker` CLI (#953 cycle 9).
+"""`dazzle worker` CLI (#953 cycle 9, service wiring #992).
 
 Starts the background-job worker + scheduler loops alongside (or
 instead of) `dazzle serve`. Picks the queue backing per
@@ -8,11 +8,11 @@ Wires SIGINT/SIGTERM to a shared `stop_event` so a Ctrl+C in dev
 or a `kill -TERM` from systemd shuts both loops down cleanly,
 draining in-flight jobs.
 
-Job-run service wiring is deferred to a follow-up cycle — when
-running standalone, status transitions are logged but not
-persisted to `JobRun` rows. Cycle-2's `JobRun` entity is still
-auto-injected by the linker; the eventual repository wiring will
-let the worker write through it.
+The worker opens its own DB pool (separate from `dazzle serve`'s)
+and builds CRUD services for `JobRun` + `AuditEntry`, so status
+transitions persist and the retention sweep actually deletes
+expired rows. Without `DATABASE_URL` set, falls back to log-only
+behaviour.
 """
 
 from __future__ import annotations
@@ -112,6 +112,12 @@ async def _run_worker(
         f"{'' if len(audits) == 1 else 's'} (daily 03:00 UTC)"
     )
 
+    services, db_manager = await _build_services(appspec)
+    if services:
+        typer.echo(f"Services: {', '.join(sorted(services.keys()))} (writes will persist)")
+    else:
+        typer.echo("Services: none (DATABASE_URL not set — writes are log-only)")
+
     stop_event = asyncio.Event()
     _install_signal_handlers(stop_event)
 
@@ -121,7 +127,7 @@ async def _run_worker(
             run_worker_loop(
                 queue=queue,
                 job_specs=job_specs,
-                job_service=None,
+                job_service=services.get("JobRun"),
                 stop_event=stop_event,
                 idle_timeout=idle_timeout,
             )
@@ -134,15 +140,9 @@ async def _run_worker(
                 tick_interval=tick_interval,
             )
         )
-        # #953 cycle 12 / #956 cycle 12 — retention loop alongside
-        # worker + scheduler. Standalone worker has no service
-        # dict yet (services live in the running FastAPI server),
-        # so the retention loop runs but no-ops on missing
-        # JobRun / AuditEntry until a follow-up cycle wires
-        # services into the worker process.
         retention_task = asyncio.create_task(
             run_retention_loop(
-                services={},
+                services=services,
                 audits=audits,
                 stop_event=stop_event,
             )
@@ -158,6 +158,11 @@ async def _run_worker(
                 await queue.close()
             except Exception:
                 logger.warning("queue.close() failed", exc_info=True)
+        if db_manager is not None:
+            try:
+                db_manager.close_pool()
+            except Exception:
+                logger.warning("db_manager.close_pool() failed", exc_info=True)
 
     typer.echo("")
     typer.echo("Worker stats:")
@@ -169,6 +174,28 @@ async def _run_worker(
     typer.echo("Retention stats:")
     for k, v in sorted(retention_stats.items()):
         typer.echo(f"  {k}: {v}")
+
+
+async def _build_services(appspec: Any) -> tuple[dict[str, Any], Any | None]:
+    """Build the worker's CRUD services for `JobRun` + `AuditEntry` (#992).
+
+    Returns ``({}, None)`` when ``DATABASE_URL`` is unset — the
+    worker still runs, but loops degrade to log-only persistence.
+    The same fallback is used when service construction fails so a
+    transient DB hiccup at boot doesn't block the queue from
+    pumping (writes will retry next restart).
+    """
+    db_url = os.environ.get("DATABASE_URL", "").strip()
+    if not db_url:
+        return {}, None
+
+    try:
+        from dazzle_back.runtime.worker_services import build_worker_services
+
+        return build_worker_services(appspec, db_url)
+    except Exception as exc:
+        logger.warning("Service wiring failed (writes will be log-only): %s", exc)
+        return {}, None
 
 
 def _build_queue(redis_key: str) -> tuple[Any, str]:

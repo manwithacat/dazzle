@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.81] - 2026-05-03
+
+### Fixed
+- **#992 — standalone `dazzle worker` now persists JobRun + AuditEntry
+  writes.** Pre-fix the worker passed `services={}` to the worker +
+  retention loops, so JobRun status transitions logged but did not
+  persist, and the retention sweep no-op'd on missing services.
+
+  The worker now opens its own DB pool and builds CRUD services for
+  the platform entities the loops actually write through (`JobRun`
+  for the worker loop's status path, `JobRun` + `AuditEntry` for
+  retention's row-count + per-entity-type sweep). The pool defaults
+  are smaller than the FastAPI server's (min 1, max 4) since only
+  two loops touch it. Without `DATABASE_URL`, the worker still runs
+  but degrades to log-only behaviour with a clear startup banner.
+
+  New helper: `dazzle_back.runtime.worker_services.build_worker_services`.
+  Pairs with #991 (CRUD HTTP routes on `AuditEntry` / `JobRun`) —
+  with both shipped, audit history is now writable from the worker
+  process and externally inspectable via the FastAPI server.
+
+  Discovered while dogfooding the new primitives;
+  see `dev_docs/2026-05-03-primitive-dogfood-friction.md` (item #6).
+
 ## [0.63.80] - 2026-05-03
 
 ### Added
