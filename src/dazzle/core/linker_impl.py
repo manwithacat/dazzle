@@ -901,6 +901,28 @@ def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> li
                 if owner and owner != module.name:
                     used_modules.add(owner)
 
+        # #988 fix: audit blocks reference entities from other
+        # modules. Without this walk, splitting `audit on Ticket:`
+        # into a separate runtime.dsl that `use`s the core module
+        # produces a false-positive "imports but never uses"
+        # warning even though the audit block IS using `Ticket`.
+        for audit_spec in module.fragment.audits:
+            entity_name = getattr(audit_spec, "entity", "")
+            if entity_name:
+                owner = symbols.symbol_sources.get(entity_name)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+
+        # #988 fix: job triggers reference entities — same
+        # rationale as audit blocks above.
+        for job_spec in module.fragment.jobs:
+            for trigger in getattr(job_spec, "triggers", []) or []:
+                entity_name = getattr(trigger, "entity", "")
+                if entity_name:
+                    owner = symbols.symbol_sources.get(entity_name)
+                    if owner and owner != module.name:
+                        used_modules.add(owner)
+
         # Find unused imports
         unused = set(module.uses) - used_modules
         for unused_import in sorted(unused):

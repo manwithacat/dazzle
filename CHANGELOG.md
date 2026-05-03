@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.76] - 2026-05-03
+
+### Fixed
+- **#988 — `check_unused_imports` false-positive on audit/job
+  entity references.** Pre-fix, splitting framework-runtime
+  declarations into a separate DSL file:
+
+      module proj.runtime
+      use proj.core
+
+      audit on Ticket: ...
+      job x: trigger: on_create Ticket ...
+
+  …triggered a spurious "imports but never uses it" warning even
+  though `audit on Ticket` and `trigger: on_create Ticket` both
+  reference `Ticket` from the imported module.
+
+  The checker now walks `module.fragment.audits` (each
+  `AuditSpec.entity`) and `module.fragment.jobs` (each
+  `JobTrigger.entity`) so cross-module references count.
+
+  Genuinely-unused imports + scheduled-only jobs (no triggers)
+  still flag correctly — verified by tests.
+
+  Discovered while dogfooding the new primitives; see
+  `dev_docs/2026-05-03-primitive-dogfood-friction.md` (item #2).
+
 ## [0.63.75] - 2026-05-03
 
 ### Fixed
