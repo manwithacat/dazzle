@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.105] - 2026-05-04
+
+### Fixed
+- **Homebrew tap CI: pre-built `cryptography` wheel + tap-before-audit.**
+  Two issues blocking the homebrew-tap CI for the last few releases:
+
+  1. **`cryptography` dylib linkage** — the package's
+     `_rust.abi3.so` ships with minimal Mach-O headers that brew's
+     `fix_install_names` chokes on (`Failed changing dylib ID of
+     .../cryptography/hazmat/bindings/_rust.abi3.so`). Same class
+     as the existing `pydantic-core` and `jiter` workarounds. Added
+     a `resource "cryptography"` block referencing the cp311-abi3
+     universal2 wheel (one wheel covers both Intel + Apple Silicon
+     macs) plus the manylinux variants for Linux. Installed via
+     `pip install --no-deps` before the main `pip install` so brew
+     never sees the .so file.
+
+  2. **`brew audit dazzle` "No available formula"** — the audit
+     step ran before the install step that `brew tap`-ed the local
+     checkout. Fixed in the homebrew-tap repo (commit b67dd4b) by
+     moving the `brew tap` call into the audit step.
+
+  Mirrored the cryptography wheel addition into both
+  `homebrew/dazzle.rb` (used for local validation) and the heredoc
+  in `.github/workflows/release-cli.yml` (which generates the tap
+  formula on tag push) so the next release propagates correctly.
+
 ## [0.63.104] - 2026-05-03
 
 ### Added
