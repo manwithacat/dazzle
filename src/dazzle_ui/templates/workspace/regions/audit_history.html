@@ -1,0 +1,60 @@
+{# #956 cycle 8 — audit-history region template.
+
+  Renders a list of `HistoryChange` objects produced by
+  ``dazzle_back.runtime.audit_visibility.load_history``. The region
+  renderer (cycle 9) populates ``audit_history`` in the template
+  context — a list of HistoryChange dataclasses.
+
+  Empty list renders the empty-state message. RBAC denial /
+  no-audit-block reaches this template as an empty list (the loader
+  short-circuits there), so the template doesn't need its own gate.
+#}
+<section class="dz-region dz-audit-history" aria-label="Change history">
+  {% if audit_history %}
+    <ol class="dz-audit-history__list" role="list">
+      {% for change in audit_history %}
+        <li class="dz-audit-history__change">
+          <header class="dz-audit-history__change-head">
+            {% if change.by_user_id %}
+              <span class="dz-audit-history__by">{{ change.by_user_id }}</span>
+            {% else %}
+              <span class="dz-audit-history__by dz-audit-history__by--system">system</span>
+            {% endif %}
+            <span class="dz-audit-history__op dz-audit-history__op--{{ change.operation }}">
+              {{ change.operation }}
+            </span>
+            {% if change.at %}
+              <time class="dz-audit-history__at" datetime="{{ change.at }}">{{ change.at }}</time>
+            {% endif %}
+          </header>
+          <ul class="dz-audit-history__fields" role="list">
+            {% for f in change.fields %}
+              <li class="dz-audit-history__field">
+                <span class="dz-audit-history__field-name">{{ f.field_name }}</span>
+                {% if change.operation == "create" %}
+                  <span class="dz-audit-history__value dz-audit-history__value--after">
+                    {{ f.decoded_after if f.decoded_after is not none else "" }}
+                  </span>
+                {% elif change.operation == "delete" %}
+                  <span class="dz-audit-history__value dz-audit-history__value--before">
+                    {{ f.decoded_before if f.decoded_before is not none else "" }}
+                  </span>
+                {% else %}
+                  <span class="dz-audit-history__value dz-audit-history__value--before">
+                    {{ f.decoded_before if f.decoded_before is not none else "" }}
+                  </span>
+                  <span class="dz-audit-history__arrow" aria-hidden="true">→</span>
+                  <span class="dz-audit-history__value dz-audit-history__value--after">
+                    {{ f.decoded_after if f.decoded_after is not none else "" }}
+                  </span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="dz-audit-history__empty">No history yet.</p>
+  {% endif %}
+</section>

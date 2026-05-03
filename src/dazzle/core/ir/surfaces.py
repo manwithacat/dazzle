@@ -328,6 +328,12 @@ class SurfaceSpec(BaseModel):
     # mode. ``"pdf_viewer"`` routes the detail surface to the built-in PDF
     # viewer chrome (see #942 cycle 1b/2a/3). ``None`` = generic detail view.
     display: str | None = None
+    # #956 cycle 8: opt-in audit-history region on detail surfaces.
+    # When True and the surface's entity has a matching `audit on X:`
+    # block, the renderer adds a history panel showing the
+    # `AuditEntry` rows for the current row, RBAC-gated by the audit
+    # block's `show_to:` declaration. False (default) = no panel.
+    show_history: bool = False
 
     model_config = ConfigDict(frozen=True)
 

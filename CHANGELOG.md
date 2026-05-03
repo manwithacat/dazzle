@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.57] - 2026-05-03
+
+### Added
+- **#956 cycle 8 — `show_history:` DSL flag + `audit_history.html`
+  region template.** Three pieces complete the user-facing surface
+  for the audit primitive:
+
+  - `SurfaceSpec.show_history: bool` (default False) — opt-in flag
+    on detail surfaces.
+  - Parser support for `show_history: true|false` inside surface
+    blocks. Validates against bare `true` / `false` tokens; other
+    values raise a parse error.
+  - `src/dazzle_ui/templates/workspace/regions/audit_history.html`
+    — Jinja template that renders a `HistoryChange` list with
+    create / update / delete variants, the system-write fallback
+    label, and an empty-state message.
+
+  Cycle 9 will wire the region renderer to invoke cycle-7's
+  `load_history` for surfaces with `show_history: true` and inject
+  the resulting `HistoryChange` list into the template's context.
+  Until then the template + flag ship together; the renderer
+  integration is one commit away from end-to-end UI.
+
 ## [0.63.56] - 2026-05-03
 
 ### Added

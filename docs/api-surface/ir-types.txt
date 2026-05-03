@@ -2593,6 +2593,7 @@ ir_class: SurfaceSpec
     - related_groups: list[RelatedGroup] = []
     - search_fields: list[str] = []
     - sections: list[SurfaceSection] = []
+    - show_history: bool = False
     - source: SourceLocation | None = None
     - title: str | None = None
     - ux: UXSpec | None = None

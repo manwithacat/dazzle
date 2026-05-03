@@ -54,6 +54,7 @@ class SurfaceParserMixin:
         layout = "wizard"  # v0.61.88 (#918): default render mode for create/edit
         companions: list[ir.CompanionSpec] = []  # v0.61.102 (#923): Part D
         display: str | None = None  # v0.61.126 (#942): VIEW-mode display override
+        show_history = False  # #956 cycle 8: opt-in audit-history region
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -168,6 +169,26 @@ class SurfaceParserMixin:
                 display = display_token.value
                 self.skip_newlines()
 
+            # #956 cycle 8: show_history: true — opt-in audit-history
+            # region on detail surfaces. Cycle-9 region renderer uses
+            # the cycle-7 load_history loader; cycle-1 `audit on X:`
+            # block on the surface's entity must exist for the panel
+            # to actually render.
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "show_history":
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    show_history = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    show_history = False
+                else:
+                    self.error(
+                        f"show_history must be 'true' or 'false', got {self.current_token().value!r}"
+                    )
+                self.skip_newlines()
+
             else:
                 break
 
@@ -207,6 +228,7 @@ class SurfaceParserMixin:
             layout=layout,  # v0.61.88 (#918)
             companions=companions,  # v0.61.102 (#923)
             display=display,  # v0.61.126 (#942)
+            show_history=show_history,  # #956 cycle 8
         )
 
     def _parse_related_group(self) -> ir.RelatedGroup:
