@@ -23,6 +23,7 @@
  *  - x-flip               — FLIP-style animations for list reorders (#960)
  *  - x-pull-to-refresh    — touch pull-down → refresh CustomEvent (#958)
  *  - x-swipe              — horizontal swipe → swipe-left/right CustomEvent (#958)
+ *  - x-optimistic         — apply DOM change before htmx settle, rollback on error (#959)
  */
 
 // ── Haptic feedback (#958 cycle 5) ──────────────────────────────────
@@ -366,6 +367,146 @@ document.addEventListener("alpine:init", () => {
         );
 
         el._dzSwipe = { onStart, onEnd };
+      });
+
+      // ── x-optimistic directive (#959 cycle 1) ──────────────────────
+      //
+      // Apply a visual change before the htmx response settles, then
+      // either keep it (success) or roll back (4xx/5xx). Closes the
+      // gap between "click delete" and "row disappears" — no waiting
+      // for the round-trip.
+      //
+      // Shapes (cycle 1):
+      //   x-optimistic="remove"                — drop the element itself
+      //   x-optimistic="remove:closest tr"     — drop a different element
+      //
+      // Cycles 2+ (deferred):
+      //   - prepend / append / replace shapes
+      //   - reconciliation with server response (merge attributes)
+      //   - undo stack integration
+      //
+      // Wire alongside an htmx mutation:
+      //
+      //   <button hx-delete="/api/tasks/{id}"
+      //           hx-target="closest tr"
+      //           hx-swap="outerHTML"
+      //           x-optimistic="remove:closest tr">Delete</button>
+      //
+      // Rollback path: on htmx:responseError or htmx:sendError, the
+      // removed node is re-inserted at its original position and a
+      // toast surfaces the failure. Adopters can listen for
+      // `dz:optimistic-rollback` if they want custom recovery UI.
+      Alpine.directive("optimistic", (el, { expression }) => {
+        const action = (expression || "remove").trim();
+        // Parse "remove:<selector>" — selector defaults to the
+        // element itself for the bare "remove" form.
+        const colonIdx = action.indexOf(":");
+        const verb =
+          colonIdx === -1 ? action : action.slice(0, colonIdx).trim();
+        const selectorRaw =
+          colonIdx === -1 ? "" : action.slice(colonIdx + 1).trim();
+
+        if (verb !== "remove") {
+          // Cycles 2+ will land prepend / append / replace. Until
+          // then, log a warning so adopters using the future shapes
+          // get visible feedback rather than silent no-ops.
+          // eslint-disable-next-line no-console
+          console.warn(
+            "x-optimistic: shape '" +
+              verb +
+              "' is reserved for a future cycle; only 'remove' is implemented today.",
+          );
+          return;
+        }
+
+        const resolveTarget = () => {
+          if (!selectorRaw) return el;
+          // Mirror htmx's `closest <selector>` semantics for parity
+          // — the most common pattern in DSL-rendered list rows.
+          if (selectorRaw.startsWith("closest ")) {
+            return el.closest(selectorRaw.slice("closest ".length).trim());
+          }
+          return document.querySelector(selectorRaw);
+        };
+
+        let snapshot = null;
+
+        const onBeforeRequest = (ev) => {
+          // Only react to htmx events fired by THIS element. Bubbled
+          // events from children would otherwise rip the row out
+          // mid-handler.
+          if (ev.target !== el) return;
+          const target = resolveTarget();
+          if (!target || !target.parentNode) return;
+          // Snapshot enough state to reverse: the node, its parent,
+          // and the sibling it was inserted before (or null = end).
+          snapshot = {
+            node: target,
+            parent: target.parentNode,
+            nextSibling: target.nextSibling,
+          };
+          target.parentNode.removeChild(target);
+        };
+
+        const restore = (reason) => {
+          if (!snapshot) return;
+          const { node, parent, nextSibling } = snapshot;
+          // Re-insert at original position. nextSibling may have
+          // been removed by another mutation — fall back to
+          // appendChild so the row at least re-appears somewhere.
+          try {
+            if (nextSibling && nextSibling.parentNode === parent) {
+              parent.insertBefore(node, nextSibling);
+            } else {
+              parent.appendChild(node);
+            }
+          } catch {
+            // Defensive — if the parent is gone we can't restore.
+          }
+          // Surface the rollback so adopters can hook custom recovery UI.
+          el.dispatchEvent(
+            new CustomEvent("dz:optimistic-rollback", {
+              bubbles: true,
+              detail: { reason: reason || "error" },
+            }),
+          );
+          // And nudge the user that something went wrong.
+          document.body.dispatchEvent(
+            new CustomEvent("showToast", {
+              detail: {
+                message: "Action could not be completed; restored",
+                type: "error",
+              },
+            }),
+          );
+          snapshot = null;
+        };
+
+        const onAfterRequest = (ev) => {
+          if (ev.target !== el) return;
+          const xhr = ev.detail && ev.detail.xhr;
+          const ok =
+            ev.detail && ev.detail.successful !== undefined
+              ? ev.detail.successful
+              : xhr && xhr.status < 400;
+          if (ok) {
+            // Keep the optimistic state. Drop the snapshot — no rollback path.
+            snapshot = null;
+            return;
+          }
+          restore("response-error");
+        };
+
+        const onSendError = (ev) => {
+          if (ev.target !== el) return;
+          restore("send-error");
+        };
+
+        el.addEventListener("htmx:beforeRequest", onBeforeRequest);
+        el.addEventListener("htmx:afterRequest", onAfterRequest);
+        el.addEventListener("htmx:sendError", onSendError);
+
+        el._dzOptimistic = { onBeforeRequest, onAfterRequest, onSendError };
       });
     }
   }

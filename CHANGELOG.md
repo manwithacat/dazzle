@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.106] - 2026-05-04
+
+### Added
+- **#959 cycle 1 — `x-optimistic` Alpine directive (`remove` shape).**
+  Apply a DOM change before the htmx response settles, then keep
+  it on success or roll back on 4xx/5xx + network errors. Closes
+  the perceived-latency gap on click-to-delete actions:
+
+  ```html
+  <button hx-delete="/api/tasks/{id}"
+          hx-target="closest tr"
+          hx-swap="outerHTML"
+          x-optimistic="remove:closest tr">Delete</button>
+  ```
+
+  Behaviour:
+  - **`remove`** (workhorse) — drops the element itself.
+  - **`remove:<selector>`** — drops a different element. Mirrors
+    htmx's `closest <selector>` semantics for parity with the most
+    common pattern (button inside the row it's deleting).
+  - On `htmx:beforeRequest`: snapshots `(node, parent, nextSibling)`,
+    then removes from the DOM.
+  - On `htmx:afterRequest` with `successful=true` (or xhr.status<400):
+    keep the change, drop the snapshot.
+  - On `htmx:afterRequest` failure or `htmx:sendError`: re-insert at
+    the original position (`insertBefore` with `appendChild` fallback
+    if the anchor is gone), dispatch `dz:optimistic-rollback`
+    CustomEvent for adopter recovery hooks, and surface an error
+    toast.
+  - Filters bubbled events via `ev.target !== el` so a child's htmx
+    request doesn't accidentally rip the row.
+
+  Cycle 2+ deferred:
+  - `prepend` / `append` / `replace` shapes
+  - Reconciliation with server response (merge attributes when shape
+    changes)
+  - Undo stack integration (Cmd+Z)
+
+  When a future shape is invoked today, the directive logs a
+  console warning rather than silently no-oping so adopters get
+  visible feedback.
+
+  Tests: `tests/unit/test_optimistic_directive.py` (13 cases) pin
+  registration, the remove-only scope, future-shape warning,
+  selector parsing, htmx-event subscription set, target-filter,
+  snapshot shape, rollback DOM operations, custom event dispatch,
+  toast emission, response-error vs send-error branches, and
+  bundle inclusion.
+
+  #959 progress: 1 of 4 cycles shipped. Remaining: cycle 2
+  (prepend/append/replace), cycle 3 (undo stack), cycle 4
+  (server-response reconciliation).
+
 ## [0.63.105] - 2026-05-04
 
 ### Fixed
