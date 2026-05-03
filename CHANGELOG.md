@@ -9,6 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.91] - 2026-05-03
+
+### Added
+- **#955 cycle 4 — Babel-backed locale-aware formatting.** New
+  helpers in `dazzle.i18n.babel_format` for date / datetime / time /
+  number / decimal / currency rendering that follows the user's
+  locale (resolved by the cycle-1 `LocaleMiddleware`):
+
+  ```jinja
+  {{ created_at | format_date }}              {# uses request locale #}
+  {{ created_at | format_date("full") }}
+  {{ amount | format_currency("USD") }}
+  {{ count | format_number }}
+  ```
+
+  Same value, different locales: `1234567` renders as `1,234,567`
+  in `en_US` and `1.234.567` in `de_DE`. `1234.5 USD` is `$1,234.50`
+  in `en_US` and `1.234,50 $` in `de_DE`.
+
+  All six filters registered on the framework Jinja env so templates
+  can use them without project-side wiring. BCP-47 tags from the
+  middleware (`en-US`) are normalised to Babel's underscore form
+  (`en_US`) automatically.
+
+  Without Babel installed, helpers degrade gracefully to ISO/ASCII
+  output (no crash, no locale formatting). Install via
+  `pip install dazzle-dsl[i18n]` to opt in.
+
+  Tests: `tests/unit/test_i18n_babel_format.py` (24 cases) cover
+  per-locale formatting, request-locale fallback, BCP-47
+  normalisation, ISO-string coercion, the missing-Babel fallback
+  paths, and Jinja filter registration.
+
+  #955 progress: cycles 1–4 of 6 shipped. Remaining: cycle 5
+  (.po/.mo workflow), cycle 6 (locale-switcher UI primitive).
+
+### Agent Guidance
+- Templates that display dates / numbers / currency should now
+  prefer the new locale-aware filters (`format_date`,
+  `format_number`, `format_currency`) over the existing
+  `dateformat` / `metric_number` / `currency` filters when locale
+  matters. The legacy filters stay locale-independent for cases
+  where consistent ASCII output is required (e.g. CSV export,
+  log lines).
+
 ## [0.63.90] - 2026-05-03
 
 ### Fixed

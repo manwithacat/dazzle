@@ -182,3 +182,26 @@ __all__ = [
     "register_translations",
     "translate",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy re-export of Babel format helpers (#955 cycle 4).
+
+    Imported on first access so ``from dazzle.i18n import format_date``
+    works without forcing the babel import at module load time. Babel
+    itself is optional (``[i18n]`` extra) but the helpers degrade
+    gracefully without it — see ``babel_format.py``.
+    """
+    babel_helpers = {
+        "format_date",
+        "format_datetime",
+        "format_time",
+        "format_number",
+        "format_decimal",
+        "format_currency",
+    }
+    if name in babel_helpers:
+        from dazzle.i18n import babel_format
+
+        return getattr(babel_format, name)
+    raise AttributeError(f"module 'dazzle.i18n' has no attribute {name!r}")

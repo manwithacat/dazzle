@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.63.90"
+version = "0.63.91"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -179,6 +179,13 @@ aws = [
 # `[notifications] provider = "sendgrid"` block is in dazzle.toml.
 sendgrid = [
     "sendgrid>=6.11",
+]
+# Internationalisation (#955 cycle 4+) — Babel for locale-aware
+# date/number/currency formatting. Optional; without it the
+# `format_date` / `format_number` / `format_currency` Jinja filters
+# fall back to locale-independent output.
+i18n = [
+    "babel>=2.13",
 ]
 # moto-based S3 mocks for storage primitive integration tests (#932 cycle 2).
 # Pulled into the dev install via `pip install -e ".[dev,aws-test]"`. The
