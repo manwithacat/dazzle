@@ -18,6 +18,9 @@
  *  - dzCommandPalette — spotlight-style command palette (Cmd+K)
  *  - dzSlideOver      — side sheet overlay with width control
  *  - dzToggleGroup    — exclusive or multi-select button group
+ *
+ * Directives:
+ *  - x-flip           — FLIP-style animations for list reorders (#960)
  */
 
 document.addEventListener("alpine:init", () => {
@@ -47,6 +50,77 @@ document.addEventListener("alpine:init", () => {
       setTimeout(() => {
         throw err;
       }, 0);
+    });
+  }
+
+  // ── x-flip directive (#960 layer 3) ─────────────────────────────────
+  //
+  // FLIP-style animation for list reorders (insert/remove/move). Apply
+  // `x-flip` to a container; each direct child needs a stable
+  // `data-flip-key` attribute (the user's row id, etc.) so the
+  // directive can match before/after positions across re-renders.
+  //
+  // Algorithm: snapshot child rects → MutationObserver fires → snapshot
+  // again → for each surviving child compute (before - after) delta,
+  // apply inverse translate, then transition back to identity. Browser
+  // does the heavy lifting via CSS transition on `transform`.
+  //
+  // Honours `prefers-reduced-motion: reduce` — observer is still wired
+  // (so the snapshot stays current) but transitions are skipped.
+  if (typeof Alpine.directive === "function") {
+    Alpine.directive("flip", (el) => {
+      const reduce =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // Map<flipKey, DOMRect>
+      const lastRects = new Map();
+      const snapshot = () => {
+        const next = new Map();
+        for (const child of el.children) {
+          const key = child.dataset && child.dataset.flipKey;
+          if (!key) continue;
+          next.set(key, child.getBoundingClientRect());
+        }
+        return next;
+      };
+      // Initial snapshot — captures whatever's already rendered so the
+      // first mutation has a "before" to compare against.
+      for (const [k, r] of snapshot()) lastRects.set(k, r);
+
+      const onMutation = () => {
+        const newRects = snapshot();
+        if (!reduce) {
+          for (const child of el.children) {
+            const key = child.dataset && child.dataset.flipKey;
+            if (!key) continue;
+            const before = lastRects.get(key);
+            const after = newRects.get(key);
+            if (!before || !after) continue;
+            const dx = before.left - after.left;
+            const dy = before.top - after.top;
+            if (dx === 0 && dy === 0) continue;
+            // Apply inverse instantly (no transition), then in next
+            // frame clear and let the transition animate to identity.
+            child.style.transition = "none";
+            child.style.transform = `translate(${dx}px, ${dy}px)`;
+            requestAnimationFrame(() => {
+              child.style.transition =
+                "transform var(--duration-base) var(--ease-spring-2)";
+              child.style.transform = "";
+            });
+          }
+        }
+        // Refresh the cache regardless so the next mutation diffs
+        // against the current state.
+        lastRects.clear();
+        for (const [k, r] of newRects) lastRects.set(k, r);
+      };
+
+      const observer = new MutationObserver(onMutation);
+      observer.observe(el, { childList: true, subtree: false });
+
+      // Cleanup hook for Alpine teardown (component removed from DOM).
+      el._dzFlipObserver = observer;
     });
   }
 

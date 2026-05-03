@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.86] - 2026-05-03
+
+### Added
+- **#960 layer 3 — `x-flip` Alpine directive for FLIP-style list
+  reorder animations.** Apply `x-flip` to a container; each direct
+  child needs a stable `data-flip-key` attribute. The directive
+  snapshots child positions, observes child-list mutations via
+  MutationObserver, then applies the inverse transform → identity
+  transition pattern so reorders animate smoothly instead of
+  popping. Uses `--ease-spring-2` + `--duration-base` from the
+  layer-1 token expansion.
+
+  Reduced-motion guard: with `prefers-reduced-motion: reduce` the
+  observer still keeps the snapshot current but the transform
+  application is skipped, so users get correct DOM state without
+  animation.
+
+  With this in, all three layers of #960 are shipped:
+  - Layer 1 (Open Props tokens) — v0.63.85
+  - Layer 2 (View Transitions API) — v0.63.32 / #974
+  - Layer 3 (FLIP directive) — this release
+
+  Tests: `tests/unit/test_flip_directive.py` (7 cases) pin the
+  registration path, observer wiring, dataset key access,
+  reduced-motion guard, and token references.
+
+  Closes #960.
+
 ## [0.63.85] - 2026-05-03
 
 ### Added
