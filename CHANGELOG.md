@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.60] - 2026-05-03
+
+### Added
+- **#956 cycle 10 — `show_history` propagates to `DetailContext`.**
+  The runtime template context for view-mode surfaces now carries
+  the `show_history: bool` flag from the IR's `SurfaceSpec`. Pure
+  compile-time wiring — `_compile_view_surface` reads
+  `surface.show_history` and threads it into `DetailContext`. No
+  runtime fetch / RBAC behaviour change in this cycle; cycle 11
+  uses the flag in `components/detail_view.html` to include the
+  HTMX-loaded audit-history fragment via cycle-9's
+  `render_audit_history_region`.
+
+  `SurfaceSpec.show_history` now has a reader (template_compiler) —
+  removed from the orphan baseline.
+
 ## [0.63.59] - 2026-05-03
 
 ### Fixed

@@ -1221,6 +1221,7 @@ def _compile_view_surface(
             status_field=status_field,
             related_groups=related_groups_ctx,
             external_link_actions=external_links,
+            show_history=surface.show_history,  # #956 cycle 10
         ),
         pdf_viewer=pdf_viewer_ctx,
     )

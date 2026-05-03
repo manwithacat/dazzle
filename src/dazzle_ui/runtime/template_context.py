@@ -309,6 +309,11 @@ class DetailContext(BaseModel):
     related_groups: list[RelatedGroupContext] = Field(default_factory=list)
     integration_actions: list[IntegrationActionContext] = Field(default_factory=list)
     external_link_actions: list[ExternalLinkAction] = Field(default_factory=list)
+    # #956 cycle 10: opt-in audit-history region propagated from
+    # `SurfaceSpec.show_history`. Cycle 11 will use this flag in
+    # `components/detail_view.html` to include the HTMX-loaded audit
+    # history fragment from `render_audit_history_region` (cycle 9).
+    show_history: bool = False
 
 
 class ReviewActionContext(BaseModel):
