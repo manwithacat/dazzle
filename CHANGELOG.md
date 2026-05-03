@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.71] - 2026-05-03
+
+### Fixed
+- **CI green-up after #953 cycle 8 (v0.63.69).** The
+  `test_redis_job_queue.py` module patches
+  `redis.asyncio.from_url` at import time, which fails in CI's
+  base test env because `redis` is an optional `[redis]` extra.
+  Added `pytest.importorskip("redis.asyncio")` at the top of
+  the module so the suite skips cleanly when the dep isn't
+  installed. Local dev / `[dev]` / `[redis]` envs still run all
+  21 tests.
+
+### Agent Guidance
+- Tests that depend on optional extras (`redis`, `lsp`, etc.)
+  must `pytest.importorskip(...)` at the top of the module —
+  not just guard the import. CI runs the base env without
+  optionals; importing such modules at test-collection time
+  raises `ModuleNotFoundError` before the skip can fire.
+
 ## [0.63.70] - 2026-05-03
 
 ### Added

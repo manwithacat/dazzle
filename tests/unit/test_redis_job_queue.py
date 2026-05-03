@@ -19,7 +19,14 @@ from unittest.mock import patch
 
 import pytest
 
-from dazzle_back.runtime.redis_job_queue import (
+# Redis is an optional extra (`pip install dazzle-dsl[redis]`). The
+# whole test module relies on patching `redis.asyncio.from_url`, so
+# skip cleanly when the dep isn't installed — CI's base env doesn't
+# include it. Tests still run via the `[dev]` / `[redis]` extras
+# locally.
+pytest.importorskip("redis.asyncio")
+
+from dazzle_back.runtime.redis_job_queue import (  # noqa: E402
     RedisJobQueue,
     RedisJobQueueError,
 )
