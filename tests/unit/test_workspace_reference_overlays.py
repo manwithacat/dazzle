@@ -170,6 +170,30 @@ class TestReferenceBandsParser:
         with pytest.raises(Exception, match="Unknown key 'style'"):
             _parse(src)
 
+    def test_non_numeric_to_raises_parse_error(self) -> None:
+        """Fuzz regression — `to: <not-a-number>` must raise a
+        ParseError with an actionable message, not a raw ValueError
+        from the float() coercion. The fuzz harness asserts the
+        parser's "never crashes" invariant."""
+        src = (
+            _BASE_DSL
+            + """    reference_bands:
+      - label: "X", from: 0, to: notanumber, color: target
+"""
+        )
+        with pytest.raises(Exception, match="reference_bands.to must be a number"):
+            _parse(src)
+
+    def test_non_numeric_from_raises_parse_error(self) -> None:
+        src = (
+            _BASE_DSL
+            + """    reference_bands:
+      - label: "X", from: notanumber, to: 10, color: target
+"""
+        )
+        with pytest.raises(Exception, match="reference_bands.from must be a number"):
+            _parse(src)
+
 
 class TestOverlaysCoexist:
     def test_lines_and_bands_on_same_region(self) -> None:

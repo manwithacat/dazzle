@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.90] - 2026-05-03
+
+### Fixed
+- **Parser fuzz: `reference_lines` / `reference_bands` numeric coercion
+  now raises `ParseError` not `ValueError`.** When a fuzz mutation (or
+  a typo) put a non-numeric value in `from:` / `to:` / `value:` of a
+  `reference_lines`/`reference_bands` entry, the parser called
+  `float(entry["..."])` directly and crashed with a raw `ValueError`,
+  violating the parser's "never raises non-ParseErrors" invariant.
+
+  New `_coerce_reference_float` helper wraps the cast and re-raises as
+  a `ParseError` with a useful "<context>.<key> must be a number" message
+  so authors get a clear hint instead of a stack trace into a private
+  helper. Closes the
+  `test_parser_fuzz.py::test_delete_token_mutation` regression.
+
 ## [0.63.89] - 2026-05-03
 
 ### Added

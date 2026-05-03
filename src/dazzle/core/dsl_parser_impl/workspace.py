@@ -275,7 +275,7 @@ class WorkspaceParserMixin:
             lines.append(
                 ir.ReferenceLine(
                     label=str(entry["label"]),
-                    value=float(entry["value"]),
+                    value=self._coerce_reference_float(entry, "value", "reference_lines"),
                     style=str(style),
                 )
             )
@@ -331,14 +331,43 @@ class WorkspaceParserMixin:
                 ir.ReferenceBand.model_validate(
                     {
                         "label": str(entry["label"]),
-                        "from": float(entry["from"]),
-                        "to": float(entry["to"]),
+                        "from": self._coerce_reference_float(entry, "from", "reference_bands"),
+                        "to": self._coerce_reference_float(entry, "to", "reference_bands"),
                         "color": color,
                     }
                 )
             )
             self.skip_newlines()
         return bands
+
+    def _coerce_reference_float(
+        self: _Self,
+        entry: dict[str, Any],
+        key: str,
+        context: str,
+    ) -> float:
+        """Coerce an entry value to ``float`` with a parser-friendly error.
+
+        ``_parse_reference_entry`` returns ``str | int | float`` — the
+        plain ``float()`` cast crashes with ``ValueError`` when the
+        parser is fed garbage (e.g. fuzz mutation puts the literal
+        string ``"color"`` where a number is expected). This wrapper
+        re-raises as a :class:`ParseError` so the fuzz invariant
+        ("parser must never raise non-ParseErrors") holds and authors
+        get a useful "<key>: must be a number" message instead of a
+        traceback into a private helper.
+        """
+        raw = entry.get(key)
+        try:
+            return float(raw)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            tok = self.current_token()
+            raise make_parse_error(
+                f"{context}.{key} must be a number; got {raw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            ) from None
 
     def _parse_reference_entry(self, allowed_keys: set[str]) -> dict[str, str | int | float]:
         """Parse one comma-separated `key: value` line for reference_lines/bands.
