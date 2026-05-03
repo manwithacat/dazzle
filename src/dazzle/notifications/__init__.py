@@ -28,9 +28,13 @@ What's deferred (#952 cycle 3+):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re as _re
+from collections import deque
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
@@ -269,13 +273,80 @@ def _render(template: str, payload: dict[str, Any]) -> str:
         return template
 
 
+class DeliveryOutcome(StrEnum):
+    """Terminal outcome for a single notification delivery attempt (#952 cycle 5).
+
+    Tracked on every send via :class:`DeliveryRecord` so a future audit
+    consumer (or just an ops dashboard reading the dispatcher's
+    in-memory deque) can see what happened to each message.
+    """
+
+    SENT = "sent"
+    """Provider returned True; delivery accepted."""
+
+    FAILED_TRANSIENT = "failed_transient"
+    """Provider returned False on every attempt — exceeded retry budget.
+    Goes to dead-letter."""
+
+    FAILED_PERMANENT = "failed_permanent"
+    """Provider raised — permanent failure, no retries attempted past
+    the one that raised."""
+
+
+@dataclass(frozen=True)
+class DeliveryRecord:
+    """One row of the notification delivery audit log (#952 cycle 5).
+
+    Recorded by :meth:`NotificationDispatcher.dispatch_async` per
+    ``(notification, channel)`` pair. Consumers (a CLI viewer, a
+    Sentinel rule, an audit-log writer) can read the dispatcher's
+    ``deliveries`` deque to surface failures.
+    """
+
+    timestamp: datetime
+    notification_name: str
+    channel: str
+    recipient: str
+    attempts: int
+    outcome: DeliveryOutcome
+    error_message: str = ""
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    """How aggressively to retry transient provider failures (#952 cycle 5).
+
+    Defaults are tuned for transactional email — three attempts over
+    ~7s gives time for a flaky SMTP relay to recover without holding
+    the request handler open for minutes. Adopters needing different
+    semantics (Slack rate limits, etc.) construct their own policy.
+    """
+
+    max_attempts: int = 3
+    base_delay_seconds: float = 1.0
+    max_delay_seconds: float = 8.0
+
+    def delay_for_attempt(self, attempt: int) -> float:
+        """Return the delay before retry *attempt* (1-indexed).
+
+        Exponential: base * 2^(attempt-1), capped at max_delay. Attempt
+        1 is the first retry — so the very first send happens with no
+        delay, then we wait base, then base*2, then base*4 …
+        """
+        if attempt < 1:
+            return 0.0
+        return min(self.base_delay_seconds * (2 ** (attempt - 1)), self.max_delay_seconds)
+
+
 @dataclass
 class NotificationDispatcher:
     """Renders + dispatches notifications via a configured provider.
 
     Cycle 2 surface — adopters call ``dispatch(spec, payload)`` directly.
-    Cycle 4 will wire the event/channel pipeline so entity-change events
-    auto-dispatch matching specs.
+    Cycle 4 wires entity-change events to auto-dispatch via
+    ``dazzle_back.runtime.notification_wiring``.
+    Cycle 5 (this version) adds :meth:`dispatch_async` with retry +
+    delivery audit log via the ``deliveries`` deque.
 
     Attributes:
         provider: The :class:`NotificationProvider` that delivers
@@ -286,11 +357,17 @@ class NotificationDispatcher:
             looked up when a spec sets ``template:``. Cycle 3 replaces
             this with a Jinja loader rooted at the project's
             ``templates/`` directory.
+        retry_policy: Backoff schedule for transient failures.
+        deliveries: Rolling audit log of delivery attempts (newest
+            last). Capped at 512 entries — older entries fall off so
+            the dispatcher's memory footprint stays bounded.
     """
 
     provider: NotificationProvider = field(default_factory=LogProvider)
     from_address: str = ""
     templates: dict[str, str] = field(default_factory=dict)
+    retry_policy: RetryPolicy = field(default_factory=RetryPolicy)
+    deliveries: deque[DeliveryRecord] = field(default_factory=lambda: deque(maxlen=512))
 
     def dispatch(
         self,
@@ -309,6 +386,113 @@ class NotificationDispatcher:
         useful for tests + cycle-3 trigger wiring that has the resolved
         target before this call.
         """
+        out: list[RenderedNotification] = []
+        for rendered in self._render_per_channel(spec, payload, recipient=recipient):
+            try:
+                ok = self.provider.send(rendered)
+            except Exception as exc:
+                # Permanent failure — record + log; don't re-raise so a
+                # single channel failure doesn't abort the others.
+                logger.exception(
+                    "Notification %r send failed on channel %s",
+                    rendered.notification_name,
+                    rendered.channel,
+                )
+                self._record_delivery(
+                    rendered,
+                    attempts=1,
+                    outcome=DeliveryOutcome.FAILED_PERMANENT,
+                    error_message=str(exc),
+                )
+            else:
+                self._record_delivery(
+                    rendered,
+                    attempts=1,
+                    outcome=DeliveryOutcome.SENT if ok else DeliveryOutcome.FAILED_TRANSIENT,
+                )
+            out.append(rendered)
+        return out
+
+    async def dispatch_async(
+        self,
+        spec: Any,
+        payload: dict[str, Any],
+        *,
+        recipient: str | None = None,
+    ) -> list[RenderedNotification]:
+        """Async variant of :meth:`dispatch` with retry on transient
+        failures (#952 cycle 5).
+
+        Per-channel: tries ``provider.send`` up to ``retry_policy.max_attempts``
+        times. Between attempts, ``asyncio.sleep`` waits per
+        ``retry_policy.delay_for_attempt(n)``. A successful send (True)
+        short-circuits the retry loop and records :class:`DeliveryOutcome.SENT`.
+        Exhausting attempts records :class:`DeliveryOutcome.FAILED_TRANSIENT`
+        (dead letter — a future cycle will route this to a real DLQ).
+        Provider exceptions short-circuit too and record
+        :class:`DeliveryOutcome.FAILED_PERMANENT`.
+
+        Used by ``dazzle_back.runtime.notification_wiring`` so the
+        request handler isn't blocked waiting for retries — the async
+        wiring callback awaits this on the event loop.
+        """
+        out: list[RenderedNotification] = []
+        for rendered in self._render_per_channel(spec, payload, recipient=recipient):
+            attempts = 0
+            outcome: DeliveryOutcome | None = None
+            error_message = ""
+            for attempt in range(1, self.retry_policy.max_attempts + 1):
+                attempts = attempt
+                if attempt > 1:
+                    await asyncio.sleep(self.retry_policy.delay_for_attempt(attempt - 1))
+                try:
+                    ok = self.provider.send(rendered)
+                except Exception as exc:
+                    logger.exception(
+                        "Notification %r send raised on channel %s (attempt %d)",
+                        rendered.notification_name,
+                        rendered.channel,
+                        attempt,
+                    )
+                    outcome = DeliveryOutcome.FAILED_PERMANENT
+                    error_message = str(exc)
+                    break
+                if ok:
+                    outcome = DeliveryOutcome.SENT
+                    break
+                # Transient — loop back unless we're out of attempts.
+                logger.info(
+                    "Notification %r transient failure on channel %s (attempt %d/%d)",
+                    rendered.notification_name,
+                    rendered.channel,
+                    attempt,
+                    self.retry_policy.max_attempts,
+                )
+            else:
+                # for-else: all attempts exhausted with transient failures.
+                outcome = DeliveryOutcome.FAILED_TRANSIENT
+            assert outcome is not None
+            self._record_delivery(
+                rendered,
+                attempts=attempts,
+                outcome=outcome,
+                error_message=error_message,
+            )
+            out.append(rendered)
+        return out
+
+    def _render_per_channel(
+        self,
+        spec: Any,
+        payload: dict[str, Any],
+        *,
+        recipient: str | None,
+    ) -> list[RenderedNotification]:
+        """Render one :class:`RenderedNotification` per channel.
+
+        Shared between sync :meth:`dispatch` and async
+        :meth:`dispatch_async` so the render path stays in one place.
+        """
         body_template = self._resolve_body_template(spec)
         rendered_subject = _render(getattr(spec, "subject", ""), payload)
         rendered_body = _render(body_template, payload)
@@ -316,26 +500,37 @@ class NotificationDispatcher:
         out: list[RenderedNotification] = []
         for channel in getattr(spec, "channels", []) or []:
             channel_value = getattr(channel, "value", str(channel))
-            rendered = RenderedNotification(
-                notification_name=getattr(spec, "name", "<unknown>"),
-                recipient=target,
-                channel=channel_value,
-                subject=rendered_subject,
-                body=rendered_body,
-            )
-            try:
-                self.provider.send(rendered)
-            except Exception:
-                # Permanent failure — log so the audit pipeline (cycle 5)
-                # can pick it up. Don't re-raise so a single channel
-                # failure doesn't abort the others.
-                logger.exception(
-                    "Notification %r send failed on channel %s",
-                    rendered.notification_name,
-                    channel_value,
+            out.append(
+                RenderedNotification(
+                    notification_name=getattr(spec, "name", "<unknown>"),
+                    recipient=target,
+                    channel=channel_value,
+                    subject=rendered_subject,
+                    body=rendered_body,
                 )
-            out.append(rendered)
+            )
         return out
+
+    def _record_delivery(
+        self,
+        rendered: RenderedNotification,
+        *,
+        attempts: int,
+        outcome: DeliveryOutcome,
+        error_message: str = "",
+    ) -> None:
+        """Append a :class:`DeliveryRecord` to the audit deque."""
+        self.deliveries.append(
+            DeliveryRecord(
+                timestamp=datetime.now(UTC),
+                notification_name=rendered.notification_name,
+                channel=rendered.channel,
+                recipient=rendered.recipient,
+                attempts=attempts,
+                outcome=outcome,
+                error_message=error_message,
+            )
+        )
 
     def _resolve_body_template(self, spec: Any) -> str:
         """Pick the body template per the cycle-1 contract: ``template:``
@@ -434,10 +629,13 @@ def build_dispatcher_from_manifest(
 
 
 __all__ = [
+    "DeliveryOutcome",
+    "DeliveryRecord",
     "LogProvider",
     "NotificationDispatcher",
     "NotificationProvider",
     "RenderedNotification",
+    "RetryPolicy",
     "SmtpProvider",
     "build_dispatcher_from_manifest",
 ]

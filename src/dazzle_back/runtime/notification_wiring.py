@@ -114,7 +114,14 @@ def build_trigger_callbacks(
 
     async def _safe_dispatch(payload: dict[str, Any]) -> None:
         try:
-            dispatcher.dispatch(spec, payload)
+            # #952 cycle 5 — async path applies the retry policy +
+            # records each attempt in the dispatcher's delivery deque.
+            # Falls back to the sync `dispatch` for stub dispatchers
+            # (e.g. tests) that don't implement `dispatch_async`.
+            if hasattr(dispatcher, "dispatch_async"):
+                await dispatcher.dispatch_async(spec, payload)
+            else:
+                dispatcher.dispatch(spec, payload)
         except Exception:
             logger.warning(
                 "Notification dispatch failed for %s — continuing",

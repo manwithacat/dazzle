@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.88] - 2026-05-03
+
+### Added
+- **#952 cycle 5 — dispatch retry + delivery audit log.** New
+  `NotificationDispatcher.dispatch_async()` runs the same render
+  pipeline as the sync `dispatch()` but adds:
+
+  - `RetryPolicy` (default: 3 attempts, exponential backoff 1s→2s→4s,
+    capped at 8s) — provider returning `False` triggers a retry
+    after `asyncio.sleep`. Provider raising stops retries (permanent
+    failure).
+  - `DeliveryRecord` per attempt: timestamp, channel, recipient,
+    attempt count, outcome (`SENT` / `FAILED_TRANSIENT` /
+    `FAILED_PERMANENT`), error message. Recorded on the
+    dispatcher's `deliveries` deque (capped at 512 — older entries
+    fall off so the dispatcher's memory stays bounded).
+  - `DeliveryOutcome` enum surfaces the three terminal states for
+    dashboards / audit consumers.
+
+  The cycle-4 wiring callback now uses `dispatch_async`, so the
+  request handler isn't blocked waiting for retries — backoff
+  happens on the event loop. Sync `dispatch()` also records
+  `DeliveryRecord`s for adopters who call it directly.
+
+  Multi-channel specs retry per channel independently — one channel
+  exhausting its budget doesn't break another.
+
+  Tests: `tests/unit/test_notification_dispatch_retry.py` (11 cases)
+  cover retry policy maths, transient retry, permanent
+  short-circuit, multi-channel independence, and the deque cap.
+
+  #952 progress: cycles 1–5 of 6 shipped. Remaining: cycle 6
+  (SendGrid / SES providers).
+
+### Known issues
+- Pre-existing parser-fuzz failure in
+  `tests/unit/test_parser_fuzz.py::test_delete_token_mutation`
+  — `reference_bands` parsing in `workspace.py:335` raises
+  `ValueError` on mutated input rather than `ParseError`. Unrelated
+  to this release; will be picked up in a follow-up cycle.
+
 ## [0.63.87] - 2026-05-03
 
 ### Added
