@@ -97,6 +97,51 @@ def _print_infra_banner(
     typer.echo()
 
 
+def _echo_runtime_summary(appspec: Any) -> None:
+    """Print one banner line per runtime primitive declared on the
+    AppSpec — audit blocks, background jobs, multi-tenancy. Only
+    fires for primitives the user actually declared, so apps that
+    don't use them get no extra noise.
+
+    #989 — pre-fix the operator could only see entity / surface /
+    workspace counts; misconfigured `audit on UnknownEntity:` or a
+    job that never registered was invisible until they went
+    looking for missing rows.
+    """
+    audits = list(getattr(appspec, "audits", []) or [])
+    if audits:
+        tracked = sorted({a.entity for a in audits if getattr(a, "entity", "")})
+        typer.echo(
+            f"  • {len(audits)} audit block{'' if len(audits) == 1 else 's'} "
+            f"({len(tracked)} entit{'y' if len(tracked) == 1 else 'ies'} tracked)"
+        )
+
+    jobs = list(getattr(appspec, "jobs", []) or [])
+    if jobs:
+        triggered = sum(1 for j in jobs if getattr(j, "triggers", []))
+        scheduled = sum(1 for j in jobs if getattr(j, "schedule", None))
+        details = []
+        if triggered:
+            details.append(f"{triggered} triggered")
+        if scheduled:
+            details.append(f"{scheduled} scheduled")
+        suffix = f" ({', '.join(details)})" if details else ""
+        typer.echo(f"  • {len(jobs)} background job{'' if len(jobs) == 1 else 's'}{suffix}")
+
+    tenancy = getattr(appspec, "tenancy", None)
+    if tenancy is not None:
+        mode = getattr(getattr(tenancy, "isolation", None), "mode", None)
+        mode_str = getattr(mode, "value", str(mode)) if mode is not None else "?"
+        admins = list(getattr(tenancy, "admin_personas", []) or [])
+        cfg = dict(getattr(tenancy, "per_tenant_config", {}) or {})
+        bits = [f"{mode_str}"]
+        if admins:
+            bits.append(f"{len(admins)} admin persona{'' if len(admins) == 1 else 's'}")
+        if cfg:
+            bits.append(f"{len(cfg)} per-tenant config key{'' if len(cfg) == 1 else 's'}")
+        typer.echo(f"  • Tenancy: {', '.join(bits)}")
+
+
 class _ServeContext:
     """Mutable bag of state threaded through serve_command helpers."""
 
@@ -488,6 +533,7 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
     typer.echo(f"Starting Dazzle backend for '{ctx.appspec.name}'...")
     typer.echo(f"  • {len(ctx.appspec.domain.entities)} entities")
     typer.echo(f"  • {len(ctx.appspec.surfaces)} surfaces")
+    _echo_runtime_summary(ctx.appspec)
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
     if ctx.enable_test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
@@ -539,6 +585,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
     typer.echo(f"  • {len(appspec.domain.entities)} entities")
     typer.echo(f"  • {len(appspec.surfaces)} surfaces")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
+    _echo_runtime_summary(appspec)
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
 
     # Extract personas and scenarios for dev control plane

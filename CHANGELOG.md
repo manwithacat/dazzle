@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.77] - 2026-05-03
+
+### Added
+- **#989 — `dazzle serve` startup banner now shows runtime
+  primitive counts.** Pre-fix the operator could only see
+  entity / surface / workspace counts; misconfigured
+  `audit on UnknownEntity:` or a job that never registered was
+  invisible until they went looking for missing rows.
+
+  New banner lines (one per primitive the AppSpec actually
+  declares — apps without them get no extra noise):
+
+      • 9 entities
+      • 17 surfaces
+      • 4 workspaces
+      • 2 audit blocks (2 entities tracked)            ← new
+      • 4 background jobs (2 triggered, 2 scheduled)    ← new
+      • Tenancy: shared_schema, 1 admin persona,
+        3 per-tenant config keys                        ← new
+      • Database: PostgreSQL (DATABASE_URL)
+
+  Singular/plural forms handled correctly throughout.
+
+  Discovered while dogfooding the new primitives; see
+  `dev_docs/2026-05-03-primitive-dogfood-friction.md` (item #3).
+
 ## [0.63.76] - 2026-05-03
 
 ### Fixed
