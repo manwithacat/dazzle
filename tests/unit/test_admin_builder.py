@@ -409,6 +409,51 @@ class TestBuildAdminWorkspaces:
         labels = {g.label for g in platform.nav_groups}
         assert labels == {"Management", "Observability", "Operations"}
 
+    def test_nav_items_use_entity_name_not_region_name(self) -> None:
+        """#993 — nav URLs must resolve to real entity routes.
+
+        Pre-fix the items used short region names (\"feedback\", \"deploys\")
+        which page_routes.py converted to /app/feedback (404). Post-fix
+        each NavItemIR.entity is the actual entity name so the URL becomes
+        /app/feedbackreport (real route).
+        """
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        all_entities = {item.entity for g in platform.nav_groups for item in g.items}
+
+        # Real entity names — these slugify to real /app/<entity> routes.
+        assert "FeedbackReport" in all_entities
+        assert "DeployHistory" in all_entities
+        assert "SystemHealth" in all_entities
+        assert "User" in all_entities
+
+        # Short region names must not appear — those would 404.
+        assert "feedback" not in all_entities
+        assert "deploys" not in all_entities
+        assert "health" not in all_entities
+
+    def test_sourceless_regions_excluded_from_nav(self) -> None:
+        """#993 — DIAGRAM-only regions (no entity_ref) drop out of the nav.
+
+        app_map is a DIAGRAM region with entity_ref=None. There's no list
+        route for it, so linking would 404. The nav builder must skip it.
+        """
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        all_entities = {item.entity for g in platform.nav_groups for item in g.items}
+
+        # app_map is in _NAV_GROUPS["Operations"] but has no source entity.
+        assert "app_map" not in all_entities
+        # The Operations group itself stays — has feedback + events members.
+        labels = {g.label for g in platform.nav_groups}
+        assert "Operations" in labels
+
     def test_basic_profile_fewer_regions(self) -> None:
         """BASIC profile produces fewer regions than STANDARD in _platform_admin."""
         from dazzle.core.admin_builder import _build_admin_workspaces

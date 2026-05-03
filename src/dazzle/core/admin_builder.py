@@ -542,8 +542,27 @@ def _build_regions(
     return regions
 
 
+_REGION_TO_ENTITY: dict[str, str | None] = {name: source for name, source, *_ in _REGION_DEFS}
+"""Region name → backing entity name lookup.
+
+Used by ``_build_nav_groups`` so URLs in the platform admin nav
+resolve to the actual entity-list route (\\`/app/feedbackreport\\`)
+instead of the short region name (\\`/app/feedback\\`, which 404s).
+A None value (e.g. ``app_map`` is DIAGRAM-only) means the region
+has no list-page route — those items are dropped from the nav.
+"""
+
+
 def _build_nav_groups(region_names: set[str]) -> list[NavGroupSpec]:
     """Build NavGroupSpec list, including only groups with at least one member.
+
+    Each ``NavItemIR.entity`` is the backing entity *name* (e.g.
+    ``FeedbackReport``), not the short region name. Pre-#993 we used
+    the region name directly, but `page_routes.py` builds URLs from
+    ``item.entity`` so ``feedback`` → ``/app/feedback`` (404).
+
+    Regions without a backing entity (DIAGRAM-only, e.g. app_map)
+    are skipped entirely — they have no list route to link to.
 
     Args:
         region_names: Set of region names that exist in the workspace.
@@ -553,7 +572,15 @@ def _build_nav_groups(region_names: set[str]) -> list[NavGroupSpec]:
     """
     groups: list[NavGroupSpec] = []
     for label, members in _NAV_GROUPS:
-        items = [NavItemIR(entity=m) for m in members if m in region_names]
+        items: list[NavItemIR] = []
+        for region_name in members:
+            if region_name not in region_names:
+                continue
+            entity_name = _REGION_TO_ENTITY.get(region_name)
+            if not entity_name:
+                # Sourceless region (e.g. DIAGRAM) — no list route to link.
+                continue
+            items.append(NavItemIR(entity=entity_name))
         if items:
             groups.append(NavGroupSpec(label=label, items=items))
     return groups

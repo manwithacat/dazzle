@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.82] - 2026-05-03
+
+### Fixed
+- **#993 — platform admin nav no longer 404s.** The auto-generated
+  `_platform_admin` workspace was registering nav items with the
+  short region name (`feedback`, `health`, `deploys`) instead of
+  the backing entity name. `page_routes.py` builds the URL straight
+  from `NavItemIR.entity`, so users got `/app/feedback` (404) when
+  the real surface lives at `/app/feedbackreport`.
+
+  Surfaced by `scripts/site_fuzz.py` against
+  `examples/support_tickets` — was the most frequent failure across
+  283 iterations (~280 hits).
+
+  After fix:
+  - `/app/feedback` → gone, links resolve to `/app/feedbackreport` (200)
+  - `/app/health` → gone, links to `/app/systemhealth` (200)
+  - `/app/deploys` → gone, links to `/app/deployhistory` (200)
+  - `/app/app-map` → dropped from nav (DIAGRAM-only region, no list route)
+
+  Implementation: new `_REGION_TO_ENTITY` lookup in
+  `admin_builder.py` maps short region names to backing entity
+  names; sourceless regions (entity_ref=None) drop out of the nav
+  entirely.
+
 ## [0.63.81] - 2026-05-03
 
 ### Fixed
