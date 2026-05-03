@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.101] - 2026-05-03
+
+### Fixed
+- **Homebrew tap formula generator: missing `project.root`** — the
+  release pipeline (`.github/workflows/release-cli.yml`) **generates**
+  the tap formula via heredoc rather than copying
+  `homebrew/dazzle.rb` verbatim. v0.63.100's fix only updated the
+  local file; this release patches the heredoc too so the next tag
+  push actually propagates the `root = "test"` line into the tap.
+
+### Security
+- **Workflow injection hardening for `github.event.inputs.version`**
+  — release-cli.yml's four `Get version` steps were interpolating
+  `${{ github.event.inputs.version }}` directly into `run:` scripts
+  (semgrep CWE-78). Refactored to source via `env: VERSION_INPUT`
+  with a quoted shell expansion. No behaviour change; defends
+  against a maintainer accidentally typing shell metachars into a
+  workflow_dispatch dispatch.
+
+### Agent Guidance
+- The release pipeline at `.github/workflows/release-cli.yml`
+  contains a self-contained heredoc generating the homebrew-tap
+  formula. **Edits to `homebrew/dazzle.rb` (used for local
+  validation) must be mirrored into the heredoc**, otherwise the
+  next tag push reverts the fix in the tap. Pre-ship checklist:
+  if you touched `homebrew/dazzle.rb`, grep `release-cli.yml` for
+  the same string and update it too.
+
 ## [0.63.100] - 2026-05-03
 
 ### Fixed

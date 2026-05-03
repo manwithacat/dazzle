@@ -26,9 +26,14 @@ jobs:
 
       - name: Get version
         id: version
+        env:
+          # Sourced via env: to keep github.event.inputs.version off the
+          # `run:` script's command line — defends against a maintainer
+          # accidentally typing shell metachars into the dispatch input.
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -n "$VERSION_INPUT" ]; then
+            echo "VERSION=$VERSION_INPUT" >> $GITHUB_OUTPUT
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
@@ -89,9 +94,14 @@ jobs:
 
       - name: Get version
         id: version
+        env:
+          # Sourced via env: to keep github.event.inputs.version off the
+          # `run:` script's command line — defends against a maintainer
+          # accidentally typing shell metachars into the dispatch input.
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -n "$VERSION_INPUT" ]; then
+            echo "VERSION=$VERSION_INPUT" >> $GITHUB_OUTPUT
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
@@ -254,11 +264,15 @@ jobs:
               # Test LSP dependencies are installed
               system libexec/"bin/python", "-c", "import dazzle.lsp"
 
-              # Test DSL validation with a minimal project
+              # Test DSL validation with a minimal project.
+              # `root` is required by the linker — without it, validate
+              # raises LinkError("project.root must be set in dazzle.toml")
+              # and the homebrew-tap CI fails inside this test block.
               (testpath/"dazzle.toml").write <<~TOML
                 [project]
                 name = "test"
                 version = "0.1.0"
+                root = "test"
               TOML
 
               (testpath/"dsl").mkpath
@@ -306,9 +320,14 @@ jobs:
     steps:
       - name: Get version
         id: version
+        env:
+          # Sourced via env: to keep github.event.inputs.version off the
+          # `run:` script's command line — defends against a maintainer
+          # accidentally typing shell metachars into the dispatch input.
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -n "$VERSION_INPUT" ]; then
+            echo "VERSION=$VERSION_INPUT" >> $GITHUB_OUTPUT
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
@@ -406,9 +425,14 @@ jobs:
     steps:
       - name: Get version
         id: version
+        env:
+          # Sourced via env: to keep github.event.inputs.version off the
+          # `run:` script's command line — defends against a maintainer
+          # accidentally typing shell metachars into the dispatch input.
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -n "$VERSION_INPUT" ]; then
+            echo "VERSION=$VERSION_INPUT" >> $GITHUB_OUTPUT
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
