@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.69] - 2026-05-03
+
+### Added
+- **#953 cycle 8 — `RedisJobQueue` (production queue backing).**
+  New `dazzle_back.runtime.redis_job_queue.RedisJobQueue`
+  satisfies the cycle-3 `JobQueue` Protocol, so the cycle-5
+  worker loop and cycle-7b scheduler swap from in-memory to
+  Redis-backed without code changes — picks per `REDIS_URL`
+  presence at cycle-9 CLI startup.
+
+  Backed by Redis LISTs with **LPUSH** (submit) + **BRPOP**
+  (dequeue). FIFO semantics with one worker; "first available
+  worker" with multiple. Each list entry is a JSON blob with the
+  cycle-3 `JobMessage` fields — human-inspectable via `redis-cli`.
+
+  Lazy connection on first use; ping at connect surfaces
+  auth/network errors before they hit `submit`. `RedisJobQueueError`
+  raised with a clear message when the client can't be
+  established or a primitive call fails (rather than letting the
+  worker loop catch a raw `redis` exception).
+
+  Sub-second caller timeouts are rounded *up* to whole seconds
+  before being passed to BRPOP (BRPOP can't represent fractional
+  waits, and a value of 0 means "block forever") so the cycle-5
+  worker doesn't accidentally spin on `dequeue(timeout=0.5)`.
+
+  Corrupt queue entries (non-JSON) are logged + dropped so a
+  single malformed message can't kill the worker loop.
+
+  `close()` releases the Redis connection on shutdown; safe to
+  call before any `submit`/`dequeue` (no-op) and swallows errors
+  from the underlying `aclose` so caller can keep shutting down.
+
+  Default key namespace `dazzle:jobs:queue`; cycle-9 CLI can
+  override per environment so dev / staging / prod don't collide
+  on a shared Redis.
+
 ## [0.63.68] - 2026-05-03
 
 ### Added
