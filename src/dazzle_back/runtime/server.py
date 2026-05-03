@@ -678,6 +678,28 @@ class DazzleBackendApp:
 
         # Wire project-level service hooks (v0.29.0)
         self._wire_service_hooks()
+        self._load_i18n_translations()
+
+    def _load_i18n_translations(self) -> None:
+        """Discover + register project translation files (#955 cycle 5).
+
+        Reads ``locale/<locale>/LC_MESSAGES/messages.{mo,po}`` under the
+        project root and registers each into the global
+        :class:`~dazzle.i18n.MessageCatalogue`. The cycle-2 ``_()``
+        filter then returns translated strings instead of source text.
+
+        No-op when the project has no ``locale/`` tree — that's the
+        common case for English-only apps. Failures are caught + logged
+        because a malformed .po file shouldn't block boot.
+        """
+        if not self._project_root:
+            return
+        try:
+            from dazzle.i18n.loader import load_translations
+
+            load_translations(self._project_root)
+        except Exception:
+            logger.warning("i18n translation load failed", exc_info=True)
 
     def _wire_service_hooks(self) -> None:
         """Discover and register project-level service hooks."""

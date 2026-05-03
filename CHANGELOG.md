@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.92] - 2026-05-03
+
+### Added
+- **#955 cycle 5 — `.po` / `.mo` workflow.** Translations now load
+  from disk at server boot, so projects can ship real translations
+  by dropping `.po` files into the standard gettext layout:
+
+  ```
+  my-project/
+    locale/
+      fr/LC_MESSAGES/messages.po
+      de/LC_MESSAGES/messages.po
+  ```
+
+  - `dazzle i18n init <locale>` — seeds a fresh `.po` from the
+    project's `messages.pot` (run `extract` first). Adds a
+    `Language: <locale>` header so translator tools know what they're
+    editing. Refuses overwrites without `--force`.
+  - `dazzle i18n compile` — walks the `locale/` tree and compiles
+    every `messages.po` to `messages.mo` (binary, ~10× faster cold
+    parse). Discovered automatically by the runtime loader.
+  - **Runtime loader** — server `_setup_services` now calls
+    `dazzle.i18n.loader.load_translations(project_root)` so the
+    cycle-2 `_()` filter starts returning translated strings as
+    soon as the first request arrives. Prefers `.mo` over `.po`;
+    falls back to `.po` when no compiled file is present.
+  - `locales/` (plural) is also accepted as a fallback layout name
+    for projects that already organise translations that way.
+
+  Without Babel installed (`[i18n]` extra), `.po` parsing falls
+  through to a minimal regex-based parser that handles single-line
+  `msgid`/`msgstr` pairs — enough for the common case. `.mo` parsing
+  requires Babel.
+
+  Tests: `tests/unit/test_i18n_loader_compile.py` (19 cases) cover
+  discovery, parsing (.po + .mo), Babel-missing fallback, the
+  CLI surface (`init`, `compile`), and end-to-end registration into
+  the global catalogue.
+
+  #955 progress: cycles 1–5 of 6 shipped. Remaining: cycle 6
+  (locale-switcher UI primitive — cookie mechanism is server-side
+  ready).
+
 ## [0.63.91] - 2026-05-03
 
 ### Added

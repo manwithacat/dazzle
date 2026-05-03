@@ -1,11 +1,16 @@
-"""``dazzle i18n`` CLI commands (#955 cycle 3).
+"""``dazzle i18n`` CLI commands (#955 cycles 3 + 5).
 
-Today this ships:
+Commands:
 
   * ``dazzle i18n extract`` — walks templates + Python sources, finds
     every ``_("...")`` call, emits a ``.pot`` (Portable Object Template)
-    file. Cycle 4 adds ``.po`` compilation; for now the ``.pot`` is the
-    source of truth that adopters hand to translators.
+    file. Source of truth that adopters hand to translators.
+  * ``dazzle i18n init <locale>`` — create a fresh ``.po`` for *locale*
+    seeded from the project's ``.pot`` (#955 cycle 5). Translators fill
+    in ``msgstr`` values; ``compile`` then turns it into a ``.mo``.
+  * ``dazzle i18n compile`` — compile every ``locale/<locale>/LC_MESSAGES/messages.po``
+    in the project to ``.mo`` (#955 cycle 5). Compiled files are
+    discovered automatically by the runtime loader at server startup.
   * ``dazzle i18n stats`` — read-only summary of the in-memory
     catalogue: how many msgids per locale, missing-translation count
     against a freshly extracted .pot.
@@ -202,6 +207,100 @@ def extract_command(
     typer.echo(
         f"Extracted {len(catalogue)} msgid(s) from {len(sources)} source root(s) -> {output}"
     )
+
+
+@i18n_app.command("init")
+def init_command(
+    locale: str = typer.Argument(..., help="Locale code, e.g. `fr`, `de_DE`."),
+    pot: Path = typer.Option(
+        Path("locales/messages.pot"),
+        "--pot",
+        help="Path to the .pot template (run `extract` first).",
+    ),
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project-root",
+        help="Project root — `.po` lands at `<root>/locale/<locale>/LC_MESSAGES/messages.po`.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite an existing .po file. Default refuses so translator work isn't lost.",
+    ),
+) -> None:
+    """Initialise a fresh `.po` for *locale* seeded from the .pot template (#955 cycle 5)."""
+    if not pot.is_file():
+        typer.echo(f"No .pot at {pot}; run `dazzle i18n extract` first.", err=True)
+        raise typer.Exit(code=2)
+    target = project_root / "locale" / locale / "LC_MESSAGES" / "messages.po"
+    if target.exists() and not force:
+        typer.echo(
+            f"{target} already exists; pass --force to overwrite (existing translations will be lost).",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Seed the .po by copying the .pot text verbatim — translators
+    # then fill in `msgstr` values. `compile` reads the result.
+    pot_text = pot.read_text(encoding="utf-8")
+    # Bump the project header to indicate the locale + initial state.
+    seeded = pot_text.replace(
+        '"Project-Id-Version:',
+        f'"Language: {locale}\\n"\n"Project-Id-Version:',
+        1,
+    )
+    target.write_text(seeded, encoding="utf-8")
+    typer.echo(f"Initialised {target} from {pot} — fill in msgstr values, then `compile`.")
+
+
+@i18n_app.command("compile")
+def compile_command(
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project-root",
+        help="Project root — discovers .po files under `<root>/locale/<locale>/LC_MESSAGES/`.",
+    ),
+) -> None:
+    """Compile every `.po` under the project's locale tree to `.mo` (#955 cycle 5).
+
+    Walks `<root>/locale/<locale>/LC_MESSAGES/messages.po` for every locale
+    directory present and writes the compiled binary alongside. The runtime
+    loader picks `.mo` over `.po` automatically because it parses faster.
+    """
+    from dazzle.i18n.loader import LOCALE_DIR_NAME, MESSAGES_BASENAME, compile_po_to_mo
+
+    locale_root = project_root / LOCALE_DIR_NAME
+    if not locale_root.is_dir():
+        typer.echo(
+            f"No {LOCALE_DIR_NAME}/ directory under {project_root}; "
+            "run `dazzle i18n init <locale>` first.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    compiled = 0
+    for locale_dir in sorted(locale_root.iterdir()):
+        if not locale_dir.is_dir():
+            continue
+        po_path = locale_dir / "LC_MESSAGES" / f"{MESSAGES_BASENAME}.po"
+        if not po_path.is_file():
+            continue
+        try:
+            mo_path = compile_po_to_mo(po_path)
+        except Exception as exc:
+            typer.echo(f"  {locale_dir.name}: failed — {exc}", err=True)
+            continue
+        typer.echo(f"  {locale_dir.name}: {po_path.name} → {mo_path.name}")
+        compiled += 1
+
+    if compiled == 0:
+        typer.echo(
+            f"No .po files found under {locale_root}/; nothing to compile.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    typer.echo(f"Compiled {compiled} locale{'' if compiled == 1 else 's'}.")
 
 
 @i18n_app.command("stats")
