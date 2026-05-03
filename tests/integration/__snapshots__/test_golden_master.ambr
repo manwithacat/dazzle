@@ -1482,7 +1482,7 @@
             'icon': None,
             'items': list([
               dict({
-                'entity': 'health',
+                'entity': 'SystemHealth',
                 'icon': None,
               }),
             ]),
@@ -1493,11 +1493,7 @@
             'icon': None,
             'items': list([
               dict({
-                'entity': 'deploys',
-                'icon': None,
-              }),
-              dict({
-                'entity': 'app_map',
+                'entity': 'DeployHistory',
                 'icon': None,
               }),
             ]),

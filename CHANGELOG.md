@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.95] - 2026-05-03
+
+### Fixed
+- **CI green: regen `test_simple_dsl_to_ir_snapshot`** to match the
+  #993 platform admin nav fix (`'health' → 'SystemHealth'` in nav
+  items). The snapshot lives under `tests/integration/`, so pre-ship
+  loops that only run `pytest tests/unit/` miss it. Three releases
+  (v0.63.92, .93, .94) shipped with this single failing test on CI;
+  this release closes the gap.
+
+### Agent Guidance
+- **Run `pytest tests/ -m "not e2e"`, not `pytest tests/unit/ -m
+  "not e2e"`, before shipping.** CI runs the broader scope —
+  ~14,200 tests vs ~13,880 under `tests/unit/`. The 322-test delta
+  covers `tests/integration/` (snapshot tests, golden masters),
+  `tests/parser_corpus/`, `tests/security/`, `tests/quality_gates/`,
+  `tests/build_validation/`, `tests/corpora/`, and `tests/llm/`.
+  Skipping any of those means CI catches what local doesn't, and
+  iteration loops drift red without realising. The `/ship` skill
+  description already prescribes the broader scope; honour it.
+
 ## [0.63.94] - 2026-05-03
 
 ### Added
