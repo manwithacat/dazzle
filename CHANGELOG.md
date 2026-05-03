@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.96] - 2026-05-03
+
+### Added
+- **#954 cycle 3 — `GET /api/fts/{entity}?q=...` endpoint backed by
+  the cycle-2 `search_vector` column.** Closes the loop on the
+  Postgres FTS primitive: an authenticated user issues a search
+  query, the endpoint runs `websearch_to_tsquery` against the GIN
+  index, applies the entity's compiled scope predicate (RBAC-correct),
+  and returns ranked rows.
+
+  - `Repository.fts_search(spec, q, *, page, page_size, scope_predicate)`
+    is the new method that builds the SQL. Uses `websearch_to_tsquery`
+    (user-friendly query syntax — quotes, OR, exclusions) over the
+    stored `search_vector` column with `ts_rank`-based ordering.
+  - `dazzle_back/runtime/fts_routes.py` mounts the FastAPI router
+    when `appspec.searches` is non-empty. 404s for unknown entities;
+    auth required.
+  - Scope-aware filtering reuses the same predicate compiler the
+    list endpoint uses — RBAC stays correct without re-implementing
+    the scope path.
+
+  Defence-in-depth: the user-supplied query string is parameterised
+  via psycopg's binding (never inlined into the SQL string); the
+  tokenizer is validated against ASCII-alpha + the cycle-2 allow-list
+  before being interpolated into the literal `to_tsquery` config.
+
+  Tests: `tests/unit/test_fts_search_method.py` (19 cases) cover SQL
+  shape, parameterisation (SQL-injection guard), tokenizer fallback,
+  scope predicate plumbing (count + items both filtered),
+  pagination math, zero-total short-circuit, and the empty-query
+  short-circuit.
+
+  #954 progress: cycles 1–3 of 4 base cycles shipped. Remaining:
+  cycle 4 (highlight + `display: search_box` workspace region wiring).
+  Cycle 5+ (pgvector semantic search) is on the roadmap.
+
+### Agent Guidance
+- New endpoints that reach into raw SQL through `Repository`-style
+  patterns must mark `cursor.execute(...)` calls and the f-string
+  SQL assignment with `# nosemgrep` when the SQL is parameterised
+  (only safe identifiers + placeholders interpolated, user values
+  bound). The existing pattern in `repository.py` is the template.
+
 ## [0.63.95] - 2026-05-03
 
 ### Fixed

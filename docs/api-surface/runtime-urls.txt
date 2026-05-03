@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 48 routes across 13 modules
+# Counts: 49 routes across 14 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
@@ -51,6 +51,10 @@ module: fragment_routes
     handler: fragment_search(request: Request, source: str = Query(..., description='Source integration name'), q: str = Query('', description='Search query'), min_chars: int = Query(3, description='Minimum characters before search')) -> Any
   GET | /select
     handler: fragment_select(request: Request, source: str = Query(..., description='Source integration name'), id: str = Query(..., description='Selected item ID')) -> Any
+
+module: fts_routes
+  GET | /api/fts/{entity}
+    handler: fts_search(entity: str, request: Request, q: str = Query(..., min_length=1, description='Search query'), page: int = Query(1, ge=1, description='1-indexed page number'), page_size: int = Query(20, ge=1, le=100, description='Per-page limit'), auth_context: Any = Depends(auth_dep)) -> dict[str, Any]
 
 module: grant_routes
   GET | (root)

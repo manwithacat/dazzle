@@ -1342,6 +1342,26 @@ class DazzleBackendApp:
             if search_router is not None:
                 self._app.include_router(search_router)
 
+        # #954 cycle 3 — tsvector-backed search endpoint(s). Registered
+        # only when the AppSpec declares `search on <Entity>:` blocks.
+        # The endpoint queries the cycle-2 search_vector column with
+        # scope-aware filtering — RBAC-correct on day one.
+        if getattr(self._appspec, "searches", None) and self._repositories:
+            try:
+                from dazzle_back.runtime.fts_routes import create_fts_routes
+
+                fts_router = create_fts_routes(
+                    appspec=self._appspec,
+                    repositories=self._repositories,
+                    fk_graph=getattr(self, "_fk_graph", None),
+                    auth_dep=auth_dep,
+                    admin_personas=getattr(self, "_admin_personas", None),
+                )
+                if fts_router is not None:
+                    self._app.include_router(fts_router)
+            except Exception:
+                logger.warning("FTS routes mount failed", exc_info=True)
+
         # Bulk-action endpoints (#785) — registered when any list-mode
         # surface declares `ux: bulk_actions:`.
         if self._repositories and self._appspec.surfaces:
