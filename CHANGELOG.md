@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.61] - 2026-05-03
+
+### Added
+- **#956 cycle 11 — audit-history HTMX fragment route +
+  `components/detail_view.html` integration.** New
+  `GET /_dazzle/audit-history/{entity_type}/{entity_id}` route
+  registered when the AppSpec declares any `audit on X:` block.
+  Renders cycle-9's `render_audit_history_region` output as an
+  HTMLResponse. Personas extracted from the auth context with
+  `role_` prefix stripped to match the DSL persona names.
+
+  `components/detail_view.html` now includes an HTMX-loaded
+  placeholder when `detail.show_history` is True and the row has an
+  id — `hx-get` to the route above, `hx-trigger="load"`,
+  `hx-swap="innerHTML"`. The audit fetch happens out-of-band so the
+  detail page render isn't blocked.
+
+  Empty-state, RBAC-denied, and missing-entity all flow through
+  cycle-9's safe-empty-HTML contract — the placeholder is always
+  replaced with valid markup.
+
+  After cycle 11 the audit primitive is functionally end-to-end from
+  DSL declaration through capture, RBAC, fetch, decode, group,
+  fragment route, and HTMX-loaded UI region. Cycle 12 = retention
+  sweep (depends on #953 jobs runtime).
+
+### Drift baseline
+- `docs/api-surface/runtime-urls.txt` regenerated for the new
+  `audit_history_routes` module (1 new GET route).
+
 ## [0.63.60] - 2026-05-03
 
 ### Added

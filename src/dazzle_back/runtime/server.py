@@ -1125,6 +1125,22 @@ class DazzleBackendApp:
             )
             self._app.include_router(grant_router)
 
+        # #956 cycle 11 — audit-history HTMX fragment route. Only
+        # registered when the AppSpec declares at least one
+        # `audit on X:` block (cycle-2's linker injects the
+        # AuditEntry service in that case).
+        if self._appspec and self._appspec.audits:
+            from dazzle_back.runtime.audit_history_routes import (
+                create_audit_history_routes,
+            )
+
+            audit_history_router = create_audit_history_routes(
+                audit_service=self._services.get("AuditEntry"),
+                audits=list(self._appspec.audits),
+                auth_dep=auth_dep,
+            )
+            self._app.include_router(audit_history_router)
+
         # File uploads
         if self._enable_files:
             from dazzle_back.runtime.file_storage import (

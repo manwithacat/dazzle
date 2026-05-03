@@ -10,13 +10,19 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 45 routes across 11 modules
+# Counts: 47 routes across 12 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
     handler: trigger_deploy(request: Request) -> JSONResponse
   POST | /deploys/{deploy_id}/rollback
     handler: rollback_deploy(deploy_id: str, request: Request) -> JSONResponse
+
+module: audit_history_routes
+  GET | /{entity_type}/{entity_id}
+    handler: get_audit_history(entity_type: str, entity_id: str) -> HTMLResponse
+  GET | /{entity_type}/{entity_id}
+    handler: get_audit_history_with_auth(entity_type: str, entity_id: str, auth_context: Any = Depends(auth_dep)) -> HTMLResponse
 
 module: audit_routes
   GET | /logs

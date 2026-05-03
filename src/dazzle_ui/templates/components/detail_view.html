@@ -170,5 +170,22 @@
   {% endfor %}
   {% endblock detail_related_groups %}
   {% endif %}
+
+  {# #956 cycle 11 — audit-history region. Opt-in via DSL
+     `show_history: true` on the surface; backed by cycle-9's
+     `render_audit_history_region`. HTMX-loaded so the audit fetch
+     doesn't block the detail-page render and the empty-state /
+     RBAC-denied paths are handled by the audit_history.html
+     fragment without an extra round-trip. #}
+  {% if detail.show_history and detail.item.get("id") %}
+  {% block detail_audit_history %}
+  <div class="dz-detail-audit-history"
+       hx-get="/_dazzle/audit-history/{{ detail.entity_name }}/{{ detail.item.id }}"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <p class="dz-audit-history__loading" aria-live="polite">Loading history…</p>
+  </div>
+  {% endblock detail_audit_history %}
+  {% endif %}
 </div>
 {% endif %}
