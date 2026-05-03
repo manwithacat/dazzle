@@ -1,0 +1,51 @@
+{# Search box region — #954 cycle 4.
+
+   Renders an htmx-driven search input that hits `/api/fts/<entity>?q=…`
+   and swaps the results list under the input on every keystroke (debounced).
+   Each result row shows the entity's `display_field` (or fallback) plus
+   highlighted `<mark>` snippets when the SearchSpec opted into
+   `highlight: true`.
+
+   The endpoint authoritatively applies scope predicates, so what the
+   user sees is always RBAC-filtered.
+
+   Region context (set by the renderer):
+     - source        — entity name being searched (e.g. "Manuscript")
+     - title         — region card title
+     - placeholder   — search input placeholder text (default: "Search…")
+     - display_field — field to render as the row label (default: "id")
+
+   Card safety: region emits zero chrome + zero title. The dashboard
+   slot owns both via region_card. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% set _entity = source %}
+{% set _placeholder = placeholder | default('Search…') %}
+{% set _display_field = display_field | default('id') %}
+{% set _results_id = "dz-search-results-" + (name | default('searchbox')) %}
+{% call region_card(title) %}
+<div class="dz-search-box-region" x-data="{ q: '' }">
+  <div class="dz-search-box-input-row">
+    <label for="{{ _results_id }}-input" class="visually-hidden">{{ title or _placeholder }}</label>
+    <input id="{{ _results_id }}-input"
+           type="search"
+           name="q"
+           class="dz-search-box-input"
+           placeholder="{{ _placeholder }}"
+           autocomplete="off"
+           hx-get="/api/fts/{{ _entity }}?html=1"
+           hx-trigger="input changed delay:250ms, search"
+           hx-target="#{{ _results_id }}"
+           hx-swap="innerHTML"
+           x-model="q">
+  </div>
+
+  {# Server-rendered initial state: empty / coaching message until the
+     user types. The htmx swap replaces this when the first results
+     arrive. #}
+  <div id="{{ _results_id }}" class="dz-search-box-results" role="region" aria-live="polite">
+    <div class="dz-search-box-empty" x-show="!q">
+      {{ _("Type to search") }}
+    </div>
+  </div>
+</div>
+{% endcall %}

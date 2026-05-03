@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.97] - 2026-05-03
+
+### Added
+- **#954 cycle 4 — `ts_headline` highlighting + `display: search_box`
+  region. Closes #954 base scope.** With cycle 4 in, the lexical
+  primitive is feature-complete: declare `search on Manuscript:` in
+  the DSL, drop `display: search_box` into a workspace, and the user
+  has a working htmx-driven full-text search with highlighted
+  snippets — RBAC-correct, indexed, with cover-density ranking.
+
+  - **Highlight**: when `SearchSpec.highlight=true`, every text-shaped
+    field in the spec gets a `<field>__snippet` column populated by
+    `ts_headline()`. Matched terms wrapped in `<mark>` tags
+    (`StartSel=<mark>`, `StopSel=</mark>`). Surrounding text is
+    Postgres-escaped, so the fragment renders snippets through Jinja
+    `| safe` to preserve the highlights without exposing XSS.
+  - **Default ranking** upgraded from `ts_rank` to `ts_rank_cd`
+    (cover-density) — usually produces better top results for short
+    queries.
+  - **DisplayMode.SEARCH_BOX** added. Renders an htmx-driven `<input
+    type="search">` that hits `/api/fts/<entity>?q=…&html=1` on every
+    keystroke (250ms debounce) and swaps the result list.
+  - **HTML fragment response**: the FTS endpoint accepts `?html=1`
+    and returns a pre-rendered fragment via the framework's
+    `render_fragment` path — no client-side templating required.
+  - **Defence-in-depth**: snippet field names are filtered against
+    the entity schema before being interpolated into the SQL, so a
+    hostile spec can't smuggle arbitrary identifiers into the
+    `ts_headline` columns.
+
+  Tests: `tests/unit/test_fts_highlight_and_searchbox.py` (17 cases)
+  cover the field-name allow-list, SQL shape (highlight on/off,
+  `<mark>` tags, snippet aliases, parameterisation), DisplayMode
+  registration, template loading, and the result fragment's
+  `<mark>` preservation.
+
+  All 4 base cycles of #954 now shipped:
+  1. SearchSpec IR + parser
+  2. tsvector + GIN index DDL
+  3. /api/fts/{entity} endpoint with scope-aware filtering
+  4. ts_headline highlighting + search_box workspace region
+
+  Cycle 5+ (pgvector semantic search) is on the roadmap but separate
+  from #954 — closing this issue. The architecture choice in cycle 2
+  (raw `op.execute()` for index DDL) means the pgvector cycles will
+  slot in alongside without rework.
+
 ## [0.63.96] - 2026-05-03
 
 ### Added

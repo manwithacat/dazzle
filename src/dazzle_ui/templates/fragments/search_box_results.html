@@ -1,0 +1,50 @@
+{# search_box result list (#954 cycle 4).
+
+   Rendered into the dz-search-box-results target by the FTS endpoint
+   when called with `?html=1`. Each row links to the entity's detail
+   route and (optionally) shows highlighted snippets pulled from
+   `ts_headline`.
+
+   Snippet HTML is server-trusted: Postgres `ts_headline` escapes
+   surrounding text and only the configured StartSel/StopSel
+   (`<mark>`) tags are inserted. Render via `safe` to preserve them. #}
+{% if total == 0 %}
+  <div class="dz-search-box-empty dz-search-box-empty--no-results">
+    {{ _("No results for") }} <em>{{ q }}</em>
+  </div>
+{% else %}
+  <div class="dz-search-box-result-count">
+    {{ total }} {{ _("result") if total == 1 else _("results") }}
+  </div>
+  <ul class="dz-search-box-result-list" role="list">
+    {% for item in items %}
+      {% set _id = item.get('id') if item.get('id') else item.values() | first %}
+      <li class="dz-search-box-result">
+        <a href="/app/{{ entity | lower }}/{{ _id }}" class="dz-search-box-result-link">
+          {% set _label_field_value = none %}
+          {% for fld in snippet_fields %}
+            {% if loop.first %}
+              {% set _label_field_value = item.get(fld) %}
+            {% endif %}
+          {% endfor %}
+          <span class="dz-search-box-result-title">
+            {{ _label_field_value or item.get('title') or item.get('name') or _id }}
+          </span>
+          {% if snippet_fields %}
+            <ul class="dz-search-box-result-snippets">
+              {% for fld in snippet_fields %}
+                {% set _snippet = item.get(fld + '__snippet') %}
+                {% if _snippet %}
+                  <li class="dz-search-box-result-snippet">
+                    <span class="dz-search-box-result-snippet-field">{{ fld }}:</span>
+                    <span class="dz-search-box-result-snippet-text">{{ _snippet | safe }}</span>
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

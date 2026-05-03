@@ -96,6 +96,7 @@ class TestCssReservesMinHeight:
             "box_plot",  # same — chart-like
             "area_chart",  # chart-shaped, 280px is right
             "confirm_action_panel",  # rare modal-style content
+            "search_box",  # #954 cycle 4 — input + result list, content-driven height
         }
 
         missing: list[str] = []

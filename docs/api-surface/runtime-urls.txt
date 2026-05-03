@@ -54,7 +54,7 @@ module: fragment_routes
 
 module: fts_routes
   GET | /api/fts/{entity}
-    handler: fts_search(entity: str, request: Request, q: str = Query(..., min_length=1, description='Search query'), page: int = Query(1, ge=1, description='1-indexed page number'), page_size: int = Query(20, ge=1, le=100, description='Per-page limit'), auth_context: Any = Depends(auth_dep)) -> dict[str, Any]
+    handler: fts_search(entity: str, request: Request, q: str = Query(..., min_length=1, description='Search query'), page: int = Query(1, ge=1, description='1-indexed page number'), page_size: int = Query(20, ge=1, le=100, description='Per-page limit'), html: int = Query(0, description='When 1, return an HTML fragment instead of JSON (#954 cycle 4)'), auth_context: Any = Depends(auth_dep)) -> Any
 
 module: grant_routes
   GET | (root)

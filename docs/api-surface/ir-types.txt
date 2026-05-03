@@ -3346,6 +3346,7 @@ enum: DisplayMode
     - PROGRESS = 'progress'
     - QUEUE = 'queue'
     - RADAR = 'radar'
+    - SEARCH_BOX = 'search_box'
     - SPARKLINE = 'sparkline'
     - STATUS_LIST = 'status_list'
     - SUMMARY = 'summary'

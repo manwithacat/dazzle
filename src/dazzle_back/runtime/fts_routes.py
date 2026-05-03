@@ -30,6 +30,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +71,11 @@ def create_fts_routes(
         q: str = Query(..., min_length=1, description="Search query"),
         page: int = Query(1, ge=1, description="1-indexed page number"),
         page_size: int = Query(20, ge=1, le=100, description="Per-page limit"),
+        html: int = Query(
+            0, description="When 1, return an HTML fragment instead of JSON (#954 cycle 4)"
+        ),
         auth_context: Any = Depends(auth_dep),
-    ) -> dict[str, Any]:
+    ) -> Any:
         spec = spec_by_entity.get(entity)
         if spec is None:
             raise HTTPException(
@@ -108,6 +112,8 @@ def create_fts_routes(
             page_size=page_size,
             scope_predicate=scope_pred,
         )
+        if html:
+            return _render_results_html(entity, q, result)
         return {
             "entity": entity,
             "query": q,
@@ -115,6 +121,35 @@ def create_fts_routes(
         }
 
     return router
+
+
+def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLResponse:
+    """Render the htmx fragment for the search_box region (#954 cycle 4).
+
+    Used when the request carries `?html=1` (the search_box region's
+    htmx swap target). Pre-renders an OOB-style result list so the
+    HTMX swap can drop it into `#dz-search-results-…` directly.
+
+    The `<mark>` tags inside snippets come from `ts_headline` and
+    contain matched terms only — Postgres pre-escapes the surrounding
+    text. The fragment renders snippets via Jinja's autoescape OFF on
+    the snippet column only (since the markup IS the highlight).
+    """
+    from dazzle_ui.runtime.template_renderer import render_fragment
+
+    items = result.get("items", []) or []
+    snippet_fields = result.get("snippet_fields", []) or []
+    total = result.get("total", 0)
+    return HTMLResponse(  # nosemgrep
+        render_fragment(
+            "fragments/search_box_results.html",
+            entity=entity,
+            q=q,
+            items=items,
+            snippet_fields=snippet_fields,
+            total=total,
+        )
+    )
 
 
 def _find_cedar_spec(appspec: Any, entity_name: str) -> Any | None:

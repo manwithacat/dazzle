@@ -364,6 +364,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "PIPELINE_STEPS": "workspace/regions/pipeline_steps.html",  # #890
     "STATUS_LIST": "workspace/regions/status_list.html",  # #3, v0.61.69
     "CONFIRM_ACTION_PANEL": "workspace/regions/confirm_action_panel.html",  # #6, v0.61.72
+    "SEARCH_BOX": "workspace/regions/search_box.html",  # #954 cycle 4
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)

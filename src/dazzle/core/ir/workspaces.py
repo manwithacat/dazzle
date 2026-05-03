@@ -83,6 +83,7 @@ class DisplayMode(StrEnum):
     CONFIRM_ACTION_PANEL = (
         "confirm_action_panel"  # v0.61.72 (#6): irreversible-action consent panel
     )
+    SEARCH_BOX = "search_box"  # #954 cycle 4: htmx search input + ranked results
 
 
 class BucketRef(BaseModel):
