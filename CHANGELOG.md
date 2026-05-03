@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.74] - 2026-05-03
+
+### Added
+- **#953 cycle 12 / #956 cycle 12 — `run_retention_loop` async
+  task wired into `dazzle worker` CLI.** New
+  `dazzle_back.runtime.retention_loop.run_retention_loop` wraps
+  cycle-11's orchestrator in an async tick that fires daily on
+  a configurable cron (default `"0 3 * * *"` = 03:00 UTC).
+  Reuses cycle-7's `parse_cron` + `cron_matches` for the same
+  minute-resolution dedupe behaviour as the regular scheduler.
+
+  `dazzle worker` CLI now runs three concurrent loops via
+  `asyncio.gather`: worker (cycle-5), scheduler (cycle-7b),
+  retention (this cycle). All share the same `stop_event` so
+  Ctrl+C / SIGTERM shuts everything down cleanly. Stats from
+  all three loops printed at shutdown.
+
+  Why a separate loop rather than a synthetic JobSpec piped
+  through the regular scheduler? Retention is framework-internal
+  — there's no `JobSpec.run` callable to dispatch. Calling
+  `run_retention_sweep` directly avoids a needless queue
+  round-trip and keeps retention failures out of the user's
+  `JobRun` table as confusing "job failed" rows.
+
+  Resilience: invalid cron logs error + disables the loop
+  cleanly. Sweep exceptions counted in `loop_errors` and the
+  loop keeps ticking. Same defensive-by-default contract as
+  the cycle-5 worker + cycle-7b scheduler.
+
+  After cycle 12 both #953 and #956 are end-to-end functional:
+  - **#953** — DSL `job:` declarations enqueue (entity events
+    or cron) → worker dispatches → JobRun rows captured →
+    retention sweeps old rows.
+  - **#956** — DSL `audit:` blocks capture mutations → history
+    region renders in the UI → retention sweeps old AuditEntry
+    rows per-spec window.
+
+  Standalone `dazzle worker` runs the retention loop but
+  no-ops on missing JobRun / AuditEntry services until a
+  follow-up cycle wires services into the worker process.
+
 ## [0.63.73] - 2026-05-03
 
 ### Added

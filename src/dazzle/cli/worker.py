@@ -90,12 +90,13 @@ async def _run_worker(
     idle_timeout: float,
     redis_key: str,
 ) -> None:
-    """Main async entry — picks queue, wires signals, runs both loops."""
+    """Main async entry — picks queue, wires signals, runs all loops."""
     from dazzle_back.runtime.job_loop import run_worker_loop
     from dazzle_back.runtime.job_scheduler import (
         parse_scheduled_jobs,
         run_scheduler_loop,
     )
+    from dazzle_back.runtime.retention_loop import run_retention_loop
 
     queue, queue_kind = _build_queue(redis_key)
     typer.echo(f"Queue backing: {queue_kind}")
@@ -104,6 +105,12 @@ async def _run_worker(
     scheduled = parse_scheduled_jobs(list(appspec.jobs))
     if scheduled:
         typer.echo(f"Scheduler: {len(scheduled)} scheduled job{'' if len(scheduled) == 1 else 's'}")
+
+    audits = list(getattr(appspec, "audits", []) or [])
+    typer.echo(
+        f"Retention: JobRun + {len(audits)} audit"
+        f"{'' if len(audits) == 1 else 's'} (daily 03:00 UTC)"
+    )
 
     stop_event = asyncio.Event()
     _install_signal_handlers(stop_event)
@@ -127,7 +134,22 @@ async def _run_worker(
                 tick_interval=tick_interval,
             )
         )
-        worker_stats, scheduler_stats = await asyncio.gather(worker_task, scheduler_task)
+        # #953 cycle 12 / #956 cycle 12 — retention loop alongside
+        # worker + scheduler. Standalone worker has no service
+        # dict yet (services live in the running FastAPI server),
+        # so the retention loop runs but no-ops on missing
+        # JobRun / AuditEntry until a follow-up cycle wires
+        # services into the worker process.
+        retention_task = asyncio.create_task(
+            run_retention_loop(
+                services={},
+                audits=audits,
+                stop_event=stop_event,
+            )
+        )
+        worker_stats, scheduler_stats, retention_stats = await asyncio.gather(
+            worker_task, scheduler_task, retention_task
+        )
     finally:
         # Best-effort close — worker shuts down even if the queue's
         # already gone away.
@@ -143,6 +165,9 @@ async def _run_worker(
         typer.echo(f"  {k}: {v}")
     typer.echo("Scheduler stats:")
     for k, v in sorted(scheduler_stats.items()):
+        typer.echo(f"  {k}: {v}")
+    typer.echo("Retention stats:")
+    for k, v in sorted(retention_stats.items()):
         typer.echo(f"  {k}: {v}")
 
 
