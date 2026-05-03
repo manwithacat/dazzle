@@ -738,6 +738,38 @@ class DazzleBackendApp:
             self._job_queue = InMemoryJobQueue()
             register_job_triggers(self._services, list(self._appspec.jobs), self._job_queue)
 
+        # #952 cycle 4 — wire notification dispatch callbacks against
+        # services for every `notification X:` block that declares a
+        # trigger entity. Manual-fire notifications (no trigger) and
+        # apps without any notification declarations both no-op.
+        notifications = list(getattr(self._appspec, "notifications", []) or [])
+        if notifications:
+            from dazzle.core.manifest import NotificationsConfig, load_manifest
+            from dazzle.notifications import build_dispatcher_from_manifest
+            from dazzle_back.runtime.notification_wiring import (
+                register_notification_triggers,
+            )
+
+            notifications_cfg = NotificationsConfig()
+            if self._project_root is not None:
+                manifest_path = self._project_root / "dazzle.toml"
+                if manifest_path.is_file():
+                    try:
+                        notifications_cfg = load_manifest(manifest_path).notifications
+                    except Exception:
+                        logger.warning(
+                            "Failed to load [notifications] from dazzle.toml — "
+                            "falling back to LogProvider",
+                            exc_info=True,
+                        )
+
+            self._notification_dispatcher = build_dispatcher_from_manifest(notifications_cfg)
+            register_notification_triggers(
+                self._services,
+                notifications,
+                self._notification_dispatcher,
+            )
+
         # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
         if hasattr(self, "_upload_callbacks"):
             for _service_name, service in self._services.items():

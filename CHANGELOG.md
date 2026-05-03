@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.87] - 2026-05-03
+
+### Added
+- **#952 cycle 4 — notification trigger wiring.** Pre-cycle-4 the
+  cycle-2 dispatcher existed but project code had to call
+  `dispatcher.dispatch(spec, payload)` manually for every event.
+
+  New `dazzle_back/runtime/notification_wiring.py` mirrors the
+  `job_triggers.py` and `audit_wiring.py` shape: register a service
+  callback per notification spec, then the cycle-2 dispatcher fires
+  automatically on entity events. Server boots the dispatcher from
+  `[notifications]` in `dazzle.toml` (LogProvider default; SMTP if
+  configured) when the AppSpec has any `notification` blocks.
+
+  Trigger semantics:
+  - `created` / `updated` / `deleted` — match the corresponding service callback
+  - `field_changed` — fire only when the named field actually changes
+  - `status_changed` — specialisation; fire when `status` (or named field) transitions to optional `to_value`
+
+  Dispatch failures are caught + logged so a misconfigured
+  notification can't break the user's mutation. Cycle 5 will route
+  through the queue + retry pipeline.
+
+  Tests: `tests/unit/test_notification_wiring.py` (20 cases) cover
+  `should_fire` semantics, callback factory behaviour, registration
+  edge cases, and an end-to-end LogProvider dispatch.
+
+### Agent Guidance
+- When adding a new entity-event-driven primitive (notifications,
+  audits, jobs already use this shape), follow the `*_wiring.py`
+  pattern: pure `should_fire` predicate, callback factory, and a
+  `register_*` function called from `_setup_services` in `server.py`.
+  All three primitives now share that template.
+
 ## [0.63.86] - 2026-05-03
 
 ### Added
