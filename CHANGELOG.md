@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.68] - 2026-05-03
+
+### Added
+- **#953 cycle 7b — async cron scheduler loop.** New
+  `dazzle_back.runtime.job_scheduler` module wraps cycle-7's
+  pure cron primitives in a long-running async tick:
+
+  - `parse_scheduled_jobs(jobs)` — extracts
+    `(job_name, parsed_cron)` pairs from `appspec.jobs`. Skips
+    pure-trigger jobs (cycle-6 wires those). Re-raises
+    `CronParseError` with the job name attached so a misconfigured
+    `JobSpec.schedule.cron` aborts the deploy with a useful error.
+  - `run_scheduler_loop(*, scheduled, queue, stop_event,
+    tick_interval=30.0)` — ticks every `tick_interval` seconds,
+    calls cycle-7's `due_jobs`, submits each due job to the
+    queue with a `scheduled_at` payload. Tracks
+    `last_fired_minute` per job to dedupe across ticks within
+    the same minute. Empty `scheduled` list returns
+    immediately.
+
+  Submit failures swallowed + counted in `loop_errors` —
+  scheduler keeps ticking even if the queue is down. Mirrors
+  the cycle-5 worker loop's resilience contract.
+
+  Cycle 9's `dazzle worker` CLI will start this alongside the
+  cycle-5 worker loop, with SIGINT/SIGTERM tripping the shared
+  `stop_event`.
+
 ## [0.63.67] - 2026-05-03
 
 ### Added
