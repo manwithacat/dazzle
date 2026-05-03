@@ -724,6 +724,20 @@ class DazzleBackendApp:
 
         register_audit_callbacks(self._services, list(self._appspec.audits))
 
+        # #953 cycle 6 — wire job-trigger callbacks. Pure-scheduled
+        # jobs (no triggers) are skipped here; cycle-7's cron
+        # scheduler enqueues those instead. The in-memory queue
+        # accumulates messages even before a worker is running;
+        # cycle-7+ will start the worker loop. Cycle-8 will swap
+        # the in-memory queue for `RedisJobQueue` satisfying the
+        # same Protocol — no caller change required.
+        if self._appspec.jobs:
+            from dazzle_back.runtime.job_queue import InMemoryJobQueue
+            from dazzle_back.runtime.job_triggers import register_job_triggers
+
+            self._job_queue = InMemoryJobQueue()
+            register_job_triggers(self._services, list(self._appspec.jobs), self._job_queue)
+
         # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
         if hasattr(self, "_upload_callbacks"):
             for _service_name, service in self._services.items():

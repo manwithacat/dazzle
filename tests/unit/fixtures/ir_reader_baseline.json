@@ -109,7 +109,6 @@
   "integrations.MatchRule.foreign_field",
   "islands.IslandEventSpec.detail_fields",
   "jobs.JobSpec.retry_backoff",
-  "jobs.JobTrigger.when_condition",
   "search.SearchField.weight",
   "layout.WorkspaceLayout.stage_options",
   "ledgers.LedgerAccountRef.create_on_entity_create",

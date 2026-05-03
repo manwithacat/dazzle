@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.66] - 2026-05-03
+
+### Added
+- **#953 cycle 6 — entity-event → job-enqueue triggers.** Wires
+  the cycle-1 `JobTrigger` declarations into the runtime. A
+  project author's:
+
+      job thumbnail_render:
+        trigger: on_create Manuscript when source_pdf is_set
+        run: app.jobs:render_thumbnail
+
+  …now enqueues a `thumbnail_render` job whenever a `Manuscript`
+  is created with a non-null `source_pdf`. Mirrors #956 cycle 4's
+  audit-emitter wiring shape.
+
+  Three new pieces:
+
+  - `should_fire(trigger, *, event_kind, old_data, new_data)` —
+    pure event-vs-trigger matching. Handles `created` /
+    `updated` / `deleted` / `field_changed` events, with
+    `field_changed` requiring an actual value change. `is_set` /
+    `is_null` `when_condition` operators supported (cycle-7 will
+    add arbitrary expression eval).
+  - `build_trigger_callbacks(*, job_name, triggers, queue)` —
+    factory returning the three async callbacks BaseService
+    accepts. `on_updated` dispatches both `updated` and
+    `field_changed` triggers. Queue submit failures swallowed +
+    logged so a queue blip never breaks the user's mutation.
+  - `register_job_triggers(services, jobs, queue)` — iterates
+    `appspec.jobs`, groups triggers by entity, registers
+    callbacks against the matching service. Pure-scheduled jobs
+    (no triggers) skipped — cycle-7 cron scheduler enqueues
+    those.
+
+  `server.py` instantiates an `InMemoryJobQueue` and calls
+  `register_job_triggers` after audit wiring. Cycle 7+ will start
+  the worker loop; cycle 8 will swap the queue for `RedisJobQueue`
+  satisfying the same Protocol.
+
+  `JobTrigger.when_condition` now has a reader (the `_evaluate_when`
+  dispatcher) — removed from the orphan baseline.
+
 ## [0.63.65] - 2026-05-03
 
 ### Added
