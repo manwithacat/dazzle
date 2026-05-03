@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.85] - 2026-05-03
+
+### Added
+- **#960 layer 1 — Open Props animation token expansion.** Pre-fix
+  `tokens.css` had only one spring easing (`--ease-spring`) and no
+  named animation shorthands; components hardcoded `@keyframes
+  dz-*` rules with bespoke timing. Added the full Open Props
+  ladder (`--ease-spring-1` through `--ease-spring-5`,
+  `--ease-elastic-1..3`) plus 14 `--animation-*` shorthand tokens
+  (`fade-in/out`, `scale-up/down`, `slide-in/out-{up,down,left,right}`,
+  `shake-x`, `pulse`) backed by 14 `dz-*` keyframe definitions.
+
+  Templates can now write `animation: var(--animation-fade-in)`
+  directly. The keyframes are prefixed `dz-` so they don't collide
+  with project-defined keyframes in customer apps.
+
+  Reduced-motion guard added: `@media (prefers-reduced-motion:
+  reduce)` collapses `dz-*` animations to 0.01ms so users who
+  request it still get state changes without parallax.
+
+  Tests: `tests/unit/test_animation_tokens.py` pins each token
+  name (38 cases). Layer 2 (View Transitions) was already shipped
+  via #974; layer 3 (`x-flip` Alpine directive) remains open. See
+  the issue #960 progress comment for the full status.
+
 ## [0.63.84] - 2026-05-03
 
 ### Fixed

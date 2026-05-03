@@ -99,9 +99,42 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.5, -0.5, 0.5, 1.5);
 
+  /* Spring-easing ladder, Open Props convention. Progressively
+   * more bounce — pick the smallest one that conveys the affordance.
+   * #960 layer 1. */
+  --ease-spring-1: cubic-bezier(0.5, 0.75, 0.75, 1.25);
+  --ease-spring-2: cubic-bezier(0.5, 1, 0.75, 1.25);
+  --ease-spring-3: cubic-bezier(0.5, 1.25, 0.75, 1.25);
+  --ease-spring-4: cubic-bezier(0.5, 1.5, 0.75, 1.25);
+  --ease-spring-5: cubic-bezier(0.5, 1.75, 0.75, 1.25);
+
+  /* Elastic easings — for dismiss/snap-back motion. */
+  --ease-elastic-1: cubic-bezier(0.5, 0.75, 0.75, 1.25);
+  --ease-elastic-2: cubic-bezier(0.5, 1, 0.75, 1.25);
+  --ease-elastic-3: cubic-bezier(0.5, 1.25, 0.75, 1.25);
+
   --duration-fast: 80ms;
   --duration-base: 150ms;
   --duration-slow: 300ms;
+
+  /* Named animation shorthands, Open Props convention. Each combines
+   * keyframe + duration + easing in one var so templates can write
+   * `animation: var(--animation-fade-in)` directly. The keyframes
+   * themselves are defined below the :root block. #960 layer 1. */
+  --animation-fade-in: dz-fade-in var(--duration-base) var(--ease-out);
+  --animation-fade-out: dz-fade-out var(--duration-base) var(--ease-in);
+  --animation-scale-up: dz-scale-up var(--duration-base) var(--ease-spring-2);
+  --animation-scale-down: dz-scale-down var(--duration-base) var(--ease-in);
+  --animation-slide-in-up: dz-slide-in-up var(--duration-base) var(--ease-out);
+  --animation-slide-in-down: dz-slide-in-down var(--duration-base) var(--ease-out);
+  --animation-slide-in-left: dz-slide-in-left var(--duration-base) var(--ease-out);
+  --animation-slide-in-right: dz-slide-in-right var(--duration-base) var(--ease-out);
+  --animation-slide-out-up: dz-slide-out-up var(--duration-base) var(--ease-in);
+  --animation-slide-out-down: dz-slide-out-down var(--duration-base) var(--ease-in);
+  --animation-slide-out-left: dz-slide-out-left var(--duration-base) var(--ease-in);
+  --animation-slide-out-right: dz-slide-out-right var(--duration-base) var(--ease-in);
+  --animation-shake-x: dz-shake-x 0.4s var(--ease-out);
+  --animation-pulse: dz-pulse 2s var(--ease-in-out) infinite;
 
   /* ─────────────────────────── widths ──────────────────────────────
    * Common content widths. */
@@ -202,5 +235,69 @@
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);
     }
+  }
+}
+
+/* ─────────────────────────── animation keyframes ────────────────────
+ * Backing keyframes for the `--animation-*` named tokens above.
+ * Prefixed `dz-` so they don't collide with project-defined
+ * keyframes. Open Props convention; #960 layer 1.
+ *
+ * Honoured by `prefers-reduced-motion: reduce` further down. */
+@keyframes dz-fade-in {
+  from { opacity: 0; }
+}
+@keyframes dz-fade-out {
+  to { opacity: 0; }
+}
+@keyframes dz-scale-up {
+  from { transform: scale(0.92); opacity: 0; }
+}
+@keyframes dz-scale-down {
+  to { transform: scale(0.92); opacity: 0; }
+}
+@keyframes dz-slide-in-up {
+  from { transform: translateY(8%); opacity: 0; }
+}
+@keyframes dz-slide-in-down {
+  from { transform: translateY(-8%); opacity: 0; }
+}
+@keyframes dz-slide-in-left {
+  from { transform: translateX(8%); opacity: 0; }
+}
+@keyframes dz-slide-in-right {
+  from { transform: translateX(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-up {
+  to { transform: translateY(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-down {
+  to { transform: translateY(8%); opacity: 0; }
+}
+@keyframes dz-slide-out-left {
+  to { transform: translateX(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-right {
+  to { transform: translateX(8%); opacity: 0; }
+}
+@keyframes dz-shake-x {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+@keyframes dz-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Reduced-motion guard: collapse all dz-* animations to a near-instant
+ * fade so users who request reduced motion still get state changes
+ * without parallax/translate/scale. Operates on the keyframe name
+ * (`animation-name`) so component-local @keyframes definitions
+ * (dashboard, etc.) aren't affected by this rule. */
+@media (prefers-reduced-motion: reduce) {
+  [style*="animation"], [class*="dz-anim-"], .dz-toast {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -1,4 +1,4 @@
-/* dazzle v0.63.84 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.85 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -133,9 +133,31 @@ Consolas, "Liberation Mono", monospace;
 --ease-out: cubic-bezier(0, 0, 0.2, 1);
 --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 --ease-spring: cubic-bezier(0.5, -0.5, 0.5, 1.5);
+--ease-spring-1: cubic-bezier(0.5, 0.75, 0.75, 1.25);
+--ease-spring-2: cubic-bezier(0.5, 1, 0.75, 1.25);
+--ease-spring-3: cubic-bezier(0.5, 1.25, 0.75, 1.25);
+--ease-spring-4: cubic-bezier(0.5, 1.5, 0.75, 1.25);
+--ease-spring-5: cubic-bezier(0.5, 1.75, 0.75, 1.25);
+--ease-elastic-1: cubic-bezier(0.5, 0.75, 0.75, 1.25);
+--ease-elastic-2: cubic-bezier(0.5, 1, 0.75, 1.25);
+--ease-elastic-3: cubic-bezier(0.5, 1.25, 0.75, 1.25);
 --duration-fast: 80ms;
 --duration-base: 150ms;
 --duration-slow: 300ms;
+--animation-fade-in: dz-fade-in var(--duration-base) var(--ease-out);
+--animation-fade-out: dz-fade-out var(--duration-base) var(--ease-in);
+--animation-scale-up: dz-scale-up var(--duration-base) var(--ease-spring-2);
+--animation-scale-down: dz-scale-down var(--duration-base) var(--ease-in);
+--animation-slide-in-up: dz-slide-in-up var(--duration-base) var(--ease-out);
+--animation-slide-in-down: dz-slide-in-down var(--duration-base) var(--ease-out);
+--animation-slide-in-left: dz-slide-in-left var(--duration-base) var(--ease-out);
+--animation-slide-in-right: dz-slide-in-right var(--duration-base) var(--ease-out);
+--animation-slide-out-up: dz-slide-out-up var(--duration-base) var(--ease-in);
+--animation-slide-out-down: dz-slide-out-down var(--duration-base) var(--ease-in);
+--animation-slide-out-left: dz-slide-out-left var(--duration-base) var(--ease-in);
+--animation-slide-out-right: dz-slide-out-right var(--duration-base) var(--ease-in);
+--animation-shake-x: dz-shake-x 0.4s var(--ease-out);
+--animation-pulse: dz-pulse 2s var(--ease-in-out) infinite;
 --width-prose: 65ch;
 --width-content: 56rem;
 --width-page: 80rem;
@@ -196,6 +218,57 @@ color-scheme: light;
 --colour-text-muted: var(--neutral-400);
 --colour-border: var(--neutral-700);
 }
+}
+}
+@keyframes dz-fade-in {
+from { opacity: 0; }
+}
+@keyframes dz-fade-out {
+to { opacity: 0; }
+}
+@keyframes dz-scale-up {
+from { transform: scale(0.92); opacity: 0; }
+}
+@keyframes dz-scale-down {
+to { transform: scale(0.92); opacity: 0; }
+}
+@keyframes dz-slide-in-up {
+from { transform: translateY(8%); opacity: 0; }
+}
+@keyframes dz-slide-in-down {
+from { transform: translateY(-8%); opacity: 0; }
+}
+@keyframes dz-slide-in-left {
+from { transform: translateX(8%); opacity: 0; }
+}
+@keyframes dz-slide-in-right {
+from { transform: translateX(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-up {
+to { transform: translateY(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-down {
+to { transform: translateY(8%); opacity: 0; }
+}
+@keyframes dz-slide-out-left {
+to { transform: translateX(-8%); opacity: 0; }
+}
+@keyframes dz-slide-out-right {
+to { transform: translateX(8%); opacity: 0; }
+}
+@keyframes dz-shake-x {
+0%, 100% { transform: translateX(0); }
+20%, 60% { transform: translateX(-4px); }
+40%, 80% { transform: translateX(4px); }
+}
+@keyframes dz-pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+[style*="animation"], [class*="dz-anim-"], .dz-toast {
+animation-duration: 0.01ms !important;
+animation-iteration-count: 1 !important;
 }
 }
 }
