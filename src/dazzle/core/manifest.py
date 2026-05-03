@@ -518,6 +518,11 @@ class ProjectManifest:
     # the presets shipped in src/dazzle_ui/runtime/static/css/themes/<name>.css
     # — e.g. "linear-dark", "paper", "stripe". None = default theme.
     # Distinct from [theme] which covers site/marketing-page tokens.
+    haptic: bool = False  # #958 cycle 5 — haptic opt-in. When True, the
+    # framework JS calls `navigator.vibrate(...)` on key actions (toast
+    # success, swipe, pull-to-refresh complete, confirm submit) on
+    # mobile devices that support the Vibration API. Off by default so
+    # adopters consciously opt in — uninvited vibration is jarring.
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
     extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
     # v0.61.104 (#932): per-name `[storage.<name>]` blocks. Keyed by the
@@ -813,6 +818,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     favicon_path = ui_data.get("favicon")
     app_theme_name = ui_data.get("theme") or ui_data.get("app_theme")
     dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
+    haptic_enabled = bool(ui_data.get("haptic", False))
     assets_mode = ui_data.get("assets", "auto")
     if assets_mode not in ("auto", "always", "never"):
         raise ValueError(f"[ui] assets must be 'auto', 'always', or 'never'; got {assets_mode!r}")
@@ -863,6 +869,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         favicon=favicon_path,
         app_theme=app_theme_name,
         dark_mode_toggle=dark_mode_toggle_enabled,
+        haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,
         storage_defs=storage_defs,

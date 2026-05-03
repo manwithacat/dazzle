@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.104] - 2026-05-03
+
+### Added
+- **#958 cycles 4 + 5 — scroll containment + haptic opt-in. Closes #958.**
+
+  **Cycle 4** — `components/mobile-scroll.css` adds two
+  touch-friendly properties to known scrollable container classes
+  (`.dz-card-body`, `.dz-drawer-content`, `.dz-detail-card-body`,
+  `.dz-app-content`, `.dz-app-body`, `.dz-form-body`, `.dz-modal`,
+  `.dz-slideover-content`, `.dz-pdf-viewer-panel`) plus a `.dz-scroll`
+  utility for adopter-defined containers:
+  - `-webkit-overflow-scrolling: touch` — opts iOS into momentum scroll
+  - `overscroll-behavior: contain` — prevents scroll-chain to parent
+    (modal-inside-page case)
+  - Horizontal containers (`.dz-table-wrap`, `.dz-scroll-x`) get
+    `overscroll-behavior-x: contain` to block iOS swipe-from-edge
+    browser-back during table panning.
+
+  **Cycle 5** — `[ui] haptic = true` opts the framework JS into
+  `navigator.vibrate(...)` calls on key events:
+  - Manifest field added (`ProjectManifest.haptic`, off by default).
+  - `dazzle_ui.runtime.theme.configure_haptic()` mirrors the
+    dark-mode-toggle pattern; wired from both
+    `dazzle_back.runtime.app_factory` and `dazzle.cli.runtime_impl.serve`.
+  - `base.html` emits `<meta name="dz-haptic" content="on">` when
+    enabled; framework JS reads it at boot and self-registers.
+  - Auto-fires on `showToast` (success vs error pattern), swipe-left /
+    swipe-right (cycle 3), and `htmx:afterRequest` 4xx/5xx responses.
+  - Honours `prefers-reduced-motion: reduce` (vibration is a
+    motion-adjacent signal).
+  - `window.dzHaptic = {tap, success, error, warning, raw}` exposed
+    for adopter-side manual triggers in Alpine handlers.
+
+  All 5 cycles of #958 now shipped:
+  1. Touch-target hit-area (44×44 floor on `pointer: coarse`)
+  2. `x-pull-to-refresh` Alpine directive
+  3. `x-swipe` Alpine directive
+  4. Scroll containment CSS
+  5. Haptic opt-in via manifest
+
+  Tests: `tests/unit/test_mobile_scroll_and_haptic.py` (28 cases)
+  cover scroll CSS shape, manifest field default + parsing, theme
+  module wiring, base.html meta gating, JS handler boot guard,
+  reduced-motion respect, auto-wired event subscriptions, and
+  bundle inclusion.
+
+  CSS bundle drift: `css_loader.CSS_SOURCE_FILES` and
+  `scripts/build_dist.py` both now enumerate the two new files.
+  `tests/unit/test_css_delivery.py::TestCssLoader::test_canonical_order`
+  baseline updated to match.
+
 ## [0.63.103] - 2026-05-03
 
 ### Added

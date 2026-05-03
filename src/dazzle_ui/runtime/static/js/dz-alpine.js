@@ -25,6 +25,76 @@
  *  - x-swipe              — horizontal swipe → swipe-left/right CustomEvent (#958)
  */
 
+// ── Haptic feedback (#958 cycle 5) ──────────────────────────────────
+//
+// Opt-in haptic feedback via the Vibration API. Activated by the
+// presence of `<meta name="dz-haptic" content="on">` in the page —
+// emitted by base.html when `[ui] haptic = true` in dazzle.toml.
+//
+// Auto-fires on:
+//   - showToast(success) → tap pattern (single 10ms pulse)
+//   - showToast(error)   → error pattern (two short pulses)
+//   - swipe-left / swipe-right → tap pattern
+//   - htmx:afterRequest with status >= 400 → error pattern
+//
+// Silently no-ops when navigator.vibrate is unsupported (most
+// desktop browsers), when the meta tag is absent, OR when the user
+// has prefers-reduced-motion set (vibration is a motion adjacent
+// signal and the same accessibility intent applies).
+//
+// Exposed as `window.dzHaptic` for adopters who want manual
+// triggers (e.g. inside an Alpine handler).
+(function () {
+  const meta = document.querySelector('meta[name="dz-haptic"]');
+  const enabled =
+    meta &&
+    meta.getAttribute("content") === "on" &&
+    typeof navigator !== "undefined" &&
+    typeof navigator.vibrate === "function";
+
+  const reduce =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const vibrate = (pattern) => {
+    if (!enabled || reduce) return false;
+    try {
+      return navigator.vibrate(pattern);
+    } catch {
+      return false;
+    }
+  };
+
+  window.dzHaptic = {
+    enabled: !!enabled && !reduce,
+    tap: () => vibrate(10),
+    success: () => vibrate(10),
+    error: () => vibrate([20, 40, 20]),
+    warning: () => vibrate([10, 30, 10]),
+    raw: vibrate,
+  };
+
+  if (!enabled || reduce) return;
+
+  // Auto-wire to standard event names. document.body may not exist
+  // yet when this script runs — use document and let bubbling carry.
+  document.addEventListener("showToast", (e) => {
+    const detail = e && e.detail;
+    if (detail && detail.type === "error") {
+      window.dzHaptic.error();
+    } else {
+      window.dzHaptic.success();
+    }
+  });
+  document.addEventListener("swipe-left", () => window.dzHaptic.tap());
+  document.addEventListener("swipe-right", () => window.dzHaptic.tap());
+  document.addEventListener("htmx:afterRequest", (e) => {
+    const xhr = e && e.detail && e.detail.xhr;
+    if (xhr && xhr.status >= 400) window.dzHaptic.error();
+  });
+})();
+
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
 

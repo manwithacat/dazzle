@@ -48,6 +48,9 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
     ("components", STATIC / "css" / "components" / "regions.css"),
     ("components", STATIC / "css" / "components" / "table.css"),
+    # #958 — mobile UX (cycle 1: touch targets, cycle 4: scroll containment).
+    ("components", STATIC / "css" / "components" / "touch-targets.css"),
+    ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
     ("components", STATIC / "css" / "dazzle-layer.css"),
     ("components", STATIC / "css" / "site-sections.css"),
 ]

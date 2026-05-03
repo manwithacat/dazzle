@@ -1,4 +1,4 @@
-/* dazzle v0.63.103 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.63.104 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7673,6 +7673,59 @@ margin: 0;
 display: flex;
 align-items: center;
 justify-content: space-between;
+}
+}
+@layer components {
+@layer components {
+@media (pointer: coarse) {
+.dz-button,
+.dz-button-ghost,
+.dz-button-outline,
+.dz-button-destructive,
+.dz-icon-button,
+.dz-card-action-button,
+.dz-list-action-button,
+.dz-sidebar-action-button,
+.dz-add-card-button {
+min-height: var(--dz-touch-target-min);
+min-width: var(--dz-touch-target-min);
+}
+.dz-modal-close-form,
+.dz-modal-close-form-floating,
+.dz-pdf-viewer-help-close,
+.dz-pdf-viewer-panel-close,
+.dz-slideover-close {
+min-height: var(--dz-touch-target-min);
+min-width: var(--dz-touch-target-min);
+}
+button,
+[role="button"],
+a.dz-link {
+min-height: var(--dz-touch-target-min);
+}
+}
+}
+}
+@layer components {
+@layer components {
+.dz-card-body,
+.dz-drawer-content,
+.dz-detail-card-body,
+.dz-app-content,
+.dz-app-body,
+.dz-form-body,
+.dz-modal,
+.dz-slideover-content,
+.dz-pdf-viewer-panel,
+.dz-scroll {
+-webkit-overflow-scrolling: touch;
+overscroll-behavior: contain;
+}
+.dz-table-wrap,
+.dz-scroll-x {
+-webkit-overflow-scrolling: touch;
+overscroll-behavior-x: contain;
+}
 }
 }
 @layer components {

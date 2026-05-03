@@ -4,6 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {# #958 cycle 5 — haptic opt-in flag the framework JS reads at boot.
+     Only emitted when `[ui] haptic = true` in dazzle.toml; the JS
+     skips navigator.vibrate calls when the meta tag is absent. #}
+  {% if haptic_enabled() %}<meta name="dz-haptic" content="on">{% endif %}
   <title>{% block title %}{% if page_title %}{{ page_title }} — {{ app_name | default("App") }}{% else %}{{ app_name | default("App") }}{% endif %}{% endblock %}</title>
   <link rel="icon" href="{{ _favicon | default('/static/assets/dazzle-favicon.svg') }}" type="image/svg+xml">
 

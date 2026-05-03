@@ -39,6 +39,9 @@ LAYERED_ORDER: tuple[tuple[str, str], ...] = (
     ("components", "css/components/pdf-viewer.css"),
     ("components", "css/components/regions.css"),
     ("components", "css/components/table.css"),
+    # #958 cycles 1 + 4 — mobile UX (touch targets + scroll containment).
+    ("components", "css/components/touch-targets.css"),
+    ("components", "css/components/mobile-scroll.css"),
     ("components", "css/dazzle-layer.css"),
     ("components", "css/site-sections.css"),
 )
