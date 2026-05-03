@@ -200,21 +200,57 @@ def json_or_htmx_error(
 ) -> HTMLResponse | JSONResponse:
     """Return HTMX error response for HTMX requests, JSON for API clients.
 
+    For form-submission contexts (POST/PUT/PATCH), retargets to
+    `#form-errors` so the form's error region renders the messages
+    in place — the create/edit form pattern.
+
+    For read contexts (GET — sort, filter, list paging), there's
+    no form on the page so the form-errors retarget would trigger
+    htmx:targetError. Returns a toast-only response (200 with an
+    HX-Trigger showToast) so the user sees the error without the
+    htmx machinery breaking. Closes #994.
+
     Args:
         request: The incoming request.
         errors: Pydantic-style error dicts.
         error_type: Error type string for JSON response.
 
     Returns:
-        HTMLResponse with HX-Retarget for HTMX, JSONResponse for API.
+        HTMLResponse with HX-Retarget for form contexts, toast-only
+        HTMLResponse for read contexts, JSONResponse for API clients.
     """
     if is_htmx_request(request):
-        # Convert structured errors to readable messages
         messages = _errors_to_messages(errors)
+        method = (getattr(request, "method", "") or "").upper()
+        if method == "GET":
+            return htmx_toast_error_response(messages)
         return htmx_error_response(messages)
     return JSONResponse(
         status_code=422,
         content={"detail": errors, "type": error_type},
+    )
+
+
+def htmx_toast_error_response(errors: list[str]) -> HTMLResponse:
+    """Surface validation errors via toast, no retarget (#994).
+
+    Used when an HTMX request hits a validation snag in a context
+    that has no form-errors target on the page (sort, filter, list
+    paging). Returning a 422 with an `HX-Retarget: #form-errors`
+    triggers ``htmx:targetError`` because the selector doesn't exist
+    — the browser console fills with errors and the user sees
+    nothing change.
+
+    Returns 200 with an empty body, no retarget, and an HX-Trigger
+    that fires the standard ``showToast`` event. The toast component
+    is in the global app shell, so it always exists regardless of
+    where the request came from.
+    """
+    message = "; ".join(errors) if errors else "Request was not accepted"
+    return htmx_response(
+        "",
+        status_code=200,
+        triggers={"showToast": {"message": message, "type": "error"}},
     )
 
 

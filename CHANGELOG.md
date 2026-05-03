@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.84] - 2026-05-03
+
+### Fixed
+- **#994 — sort/filter on list pages no longer triggers
+  htmx:targetError.** `json_or_htmx_error` was unconditionally
+  retargeting validation responses to `#form-errors`. Sort/filter
+  links are GET requests that target a table body (e.g.
+  `dt-users-body`), not a form, so the retarget pointed at a
+  non-existent selector — `htmx:targetError` fired and the user
+  saw nothing.
+
+  Fix: GET-method HTMX requests now route to a new
+  `htmx_toast_error_response` (200 + `HX-Trigger: showToast`)
+  instead. Write methods (POST/PUT/PATCH/DELETE) keep the existing
+  form-errors retarget path, so create/edit form validation is
+  unchanged. Surfaced by `scripts/site_fuzz.py` against
+  `examples/support_tickets`.
+
+  Verified end-to-end: 60s fuzz post-fix produced 10 findings
+  (down from ~190 in 30s pre-fix), all `/privacy` 404s from the
+  example app's marketing config — zero `form-errors` /
+  `targetError` errors remain.
+
 ## [0.63.83] - 2026-05-03
 
 ### Fixed
