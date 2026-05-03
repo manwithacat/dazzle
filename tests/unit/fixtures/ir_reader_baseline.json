@@ -107,7 +107,6 @@
   "integrations.IntegrationSync.from_service",
   "integrations.MatchRule.entity_field",
   "integrations.MatchRule.foreign_field",
-  "audit.AuditSpec.show_to",
   "islands.IslandEventSpec.detail_fields",
   "jobs.JobSpec.dead_letter",
   "jobs.JobSpec.retry_backoff",

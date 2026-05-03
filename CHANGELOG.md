@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.56] - 2026-05-03
+
+### Added
+- **#956 cycle 7 — audit visibility gate + load_history loader.** New
+  `dazzle_back.runtime.audit_visibility` module wires the cycle-1
+  ``show_to:`` declaration into a runtime RBAC gate and provides the
+  end-to-end orchestrator the cycle-8 region renderer will call:
+
+  - `find_audit_spec(audits, entity_type)` — first-match lookup over
+    `appspec.audits`.
+  - `can_view_audit_history(audit_spec, viewer_personas)` —
+    deny-by-default RBAC gate. Empty `show_to.personas` denies
+    explicitly; intersection with viewer personas allows. Unknown
+    `show_to.kind` (future schema) fails closed.
+  - `load_history(audit_service, audit_spec, entity_type, entity_id,
+    viewer_personas, limit)` — async orchestrator: skips the DB call
+    entirely when audit_spec is None or RBAC denies, then fetches /
+    decodes (cycle 6) / groups (cycle 6). Service exceptions
+    swallowed so a failed audit fetch never breaks the detail page.
+    Tolerates list-of-dicts, paged-response (`{"items": [...]}`), and
+    Pydantic-model row shapes from the service.
+
+  After cycle 7, the runtime layer of the audit primitive is fully
+  testable end-to-end without any UI coupling. Cycle 8 wires the
+  Jinja template + DSL `show_history:` flag.
+
 ## [0.63.55] - 2026-05-03
 
 ### Added
