@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.103] - 2026-05-03
+
+### Added
+- **#958 cycle 3 — `x-swipe` Alpine directive.** Apply `x-swipe`
+  to a list row (or any element); horizontal touch motion past the
+  threshold fires `swipe-left` / `swipe-right` CustomEvents.
+  Adopters wire to Alpine handlers or htmx triggers:
+
+  ```html
+  <li x-swipe
+      @swipe-left="archive(item.id)"
+      @swipe-right="favorite(item.id)">
+
+  <li x-swipe
+      hx-post="/tasks/{id}/done" hx-trigger="swipe-left">
+  ```
+
+  Heuristics keep the gesture vocabulary clean:
+  - **Horizontal threshold 60px** — sub-threshold motion is a tap
+  - **Max vertical drift 40px** — anything more is a scroll
+  - **Max duration 500ms** — slower is a long-press / drag
+  - **Single-finger only** — multi-touch is browser navigation territory
+  - **Touch-only via `(pointer: coarse)`** — desktop mouse drag
+    would conflict with text selection
+
+  Event detail carries `{dx, dy, durationMs}` so handlers can do
+  velocity-aware decisions (snap-back vs commit threshold).
+  `bubbles: true` so a parent list container can delegate instead
+  of wiring every row.
+
+  Tests: `tests/unit/test_swipe_directive.py` (13 cases) pin
+  registration, gating, dispatch contract, all four heuristic
+  filters, single-finger constraint, touchcancel handling, event
+  bubbling, and bundle inclusion.
+
+  #958 progress: 3 of 5 cycles shipped. Remaining: cycle 4 (native
+  scroll containment audit), cycle 5 (haptic opt-in via
+  `navigator.vibrate`).
+
 ## [0.63.102] - 2026-05-03
 
 ### Added

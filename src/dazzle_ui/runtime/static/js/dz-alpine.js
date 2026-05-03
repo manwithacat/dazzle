@@ -22,6 +22,7 @@
  * Directives:
  *  - x-flip               — FLIP-style animations for list reorders (#960)
  *  - x-pull-to-refresh    — touch pull-down → refresh CustomEvent (#958)
+ *  - x-swipe              — horizontal swipe → swipe-left/right CustomEvent (#958)
  */
 
 document.addEventListener("alpine:init", () => {
@@ -211,6 +212,90 @@ document.addEventListener("alpine:init", () => {
 
         // Stash for potential teardown.
         el._dzPullToRefresh = { onStart, onMove, onEnd };
+      });
+
+      // ── x-swipe directive (#958 cycle 3) ────────────────────────────
+      //
+      // Horizontal swipe gesture on list rows (or any element).
+      // Apply `x-swipe`; the directive fires `swipe-left` /
+      // `swipe-right` CustomEvents on threshold-crossing horizontal
+      // touch motion. Wire to Alpine handlers or htmx triggers:
+      //
+      //   <li x-swipe
+      //       @swipe-left="archive(item.id)"
+      //       @swipe-right="favorite(item.id)">
+      //
+      //   <li x-swipe
+      //       hx-post="/tasks/{id}/done" hx-trigger="swipe-left">
+      //
+      // Heuristics:
+      // - threshold 60px horizontal — deliberate movement, not a tap
+      // - max vertical drift 40px — anything more is a scroll
+      // - max duration 500ms — slower is a drag, not a swipe
+      //
+      // Touch-only via the same `pointer: coarse` rationale as
+      // x-pull-to-refresh — desktop mouse drag would be ambiguous
+      // with text selection.
+      Alpine.directive("swipe", (el) => {
+        const isTouch =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(pointer: coarse)").matches;
+        if (!isTouch) return;
+
+        const threshold = 60;
+        const maxVertical = 40;
+        const maxDurationMs = 500;
+        let startX = 0;
+        let startY = 0;
+        let startT = 0;
+        let active = false;
+
+        const onStart = (e) => {
+          // Single-finger only — pinch / multi-touch is its own
+          // gesture vocabulary; swipe with two fingers would also
+          // be ambiguous with browser-level navigation gestures.
+          if (e.touches.length !== 1) {
+            active = false;
+            return;
+          }
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          startT = Date.now();
+          active = true;
+        };
+
+        const onEnd = (e) => {
+          if (!active) return;
+          active = false;
+          // touchend's changedTouches carries the final position.
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) return;
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+          const dt = Date.now() - startT;
+          if (dt > maxDurationMs) return;
+          if (Math.abs(dy) > maxVertical) return;
+          if (Math.abs(dx) < threshold) return;
+          // Detail carries the raw delta + duration so handlers can
+          // do their own velocity-based logic (e.g. snap-vs-undo).
+          const detail = { dx: dx, dy: dy, durationMs: dt };
+          const name = dx < 0 ? "swipe-left" : "swipe-right";
+          el.dispatchEvent(
+            new CustomEvent(name, { bubbles: true, detail: detail }),
+          );
+        };
+
+        el.addEventListener("touchstart", onStart, { passive: true });
+        el.addEventListener("touchend", onEnd, { passive: true });
+        el.addEventListener(
+          "touchcancel",
+          () => {
+            active = false;
+          },
+          { passive: true },
+        );
+
+        el._dzSwipe = { onStart, onEnd };
       });
     }
   }
