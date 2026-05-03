@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.80] - 2026-05-03
+
+### Added
+- **#991 — admin LIST surfaces auto-generated for `AuditEntry` and
+  `JobRun`.** The cycle-2 system entities had no surface, so the
+  route generator emitted no CRUD endpoints. The audit-history
+  region worked in-process, but external inspection of audit
+  history (`curl /auditentries?entity_type=Ticket`) and job-run
+  history was impossible without the user authoring a surface
+  manually — friction the dogfood pass surfaced.
+
+  The linker now builds an admin LIST surface for each platform
+  entity it auto-injects (mirroring the `FeedbackReport` pattern).
+  Surfaces are decorated with sort + filter + search UX so the
+  generated list is operator-usable out of the box. Routes appear
+  in OpenAPI:
+
+  ```
+  audit: /app/auditentry, /auditentries, /auditentries/{id}
+  job:   /app/jobrun,     /jobruns,     /jobruns/{id}
+  ```
+
+  Surfaces are only injected when an `audit on …` or `job …` block
+  is present in the DSL — DSL files that don't use these
+  primitives are unaffected.
+
 ## [0.63.79] - 2026-05-03
 
 ### Fixed

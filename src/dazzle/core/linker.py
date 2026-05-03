@@ -118,8 +118,14 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # 9a. Auto-generate AuditEntry entity when any `audit on X:` block is
     # present (#956 cycle 2). Single shared system entity for all
     # audited entity types — `entity_type` discriminator on each row.
+    surfaces = merged_fragment.surfaces
     if merged_fragment.audits and not any(e.name == "AuditEntry" for e in entities):
         entities = [*entities, _build_audit_entry_entity()]
+        # #991 — pair the entity with an admin LIST surface so the
+        # route generator emits CRUD endpoints (/auditentries +
+        # /api/auditentry) for external inspection. Mirrors the
+        # FeedbackReport pattern below.
+        surfaces = [*surfaces, _build_audit_entry_admin_surface()]
 
     # 9aa. Auto-generate JobRun entity when any `job X:` block is
     # present (#953 cycle 2). Single shared platform entity holding
@@ -128,10 +134,12 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # to skip already-running scheduled jobs.
     if merged_fragment.jobs and not any(e.name == "JobRun" for e in entities):
         entities = [*entities, _build_job_run_entity()]
+        # #991 — admin LIST surface so the route generator emits
+        # CRUD endpoints for the worker (and operator triage tools).
+        surfaces = [*surfaces, _build_job_run_admin_surface()]
 
     # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
-    surfaces = merged_fragment.surfaces
     if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
         entities = [*entities, _build_feedback_report_entity()]
         surfaces = [
@@ -475,6 +483,82 @@ def _build_audit_entry_entity() -> ir.EntitySpec:
         patterns=["system", "audit"],
         fields=fields,
         access=access,
+    )
+
+
+def _build_audit_entry_admin_surface() -> ir.SurfaceSpec:
+    """Build a LIST admin surface for AuditEntry (#991).
+
+    Pairs with the auto-injected entity so the route generator
+    emits `/auditentries` (LIST), `/auditentries/{id}` (READ),
+    and `/app/auditentry` (UI list) endpoints. Without this
+    surface the entity exists but has no HTTP-visible CRUD
+    routes — the audit-history region works in-process but
+    external inspection tools can't query.
+
+    Mirrors the FeedbackReport admin-surface pattern.
+    """
+    elements = [
+        ir.SurfaceElement(field_name=name, label=label)
+        for name, label in [
+            ("at", "When"),
+            ("entity_type", "Entity"),
+            ("entity_id", "ID"),
+            ("field_name", "Field"),
+            ("operation", "Op"),
+            ("by_user_id", "By"),
+        ]
+    ]
+    ux = ir.UXSpec(
+        sort=[ir.SortSpec(field="at", direction="desc")],
+        filter=["entity_type", "operation", "by_user_id"],
+        search=["entity_id", "field_name"],
+        empty_message="No audit entries yet.",
+    )
+    return ir.SurfaceSpec(
+        name="auditentry_admin",
+        title="Audit Entries",
+        entity_ref="AuditEntry",
+        mode=ir.SurfaceMode.LIST,
+        sections=[ir.SurfaceSection(name="main", title="Audit", elements=elements)],
+        access=ir.SurfaceAccessSpec(require_auth=True),
+        ux=ux,
+    )
+
+
+def _build_job_run_admin_surface() -> ir.SurfaceSpec:
+    """Build a LIST admin surface for JobRun (#991).
+
+    Same rationale as `_build_audit_entry_admin_surface`: pairs
+    with the cycle-2 entity so the route generator emits CRUD
+    endpoints the worker (and operator triage tools) can hit.
+    """
+    elements = [
+        ir.SurfaceElement(field_name=name, label=label)
+        for name, label in [
+            ("created_at", "Created"),
+            ("job_name", "Job"),
+            ("status", "Status"),
+            ("attempt_number", "Attempt"),
+            ("started_at", "Started"),
+            ("finished_at", "Finished"),
+            ("duration_ms", "Duration (ms)"),
+        ]
+    ]
+    ux = ir.UXSpec(
+        sort=[ir.SortSpec(field="created_at", direction="desc")],
+        filter=["job_name", "status"],
+        search=["job_name", "error_message"],
+        empty_message="No job runs yet.",
+    )
+    return ir.SurfaceSpec(
+        name="jobrun_admin",
+        title="Job Runs",
+        entity_ref="JobRun",
+        mode=ir.SurfaceMode.LIST,
+        sections=[ir.SurfaceSection(name="main", title="Jobs", elements=elements)],
+        access=ir.SurfaceAccessSpec(require_auth=True),
+        ux=ux,
     )
 
 
