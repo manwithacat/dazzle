@@ -366,13 +366,36 @@ class TestBuildDispatcherFromManifest:
         assert isinstance(dispatcher.provider, LogProvider)
         assert "requires [notifications.smtp] host" in caplog.text
 
-    def test_unknown_provider_falls_back_to_log(self, caplog):
-        """sendgrid / ses still log a deferred-cycle warning + fall back
-        until cycle 6+ adapters land."""
+    def test_sendgrid_without_api_key_falls_back_to_log(self, caplog):
+        """SendGrid provider without an api_key still falls back to
+        LogProvider so dispatch is visible during dev. (#952 cycle 6
+        — sendgrid is now implemented but still requires the key.)"""
         from dazzle.core.manifest import NotificationsConfig
 
         cfg = NotificationsConfig(provider="sendgrid")
         with caplog.at_level(logging.WARNING, logger="dazzle.notifications"):
             dispatcher = build_dispatcher_from_manifest(cfg)
         assert isinstance(dispatcher.provider, LogProvider)
-        assert "not yet implemented" in caplog.text
+        assert "api_key" in caplog.text
+
+    def test_truly_unknown_provider_falls_back_to_log(self, caplog):
+        """A typo in [notifications] provider should warn + fall back
+        rather than crash startup."""
+        from dazzle.core.manifest import NotificationsConfig
+
+        # Bypass NotificationsConfig validation by constructing the
+        # dataclass directly with an unknown provider — exercises the
+        # else-branch in build_dispatcher_from_manifest.
+        cfg = NotificationsConfig.__new__(NotificationsConfig)
+        cfg.provider = "carrierpigeon"
+        cfg.from_address = ""
+        cfg.smtp_host = ""
+        cfg.smtp_port = 587
+        cfg.smtp_username = ""
+        cfg.smtp_password = ""
+        cfg.api_key = ""
+        cfg.aws_region = ""
+        with caplog.at_level(logging.WARNING, logger="dazzle.notifications"):
+            dispatcher = build_dispatcher_from_manifest(cfg)
+        assert isinstance(dispatcher.provider, LogProvider)
+        assert "carrierpigeon" in caplog.text

@@ -356,8 +356,13 @@ class NotificationsConfig:
         smtp_host / smtp_port / smtp_username / smtp_password: SMTP
             connection details. Empty in the default config; populated
             from ``[notifications.smtp]`` block when ``provider="smtp"``.
-        api_key: Provider API token for ``sendgrid`` / ``ses``. Empty
-            when ``provider="log"`` / ``"smtp"``.
+        api_key: Provider API token for ``sendgrid``. Empty for
+            ``log`` / ``smtp`` / ``ses``.
+        aws_region: AWS region for ``ses``. Empty falls back to the
+            boto3 default credential chain. Access keys + secrets
+            also come from the boto3 chain (env, instance profile,
+            AWS_PROFILE) — never declared in dazzle.toml so the
+            manifest can be checked into git safely.
     """
 
     provider: str = "log"  # log | smtp | sendgrid | ses
@@ -367,6 +372,7 @@ class NotificationsConfig:
     smtp_username: str = ""
     smtp_password: str = ""
     api_key: str = ""
+    aws_region: str = ""
 
 
 @dataclass
@@ -791,6 +797,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         smtp_username=str(smtp_data.get("username", "")),
         smtp_password=str(smtp_data.get("password", "")),
         api_key=str(notif_data.get("api_key", "")),
+        aws_region=str(notif_data.get("aws_region", "")),
     )
 
     # Parse URLs config

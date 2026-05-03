@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.89] - 2026-05-03
+
+### Added
+- **#952 cycle 6 — SES + SendGrid notification providers. Closes #952.**
+  Both providers follow the cycle-3 `SmtpProvider` shape: classify
+  errors as transient (return False → dispatcher retries via
+  `dispatch_async`) vs permanent (raise → recorded as
+  `FAILED_PERMANENT`). Non-email channels fall through cleanly.
+
+  - `SesProvider` (primary) — uses boto3 against AWS SES. Credentials
+    come from boto3's default chain (env, instance profile,
+    `AWS_PROFILE`); the only manifest field needed is
+    `aws_region`. Throttling, ServiceUnavailable, network timeouts
+    classify as transient. Install: `pip install dazzle-dsl[aws]`.
+  - `SendgridProvider` — uses sendgrid v3 HTTP API. 429 + 5xx
+    responses classify as transient; 4xx other than 429 raise.
+    Install: `pip install dazzle-dsl[sendgrid]`. Tests use a stub
+    client to avoid burning API quota or making real network calls.
+
+  Manifest:
+  - `[notifications] provider = "ses"` + `aws_region = "..."` →
+    builds `SesProvider`.
+  - `[notifications] provider = "sendgrid"` + `api_key = "..."` →
+    builds `SendgridProvider`. Missing key falls back to
+    `LogProvider` with a warning so dev still works.
+
+  All 6 cycles of #952 now shipped:
+  - Cycle 1 — DSL parser + IR + linker
+  - Cycle 2 — `NotificationDispatcher` + `LogProvider`
+  - Cycle 3 — `SmtpProvider`
+  - Cycle 4 — entity-event trigger wiring
+  - Cycle 5 — `dispatch_async` + retry + `DeliveryRecord` audit log
+  - Cycle 6 — `SesProvider` + `SendgridProvider`
+
+  Tests: `tests/unit/test_notification_providers_ses_sendgrid.py`
+  (18 cases, 5 skipped when sendgrid lib not installed). Uses moto
+  for SES end-to-end + stubbed responses for SendGrid.
+
+### Changed
+- `NotificationsConfig` adds `aws_region` field for SES region
+  selection. Empty default keeps existing manifests working.
+
+### Known issues
+- Pre-existing parser-fuzz failure in `test_delete_token_mutation`
+  (workspace.py:335 `reference_bands`) still open; will be picked
+  up in a follow-up cycle.
+
 ## [0.63.88] - 2026-05-03
 
 ### Added
