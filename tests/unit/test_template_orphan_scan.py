@@ -75,12 +75,6 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Dormant building-block with contract (island.md, UX-059); "
         "IslandContext dataclass wired but no template include"
     ),
-    "workspace/regions/audit_history.html": (
-        "#956 cycle 8: shipped ahead of region renderer wiring (cycle 9). "
-        "Template + DSL flag + tests land first; the workspace renderer "
-        "consumes it once #956 cycle 9 wires `show_history: true` surfaces "
-        "into the region list."
-    ),
 }
 
 

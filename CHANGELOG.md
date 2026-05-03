@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.58] - 2026-05-03
+
+### Added
+- **#956 cycle 9 — `render_audit_history_region` integration helper.**
+  New `dazzle_back.runtime.audit_region.render_audit_history_region`
+  combines cycles 7 (RBAC + load_history) and 8 (template) into a
+  single async callable. Returns a rendered HTML string that the
+  detail-page renderer can drop into the surface body.
+
+  Always returns valid HTML — when no audit_spec / RBAC denies / no
+  rows / service exception, the template's empty-state markup
+  fires, so callers don't need a conditional check before deciding
+  whether to render the section. A template-render failure falls
+  back to safe minimal markup so the detail page never breaks.
+
+  After cycle 9 the audit primitive is functionally complete from
+  DSL declaration through write capture, RBAC gating, fetch,
+  decode, group, and render. The remaining cycle is the workspace
+  renderer hook that calls this helper for surfaces with
+  `show_history: true` — pure plumbing into an existing render
+  path. Cycle 10 = retention sweep (depends on #953 jobs runtime).
+
+  `audit_history.html` now has a production reader (this helper) —
+  removed from the orphan-template allowlist.
+
 ## [0.63.57] - 2026-05-03
 
 ### Added
