@@ -5,6 +5,7 @@ Handles rhythm listing, retrieval, evaluation, coverage, and proposal.
 """
 
 import json
+import logging
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, Literal
@@ -13,6 +14,7 @@ from dazzle.core.ir.rhythm import LifecycleReport, LifecycleStep
 
 from .common import error_response, load_project_appspec, wrap_handler_errors
 
+logger = logging.getLogger(__name__)
 StepStatus = Literal["complete", "partial", "not_started"]
 Maturity = Literal["new_domain", "building", "evaluating", "mature"]
 
@@ -845,6 +847,7 @@ def _seed_gap_relations(gaps: list[dict[str, Any]]) -> None:
         if graph is None:
             return
     except Exception:
+        logger.debug("ignored exception in rhythm.py:847", exc_info=True)
         return
 
     import hashlib

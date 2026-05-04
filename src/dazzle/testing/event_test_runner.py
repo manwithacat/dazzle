@@ -14,6 +14,7 @@ respond correctly to new log entries.
 
 from __future__ import annotations  # required: forward reference
 
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -26,6 +27,8 @@ import httpx
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import EntitySpec
+
+logger = logging.getLogger(__name__)
 
 
 class EventTestResult(StrEnum):
@@ -173,6 +176,7 @@ class EventTestClient:
             self._offset = 0
             return resp.status_code == 200
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:175", exc_info=True)
             return False
 
     def ingest_event(self, event: EventLogEntry) -> bool:
@@ -276,6 +280,7 @@ class EventTestClient:
                 return len(resp.json())
             return 0
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:278", exc_info=True)
             return 0
 
     def get_entity(self, entity_name: str, entity_id: str) -> Any:
@@ -288,6 +293,7 @@ class EventTestClient:
                 return resp.json()
             return None
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:290", exc_info=True)
             return None
 
     def get_entities(self, entity_name: str) -> Any:
@@ -298,6 +304,7 @@ class EventTestClient:
                 return resp.json()
             return []
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:300", exc_info=True)
             return []
 
     def get_emitted_events(self, since_offset: int = 0) -> Any:
@@ -310,6 +317,7 @@ class EventTestClient:
                 return resp.json()
             return []
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:312", exc_info=True)
             return []
 
     def get_process_status(self, process_name: str, run_id: str | None = None) -> Any:
@@ -323,6 +331,7 @@ class EventTestClient:
                 return resp.json()
             return None
         except Exception:
+            logger.debug("ignored exception in event_test_runner.py:325", exc_info=True)
             return None
 
     def check_assertion(self, assertion: StateAssertion) -> tuple[bool, str]:

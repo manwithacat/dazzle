@@ -449,6 +449,7 @@ async def _get_entity_data(deps: _TestDeps, entity_name: str) -> list[dict[str, 
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except Exception:
+            logger.debug("ignored exception in test_routes.py:451", exc_info=True)
             return []
 
 

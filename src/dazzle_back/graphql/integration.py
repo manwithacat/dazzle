@@ -7,6 +7,7 @@ or creating a standalone GraphQL application.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +15,7 @@ from dazzle_back.graphql.context import GraphQLContext
 from dazzle_back.graphql.resolver_generator import ResolverGenerator
 from dazzle_back.graphql.schema_generator import SchemaGenerator
 
+logger = logging.getLogger(__name__)
 # Check for dependencies
 try:
     import strawberry
@@ -393,6 +395,7 @@ def _make_delete_resolver(entity_name: str, repo: Any) -> Callable[..., Any]:
             except PermissionError:
                 raise
             except Exception:
+                logger.debug("ignored exception in integration.py:395", exc_info=True)
                 return False
 
         return False

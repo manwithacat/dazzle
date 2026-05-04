@@ -40,6 +40,7 @@ def check_postgres_available(db_url: str = _DEFAULT_DB_URL) -> bool:
             conn.execute("SELECT 1")
         return True
     except Exception:
+        logger.debug("ignored exception in harness.py:42", exc_info=True)
         return False
 
 

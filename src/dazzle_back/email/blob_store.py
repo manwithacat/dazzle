@@ -370,6 +370,7 @@ class S3BlobStore(BlobStore):
             )
             return True
         except Exception:
+            logger.debug("ignored exception in blob_store.py:372", exc_info=True)
             return False
 
     async def get_metadata(self, pointer: str) -> BlobMetadata | None:
@@ -394,6 +395,7 @@ class S3BlobStore(BlobStore):
                 metadata={k: v for k, v in s3_meta.items() if k not in ("sha256", "created_at")},
             )
         except Exception:
+            logger.debug("ignored exception in blob_store.py:396", exc_info=True)
             return None
 
     async def exists(self, pointer: str) -> bool:
@@ -408,6 +410,7 @@ class S3BlobStore(BlobStore):
             )
             return True
         except Exception:
+            logger.debug("ignored exception in blob_store.py:410", exc_info=True)
             return False
 
 

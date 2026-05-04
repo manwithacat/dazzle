@@ -370,6 +370,7 @@ def extract_step_metrics(operation: str, data: Any) -> dict[str, Any]:
     try:
         return extractor(data)
     except Exception:
+        logger.debug("ignored exception in orchestration.py:372", exc_info=True)
         return {}
 
 

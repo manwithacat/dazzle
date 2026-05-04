@@ -75,6 +75,7 @@ def verify_state(raw: str) -> ExperienceState | None:
     try:
         payload = base64.urlsafe_b64decode(padded)
     except Exception:
+        logger.debug("ignored exception in experience_state.py:77", exc_info=True)
         return None
 
     expected_sig = hmac.new(_get_signing_key(), payload, hashlib.sha256).hexdigest()
@@ -85,6 +86,7 @@ def verify_state(raw: str) -> ExperienceState | None:
     try:
         state = ExperienceState.model_validate_json(payload)
     except Exception:
+        logger.debug("ignored exception in experience_state.py:87", exc_info=True)
         return None
 
     # Check expiry

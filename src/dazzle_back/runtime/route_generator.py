@@ -1937,6 +1937,7 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
     except ImportError:
         return None  # Template renderer not available
     except Exception:
+        logger.debug("ignored exception in route_generator.py:1939", exc_info=True)
         return None  # Fragment not found or render error
 
 

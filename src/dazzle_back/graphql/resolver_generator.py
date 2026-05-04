@@ -7,12 +7,14 @@ enforcing multi-tenant isolation through context.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from dazzle_back.graphql.context import GraphQLContext
 from dazzle_back.specs.entity import EntitySpec
 
+logger = logging.getLogger(__name__)
 # Strawberry is optional
 try:
     import strawberry
@@ -132,6 +134,7 @@ class ResolverGenerator:
                             return None
                     return result
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:134", exc_info=True)
                     return None
 
             # Fall back to service
@@ -139,6 +142,7 @@ class ResolverGenerator:
                 try:
                     return await _maybe_await(service.get(id, tenant_id=ctx.tenant_id))
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:141", exc_info=True)
                     return None
 
             return None
@@ -170,6 +174,7 @@ class ResolverGenerator:
                     )
                     return results
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:172", exc_info=True)
                     return []
 
             # Fall back to service
@@ -184,6 +189,7 @@ class ResolverGenerator:
                     )
                     return svc_result
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:186", exc_info=True)
                     return []
 
             return []
@@ -304,6 +310,7 @@ class ResolverGenerator:
                 except PermissionError:
                     raise
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:306", exc_info=True)
                     return False
 
             # Fall back to service
@@ -312,6 +319,7 @@ class ResolverGenerator:
                     await _maybe_await(service.delete(id, tenant_id=ctx.tenant_id))
                     return True
                 except Exception:
+                    logger.debug("ignored exception in resolver_generator.py:314", exc_info=True)
                     return False
 
             return False

@@ -244,6 +244,7 @@ class UnifiedTestRunner:
                 cache = json.load(f)
             return bool(cache.get("dsl_hash") == current_hash)
         except Exception:
+            logger.debug("ignored exception in unified_runner.py:246", exc_info=True)
             return False
 
     def _load_cached_suite(self) -> GeneratedTestSuite:

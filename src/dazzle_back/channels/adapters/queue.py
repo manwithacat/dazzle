@@ -222,6 +222,7 @@ class RabbitMQAdapter(QueueAdapter):
         try:
             return not self._connection.is_closed
         except Exception:
+            logger.debug("ignored exception in queue.py:224", exc_info=True)
             return False
 
 

@@ -203,6 +203,7 @@ class MailpitDetector(ProviderDetector):
             # aiohttp not available, try with urllib
             return await self._health_check_urllib(result)
         except Exception:
+            logger.debug("ignored exception in email.py:205", exc_info=True)
             return False
 
     async def _health_check_urllib(self, result: DetectionResult) -> bool:
@@ -215,6 +216,7 @@ class MailpitDetector(ProviderDetector):
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     return bool(resp.status == 200)
             except Exception:
+                logger.debug("ignored exception in email.py:217", exc_info=True)
                 return False
 
         loop = asyncio.get_event_loop()

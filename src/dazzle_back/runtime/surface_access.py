@@ -13,6 +13,7 @@ those types and adds the FastAPI-specific helpers (middleware factory, exception
 handler) that are only needed in the backend.
 """
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -25,6 +26,8 @@ from dazzle_ui.runtime.surface_access import (
     SurfaceAccessDenied,
     check_surface_access,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "SurfaceAccessConfig",
@@ -95,6 +98,7 @@ async def get_user_personas_from_membership(
         return []
     except Exception:
         # Table doesn't exist or other error - return empty
+        logger.debug("ignored exception in surface_access.py:96", exc_info=True)
         return []
 
 

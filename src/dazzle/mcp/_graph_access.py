@@ -5,7 +5,10 @@ Centralises the try/except-import pattern so that modules outside
 MCP server being initialised.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def get_kg() -> Any:
@@ -15,4 +18,5 @@ def get_kg() -> Any:
 
         return get_knowledge_graph()
     except Exception:
+        logger.debug("ignored exception in _graph_access.py:17", exc_info=True)
         return None

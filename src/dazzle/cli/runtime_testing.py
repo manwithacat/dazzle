@@ -435,6 +435,7 @@ def run_benchmarks(
                     pass
                 return (time.perf_counter() - req_start) * 1000
             except Exception:
+                logger.debug("ignored exception in runtime_testing.py:437", exc_info=True)
                 return 0.0
 
         if verbose:

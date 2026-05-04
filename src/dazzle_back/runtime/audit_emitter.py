@@ -155,6 +155,7 @@ def build_audit_callbacks(
         try:
             return user_id_provider()
         except Exception:
+            logger.debug("ignored exception in audit_emitter.py:157", exc_info=True)
             return None
 
     async def _write_safely(rows: list[dict[str, Any]]) -> None:

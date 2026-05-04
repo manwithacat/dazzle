@@ -401,6 +401,7 @@ class SessionStoreMixin:
                 (email,),
             )
         except Exception:
+            logger.debug("ignored exception in store.py:403", exc_info=True)
             return {}
         if not rows:
             return {}

@@ -6,9 +6,11 @@ Provides thumbnail generation and image optimization.
 
 from __future__ import annotations
 
+import logging
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Literal
 
+logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from PIL import Image
 
@@ -210,6 +212,7 @@ class ImageProcessor:
             fmt: str | None = img.format
             return fmt
         except Exception:
+            logger.debug("ignored exception in image_processor.py:212", exc_info=True)
             return None
 
     @staticmethod

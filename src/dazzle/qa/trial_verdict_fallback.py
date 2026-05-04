@@ -13,9 +13,11 @@ only when ``transcript_sink["verdict"]`` is empty at trial end.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
+logger = logging.getLogger(__name__)
 _FALLBACK_SYSTEM_PROMPT = """\
 You are writing the closing verdict for a software trial. The trial
 subject — a real business user — ran out of time before writing their
@@ -115,4 +117,5 @@ def synthesize_verdict(
     except Exception:
         # Never let the fallback crash the trial report. Empty
         # verdict → tombstone in the report, which is still useful.
+        logger.debug("ignored exception in trial_verdict_fallback.py:115", exc_info=True)
         return ""

@@ -182,6 +182,7 @@ class DazzleClient:
             resp = self.client.get(f"{self.api_url}/health")
             return resp.status_code == 200
         except Exception:
+            logger.debug("ignored exception in test_runner.py:184", exc_info=True)
             return False
 
     def wait_for_ready(self, max_wait: float = 30.0) -> bool:
@@ -209,6 +210,7 @@ class DazzleClient:
             self._test_routes_available = True
             return resp.status_code == 200
         except Exception:
+            logger.debug("ignored exception in test_runner.py:211", exc_info=True)
             return False
 
     def seed_data(self, scenario: str | None = None) -> bool:
@@ -276,6 +278,7 @@ class DazzleClient:
             )
             return resp.status_code == 200
         except Exception:
+            logger.debug("ignored exception in test_runner.py:278", exc_info=True)
             return False
 
     def authenticate(self, persona: str) -> bool:
@@ -362,6 +365,7 @@ class DazzleClient:
                 return True
             return False
         except Exception:
+            logger.debug("ignored exception in test_runner.py:364", exc_info=True)
             return False
 
     def get_entities(self, entity_name: str) -> list[dict[str, Any]]:
@@ -395,6 +399,7 @@ class DazzleClient:
                     return list(data["items"])
             return []
         except Exception:
+            logger.debug("ignored exception in test_runner.py:397", exc_info=True)
             return []
 
     def create_entity(self, entity_name: str, data: dict[str, Any]) -> dict[str, Any] | None:
@@ -455,6 +460,7 @@ class DazzleClient:
                 return dict(resp.json())
             return None
         except Exception:
+            logger.debug("ignored exception in test_runner.py:457", exc_info=True)
             return None
 
     def delete_entity(self, entity_name: str, entity_id: str) -> bool:
@@ -483,6 +489,7 @@ class DazzleClient:
             )
             return resp.status_code in (200, 204)
         except Exception:
+            logger.debug("ignored exception in test_runner.py:485", exc_info=True)
             return False
 
     def _build_fk_reverse_map(self) -> dict[str, list[tuple[str, str]]]:
@@ -617,6 +624,7 @@ class DazzleClient:
                 return dict(resp.json())
             return None
         except Exception:
+            logger.debug("ignored exception in test_runner.py:619", exc_info=True)
             return None
 
     def get_entity_schema(self, entity_name: str) -> dict[str, Any] | None:
@@ -627,6 +635,7 @@ class DazzleClient:
                 return dict(resp.json())
             return None
         except Exception:
+            logger.debug("ignored exception in test_runner.py:629", exc_info=True)
             return None
 
     def generate_entity_data(
@@ -728,6 +737,7 @@ class DazzleClient:
             resp = self._request("GET", self.ui_url)
             return resp.status_code == 200 and "<title>" in resp.text
         except Exception:
+            logger.debug("ignored exception in test_runner.py:730", exc_info=True)
             return False
 
     def _auth_headers(self) -> dict[str, str]:

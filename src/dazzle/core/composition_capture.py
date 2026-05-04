@@ -284,6 +284,7 @@ async def _extract_child_bbox(element: Any, selector: str) -> ElementGeometry | 
             return None
         return ElementGeometry(x=box["x"], y=box["y"], width=box["width"], height=box["height"])
     except Exception:
+        logger.debug("ignored exception in composition_capture.py:286", exc_info=True)
         return None
 
 

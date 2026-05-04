@@ -4,7 +4,10 @@ Provides dotted-path resolution, simple condition evaluation for experience
 flows, and typed expression evaluation for surface ``when:`` conditions.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_dotted_path(
@@ -127,4 +130,5 @@ def evaluate_when_expr(when_expr_str: str, data: dict[str, Any]) -> bool:
         return bool(result)
     except Exception:
         # Fail open — show the field if evaluation fails
+        logger.debug("ignored exception in expression_eval.py:128", exc_info=True)
         return True

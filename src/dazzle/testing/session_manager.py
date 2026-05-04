@@ -312,6 +312,7 @@ class SessionManager:
             )
             return resp.status_code == 200
         except Exception:
+            logger.debug("ignored exception in session_manager.py:314", exc_info=True)
             return False
         finally:
             if close_client:

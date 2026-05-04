@@ -6,6 +6,7 @@ Provides connection management, channel subscriptions, and message routing.
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -13,6 +14,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -527,6 +530,7 @@ class WebSocketManager:
             return True
         except Exception:
             # Connection may be closed, will be cleaned up
+            logger.debug("ignored exception in websocket_manager.py:528", exc_info=True)
             return False
 
     # =========================================================================

@@ -133,6 +133,7 @@ class ApiResponseCache:
                 )
             )
         except Exception:
+            logger.debug("ignored exception in api_cache.py:135", exc_info=True)
             return True  # fail-open
 
     async def release_lock(self, scope: str, url: str) -> None:

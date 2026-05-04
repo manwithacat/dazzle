@@ -468,6 +468,7 @@ class E2ERunner:
                         return int(data.get("count", 0))
                     return 0
                 except Exception:
+                    logger.debug("ignored exception in e2e_runner.py:470", exc_info=True)
                     return 0
 
         adapter = SimpleAdapter(

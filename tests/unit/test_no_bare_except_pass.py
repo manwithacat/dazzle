@@ -1,19 +1,29 @@
-"""Drift gate: zero bare ``except Exception: pass`` blocks in production code.
+"""Drift gate: zero silent-swallow patterns in production code.
 
 Why this exists:
-    Bare ``except Exception: pass`` swallows every error silently — the canonical
-    silent-failure pattern. Smells round 2026-04-16/2026-05-01 trimmed prod sites
-    from 44 → 28 → 0; this test pins the achievement.
+    Bare ``except Exception: pass`` and its variants
+    (``return None``/``{}``/``[]``/``""``) all swallow every error silently —
+    the canonical silent-failure pattern. They hide bugs in production paths.
+
+    Smells round 2026-05-04 surfaced 51 variants beyond the strict
+    ``: pass`` form (return-trivial). v0.65.17 fixed all 51 by inserting a
+    ``logger.debug(..., exc_info=True)`` line above the trivial return,
+    then tightened this gate to catch new cases.
 
 How to satisfy:
     Use one of:
       * ``with suppress(Exception):`` — when the suppression is intentional
         (cleanup, best-effort probes, optional features). Greppable as
         "we meant to ignore this".
-      * ``except Exception: logger.debug("...", exc_info=True)`` — when the
-        site has a logger and the failure is informational.
+      * Two-statement except: ``except Exception: logger.debug(...); return X``
+        — when the site has a logger and the failure is informational.
       * Re-raise / handle the specific exception — when the failure must
         actually be addressed.
+
+The test rejects single-statement ``except Exception:`` bodies whose only
+statement is ``pass`` or a trivial ``return``. A multi-statement body
+(e.g. log + return) is accepted because the developer added at least one
+informational line.
 
 Tests are out of scope; production code only.
 """
@@ -38,9 +48,42 @@ def _is_bare_except_exception(handler: ast.ExceptHandler) -> bool:
     return False
 
 
-def _body_is_only_pass(handler: ast.ExceptHandler) -> bool:
-    """The handler body is a single ``pass`` statement."""
-    return len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass)
+def _is_trivial_return(node: ast.stmt) -> bool:
+    """Is *node* a ``return`` of a trivially empty value (``None``/``{}``/``[]``)?"""
+    if not isinstance(node, ast.Return):
+        return False
+    val = node.value
+    if val is None:
+        return True
+    if isinstance(val, ast.Constant):
+        return val.value is None or val.value in (True, False, 0, "", b"")
+    # Empty container literal: {}, [], (), set()
+    if isinstance(val, ast.Dict) and not val.keys:
+        return True
+    if isinstance(val, (ast.List, ast.Set, ast.Tuple)) and not val.elts:
+        return True
+    if isinstance(val, ast.Call):
+        f = val.func
+        if (
+            isinstance(f, ast.Name)
+            and f.id in {"dict", "list", "set", "tuple"}
+            and not val.args
+            and not val.keywords
+        ):
+            return True
+    return False
+
+
+def _body_is_silent_swallow(handler: ast.ExceptHandler) -> bool:
+    """The handler body is a single ``pass`` or trivial ``return``.
+
+    A multi-statement body (e.g. log + return) is NOT a silent swallow —
+    the dev added at least one informational statement.
+    """
+    if len(handler.body) != 1:
+        return False
+    body0 = handler.body[0]
+    return isinstance(body0, ast.Pass) or _is_trivial_return(body0)
 
 
 def _walk_python_files() -> list[pathlib.Path]:
@@ -59,7 +102,12 @@ def _walk_python_files() -> list[pathlib.Path]:
 
 
 def test_no_bare_except_exception_pass() -> None:
-    """No production module may contain ``except Exception: pass``."""
+    """No production module may silently swallow ``except Exception``.
+
+    Catches both ``except Exception: pass`` and the variant forms that
+    return a trivial value (``return None``, ``return {}``, ``return []``,
+    ``return ""``, etc.) without logging.
+    """
     offenders: list[str] = []
     for path in _walk_python_files():
         try:
@@ -69,12 +117,13 @@ def test_no_bare_except_exception_pass() -> None:
         for node in ast.walk(tree):
             if not isinstance(node, ast.ExceptHandler):
                 continue
-            if _is_bare_except_exception(node) and _body_is_only_pass(node):
+            if _is_bare_except_exception(node) and _body_is_silent_swallow(node):
                 rel = path.relative_to(REPO_ROOT)
                 offenders.append(f"{rel}:{node.lineno}")
 
     assert not offenders, (
-        "Bare `except Exception: pass` is forbidden in production code. "
-        "Use `with suppress(Exception):` or log at debug level. "
+        "Silent `except Exception` swallow is forbidden in production code. "
+        'Add a `logger.debug("...", exc_info=True)` line above the return, '
+        "use `with suppress(Exception):`, or catch a specific exception type. "
         f"Offenders ({len(offenders)}):\n  " + "\n  ".join(offenders)
     )

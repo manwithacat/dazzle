@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.17] - 2026-05-04
+
+### Fixed
+- **51 silent-exception-swallow sites converted to debug-logged form**
+  (#1007). Pattern was `except Exception: <return-trivial>` — the variant
+  forms (`return None`/`{}`/`[]`/`""`) that escaped the strict bare-pass
+  gate. Each site now has a `logger.debug("...", exc_info=True)` line
+  above the return, so the failure is recoverable in logs without
+  spamming production. Top sweeps: `testing/test_runner.py` (10 sites),
+  `testing/event_test_runner.py` and `graphql/resolver_generator.py`
+  (6 each).
+
+### Changed
+- **`tests/unit/test_no_bare_except_pass.py` tightened** to also catch
+  trivial-return variants. Previously only `except Exception: pass` was
+  rejected; the gate now also rejects single-statement
+  `except Exception:` bodies whose only statement is
+  `return None|{}|[]|""|0|False|True|()` (or empty-container call form
+  like `dict()`/`list()`/`set()`/`tuple()`). Multi-statement bodies
+  (e.g. log + return) remain accepted — the dev added at least one
+  informational line.
+
+### Agent Guidance
+- When you write a `try/except Exception` block, the body MUST contain
+  more than just `pass` or a trivial return. Add at least
+  `logger.debug("describe failure", exc_info=True)` above any fallback
+  return so the error stays recoverable. The acceptance gate is
+  `pytest tests/unit/test_no_bare_except_pass.py`.
+
 ## [0.65.16] - 2026-05-04
 
 ### Removed

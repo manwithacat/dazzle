@@ -309,6 +309,7 @@ class MailpitInboundAdapter(InboundMailAdapter):
                 )
                 return response.status_code == 200
         except Exception:
+            logger.debug("ignored exception in inbound.py:311", exc_info=True)
             return False
 
 
