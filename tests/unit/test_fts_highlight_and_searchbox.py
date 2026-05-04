@@ -247,14 +247,19 @@ class TestDisplayModeRegistration:
 
         env = get_jinja_env()
         tpl = env.get_template("dz://workspace/regions/search_box.html")  # nosemgrep
-        assert "dz-search-box-region" in tpl.render(  # nosemgrep
-            source="Manuscript",
+        rendered = tpl.render(  # nosemgrep
+            source_entity="Manuscript",
             title="Search",
             placeholder="Search…",
             display_field="title",
             name="ms",
             _=lambda s: s,
         )
+        assert "dz-search-box-region" in rendered
+        # Regression for #1013 — the entity must appear in the hx-get URL.
+        # The renderer passes `source_entity`; the template previously read
+        # `source` and emitted `/api/fts/?html=1` (404 per keystroke).
+        assert 'hx-get="/api/fts/Manuscript?html=1"' in rendered
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@
    user sees is always RBAC-filtered.
 
    Region context (set by the renderer):
-     - source        — entity name being searched (e.g. "Manuscript")
+     - source_entity — entity name being searched (e.g. "Manuscript")
      - title         — region card title
      - placeholder   — search input placeholder text (default: "Search…")
      - display_field — field to render as the row label (default: "id")
@@ -18,7 +18,7 @@
    Card safety: region emits zero chrome + zero title. The dashboard
    slot owns both via region_card. #}
 {% from 'macros/region_wrapper.html' import region_card %}
-{% set _entity = source %}
+{% set _entity = source_entity %}
 {% set _placeholder = placeholder | default('Search…') %}
 {% set _display_field = display_field | default('id') %}
 {% set _results_id = "dz-search-results-" + (name | default('searchbox')) %}

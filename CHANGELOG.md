@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.16] - 2026-05-04
+
+### Fixed
+- **#1013** — `display: search_box` workspace region rendered an htmx
+  input with empty entity in the URL (`hx-get="/api/fts/?html=1"`),
+  404'ing on every keystroke. The renderer passes the kwarg as
+  `source_entity` but the template read `source`. Changed the template
+  to read `source_entity` to match. Regression test pins the rendered
+  URL contains the entity name.
+
 ## [0.66.15] - 2026-05-04
 
 ### Added
