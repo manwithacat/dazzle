@@ -46,38 +46,31 @@ workspace dash "Dash":
 
 
 class TestTonesParser:
-    def test_default_is_empty_dict(self) -> None:
-        region = _parse(_BASE_DSL).workspaces[0].regions[0]
-        assert region.tones == {}
-
-    def test_single_tone(self) -> None:
-        src = _BASE_DSL + "    tones:\n      active: positive\n"
+    @pytest.mark.parametrize(
+        "tones_block,expected",
+        [
+            ("", {}),
+            ("    tones:\n      active: positive\n", {"active": "positive"}),
+            (
+                "    tones:\n"
+                "      active: positive\n"
+                "      resolved: accent\n"
+                "      errors: destructive\n",
+                {"active": "positive", "resolved": "accent", "errors": "destructive"},
+            ),
+            ("    tones:\n      ghost: warning\n", {"ghost": "warning"}),
+        ],
+        ids=[
+            "test_default_is_empty_dict",
+            "test_single_tone",
+            "test_multiple_tones",
+            "test_tone_for_unknown_metric_is_allowed",
+        ],
+    )
+    def test_tones_parsed(self, tones_block: str, expected: dict) -> None:
+        src = _BASE_DSL + tones_block
         region = _parse(src).workspaces[0].regions[0]
-        assert region.tones == {"active": "positive"}
-
-    def test_multiple_tones(self) -> None:
-        src = (
-            _BASE_DSL
-            + "    tones:\n"
-            + "      active: positive\n"
-            + "      resolved: accent\n"
-            + "      errors: destructive\n"
-        )
-        region = _parse(src).workspaces[0].regions[0]
-        assert region.tones == {
-            "active": "positive",
-            "resolved": "accent",
-            "errors": "destructive",
-        }
-
-    def test_tone_for_unknown_metric_is_allowed(self) -> None:
-        """The parser does not validate that metric names exist in
-        `aggregate:` — that's a job for the linter (future). Keeping
-        the parser permissive lets authors stage tones and aggregates
-        independently."""
-        src = _BASE_DSL + "    tones:\n      ghost: warning\n"
-        region = _parse(src).workspaces[0].regions[0]
-        assert region.tones == {"ghost": "warning"}
+        assert region.tones == expected
 
     def test_tones_does_not_affect_aggregates(self) -> None:
         src_with = _BASE_DSL + "    tones:\n      active: positive\n"

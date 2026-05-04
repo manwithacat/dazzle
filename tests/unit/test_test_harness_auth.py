@@ -45,25 +45,36 @@ class TestWriteRuntimeFile:
 
 
 class TestReadRuntimeTestSecret:
-    def test_missing_runtime_returns_none(self, tmp_path: Path) -> None:
-        assert read_runtime_test_secret(tmp_path) is None
-
     def test_round_trips_value(self, tmp_path: Path, allocation: PortAllocation) -> None:
         write_runtime_file(tmp_path, allocation, test_secret="abc123")
         assert read_runtime_test_secret(tmp_path) == "abc123"
 
-    def test_absent_field_returns_none(self, tmp_path: Path, allocation: PortAllocation) -> None:
-        write_runtime_file(tmp_path, allocation)
-        assert read_runtime_test_secret(tmp_path) is None
-
-    def test_malformed_json_returns_none(self, tmp_path: Path) -> None:
-        (tmp_path / ".dazzle").mkdir()
-        (tmp_path / ".dazzle" / "runtime.json").write_text("{not json")
-        assert read_runtime_test_secret(tmp_path) is None
-
-    def test_non_string_secret_returns_none(self, tmp_path: Path) -> None:
-        (tmp_path / ".dazzle").mkdir()
-        (tmp_path / ".dazzle" / "runtime.json").write_text(json.dumps({"test_secret": 42}))
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "missing_runtime",
+            "absent_field",
+            "malformed_json",
+            "non_string_secret",
+        ],
+        ids=[
+            "test_missing_runtime_returns_none",
+            "test_absent_field_returns_none",
+            "test_malformed_json_returns_none",
+            "test_non_string_secret_returns_none",
+        ],
+    )
+    def test_returns_none(self, tmp_path: Path, allocation: PortAllocation, scenario: str) -> None:
+        if scenario == "missing_runtime":
+            pass  # tmp_path has no runtime
+        elif scenario == "absent_field":
+            write_runtime_file(tmp_path, allocation)
+        elif scenario == "malformed_json":
+            (tmp_path / ".dazzle").mkdir()
+            (tmp_path / ".dazzle" / "runtime.json").write_text("{not json")
+        else:  # non_string_secret
+            (tmp_path / ".dazzle").mkdir()
+            (tmp_path / ".dazzle" / "runtime.json").write_text(json.dumps({"test_secret": 42}))
         assert read_runtime_test_secret(tmp_path) is None
 
 

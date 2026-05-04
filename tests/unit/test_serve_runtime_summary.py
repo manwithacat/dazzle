@@ -17,6 +17,8 @@ from io import StringIO
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 from dazzle.cli.runtime_impl.serve import _echo_runtime_summary
 
 
@@ -98,34 +100,33 @@ class TestAuditSummary:
 
 
 class TestJobsSummary:
-    def test_only_triggered(self):
-        spec = _AppSpec(jobs=[_Job(name="x", triggers=[object()])])
+    @pytest.mark.parametrize(
+        "jobs,expected",
+        [
+            ([_Job(name="x", triggers=[object()])], "1 background job (1 triggered)"),
+            ([_Job(name="x", schedule=object())], "1 background job (1 scheduled)"),
+            (
+                [
+                    _Job(name="a", triggers=[object()]),
+                    _Job(name="b", triggers=[object()]),
+                    _Job(name="c", schedule=object()),
+                    _Job(name="d", schedule=object()),
+                ],
+                "4 background jobs (2 triggered, 2 scheduled)",
+            ),
+            ([_Job(name="x")], "1 background job"),
+        ],
+        ids=[
+            "test_only_triggered",
+            "test_only_scheduled",
+            "test_mixed",
+            "test_neither",
+        ],
+    )
+    def test_jobs_summary_line(self, jobs: list[_Job], expected: str) -> None:
+        spec = _AppSpec(jobs=jobs)
         out = _capture(spec)
-        assert "1 background job (1 triggered)" in out
-
-    def test_only_scheduled(self):
-        spec = _AppSpec(jobs=[_Job(name="x", schedule=object())])
-        out = _capture(spec)
-        assert "1 background job (1 scheduled)" in out
-
-    def test_mixed(self):
-        spec = _AppSpec(
-            jobs=[
-                _Job(name="a", triggers=[object()]),
-                _Job(name="b", triggers=[object()]),
-                _Job(name="c", schedule=object()),
-                _Job(name="d", schedule=object()),
-            ]
-        )
-        out = _capture(spec)
-        assert "4 background jobs (2 triggered, 2 scheduled)" in out
-
-    def test_neither(self):
-        # Job with neither triggers nor schedule (malformed but
-        # defensive) — banner just shows the count.
-        spec = _AppSpec(jobs=[_Job(name="x")])
-        out = _capture(spec)
-        assert "1 background job" in out
+        assert expected in out
 
 
 # ---------------------------------------------------------------------------

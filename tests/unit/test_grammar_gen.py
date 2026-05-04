@@ -1,5 +1,7 @@
 """Tests for grammar_gen.py — grammar documentation generator."""
 
+import pytest
+
 from dazzle.core.grammar_gen import (
     _MIXIN_SECTIONS,
     build_type_spec_rule,
@@ -23,11 +25,6 @@ class TestGenerateGrammar:
         output = generate_grammar()
         assert f"v{version}" in output
 
-    def test_includes_ebnf_block(self) -> None:
-        output = generate_grammar()
-        assert "```ebnf" in output
-        assert "dazzle_spec" in output
-
     def test_includes_anti_turing_note(self) -> None:
         output = generate_grammar()
         assert "Anti-Turing" in output
@@ -43,20 +40,25 @@ class TestGenerateGrammar:
         output = generate_grammar()
         assert "## Field Types" in output
 
-    def test_includes_dsl_examples(self) -> None:
+    @pytest.mark.parametrize(
+        "tokens",
+        [
+            ["```ebnf", "dazzle_spec"],
+            ["## DSL Examples", "```dsl"],
+            ["## Parser Mixin Coverage", "| Module | Class | Category |"],
+            ["Auto-generated", "grammar_gen.py"],
+        ],
+        ids=[
+            "test_includes_ebnf_block",
+            "test_includes_dsl_examples",
+            "test_includes_parser_mixin_table",
+            "test_auto_generated_notice",
+        ],
+    )
+    def test_grammar_contains_tokens(self, tokens: list[str]) -> None:
         output = generate_grammar()
-        assert "## DSL Examples" in output
-        assert "```dsl" in output
-
-    def test_includes_parser_mixin_table(self) -> None:
-        output = generate_grammar()
-        assert "## Parser Mixin Coverage" in output
-        assert "| Module | Class | Category |" in output
-
-    def test_auto_generated_notice(self) -> None:
-        output = generate_grammar()
-        assert "Auto-generated" in output
-        assert "grammar_gen.py" in output
+        for token in tokens:
+            assert token in output
 
 
 class TestMixinCoverage:

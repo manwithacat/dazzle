@@ -25,10 +25,23 @@ def js() -> str:
     return DZ_ALPINE_JS.read_text()
 
 
-def test_flip_directive_registered(js: str) -> None:
-    """Alpine.directive('flip', ...) call must be present so x-flip
-    in templates resolves to our handler rather than a no-op."""
-    assert 'Alpine.directive("flip"' in js
+@pytest.mark.parametrize(
+    "expected",
+    [
+        'Alpine.directive("flip"',
+        "flipKey",
+        "prefers-reduced-motion: reduce",
+        "x-flip",
+    ],
+    ids=[
+        "test_flip_directive_registered",
+        "test_flip_directive_reads_data_flip_key",
+        "test_flip_directive_honours_reduced_motion",
+        "test_directives_listed_in_module_header",
+    ],
+)
+def test_js_contains_token(js: str, expected: str) -> None:
+    assert expected in js
 
 
 def test_flip_directive_uses_mutation_observer(js: str) -> None:
@@ -36,20 +49,6 @@ def test_flip_directive_uses_mutation_observer(js: str) -> None:
     container — that's how it picks up Alpine x-for re-renders."""
     assert "MutationObserver" in js
     assert "childList: true" in js
-
-
-def test_flip_directive_reads_data_flip_key(js: str) -> None:
-    """Children are matched across re-renders by `data-flip-key`.
-    Without this dataset access, surviving children can't be paired
-    with their before-positions."""
-    assert "flipKey" in js
-
-
-def test_flip_directive_honours_reduced_motion(js: str) -> None:
-    """Users with `prefers-reduced-motion: reduce` should still get
-    correct DOM state but no animation — the directive must check
-    matchMedia and skip the transform path."""
-    assert "prefers-reduced-motion: reduce" in js
 
 
 def test_flip_directive_uses_spring_token(js: str) -> None:
@@ -66,9 +65,3 @@ def test_flip_directive_applies_inverse_then_identity(js: str) -> None:
     style writes and the transition never plays."""
     assert "requestAnimationFrame" in js
     assert "translate(" in js
-
-
-def test_directives_listed_in_module_header(js: str) -> None:
-    """File header documents the public API — `x-flip` should be
-    listed alongside the dz* components."""
-    assert "x-flip" in js

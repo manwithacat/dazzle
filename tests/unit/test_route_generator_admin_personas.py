@@ -24,28 +24,24 @@ def stub_route_generator_args():
     }
 
 
-def test_admin_personas_default_empty(stub_route_generator_args):
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [
+        ({}, []),
+        ({"admin_personas": ["super_admin", "support"]}, ["super_admin", "support"]),
+        ({"admin_personas": None}, []),
+    ],
+    ids=[
+        "test_admin_personas_default_empty",
+        "test_admin_personas_explicit_list_stored",
+        "test_admin_personas_none_normalises_to_empty_list",
+    ],
+)
+def test_admin_personas_storage(stub_route_generator_args, kwargs: dict, expected: list):
     from dazzle_back.runtime.route_generator import RouteGenerator
 
-    rg = RouteGenerator(**stub_route_generator_args)
-    assert rg.admin_personas == []
-
-
-def test_admin_personas_explicit_list_stored(stub_route_generator_args):
-    from dazzle_back.runtime.route_generator import RouteGenerator
-
-    rg = RouteGenerator(
-        admin_personas=["super_admin", "support"],
-        **stub_route_generator_args,
-    )
-    assert rg.admin_personas == ["super_admin", "support"]
-
-
-def test_admin_personas_none_normalises_to_empty_list(stub_route_generator_args):
-    from dazzle_back.runtime.route_generator import RouteGenerator
-
-    rg = RouteGenerator(admin_personas=None, **stub_route_generator_args)
-    assert rg.admin_personas == []
+    rg = RouteGenerator(**kwargs, **stub_route_generator_args)
+    assert rg.admin_personas == expected
 
 
 def test_admin_personas_copy_not_alias(stub_route_generator_args):

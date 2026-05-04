@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 _CONFTEST_PATH = str(Path(__file__).parent / "conftest.py")
 
 
@@ -205,34 +207,34 @@ class TestLookupInferenceHandler:
         assert "error" in data
         assert "query" in data["error"].lower() or "hint" in data
 
-    def test_with_query(self) -> None:
-        """Test looking up inference patterns."""
-        result = lookup_inference_handler({"query": "task management"})
+    @pytest.mark.parametrize(
+        "args,check",
+        [
+            (
+                {"query": "task management"},
+                lambda d: "patterns" in d or "matches" in d or "error" not in d,
+            ),
+            (
+                {"list_all": True},
+                lambda d: "categories" in d or "pattern_count" in d or "triggers" in d,
+            ),
+            (
+                {"query": "task", "detail": "full"},
+                lambda d: "error" not in d or "detail" not in d.get("error", ""),
+            ),
+            (
+                {"query": "task", "detail": "invalid"},
+                lambda d: "error" not in d or "detail" not in d.get("error", ""),
+            ),
+        ],
+        ids=[
+            "test_with_query",
+            "test_list_all_patterns",
+            "test_detail_option",
+            "test_invalid_detail_defaults_to_minimal",
+        ],
+    )
+    def test_handler_invocation(self, args: dict, check) -> None:
+        result = lookup_inference_handler(args)
         data = json.loads(result)
-
-        # Should return pattern matches
-        assert "patterns" in data or "matches" in data or "error" not in data
-
-    def test_list_all_patterns(self) -> None:
-        """Test listing all inference patterns."""
-        result = lookup_inference_handler({"list_all": True})
-        data = json.loads(result)
-
-        # Should return all patterns info
-        assert "categories" in data or "pattern_count" in data or "triggers" in data
-
-    def test_detail_option(self) -> None:
-        """Test detail level option."""
-        result = lookup_inference_handler({"query": "task", "detail": "full"})
-        data = json.loads(result)
-
-        # Should accept full detail level
-        assert "error" not in data or "detail" not in data.get("error", "")
-
-    def test_invalid_detail_defaults_to_minimal(self) -> None:
-        """Test that invalid detail defaults to minimal."""
-        result = lookup_inference_handler({"query": "task", "detail": "invalid"})
-        data = json.loads(result)
-
-        # Should not error on invalid detail level
-        assert "error" not in data or "detail" not in data.get("error", "")
+        assert check(data)

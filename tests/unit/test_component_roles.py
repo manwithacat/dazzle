@@ -4,6 +4,8 @@ Unit tests for component roles (v0.5.0 feature).
 Tests ComponentRole and role-based classification of components.
 """
 
+import pytest
+
 from dazzle_ui.specs.actions import (
     ActionSpec,
     FetchEffect,
@@ -78,66 +80,64 @@ class TestExplicitRoles:
 class TestInferredRoles:
     """Tests for automatic role inference when role is None."""
 
-    def test_inferred_presentational_no_state_no_effects(self):
-        """Test component inferred as presentational (no state, no effects)."""
-        comp = ComponentSpec(
-            name="Icon",
-            props_schema=PropsSchema(
-                fields=[PropFieldSpec(name="name", type="str", required=True)]
-            ),
-            # No state, no actions
-        )
-        assert comp.role is None  # Not explicitly set
-        assert comp.is_presentational is True
-        assert comp.is_container is False
-
-    def test_inferred_presentational_pure_actions_only(self):
-        """Test component inferred as presentational with pure actions."""
-        comp = ComponentSpec(
-            name="Toggle",
-            state=[],  # No state
-            actions=[
-                ActionSpec(
-                    name="toggle",
-                    # Pure action: only transitions, no effect
-                    transitions=[
-                        TransitionSpec(
-                            target_state="isOn",
-                            update=PatchSpec(op=PatchOp.SET, path="isOn", value=True),
-                        )
-                    ],
-                    effect=None,  # No side effects
-                )
-            ],
-        )
+    @pytest.mark.parametrize(
+        "scenario,is_presentational",
+        [
+            ("no_state_no_effects", True),
+            ("pure_actions_only", True),
+            ("has_state", False),
+            ("has_impure_action", False),
+        ],
+        ids=[
+            "test_inferred_presentational_no_state_no_effects",
+            "test_inferred_presentational_pure_actions_only",
+            "test_inferred_container_has_state",
+            "test_inferred_container_has_impure_action",
+        ],
+    )
+    def test_role_inference(self, scenario: str, is_presentational: bool):
+        if scenario == "no_state_no_effects":
+            comp = ComponentSpec(
+                name="Icon",
+                props_schema=PropsSchema(
+                    fields=[PropFieldSpec(name="name", type="str", required=True)]
+                ),
+            )
+        elif scenario == "pure_actions_only":
+            comp = ComponentSpec(
+                name="Toggle",
+                state=[],
+                actions=[
+                    ActionSpec(
+                        name="toggle",
+                        transitions=[
+                            TransitionSpec(
+                                target_state="isOn",
+                                update=PatchSpec(op=PatchOp.SET, path="isOn", value=True),
+                            )
+                        ],
+                        effect=None,
+                    )
+                ],
+            )
+        elif scenario == "has_state":
+            comp = ComponentSpec(
+                name="Counter",
+                state=[StateSpec(name="count", scope=StateScope.LOCAL, initial=0)],
+            )
+        else:  # has_impure_action
+            comp = ComponentSpec(
+                name="DataFetcher",
+                actions=[
+                    ActionSpec(
+                        name="loadData",
+                        effect=FetchEffect(backend_service="list_data"),
+                    )
+                ],
+            )
         assert comp.role is None
-        assert comp.is_presentational is True
-        assert comp.is_container is False
-
-    def test_inferred_container_has_state(self):
-        """Test component inferred as container when it has state."""
-        comp = ComponentSpec(
-            name="Counter",
-            state=[StateSpec(name="count", scope=StateScope.LOCAL, initial=0)],
-        )
-        assert comp.role is None
-        assert comp.is_presentational is False
-        assert comp.is_container is True
-
-    def test_inferred_container_has_impure_action(self):
-        """Test component inferred as container when it has impure actions."""
-        comp = ComponentSpec(
-            name="DataFetcher",
-            actions=[
-                ActionSpec(
-                    name="loadData",
-                    effect=FetchEffect(backend_service="list_data"),
-                )
-            ],
-        )
-        assert comp.role is None
-        assert comp.is_presentational is False
-        assert comp.is_container is True
+        assert comp.is_presentational is is_presentational
+        assert comp.is_container is (not is_presentational)
 
     def test_inferred_container_mixed_actions(self):
         """Test container inference with both pure and impure actions."""

@@ -55,31 +55,35 @@ def sample_message():
 class TestRabbitMQAdapter:
     """Tests for RabbitMQAdapter structure and interface."""
 
-    def test_provider_name(self, rabbitmq_detection):
-        """Test provider name."""
-        adapter = RabbitMQAdapter(rabbitmq_detection)
-        assert adapter.provider_name == "rabbitmq"
-
-    def test_channel_kind(self, rabbitmq_detection):
-        """Test channel kind."""
-        adapter = RabbitMQAdapter(rabbitmq_detection)
-        assert adapter.channel_kind == "queue"
-
-    def test_url_parsing(self, rabbitmq_detection):
-        """Test URL is parsed from detection result."""
-        adapter = RabbitMQAdapter(rabbitmq_detection)
-        assert adapter._url == "amqp://localhost:5672"
-
-    def test_default_url(self):
-        """Test default URL when not provided."""
-        detection = DetectionResult(
-            provider_name="rabbitmq",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=None,
-            detection_method="test",
-        )
+    @pytest.mark.parametrize(
+        "scenario,attr,expected",
+        [
+            ("default", "provider_name", "rabbitmq"),
+            ("default", "channel_kind", "queue"),
+            ("default", "_url", "amqp://localhost:5672"),
+            ("no_url", "_url", "amqp://localhost:5672"),
+        ],
+        ids=[
+            "test_provider_name",
+            "test_channel_kind",
+            "test_url_parsing",
+            "test_default_url",
+        ],
+    )
+    def test_rabbitmq_adapter_attrs(
+        self, rabbitmq_detection, scenario: str, attr: str, expected: str
+    ):
+        if scenario == "no_url":
+            detection = DetectionResult(
+                provider_name="rabbitmq",
+                status=ProviderStatus.AVAILABLE,
+                connection_url=None,
+                detection_method="test",
+            )
+        else:
+            detection = rabbitmq_detection
         adapter = RabbitMQAdapter(detection)
-        assert adapter._url == "amqp://localhost:5672"
+        assert getattr(adapter, attr) == expected
 
     def test_not_initialized_by_default(self, rabbitmq_detection):
         """Test adapter is not initialized by default."""

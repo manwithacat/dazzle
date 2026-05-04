@@ -70,31 +70,33 @@ def sample_message():
 class TestRedisStreamAdapter:
     """Tests for RedisStreamAdapter structure and interface."""
 
-    def test_provider_name(self, redis_detection):
-        """Test provider name."""
-        adapter = RedisStreamAdapter(redis_detection)
-        assert adapter.provider_name == "redis"
-
-    def test_channel_kind(self, redis_detection):
-        """Test channel kind."""
-        adapter = RedisStreamAdapter(redis_detection)
-        assert adapter.channel_kind == "stream"
-
-    def test_url_parsing(self, redis_detection):
-        """Test URL is parsed from detection result."""
-        adapter = RedisStreamAdapter(redis_detection)
-        assert adapter._url == "redis://localhost:6379"
-
-    def test_default_url(self):
-        """Test default URL when not provided."""
-        detection = DetectionResult(
-            provider_name="redis",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=None,
-            detection_method="test",
-        )
+    @pytest.mark.parametrize(
+        "scenario,attr,expected",
+        [
+            ("default", "provider_name", "redis"),
+            ("default", "channel_kind", "stream"),
+            ("default", "_url", "redis://localhost:6379"),
+            ("no_url", "_url", "redis://localhost:6379"),
+        ],
+        ids=[
+            "test_provider_name",
+            "test_channel_kind",
+            "test_url_parsing",
+            "test_default_url",
+        ],
+    )
+    def test_redis_adapter_attrs(self, redis_detection, scenario: str, attr: str, expected: str):
+        if scenario == "no_url":
+            detection = DetectionResult(
+                provider_name="redis",
+                status=ProviderStatus.AVAILABLE,
+                connection_url=None,
+                detection_method="test",
+            )
+        else:
+            detection = redis_detection
         adapter = RedisStreamAdapter(detection)
-        assert adapter._url == "redis://localhost:6379"
+        assert getattr(adapter, attr) == expected
 
     def test_not_initialized_by_default(self, redis_detection):
         """Test adapter is not initialized by default."""
@@ -121,31 +123,33 @@ class TestRedisStreamAdapter:
 class TestKafkaAdapter:
     """Tests for KafkaAdapter structure and interface."""
 
-    def test_provider_name(self, kafka_detection):
-        """Test provider name."""
-        adapter = KafkaAdapter(kafka_detection)
-        assert adapter.provider_name == "kafka"
-
-    def test_channel_kind(self, kafka_detection):
-        """Test channel kind."""
-        adapter = KafkaAdapter(kafka_detection)
-        assert adapter.channel_kind == "stream"
-
-    def test_bootstrap_servers_parsing(self, kafka_detection):
-        """Test bootstrap servers are parsed from detection result."""
-        adapter = KafkaAdapter(kafka_detection)
-        assert adapter._bootstrap_servers == "localhost:9092"
-
-    def test_default_bootstrap_servers(self):
-        """Test default bootstrap servers when not provided."""
-        detection = DetectionResult(
-            provider_name="kafka",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=None,
-            detection_method="test",
-        )
+    @pytest.mark.parametrize(
+        "scenario,attr,expected",
+        [
+            ("default", "provider_name", "kafka"),
+            ("default", "channel_kind", "stream"),
+            ("default", "_bootstrap_servers", "localhost:9092"),
+            ("no_url", "_bootstrap_servers", "localhost:9092"),
+        ],
+        ids=[
+            "test_provider_name",
+            "test_channel_kind",
+            "test_bootstrap_servers_parsing",
+            "test_default_bootstrap_servers",
+        ],
+    )
+    def test_kafka_adapter_attrs(self, kafka_detection, scenario: str, attr: str, expected: str):
+        if scenario == "no_url":
+            detection = DetectionResult(
+                provider_name="kafka",
+                status=ProviderStatus.AVAILABLE,
+                connection_url=None,
+                detection_method="test",
+            )
+        else:
+            detection = kafka_detection
         adapter = KafkaAdapter(detection)
-        assert adapter._bootstrap_servers == "localhost:9092"
+        assert getattr(adapter, attr) == expected
 
     def test_not_initialized_by_default(self, kafka_detection):
         """Test adapter is not initialized by default."""

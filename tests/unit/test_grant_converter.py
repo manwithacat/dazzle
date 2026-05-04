@@ -3,6 +3,8 @@
 
 from uuid import uuid4
 
+import pytest
+
 from dazzle.core.ir.conditions import ConditionExpr, GrantCheck
 from dazzle_back.converters.entity_converter import _convert_access_condition
 from dazzle_back.runtime.access_evaluator import (
@@ -59,58 +61,48 @@ class TestConvertGrantCheck:
 
 
 class TestEvaluateGrantCheck:
-    def test_grant_check_no_grants_denies(self):
-        """grant_check with no active grants returns False."""
+    @pytest.mark.parametrize(
+        "scenario,expected",
+        [
+            ("no_grants", False),
+            ("matching_grant", True),
+            ("wrong_relation", False),
+            ("missing_scope_field", False),
+        ],
+        ids=[
+            "test_grant_check_no_grants_denies",
+            "test_grant_check_with_matching_grant_allows",
+            "test_grant_check_wrong_relation_denies",
+            "test_grant_check_missing_scope_field_denies",
+        ],
+    )
+    def test_evaluate_grant_check(self, scenario: str, expected: bool):
         spec = AccessConditionSpec(
             kind="grant_check",
             grant_relation="acting_hod",
             grant_scope_field="department",
         )
-        ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=["member"])
-        result = evaluate_access_condition(spec, {"department": str(uuid4())}, ctx)
-        assert result is False
-
-    def test_grant_check_with_matching_grant_allows(self):
-        """grant_check with matching active grant returns True."""
-        dept_id = str(uuid4())
-        spec = AccessConditionSpec(
-            kind="grant_check",
-            grant_relation="acting_hod",
-            grant_scope_field="department",
-        )
-        ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
-        # Attach active_grants to context
-        ctx.active_grants = [  # type: ignore[attr-defined]
-            {"relation": "acting_hod", "scope_value": dept_id},
-        ]
-        result = evaluate_access_condition(spec, {"department": dept_id}, ctx)
-        assert result is True
-
-    def test_grant_check_wrong_relation_denies(self):
-        """grant_check with non-matching relation returns False."""
-        dept_id = str(uuid4())
-        spec = AccessConditionSpec(
-            kind="grant_check",
-            grant_relation="acting_hod",
-            grant_scope_field="department",
-        )
-        ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
-        ctx.active_grants = [  # type: ignore[attr-defined]
-            {"relation": "observer", "scope_value": dept_id},
-        ]
-        result = evaluate_access_condition(spec, {"department": dept_id}, ctx)
-        assert result is False
-
-    def test_grant_check_missing_scope_field_denies(self):
-        """grant_check where record lacks scope field returns False."""
-        spec = AccessConditionSpec(
-            kind="grant_check",
-            grant_relation="acting_hod",
-            grant_scope_field="department",
-        )
-        ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
-        ctx.active_grants = [  # type: ignore[attr-defined]
-            {"relation": "acting_hod", "scope_value": "some-dept"},
-        ]
-        result = evaluate_access_condition(spec, {}, ctx)
-        assert result is False
+        if scenario == "no_grants":
+            ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=["member"])
+            record = {"department": str(uuid4())}
+        elif scenario == "matching_grant":
+            dept_id = str(uuid4())
+            ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
+            ctx.active_grants = [  # type: ignore[attr-defined]
+                {"relation": "acting_hod", "scope_value": dept_id},
+            ]
+            record = {"department": dept_id}
+        elif scenario == "wrong_relation":
+            dept_id = str(uuid4())
+            ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
+            ctx.active_grants = [  # type: ignore[attr-defined]
+                {"relation": "observer", "scope_value": dept_id},
+            ]
+            record = {"department": dept_id}
+        else:  # missing_scope_field
+            ctx = AccessRuntimeContext(user_id=str(uuid4()), roles=[])
+            ctx.active_grants = [  # type: ignore[attr-defined]
+                {"relation": "acting_hod", "scope_value": "some-dept"},
+            ]
+            record = {}
+        assert evaluate_access_condition(spec, record, ctx) is expected

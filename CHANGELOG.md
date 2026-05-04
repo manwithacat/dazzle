@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.19] - 2026-05-04
+
+### Changed
+- **Distillation cycle 17** — Batch Y final report (-11, with discipline)
+  + Batch Z partial collapse on test_knowledge_handlers, test_component_roles,
+  test_flip_directive, test_fts_search_method, test_grammar_gen,
+  test_grant_converter, test_queue_adapters, test_serve_runtime_summary,
+  test_stream_adapters, test_workspace_region_tones. 155 tests pass across
+  modified files. Suite total: 12,853 → 12,815 (38 fewer this cycle).
+  Cumulative cycles 1-17: 14,295 → 12,815 (1,480 tests removed). Need
+  815 more for < 12,000.
+
+### Agent Guidance
+- **Pass-3 audit calibration**: the `mirror_share` heuristic in
+  `scripts/distill/cross_file.py` over-flagged at threshold 0.5 (~80% FPR
+  per Batch Y investigation). Real implementation-mirror tests are rarer
+  than the heuristic suggests — most flagged files genuinely cover distinct
+  observable behaviors with mock-heavy fixtures. Tighten to ≥0.7 next
+  iteration, or drop the proxy heuristic and rely on the explicit
+  `implementation_mirror` archetype tag from the classifier.
+
 ## [0.66.18] - 2026-05-04
 
 ### Changed

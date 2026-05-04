@@ -30,27 +30,38 @@ class TestPgConnectionWrapper:
         wrapper = PgConnectionWrapper(mock_conn)
         return wrapper, mock_cursor
 
-    def test_passes_sql_through_unchanged(self) -> None:
-        """PgConnectionWrapper passes SQL to cursor unchanged."""
+    @pytest.mark.parametrize(
+        "sql,params,expected_sql,expected_params",
+        [
+            (
+                "SELECT * FROM t WHERE id = %s AND name = %s",
+                ("a", "b"),
+                "SELECT * FROM t WHERE id = %s AND name = %s",
+                ("a", "b"),
+            ),
+            ("SELECT * FROM t WHERE id = 1", None, "SELECT * FROM t WHERE id = 1", ()),
+            (
+                "SELECT * FROM t WHERE id IN (%s, %s, %s)",
+                (1, 2, 3),
+                "SELECT * FROM t WHERE id IN (%s, %s, %s)",
+                (1, 2, 3),
+            ),
+        ],
+        ids=[
+            "test_passes_sql_through_unchanged",
+            "test_no_params_query",
+            "test_in_clause",
+        ],
+    )
+    def test_sql_passes_through(
+        self, sql: str, params: tuple | None, expected_sql: str, expected_params: tuple
+    ) -> None:
         wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id = %s AND name = %s", ("a", "b"))
-        mock_cursor.execute.assert_called_once_with(
-            "SELECT * FROM t WHERE id = %s AND name = %s", ("a", "b")
-        )
-
-    def test_no_params_query(self) -> None:
-        """Queries without params pass through unchanged."""
-        wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id = 1")
-        mock_cursor.execute.assert_called_once_with("SELECT * FROM t WHERE id = 1", ())
-
-    def test_in_clause(self) -> None:
-        """IN (%s, %s, %s) passes through correctly."""
-        wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id IN (%s, %s, %s)", (1, 2, 3))
-        mock_cursor.execute.assert_called_once_with(
-            "SELECT * FROM t WHERE id IN (%s, %s, %s)", (1, 2, 3)
-        )
+        if params is None:
+            wrapper.execute(sql)
+        else:
+            wrapper.execute(sql, params)
+        mock_cursor.execute.assert_called_once_with(expected_sql, expected_params)
 
     def test_returns_cursor(self) -> None:
         """execute() returns the cursor for fetchone/fetchall."""

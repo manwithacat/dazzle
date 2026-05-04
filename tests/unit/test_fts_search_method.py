@@ -18,6 +18,8 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from dazzle.core.ir.search import SearchField, SearchSpec
 from dazzle_back.runtime.repository import Repository
 
@@ -122,32 +124,26 @@ class TestSqlShape:
         assert "COUNT(*)" in queries[0][0]
         assert "ORDER BY rank DESC" in queries[1][0]
 
-    def test_uses_websearch_to_tsquery(self):
-        # User-friendly query syntax matters — confirms we're not
-        # using plainto_tsquery (which doesn't accept "phrases").
-        repo = _build_repo()
-        asyncio.run(repo.fts_search(_spec(), "hello"))
-        items_sql = repo.db.cursor_obj.queries[1][0]
-        assert "websearch_to_tsquery" in items_sql
-
-    def test_uses_search_vector_column(self):
-        # Must hit the cycle-2 stored column, not rebuild a tsvector each query.
-        repo = _build_repo()
-        asyncio.run(repo.fts_search(_spec(), "hello"))
-        items_sql = repo.db.cursor_obj.queries[1][0]
-        assert "search_vector @@" in items_sql
-
-    def test_orders_by_rank_descending(self):
-        repo = _build_repo()
-        asyncio.run(repo.fts_search(_spec(), "hello"))
-        items_sql = repo.db.cursor_obj.queries[1][0]
-        assert "ORDER BY rank DESC" in items_sql
-
-    def test_quoted_table_name(self):
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            "websearch_to_tsquery",
+            "search_vector @@",
+            "ORDER BY rank DESC",
+            '"Manuscript"',
+        ],
+        ids=[
+            "test_uses_websearch_to_tsquery",
+            "test_uses_search_vector_column",
+            "test_orders_by_rank_descending",
+            "test_quoted_table_name",
+        ],
+    )
+    def test_items_sql_contains(self, expected: str) -> None:
         repo = _build_repo(table_name="Manuscript")
         asyncio.run(repo.fts_search(_spec(), "hello"))
         items_sql = repo.db.cursor_obj.queries[1][0]
-        assert '"Manuscript"' in items_sql
+        assert expected in items_sql
 
     def test_query_string_is_parameterised(self):
         # The user-supplied `q` must NEVER appear inline in the SQL —
