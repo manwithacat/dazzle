@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.7] - 2026-05-04
+
+### Fixed
+- **#1002 — `_platform_admin` workspace `app_map` region 404'd on
+  every page that included it.** The auto-injected platform-admin
+  workspace ships an `app_map` region (`display: DIAGRAM, source:
+  None`); the workspace template emitted hx-get
+  `/api/workspaces/_platform_admin/regions/app_map` but
+  `workspace_route_builder` never registered the route — the
+  bodyless-display allowlist (`_BODYLESS_DISPLAYS`) at the
+  route-builder level included `ACTION_GRID, PIPELINE_STEPS,
+  STATUS_LIST, CONFIRM_ACTION_PANEL` but missed `DIAGRAM`. So the
+  region was correctly rendered as a hx-get target by the template,
+  but the corresponding route never existed.
+
+  Fix: add `DIAGRAM` to `_BODYLESS_DISPLAYS`. Now the route mounts,
+  the handler short-circuits the items fetch when source is None
+  (existing path), and the diagram-only region serves a clean
+  fragment instead of a 404.
+
+  Verified by wide runtime fuzz: contact_manager + component_showcase
+  no longer log `/api/workspaces/_platform_admin/regions/app_map`
+  404s on every page.
+
+  Closes #1002.
+
 ## [0.65.6] - 2026-05-04
 
 ### Fixed

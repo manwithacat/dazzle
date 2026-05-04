@@ -190,11 +190,20 @@ class WorkspaceRouteBuilder:
                     # bodyless-region exemption already lets these
                     # parse without a source; this is the matching
                     # exemption at the route-builder level.
+                    #
+                    # #1002 — DIAGRAM was missing from this allowlist.
+                    # `app_map` in the auto-injected `_platform_admin`
+                    # workspace is `display: DIAGRAM, source: None`, so
+                    # its region route was never registered — the
+                    # workspace template still emitted hx-get
+                    # `/api/workspaces/_platform_admin/regions/app_map`
+                    # which 404'd on every page including the region.
                     _BODYLESS_DISPLAYS = (
                         "ACTION_GRID",
                         "PIPELINE_STEPS",
                         "STATUS_LIST",
                         "CONFIRM_ACTION_PANEL",
+                        "DIAGRAM",
                     )
                     if not ctx_region.source and ctx_region.display not in _BODYLESS_DISPLAYS:
                         continue
