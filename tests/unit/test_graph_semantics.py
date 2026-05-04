@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.validator import validate_graph_declarations
@@ -258,175 +260,173 @@ def _make_appspec(entities: list[ir.EntitySpec]) -> ir.AppSpec:
     )
 
 
-class TestGraphValidationErrors:
-    """Hard errors that block app startup."""
+def _make_std_ref_fields(ref_entity: str = "Node") -> list[ir.FieldSpec]:
+    """Return [id, src→ref, tgt→ref] — the standard valid edge field list."""
+    return [
+        ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+        ir.FieldSpec(
+            name="src", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=ref_entity)
+        ),
+        ir.FieldSpec(
+            name="tgt", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=ref_entity)
+        ),
+    ]
 
-    def test_source_field_not_found(self) -> None:
+
+def _build_error_case(case_id: str) -> tuple[ir.AppSpec, str]:
+    """Build the (AppSpec, expected_error_substring) pair for each validation-error case."""
+    node = _make_entity("Node")
+
+    if case_id == "source_field_not_found":
+        # graph_edge references 'src' but the entity only has 'tgt'
         entity = _make_entity(
             "Edge",
             fields=[
                 ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
                 ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                    name="tgt", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node")
                 ),
             ],
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("source 'src' is not a field on Edge" in e for e in errors)
+        return _make_appspec([node, entity]), "source 'src' is not a field on Edge"
 
-    def test_target_field_not_found(self) -> None:
+    if case_id == "target_field_not_found":
+        # graph_edge references 'tgt' but the entity only has 'src'
         entity = _make_entity(
             "Edge",
             fields=[
                 ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
                 ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                    name="src", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node")
                 ),
             ],
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("target 'tgt' is not a field on Edge" in e for e in errors)
+        return _make_appspec([node, entity]), "target 'tgt' is not a field on Edge"
 
-    def test_source_not_ref_type(self) -> None:
+    if case_id == "source_not_ref_type":
+        # src is a str field, not a ref
         entity = _make_entity(
             "Edge",
             fields=[
                 ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
                 ir.FieldSpec(name="src", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
                 ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                    name="tgt", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node")
                 ),
             ],
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("source must be a ref field, got 'str'" in e for e in errors)
+        return _make_appspec([node, entity]), "source must be a ref field, got 'str'"
 
-    def test_target_not_ref_type(self) -> None:
+    if case_id == "target_not_ref_type":
+        # tgt is a str field, not a ref
         entity = _make_entity(
             "Edge",
             fields=[
                 ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
                 ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                    name="src", type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node")
                 ),
                 ir.FieldSpec(name="tgt", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
             ],
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("target must be a ref field, got 'str'" in e for e in errors)
+        return _make_appspec([node, entity]), "target must be a ref field, got 'str'"
 
-    def test_weight_field_not_found(self) -> None:
+    if case_id == "weight_field_not_found":
+        # weight_field='importance' does not exist on the entity
         entity = _make_entity(
             "Edge",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-                ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-            ],
+            fields=_make_std_ref_fields(),
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt", weight_field="importance"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("weight 'importance' is not a field on Edge" in e for e in errors)
+        return _make_appspec([node, entity]), "weight 'importance' is not a field on Edge"
 
-    def test_weight_field_not_numeric(self) -> None:
+    if case_id == "weight_field_not_numeric":
+        # weight_field exists but is a str, not numeric
         entity = _make_entity(
             "Edge",
             fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-                ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
+                *_make_std_ref_fields(),
                 ir.FieldSpec(name="importance", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
             ],
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt", weight_field="importance"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("weight must be int, decimal, or float" in e for e in errors)
+        return _make_appspec([node, entity]), "weight must be int, decimal, or float"
 
-    def test_type_field_not_found(self) -> None:
+    if case_id == "type_field_not_found":
+        # type_field='kind' does not exist on the entity
         entity = _make_entity(
             "Edge",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-                ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-            ],
+            fields=_make_std_ref_fields(),
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt", type_field="kind"),
         )
-        node = _make_entity("Node")
-        errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("type 'kind' is not a field on Edge" in e for e in errors)
+        return _make_appspec([node, entity]), "type 'kind' is not a field on Edge"
 
-    def test_graph_node_edges_nonexistent_entity(self) -> None:
-        node = _make_entity(
-            "Node",
-            graph_node=ir.GraphNodeSpec(edge_entity="FakeEdge"),
-        )
-        errors, _ = validate_graph_declarations(_make_appspec([node]))
-        assert any("edges 'FakeEdge' is not a defined entity" in e for e in errors)
+    if case_id == "graph_node_edges_nonexistent_entity":
+        # graph_node references 'FakeEdge' which doesn't exist
+        node_with_gn = _make_entity("Node", graph_node=ir.GraphNodeSpec(edge_entity="FakeEdge"))
+        return _make_appspec([node_with_gn]), "edges 'FakeEdge' is not a defined entity"
 
-    def test_graph_node_edges_entity_has_no_graph_edge(self) -> None:
+    if case_id == "graph_node_edges_entity_has_no_graph_edge":
+        # graph_node references 'EdgeEntity' which exists but has no graph_edge:
         edge = _make_entity("EdgeEntity")  # no graph_edge
-        node = _make_entity(
-            "Node",
-            graph_node=ir.GraphNodeSpec(edge_entity="EdgeEntity"),
-        )
-        errors, _ = validate_graph_declarations(_make_appspec([node, edge]))
-        assert any("does not declare graph_edge:" in e for e in errors)
+        node_with_gn = _make_entity("Node", graph_node=ir.GraphNodeSpec(edge_entity="EdgeEntity"))
+        return _make_appspec([node_with_gn, edge]), "does not declare graph_edge:"
 
-    def test_graph_node_display_field_not_found(self) -> None:
+    if case_id == "graph_node_display_field_not_found":
+        # graph_node.display='nonexistent' is not a field on the node entity
         edge = _make_entity(
             "Edge",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-                ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-            ],
+            fields=_make_std_ref_fields(),
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
-        node = _make_entity(
+        node_with_gn = _make_entity(
             "Node",
             graph_node=ir.GraphNodeSpec(edge_entity="Edge", display="nonexistent"),
         )
-        errors, _ = validate_graph_declarations(_make_appspec([node, edge]))
-        assert any("display 'nonexistent' is not a field on Node" in e for e in errors)
+        return _make_appspec([node_with_gn, edge]), "display 'nonexistent' is not a field on Node"
+
+    raise ValueError(f"Unknown case_id: {case_id}")
+
+
+class TestGraphValidationErrors:
+    """Hard errors that block app startup."""
+
+    @pytest.mark.parametrize(
+        "case_id",
+        [
+            "source_field_not_found",
+            "target_field_not_found",
+            "source_not_ref_type",
+            "target_not_ref_type",
+            "weight_field_not_found",
+            "weight_field_not_numeric",
+            "type_field_not_found",
+            "graph_node_edges_nonexistent_entity",
+            "graph_node_edges_entity_has_no_graph_edge",
+            "graph_node_display_field_not_found",
+        ],
+        ids=[
+            "test_source_field_not_found",
+            "test_target_field_not_found",
+            "test_source_not_ref_type",
+            "test_target_not_ref_type",
+            "test_weight_field_not_found",
+            "test_weight_field_not_numeric",
+            "test_type_field_not_found",
+            "test_graph_node_edges_nonexistent_entity",
+            "test_graph_node_edges_entity_has_no_graph_edge",
+            "test_graph_node_display_field_not_found",
+        ],
+    )
+    def test_validation_error(self, case_id: str) -> None:
+        """validate_graph_declarations raises the expected error for each misconfiguration."""
+        appspec, expected_msg = _build_error_case(case_id)
+        errors, _ = validate_graph_declarations(appspec)
+        assert any(expected_msg in e for e in errors)
 
     def test_valid_graph_no_errors(self) -> None:
         node = _make_entity(
@@ -439,17 +439,7 @@ class TestGraphValidationErrors:
         )
         edge = _make_entity(
             "Edge",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="src",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-                ir.FieldSpec(
-                    name="tgt",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
-                ),
-            ],
+            fields=_make_std_ref_fields(),
             graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
         )
         errors, _ = validate_graph_declarations(_make_appspec([node, edge]))

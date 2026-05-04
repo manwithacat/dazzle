@@ -597,81 +597,62 @@ class TestResolveBackendUrl:
         monkeypatch.delenv("DAZZLE_BACKEND_URL", raising=False)
         monkeypatch.delenv("PORT", raising=False)
 
-    # --- Topology 1: Local dev (no env vars) ---
-
-    def test_local_dev_uses_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Local dev: no env vars, base_url empty → hardcoded fallback."""
+    @pytest.mark.parametrize(
+        "backend_url,port,request_base_url,expected",
+        [
+            # --- Topology 1: Local dev (no env vars) ---
+            # Local dev: no env vars, base_url empty → hardcoded fallback
+            (None, None, "", "http://127.0.0.1:8000"),
+            # Local dev: no env vars, base_url available → use it
+            (None, None, "http://localhost:3000/", "http://localhost:3000"),
+            # --- Topology 2: Single dyno (Heroku, Railway) ---
+            # Single dyno: PORT set → localhost with dynamic port
+            (None, "12345", None, "http://127.0.0.1:12345"),
+            # Single dyno: PORT takes priority over request.base_url
+            (None, "5000", "https://myapp.herokuapp.com/", "http://127.0.0.1:5000"),
+            # --- Topology 3: Split services (frontend ≠ backend) ---
+            # Split services: DAZZLE_BACKEND_URL set → use it directly
+            ("https://api.example.com", None, None, "https://api.example.com"),
+            # Trailing slash on DAZZLE_BACKEND_URL is stripped
+            ("https://api.example.com/", None, None, "https://api.example.com"),
+            # DAZZLE_BACKEND_URL takes priority over PORT
+            ("http://backend:9000", "3000", None, "http://backend:9000"),
+            # Split services with internal network URL (AWS VPC, Docker network)
+            ("http://backend.internal:8000", None, None, "http://backend.internal:8000"),
+            # --- Edge cases ---
+            # Empty DAZZLE_BACKEND_URL falls through to next strategy
+            ("", "8080", None, "http://127.0.0.1:8080"),
+        ],
+        ids=[
+            "test_local_dev_uses_fallback",
+            "test_local_dev_uses_base_url",
+            "test_single_dyno_uses_port",
+            "test_single_dyno_port_beats_base_url",
+            "test_split_service_explicit_url",
+            "test_split_service_strips_trailing_slash",
+            "test_split_service_beats_port",
+            "test_split_service_internal_url",
+            "test_empty_dazzle_backend_url_ignored",
+        ],
+    )
+    def test_resolve_backend_url(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_url: str | None,
+        port: str | None,
+        request_base_url: str | None,
+        expected: str,
+    ) -> None:
+        """_resolve_backend_url resolves the correct URL given env/request setup."""
         self._clean_env(monkeypatch)
+        if backend_url is not None:
+            monkeypatch.setenv("DAZZLE_BACKEND_URL", backend_url)
+        if port is not None:
+            monkeypatch.setenv("PORT", port)
         request = MagicMock()
-        request.base_url = ""
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8000"
-
-    def test_local_dev_uses_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Local dev: no env vars, base_url available → use it."""
-        self._clean_env(monkeypatch)
-        request = MagicMock()
-        request.base_url = "http://localhost:3000/"
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://localhost:3000"
-
-    # --- Topology 2: Single dyno (Heroku, Railway) ---
-
-    def test_single_dyno_uses_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Single dyno: PORT set → localhost with dynamic port."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("PORT", "12345")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:12345"
-
-    def test_single_dyno_port_beats_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Single dyno: PORT takes priority over request.base_url."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("PORT", "5000")
-        request = MagicMock()
-        request.base_url = "https://myapp.herokuapp.com/"
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:5000"
-
-    # --- Topology 3: Split services (frontend ≠ backend) ---
-
-    def test_split_service_explicit_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Split services: DAZZLE_BACKEND_URL set → use it directly."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("DAZZLE_BACKEND_URL", "https://api.example.com")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "https://api.example.com"
-
-    def test_split_service_strips_trailing_slash(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Trailing slash on DAZZLE_BACKEND_URL is stripped."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("DAZZLE_BACKEND_URL", "https://api.example.com/")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "https://api.example.com"
-
-    def test_split_service_beats_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """DAZZLE_BACKEND_URL takes priority over PORT."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("DAZZLE_BACKEND_URL", "http://backend:9000")
-        monkeypatch.setenv("PORT", "3000")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://backend:9000"
-
-    def test_split_service_internal_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Split services with internal network URL (AWS VPC, Docker network)."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("DAZZLE_BACKEND_URL", "http://backend.internal:8000")
-        request = MagicMock()
-        assert (
-            _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://backend.internal:8000"
-        )
-
-    # --- Edge cases ---
-
-    def test_empty_dazzle_backend_url_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Empty DAZZLE_BACKEND_URL falls through to next strategy."""
-        self._clean_env(monkeypatch)
-        monkeypatch.setenv("DAZZLE_BACKEND_URL", "")
-        monkeypatch.setenv("PORT", "8080")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8080"
+        if request_base_url is not None:
+            request.base_url = request_base_url
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == expected
 
     def test_base_url_exception_handled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """If request.base_url raises, fall through gracefully."""

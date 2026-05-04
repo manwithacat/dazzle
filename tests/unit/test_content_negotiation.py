@@ -52,40 +52,45 @@ class TestIsHtmxRequest:
 class TestWantsHtml:
     """_wants_html() should match HTMX requests and browser navigation (#348)."""
 
-    def test_htmx_header(self) -> None:
-        """HX-Request header means wants HTML."""
-        assert _wants_html(_req(**{"HX-Request": "true"})) is True
-
-    def test_exact_text_html(self) -> None:
-        """Accept: text/html (exact) should match."""
-        assert _wants_html(_req(Accept="text/html")) is True
-
-    def test_browser_accept_header(self) -> None:
-        """Standard browser Accept header should match (#348)."""
-        browser_accept = (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-        )
-        assert _wants_html(_req(Accept=browser_accept)) is True
-
-    def test_json_accept(self) -> None:
-        """application/json should not match."""
-        assert _wants_html(_req(Accept="application/json")) is False
-
-    def test_wildcard_only(self) -> None:
-        """*/* alone should not match (too broad)."""
-        assert _wants_html(_req(Accept="*/*")) is False
-
-    def test_empty_accept(self) -> None:
-        """Missing Accept header should not match."""
-        assert _wants_html(_req()) is False
-
-    def test_no_headers_attr(self) -> None:
-        """Object without headers attribute should return False."""
-        assert _wants_html(object()) is False
-
-    def test_playwright_accept(self) -> None:
-        """Playwright default Accept header should match."""
-        assert _wants_html(_req(Accept="text/html,*/*")) is True
+    @pytest.mark.parametrize(
+        ("req_obj", "expected"),
+        [
+            # HX-Request header means wants HTML.
+            (_req(**{"HX-Request": "true"}), True),
+            # Accept: text/html (exact) should match.
+            (_req(Accept="text/html"), True),
+            # Standard browser Accept header should match (#348).
+            (
+                _req(
+                    Accept="text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                ),
+                True,
+            ),
+            # application/json should not match.
+            (_req(Accept="application/json"), False),
+            # */* alone should not match (too broad).
+            (_req(Accept="*/*"), False),
+            # Missing Accept header should not match.
+            (_req(), False),
+            # Object without headers attribute should return False.
+            (object(), False),
+            # Playwright default Accept header should match.
+            (_req(Accept="text/html,*/*"), True),
+        ],
+        ids=[
+            "test_htmx_header",
+            "test_exact_text_html",
+            "test_browser_accept_header",
+            "test_json_accept",
+            "test_wildcard_only",
+            "test_empty_accept",
+            "test_no_headers_attr",
+            "test_playwright_accept",
+        ],
+    )
+    def test_wants_html(self, req_obj: object, expected: bool) -> None:
+        """_wants_html() returns True for HTML-wanting requests, False otherwise."""
+        assert _wants_html(req_obj) is expected
 
 
 def _mock_request(accept: str = "", hx_request: bool = False, query: str = "") -> MagicMock:

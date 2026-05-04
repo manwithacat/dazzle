@@ -124,10 +124,14 @@ INVARIANT_ENFORCERS: dict[str, list[tuple[str, str, str]]] = {
 def _test_exists(module_name: str, class_name: str, test_name: str) -> bool:
     """Return True if the named test exists in the given module/class.
 
-    We grep the test file for ``class {class_name}`` followed by
-    ``def {test_name}`` (anywhere after, in the same file). This
-    doesn't execute the test code and doesn't resolve any name
-    dynamically — the file list is a static allowlist.
+    Two acceptance forms:
+      1. A standalone ``def test_name(...)`` inside ``class class_name``.
+      2. A parametrize id matching ``test_name`` inside that class —
+         the suite distillation work (#1011 follow-up) collapsed many
+         per-name tests into one parametric test where the ids are the
+         original names. Either form keeps the invariant pinned.
+
+    We do this by a static text scan — no import, no dynamic resolution.
     """
     filename = _ALLOWED_MODULE_FILES.get(module_name)
     if filename is None:
@@ -140,11 +144,15 @@ def _test_exists(module_name: str, class_name: str, test_name: str) -> bool:
     class_idx = text.find(class_marker)
     if class_idx == -1:
         return False
-    # Match the test method anywhere in the file after the class
-    # heading. An intervening class definition could technically
-    # shadow, but that's not a pattern we use — and pytest would
-    # collect both anyway.
-    return re.search(rf"\bdef\s+{re.escape(test_name)}\s*\(", text[class_idx:]) is not None
+    body = text[class_idx:]
+    # Form 1 — direct method
+    if re.search(rf"\bdef\s+{re.escape(test_name)}\s*\(", body):
+        return True
+    # Form 2 — parametrize id (single- or double-quoted)
+    name_q = re.escape(test_name)
+    if re.search(rf'["\']\s*{name_q}\s*["\']', body):
+        return True
+    return False
 
 
 class TestCardSafetyInvariants:

@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.6] - 2026-05-04
+
+### Changed
+- **Distillation cycle 5** — collapsed ~25 hotspot clusters across 25 files
+  using a mix of 4 parallel sub-agents and direct edits. Touched files:
+  test_url_consistency, test_viewport_suggestions, test_graph_semantics,
+  test_fidelity_scorer (×2), test_validator, test_qa_trial, test_api_packs,
+  test_compliance_matching, test_sa_schema, test_computed_evaluator,
+  test_condition_evaluator_grant_check, test_viewport,
+  test_ux_contract_checker, test_content_negotiation,
+  test_dazzle_adapter_urls, test_e2e_harness, test_money_expansion,
+  test_agent_parser, test_manifest_database, test_composition_audit (×2),
+  test_condition_evaluator_role_check, test_safe_casts,
+  test_input_sanitization, test_audit_visibility, test_workspace_rendering,
+  test_audit_history_routes, test_locale_middleware, test_set_factory_env.
+  Suite total: 14,045 → 13,833 (212 fewer test functions).
+
+### Fixed
+- **`tests/unit/test_card_safety_invariants.py::_test_exists`** now also
+  recognises parametrize ids as test names. The distillation work
+  collapsed `TestFindNestedChromes` per-name tests into one parametric
+  test where the original names live as `ids=[...]`. Without the
+  helper update the meta-test asserting "every invariant has an
+  enforcing test" reported false positives. The pin remains valid:
+  invariant names are still grep-able in the source.
+
 ## [0.66.5] - 2026-05-04
 
 ### Changed

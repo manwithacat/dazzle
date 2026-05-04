@@ -25,6 +25,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+import pytest
+
 from dazzle_back.runtime.audit_visibility import (
     can_view_audit_history,
     find_audit_spec,
@@ -98,37 +100,54 @@ class TestFindAuditSpec:
 
 
 class TestCanViewAuditHistory:
-    def test_none_spec_denies(self):
-        assert can_view_audit_history(None, ["teacher"]) is False
-
-    def test_empty_show_to_denies(self):
-        # `show_to: persona()` with no allow-list is explicit deny —
-        # the framework requires an explicit grant.
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(personas=[]))
-        assert can_view_audit_history(spec, ["teacher"]) is False
-
-    def test_persona_match_allows(self):
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(personas=["teacher", "admin"]))
-        assert can_view_audit_history(spec, ["teacher"]) is True
-
-    def test_persona_intersection_partial(self):
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(personas=["teacher", "admin"]))
-        # Viewer has multiple roles; one matches.
-        assert can_view_audit_history(spec, ["student", "admin"]) is True
-
-    def test_persona_no_intersection_denies(self):
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(personas=["admin"]))
-        assert can_view_audit_history(spec, ["teacher", "student"]) is False
-
-    def test_unknown_kind_fail_closed(self):
-        # Future show_to kinds — until support is added, deny rather
-        # than open by default.
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(kind="future_kind", personas=["teacher"]))
-        assert can_view_audit_history(spec, ["teacher"]) is False
-
-    def test_empty_viewer_personas_denies(self):
-        spec = _AuditSpec(entity="X", show_to=_ShowTo(personas=["admin"]))
-        assert can_view_audit_history(spec, []) is False
+    @pytest.mark.parametrize(
+        ("spec", "viewer_personas", "expected"),
+        [
+            (None, ["teacher"], False),  # no spec → deny
+            # Empty allow-list is an explicit deny (framework requires explicit grant)
+            (_AuditSpec(entity="X", show_to=_ShowTo(personas=[])), ["teacher"], False),
+            # Direct match
+            (
+                _AuditSpec(entity="X", show_to=_ShowTo(personas=["teacher", "admin"])),
+                ["teacher"],
+                True,
+            ),
+            # Intersection — one of viewer's roles matches
+            (
+                _AuditSpec(entity="X", show_to=_ShowTo(personas=["teacher", "admin"])),
+                ["student", "admin"],
+                True,
+            ),
+            # No intersection
+            (
+                _AuditSpec(entity="X", show_to=_ShowTo(personas=["admin"])),
+                ["teacher", "student"],
+                False,
+            ),
+            # Unknown kind fails closed (future kinds default-deny)
+            (
+                _AuditSpec(
+                    entity="X",
+                    show_to=_ShowTo(kind="future_kind", personas=["teacher"]),
+                ),
+                ["teacher"],
+                False,
+            ),
+            # Empty viewer personas
+            (_AuditSpec(entity="X", show_to=_ShowTo(personas=["admin"])), [], False),
+        ],
+        ids=[
+            "none_spec_denies",
+            "empty_show_to_denies",
+            "persona_match_allows",
+            "intersection_partial",
+            "no_intersection_denies",
+            "unknown_kind_fail_closed",
+            "empty_viewer_denies",
+        ],
+    )
+    def test_visibility(self, spec, viewer_personas, expected) -> None:
+        assert can_view_audit_history(spec, viewer_personas) is expected
 
 
 # ---------------------------------------------------------------------------

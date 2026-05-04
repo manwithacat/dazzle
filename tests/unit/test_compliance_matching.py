@@ -4,6 +4,8 @@ Verifies that _match_compliance_pattern correctly identifies PII/financial
 fields while avoiding false positives on system and technical fields.
 """
 
+import pytest
+
 from dazzle.mcp.event_first_tools import (
     _match_compliance_pattern,
     infer_compliance_requirements,
@@ -37,35 +39,51 @@ class TestWordBoundaryMatching:
 class TestNeutralizingContext:
     """Fields with qualifying prefixes should be rejected or deprioritized."""
 
-    def test_ip_address_rejected(self):
-        """ip_address is technical, not postal."""
-        assert _match_compliance_pattern("ip_address", "AuditLog", "address", 0.85) is None
-
-    def test_mac_address_rejected(self):
-        assert _match_compliance_pattern("mac_address", "Device", "address", 0.85) is None
-
-    def test_wallet_address_rejected(self):
-        assert _match_compliance_pattern("wallet_address", "Account", "address", 0.85) is None
-
-    def test_entity_name_rejected(self):
-        """target_entity_name is an identifier, not a person."""
-        assert _match_compliance_pattern("target_entity_name", "AuditLog", "name", 0.7) is None
-
-    def test_rule_name_rejected(self):
-        assert _match_compliance_pattern("rule_name", "FlaggingRule", "name", 0.7) is None
-
-    def test_service_name_rejected(self):
-        assert _match_compliance_pattern("service_name", "Integration", "name", 0.7) is None
-
-    def test_display_name_rejected(self):
-        assert _match_compliance_pattern("display_name", "Config", "name", 0.7) is None
-
-    def test_tenant_name_rejected(self):
-        assert _match_compliance_pattern("xero_tenant_name", "XeroIntegration", "name", 0.7) is None
-
-    def test_scorecard_not_financial(self):
-        """'scorecard' should not match 'card' pattern."""
-        assert _match_compliance_pattern("score_card", "Report", "card", 0.9) is None
+    @pytest.mark.parametrize(
+        "field_name,entity,pattern,confidence",
+        [
+            (
+                "ip_address",
+                "AuditLog",
+                "address",
+                0.85,
+            ),  # test_ip_address_rejected: ip_address is technical, not postal
+            ("mac_address", "Device", "address", 0.85),  # test_mac_address_rejected
+            ("wallet_address", "Account", "address", 0.85),  # test_wallet_address_rejected
+            (
+                "target_entity_name",
+                "AuditLog",
+                "name",
+                0.7,
+            ),  # test_entity_name_rejected: target_entity_name is an identifier, not a person
+            ("rule_name", "FlaggingRule", "name", 0.7),  # test_rule_name_rejected
+            ("service_name", "Integration", "name", 0.7),  # test_service_name_rejected
+            ("display_name", "Config", "name", 0.7),  # test_display_name_rejected
+            ("xero_tenant_name", "XeroIntegration", "name", 0.7),  # test_tenant_name_rejected
+            (
+                "score_card",
+                "Report",
+                "card",
+                0.9,
+            ),  # test_scorecard_not_financial: 'scorecard' should not match 'card' pattern
+        ],
+        ids=[
+            "test_ip_address_rejected",
+            "test_mac_address_rejected",
+            "test_wallet_address_rejected",
+            "test_entity_name_rejected",
+            "test_rule_name_rejected",
+            "test_service_name_rejected",
+            "test_display_name_rejected",
+            "test_tenant_name_rejected",
+            "test_scorecard_not_financial",
+        ],
+    )
+    def test_neutralized_fields_return_none(
+        self, field_name: str, entity: str, pattern: str, confidence: float
+    ) -> None:
+        """Qualifying technical/system prefixes should suppress the match."""
+        assert _match_compliance_pattern(field_name, entity, pattern, confidence) is None
 
     def test_postal_address_still_matches(self):
         """A plain 'address' field on a Contact entity is real PII."""

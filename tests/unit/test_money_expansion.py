@@ -1,5 +1,4 @@
-"""
-Tests for money(GBP) field expansion (Issue #131).
+"""Tests for money(GBP) field expansion (Issue #131).
 
 Tests cover:
 - Entity converter: money field -> _minor (INT) + _currency (STR) expansion
@@ -11,6 +10,8 @@ Tests cover:
 """
 
 from pathlib import Path
+
+import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
@@ -366,40 +367,44 @@ class TestTemplateCompilerMoney:
 class TestCurrencyFilter:
     """Test _currency_filter with ISO 4217 scale support."""
 
-    def test_minor_units_default(self):
-        """By default, minor=True divides by correct scale (100 for GBP)."""
-        result = _currency_filter(2900, "GBP", minor=True)
-        assert result == "\u00a329.00"
-
-    def test_minor_false(self):
-        """minor=False passes value through directly."""
-        result = _currency_filter(29.0, "GBP", minor=False)
-        assert result == "\u00a329.00"
-
-    def test_usd_symbol(self):
-        result = _currency_filter(1500, "USD", minor=True)
-        assert result == "$15.00"
-
-    def test_eur_symbol(self):
-        result = _currency_filter(999, "EUR", minor=True)
-        assert result == "\u20ac9.99"
-
     def test_none_value(self):
+        """None value returns empty string."""
         assert _currency_filter(None) == ""
 
-    def test_zero_value(self):
-        result = _currency_filter(0, "GBP", minor=True)
-        assert result == "\u00a30.00"
-
-    def test_jpy_zero_decimal(self):
-        """JPY has scale=0, so 1000 minor units = ¥1,000."""
-        result = _currency_filter(1000, "JPY", minor=True)
-        assert result == "\u00a51,000"
-
-    def test_bhd_three_decimal(self):
-        """BHD has scale=3, so 1999 minor units = BHD 1.999."""
-        result = _currency_filter(1999, "BHD", minor=True)
-        assert result == "BHD 1.999"
+    @pytest.mark.parametrize(
+        ("value", "currency", "minor", "expected"),
+        [
+            # By default, minor=True divides by correct scale (100 for GBP).
+            (2900, "GBP", True, "\u00a329.00"),
+            # minor=False passes value through directly.
+            (29.0, "GBP", False, "\u00a329.00"),
+            # USD symbol and scale.
+            (1500, "USD", True, "$15.00"),
+            # EUR symbol and scale.
+            (999, "EUR", True, "\u20ac9.99"),
+            # Zero value with GBP.
+            (0, "GBP", True, "\u00a30.00"),
+            # JPY has scale=0, so 1000 minor units = \u00a51,000.
+            (1000, "JPY", True, "\u00a51,000"),
+            # BHD has scale=3, so 1999 minor units = BHD 1.999.
+            (1999, "BHD", True, "BHD 1.999"),
+        ],
+        ids=[
+            "test_minor_units_default",
+            "test_minor_false",
+            "test_usd_symbol",
+            "test_eur_symbol",
+            "test_zero_value",
+            "test_jpy_zero_decimal",
+            "test_bhd_three_decimal",
+        ],
+    )
+    def test_currency_filter(
+        self, value: object, currency: str, minor: bool, expected: str
+    ) -> None:
+        """_currency_filter correctly formats minor-unit amounts for each currency."""
+        result = _currency_filter(value, currency, minor=minor)
+        assert result == expected
 
 
 # =============================================================================

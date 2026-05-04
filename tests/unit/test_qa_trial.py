@@ -47,37 +47,43 @@ class TestBuildTrialMission:
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert m.name == "trial:sample"
 
-    def test_start_url_points_at_app(self, scenario: dict) -> None:
+    @pytest.mark.parametrize(
+        "starting_url_override,expected_start_url",
+        [
+            # test_start_url_points_at_app: no starting_url key → default /app path
+            (None, "http://host:1234/app"),
+            # test_starting_url_relative_path_is_resolved_against_base:
+            # starting_url lets a scenario target a specific workspace/region.
+            ("/app/workspaces/dash#region-foo", "http://host:1234/app/workspaces/dash#region-foo"),
+            # test_starting_url_absolute_overrides_base:
+            # Absolute URLs pass through untouched — useful for cross-host targeting.
+            ("http://elsewhere:5000/whatever", "http://elsewhere:5000/whatever"),
+            # test_starting_url_strips_whitespace
+            ("  /app/thing  ", "http://host:1234/app/thing"),
+            # test_starting_url_missing_leading_slash:
+            # Forgiving: no leading slash still produces a sane URL.
+            ("app/workspaces/x", "http://host:1234/app/workspaces/x"),
+        ],
+        ids=[
+            "test_start_url_points_at_app",
+            "test_starting_url_relative_path_is_resolved_against_base",
+            "test_starting_url_absolute_overrides_base",
+            "test_starting_url_strips_whitespace",
+            "test_starting_url_missing_leading_slash",
+        ],
+    )
+    def test_start_url_resolution(
+        self,
+        scenario: dict,
+        starting_url_override: str | None,
+        expected_start_url: str,
+    ) -> None:
+        """start_url is resolved correctly from base_url and optional starting_url."""
         sink: dict = {"friction": []}
+        if starting_url_override is not None:
+            scenario = {**scenario, "starting_url": starting_url_override}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.start_url == "http://host:1234/app"
-
-    def test_starting_url_relative_path_is_resolved_against_base(self, scenario: dict) -> None:
-        """starting_url lets a scenario target a specific workspace/region."""
-        sink: dict = {"friction": []}
-        scenario = {**scenario, "starting_url": "/app/workspaces/dash#region-foo"}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.start_url == "http://host:1234/app/workspaces/dash#region-foo"
-
-    def test_starting_url_absolute_overrides_base(self, scenario: dict) -> None:
-        """Absolute URLs pass through untouched — useful for cross-host targeting."""
-        sink: dict = {"friction": []}
-        scenario = {**scenario, "starting_url": "http://elsewhere:5000/whatever"}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.start_url == "http://elsewhere:5000/whatever"
-
-    def test_starting_url_strips_whitespace(self, scenario: dict) -> None:
-        sink: dict = {"friction": []}
-        scenario = {**scenario, "starting_url": "  /app/thing  "}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.start_url == "http://host:1234/app/thing"
-
-    def test_starting_url_missing_leading_slash(self, scenario: dict) -> None:
-        """Forgiving: no leading slash still produces a sane URL."""
-        sink: dict = {"friction": []}
-        scenario = {**scenario, "starting_url": "app/workspaces/x"}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.start_url == "http://host:1234/app/workspaces/x"
+        assert m.start_url == expected_start_url
 
     def test_system_prompt_includes_identity_and_tasks(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
@@ -189,17 +195,34 @@ class TestBuildTrialMission:
         assert result.get("ended") is True
         assert sink["verdict"][0]["text"].startswith("Smooth experience")
 
-    def test_max_steps_override_wins(self, scenario: dict) -> None:
+    @pytest.mark.parametrize(
+        "max_steps_kwarg,expected_max_steps",
+        [
+            # test_max_steps_override_wins: explicit kwarg takes precedence over scenario value.
+            (5, 5),
+            # test_max_steps_falls_back_to_scenario: no kwarg → scenario['max_steps'] (20) is used.
+            (None, 20),
+        ],
+        ids=[
+            "test_max_steps_override_wins",
+            "test_max_steps_falls_back_to_scenario",
+        ],
+    )
+    def test_max_steps(
+        self,
+        scenario: dict,
+        max_steps_kwarg: int | None,
+        expected_max_steps: int,
+    ) -> None:
+        """max_steps is resolved from the explicit kwarg or falls back to scenario['max_steps']."""
         sink: dict = {"friction": []}
+        kwargs: dict = {}
+        if max_steps_kwarg is not None:
+            kwargs["max_steps"] = max_steps_kwarg
         m = build_trial_mission(
-            scenario, base_url="http://host:1234", transcript_sink=sink, max_steps=5
+            scenario, base_url="http://host:1234", transcript_sink=sink, **kwargs
         )
-        assert m.max_steps == 5
-
-    def test_max_steps_falls_back_to_scenario(self, scenario: dict) -> None:
-        sink: dict = {"friction": []}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        assert m.max_steps == 20
+        assert m.max_steps == expected_max_steps
 
     def test_system_prompt_mentions_step_budget_and_wrap_up(self, scenario: dict) -> None:
         """After the post-trial-1/2/3 tweaks: the prompt tells the agent

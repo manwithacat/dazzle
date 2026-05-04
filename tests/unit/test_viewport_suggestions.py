@@ -1,5 +1,9 @@
 """Tests for viewport auto-fix suggestions."""
 
+from typing import Any
+
+import pytest
+
 from dazzle.testing.viewport import ViewportAssertion, ViewportAssertionResult
 from dazzle.testing.viewport_suggestions import (
     SUGGESTION_TABLE,
@@ -10,95 +14,104 @@ from dazzle.testing.viewport_suggestions import (
 
 
 class TestSuggestFix:
-    """Tests for suggest_fix()."""
+    """Tests for suggest_fix() — verifies suggested Tailwind class and optional confidence."""
 
-    def test_display_grid_mobile(self) -> None:
-        result = suggest_fix(".grid", "display", "grid", "block", "mobile")
+    @pytest.mark.parametrize(
+        "selector,prop,expected,actual,viewport,suggested_class,confidence",
+        [
+            # display: grid across viewports
+            (".grid", "display", "grid", "block", "mobile", "grid", "high"),
+            (".grid", "display", "grid", "block", "tablet", "sm:grid", None),
+            (".grid", "display", "grid", "block", "desktop", "lg:grid", None),
+            (".grid", "display", "grid", "block", "wide", "xl:grid", None),
+            # display: none / flex
+            (".el", "display", "none", "block", "tablet", "sm:hidden", None),
+            (".el", "display", "flex", "block", "desktop", "lg:flex", None),
+            # grid-template-columns
+            (
+                ".grid",
+                "grid-template-columns",
+                "repeat(2, minmax(0, 1fr))",
+                "1fr",
+                "tablet",
+                "sm:grid-cols-2",
+                "medium",
+            ),
+            (
+                ".grid",
+                "grid-template-columns",
+                "repeat(3, minmax(0, 1fr))",
+                "1fr",
+                "desktop",
+                "lg:grid-cols-3",
+                None,
+            ),
+            # flex-direction
+            (".stats", "flex-direction", "column", "row", "mobile", "flex-col", None),
+            (".stats", "flex-direction", "row", "column", "desktop", "lg:flex-row", None),
+            # visibility
+            (".el", "visibility", "hidden", "visible", "mobile", "invisible", "high"),
+            (".el", "visibility", "visible", "hidden", "desktop", "lg:visible", None),
+            # expected as list — uses first element
+            (".el", "display", ["grid", "inline-grid"], "block", "tablet", "sm:grid", None),
+        ],
+        ids=[
+            "test_display_grid_mobile",
+            "test_display_grid_tablet",
+            "test_display_grid_desktop",
+            "test_display_grid_wide",
+            "test_display_none",
+            "test_display_flex",
+            "test_grid_cols_2",
+            "test_grid_cols_3",
+            "test_flex_direction_column",
+            "test_flex_direction_row",
+            "test_visibility_hidden",
+            "test_visibility_visible",
+            "test_expected_as_list_uses_first",
+        ],
+    )
+    def test_suggest_fix(
+        self,
+        selector: str,
+        prop: str,
+        expected: Any,
+        actual: str | None,
+        viewport: str,
+        suggested_class: str,
+        confidence: str | None,
+    ) -> None:
+        """suggest_fix returns the expected Tailwind class (and confidence when specified)."""
+        result = suggest_fix(selector, prop, expected, actual, viewport)
         assert result is not None
-        assert result.suggested_class == "grid"
-        assert result.confidence == "high"
+        assert result.suggested_class == suggested_class
+        if confidence is not None:
+            assert result.confidence == confidence
 
-    def test_display_grid_tablet(self) -> None:
-        result = suggest_fix(".grid", "display", "grid", "block", "tablet")
-        assert result is not None
-        assert result.suggested_class == "sm:grid"
-
-    def test_display_grid_desktop(self) -> None:
-        result = suggest_fix(".grid", "display", "grid", "block", "desktop")
-        assert result is not None
-        assert result.suggested_class == "lg:grid"
-
-    def test_display_grid_wide(self) -> None:
-        result = suggest_fix(".grid", "display", "grid", "block", "wide")
-        assert result is not None
-        assert result.suggested_class == "xl:grid"
-
-    def test_display_none(self) -> None:
-        result = suggest_fix(".el", "display", "none", "block", "tablet")
-        assert result is not None
-        assert result.suggested_class == "sm:hidden"
-
-    def test_display_flex(self) -> None:
-        result = suggest_fix(".el", "display", "flex", "block", "desktop")
-        assert result is not None
-        assert result.suggested_class == "lg:flex"
-
-    def test_grid_cols_2(self) -> None:
-        result = suggest_fix(
-            ".grid",
-            "grid-template-columns",
-            "repeat(2, minmax(0, 1fr))",
-            "1fr",
-            "tablet",
-        )
-        assert result is not None
-        assert result.suggested_class == "sm:grid-cols-2"
-        assert result.confidence == "medium"
-
-    def test_grid_cols_3(self) -> None:
-        result = suggest_fix(
-            ".grid",
-            "grid-template-columns",
-            "repeat(3, minmax(0, 1fr))",
-            "1fr",
-            "desktop",
-        )
-        assert result is not None
-        assert result.suggested_class == "lg:grid-cols-3"
-
-    def test_flex_direction_column(self) -> None:
-        result = suggest_fix(".stats", "flex-direction", "column", "row", "mobile")
-        assert result is not None
-        assert result.suggested_class == "flex-col"
-
-    def test_flex_direction_row(self) -> None:
-        result = suggest_fix(".stats", "flex-direction", "row", "column", "desktop")
-        assert result is not None
-        assert result.suggested_class == "lg:flex-row"
-
-    def test_visibility_hidden(self) -> None:
-        result = suggest_fix(".el", "visibility", "hidden", "visible", "mobile")
-        assert result is not None
-        assert result.suggested_class == "invisible"
-        assert result.confidence == "high"
-
-    def test_visibility_visible(self) -> None:
-        result = suggest_fix(".el", "visibility", "visible", "hidden", "desktop")
-        assert result is not None
-        assert result.suggested_class == "lg:visible"
-
-    def test_no_suggestion_for_unknown_property(self) -> None:
-        result = suggest_fix(".el", "font-size", "16px", "14px", "mobile")
+    @pytest.mark.parametrize(
+        "selector,prop,expected,actual,viewport",
+        [
+            # Unknown CSS property has no Tailwind mapping
+            (".el", "font-size", "16px", "14px", "mobile"),
+            # actual=None means no baseline to compare against
+            (".el", "display", "grid", None, "mobile"),
+        ],
+        ids=[
+            "test_no_suggestion_for_unknown_property",
+            "test_no_suggestion_when_actual_is_none",
+        ],
+    )
+    def test_suggest_fix_returns_none(
+        self,
+        selector: str,
+        prop: str,
+        expected: Any,
+        actual: str | None,
+        viewport: str,
+    ) -> None:
+        """suggest_fix returns None when no suggestion is available."""
+        result = suggest_fix(selector, prop, expected, actual, viewport)
         assert result is None
-
-    def test_no_suggestion_when_actual_is_none(self) -> None:
-        result = suggest_fix(".el", "display", "grid", None, "mobile")
-        assert result is None
-
-    def test_expected_as_list_uses_first(self) -> None:
-        result = suggest_fix(".el", "display", ["grid", "inline-grid"], "block", "tablet")
-        assert result is not None
-        assert result.suggested_class == "sm:grid"
 
 
 class TestViewportPrefixMapping:

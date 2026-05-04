@@ -4,6 +4,7 @@ Tests for EntitySpec -> SQLAlchemy MetaData bridge.
 Verifies type mapping, FK handling, self-references, and topological ordering.
 """
 
+import pytest
 from sqlalchemy import JSON, Boolean, Date, DateTime, Float, Integer, Text, Uuid
 
 from dazzle_back.runtime.sa_schema import (
@@ -44,32 +45,35 @@ def _field(name: str, kind: str = "scalar", scalar_type: ScalarType | None = Non
 class TestScalarTypeMapping:
     """Test DSL scalar type -> SA type mapping."""
 
-    def test_str_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.STR), Text)
-
-    def test_int_maps_to_integer(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.INT), Integer)
-
-    def test_decimal_maps_to_float(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.DECIMAL), Float)
-
-    def test_bool_maps_to_boolean(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.BOOL), Boolean)
-
-    def test_date_maps_to_date(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.DATE), Date)
-
-    def test_datetime_maps_to_datetime(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.DATETIME), DateTime)
-
-    def test_uuid_maps_to_uuid(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.UUID), Uuid)
-
-    def test_email_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.EMAIL), Text)
-
-    def test_json_maps_to_json(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.JSON), JSON)
+    @pytest.mark.parametrize(
+        "scalar_type,expected_sa_type",
+        [
+            (ScalarType.STR, Text),  # test_str_maps_to_text
+            (ScalarType.INT, Integer),  # test_int_maps_to_integer
+            (ScalarType.DECIMAL, Float),  # test_decimal_maps_to_float
+            (ScalarType.BOOL, Boolean),  # test_bool_maps_to_boolean
+            (ScalarType.DATE, Date),  # test_date_maps_to_date
+            (ScalarType.DATETIME, DateTime),  # test_datetime_maps_to_datetime
+            (ScalarType.UUID, Uuid),  # test_uuid_maps_to_uuid
+            (ScalarType.EMAIL, Text),  # test_email_maps_to_text
+            (ScalarType.JSON, JSON),  # test_json_maps_to_json
+        ],
+        ids=[
+            "test_str_maps_to_text",
+            "test_int_maps_to_integer",
+            "test_decimal_maps_to_float",
+            "test_bool_maps_to_boolean",
+            "test_date_maps_to_date",
+            "test_datetime_maps_to_datetime",
+            "test_uuid_maps_to_uuid",
+            "test_email_maps_to_text",
+            "test_json_maps_to_json",
+        ],
+    )
+    def test_scalar_type_maps_to_sa_type(
+        self, scalar_type: ScalarType, expected_sa_type: type
+    ) -> None:
+        assert isinstance(_scalar_type_to_sa(scalar_type), expected_sa_type)
 
 
 class TestFieldTypeMapping:

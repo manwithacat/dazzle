@@ -1,5 +1,7 @@
 """Tests for contract checker — HTML assertion engine."""
 
+import pytest
+
 from dazzle.testing.ux.contract_checker import check_contract
 from dazzle.testing.ux.contracts import (
     CreateFormContract,
@@ -260,48 +262,111 @@ class TestNestedCardChrome:
 class TestFindNestedChromes:
     """Direct tests of the nested-chrome scanner helper."""
 
-    def test_detects_rounded_plus_border_nested(self) -> None:
+    @pytest.mark.parametrize(
+        ("html", "expected"),
+        [
+            # Nested rounded+border elements → detected pair.
+            (
+                '<div class="rounded-md border"><article class="rounded-lg border bg-blue-50">inner</article></div>',
+                [("div", "article")],
+            ),
+            # rounded-md alone is not chrome — must also have a full border.
+            (
+                '<div class="rounded-md"><article class="rounded-md border bg-white">x</article></div>',
+                [],
+            ),
+            # A rounded element with bg- but no border is not chrome — it's a progress-bar
+            # track, tile backdrop, or pill. Regression for #794 second-follow-up: without
+            # this, scanner flagged kanban column backdrops and bar-chart bar tracks.
+            (
+                '<article class="rounded-md border bg-[hsl(var(--card))]">'
+                '<div class="rounded-full bg-[hsl(var(--muted))] h-5">'
+                '<div class="rounded-full bg-[hsl(var(--primary))] h-5" style="width: 60%"></div>'
+                "</div></article>",
+                [],
+            ),
+            # Sibling chrome elements are not nested — not flagged.
+            (
+                '<section class="rounded-md border"><p>a</p></section>'
+                '<section class="rounded-md border"><p>b</p></section>',
+                [],
+            ),
+            # Regression for #794 follow-up: arbitrary-value rounded classes like
+            # rounded-[4px] / rounded-[6px] (region_card macro + grid.html) must match.
+            (
+                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
+                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px]">'
+                "item</div></div>",
+                [("div", "div")],
+            ),
+            # A left-side accent border (attention state stripe) is not a card edge —
+            # must not trigger nesting detection against an outer chrome.
+            (
+                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
+                '<div class="rounded-[4px] p-3 border-l-4 border-l-[hsl(var(--primary))]">'
+                "item</div></div>",
+                [],
+            ),
+            # Regression #794 followup: dashboard slot article + region_card inner wrapper
+            # before the bare-region fix — two card layers → detected.
+            (
+                '<div data-card-id="card-0" class="relative group outline-none">'
+                '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
+                "<h3>Grade Distribution</h3>"
+                "<div>"
+                '<div data-dz-region class="bg-[hsl(var(--card))] border '
+                'border-[hsl(var(--border))] rounded-[6px]">'
+                '<div class="p-3"><h3>Grade Distribution</h3><p>chart</p></div>'
+                "</div></div></article></div>",
+                [("article", "div")],
+            ),
+            # Post #794-followup: dashboard slot owns chrome+title, region_card is a bare
+            # instrumentation hook — no card-in-card.
+            (
+                '<div data-card-id="card-0" class="relative group outline-none">'
+                '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
+                '<h3 id="card-title-card-0">Grade Distribution</h3>'
+                '<div class="px-4 pb-4">'
+                '<div data-dz-region data-dz-region-name="grade_distribution" '
+                'id="region-grade_distribution">'
+                "<p>chart body goes here</p>"
+                "</div></div></article></div>",
+                [],
+            ),
+            # Grid region after #794-followup: bare data-dz-region hook, plain pad items,
+            # no chrome — dashboard slot (asserted separately) owns all chrome.
+            (
+                '<div data-dz-region data-dz-region-name="system_status" '
+                'id="region-system_status">'
+                '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'
+                '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
+                "<h4>api-gateway</h4></div>"
+                '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
+                "<h4>auth-service</h4></div>"
+                "</div></div>",
+                [],
+            ),
+        ],
+        ids=[
+            "test_detects_rounded_plus_border_nested",
+            "test_ignores_rounded_without_surface",
+            "test_ignores_bg_only_rounded",
+            "test_ignores_siblings",
+            "test_accepts_arbitrary_value_rounded",
+            "test_side_border_is_not_chrome",
+            "test_dashboard_slot_plus_region_card_is_card_in_card",
+            "test_dashboard_slot_with_bare_region_card_is_clean",
+            "test_fixed_grid_region_shape",
+        ],
+    )
+    def test_find_nested_chromes(self, html: str, expected: list) -> None:
+        """find_nested_chromes() detects card-within-card chrome nesting."""
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
-        html = '<div class="rounded-md border"><article class="rounded-lg border bg-blue-50">inner</article></div>'
-        assert find_nested_chromes(html) == [("div", "article")]
-
-    def test_ignores_rounded_without_surface(self) -> None:
-        # rounded-md alone is not chrome — must also have a full border.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<div class="rounded-md"><article class="rounded-md border bg-white">x</article></div>'
-        )
-        assert find_nested_chromes(html) == []
-
-    def test_ignores_bg_only_rounded(self) -> None:
-        # A rounded element with bg- but no border is not chrome — it's
-        # a progress-bar track, tile backdrop, or pill. Regression for
-        # the #794 second-follow-up composite tightening: without this
-        # constraint, the scanner flagged kanban column backdrops
-        # (``bg-muted/0.4 rounded-[6px]``) and bar-chart bar tracks
-        # (``bg-muted rounded-full``) as card chrome.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
-            '<div class="rounded-full bg-[hsl(var(--muted))] h-5">'  # progress track
-            '<div class="rounded-full bg-[hsl(var(--primary))] h-5" style="width: 60%"></div>'
-            "</div></article>"
-        )
-        assert find_nested_chromes(html) == []
-
-    def test_ignores_siblings(self) -> None:
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<section class="rounded-md border"><p>a</p></section>'
-            '<section class="rounded-md border"><p>b</p></section>'
-        )
-        assert find_nested_chromes(html) == []
+        assert find_nested_chromes(html) == expected
 
     def test_reports_one_pair_per_inner_chrome(self) -> None:
+        # Two inner chromes under one outer chrome = 2 pairs.
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
         html = (
@@ -310,97 +375,9 @@ class TestFindNestedChromes:
             '<div class="rounded-md border">b</div>'
             "</section>"
         )
-        # Two inner chromes under one outer chrome = 2 pairs.
         result = find_nested_chromes(html)
         assert len(result) == 2
         assert all(outer == "section" for outer, _ in result)
-
-    def test_accepts_arbitrary_value_rounded(self) -> None:
-        # Regression for the #794 follow-up: Dazzle's own templates use
-        # arbitrary-value rounded classes like `rounded-[4px]` and
-        # `rounded-[6px]` (region_card macro + grid.html). The initial
-        # fix missed this because it only recognised fixed-scale
-        # `rounded-md` / `rounded-lg` / etc.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
-            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px]">'
-            "item</div></div>"
-        )
-        assert find_nested_chromes(html) == [("div", "div")]
-
-    def test_side_border_is_not_chrome(self) -> None:
-        # A left-side accent border (used for attention states) is an
-        # accent stripe, not a card edge — must not trigger nesting
-        # detection against an outer chrome.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
-            '<div class="rounded-[4px] p-3 border-l-4 border-l-[hsl(var(--primary))]">'
-            "item</div></div>"
-        )
-        assert find_nested_chromes(html) == []
-
-    def test_dashboard_slot_plus_region_card_is_card_in_card(self) -> None:
-        # Regression: the exact shape AegisMark reported in the #794
-        # follow-up. The dashboard slot (workspace/_content.html) owns
-        # an <article> with rounded-md + border + bg-card. Before the
-        # region_card-is-bare fix, the macro also emitted its own
-        # rounded-[6px] + border + bg-card wrapper inside that article
-        # — two card layers, one visible card-in-card. Scanner must
-        # catch this.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        before_fix_html = (
-            '<div data-card-id="card-0" class="relative group outline-none">'
-            '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
-            "<h3>Grade Distribution</h3>"
-            "<div>"
-            '<div data-dz-region class="bg-[hsl(var(--card))] border '
-            'border-[hsl(var(--border))] rounded-[6px]">'
-            '<div class="p-3"><h3>Grade Distribution</h3><p>chart</p></div>'
-            "</div></div></article></div>"
-        )
-        assert find_nested_chromes(before_fix_html) == [("article", "div")]
-
-    def test_dashboard_slot_with_bare_region_card_is_clean(self) -> None:
-        # The shape after #794-followup: dashboard slot owns chrome
-        # + title, region_card is a contentless instrumentation hook
-        # (just data-dz-region), region body is bare content. No
-        # card-in-card, no duplicate title.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        after_fix_html = (
-            '<div data-card-id="card-0" class="relative group outline-none">'
-            '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
-            '<h3 id="card-title-card-0">Grade Distribution</h3>'
-            '<div class="px-4 pb-4">'
-            '<div data-dz-region data-dz-region-name="grade_distribution" '
-            'id="region-grade_distribution">'
-            "<p>chart body goes here</p>"
-            "</div></div></article></div>"
-        )
-        assert find_nested_chromes(after_fix_html) == []
-
-    def test_fixed_grid_region_shape(self) -> None:
-        # Grid region content after #794-followup: bare data-dz-region
-        # hook, items are plain pads, no chrome anywhere. The enclosing
-        # dashboard slot (asserted separately above) owns all chrome.
-        from dazzle.testing.ux.contract_checker import find_nested_chromes
-
-        html = (
-            '<div data-dz-region data-dz-region-name="system_status" '
-            'id="region-system_status">'
-            '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'
-            '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
-            "<h4>api-gateway</h4></div>"
-            '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
-            "<h4>auth-service</h4></div>"
-            "</div></div>"
-        )
-        assert find_nested_chromes(html) == []
 
 
 class TestFindDuplicateTitlesInCards:

@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from dazzle_back.runtime.computed_evaluator import (
     enrich_record_with_computed_fields,
     enrich_records_with_computed_fields,
@@ -76,6 +78,8 @@ class TestFieldRefExpression:
 
 
 class TestAggregateExpression:
+    """Test aggregate function evaluation over related record sets."""
+
     def _agg(self, func: AggregateFunctionKind, path: list[str]) -> ComputedExprSpec:
         return ComputedExprSpec(
             kind="aggregate",
@@ -83,52 +87,92 @@ class TestAggregateExpression:
             field=ComputedExprSpec(kind="field_ref", path=path),
         )
 
-    def test_count(self) -> None:
-        expr = self._agg(AggregateFunctionKind.COUNT, ["items"])
-        related = {"items": [{"id": 1}, {"id": 2}, {"id": 3}]}
-        assert evaluate_expression(expr, {}, related) == 3
-
-    def test_count_empty(self) -> None:
-        expr = self._agg(AggregateFunctionKind.COUNT, ["items"])
-        assert evaluate_expression(expr, {}, {"items": []}) == 0
-
-    def test_sum(self) -> None:
-        expr = self._agg(AggregateFunctionKind.SUM, ["items", "amount"])
-        related = {"items": [{"amount": 10}, {"amount": 20}, {"amount": 30}]}
-        assert evaluate_expression(expr, {}, related) == 60
-
-    def test_avg(self) -> None:
-        expr = self._agg(AggregateFunctionKind.AVG, ["items", "price"])
-        related = {"items": [{"price": 10}, {"price": 20}]}
-        assert evaluate_expression(expr, {}, related) == 15.0
-
-    def test_min(self) -> None:
-        expr = self._agg(AggregateFunctionKind.MIN, ["scores", "value"])
-        related = {"scores": [{"value": 5}, {"value": 2}, {"value": 8}]}
-        assert evaluate_expression(expr, {}, related) == 2
-
-    def test_max(self) -> None:
-        expr = self._agg(AggregateFunctionKind.MAX, ["scores", "value"])
-        related = {"scores": [{"value": 5}, {"value": 2}, {"value": 8}]}
-        assert evaluate_expression(expr, {}, related) == 8
-
-    def test_sum_empty_items(self) -> None:
-        expr = self._agg(AggregateFunctionKind.SUM, ["items", "amount"])
-        assert evaluate_expression(expr, {}, {"items": []}) is None
-
-    def test_sum_with_none_values(self) -> None:
-        expr = self._agg(AggregateFunctionKind.SUM, ["items", "amount"])
-        related = {"items": [{"amount": 10}, {"amount": None}, {"amount": 30}]}
-        assert evaluate_expression(expr, {}, related) == 40
-
-    def test_sum_with_string_values(self) -> None:
-        expr = self._agg(AggregateFunctionKind.SUM, ["items", "amount"])
-        related = {"items": [{"amount": "10"}, {"amount": "20"}]}
-        assert evaluate_expression(expr, {}, related) == 30.0
-
-    def test_missing_relation(self) -> None:
-        expr = self._agg(AggregateFunctionKind.COUNT, ["nonexistent"])
-        assert evaluate_expression(expr, {}, {}) == 0
+    @pytest.mark.parametrize(
+        "func,path,related,expected",
+        [
+            (  # test_count
+                AggregateFunctionKind.COUNT,
+                ["items"],
+                {"items": [{"id": 1}, {"id": 2}, {"id": 3}]},
+                3,
+            ),
+            (  # test_count_empty
+                AggregateFunctionKind.COUNT,
+                ["items"],
+                {"items": []},
+                0,
+            ),
+            (  # test_sum
+                AggregateFunctionKind.SUM,
+                ["items", "amount"],
+                {"items": [{"amount": 10}, {"amount": 20}, {"amount": 30}]},
+                60,
+            ),
+            (  # test_avg
+                AggregateFunctionKind.AVG,
+                ["items", "price"],
+                {"items": [{"price": 10}, {"price": 20}]},
+                15.0,
+            ),
+            (  # test_min
+                AggregateFunctionKind.MIN,
+                ["scores", "value"],
+                {"scores": [{"value": 5}, {"value": 2}, {"value": 8}]},
+                2,
+            ),
+            (  # test_max
+                AggregateFunctionKind.MAX,
+                ["scores", "value"],
+                {"scores": [{"value": 5}, {"value": 2}, {"value": 8}]},
+                8,
+            ),
+            (  # test_sum_empty_items: SUM over empty list returns None
+                AggregateFunctionKind.SUM,
+                ["items", "amount"],
+                {"items": []},
+                None,
+            ),
+            (  # test_sum_with_none_values: None values are skipped
+                AggregateFunctionKind.SUM,
+                ["items", "amount"],
+                {"items": [{"amount": 10}, {"amount": None}, {"amount": 30}]},
+                40,
+            ),
+            (  # test_sum_with_string_values: numeric strings are coerced
+                AggregateFunctionKind.SUM,
+                ["items", "amount"],
+                {"items": [{"amount": "10"}, {"amount": "20"}]},
+                30.0,
+            ),
+            (  # test_missing_relation: missing key returns 0 for COUNT
+                AggregateFunctionKind.COUNT,
+                ["nonexistent"],
+                {},
+                0,
+            ),
+        ],
+        ids=[
+            "test_count",
+            "test_count_empty",
+            "test_sum",
+            "test_avg",
+            "test_min",
+            "test_max",
+            "test_sum_empty_items",
+            "test_sum_with_none_values",
+            "test_sum_with_string_values",
+            "test_missing_relation",
+        ],
+    )
+    def test_aggregate_expression(
+        self,
+        func: AggregateFunctionKind,
+        path: list[str],
+        related: dict,
+        expected: object,
+    ) -> None:
+        expr = self._agg(func, path)
+        assert evaluate_expression(expr, {}, related) == expected
 
     def test_no_function(self) -> None:
         expr = ComputedExprSpec(kind="aggregate", function=None, field=None)

@@ -1,53 +1,57 @@
 """Tests for the safe cast registry."""
 
+import pytest
+
 from dazzle_back.runtime.safe_casts import get_using_clause, is_safe_cast
 
 
 class TestSafeCastRegistry:
-    def test_text_to_uuid_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "UUID")
-
-    def test_text_to_timestamptz_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "TIMESTAMPTZ")
-
-    def test_text_to_date_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "DATE")
-
-    def test_text_to_jsonb_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "JSONB")
-
-    def test_text_to_boolean_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "BOOLEAN")
-
-    def test_text_to_integer_is_safe(self) -> None:
-        assert is_safe_cast("TEXT", "INTEGER")
-
-    def test_double_to_numeric_is_safe(self) -> None:
-        assert is_safe_cast("DOUBLE PRECISION", "NUMERIC")
-
-    def test_uuid_to_text_is_not_safe(self) -> None:
-        assert not is_safe_cast("UUID", "TEXT")
-
-    def test_integer_to_boolean_is_not_safe(self) -> None:
-        assert not is_safe_cast("INTEGER", "BOOLEAN")
-
-    def test_case_insensitive(self) -> None:
-        assert is_safe_cast("text", "uuid")
+    @pytest.mark.parametrize(
+        ("from_type", "to_type", "expected"),
+        [
+            ("TEXT", "UUID", True),
+            ("TEXT", "TIMESTAMPTZ", True),
+            ("TEXT", "DATE", True),
+            ("TEXT", "JSONB", True),
+            ("TEXT", "BOOLEAN", True),
+            ("TEXT", "INTEGER", True),
+            ("DOUBLE PRECISION", "NUMERIC", True),
+            ("UUID", "TEXT", False),
+            ("INTEGER", "BOOLEAN", False),
+            ("text", "uuid", True),  # case-insensitive
+        ],
+        ids=[
+            "text_to_uuid",
+            "text_to_timestamptz",
+            "text_to_date",
+            "text_to_jsonb",
+            "text_to_boolean",
+            "text_to_integer",
+            "double_to_numeric",
+            "uuid_to_text_unsafe",
+            "integer_to_boolean_unsafe",
+            "case_insensitive",
+        ],
+    )
+    def test_is_safe_cast(self, from_type, to_type, expected) -> None:
+        assert is_safe_cast(from_type, to_type) is expected
 
 
 class TestGetUsingClause:
-    def test_text_to_uuid_clause(self) -> None:
-        clause = get_using_clause("TEXT", "UUID", "my_col")
-        assert clause == '"my_col"::uuid'
-
-    def test_text_to_timestamptz_clause(self) -> None:
-        clause = get_using_clause("TEXT", "TIMESTAMPTZ", "created_at")
-        assert clause == '"created_at"::timestamptz'
-
-    def test_double_to_numeric_has_no_clause(self) -> None:
-        clause = get_using_clause("DOUBLE PRECISION", "NUMERIC", "amount")
-        assert clause is None
-
-    def test_unknown_cast_returns_none(self) -> None:
-        clause = get_using_clause("UUID", "TEXT", "id")
-        assert clause is None
+    @pytest.mark.parametrize(
+        ("from_type", "to_type", "col_name", "expected"),
+        [
+            ("TEXT", "UUID", "my_col", '"my_col"::uuid'),
+            ("TEXT", "TIMESTAMPTZ", "created_at", '"created_at"::timestamptz'),
+            ("DOUBLE PRECISION", "NUMERIC", "amount", None),
+            ("UUID", "TEXT", "id", None),  # unknown cast
+        ],
+        ids=[
+            "text_to_uuid",
+            "text_to_timestamptz",
+            "double_to_numeric_no_clause",
+            "unknown_cast_returns_none",
+        ],
+    )
+    def test_using_clause(self, from_type, to_type, col_name, expected) -> None:
+        assert get_using_clause(from_type, to_type, col_name) == expected

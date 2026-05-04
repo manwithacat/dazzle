@@ -1,5 +1,7 @@
 """Tests for HTML input sanitization (#135)."""
 
+import pytest
+
 from dazzle_back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
 
 # ---------------------------------------------------------------------------
@@ -10,27 +12,29 @@ from dazzle_back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
 class TestStripHtmlTags:
     """Tests for complete HTML tag stripping on str fields."""
 
-    def test_script_tags_stripped(self):
-        assert strip_html_tags('<script>alert("xss")</script>') == 'alert("xss")'
-
-    def test_normal_text_preserved(self):
-        assert strip_html_tags("Hello, World!") == "Hello, World!"
-
-    def test_angle_brackets_in_normal_text(self):
-        # Edge: a < b > c is not a valid tag
-        assert strip_html_tags("3 < 5 is true") == "3 < 5 is true"
-
-    def test_all_tags_removed(self):
-        assert strip_html_tags("<b>bold</b> and <i>italic</i>") == "bold and italic"
-
-    def test_empty_string(self):
-        assert strip_html_tags("") == ""
-
-    def test_nested_tags(self):
-        assert strip_html_tags("<div><p>hello</p></div>") == "hello"
-
-    def test_img_tag_removed(self):
-        assert strip_html_tags('<img src="x" onerror="alert(1)">text') == "text"
+    @pytest.mark.parametrize(
+        ("input_str", "expected"),
+        [
+            ('<script>alert("xss")</script>', 'alert("xss")'),
+            ("Hello, World!", "Hello, World!"),  # normal text preserved
+            ("3 < 5 is true", "3 < 5 is true"),  # `<` not followed by tag-name
+            ("<b>bold</b> and <i>italic</i>", "bold and italic"),
+            ("", ""),
+            ("<div><p>hello</p></div>", "hello"),  # nested tags
+            ('<img src="x" onerror="alert(1)">text', "text"),
+        ],
+        ids=[
+            "script_tags_stripped",
+            "normal_text_preserved",
+            "angle_brackets_in_normal_text",
+            "all_tags_removed",
+            "empty_string",
+            "nested_tags",
+            "img_tag_removed",
+        ],
+    )
+    def test_strip(self, input_str, expected) -> None:
+        assert strip_html_tags(input_str) == expected
 
 
 # ---------------------------------------------------------------------------

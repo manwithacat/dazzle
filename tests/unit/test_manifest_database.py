@@ -364,46 +364,84 @@ class TestResolveDatabaseUrlWithEnv:
             },
         )
 
-    def test_explicit_url_beats_env_profile(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
+    @pytest.mark.parametrize(
+        ("env_sets", "env_deletes", "env_name", "explicit_url", "expected"),
+        [
+            # Explicit URL beats env profile — explicit_url wins regardless of env_name.
+            (
+                {},
+                ["DATABASE_URL"],
+                "development",
+                "postgresql://cli:5432/clidb",
+                "postgresql://cli:5432/clidb",
+            ),
+            # Env profile with direct database_url is used.
+            ({}, ["DATABASE_URL"], "development", None, "postgresql://localhost:5432/devdb"),
+            # Env profile with env var indirection resolves when var is set.
+            (
+                {"STAGING_DB_URL": "postgresql://staging:5432/stgdb"},
+                ["DATABASE_URL"],
+                "staging",
+                None,
+                "postgresql://staging:5432/stgdb",
+            ),
+            # Env profile env var unset — falls through to manifest database URL.
+            (
+                {},
+                ["DATABASE_URL", "STAGING_DB_URL"],
+                "staging",
+                None,
+                "postgresql://toml:5432/tomldb",
+            ),
+            # direct_url beats env_var when both are set in the profile.
+            (
+                {"INDIRECT_DB_URL": "postgresql://indirect:5432/db"},
+                ["DATABASE_URL"],
+                "both",
+                None,
+                "postgresql://direct:5432/db",
+            ),
+            # Env profile beats ambient DATABASE_URL env var.
+            (
+                {"DATABASE_URL": "postgresql://ambient:5432/ambientdb"},
+                [],
+                "development",
+                None,
+                "postgresql://localhost:5432/devdb",
+            ),
+            # Empty env_name uses existing fallback chain (manifest direct URL).
+            ({}, ["DATABASE_URL"], "", None, "postgresql://toml:5432/tomldb"),
+        ],
+        ids=[
+            "test_explicit_url_beats_env_profile",
+            "test_env_profile_direct_url",
+            "test_env_profile_env_var_indirection",
+            "test_env_profile_env_var_unset_falls_through",
+            "test_env_profile_direct_beats_env_var",
+            "test_env_profile_beats_database_url_env",
+            "test_no_env_name_uses_existing_chain",
+        ],
+    )
+    def test_resolve_with_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        env_sets: dict,
+        env_deletes: list,
+        env_name: str,
+        explicit_url: str | None,
+        expected: str,
+    ) -> None:
+        """resolve_database_url() selects the correct URL from env profile, env vars, and manifest."""
+        for key in env_deletes:
+            monkeypatch.delenv(key, raising=False)
+        for key, value in env_sets.items():
+            monkeypatch.setenv(key, value)
         manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(
-            manifest, explicit_url="postgresql://cli:5432/clidb", env_name="development"
-        )
-        assert result == "postgresql://cli:5432/clidb"
-
-    def test_env_profile_direct_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="development")
-        assert result == "postgresql://localhost:5432/devdb"
-
-    def test_env_profile_env_var_indirection(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.setenv("STAGING_DB_URL", "postgresql://staging:5432/stgdb")
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="staging")
-        assert result == "postgresql://staging:5432/stgdb"
-
-    def test_env_profile_env_var_unset_falls_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.delenv("STAGING_DB_URL", raising=False)
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="staging")
-        assert result == "postgresql://toml:5432/tomldb"
-
-    def test_env_profile_direct_beats_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.setenv("INDIRECT_DB_URL", "postgresql://indirect:5432/db")
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="both")
-        assert result == "postgresql://direct:5432/db"
-
-    def test_env_profile_beats_database_url_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("DATABASE_URL", "postgresql://ambient:5432/ambientdb")
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="development")
-        assert result == "postgresql://localhost:5432/devdb"
+        kwargs: dict = {"env_name": env_name}
+        if explicit_url is not None:
+            kwargs["explicit_url"] = explicit_url
+        result = resolve_database_url(manifest, **kwargs)
+        assert result == expected
 
     def test_unknown_env_name_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_URL", raising=False)
@@ -416,12 +454,6 @@ class TestResolveDatabaseUrlWithEnv:
         manifest = self._make_manifest_with_envs()
         with pytest.raises(SystemExit, match="staging"):
             resolve_database_url(manifest, env_name="nonexistent")
-
-    def test_no_env_name_uses_existing_chain(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        manifest = self._make_manifest_with_envs()
-        result = resolve_database_url(manifest, env_name="")
-        assert result == "postgresql://toml:5432/tomldb"
 
     def test_env_profile_normalises_postgres_scheme(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_URL", raising=False)

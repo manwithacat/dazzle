@@ -216,19 +216,133 @@ class TestDeriveSectionRoles:
 class TestEvaluateRule:
     """Test the 5 composition rule types."""
 
-    def test_ratio_pass(self) -> None:
-        rule = {
-            "id": "r1",
-            "type": "ratio",
-            "a": "h1",
-            "b": "subhead",
-            "min": 1.5,
-            "severity": "high",
-            "message": "test",
-        }
-        roles = {"h1", "subhead"}
-        weights = {"h1": 7.30, "subhead": 2.39}
-        assert evaluate_rule(rule, roles, weights) is None  # passes
+    # --- "passes" (returns None) cases ---
+
+    @pytest.mark.parametrize(
+        ("rule", "roles", "weights"),
+        [
+            # ratio: h1/subhead ratio 7.30/2.39 ≈ 3.05 exceeds min 1.5 → passes.
+            (
+                {
+                    "id": "r1",
+                    "type": "ratio",
+                    "a": "h1",
+                    "b": "subhead",
+                    "min": 1.5,
+                    "severity": "high",
+                    "message": "test",
+                },
+                {"h1", "subhead"},
+                {"h1": 7.30, "subhead": 2.39},
+            ),
+            # ratio: missing element (subhead) → skipped.
+            (
+                {
+                    "id": "r1",
+                    "type": "ratio",
+                    "a": "h1",
+                    "b": "subhead",
+                    "min": 1.5,
+                    "severity": "high",
+                    "message": "test",
+                },
+                {"h1"},
+                {"h1": 7.30},
+            ),
+            # ordering: primary_cta > secondary_cta weight → correct order → passes.
+            (
+                {
+                    "id": "o1",
+                    "type": "ordering",
+                    "order": ["primary_cta", "secondary_cta"],
+                    "severity": "medium",
+                    "message": "test",
+                },
+                {"primary_cta", "secondary_cta"},
+                {"primary_cta": 4.73, "secondary_cta": 3.53},
+            ),
+            # ordering: secondary_cta missing → skipped.
+            (
+                {
+                    "id": "o1",
+                    "type": "ordering",
+                    "order": ["primary_cta", "secondary_cta"],
+                    "severity": "medium",
+                    "message": "test",
+                },
+                {"primary_cta"},
+                {"primary_cta": 4.73},
+            ),
+            # consistency: only 1 element (<2) → skipped.
+            (
+                {
+                    "id": "c1",
+                    "type": "consistency",
+                    "elements": ["h3"],
+                    "max_variance": 1.5,
+                    "severity": "medium",
+                    "message": "test",
+                },
+                {"h3"},
+                {"h3": 2.71},
+            ),
+            # minimum: h2=7.09 ≥ min 7.0 → passes (CTA section override).
+            (
+                {
+                    "id": "m1",
+                    "type": "minimum",
+                    "element": "h2",
+                    "min": 7.0,
+                    "severity": "high",
+                    "message": "test",
+                },
+                {"h2"},
+                {"h2": 7.09},
+            ),
+            # minimum: element missing from roles → skipped.
+            (
+                {
+                    "id": "m1",
+                    "type": "minimum",
+                    "element": "h2",
+                    "min": 7.0,
+                    "severity": "high",
+                    "message": "test",
+                },
+                set(),
+                {},
+            ),
+            # balance: one side (hero_image) missing → skipped.
+            (
+                {
+                    "id": "b1",
+                    "type": "balance",
+                    "left": ["h1"],
+                    "right": ["hero_image"],
+                    "max_imbalance": 0.30,
+                    "severity": "low",
+                    "message": "test",
+                },
+                {"h1"},
+                {"h1": 7.30},
+            ),
+        ],
+        ids=[
+            "test_ratio_pass",
+            "test_ratio_skips_missing_element",
+            "test_ordering_pass",
+            "test_ordering_skips_missing",
+            "test_consistency_pass",
+            "test_minimum_pass",
+            "test_minimum_skips_missing",
+            "test_balance_skips_one_side_empty",
+        ],
+    )
+    def test_rule_passes(self, rule: dict, roles: set, weights: dict) -> None:
+        """Rules that are satisfied (or skipped due to missing elements) return None."""
+        assert evaluate_rule(rule, roles, weights) is None
+
+    # --- "fails" (returns violation dict) cases — each carries unique detail assertions ---
 
     def test_ratio_fail(self) -> None:
         rule = {
@@ -247,21 +361,8 @@ class TestEvaluateRule:
         assert result["severity"] == "high"
         assert "Ratio" in result["detail"]
 
-    def test_ratio_skips_missing_element(self) -> None:
-        rule = {
-            "id": "r1",
-            "type": "ratio",
-            "a": "h1",
-            "b": "subhead",
-            "min": 1.5,
-            "severity": "high",
-            "message": "test",
-        }
-        roles = {"h1"}  # subhead missing
-        weights = {"h1": 7.30}
-        assert evaluate_rule(rule, roles, weights) is None
-
     def test_ratio_max(self) -> None:
+        # ratio is 3.05, exceeds max 2.0
         rule = {
             "id": "r1",
             "type": "ratio",
@@ -277,18 +378,6 @@ class TestEvaluateRule:
         result = evaluate_rule(rule, roles, weights)
         assert result is not None  # ratio is 3.05, exceeds max 2.0
 
-    def test_ordering_pass(self) -> None:
-        rule = {
-            "id": "o1",
-            "type": "ordering",
-            "order": ["primary_cta", "secondary_cta"],
-            "severity": "medium",
-            "message": "test",
-        }
-        roles = {"primary_cta", "secondary_cta"}
-        weights = {"primary_cta": 4.73, "secondary_cta": 3.53}
-        assert evaluate_rule(rule, roles, weights) is None
-
     def test_ordering_fail(self) -> None:
         rule = {
             "id": "o1",
@@ -302,31 +391,6 @@ class TestEvaluateRule:
         result = evaluate_rule(rule, roles, weights)
         assert result is not None
         assert "Ordering" in result["detail"]
-
-    def test_ordering_skips_missing(self) -> None:
-        rule = {
-            "id": "o1",
-            "type": "ordering",
-            "order": ["primary_cta", "secondary_cta"],
-            "severity": "medium",
-            "message": "test",
-        }
-        roles = {"primary_cta"}  # secondary missing
-        weights = {"primary_cta": 4.73}
-        assert evaluate_rule(rule, roles, weights) is None
-
-    def test_consistency_pass(self) -> None:
-        rule = {
-            "id": "c1",
-            "type": "consistency",
-            "elements": ["h3"],
-            "max_variance": 1.5,
-            "severity": "medium",
-            "message": "test",
-        }
-        roles = {"h3"}
-        weights = {"h3": 2.71}
-        assert evaluate_rule(rule, roles, weights) is None  # < 2 elements
 
     def test_consistency_fail(self) -> None:
         rule = {
@@ -343,19 +407,6 @@ class TestEvaluateRule:
         assert result is not None
         assert "Variance" in result["detail"]
 
-    def test_minimum_pass(self) -> None:
-        rule = {
-            "id": "m1",
-            "type": "minimum",
-            "element": "h2",
-            "min": 7.0,
-            "severity": "high",
-            "message": "test",
-        }
-        roles = {"h2"}
-        weights = {"h2": 7.09}  # CTA override
-        assert evaluate_rule(rule, roles, weights) is None
-
     def test_minimum_fail(self) -> None:
         rule = {
             "id": "m1",
@@ -371,20 +422,11 @@ class TestEvaluateRule:
         assert result is not None
         assert "5.51" in result["detail"]
 
-    def test_minimum_skips_missing(self) -> None:
-        rule = {
-            "id": "m1",
-            "type": "minimum",
-            "element": "h2",
-            "min": 7.0,
-            "severity": "high",
-            "message": "test",
-        }
-        roles: set[str] = set()
-        weights: dict[str, float] = {}
-        assert evaluate_rule(rule, roles, weights) is None
-
     def test_balance_pass(self) -> None:
+        # left=9.69, right=4.63, total=14.32, imbalance=35% > 30%
+        # This actually fails! Let me check...
+        # Actually for the full hero the weights should work out differently
+        # Let's just check behavior is correct
         rule = {
             "id": "b1",
             "type": "balance",
@@ -397,26 +439,8 @@ class TestEvaluateRule:
         roles = {"h1", "subhead", "hero_image"}
         weights = {"h1": 7.30, "subhead": 2.39, "hero_image": 4.63}
         result = evaluate_rule(rule, roles, weights)
-        # left=9.69, right=4.63, total=14.32, imbalance=35% > 30%
-        # This actually fails! Let me check...
-        # Actually for the full hero the weights should work out differently
-        # Let's just check behavior is correct
         if result is not None:
             assert result["severity"] == "low"
-
-    def test_balance_skips_one_side_empty(self) -> None:
-        rule = {
-            "id": "b1",
-            "type": "balance",
-            "left": ["h1"],
-            "right": ["hero_image"],
-            "max_imbalance": 0.30,
-            "severity": "low",
-            "message": "test",
-        }
-        roles = {"h1"}  # No hero_image
-        weights = {"h1": 7.30}
-        assert evaluate_rule(rule, roles, weights) is None
 
     def test_balance_fail(self) -> None:
         rule = {

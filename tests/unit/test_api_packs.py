@@ -1,5 +1,7 @@
 """Tests for API pack cache TTL and integration template generation."""
 
+import pytest
+
 from dazzle.api_kb.loader import ApiPack, AuthSpec, ForeignModelSpec, OperationSpec
 from dazzle.core.dsl_parser_impl.process import format_duration
 
@@ -9,33 +11,38 @@ from dazzle.core.dsl_parser_impl.process import format_duration
 
 
 class TestFormatDuration:
-    def test_days(self) -> None:
-        assert format_duration(86400) == "1d"
+    """Test format_duration converts seconds to human-readable duration strings."""
 
-    def test_hours(self) -> None:
-        assert format_duration(3600) == "1h"
-
-    def test_24_hours(self) -> None:
-        assert format_duration(86400) == "1d"
-
-    def test_minutes(self) -> None:
-        assert format_duration(300) == "5m"
-
-    def test_one_minute(self) -> None:
-        assert format_duration(60) == "1m"
-
-    def test_seconds(self) -> None:
-        assert format_duration(45) == "45s"
-
-    def test_zero(self) -> None:
-        assert format_duration(0) == "0s"
-
-    def test_negative(self) -> None:
-        assert format_duration(-10) == "0s"
-
-    def test_non_clean_falls_to_seconds(self) -> None:
-        # 61 seconds doesn't divide evenly into minutes
-        assert format_duration(61) == "61s"
+    @pytest.mark.parametrize(
+        "seconds,expected",
+        [
+            (86400, "1d"),  # test_days
+            (3600, "1h"),  # test_hours
+            (86400, "1d"),  # test_24_hours
+            (300, "5m"),  # test_minutes
+            (60, "1m"),  # test_one_minute
+            (45, "45s"),  # test_seconds
+            (0, "0s"),  # test_zero
+            (-10, "0s"),  # test_negative
+            (
+                61,
+                "61s",
+            ),  # test_non_clean_falls_to_seconds: 61 seconds doesn't divide evenly into minutes
+        ],
+        ids=[
+            "test_days",
+            "test_hours",
+            "test_24_hours",
+            "test_minutes",
+            "test_one_minute",
+            "test_seconds",
+            "test_zero",
+            "test_negative",
+            "test_non_clean_falls_to_seconds",
+        ],
+    )
+    def test_format_duration(self, seconds: int, expected: str) -> None:
+        assert format_duration(seconds) == expected
 
 
 # ---------------------------------------------------------------------------

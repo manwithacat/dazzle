@@ -738,27 +738,23 @@ class TestDeadConstructDetection:
             regions=regions or [],
         )
 
-    # --- Entity reachability ---
+    # --- Entity reachability (not-dead cases) ---
 
-    def test_entity_used_by_surface_is_not_dead(self) -> None:
+    def _appspec_entity_used_by_surface(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Task")
         surface = self._make_surface(entity_ref="Task")
-        appspec = make_appspec(entities=[entity], surfaces=[surface])
-        warnings = extended_lint(appspec)
-        assert not any("entity 'Task'" in w for w in warnings)
+        return make_appspec(entities=[entity], surfaces=[surface]), "entity 'Task'"
 
-    def test_entity_used_by_field_ref_is_not_dead(self) -> None:
+    def _appspec_entity_used_by_field_ref(self) -> tuple[ir.AppSpec, str]:
         ref_field = ir.FieldSpec(
             name="assigned_to",
             type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
         )
         task = make_entity(name="Task", fields=[make_id_field(), ref_field])
         user = make_entity(name="User")
-        appspec = make_appspec(entities=[task, user])
-        warnings = extended_lint(appspec)
-        assert not any("entity 'User'" in w for w in warnings)
+        return make_appspec(entities=[task, user]), "entity 'User'"
 
-    def test_entity_used_by_workspace_source_is_not_dead(self) -> None:
+    def _appspec_entity_used_by_workspace_source(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Alert")
         region = ir.WorkspaceRegion(name="alerts", source="Alert")
         workspace = self._make_workspace(regions=[region])
@@ -767,10 +763,9 @@ class TestDeadConstructDetection:
             domain=ir.DomainSpec(entities=[entity]),
             workspaces=[workspace],
         )
-        warnings = extended_lint(appspec)
-        assert not any("entity 'Alert'" in w for w in warnings)
+        return appspec, "entity 'Alert'"
 
-    def test_entity_used_by_process_trigger_is_not_dead(self) -> None:
+    def _appspec_entity_used_by_process_trigger(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Order")
         trigger = ir.ProcessTriggerSpec(
             kind=ir.ProcessTriggerKind.ENTITY_EVENT,
@@ -783,18 +778,9 @@ class TestDeadConstructDetection:
             domain=ir.DomainSpec(entities=[entity]),
             processes=[process],
         )
-        warnings = extended_lint(appspec)
-        assert not any("entity 'Order'" in w for w in warnings)
+        return appspec, "entity 'Order'"
 
-    def test_orphan_entity_is_reported(self) -> None:
-        entity = make_entity(name="Orphan")
-        appspec = make_appspec(entities=[entity])
-        warnings = extended_lint(appspec)
-        assert any("Dead construct: entity 'Orphan'" in w for w in warnings)
-
-    # --- Surface reachability ---
-
-    def test_surface_used_by_workspace_action_is_not_dead(self) -> None:
+    def _appspec_surface_used_by_workspace_action(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Task")
         surface = self._make_surface(name="task_edit", entity_ref="Task")
         region = ir.WorkspaceRegion(name="tasks", source="Task", action="task_edit")
@@ -805,10 +791,9 @@ class TestDeadConstructDetection:
             surfaces=[surface],
             workspaces=[workspace],
         )
-        warnings = extended_lint(appspec)
-        assert not any("surface 'task_edit'" in w for w in warnings)
+        return appspec, "surface 'task_edit'"
 
-    def test_surface_used_by_experience_step_is_not_dead(self) -> None:
+    def _appspec_surface_used_by_experience_step(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Task")
         surface = self._make_surface(name="welcome", entity_ref="Task")
         step = ir.ExperienceStep(
@@ -828,10 +813,9 @@ class TestDeadConstructDetection:
             surfaces=[surface],
             experiences=[experience],
         )
-        warnings = extended_lint(appspec)
-        assert not any("surface 'welcome'" in w for w in warnings)
+        return appspec, "surface 'welcome'"
 
-    def test_surface_used_by_process_human_task_is_not_dead(self) -> None:
+    def _appspec_surface_used_by_process_human_task(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Task")
         surface = self._make_surface(name="approval_form", entity_ref="Task")
         human_task = ir.HumanTaskSpec(surface="approval_form")
@@ -847,17 +831,9 @@ class TestDeadConstructDetection:
             surfaces=[surface],
             processes=[process],
         )
-        warnings = extended_lint(appspec)
-        assert not any("surface 'approval_form'" in w for w in warnings)
+        return appspec, "surface 'approval_form'"
 
-    def test_unreferenced_surface_is_reported(self) -> None:
-        entity = make_entity(name="Task")
-        surface = self._make_surface(name="orphan_view", entity_ref="Task")
-        appspec = make_appspec(entities=[entity], surfaces=[surface])
-        warnings = extended_lint(appspec)
-        assert any("Dead construct: surface 'orphan_view'" in w for w in warnings)
-
-    def test_surface_used_as_workspace_source_is_not_dead(self) -> None:
+    def _appspec_surface_used_as_workspace_source(self) -> tuple[ir.AppSpec, str]:
         entity = make_entity(name="Task")
         surface = self._make_surface(name="task_list", entity_ref="Task")
         region = ir.WorkspaceRegion(name="tasks", source="task_list")
@@ -868,8 +844,82 @@ class TestDeadConstructDetection:
             surfaces=[surface],
             workspaces=[workspace],
         )
+        return appspec, "surface 'task_list'"
+
+    @pytest.mark.parametrize(
+        "builder_name",
+        [
+            "test_entity_used_by_surface_is_not_dead",
+            "test_entity_used_by_field_ref_is_not_dead",
+            "test_entity_used_by_workspace_source_is_not_dead",
+            "test_entity_used_by_process_trigger_is_not_dead",
+            "test_surface_used_by_workspace_action_is_not_dead",
+            "test_surface_used_by_experience_step_is_not_dead",
+            "test_surface_used_by_process_human_task_is_not_dead",
+            "test_surface_used_as_workspace_source_is_not_dead",
+        ],
+        ids=[
+            "test_entity_used_by_surface_is_not_dead",
+            "test_entity_used_by_field_ref_is_not_dead",
+            "test_entity_used_by_workspace_source_is_not_dead",
+            "test_entity_used_by_process_trigger_is_not_dead",
+            "test_surface_used_by_workspace_action_is_not_dead",
+            "test_surface_used_by_experience_step_is_not_dead",
+            "test_surface_used_by_process_human_task_is_not_dead",
+            "test_surface_used_as_workspace_source_is_not_dead",
+        ],
+    )
+    def test_referenced_construct_is_not_dead(self, builder_name: str) -> None:
+        """Referenced entities and surfaces must not appear in dead-construct warnings."""
+        _builder_map = {
+            "test_entity_used_by_surface_is_not_dead": self._appspec_entity_used_by_surface,
+            "test_entity_used_by_field_ref_is_not_dead": self._appspec_entity_used_by_field_ref,
+            "test_entity_used_by_workspace_source_is_not_dead": self._appspec_entity_used_by_workspace_source,
+            "test_entity_used_by_process_trigger_is_not_dead": self._appspec_entity_used_by_process_trigger,
+            "test_surface_used_by_workspace_action_is_not_dead": self._appspec_surface_used_by_workspace_action,
+            "test_surface_used_by_experience_step_is_not_dead": self._appspec_surface_used_by_experience_step,
+            "test_surface_used_by_process_human_task_is_not_dead": self._appspec_surface_used_by_process_human_task,
+            "test_surface_used_as_workspace_source_is_not_dead": self._appspec_surface_used_as_workspace_source,
+        }
+        appspec, dead_name_fragment = _builder_map[builder_name]()
         warnings = extended_lint(appspec)
-        assert not any("surface 'task_list'" in w for w in warnings)
+        assert not any(dead_name_fragment in w for w in warnings)
+
+    @pytest.mark.parametrize(
+        "appspec_fn,dead_warning_fragment",
+        [
+            # test_orphan_entity_is_reported
+            (
+                lambda self: make_appspec(entities=[make_entity(name="Orphan")]),
+                "Dead construct: entity 'Orphan'",
+            ),
+            # test_unreferenced_surface_is_reported
+            (
+                lambda self: make_appspec(
+                    entities=[make_entity(name="Task")],
+                    surfaces=[
+                        ir.SurfaceSpec(
+                            name="orphan_view",
+                            title="Orphan View",
+                            entity_ref="Task",
+                            mode=ir.SurfaceMode.LIST,
+                            sections=[],
+                        )
+                    ],
+                ),
+                "Dead construct: surface 'orphan_view'",
+            ),
+        ],
+        ids=[
+            "test_orphan_entity_is_reported",
+            "test_unreferenced_surface_is_reported",
+        ],
+    )
+    def test_dead_construct_is_reported(self, appspec_fn, dead_warning_fragment: str) -> None:
+        """Unreferenced entities and surfaces must appear in dead-construct warnings."""
+        appspec = appspec_fn(self)
+        warnings = extended_lint(appspec)
+        assert any(dead_warning_fragment in w for w in warnings)
 
     # --- Multiple dead constructs ---
 

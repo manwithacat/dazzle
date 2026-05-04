@@ -101,37 +101,48 @@ def _make_app(*, audit_service, audits, auth_dep=None):
 
 
 class TestExtractPersonas:
-    def test_none_context(self):
-        assert _extract_personas(None) == []
-
-    def test_unauthenticated(self):
-        ctx = SimpleNamespace(is_authenticated=False, user=None)
-        assert _extract_personas(ctx) == []
-
-    def test_user_none_with_authenticated_flag(self):
-        ctx = SimpleNamespace(is_authenticated=True, user=None)
-        assert _extract_personas(ctx) == []
-
-    def test_string_roles(self):
-        user = SimpleNamespace(roles=["teacher", "marker"])
-        ctx = SimpleNamespace(is_authenticated=True, user=user)
-        assert _extract_personas(ctx) == ["teacher", "marker"]
-
-    def test_role_prefix_stripped(self):
-        user = SimpleNamespace(roles=["role_teacher"])
-        ctx = SimpleNamespace(is_authenticated=True, user=user)
-        assert _extract_personas(ctx) == ["teacher"]
-
-    def test_object_roles_with_name_attr(self):
-        role = SimpleNamespace(name="teacher")
-        user = SimpleNamespace(roles=[role])
-        ctx = SimpleNamespace(is_authenticated=True, user=user)
-        assert _extract_personas(ctx) == ["teacher"]
-
-    def test_empty_roles(self):
-        user = SimpleNamespace(roles=[])
-        ctx = SimpleNamespace(is_authenticated=True, user=user)
-        assert _extract_personas(ctx) == []
+    @pytest.mark.parametrize(
+        ("ctx", "expected"),
+        [
+            (None, []),
+            (SimpleNamespace(is_authenticated=False, user=None), []),
+            (SimpleNamespace(is_authenticated=True, user=None), []),
+            (
+                SimpleNamespace(
+                    is_authenticated=True, user=SimpleNamespace(roles=["teacher", "marker"])
+                ),
+                ["teacher", "marker"],
+            ),
+            (
+                SimpleNamespace(
+                    is_authenticated=True, user=SimpleNamespace(roles=["role_teacher"])
+                ),
+                ["teacher"],  # `role_` prefix stripped
+            ),
+            (
+                SimpleNamespace(
+                    is_authenticated=True,
+                    user=SimpleNamespace(roles=[SimpleNamespace(name="teacher")]),
+                ),
+                ["teacher"],  # objects with .name attr
+            ),
+            (
+                SimpleNamespace(is_authenticated=True, user=SimpleNamespace(roles=[])),
+                [],
+            ),
+        ],
+        ids=[
+            "none_context",
+            "unauthenticated",
+            "user_none_authenticated_flag",
+            "string_roles",
+            "role_prefix_stripped",
+            "object_roles_with_name_attr",
+            "empty_roles",
+        ],
+    )
+    def test_extract(self, ctx, expected) -> None:
+        assert _extract_personas(ctx) == expected
 
 
 # ---------------------------------------------------------------------------

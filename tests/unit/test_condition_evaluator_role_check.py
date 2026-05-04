@@ -9,6 +9,8 @@ Covers:
 - role_check in AND with comparison for SQL filter
 """
 
+import pytest
+
 from dazzle_back.runtime.condition_evaluator import (
     condition_to_sql_filter,
     evaluate_condition,
@@ -90,75 +92,82 @@ class TestEvaluateConditionRoleCheck:
 
 
 class TestEvaluateConditionRoleCheckCompound:
-    def test_and_role_and_comparison_both_pass(self) -> None:
-        cond = _and_cond(
-            _role_check_cond("editor"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["editor"]}
-        record = {"status": "active"}
-        assert evaluate_condition(cond, record, context) is True
-
-    def test_and_role_passes_comparison_fails(self) -> None:
-        cond = _and_cond(
-            _role_check_cond("editor"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["editor"]}
-        record = {"status": "draft"}
-        assert evaluate_condition(cond, record, context) is False
-
-    def test_and_role_fails_comparison_passes(self) -> None:
-        cond = _and_cond(
-            _role_check_cond("admin"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["viewer"]}
-        record = {"status": "active"}
-        assert evaluate_condition(cond, record, context) is False
-
-    def test_or_role_passes_other_fails(self) -> None:
-        cond = _or_cond(
-            _role_check_cond("admin"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["admin"]}
-        record = {"status": "draft"}
-        assert evaluate_condition(cond, record, context) is True
-
-    def test_or_role_fails_other_passes(self) -> None:
-        cond = _or_cond(
-            _role_check_cond("admin"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["viewer"]}
-        record = {"status": "active"}
-        assert evaluate_condition(cond, record, context) is True
-
-    def test_or_both_fail(self) -> None:
-        cond = _or_cond(
-            _role_check_cond("admin"),
-            _comparison_cond("status", "active"),
-        )
-        context = {"user_roles": ["viewer"]}
-        record = {"status": "draft"}
-        assert evaluate_condition(cond, record, context) is False
-
-    def test_and_two_role_checks_both_required(self) -> None:
-        cond = _and_cond(
-            _role_check_cond("editor"),
-            _role_check_cond("reviewer"),
-        )
-        context = {"user_roles": ["editor"]}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_and_two_role_checks_both_present(self) -> None:
-        cond = _and_cond(
-            _role_check_cond("editor"),
-            _role_check_cond("reviewer"),
-        )
-        context = {"user_roles": ["editor", "reviewer"]}
-        assert evaluate_condition(cond, {}, context) is True
+    @pytest.mark.parametrize(
+        ("cond", "record", "context", "expected"),
+        [
+            # AND: role passes + comparison passes → True.
+            (
+                _and_cond(_role_check_cond("editor"), _comparison_cond("status", "active")),
+                {"status": "active"},
+                {"user_roles": ["editor"]},
+                True,
+            ),
+            # AND: role passes + comparison fails → False.
+            (
+                _and_cond(_role_check_cond("editor"), _comparison_cond("status", "active")),
+                {"status": "draft"},
+                {"user_roles": ["editor"]},
+                False,
+            ),
+            # AND: role fails + comparison passes → False.
+            (
+                _and_cond(_role_check_cond("admin"), _comparison_cond("status", "active")),
+                {"status": "active"},
+                {"user_roles": ["viewer"]},
+                False,
+            ),
+            # OR: role passes + comparison fails → True.
+            (
+                _or_cond(_role_check_cond("admin"), _comparison_cond("status", "active")),
+                {"status": "draft"},
+                {"user_roles": ["admin"]},
+                True,
+            ),
+            # OR: role fails + comparison passes → True.
+            (
+                _or_cond(_role_check_cond("admin"), _comparison_cond("status", "active")),
+                {"status": "active"},
+                {"user_roles": ["viewer"]},
+                True,
+            ),
+            # OR: both fail → False.
+            (
+                _or_cond(_role_check_cond("admin"), _comparison_cond("status", "active")),
+                {"status": "draft"},
+                {"user_roles": ["viewer"]},
+                False,
+            ),
+            # AND two role checks: only one role present → False.
+            (
+                _and_cond(_role_check_cond("editor"), _role_check_cond("reviewer")),
+                {},
+                {"user_roles": ["editor"]},
+                False,
+            ),
+            # AND two role checks: both roles present → True.
+            (
+                _and_cond(_role_check_cond("editor"), _role_check_cond("reviewer")),
+                {},
+                {"user_roles": ["editor", "reviewer"]},
+                True,
+            ),
+        ],
+        ids=[
+            "test_and_role_and_comparison_both_pass",
+            "test_and_role_passes_comparison_fails",
+            "test_and_role_fails_comparison_passes",
+            "test_or_role_passes_other_fails",
+            "test_or_role_fails_other_passes",
+            "test_or_both_fail",
+            "test_and_two_role_checks_both_required",
+            "test_and_two_role_checks_both_present",
+        ],
+    )
+    def test_evaluate_condition_compound(
+        self, cond: dict, record: dict, context: dict, expected: bool
+    ) -> None:
+        """evaluate_condition handles AND/OR combinations of role_check and comparison."""
+        assert evaluate_condition(cond, record, context) is expected
 
 
 # ---------------------------------------------------------------------------

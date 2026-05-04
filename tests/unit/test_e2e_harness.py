@@ -12,58 +12,49 @@ from dazzle_e2e.locators import parse_semantic_target
 class TestSemanticTargetParsing:
     """Tests for semantic target parsing."""
 
-    def test_parse_view_target(self) -> None:
-        """Test parsing a view target."""
-        target_type, identifier = parse_semantic_target("view:task_list")
-        assert target_type == "view"
-        assert identifier == "task_list"
-
-    def test_parse_field_target(self) -> None:
-        """Test parsing a field target."""
-        target_type, identifier = parse_semantic_target("field:Task.title")
-        assert target_type == "field"
-        assert identifier == "Task.title"
-
-    def test_parse_action_target(self) -> None:
-        """Test parsing an action target."""
-        target_type, identifier = parse_semantic_target("action:Task.create")
-        assert target_type == "action"
-        assert identifier == "Task.create"
-
-    def test_parse_entity_target(self) -> None:
-        """Test parsing an entity target."""
-        target_type, identifier = parse_semantic_target("entity:Task")
-        assert target_type == "entity"
-        assert identifier == "Task"
-
-    def test_parse_row_target(self) -> None:
-        """Test parsing a row target."""
-        target_type, identifier = parse_semantic_target("row:Task")
-        assert target_type == "row"
-        assert identifier == "Task"
-
-    def test_parse_message_target(self) -> None:
-        """Test parsing a message target."""
-        target_type, identifier = parse_semantic_target("message:Task.title")
-        assert target_type == "message"
-        assert identifier == "Task.title"
-
-    def test_parse_dialog_target(self) -> None:
-        """Test parsing a dialog target."""
-        target_type, identifier = parse_semantic_target("dialog:confirm")
-        assert target_type == "dialog"
-        assert identifier == "confirm"
+    @pytest.mark.parametrize(
+        ("target", "expected_type", "expected_identifier"),
+        [
+            # Test parsing a view target.
+            ("view:task_list", "view", "task_list"),
+            # Test parsing a field target.
+            ("field:Task.title", "field", "Task.title"),
+            # Test parsing an action target.
+            ("action:Task.create", "action", "Task.create"),
+            # Test parsing an entity target.
+            ("entity:Task", "entity", "Task"),
+            # Test parsing a row target.
+            ("row:Task", "row", "Task"),
+            # Test parsing a message target.
+            ("message:Task.title", "message", "Task.title"),
+            # Test parsing a dialog target.
+            ("dialog:confirm", "dialog", "confirm"),
+            # Test parsing target with empty identifier.
+            ("view:", "view", ""),
+        ],
+        ids=[
+            "test_parse_view_target",
+            "test_parse_field_target",
+            "test_parse_action_target",
+            "test_parse_entity_target",
+            "test_parse_row_target",
+            "test_parse_message_target",
+            "test_parse_dialog_target",
+            "test_empty_identifier",
+        ],
+    )
+    def test_parse_semantic_target(
+        self, target: str, expected_type: str, expected_identifier: str
+    ) -> None:
+        """Semantic targets parse into (target_type, identifier) tuples."""
+        target_type, identifier = parse_semantic_target(target)
+        assert target_type == expected_type
+        assert identifier == expected_identifier
 
     def test_invalid_target_raises(self) -> None:
         """Test that invalid target format raises ValueError."""
         with pytest.raises(ValueError, match="Invalid semantic target format"):
             parse_semantic_target("invalid_target")
-
-    def test_empty_identifier(self) -> None:
-        """Test parsing target with empty identifier."""
-        target_type, identifier = parse_semantic_target("view:")
-        assert target_type == "view"
-        assert identifier == ""
 
 
 class TestFlowResult:

@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 
 # ---------------------------------------------------------------------------
@@ -55,58 +57,39 @@ def _make_entity(
 class TestFieldKindToColType:
     """_field_kind_to_col_type() maps IR fields to column rendering types."""
 
-    def test_enum_field_returns_badge(self) -> None:
+    @pytest.mark.parametrize(
+        ("field_name", "kind", "enum_values", "expected"),
+        [
+            ("status", FieldTypeKind.ENUM, ["open", "closed"], "badge"),
+            ("completed", FieldTypeKind.BOOL, None, "bool"),
+            ("created_at", FieldTypeKind.DATE, None, "date"),
+            ("updated_at", FieldTypeKind.DATETIME, None, "date"),
+            ("amount", FieldTypeKind.MONEY, None, "currency"),
+            ("title", FieldTypeKind.STR, None, "text"),
+        ],
+        ids=["enum_badge", "bool", "date", "datetime_date", "money_currency", "str_text"],
+    )
+    def test_kind_mapping(self, field_name, kind, enum_values, expected) -> None:
         from dazzle_back.runtime.server import _field_kind_to_col_type
 
-        f = _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "closed"])
-        assert _field_kind_to_col_type(f) == "badge"
+        f = _make_field(field_name, kind, enum_values=enum_values)
+        assert _field_kind_to_col_type(f) == expected
 
-    def test_bool_field_returns_bool(self) -> None:
+    @pytest.mark.parametrize(
+        ("field_name", "expected"),
+        [
+            ("status", "badge"),  # state_machine.status_field → badge
+            ("title", "text"),  # not the status field → text
+        ],
+        ids=["status_field_badge", "non_status_field_text"],
+    )
+    def test_state_machine_dispatch(self, field_name, expected) -> None:
         from dazzle_back.runtime.server import _field_kind_to_col_type
 
-        f = _make_field("completed", FieldTypeKind.BOOL)
-        assert _field_kind_to_col_type(f) == "bool"
-
-    def test_date_field_returns_date(self) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("created_at", FieldTypeKind.DATE)
-        assert _field_kind_to_col_type(f) == "date"
-
-    def test_datetime_field_returns_date(self) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("updated_at", FieldTypeKind.DATETIME)
-        assert _field_kind_to_col_type(f) == "date"
-
-    def test_money_field_returns_currency(self) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("amount", FieldTypeKind.MONEY)
-        assert _field_kind_to_col_type(f) == "currency"
-
-    def test_str_field_returns_text(self) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("title", FieldTypeKind.STR)
-        assert _field_kind_to_col_type(f) == "text"
-
-    def test_state_machine_status_field_returns_badge(self) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("status", FieldTypeKind.STR)
+        f = _make_field(field_name, FieldTypeKind.STR)
         sm = SimpleNamespace(status_field="status", states=["open", "closed"])
         entity = _make_entity("Task", [f], state_machine=sm)
-        assert _field_kind_to_col_type(f, entity) == "badge"
-
-    def test_non_status_field_with_state_machine_returns_text(self) -> None:
-        """A field that's NOT the status_field should still return text."""
-        from dazzle_back.runtime.server import _field_kind_to_col_type
-
-        f = _make_field("title", FieldTypeKind.STR)
-        sm = SimpleNamespace(status_field="status", states=["open", "closed"])
-        entity = _make_entity("Task", [f], state_machine=sm)
-        assert _field_kind_to_col_type(f, entity) == "text"
+        assert _field_kind_to_col_type(f, entity) == expected
 
 
 # ===========================================================================

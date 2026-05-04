@@ -6,6 +6,8 @@ assertion matching.
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dazzle.testing.viewport import (
     ALL_PATTERNS,
     DETAIL_VIEW_PATTERN,
@@ -133,32 +135,33 @@ class TestComponentPatterns:
 class TestExpectedMatching:
     """Single string vs list[str] expected values."""
 
-    def test_exact_match_passes(self) -> None:
-        assert _matches("hidden", "hidden") is True
-
-    def test_exact_match_fails(self) -> None:
-        assert _matches("hidden", "visible") is False
-
-    def test_list_match_first(self) -> None:
-        assert _matches(["flex", "inline-flex"], "flex") is True
-
-    def test_list_match_second(self) -> None:
-        assert _matches(["flex", "inline-flex"], "inline-flex") is True
-
-    def test_list_match_fails(self) -> None:
-        assert _matches(["flex", "inline-flex"], "block") is False
-
-    def test_none_actual_always_fails_string(self) -> None:
-        assert _matches("hidden", None) is False
-
-    def test_none_actual_always_fails_list(self) -> None:
-        assert _matches(["flex", "block"], None) is False
-
-    def test_empty_string_matches(self) -> None:
-        assert _matches("", "") is True
-
-    def test_empty_list_fails(self) -> None:
-        assert _matches([], "anything") is False
+    @pytest.mark.parametrize(
+        "expected,actual,result",
+        [
+            ("hidden", "hidden", True),  # test_exact_match_passes
+            ("hidden", "visible", False),  # test_exact_match_fails
+            (["flex", "inline-flex"], "flex", True),  # test_list_match_first
+            (["flex", "inline-flex"], "inline-flex", True),  # test_list_match_second
+            (["flex", "inline-flex"], "block", False),  # test_list_match_fails
+            ("hidden", None, False),  # test_none_actual_always_fails_string
+            (["flex", "block"], None, False),  # test_none_actual_always_fails_list
+            ("", "", True),  # test_empty_string_matches
+            ([], "anything", False),  # test_empty_list_fails
+        ],
+        ids=[
+            "test_exact_match_passes",
+            "test_exact_match_fails",
+            "test_list_match_first",
+            "test_list_match_second",
+            "test_list_match_fails",
+            "test_none_actual_always_fails_string",
+            "test_none_actual_always_fails_list",
+            "test_empty_string_matches",
+            "test_empty_list_fails",
+        ],
+    )
+    def test_matches(self, expected: object, actual: object, result: bool) -> None:
+        assert _matches(expected, actual) is result
 
 
 # ============================================================================

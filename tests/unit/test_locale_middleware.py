@@ -126,44 +126,47 @@ class TestLocaleMiddlewareResolution:
             supported_locales=supported,
         )
 
-    def test_cookie_wins_over_accept_language(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=["en", "fr", "de"])
-        req = make_request(accept_language="de;q=0.9, en;q=0.5", locale_cookie="fr")
-        assert mw._resolve(req) == "fr"
-
-    def test_cookie_ignored_when_unsupported(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=["en", "fr"])
-        req = make_request(accept_language="de;q=0.9", locale_cookie="ja")
-        # Cookie 'ja' isn't supported → fall through to Accept-Language.
-        # 'de' isn't supported either → fall to default.
-        assert mw._resolve(req) == "en"
-
-    def test_accept_language_used_when_no_cookie(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=["en", "fr"])
-        req = make_request(accept_language="fr;q=0.9, en;q=0.5")
-        assert mw._resolve(req) == "fr"
-
-    def test_default_when_no_cookie_or_header(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=["en", "fr"])
-        req = make_request()
-        assert mw._resolve(req) == "en"
-
-    def test_primary_subtag_fallback_on_accept_language(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=["en"])
-        req = make_request(accept_language="en-GB;q=0.9, fr;q=0.5")
-        assert mw._resolve(req) == "en"
+    @pytest.mark.parametrize(
+        ("default", "supported", "accept_language", "locale_cookie", "expected"),
+        [
+            # Cookie wins over Accept-Language when supported
+            ("en", ["en", "fr", "de"], "de;q=0.9, en;q=0.5", "fr", "fr"),
+            # Unsupported cookie + unsupported Accept-Language → default
+            ("en", ["en", "fr"], "de;q=0.9", "ja", "en"),
+            # Accept-Language used when no cookie
+            ("en", ["en", "fr"], "fr;q=0.9, en;q=0.5", None, "fr"),
+            # No cookie + no Accept-Language → default
+            ("en", ["en", "fr"], None, None, "en"),
+            # Primary-subtag fallback (en-GB → en when only en is supported)
+            ("en", ["en"], "en-GB;q=0.9, fr;q=0.5", None, "en"),
+            # Empty supported list → return highest-quality user preference
+            ("en", [], "ja;q=0.9, ko;q=0.7", None, "ja"),
+        ],
+        ids=[
+            "cookie_wins_over_accept_language",
+            "cookie_ignored_when_unsupported",
+            "accept_language_used_when_no_cookie",
+            "default_when_no_cookie_or_header",
+            "primary_subtag_fallback",
+            "empty_supported_list_passes_preference",
+        ],
+    )
+    def test_resolve(
+        self, make_request, default, supported, accept_language, locale_cookie, expected
+    ) -> None:
+        mw = self._middleware(default=default, supported=supported)
+        kwargs: dict[str, str] = {}
+        if accept_language is not None:
+            kwargs["accept_language"] = accept_language
+        if locale_cookie is not None:
+            kwargs["locale_cookie"] = locale_cookie
+        assert mw._resolve(make_request(**kwargs)) == expected
 
     def test_unsupported_default_normalised(self, make_request) -> None:
         """Garbage default falls back to `en` — defensive against
         malformed dazzle.toml [i18n] default values."""
         mw = self._middleware(default="!!!garbage!!!")
-        req = make_request()
-        assert mw._resolve(req) == "en"
-
-    def test_empty_supported_list_passes_user_preference(self, make_request) -> None:
-        mw = self._middleware(default="en", supported=[])
-        req = make_request(accept_language="ja;q=0.9, ko;q=0.7")
-        assert mw._resolve(req) == "ja"
+        assert mw._resolve(make_request()) == "en"
 
 
 class TestGettextFilter:

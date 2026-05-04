@@ -12,6 +12,8 @@ Tests cover:
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core.fidelity_scorer import (
     _check_form_structure,
     _check_story_embodiment,
@@ -387,65 +389,6 @@ class TestMoneyFieldExpansion:
         result = _expand_field_names(["title", "price"], entity)
         assert result == ["title", "price_minor", "price_currency"]
 
-    def test_expand_money_field_in_form(self) -> None:
-        """CREATE surface with money widget: hidden _minor/_currency inputs → no gap."""
-        surface = _make_surface(
-            name="product_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["title", "price"],
-        )
-        entity = _make_entity(
-            [
-                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
-                FieldSpec(
-                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-            ]
-        )
-        html = """
-        <form hx-post="/products">
-            <input name="title" type="text">
-            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
-                <input type="text" inputmode="decimal" data-dz-money-display>
-                <input type="hidden" name="price_minor" data-dz-money-minor>
-                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        root = parse_html(html)
-        gaps = _check_form_structure(surface, entity, root)
-        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
-        assert missing == []
-
-    def test_money_widget_data_attribute_match(self) -> None:
-        """data-dz-money attribute alone satisfies the field check."""
-        surface = _make_surface(
-            name="product_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["price"],
-        )
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-            ]
-        )
-        # Widget with data-dz-money but no named inputs (edge case)
-        html = """
-        <form hx-post="/products">
-            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
-                <input type="text" inputmode="decimal" data-dz-money-display>
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        root = parse_html(html)
-        gaps = _check_form_structure(surface, entity, root)
-        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
-        assert missing == []
-
     def test_no_expansion_without_entity(self) -> None:
         """entity=None: money field name not in inputs → gap reported."""
         result = _expand_field_names(["price", "title"], None)
@@ -462,401 +405,425 @@ class TestMoneyFieldExpansion:
         result = _expand_field_names(["title", "count"], entity)
         assert result == ["title", "count"]
 
-    def test_mixed_money_and_regular_fields(self) -> None:
-        """Surface with both money and regular fields: money widgets satisfy checks."""
+    @pytest.mark.parametrize(
+        "surface_name,field_names,entity_fields,html",
+        [
+            # test_expand_money_field_in_form:
+            # CREATE surface with money widget: hidden _minor/_currency inputs → no gap.
+            (
+                "product_create",
+                ["title", "price"],
+                [
+                    FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+                    FieldSpec(
+                        name="price",
+                        type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    ),
+                ],
+                """
+                <form hx-post="/products">
+                    <input name="title" type="text">
+                    <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                        <input type="text" inputmode="decimal" data-dz-money-display>
+                        <input type="hidden" name="price_minor" data-dz-money-minor>
+                        <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_money_widget_data_attribute_match:
+            # data-dz-money attribute alone satisfies the field check.
+            (
+                "product_create",
+                ["price"],
+                [
+                    FieldSpec(
+                        name="price",
+                        type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    ),
+                ],
+                """
+                <form hx-post="/products">
+                    <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                        <input type="text" inputmode="decimal" data-dz-money-display>
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_mixed_money_and_regular_fields:
+            # Surface with both money and regular fields: money widgets satisfy checks.
+            (
+                "invoice_create",
+                ["description", "amount", "tax"],
+                [
+                    FieldSpec(
+                        name="description",
+                        type=FieldType(kind=FieldTypeKind.STR, max_length=500),
+                    ),
+                    FieldSpec(
+                        name="amount",
+                        type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    ),
+                    FieldSpec(
+                        name="tax",
+                        type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    ),
+                ],
+                """
+                <form hx-post="/invoices">
+                    <input name="description" type="text">
+                    <div data-dz-money="amount" data-dz-currency="GBP" data-dz-scale="2">
+                        <input type="text" inputmode="decimal" data-dz-money-display>
+                        <input type="hidden" name="amount_minor" data-dz-money-minor>
+                        <input type="hidden" name="amount_currency" data-dz-money-currency value="GBP">
+                    </div>
+                    <div data-dz-money="tax" data-dz-currency="GBP" data-dz-scale="2">
+                        <input type="text" inputmode="decimal" data-dz-money-display>
+                        <input type="hidden" name="tax_minor" data-dz-money-minor>
+                        <input type="hidden" name="tax_currency" data-dz-money-currency value="GBP">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+        ],
+        ids=[
+            "test_expand_money_field_in_form",
+            "test_money_widget_data_attribute_match",
+            "test_mixed_money_and_regular_fields",
+        ],
+    )
+    def test_form_structure_no_missing_field_gap(
+        self,
+        surface_name: str,
+        field_names: list,
+        entity_fields: list,
+        html: str,
+    ) -> None:
+        """_check_form_structure raises no MISSING_FIELD gap for valid money widget HTML."""
         surface = _make_surface(
-            name="invoice_create",
+            name=surface_name,
             mode=SurfaceMode.CREATE,
-            field_names=["description", "amount", "tax"],
+            field_names=field_names,
         )
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="description", type=FieldType(kind=FieldTypeKind.STR, max_length=500)
-                ),
-                FieldSpec(
-                    name="amount", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-                FieldSpec(
-                    name="tax", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-            ]
-        )
-        html = """
-        <form hx-post="/invoices">
-            <input name="description" type="text">
-            <div data-dz-money="amount" data-dz-currency="GBP" data-dz-scale="2">
-                <input type="text" inputmode="decimal" data-dz-money-display>
-                <input type="hidden" name="amount_minor" data-dz-money-minor>
-                <input type="hidden" name="amount_currency" data-dz-money-currency value="GBP">
-            </div>
-            <div data-dz-money="tax" data-dz-currency="GBP" data-dz-scale="2">
-                <input type="text" inputmode="decimal" data-dz-money-display>
-                <input type="hidden" name="tax_minor" data-dz-money-minor>
-                <input type="hidden" name="tax_currency" data-dz-money-currency value="GBP">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
+        entity = _make_entity(entity_fields)
         root = parse_html(html)
         gaps = _check_form_structure(surface, entity, root)
         missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
         assert missing == []
 
-    def test_money_field_input_type_check_no_false_positive(self) -> None:
-        """Input type check doesn't false-positive on money widget hidden inputs."""
+    @pytest.mark.parametrize(
+        "surface_name,field_name,field_type,html,extra_assert_msg",
+        [
+            # test_money_field_input_type_check_no_false_positive:
+            # Input type check doesn't false-positive on money widget hidden inputs.
+            (
+                "product_create",
+                "price",
+                FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                """
+                <form hx-post="/products">
+                    <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                        <input type="text" inputmode="decimal" data-dz-money-display>
+                        <input type="hidden" name="price_minor" data-dz-money-minor>
+                        <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+                None,
+            ),
+            # test_float_field_renders_as_number:
+            # FLOAT fields render as <input type="number"> (same mapping as
+            # INT/DECIMAL/MONEY). Regression guard for #825: before the fix,
+            # FLOAT was absent from FIELD_TYPE_TO_INPUT and fell through to
+            # DEFAULT_INPUT_TYPE="text", producing a spurious
+            # INCORRECT_INPUT_TYPE gap on every float surface.
+            (
+                "reading_create",
+                "temperature",
+                FieldType(kind=FieldTypeKind.FLOAT),
+                """
+                <form hx-post="/readings">
+                    <input type="number" name="temperature">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+                "Unexpected input-type gaps",
+            ),
+            # test_file_field_input_type_no_false_positive:
+            # File fields with type='file' should not be flagged as incorrect.
+            (
+                "manuscript_create",
+                "file_url",
+                FieldType(kind=FieldTypeKind.FILE),
+                """
+                <form hx-post="/manuscripts">
+                    <input type="file" name="file_url">
+                    <button type="submit">Upload</button>
+                </form>
+                """,
+                None,
+            ),
+            # test_file_field_skipped_in_type_check:
+            # File fields should be skipped in input type checks (#579).
+            # File uploads often use custom widgets (dropzones, etc.) so comparing
+            # against <input> type attributes produces false positives.
+            (
+                "manuscript_create",
+                "file_url",
+                FieldType(kind=FieldTypeKind.FILE),
+                """
+                <form hx-post="/manuscripts">
+                    <input type="text" name="file_url">
+                    <button type="submit">Upload</button>
+                </form>
+                """,
+                None,
+            ),
+        ],
+        ids=[
+            "test_money_field_input_type_check_no_false_positive",
+            "test_float_field_renders_as_number",
+            "test_file_field_input_type_no_false_positive",
+            "test_file_field_skipped_in_type_check",
+        ],
+    )
+    def test_no_incorrect_input_type_gap(
+        self,
+        surface_name: str,
+        field_name: str,
+        field_type: FieldType,
+        html: str,
+        extra_assert_msg: str | None,
+    ) -> None:
+        """score_surface_fidelity raises no INCORRECT_INPUT_TYPE gap for the given HTML."""
         surface = _make_surface(
-            name="product_create",
+            name=surface_name,
             mode=SurfaceMode.CREATE,
-            field_names=["price"],
+            field_names=[field_name],
         )
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-            ]
-        )
-        html = """
-        <form hx-post="/products">
-            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
-                <input type="text" inputmode="decimal" data-dz-money-display>
-                <input type="hidden" name="price_minor" data-dz-money-minor>
-                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
+        entity = _make_entity([FieldSpec(name=field_name, type=field_type)])
         score = score_surface_fidelity(surface, entity, html)
         type_gaps = [
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
-        assert type_gaps == []
-
-    def test_float_field_renders_as_number(self) -> None:
-        """FLOAT fields render as <input type="number"> (same mapping as
-        INT/DECIMAL/MONEY). Regression guard for #825: before the fix,
-        FLOAT was absent from FIELD_TYPE_TO_INPUT and fell through to
-        DEFAULT_INPUT_TYPE="text", producing a spurious
-        INCORRECT_INPUT_TYPE gap on every float surface."""
-        surface = _make_surface(
-            name="reading_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["temperature"],
-        )
-        entity = _make_entity(
-            [
-                FieldSpec(name="temperature", type=FieldType(kind=FieldTypeKind.FLOAT)),
-            ]
-        )
-        html = """
-        <form hx-post="/readings">
-            <input type="number" name="temperature">
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == [], f"Unexpected input-type gaps: {type_gaps}"
-
-    def test_file_field_input_type_no_false_positive(self) -> None:
-        """File fields with type='file' should not be flagged as incorrect."""
-        surface = _make_surface(
-            name="manuscript_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["file_url"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="file_url", type=FieldType(kind=FieldTypeKind.FILE))],
-        )
-        html = """
-        <form hx-post="/manuscripts">
-            <input type="file" name="file_url">
-            <button type="submit">Upload</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_file_field_skipped_in_type_check(self) -> None:
-        """File fields should be skipped in input type checks (#579).
-
-        File uploads often use custom widgets (dropzones, etc.) so comparing
-        against <input> type attributes produces false positives.
-        """
-        surface = _make_surface(
-            name="manuscript_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["file_url"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="file_url", type=FieldType(kind=FieldTypeKind.FILE))],
-        )
-        html = """
-        <form hx-post="/manuscripts">
-            <input type="text" name="file_url">
-            <button type="submit">Upload</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert len(type_gaps) == 0
+        msg = extra_assert_msg or ""
+        assert type_gaps == [], f"{msg}: {type_gaps}" if msg else str(type_gaps)
 
 
 class TestWidgetRenderedInputTypes:
     """Widget-rendered input types satisfy the expected DSL type (#779)."""
 
-    def test_datepicker_on_date_field(self) -> None:
-        """Flatpickr datepicker: type='text' + data-dz-widget='datepicker' satisfies date."""
-        surface = _make_surface(
-            name="event_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["starts_on"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
-        )
-        html = """
-        <form hx-post="/events">
-            <input name="starts_on" type="text" data-dz-widget="datepicker">
-            <button type="submit">Save</button>
-        </form>
-        """
+    @pytest.mark.parametrize(
+        "surface_name,surface_mode,field_name,field_type,html",
+        [
+            # test_datepicker_on_date_field:
+            # Flatpickr datepicker: type='text' + data-dz-widget='datepicker' satisfies date.
+            (
+                "event_create",
+                SurfaceMode.CREATE,
+                "starts_on",
+                FieldType(kind=FieldTypeKind.DATE),
+                """
+                <form hx-post="/events">
+                    <input name="starts_on" type="text" data-dz-widget="datepicker">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_datepicker_on_datetime_field:
+            # Flatpickr datepicker with enableTime: satisfies datetime field.
+            (
+                "event_create",
+                SurfaceMode.CREATE,
+                "starts_at",
+                FieldType(kind=FieldTypeKind.DATETIME),
+                """
+                <form hx-post="/events">
+                    <input name="starts_at" type="text" data-dz-widget="datepicker">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_range_slider_on_int_field:
+            # Range slider: type='range' satisfies int/number field.
+            (
+                "settings_edit",
+                SurfaceMode.EDIT,
+                "volume",
+                FieldType(kind=FieldTypeKind.INT),
+                """
+                <form hx-put="/settings">
+                    <div data-dz-widget="range-tooltip">
+                        <input name="volume" type="range" min="0" max="100">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_range_slider_on_decimal_field:
+            # Range slider satisfies decimal fields as well.
+            (
+                "settings_edit",
+                SurfaceMode.EDIT,
+                "opacity",
+                FieldType(kind=FieldTypeKind.DECIMAL),
+                """
+                <form hx-put="/settings">
+                    <input name="opacity" type="range" min="0" max="1" step="0.01">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_richtext_hidden_input_on_str_field:
+            # Rich text widget: hidden input inside data-dz-widget='richtext' satisfies str.
+            (
+                "post_create",
+                SurfaceMode.CREATE,
+                "body",
+                FieldType(kind=FieldTypeKind.STR, max_length=5000),
+                """
+                <form hx-post="/posts">
+                    <div data-dz-widget="richtext">
+                        <div class="quill-editor"></div>
+                        <input type="hidden" name="body">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_richtext_hidden_input_on_enum_field:
+            # Rich text widget on enum: hidden input satisfies select expectation.
+            (
+                "post_create",
+                SurfaceMode.CREATE,
+                "category",
+                FieldType(kind=FieldTypeKind.ENUM),
+                """
+                <form hx-post="/posts">
+                    <div data-dz-widget="richtext">
+                        <input type="hidden" name="category">
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_search_select_widget_satisfies_str_field:
+            # Closes #878: search_select renders the str value as an
+            # <input type="hidden"> form-submission carrier alongside a visible
+            # <input type="text"> search box. The hidden input is intentional;
+            # a str field rendered through this widget must NOT generate an
+            # INCORRECT_INPUT_TYPE gap. Equivalence depends on the wrapper div
+            # carrying data-dz-widget="search_select".
+            (
+                "device_create",
+                SurfaceMode.CREATE,
+                "manufacturer",
+                FieldType(kind=FieldTypeKind.STR, max_length=200),
+                """
+                <form hx-post="/devices">
+                    <div class="relative w-full" x-data="{ open: false }" data-dz-widget="search_select">
+                        <input type="hidden" name="manufacturer" id="field-manufacturer" />
+                        <input type="text" id="search-input-manufacturer" role="combobox" />
+                    </div>
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+        ],
+        ids=[
+            "test_datepicker_on_date_field",
+            "test_datepicker_on_datetime_field",
+            "test_range_slider_on_int_field",
+            "test_range_slider_on_decimal_field",
+            "test_richtext_hidden_input_on_str_field",
+            "test_richtext_hidden_input_on_enum_field",
+            "test_search_select_widget_satisfies_str_field",
+        ],
+    )
+    def test_widget_no_input_type_gap(
+        self,
+        surface_name: str,
+        surface_mode: SurfaceMode,
+        field_name: str,
+        field_type: FieldType,
+        html: str,
+    ) -> None:
+        """Widget-rendered inputs produce no INCORRECT_INPUT_TYPE gap."""
+        surface = _make_surface(name=surface_name, mode=surface_mode, field_names=[field_name])
+        entity = _make_entity([FieldSpec(name=field_name, type=field_type)])
         score = score_surface_fidelity(surface, entity, html)
         type_gaps = [
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
         assert type_gaps == []
 
-    def test_datepicker_on_datetime_field(self) -> None:
-        """Flatpickr datepicker with enableTime: satisfies datetime field."""
+    @pytest.mark.parametrize(
+        "surface_name,field_name,field_type,html",
+        [
+            # test_unknown_widget_still_flags_mismatch:
+            # Unknown widget name doesn't silently bypass the type check.
+            (
+                "event_create",
+                "starts_on",
+                FieldType(kind=FieldTypeKind.DATE),
+                """
+                <form hx-post="/events">
+                    <input name="starts_on" type="text" data-dz-widget="mysterywidget">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_plain_mismatch_without_widget_still_flags:
+            # Type mismatch with no widget context still produces a gap.
+            (
+                "event_create",
+                "starts_on",
+                FieldType(kind=FieldTypeKind.DATE),
+                """
+                <form hx-post="/events">
+                    <input name="starts_on" type="text">
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+            # test_search_select_without_widget_marker_still_flags:
+            # Counter-test: a str field rendered as <input type="hidden"> with no
+            # widget marker remains a real defect — equivalence is gated on the
+            # data-dz-widget="search_select" decorator on the wrapper.
+            (
+                "device_create",
+                "manufacturer",
+                FieldType(kind=FieldTypeKind.STR, max_length=200),
+                """
+                <form hx-post="/devices">
+                    <input type="hidden" name="manufacturer" />
+                    <button type="submit">Save</button>
+                </form>
+                """,
+            ),
+        ],
+        ids=[
+            "test_unknown_widget_still_flags_mismatch",
+            "test_plain_mismatch_without_widget_still_flags",
+            "test_search_select_without_widget_marker_still_flags",
+        ],
+    )
+    def test_type_mismatch_flagged(
+        self,
+        surface_name: str,
+        field_name: str,
+        field_type: FieldType,
+        html: str,
+    ) -> None:
+        """Input type mismatches without a known-good widget produce exactly one gap."""
         surface = _make_surface(
-            name="event_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["starts_at"],
+            name=surface_name, mode=SurfaceMode.CREATE, field_names=[field_name]
         )
-        entity = _make_entity(
-            [FieldSpec(name="starts_at", type=FieldType(kind=FieldTypeKind.DATETIME))],
-        )
-        html = """
-        <form hx-post="/events">
-            <input name="starts_at" type="text" data-dz-widget="datepicker">
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_range_slider_on_int_field(self) -> None:
-        """Range slider: type='range' satisfies int/number field."""
-        surface = _make_surface(
-            name="settings_edit",
-            mode=SurfaceMode.EDIT,
-            field_names=["volume"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="volume", type=FieldType(kind=FieldTypeKind.INT))],
-        )
-        html = """
-        <form hx-put="/settings">
-            <div data-dz-widget="range-tooltip">
-                <input name="volume" type="range" min="0" max="100">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_range_slider_on_decimal_field(self) -> None:
-        """Range slider satisfies decimal fields as well."""
-        surface = _make_surface(
-            name="settings_edit",
-            mode=SurfaceMode.EDIT,
-            field_names=["opacity"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="opacity", type=FieldType(kind=FieldTypeKind.DECIMAL))],
-        )
-        html = """
-        <form hx-put="/settings">
-            <input name="opacity" type="range" min="0" max="1" step="0.01">
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_richtext_hidden_input_on_str_field(self) -> None:
-        """Rich text widget: hidden input inside data-dz-widget='richtext' satisfies str."""
-        surface = _make_surface(
-            name="post_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["body"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="body", type=FieldType(kind=FieldTypeKind.STR, max_length=5000))],
-        )
-        html = """
-        <form hx-post="/posts">
-            <div data-dz-widget="richtext">
-                <div class="quill-editor"></div>
-                <input type="hidden" name="body">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_richtext_hidden_input_on_enum_field(self) -> None:
-        """Rich text widget on enum: hidden input satisfies select expectation."""
-        surface = _make_surface(
-            name="post_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["category"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="category", type=FieldType(kind=FieldTypeKind.ENUM))],
-        )
-        html = """
-        <form hx-post="/posts">
-            <div data-dz-widget="richtext">
-                <input type="hidden" name="category">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_unknown_widget_still_flags_mismatch(self) -> None:
-        """Unknown widget name doesn't silently bypass the type check."""
-        surface = _make_surface(
-            name="event_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["starts_on"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
-        )
-        html = """
-        <form hx-post="/events">
-            <input name="starts_on" type="text" data-dz-widget="mysterywidget">
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert len(type_gaps) == 1
-
-    def test_plain_mismatch_without_widget_still_flags(self) -> None:
-        """Type mismatch with no widget context still produces a gap."""
-        surface = _make_surface(
-            name="event_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["starts_on"],
-        )
-        entity = _make_entity(
-            [FieldSpec(name="starts_on", type=FieldType(kind=FieldTypeKind.DATE))],
-        )
-        html = """
-        <form hx-post="/events">
-            <input name="starts_on" type="text">
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert len(type_gaps) == 1
-
-    def test_search_select_widget_satisfies_str_field(self) -> None:
-        """Closes #878: search_select renders the str value as an
-        ``<input type="hidden">`` form-submission carrier alongside a visible
-        ``<input type="text">`` search box. The hidden input is intentional;
-        a str field rendered through this widget must NOT generate an
-        INCORRECT_INPUT_TYPE gap. Equivalence depends on the wrapper div
-        carrying ``data-dz-widget="search_select"`` (cf. the actual fragment
-        at ``src/dazzle_ui/templates/fragments/search_select.html``)."""
-        surface = _make_surface(
-            name="device_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["manufacturer"],
-        )
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="manufacturer",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                )
-            ],
-        )
-        html = """
-        <form hx-post="/devices">
-            <div class="relative w-full" x-data="{ open: false }" data-dz-widget="search_select">
-                <input type="hidden" name="manufacturer" id="field-manufacturer" />
-                <input type="text" id="search-input-manufacturer" role="combobox" />
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert type_gaps == []
-
-    def test_search_select_without_widget_marker_still_flags(self) -> None:
-        """Counter-test: a str field rendered as <input type="hidden"> with no
-        widget marker remains a real defect — equivalence is gated on the
-        ``data-dz-widget="search_select"`` decorator on the wrapper. If the
-        decorator goes missing during a refactor, the false-positive flag
-        returns and surfaces the regression."""
-        surface = _make_surface(
-            name="device_create",
-            mode=SurfaceMode.CREATE,
-            field_names=["manufacturer"],
-        )
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="manufacturer",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                )
-            ],
-        )
-        html = """
-        <form hx-post="/devices">
-            <input type="hidden" name="manufacturer" />
-            <button type="submit">Save</button>
-        </form>
-        """
+        entity = _make_entity([FieldSpec(name=field_name, type=field_type)])
         score = score_surface_fidelity(surface, entity, html)
         type_gaps = [
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
