@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.2] - 2026-05-04
+
+### Fixed
+- **ops_dashboard ST-007 story prose**: caught by the second `/fuzz`
+  sweep — the v0.65.1 Alert.acknowledged → Alert.status migration
+  updated the entity, surfaces, workspace filters, and aggregates
+  but missed the descriptive prose in `stories.dsl` ("Alert.acknowledged
+  = false" → "Alert.status becomes acknowledged"). Cosmetic, but
+  rolling it in keeps the example self-consistent. Closes the only
+  loose end the second sweep surfaced.
+
 ## [0.65.1] - 2026-05-04
 
 ### Fixed

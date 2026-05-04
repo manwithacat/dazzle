@@ -63,9 +63,9 @@ story ST-007 "Operations Engineer acknowledges an alert with one click":
   trigger: user_click
   scope: [Alert]
   given:
-    - "Alert.acknowledged = false"
+    - "Alert.status = active"
   then:
-    - "Alert.acknowledged becomes true"
+    - "Alert.status becomes acknowledged"
     - "Alert.acknowledged_by records the Operations Engineer"
 
 story ST-008 "Operations Engineer views alerts grouped by severity":
