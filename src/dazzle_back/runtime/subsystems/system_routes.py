@@ -82,24 +82,21 @@ class SystemRoutesSubsystem:
             event_explorer_router = create_event_explorer_routes(ctx.event_framework)
             ctx.app.include_router(event_explorer_router)
 
-        # Site routes (v0.16.0)
+        # Site API routes (v0.16.0). The page-router (`/`, `/site.js`,
+        # `/styles/dazzle.css`) is registered by app_factory.py with the
+        # full auth/persona/analytics wiring. Calling
+        # `create_site_page_routes` here too would re-register the same
+        # paths and produce duplicate-route warnings on every boot
+        # (caught by the cycle 4 fuzz sweep against contact_manager,
+        # support_tickets, ops_dashboard).
         if ctx.sitespec_data:
-            from dazzle_back.runtime.site_routes import (
-                create_site_page_routes,
-                create_site_routes,
-            )
+            from dazzle_back.runtime.site_routes import create_site_routes
 
             site_router = create_site_routes(
                 sitespec_data=ctx.sitespec_data,
                 project_root=ctx.project_root,
             )
             ctx.app.include_router(site_router)
-
-            page_router = create_site_page_routes(
-                sitespec_data=ctx.sitespec_data,
-                project_root=ctx.project_root,
-            )
-            ctx.app.include_router(page_router)
 
         # Fragment routes (v0.25.0)
         self._init_fragment_routes(ctx)

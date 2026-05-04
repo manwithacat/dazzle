@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.5] - 2026-05-04
+
+### Fixed
+- **Site page routes registered twice on every boot.** The cycle-4
+  fuzz sweep against contact_manager, support_tickets, and
+  ops_dashboard caught a duplicate-handler warning at startup:
+  `GET /` → `serve_page` + `serve_root_page`, plus the same warning
+  for `/site.js` and `/styles/dazzle.css`. Root cause:
+  `create_site_page_routes` was wired in from two places —
+  `app_factory.py` (canonical, full auth/persona/analytics context)
+  and `subsystems/system_routes.py` (a bare-bones leftover from the
+  v0.16 era). Both fired when `ctx.sitespec_data` was set.
+
+  Fix: `subsystems/system_routes.py` now keeps only the API-only
+  `create_site_routes` call (which serves `/api/site/*` and doesn't
+  conflict). The page-router registration belongs solely to
+  `app_factory.py`.
+
+  Drift gate `tests/unit/test_site_routes_no_duplicate_registration.py`
+  pins the call-site count at 1 across both files so the regression
+  fails CI before reaching a release.
+### Agent Guidance
+- When wiring runtime routes, register page handlers (URLs the user
+  hits in a browser) ONLY from `app_factory.py` — that's where the
+  auth/persona/analytics context is in scope. `subsystems/*.py`
+  modules should only register routes that don't depend on that
+  context (typically `/api/*` or `/dz/*`). Adding a duplicate
+  registration is now caught by the drift gate.
+
 ## [0.64.4] - 2026-05-04
 
 ### Added
