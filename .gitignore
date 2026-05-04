@@ -116,3 +116,6 @@ dev_docs/
 
 # Per-example secrets — template is .env.example, actual .env never committed
 examples/*/.env
+
+# Test-suite distillation classifier output (regenerable; large)
+tests/audit/classification.json
