@@ -49,41 +49,29 @@ def _or_cond(left: dict, right: dict) -> dict:
 
 
 class TestEvaluateConditionRoleCheck:
-    def test_role_check_true_when_user_has_role(self) -> None:
-        cond = _role_check_cond("admin")
-        context = {"user_roles": ["admin", "viewer"]}
-        assert evaluate_condition(cond, {}, context) is True
-
-    def test_role_check_false_when_user_lacks_role(self) -> None:
-        cond = _role_check_cond("admin")
-        context = {"user_roles": ["viewer"]}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_role_check_false_with_empty_roles_list(self) -> None:
-        cond = _role_check_cond("admin")
-        context = {"user_roles": []}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_role_check_false_with_missing_user_roles_key(self) -> None:
-        cond = _role_check_cond("admin")
-        context = {}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_role_check_false_with_empty_role_name(self) -> None:
-        cond = {"role_check": {"role_name": ""}}
-        context = {"user_roles": ["admin"]}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_role_check_false_with_missing_role_name_key(self) -> None:
-        cond = {"role_check": {}}
-        context = {"user_roles": ["admin"]}
-        assert evaluate_condition(cond, {}, context) is False
-
-    def test_role_check_exact_match_only(self) -> None:
-        """'adm' should not match 'admin'."""
-        cond = _role_check_cond("adm")
-        context = {"user_roles": ["admin"]}
-        assert evaluate_condition(cond, {}, context) is False
+    @pytest.mark.parametrize(
+        ("cond", "context", "expected"),
+        [
+            (_role_check_cond("admin"), {"user_roles": ["admin", "viewer"]}, True),
+            (_role_check_cond("admin"), {"user_roles": ["viewer"]}, False),
+            (_role_check_cond("admin"), {"user_roles": []}, False),
+            (_role_check_cond("admin"), {}, False),
+            ({"role_check": {"role_name": ""}}, {"user_roles": ["admin"]}, False),
+            ({"role_check": {}}, {"user_roles": ["admin"]}, False),
+            (_role_check_cond("adm"), {"user_roles": ["admin"]}, False),
+        ],
+        ids=[
+            "test_role_check_true_when_user_has_role",
+            "test_role_check_false_when_user_lacks_role",
+            "test_role_check_false_with_empty_roles_list",
+            "test_role_check_false_with_missing_user_roles_key",
+            "test_role_check_false_with_empty_role_name",
+            "test_role_check_false_with_missing_role_name_key",
+            "test_role_check_exact_match_only",
+        ],
+    )
+    def test_role_check_evaluation(self, cond: dict, context: dict, expected: bool) -> None:
+        assert evaluate_condition(cond, {}, context) is expected
 
 
 # ---------------------------------------------------------------------------

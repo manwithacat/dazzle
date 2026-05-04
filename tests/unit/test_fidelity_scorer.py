@@ -963,24 +963,29 @@ class TestSearchSelectErrorHandlerCheck:
         gaps = _check_interaction_fidelity(self._make_search_select_surface(), root, html)
         return [g for g in gaps if g.category == FidelityGapCategory.MISSING_ERROR_HANDLER]
 
-    def test_aria_invalid_satisfies_error_handler_check(self) -> None:
-        html = self._make_search_select_html('aria-invalid="true"')
-        assert self._error_handler_gaps(html) == []
-
-    def test_destructive_token_satisfies_error_handler_check(self) -> None:
-        html = self._make_search_select_html('class="border-[hsl(var(--destructive))]"')
-        assert self._error_handler_gaps(html) == []
-
-    def test_legacy_text_error_class_still_satisfies_check(self) -> None:
-        # Backwards compat — apps not yet migrated off DaisyUI keep passing.
-        html = self._make_search_select_html('class="text-error"')
-        assert self._error_handler_gaps(html) == []
-
-    def test_no_error_marker_still_flagged(self) -> None:
-        html = self._make_search_select_html("")
+    @pytest.mark.parametrize(
+        ("error_marker", "expect_flagged"),
+        [
+            ('aria-invalid="true"', False),
+            ('class="border-[hsl(var(--destructive))]"', False),
+            ('class="text-error"', False),
+            ("", True),
+        ],
+        ids=[
+            "test_aria_invalid_satisfies_error_handler_check",
+            "test_destructive_token_satisfies_error_handler_check",
+            "test_legacy_text_error_class_still_satisfies_check",
+            "test_no_error_marker_still_flagged",
+        ],
+    )
+    def test_error_marker(self, error_marker: str, expect_flagged: bool) -> None:
+        html = self._make_search_select_html(error_marker)
         gaps = self._error_handler_gaps(html)
-        assert len(gaps) == 1
-        assert gaps[0].severity == "minor"
+        if expect_flagged:
+            assert len(gaps) == 1
+            assert gaps[0].severity == "minor"
+        else:
+            assert gaps == []
 
 
 class TestCreateModeStoryGapSuppression:
@@ -1034,98 +1039,104 @@ class TestCreateModeStoryGapSuppression:
             stories,
         )
 
-    def test_create_skips_precondition_when_default_matches(self) -> None:
-        """Task.status defaults to 'todo' → precondition 'is todo' satisfied implicitly."""
+    @pytest.mark.parametrize(
+        (
+            "surface_name",
+            "surface_mode",
+            "story_id",
+            "given",
+            "then",
+            "category",
+            "expected_count",
+        ),
+        [
+            (
+                "task_create",
+                SurfaceMode.CREATE,
+                "ST-001",
+                ["Task.status is 'todo'"],
+                (),
+                FidelityGapCategory.STORY_PRECONDITION_MISSING,
+                0,
+            ),
+            (
+                "task_create",
+                SurfaceMode.CREATE,
+                "ST-009",
+                ["Task.status is 'in_progress'"],
+                (),
+                FidelityGapCategory.STORY_PRECONDITION_MISSING,
+                1,
+            ),
+            (
+                "task_edit",
+                SurfaceMode.EDIT,
+                "ST-001",
+                ["Task.status is 'todo'"],
+                (),
+                FidelityGapCategory.STORY_PRECONDITION_MISSING,
+                1,
+            ),
+            (
+                "task_create",
+                SurfaceMode.CREATE,
+                "ST-008",
+                (),
+                ["Task.status becomes 'in_progress'"],
+                FidelityGapCategory.STORY_OUTCOME_MISSING,
+                0,
+            ),
+            (
+                "task_create",
+                SurfaceMode.CREATE,
+                "ST-019",
+                (),
+                ["Task.status transitions through declared state machine"],
+                FidelityGapCategory.STORY_OUTCOME_MISSING,
+                0,
+            ),
+            (
+                "task_edit",
+                SurfaceMode.EDIT,
+                "ST-008",
+                (),
+                ["Task.status becomes 'in_progress'"],
+                FidelityGapCategory.STORY_OUTCOME_MISSING,
+                1,
+            ),
+        ],
+        ids=[
+            "test_create_skips_precondition_when_default_matches",
+            "test_create_still_flags_precondition_when_default_differs",
+            "test_edit_still_flags_precondition_even_when_default_matches",
+            "test_create_skips_outcome_for_becomes_transition",
+            "test_create_skips_outcome_for_transitions_through_phrase",
+            "test_edit_still_flags_transition_outcome",
+        ],
+    )
+    def test_create_mode_gap_suppression(
+        self,
+        surface_name: str,
+        surface_mode: SurfaceMode,
+        story_id: str,
+        given,
+        then,
+        category: FidelityGapCategory,
+        expected_count: int,
+    ) -> None:
+        """create-mode surfaces suppress preconditions / transition outcomes;
+        edit-mode surfaces still flag them."""
         surface = _make_surface(
-            name="task_create",
+            name=surface_name,
             entity_ref="Task",
-            mode=SurfaceMode.CREATE,
+            mode=surface_mode,
             field_names=["title"],
         )
         entity = self._make_task_entity(status_default="todo")
-        story = self._make_story("ST-001", given=["Task.status is 'todo'"])
+        story = self._make_story(story_id, given=list(given), then=list(then))
         gaps = self._gaps_for(surface, entity, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert precond_gaps == []
-
-    def test_create_still_flags_precondition_when_default_differs(self) -> None:
-        """Task.status defaults to 'todo' → precondition 'is in_progress' is NOT satisfied."""
-        surface = _make_surface(
-            name="task_create",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            field_names=["title"],
-        )
-        entity = self._make_task_entity(status_default="todo")
-        story = self._make_story("ST-009", given=["Task.status is 'in_progress'"])
-        gaps = self._gaps_for(surface, entity, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert len(precond_gaps) == 1
-
-    def test_edit_still_flags_precondition_even_when_default_matches(self) -> None:
-        """Edit surfaces show current entity state — defaults don't apply, so
-        the gap is real if the field is missing from the surface."""
-        surface = _make_surface(
-            name="task_edit",
-            entity_ref="Task",
-            mode=SurfaceMode.EDIT,
-            field_names=["title"],
-        )
-        entity = self._make_task_entity(status_default="todo")
-        story = self._make_story("ST-001", given=["Task.status is 'todo'"])
-        gaps = self._gaps_for(surface, entity, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert len(precond_gaps) == 1
-
-    def test_create_skips_outcome_for_becomes_transition(self) -> None:
-        surface = _make_surface(
-            name="task_create",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            field_names=["title"],
-        )
-        entity = self._make_task_entity()
-        story = self._make_story("ST-008", then=["Task.status becomes 'in_progress'"])
-        gaps = self._gaps_for(surface, entity, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert outcome_gaps == []
-
-    def test_create_skips_outcome_for_transitions_through_phrase(self) -> None:
-        """Catches the simple_task ST-019 wording 'transitions through declared state machine'."""
-        surface = _make_surface(
-            name="task_create",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            field_names=["title"],
-        )
-        entity = self._make_task_entity()
-        story = self._make_story(
-            "ST-019", then=["Task.status transitions through declared state machine"]
-        )
-        gaps = self._gaps_for(surface, entity, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert outcome_gaps == []
-
-    def test_edit_still_flags_transition_outcome(self) -> None:
-        """Edit surfaces ARE where transitions fire — outcome gap is real if
-        the surface doesn't render the field that gets updated."""
-        surface = _make_surface(
-            name="task_edit",
-            entity_ref="Task",
-            mode=SurfaceMode.EDIT,
-            field_names=["title"],
-        )
-        entity = self._make_task_entity()
-        story = self._make_story("ST-008", then=["Task.status becomes 'in_progress'"])
-        gaps = self._gaps_for(surface, entity, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert len(outcome_gaps) == 1
+        matching = [g for g in gaps if g.category == category]
+        assert len(matching) == expected_count
 
 
 class TestStatusChangedTriggerExclusion:
@@ -1157,55 +1168,38 @@ class TestStatusChangedTriggerExclusion:
             unless=[],
         )
 
-    def test_status_changed_excluded_from_create(self) -> None:
+    @pytest.mark.parametrize(
+        ("surface_name", "surface_mode", "story_id", "trigger", "expect_match"),
+        [
+            ("task_create", SurfaceMode.CREATE, "ST-008", StoryTrigger.STATUS_CHANGED, False),
+            ("task_create", SurfaceMode.CREATE, "ST-100", StoryTrigger.USER_CLICK, True),
+            ("task_create", SurfaceMode.CREATE, "ST-101", StoryTrigger.FORM_SUBMITTED, True),
+            ("task_edit", SurfaceMode.EDIT, "ST-008", StoryTrigger.STATUS_CHANGED, True),
+        ],
+        ids=[
+            "test_status_changed_excluded_from_create",
+            "test_user_click_still_matches_create",
+            "test_form_submitted_still_matches_create",
+            "test_status_changed_still_matches_edit",
+        ],
+    )
+    def test_trigger_create_filter(
+        self,
+        surface_name: str,
+        surface_mode: SurfaceMode,
+        story_id: str,
+        trigger: StoryTrigger,
+        expect_match: bool,
+    ) -> None:
         surface = _make_surface(
-            name="task_create",
+            name=surface_name,
             entity_ref="Task",
-            mode=SurfaceMode.CREATE,
+            mode=surface_mode,
             field_names=["title"],
         )
-        story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
+        story = self._story(story_id, trigger)
         matched = _match_stories_to_surfaces(surface, [story])
-        assert matched == []
-
-    def test_user_click_still_matches_create(self) -> None:
-        """user_click stories DO apply to create surfaces (e.g. 'user
-        clicks Save to create Task'). Trigger filter is narrow."""
-        surface = _make_surface(
-            name="task_create",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            field_names=["title"],
-        )
-        story = self._story("ST-100", StoryTrigger.USER_CLICK)
-        matched = _match_stories_to_surfaces(surface, [story])
-        assert matched == [story]
-
-    def test_form_submitted_still_matches_create(self) -> None:
-        """form_submitted is THE creation trigger — must continue to match."""
-        surface = _make_surface(
-            name="task_create",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            field_names=["title"],
-        )
-        story = self._story("ST-101", StoryTrigger.FORM_SUBMITTED)
-        matched = _match_stories_to_surfaces(surface, [story])
-        assert matched == [story]
-
-    def test_status_changed_still_matches_edit(self) -> None:
-        """Edit surfaces are exactly where transitions fire — they must
-        continue to match status_changed stories so missing-field gaps on
-        the edit form are still surfaced."""
-        surface = _make_surface(
-            name="task_edit",
-            entity_ref="Task",
-            mode=SurfaceMode.EDIT,
-            field_names=["title"],
-        )
-        story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
-        matched = _match_stories_to_surfaces(surface, [story])
-        assert matched == [story]
+        assert matched == ([story] if expect_match else [])
 
     def test_status_changed_still_matches_list_and_detail(self) -> None:
         """List and detail surfaces continue to match — they show transition

@@ -1,5 +1,7 @@
 """Tests for UI semantic layout engine."""
 
+import pytest
+
 from dazzle.core.ir import (
     AttentionSignalKind,
     LayoutArchetype,
@@ -20,43 +22,34 @@ from dazzle.ui.layout_engine.archetypes import FOCUS_METRIC
 class TestArchetypeSelection:
     """Tests for archetype selection logic."""
 
-    def test_select_focus_metric_single_kpi(self):
-        """Test that single high-weight KPI selects FOCUS_METRIC."""
+    @pytest.mark.parametrize(
+        ("signal_id", "kind", "label", "weight", "expected"),
+        [
+            ("kpi1", AttentionSignalKind.KPI, "Critical KPI", 0.9, LayoutArchetype.FOCUS_METRIC),
+            ("table1", AttentionSignalKind.TABLE, "Data Table", 0.8, LayoutArchetype.SCANNER_TABLE),
+        ],
+        ids=[
+            "test_select_focus_metric_single_kpi",
+            "test_select_scanner_table_single_table",
+        ],
+    )
+    def test_select_single_signal(self, signal_id, kind, label, weight, expected):
+        """Single high-weight signal → matching archetype."""
         workspace = WorkspaceLayout(
             id="test",
             label="Test",
             attention_signals=[
                 LayoutSignal(
-                    id="kpi1",
-                    kind=AttentionSignalKind.KPI,
-                    label="Critical KPI",
+                    id=signal_id,
+                    kind=kind,
+                    label=label,
                     source="Entity",
-                    attention_weight=0.9,
+                    attention_weight=weight,
                 )
             ],
         )
-
         archetype = select_stage(workspace)
-        assert archetype == LayoutArchetype.FOCUS_METRIC
-
-    def test_select_scanner_table_single_table(self):
-        """Test that single table selects SCANNER_TABLE."""
-        workspace = WorkspaceLayout(
-            id="test",
-            label="Test",
-            attention_signals=[
-                LayoutSignal(
-                    id="table1",
-                    kind=AttentionSignalKind.TABLE,
-                    label="Data Table",
-                    source="Entity",
-                    attention_weight=0.8,
-                )
-            ],
-        )
-
-        archetype = select_stage(workspace)
-        assert archetype == LayoutArchetype.SCANNER_TABLE
+        assert archetype == expected
 
     def test_select_monitor_wall_multiple_signals(self):
         """Test that multiple moderate signals select MONITOR_WALL."""

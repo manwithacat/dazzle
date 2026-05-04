@@ -76,15 +76,6 @@ APP_TOKENS = [
     "--dz-heading-app-subsection-title",
 ]
 
-
-@pytest.mark.parametrize("name", APP_TOKENS)
-def test_app_heading_token_present(tokens_css: str, name: str) -> None:
-    """Each app heading slot must declare a value in tokens.css.
-    Drift here = a heading-using component reverts to hardcoded
-    font-sizes."""
-    assert f"{name}:" in tokens_css
-
-
 MARKETING_TOKENS = [
     "--dz-heading-marketing-hero",
     "--dz-heading-marketing-cta",
@@ -92,11 +83,22 @@ MARKETING_TOKENS = [
 ]
 
 
-@pytest.mark.parametrize("name", MARKETING_TOKENS)
-def test_marketing_heading_token_present(tokens_css: str, name: str) -> None:
-    """Marketing tokens mirror the site-section variables for
-    discoverability — adopters scanning tokens.css see the full
-    heading scale in one place."""
+@pytest.mark.parametrize(
+    "name",
+    APP_TOKENS + MARKETING_TOKENS,
+    ids=[
+        "test_app_heading_token_present_page_title",
+        "test_app_heading_token_present_section_title",
+        "test_app_heading_token_present_subsection_title",
+        "test_marketing_heading_token_present_hero",
+        "test_marketing_heading_token_present_cta",
+        "test_marketing_heading_token_present_section",
+    ],
+)
+def test_heading_token_present(tokens_css: str, name: str) -> None:
+    """Each heading slot (app + marketing) must declare a value in
+    tokens.css. Drift here = a heading-using component reverts to
+    hardcoded font-sizes (app) or site-sections drift (marketing)."""
     assert f"{name}:" in tokens_css
 
 

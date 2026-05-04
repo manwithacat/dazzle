@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (13,317 test functions)
+# Test Suite Taxonomy — Pass 1 (13,227 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,19 +6,19 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 11,408 | 85.7% | 0 |
-| smoke | 1,402 | 10.5% | 535 |
-| parametric_cluster | 267 | 2.0% | 267 |
-| regression_pin | 170 | 1.3% | 170 |
+| contract | 11,316 | 85.6% | 0 |
+| smoke | 1,382 | 10.4% | 535 |
+| parametric_cluster | 290 | 2.2% | 290 |
+| regression_pin | 169 | 1.3% | 169 |
 | implementation_mirror | 52 | 0.4% | 0 |
 | snapshot | 12 | 0.1% | 12 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 11,857 (contract + regression_pin + parametric + snapshot)
+- **Definitely keep**: 11,787 (contract + regression_pin + parametric + snapshot)
 - **Review for collapse/rewrite**: 58 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,402
+- **Smoke tests** (canary; keep but never as sole coverage): 1,382
 
 ## Top 10 implementation-mirror files
 
@@ -35,12 +35,12 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 ## Top 10 smoke-test files
 
-- `tests/unit/test_invariant_evaluator.py` — 26 smoke tests
-- `tests/unit/test_composition_audit.py` — 18 smoke tests
+- `tests/unit/test_invariant_evaluator.py` — 23 smoke tests
 - `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_access_control.py` — 17 smoke tests
 - `tests/unit/test_app_theme_registry.py` — 16 smoke tests
 - `tests/unit/test_layout_ir.py` — 16 smoke tests
+- `tests/unit/test_composition_audit.py` — 14 smoke tests
 - `tests/unit/test_grant_store.py` — 13 smoke tests
 - `tests/unit/test_job_queue.py` — 13 smoke tests
 - `tests/unit/test_notification_providers_ses_sendgrid.py` — 13 smoke tests

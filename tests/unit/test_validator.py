@@ -152,54 +152,135 @@ class TestValidateEntities:
         errors, warnings = validate_entities(appspec)
         assert any(error_fragment in e for e in errors)
 
-    def test_duplicate_field_names(self) -> None:
-        """Test detection of duplicate field names."""
-        entity = make_entity(
-            fields=[
-                make_id_field(),
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+    @pytest.mark.parametrize(
+        ("entity_factory", "predicate", "channel"),
+        [
+            # test_duplicate_field_names
+            (
+                lambda: make_entity(
+                    fields=[
+                        make_id_field(),
+                        ir.FieldSpec(
+                            name="title",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+                        ),
+                        ir.FieldSpec(
+                            name="title",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.TEXT),
+                        ),
+                    ]
                 ),
-                ir.FieldSpec(
-                    name="title",  # Duplicate
-                    type=ir.FieldType(kind=ir.FieldTypeKind.TEXT),
+                lambda msg: "duplicate field names" in msg,
+                "errors",
+            ),
+            # test_decimal_scale_greater_than_precision
+            (
+                lambda: make_entity(
+                    fields=[
+                        make_id_field(),
+                        ir.FieldSpec(
+                            name="amount",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.DECIMAL, precision=5, scale=10),
+                        ),
+                    ]
                 ),
-            ]
-        )
+                lambda msg: "scale" in msg and "precision" in msg,
+                "errors",
+            ),
+            # test_string_very_large_max_length_warning
+            (
+                lambda: make_entity(
+                    fields=[
+                        make_id_field(),
+                        ir.FieldSpec(
+                            name="description",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=20000),
+                        ),
+                    ]
+                ),
+                lambda msg: "text" in msg.lower(),
+                "warnings",
+            ),
+            # test_conflicting_modifiers
+            (
+                lambda: make_entity(
+                    fields=[
+                        make_id_field(),
+                        ir.FieldSpec(
+                            name="title",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+                            modifiers=[ir.FieldModifier.REQUIRED, ir.FieldModifier.OPTIONAL],
+                        ),
+                    ]
+                ),
+                lambda msg: "required" in msg and "optional" in msg,
+                "errors",
+            ),
+            # test_auto_modifier_on_non_datetime
+            (
+                lambda: make_entity(
+                    fields=[
+                        make_id_field(),
+                        ir.FieldSpec(
+                            name="counter",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.INT),
+                            modifiers=[ir.FieldModifier.AUTO_ADD],
+                        ),
+                    ]
+                ),
+                lambda msg: "auto_add" in msg,
+                "warnings",
+            ),
+            # test_constraint_references_nonexistent_field
+            (
+                lambda: make_entity(
+                    constraints=[
+                        ir.Constraint(
+                            kind=ir.ConstraintKind.UNIQUE,
+                            fields=["nonexistent_field"],
+                        ),
+                    ]
+                ),
+                lambda msg: "nonexistent_field" in msg,
+                "errors",
+            ),
+            # test_permit_without_scope_warns
+            (
+                lambda: ir.EntitySpec(
+                    name="Task",
+                    title="Task",
+                    fields=[make_id_field()],
+                    access=ir.AccessSpec(
+                        permissions=[
+                            ir.PermissionRule(
+                                operation=ir.PermissionKind.READ,
+                                require_auth=True,
+                                effect=ir.PolicyEffect.PERMIT,
+                            )
+                        ]
+                    ),
+                ),
+                lambda msg: "no scope: blocks" in msg,
+                "warnings",
+            ),
+        ],
+        ids=[
+            "test_duplicate_field_names",
+            "test_decimal_scale_greater_than_precision",
+            "test_string_very_large_max_length_warning",
+            "test_conflicting_modifiers",
+            "test_auto_modifier_on_non_datetime",
+            "test_constraint_references_nonexistent_field",
+            "test_permit_without_scope_warns",
+        ],
+    )
+    def test_entity_validation_diagnostics(self, entity_factory, predicate, channel: str) -> None:
+        """Various entity-validation diagnostics surface the right error/warning fragments."""
+        entity = entity_factory()
         appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-        assert any("duplicate field names" in e for e in errors)
-
-    def test_decimal_scale_greater_than_precision(self) -> None:
-        """Test detection of invalid decimal scale > precision."""
-        entity = make_entity(
-            fields=[
-                make_id_field(),
-                ir.FieldSpec(
-                    name="amount",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.DECIMAL, precision=5, scale=10),
-                ),
-            ]
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("scale" in e and "precision" in e for e in errors)
-
-    def test_string_very_large_max_length_warning(self) -> None:
-        """Test warning for very large string max_length."""
-        entity = make_entity(
-            fields=[
-                make_id_field(),
-                ir.FieldSpec(
-                    name="description",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=20000),
-                ),
-            ]
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("text" in w.lower() for w in warnings)
+        messages = errors if channel == "errors" else warnings
+        assert any(predicate(m) for m in messages)
 
     @pytest.mark.parametrize(
         "entity_name,field_name,expected_name",
@@ -226,72 +307,6 @@ class TestValidateEntities:
         errors, warnings = validate_entities(appspec)
         assert len(errors) == 0
         assert any("SQL reserved word" in w and expected_name in w for w in warnings)
-
-    def test_conflicting_modifiers(self) -> None:
-        """Test detection of conflicting required/optional modifiers."""
-        entity = make_entity(
-            fields=[
-                make_id_field(),
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
-                    modifiers=[ir.FieldModifier.REQUIRED, ir.FieldModifier.OPTIONAL],
-                ),
-            ]
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("required" in e and "optional" in e for e in errors)
-
-    def test_auto_modifier_on_non_datetime(self) -> None:
-        """Test warning for auto_add/auto_update on non-datetime field."""
-        entity = make_entity(
-            fields=[
-                make_id_field(),
-                ir.FieldSpec(
-                    name="counter",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.INT),
-                    modifiers=[ir.FieldModifier.AUTO_ADD],
-                ),
-            ]
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("auto_add" in w for w in warnings)
-
-    def test_constraint_references_nonexistent_field(self) -> None:
-        """Test detection of constraint referencing non-existent field."""
-        entity = make_entity(
-            constraints=[
-                ir.Constraint(
-                    kind=ir.ConstraintKind.UNIQUE,
-                    fields=["nonexistent_field"],
-                ),
-            ]
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("nonexistent_field" in e for e in errors)
-
-    def test_permit_without_scope_warns(self) -> None:
-        """Entity with permit: rules but no scope: blocks should warn."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="Task",
-            fields=[make_id_field()],
-            access=ir.AccessSpec(
-                permissions=[
-                    ir.PermissionRule(
-                        operation=ir.PermissionKind.READ,
-                        require_auth=True,
-                        effect=ir.PolicyEffect.PERMIT,
-                    )
-                ]
-            ),
-        )
-        appspec = make_appspec(entities=[entity])
-        errors, warnings = validate_entities(appspec)
-        assert any("no scope: blocks" in w for w in warnings)
 
     def test_system_entity_skips_scope_warning(self) -> None:
         """Framework-generated entities (patterns=['system']) skip the scope warning."""

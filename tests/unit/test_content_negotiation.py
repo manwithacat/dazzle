@@ -21,32 +21,32 @@ def _req(**headers: str) -> SimpleNamespace:
 class TestIsHtmxRequest:
     """_is_htmx_request() should only match genuine HTMX requests (#349)."""
 
-    def test_htmx_header(self) -> None:
-        """HX-Request header is the only signal."""
-        assert _is_htmx_request(_req(**{"HX-Request": "true"})) is True
-
-    def test_accept_text_html_is_not_htmx(self) -> None:
-        """Accept: text/html alone is NOT an HTMX request (#349)."""
-        assert _is_htmx_request(_req(Accept="text/html")) is False
-
-    def test_browser_accept_is_not_htmx(self) -> None:
-        """Standard browser Accept header is NOT an HTMX request (#349)."""
-        browser_accept = (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-        )
-        assert _is_htmx_request(_req(Accept=browser_accept)) is False
-
-    def test_json_accept(self) -> None:
-        """application/json should not match."""
-        assert _is_htmx_request(_req(Accept="application/json")) is False
-
-    def test_empty_accept(self) -> None:
-        """Missing Accept header should not match."""
-        assert _is_htmx_request(_req()) is False
-
-    def test_no_headers_attr(self) -> None:
-        """Object without headers attribute should return False."""
-        assert _is_htmx_request(object()) is False
+    @pytest.mark.parametrize(
+        ("req_obj", "expected"),
+        [
+            (_req(**{"HX-Request": "true"}), True),
+            (_req(Accept="text/html"), False),
+            (
+                _req(
+                    Accept="text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                ),
+                False,
+            ),
+            (_req(Accept="application/json"), False),
+            (_req(), False),
+            (object(), False),
+        ],
+        ids=[
+            "test_htmx_header",
+            "test_accept_text_html_is_not_htmx",
+            "test_browser_accept_is_not_htmx",
+            "test_json_accept",
+            "test_empty_accept",
+            "test_no_headers_attr",
+        ],
+    )
+    def test_is_htmx_request(self, req_obj: object, expected: bool) -> None:
+        assert _is_htmx_request(req_obj) is expected
 
 
 class TestWantsHtml:

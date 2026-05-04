@@ -65,27 +65,33 @@ def _logical(
 
 
 class TestBasicExpressions:
-    def test_literal(self) -> None:
-        assert evaluate_invariant_expr(_literal(42), {}) == 42
-
-    def test_literal_string(self) -> None:
-        assert evaluate_invariant_expr(_literal("active"), {}) == "active"
-
-    def test_field_ref_simple(self) -> None:
-        assert evaluate_invariant_expr(_field_ref("amount"), {"amount": 100}) == 100
-
-    def test_field_ref_missing(self) -> None:
-        assert evaluate_invariant_expr(_field_ref("x"), {}) is None
-
-    def test_field_ref_nested(self) -> None:
-        record = {"address": {"city": "London"}}
-        assert evaluate_invariant_expr(_field_ref("address", "city"), record) == "London"
-
-    def test_field_ref_empty_path(self) -> None:
-        assert evaluate_invariant_expr(InvariantExprSpec(kind="field_ref", path=[]), {}) is None
-
-    def test_field_ref_nested_non_dict(self) -> None:
-        assert evaluate_invariant_expr(_field_ref("x", "y"), {"x": 5}) is None
+    @pytest.mark.parametrize(
+        ("expr", "record", "expected"),
+        [
+            (_literal(42), {}, 42),
+            (_literal("active"), {}, "active"),
+            (_field_ref("amount"), {"amount": 100}, 100),
+            (_field_ref("x"), {}, None),
+            (_field_ref("address", "city"), {"address": {"city": "London"}}, "London"),
+            (InvariantExprSpec(kind="field_ref", path=[]), {}, None),
+            (_field_ref("x", "y"), {"x": 5}, None),
+        ],
+        ids=[
+            "test_literal",
+            "test_literal_string",
+            "test_field_ref_simple",
+            "test_field_ref_missing",
+            "test_field_ref_nested",
+            "test_field_ref_empty_path",
+            "test_field_ref_nested_non_dict",
+        ],
+    )
+    def test_evaluate(self, expr: InvariantExprSpec, record: dict, expected: object) -> None:
+        result = evaluate_invariant_expr(expr, record)
+        if expected is None:
+            assert result is None
+        else:
+            assert result == expected
 
 
 # ---------------------------------------------------------------------------

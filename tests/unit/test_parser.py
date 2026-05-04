@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 
 # Test entity parsing
@@ -1271,9 +1273,22 @@ surface task_create "Create Task":
 class TestBusinessPriority:
     """Tests for priority: modifier on surfaces and experiences."""
 
-    def test_surface_priority_critical(self):
-        """Surface with priority: critical."""
-        dsl = """
+    @pytest.mark.parametrize(
+        ("priority_line", "expected"),
+        [
+            ("  priority: critical\n", "critical"),
+            ("  priority: low\n", "low"),
+            ("", "medium"),
+        ],
+        ids=[
+            "test_surface_priority_critical",
+            "test_surface_priority_low",
+            "test_surface_priority_defaults_to_medium",
+        ],
+    )
+    def test_surface_priority(self, priority_line: str, expected: str):
+        """Surface priority parses to the expected value (defaults to medium)."""
+        dsl = f"""
 module test.core
 app test_app "Test App"
 
@@ -1284,54 +1299,12 @@ entity Task "Task":
 surface task_list "Tasks":
   uses entity Task
   mode: list
-  priority: critical
-  section main:
+{priority_line}  section main:
     field title "Title"
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         surface = fragment.surfaces[0]
-        assert surface.priority.value == "critical"
-
-    def test_surface_priority_low(self):
-        """Surface with priority: low."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-  priority: low
-  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.priority.value == "low"
-
-    def test_surface_priority_defaults_to_medium(self):
-        """Surface without priority defaults to medium."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.priority.value == "medium"
+        assert surface.priority.value == expected
 
     def test_experience_priority_critical(self):
         """Experience with priority: critical."""

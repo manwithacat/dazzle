@@ -1,5 +1,7 @@
 """Tests for surface search_fields and filter_fields wiring (#361, #596)."""
 
+import pytest
+
 from dazzle_back.runtime.app_factory import build_entity_filter_fields, build_entity_search_fields
 from dazzle_back.runtime.query_builder import QueryBuilder
 
@@ -90,88 +92,102 @@ def _make_surface(entity_ref: str, search_fields: list[str] | None = None, **kwa
     )
 
 
-class TestBuildEntitySearchFields:
-    """build_entity_search_fields() should extract search_fields from surface specs."""
+# Need SurfaceSpec import for the parametrized tests below
+from dazzle.core.ir.surfaces import SurfaceSpec  # noqa: E402
 
-    def test_extracts_search_fields(self) -> None:
-        """Surfaces with search_fields should be extracted."""
-        surfaces = [_make_surface("Task", search_fields=["title", "description"])]
-        result = build_entity_search_fields(surfaces)
-        assert result == {"Task": ["title", "description"]}
 
-    def test_no_search_fields_excluded(self) -> None:
-        """Surfaces without search_fields should not appear."""
-        surfaces = [_make_surface("Task")]
-        result = build_entity_search_fields(surfaces)
-        assert result == {}
+def _surfaces_extracts_search_fields():
+    return [_make_surface("Task", search_fields=["title", "description"])]
 
-    def test_multiple_entities(self) -> None:
-        """Each entity's search fields should be extracted independently."""
-        surfaces = [
-            _make_surface("Task", search_fields=["title"]),
-            _make_surface("Bug", search_fields=["summary", "details"]),
-        ]
-        result = build_entity_search_fields(surfaces)
-        assert result == {"Task": ["title"], "Bug": ["summary", "details"]}
 
-    def test_first_surface_wins(self) -> None:
-        """If multiple surfaces reference the same entity, keep the first."""
-        surfaces = [
-            _make_surface("Task", search_fields=["title"]),
-            _make_surface("Task", search_fields=["description"]),
-        ]
-        # Second surface has different name to avoid validation error
-        surfaces[1] = SurfaceSpec(
+def _surfaces_no_search_fields():
+    return [_make_surface("Task")]
+
+
+def _surfaces_multiple_entities():
+    return [
+        _make_surface("Task", search_fields=["title"]),
+        _make_surface("Bug", search_fields=["summary", "details"]),
+    ]
+
+
+def _surfaces_first_surface_wins():
+    return [
+        _make_surface("Task", search_fields=["title"]),
+        SurfaceSpec(
             name="task_detail",
             entity_ref="Task",
             mode="list",
             search_fields=["description"],
-        )
-        result = build_entity_search_fields(surfaces)
-        assert result == {"Task": ["title"]}
+        ),
+    ]
 
-    def test_no_entity_ref_ignored(self) -> None:
-        """Surfaces without entity_ref should be skipped."""
-        from dazzle.core.ir.surfaces import SurfaceSpec
 
-        surfaces = [SurfaceSpec(name="dashboard", mode="list", search_fields=["q"])]
-        result = build_entity_search_fields(surfaces)
-        assert result == {}
+def _surfaces_no_entity_ref():
+    return [SurfaceSpec(name="dashboard", mode="list", search_fields=["q"])]
 
-    def test_falls_back_to_ux_search_when_surface_lacks_search_fields(self) -> None:
-        """ux.search is the canonical form; build_entity_search_fields
-        must read it too (#856). Previously only legacy top-level
-        search_fields was honoured, which is why the contact_manager
-        filterable_table search input produced no WHERE clause."""
-        from dazzle.core.ir.ux import UXSpec
 
-        surface = SurfaceSpec(
+def _surfaces_ux_fallback():
+    from dazzle.core.ir.ux import UXSpec
+
+    return [
+        SurfaceSpec(
             name="contact_list",
             entity_ref="Contact",
             mode="list",
             ux=UXSpec(search=["first_name", "last_name", "email"]),
         )
-        result = build_entity_search_fields([surface])
-        assert result == {"Contact": ["first_name", "last_name", "email"]}
+    ]
 
-    def test_top_level_search_fields_wins_over_ux_search(self) -> None:
-        """When both are declared, legacy top-level takes precedence — matches
-        existing doc comment semantics and avoids breaking apps that set both."""
-        from dazzle.core.ir.ux import UXSpec
 
-        surface = SurfaceSpec(
+def _surfaces_top_level_wins():
+    from dazzle.core.ir.ux import UXSpec
+
+    return [
+        SurfaceSpec(
             name="contact_list",
             entity_ref="Contact",
             mode="list",
             search_fields=["email"],
             ux=UXSpec(search=["first_name", "last_name"]),
         )
-        result = build_entity_search_fields([surface])
-        assert result == {"Contact": ["email"]}
+    ]
 
 
-# Need SurfaceSpec import for the test_first_surface_wins test
-from dazzle.core.ir.surfaces import SurfaceSpec  # noqa: E402
+class TestBuildEntitySearchFields:
+    """build_entity_search_fields() should extract search_fields from surface specs."""
+
+    @pytest.mark.parametrize(
+        ("surfaces_factory", "expected"),
+        [
+            (_surfaces_extracts_search_fields, {"Task": ["title", "description"]}),
+            (_surfaces_no_search_fields, {}),
+            (
+                _surfaces_multiple_entities,
+                {"Task": ["title"], "Bug": ["summary", "details"]},
+            ),
+            (_surfaces_first_surface_wins, {"Task": ["title"]}),
+            (_surfaces_no_entity_ref, {}),
+            (
+                _surfaces_ux_fallback,
+                {"Contact": ["first_name", "last_name", "email"]},
+            ),
+            (_surfaces_top_level_wins, {"Contact": ["email"]}),
+        ],
+        ids=[
+            "test_extracts_search_fields",
+            "test_no_search_fields_excluded",
+            "test_multiple_entities",
+            "test_first_surface_wins",
+            "test_no_entity_ref_ignored",
+            "test_falls_back_to_ux_search_when_surface_lacks_search_fields",
+            "test_top_level_search_fields_wins_over_ux_search",
+        ],
+    )
+    def test_build_entity_search_fields(self, surfaces_factory, expected) -> None:
+        result = build_entity_search_fields(surfaces_factory())
+        assert result == expected
+
 
 # =============================================================================
 # build_entity_filter_fields tests (#596)

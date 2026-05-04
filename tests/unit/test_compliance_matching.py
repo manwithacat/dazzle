@@ -130,47 +130,50 @@ class TestEntityContextAwareness:
 class TestUKGovernmentIdentifiers:
     """UK-specific PII patterns: NINO, UTR, sort codes."""
 
-    def test_ni_number_matches(self):
-        result = _match_compliance_pattern("ni_number", "Contact", "ni_number", 0.99)
+    @pytest.mark.parametrize(
+        ("field_name", "entity", "pattern", "confidence", "min_result"),
+        [
+            ("ni_number", "Contact", "ni_number", 0.99, 0.95),
+            ("nino", "Employee", "nino", 0.99, 0.95),
+            (
+                "national_insurance_number",
+                "Contact",
+                "national_insurance",
+                0.99,
+                0.95,
+            ),
+            ("personal_utr", "SoleTrader", "utr", 0.95, 0.9),
+            (
+                "unique_taxpayer_reference",
+                "Contact",
+                "unique_taxpayer_reference",
+                0.95,
+                0.9,
+            ),
+            ("bank_sort_code", "Employee", "sort_code", 0.9, 0.85),
+            ("sort_code", "BankAccount", "sort_code", 0.9, 0.85),
+        ],
+        ids=[
+            "test_ni_number_matches",
+            "test_nino_matches",
+            "test_national_insurance_prefix_matches",
+            "test_personal_utr_matches",
+            "test_unique_taxpayer_reference_matches",
+            "test_sort_code_matches_financial",
+            "test_sort_code_standalone",
+        ],
+    )
+    def test_uk_identifier_matches(
+        self,
+        field_name: str,
+        entity: str,
+        pattern: str,
+        confidence: float,
+        min_result: float,
+    ) -> None:
+        result = _match_compliance_pattern(field_name, entity, pattern, confidence)
         assert result is not None
-        assert result >= 0.95
-
-    def test_nino_matches(self):
-        result = _match_compliance_pattern("nino", "Employee", "nino", 0.99)
-        assert result is not None
-        assert result >= 0.95
-
-    def test_national_insurance_prefix_matches(self):
-        """national_insurance_number should match national_insurance pattern."""
-        result = _match_compliance_pattern(
-            "national_insurance_number", "Contact", "national_insurance", 0.99
-        )
-        assert result is not None
-        assert result >= 0.95
-
-    def test_personal_utr_matches(self):
-        """personal_utr should match utr pattern (segment match)."""
-        result = _match_compliance_pattern("personal_utr", "SoleTrader", "utr", 0.95)
-        assert result is not None
-        assert result >= 0.9
-
-    def test_unique_taxpayer_reference_matches(self):
-        result = _match_compliance_pattern(
-            "unique_taxpayer_reference", "Contact", "unique_taxpayer_reference", 0.95
-        )
-        assert result is not None
-        assert result >= 0.9
-
-    def test_sort_code_matches_financial(self):
-        """bank_sort_code should match sort_code pattern."""
-        result = _match_compliance_pattern("bank_sort_code", "Employee", "sort_code", 0.9)
-        assert result is not None
-        assert result >= 0.85
-
-    def test_sort_code_standalone(self):
-        result = _match_compliance_pattern("sort_code", "BankAccount", "sort_code", 0.9)
-        assert result is not None
-        assert result >= 0.85
+        assert result >= min_result
 
 
 class TestConfidenceThreshold:

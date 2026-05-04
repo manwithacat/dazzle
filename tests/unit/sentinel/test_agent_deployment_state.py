@@ -132,32 +132,44 @@ def _make_policies(
 
 
 class TestDS01InterfaceWithoutAuth:
-    def test_flags_interface_with_auth_none(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", auth=InterfaceAuthMethod.NONE)
+    @pytest.mark.parametrize(
+        ("auth", "expect_flagged"),
+        [
+            (InterfaceAuthMethod.NONE, True),
+            (InterfaceAuthMethod.OAUTH2, False),
+            (InterfaceAuthMethod.API_KEY, False),
+        ],
+        ids=[
+            "test_flags_interface_with_auth_none",
+            "test_passes_with_oauth2",
+            "test_passes_with_api_key",
+        ],
+    )
+    def test_single_interface_auth(
+        self,
+        agent: DeploymentStateAgent,
+        auth: InterfaceAuthMethod,
+        expect_flagged: bool,
+    ) -> None:
+        iface = _make_interface("orders_api", auth=auth)
         interfaces = _make_interfaces([iface])
         appspec = make_appspec(interfaces=interfaces)
         findings = agent.interface_without_auth(appspec)
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-01"
-        assert findings[0].severity == Severity.HIGH
-        assert "orders_api" in findings[0].title
+        if expect_flagged:
+            assert len(findings) == 1
+            assert findings[0].heuristic_id == "DS-01"
+            assert findings[0].severity == Severity.HIGH
+            assert "orders_api" in findings[0].title
+        else:
+            assert findings == []
 
-    def test_passes_with_oauth2(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", auth=InterfaceAuthMethod.OAUTH2)
-        interfaces = _make_interfaces([iface])
-        appspec = make_appspec(interfaces=interfaces)
-        findings = agent.interface_without_auth(appspec)
-        assert findings == []
-
-    def test_passes_with_api_key(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", auth=InterfaceAuthMethod.API_KEY)
-        interfaces = _make_interfaces([iface])
-        appspec = make_appspec(interfaces=interfaces)
-        findings = agent.interface_without_auth(appspec)
-        assert findings == []
-
-    def test_no_interfaces_returns_empty(self, agent: DeploymentStateAgent) -> None:
-        appspec = make_appspec(interfaces=None)
+    @pytest.mark.parametrize(
+        "interfaces_arg",
+        [None, _make_interfaces([])],
+        ids=["test_no_interfaces_returns_empty", "test_empty_apis_list"],
+    )
+    def test_no_interfaces(self, agent: DeploymentStateAgent, interfaces_arg: object) -> None:
+        appspec = make_appspec(interfaces=interfaces_arg)
         findings = agent.interface_without_auth(appspec)
         assert findings == []
 
@@ -171,12 +183,6 @@ class TestDS01InterfaceWithoutAuth:
         findings = agent.interface_without_auth(appspec)
         assert len(findings) == 1
         assert "public_api" in findings[0].title
-
-    def test_empty_apis_list(self, agent: DeploymentStateAgent) -> None:
-        interfaces = _make_interfaces([])
-        appspec = make_appspec(interfaces=interfaces)
-        findings = agent.interface_without_auth(appspec)
-        assert findings == []
 
 
 # =============================================================================
@@ -264,36 +270,41 @@ class TestDS03TransactionWithoutIdempotency:
 
 
 class TestDS04QueueDirectDelivery:
-    def test_flags_queue_with_direct_send(self, agent: DeploymentStateAgent) -> None:
-        op = _make_send_op("order_send", delivery_mode=DeliveryMode.DIRECT)
-        channel = _make_channel("order_queue", kind=ChannelKind.QUEUE, send_operations=[op])
+    @pytest.mark.parametrize(
+        ("channel_name", "kind", "op_name", "delivery_mode", "expect_flagged"),
+        [
+            ("order_queue", ChannelKind.QUEUE, "order_send", DeliveryMode.DIRECT, True),
+            ("order_queue", ChannelKind.QUEUE, "order_send", DeliveryMode.OUTBOX, False),
+            ("notifications", ChannelKind.EMAIL, "email_send", DeliveryMode.DIRECT, False),
+            ("events", ChannelKind.STREAM, "event_send", DeliveryMode.DIRECT, False),
+        ],
+        ids=[
+            "test_flags_queue_with_direct_send",
+            "test_passes_queue_with_outbox_send",
+            "test_ignores_non_queue_channel_with_direct",
+            "test_ignores_stream_channel",
+        ],
+    )
+    def test_single_channel(
+        self,
+        agent: DeploymentStateAgent,
+        channel_name: str,
+        kind: ChannelKind,
+        op_name: str,
+        delivery_mode: DeliveryMode,
+        expect_flagged: bool,
+    ) -> None:
+        op = _make_send_op(op_name, delivery_mode=delivery_mode)
+        channel = _make_channel(channel_name, kind=kind, send_operations=[op])
         appspec = make_appspec(channels=[channel])
         findings = agent.queue_direct_delivery(appspec)
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-04"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "order_queue" in findings[0].title
-
-    def test_passes_queue_with_outbox_send(self, agent: DeploymentStateAgent) -> None:
-        op = _make_send_op("order_send", delivery_mode=DeliveryMode.OUTBOX)
-        channel = _make_channel("order_queue", kind=ChannelKind.QUEUE, send_operations=[op])
-        appspec = make_appspec(channels=[channel])
-        findings = agent.queue_direct_delivery(appspec)
-        assert findings == []
-
-    def test_ignores_non_queue_channel_with_direct(self, agent: DeploymentStateAgent) -> None:
-        op = _make_send_op("email_send", delivery_mode=DeliveryMode.DIRECT)
-        channel = _make_channel("notifications", kind=ChannelKind.EMAIL, send_operations=[op])
-        appspec = make_appspec(channels=[channel])
-        findings = agent.queue_direct_delivery(appspec)
-        assert findings == []
-
-    def test_ignores_stream_channel(self, agent: DeploymentStateAgent) -> None:
-        op = _make_send_op("event_send", delivery_mode=DeliveryMode.DIRECT)
-        channel = _make_channel("events", kind=ChannelKind.STREAM, send_operations=[op])
-        appspec = make_appspec(channels=[channel])
-        findings = agent.queue_direct_delivery(appspec)
-        assert findings == []
+        if expect_flagged:
+            assert len(findings) == 1
+            assert findings[0].heuristic_id == "DS-04"
+            assert findings[0].severity == Severity.MEDIUM
+            assert channel_name in findings[0].title
+        else:
+            assert findings == []
 
     def test_no_channels_returns_empty(self, agent: DeploymentStateAgent) -> None:
         appspec = make_appspec(channels=[])

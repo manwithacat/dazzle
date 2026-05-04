@@ -136,33 +136,28 @@ def test_dotted_field_becomes_path_check(feedback_graph: FKGraph) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_field_equals_null(empty_graph: FKGraph) -> None:
+@pytest.mark.parametrize(
+    ("op", "expected_op"),
+    [
+        (ComparisonOperator.EQUALS, CompOp.IS),
+        (ComparisonOperator.NOT_EQUALS, CompOp.IS_NOT),
+    ],
+    ids=["test_field_equals_null", "test_field_not_equals_null"],
+)
+def test_field_null_comparison(
+    op: ComparisonOperator, expected_op: CompOp, empty_graph: FKGraph
+) -> None:
     condition = ConditionExpr(
         comparison=Comparison(
             field="deleted_at",
-            operator=ComparisonOperator.EQUALS,
+            operator=op,
             value=ConditionValue(literal="null"),
         )
     )
     result = build_scope_predicate(condition, "Task", empty_graph)
     assert isinstance(result, ColumnCheck)
     assert result.field == "deleted_at"
-    assert result.op == CompOp.IS
-    assert result.value == ValueRef(literal_null=True)
-
-
-def test_field_not_equals_null(empty_graph: FKGraph) -> None:
-    condition = ConditionExpr(
-        comparison=Comparison(
-            field="deleted_at",
-            operator=ComparisonOperator.NOT_EQUALS,
-            value=ConditionValue(literal="null"),
-        )
-    )
-    result = build_scope_predicate(condition, "Task", empty_graph)
-    assert isinstance(result, ColumnCheck)
-    assert result.field == "deleted_at"
-    assert result.op == CompOp.IS_NOT
+    assert result.op == expected_op
     assert result.value == ValueRef(literal_null=True)
 
 

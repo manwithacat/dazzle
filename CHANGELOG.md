@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.13] - 2026-05-04
+
+### Changed
+- **Distillation cycle 12** — Batches S+T completed: 20+ size-6 clusters
+  collapsed to `@pytest.mark.parametrize` form. Files touched:
+  test_compliance_matching, test_condition_evaluator_role_check,
+  test_search_fields, test_validator, test_composition_audit,
+  test_content_negotiation, test_fidelity_scorer, test_heading_scale_tokens,
+  test_journey_reporter, test_template_rendering, test_locale_middleware,
+  test_invariant_evaluator, test_parser, test_layout_engine,
+  test_predicate_builder, sentinel/test_agent_deployment_state. 796 tests
+  pass across modified files. Suite total: 13,317 → 13,227 (90 fewer).
+  Cumulative cycles 1-12: 14,295 → 13,227 (1,068 tests removed).
+
 ## [0.66.12] - 2026-05-04
 
 ### Changed

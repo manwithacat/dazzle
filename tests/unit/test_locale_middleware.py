@@ -44,27 +44,27 @@ class TestNormaliseLocale:
 
 
 class TestParseAcceptLanguage:
-    def test_single_locale(self) -> None:
-        assert parse_accept_language("en") == [("en", 1.0)]
-
-    def test_multiple_with_quality(self) -> None:
-        result = parse_accept_language("fr;q=0.8, en;q=0.9, de;q=0.7")
-        assert result == [("en", 0.9), ("fr", 0.8), ("de", 0.7)]
-
-    def test_quality_zero_excluded(self) -> None:
-        result = parse_accept_language("en;q=0, fr;q=0.5")
-        assert result == [("fr", 0.5)]
-
-    def test_malformed_q_value_skipped(self) -> None:
-        result = parse_accept_language("en;q=high, fr;q=0.5")
-        assert result == [("fr", 0.5)]
-
-    def test_empty_header(self) -> None:
-        assert parse_accept_language("") == []
-
-    def test_garbage_entries_skipped(self) -> None:
-        result = parse_accept_language("12-foo, en;q=0.9, /;q=0.5")
-        assert result == [("en", 0.9)]
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [
+            ("en", [("en", 1.0)]),
+            ("fr;q=0.8, en;q=0.9, de;q=0.7", [("en", 0.9), ("fr", 0.8), ("de", 0.7)]),
+            ("en;q=0, fr;q=0.5", [("fr", 0.5)]),
+            ("en;q=high, fr;q=0.5", [("fr", 0.5)]),
+            ("", []),
+            ("12-foo, en;q=0.9, /;q=0.5", [("en", 0.9)]),
+        ],
+        ids=[
+            "test_single_locale",
+            "test_multiple_with_quality",
+            "test_quality_zero_excluded",
+            "test_malformed_q_value_skipped",
+            "test_empty_header",
+            "test_garbage_entries_skipped",
+        ],
+    )
+    def test_parse(self, header: str, expected: list[tuple[str, float]]) -> None:
+        assert parse_accept_language(header) == expected
 
 
 class TestPickSupported:

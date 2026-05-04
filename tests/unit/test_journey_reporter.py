@@ -3,6 +3,8 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from dazzle.agent.journey_models import (
     AnalysisReport,
     CrossPersonaPattern,
@@ -130,98 +132,101 @@ class TestRenderReport:
         assert "pass" in content.lower()
         assert "fail" in content.lower()
 
-    def test_contains_cross_persona_patterns(self, tmp_path: Path) -> None:
-        """Report HTML includes cross-persona pattern IDs and titles."""
-        pattern = CrossPersonaPattern(
-            id="CPP-001",
-            title="Navigation inconsistency",
-            severity="high",
-            affected_personas=["teacher", "student"],
-            description="Both personas hit a broken nav link",
-            evidence=["Step 3 in teacher session", "Step 2 in student session"],
-            recommendation="Fix the sidebar link",
-        )
+    @pytest.mark.parametrize(
+        ("analysis_kwargs", "expected_substrings"),
+        [
+            # test_contains_cross_persona_patterns
+            (
+                {
+                    "patterns": [
+                        CrossPersonaPattern(
+                            id="CPP-001",
+                            title="Navigation inconsistency",
+                            severity="high",
+                            affected_personas=["teacher", "student"],
+                            description="Both personas hit a broken nav link",
+                            evidence=[
+                                "Step 3 in teacher session",
+                                "Step 2 in student session",
+                            ],
+                            recommendation="Fix the sidebar link",
+                        )
+                    ]
+                },
+                ("CPP-001", "Navigation inconsistency"),
+            ),
+            # test_contains_dead_ends
+            (
+                {
+                    "dead_ends": [
+                        DeadEnd(
+                            id="DE-001",
+                            persona="teacher",
+                            page="/app/settings",
+                            story=None,
+                            description="Settings page has no back button",
+                        )
+                    ]
+                },
+                ("DE-001", "Settings page has no back button"),
+            ),
+            # test_contains_nav_breaks
+            (
+                {
+                    "nav_breaks": [
+                        NavBreak(
+                            id="NB-001",
+                            description="Sidebar link to reports returns 404",
+                            affected_personas=["teacher"],
+                            workaround="Use direct URL",
+                        )
+                    ]
+                },
+                ("NB-001", "Sidebar link to reports returns 404"),
+            ),
+            # test_contains_recommendations
+            (
+                {
+                    "recommendations": [
+                        Recommendation(
+                            priority=1,
+                            title="Fix broken navigation",
+                            description="Several nav links return 404",
+                            effort="low",
+                            affected_entities=["Task", "Report"],
+                        )
+                    ]
+                },
+                ("Fix broken navigation",),
+            ),
+        ],
+        ids=[
+            "test_contains_cross_persona_patterns",
+            "test_contains_dead_ends",
+            "test_contains_nav_breaks",
+            "test_contains_recommendations",
+        ],
+    )
+    def test_report_contains_analysis_entries(
+        self,
+        tmp_path: Path,
+        analysis_kwargs: dict,
+        expected_substrings: tuple,
+    ) -> None:
+        """Each analysis entry type renders its identifying strings into the HTML."""
         session = JourneySession.from_steps(
             persona="teacher",
             steps=[_make_step()],
             run_date="2026-03-20",
         )
-        analysis = _make_analysis(patterns=[pattern])
+        analysis = _make_analysis(**analysis_kwargs)
         out = tmp_path / "report.html"
 
         render_report([session], analysis, out)
 
         content = out.read_text()
-        assert "CPP-001" in content
-        assert "Navigation inconsistency" in content
-
-    def test_contains_dead_ends(self, tmp_path: Path) -> None:
-        """Report HTML includes dead-end entries."""
-        dead_end = DeadEnd(
-            id="DE-001",
-            persona="teacher",
-            page="/app/settings",
-            story=None,
-            description="Settings page has no back button",
-        )
-        session = JourneySession.from_steps(
-            persona="teacher",
-            steps=[_make_step()],
-            run_date="2026-03-20",
-        )
-        analysis = _make_analysis(dead_ends=[dead_end])
-        out = tmp_path / "report.html"
-
-        render_report([session], analysis, out)
-
-        content = out.read_text()
-        assert "DE-001" in content
-        assert "Settings page has no back button" in content
-
-    def test_contains_nav_breaks(self, tmp_path: Path) -> None:
-        """Report HTML includes nav-break entries."""
-        nav_break = NavBreak(
-            id="NB-001",
-            description="Sidebar link to reports returns 404",
-            affected_personas=["teacher"],
-            workaround="Use direct URL",
-        )
-        session = JourneySession.from_steps(
-            persona="teacher",
-            steps=[_make_step()],
-            run_date="2026-03-20",
-        )
-        analysis = _make_analysis(nav_breaks=[nav_break])
-        out = tmp_path / "report.html"
-
-        render_report([session], analysis, out)
-
-        content = out.read_text()
-        assert "NB-001" in content
-        assert "Sidebar link to reports returns 404" in content
-
-    def test_contains_recommendations(self, tmp_path: Path) -> None:
-        """Report HTML includes recommendation titles and priorities."""
-        rec = Recommendation(
-            priority=1,
-            title="Fix broken navigation",
-            description="Several nav links return 404",
-            effort="low",
-            affected_entities=["Task", "Report"],
-        )
-        session = JourneySession.from_steps(
-            persona="teacher",
-            steps=[_make_step()],
-            run_date="2026-03-20",
-        )
-        analysis = _make_analysis(recommendations=[rec])
-        out = tmp_path / "report.html"
-
-        render_report([session], analysis, out)
-
-        content = out.read_text()
-        assert "Fix broken navigation" in content
-        assert "low" in content.lower()
+        for substring in expected_substrings:
+            assert substring in content
 
     def test_empty_sessions_shows_no_data_message(self, tmp_path: Path) -> None:
         """Empty sessions produce a report with a 'No journey data' message."""

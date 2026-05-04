@@ -608,28 +608,30 @@ class TestEvaluatePageRule:
 class TestScoring:
     """Test violation scoring."""
 
-    def test_no_violations_scores_100(self) -> None:
-        assert score_violations([]) == 100
-
-    def test_one_high_deducts_15(self) -> None:
-        violations = [{"severity": "high"}]
-        assert score_violations(violations) == 85
-
-    def test_one_medium_deducts_5(self) -> None:
-        violations = [{"severity": "medium"}]
-        assert score_violations(violations) == 95
-
-    def test_one_low_deducts_2(self) -> None:
-        violations = [{"severity": "low"}]
-        assert score_violations(violations) == 98
-
-    def test_multiple_violations(self) -> None:
-        violations = [{"severity": "high"}, {"severity": "medium"}, {"severity": "low"}]
-        assert score_violations(violations) == 78  # 100 - 15 - 5 - 2
-
-    def test_score_floors_at_zero(self) -> None:
-        violations = [{"severity": "high"}] * 10
-        assert score_violations(violations) == 0
+    @pytest.mark.parametrize(
+        ("violations", "expected"),
+        [
+            ([], 100),
+            ([{"severity": "high"}], 85),
+            ([{"severity": "medium"}], 95),
+            ([{"severity": "low"}], 98),
+            (
+                [{"severity": "high"}, {"severity": "medium"}, {"severity": "low"}],
+                78,
+            ),
+            ([{"severity": "high"}] * 10, 0),
+        ],
+        ids=[
+            "test_no_violations_scores_100",
+            "test_one_high_deducts_15",
+            "test_one_medium_deducts_5",
+            "test_one_low_deducts_2",
+            "test_multiple_violations",
+            "test_score_floors_at_zero",
+        ],
+    )
+    def test_score(self, violations, expected) -> None:
+        assert score_violations(violations) == expected
 
 
 # ── Section Audit Tests ──────────────────────────────────────────────
@@ -1041,51 +1043,64 @@ class TestMarkdownReport:
 class TestCheckStackedMedia:
     """Test stacked-media detection from bounding boxes."""
 
-    def test_side_by_side_passes(self) -> None:
-        """Media beside content — no violation."""
-        geo = SectionGeometry(
-            section=ElementGeometry(0, 0, 1280, 400),
-            content=ElementGeometry(0, 0, 640, 400),
-            media=ElementGeometry(640, 0, 640, 400),
-        )
-        assert check_stacked_media(geo) is None
-
-    def test_stacked_below_fails(self) -> None:
-        """Media starts below content bottom — stacked."""
-        geo = SectionGeometry(
-            section=ElementGeometry(0, 0, 1280, 800),
-            content=ElementGeometry(0, 0, 1280, 400),
-            media=ElementGeometry(0, 400, 1280, 400),
-        )
+    @pytest.mark.parametrize(
+        ("geo", "expect_violation"),
+        [
+            (
+                SectionGeometry(
+                    section=ElementGeometry(0, 0, 1280, 400),
+                    content=ElementGeometry(0, 0, 640, 400),
+                    media=ElementGeometry(640, 0, 640, 400),
+                ),
+                False,
+            ),
+            (
+                SectionGeometry(
+                    section=ElementGeometry(0, 0, 1280, 800),
+                    content=ElementGeometry(0, 0, 1280, 400),
+                    media=ElementGeometry(0, 400, 1280, 400),
+                ),
+                True,
+            ),
+            (
+                SectionGeometry(
+                    section=ElementGeometry(0, 0, 1280, 400),
+                    content=ElementGeometry(0, 0, 1280, 400),
+                ),
+                False,
+            ),
+            (
+                SectionGeometry(
+                    section=ElementGeometry(0, 0, 1280, 400),
+                    media=ElementGeometry(0, 0, 640, 400),
+                ),
+                False,
+            ),
+            (
+                SectionGeometry(
+                    section=ElementGeometry(0, 0, 1280, 500),
+                    content=ElementGeometry(0, 0, 640, 400),
+                    media=ElementGeometry(640, 50, 640, 400),
+                ),
+                False,
+            ),
+        ],
+        ids=[
+            "test_side_by_side_passes",
+            "test_stacked_below_fails",
+            "test_no_media_passes",
+            "test_no_content_passes",
+            "test_overlapping_passes",
+        ],
+    )
+    def test_check(self, geo: SectionGeometry, expect_violation: bool) -> None:
         result = check_stacked_media(geo)
-        assert result is not None
-        assert result["rule_id"] == "stacked-media"
-        assert result["severity"] == "high"
-
-    def test_no_media_passes(self) -> None:
-        """No media element — check not applicable."""
-        geo = SectionGeometry(
-            section=ElementGeometry(0, 0, 1280, 400),
-            content=ElementGeometry(0, 0, 1280, 400),
-        )
-        assert check_stacked_media(geo) is None
-
-    def test_no_content_passes(self) -> None:
-        """No content element — check not applicable."""
-        geo = SectionGeometry(
-            section=ElementGeometry(0, 0, 1280, 400),
-            media=ElementGeometry(0, 0, 640, 400),
-        )
-        assert check_stacked_media(geo) is None
-
-    def test_overlapping_passes(self) -> None:
-        """Media overlaps content vertically — not stacked."""
-        geo = SectionGeometry(
-            section=ElementGeometry(0, 0, 1280, 500),
-            content=ElementGeometry(0, 0, 640, 400),
-            media=ElementGeometry(640, 50, 640, 400),
-        )
-        assert check_stacked_media(geo) is None
+        if expect_violation:
+            assert result is not None
+            assert result["rule_id"] == "stacked-media"
+            assert result["severity"] == "high"
+        else:
+            assert result is None
 
 
 class TestCheckBelowFold:

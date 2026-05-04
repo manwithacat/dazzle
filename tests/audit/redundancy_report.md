@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 925
-- **Tests inside those clusters**: 3,370
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,445 tests** (≈ 17.1% of the suite)
+- **Clusters of ≥3**: 873
+- **Tests inside those clusters**: 3,139
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,266 tests** (≈ 15.9% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 5 |
-| 5-9 | 122 |
-| 3-4 | 798 |
+| 5-9 | 102 |
+| 3-4 | 766 |
 
 ## Top 30 largest clusters
 
@@ -67,7 +67,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_fidelity_scorer.py` | 22 |
 | `tests/unit/test_parser.py` | 21 |
 | `tests/unit/sentinel/test_agent_deployment_state.py` | 20 |
-| `tests/unit/test_docker_generation.py` | 19 |
+| `tests/unit/test_invariant_evaluator.py` | 19 |
 
 ## How to act on this
 
