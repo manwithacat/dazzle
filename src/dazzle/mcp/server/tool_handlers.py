@@ -20,7 +20,7 @@ from dazzle.core.patterns import detect_crud_patterns, detect_integration_patter
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
-from dazzle.mcp.semantics import get_mcp_version, lookup_concept
+from dazzle.mcp.semantics_kb import get_mcp_version, lookup_concept
 from dazzle.mcp.server.state import get_state
 
 from .handlers.common import wrap_handler_errors
@@ -657,7 +657,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
                     seed_framework_knowledge(graph)
 
                 # Get the new version after reload
-                from dazzle.mcp.semantics import get_mcp_version as new_get_version
+                from dazzle.mcp.semantics_kb import get_mcp_version as new_get_version
 
                 new_version_info = new_get_version()
                 result["reload"] = "success"

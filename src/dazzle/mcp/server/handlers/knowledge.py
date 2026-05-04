@@ -12,8 +12,7 @@ from dazzle.mcp._graph_access import get_kg as _get_kg
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
-from dazzle.mcp.semantics import lookup_concept
-from dazzle.mcp.semantics_kb import MCP_SEMANTICS_VERSION
+from dazzle.mcp.semantics_kb import MCP_SEMANTICS_VERSION, lookup_concept
 
 from .common import error_response, extract_progress, wrap_handler_errors
 

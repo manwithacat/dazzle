@@ -86,3 +86,26 @@ def test_no_backward_compat_shim_markers() -> None:
         "the comment if the marker is mislabelled. "
         f"Offenders ({len(offenders)}):\n  " + "\n  ".join(offenders)
     )
+
+
+# Files that were deleted as part of #1008 — assert they never come back.
+# A re-resurrection of any of these means a re-introduction of a removed
+# shim layer. The fix is to update the new caller to import from the
+# canonical location, not to re-create the shim.
+DELETED_SHIM_PATHS: tuple[str, ...] = (
+    "src/dazzle/core/init_impl/ui_init.py",  # no-op stub — Vite/DNR-UI removed
+    "src/dazzle/mcp/semantics.py",  # pure re-export of dazzle.mcp.semantics_kb
+)
+
+
+def test_deleted_shim_files_stay_deleted() -> None:
+    """Once a shim is deleted, it must not reappear (#1008)."""
+    resurrected: list[str] = []
+    for rel in DELETED_SHIM_PATHS:
+        if (REPO_ROOT / rel).exists():
+            resurrected.append(rel)
+    assert not resurrected, (
+        "These shim files were deleted in #1008 and must not be re-created. "
+        "Update callers to import from the canonical module instead. "
+        f"Resurrected: {resurrected}"
+    )

@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 from ..llm_context import create_llm_instrumentation
 from .spec import create_spec_template
 from .templates import copy_template
-from .ui_init import generate_ui
 from .validation import InitError, sanitize_name
 
 if TYPE_CHECKING:
@@ -190,10 +189,6 @@ def init_project(
             log(f"  Warning: LLM instrumentation failed ({e})")
     else:
         log("Skipping LLM instrumentation (--no-llm)")
-
-    # Generate DNR UI from DSL (ensures we use canonical templates, not stale copies)
-    log("Generating DNR UI from DSL...")
-    generate_ui(target_dir, log)
 
     # Initialize git repository (unless disabled)
     if not no_git:

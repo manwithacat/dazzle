@@ -18,7 +18,6 @@ from .templates import (
     copy_template,
     substitute_template_vars,
 )
-from .ui_init import generate_ui
 from .validation import (
     RESERVED_KEYWORDS,
     InitError,
@@ -39,8 +38,6 @@ __all__ = [
     "copy_template",
     # Spec
     "create_spec_template",
-    # Runtime UI
-    "generate_ui",
     # Project init
     "list_examples",
     "create_mcp_config",

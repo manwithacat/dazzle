@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.16] - 2026-05-04
+
+### Removed
+- **Deleted `src/dazzle/core/init_impl/ui_init.py`** (#1008) — no-op stub
+  left over from the Vite/DNR-UI removal. Its only call site
+  (`generate_ui(target_dir, log)` in `init_impl/project.py:196`) just
+  logged "Skipping dnr-ui generation" and returned False; the call and
+  the import are gone.
+- **Deleted `src/dazzle/mcp/semantics.py`** (#1008) — pure re-export
+  of `dazzle.mcp.semantics_kb`. The 4 production callers
+  (`server/__init__.py`, `server/tool_handlers.py`, `handlers/status.py`,
+  `handlers/knowledge.py`) now import from the canonical
+  `dazzle.mcp.semantics_kb` directly.
+
+### Added
+- **`tests/unit/test_no_shims.py::test_deleted_shim_files_stay_deleted`** —
+  asserts `ui_init.py` and `mcp/semantics.py` cannot be re-created.
+  When deleting future shims, append the path to `DELETED_SHIM_PATHS`.
+
+### Deferred (#1008 follow-up)
+- `pptx_gen.py` and `pptx_slides.py` re-export the primitives layer for
+  backward compat (lines 22-46, 49-64 of `pptx_gen.py`). They have
+  substantive content beyond the re-exports; redirecting the 6 test
+  callers and 1 production caller is mechanical but bigger than this
+  cycle.
+- `LayoutArchetype = Stage` alias in `core/ir/layout.py` is used by
+  60+ sites in `dazzle/ui/layout_engine/` and tests, with semantic
+  intent (UI domain alias). The smells finding is contested — keeping
+  the alias is defensible. Existing `test_no_shims.py` allow-lists it.
+
+### Agent Guidance
+- When the smells run flags a "shim module", verify whether it's a
+  pure re-export (delete + redirect) or a substantive module that
+  also re-exports (more nuanced — may need scoped follow-up).
+- Don't re-create deleted shim modules. The pin is in
+  `tests/unit/test_no_shims.py::DELETED_SHIM_PATHS`; if a new caller
+  needs an old import path, update the caller, not the import.
+
 ## [0.65.15] - 2026-05-04
 
 ### Changed

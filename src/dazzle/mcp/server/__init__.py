@@ -22,7 +22,7 @@ from pydantic import AnyUrl
 
 from dazzle.mcp.examples import get_example_metadata
 from dazzle.mcp.resources import create_resources
-from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
+from dazzle.mcp.semantics_kb import get_dsl_patterns, get_semantic_index
 
 from .glossary import get_glossary
 from .handlers_consolidated import dispatch_consolidated_tool

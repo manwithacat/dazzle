@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
-from dazzle.mcp.semantics import get_mcp_version
+from dazzle.mcp.semantics_kb import get_mcp_version
 
 from ..state import (
     get_active_project,
@@ -163,7 +163,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
                         importlib.reload(_sys.modules[mod_name])
 
                 # Get the new version after reload
-                from dazzle.mcp.semantics import get_mcp_version as new_get_version
+                from dazzle.mcp.semantics_kb import get_mcp_version as new_get_version
 
                 new_version_info = new_get_version()
                 result["reload"] = "success"
