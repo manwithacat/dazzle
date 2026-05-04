@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.e2e.baseline import BaselineManager
-from dazzle.e2e.errors import UnknownModeError
 from dazzle.e2e.lifecycle import LockFile
 from dazzle.e2e.modes import MODE_REGISTRY, get_mode
 from dazzle.mcp.server.handlers.common import wrap_handler_errors
@@ -38,12 +37,10 @@ def e2e_list_modes_handler(project_path: Path, args: dict[str, Any]) -> str:
 
 @wrap_handler_errors
 def e2e_describe_mode_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Return a single mode spec by name, or an error dict if unknown."""
+    """Return a single mode spec by name. UnknownModeError surfaces via the
+    decorator's standard error envelope."""
     name = args.get("name", "")
-    try:
-        spec = get_mode(name)
-    except UnknownModeError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    spec = get_mode(name)
     return json.dumps(_mode_to_dict(spec), indent=2)
 
 

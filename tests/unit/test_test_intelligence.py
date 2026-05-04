@@ -54,17 +54,14 @@ for mod_name in [
 # Now import the handler module directly (file-based to skip dazzle.mcp.__init__)
 _src = Path(__file__).parent.parent.parent / "src"
 
-# We need to import the common module first since test_intelligence imports from it
-_common_path = _src / "dazzle" / "mcp" / "server" / "handlers" / "common.py"
-_common_spec = importlib.util.spec_from_file_location(
-    "dazzle.mcp.server.handlers.common",
-    _common_path,
-)
-_common_module = importlib.util.module_from_spec(_common_spec)
-sys.modules["dazzle.mcp.server.handlers.common"] = _common_module
-_common_spec.loader.exec_module(_common_module)
+# Pre-mock the parent packages BEFORE loading common — common's
+# `from ..progress import ProgressContext` triggers a real import of
+# dazzle.mcp.server otherwise, which pulls in tool_handlers (#1010 made
+# it depend on common), creating a circular load.
+sys.modules.setdefault("dazzle.mcp.server", MagicMock())
+sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock())
 
-# Import the progress module (needed by common)
+# Load progress before common (common imports from it).
 _progress_path = _src / "dazzle" / "mcp" / "server" / "progress.py"
 if "dazzle.mcp.server.progress" not in sys.modules:
     _progress_spec = importlib.util.spec_from_file_location(
@@ -73,9 +70,18 @@ if "dazzle.mcp.server.progress" not in sys.modules:
     )
     _progress_module = importlib.util.module_from_spec(_progress_spec)
     sys.modules["dazzle.mcp.server.progress"] = _progress_module
-    # Also add the parent packages so relative imports work
-    sys.modules.setdefault("dazzle.mcp.server", MagicMock())
-    sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock())
+    _progress_spec.loader.exec_module(_progress_module)
+
+# Now common can be loaded — its relative import resolves to the
+# already-loaded progress module.
+_common_path = _src / "dazzle" / "mcp" / "server" / "handlers" / "common.py"
+_common_spec = importlib.util.spec_from_file_location(
+    "dazzle.mcp.server.handlers.common",
+    _common_path,
+)
+_common_module = importlib.util.module_from_spec(_common_spec)
+sys.modules["dazzle.mcp.server.handlers.common"] = _common_module
+_common_spec.loader.exec_module(_common_module)
 
 # Import the handler
 _handler_module_path = _src / "dazzle" / "mcp" / "server" / "handlers" / "test_intelligence.py"

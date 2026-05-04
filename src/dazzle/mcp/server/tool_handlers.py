@@ -23,6 +23,7 @@ from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 from dazzle.mcp.server.state import get_state
 
+from .handlers.common import wrap_handler_errors
 from .state import (
     get_active_project,
     get_active_project_path,
@@ -341,172 +342,157 @@ def validate_all_projects() -> str:
 # ============================================================================
 
 
+@wrap_handler_errors
 def validate_dsl(project_root: Path) -> str:
     """Validate DSL files in the project."""
-    try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    manifest = load_manifest(project_root / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_root, manifest)
+    modules = parse_modules(dsl_files)
+    app_spec = build_appspec(modules, manifest.project_root)
 
-        result: dict[str, Any] = {
-            "status": "valid",
-            "project_path": str(project_root),
-            "modules": len(modules),
-            "entities": len(app_spec.domain.entities),
-            "surfaces": len(app_spec.surfaces),
-            "apis": len(app_spec.apis),
-        }
+    result: dict[str, Any] = {
+        "status": "valid",
+        "project_path": str(project_root),
+        "modules": len(modules),
+        "entities": len(app_spec.domain.entities),
+        "surfaces": len(app_spec.surfaces),
+        "apis": len(app_spec.apis),
+    }
 
-        # Add project context in dev mode
-        if is_dev_mode():
-            result["project"] = get_active_project()
+    # Add project context in dev mode
+    if is_dev_mode():
+        result["project"] = get_active_project()
 
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps(
-            {"status": "error", "project_path": str(project_root), "error": str(e)},
-            indent=2,
-        )
+    return json.dumps(result, indent=2)
 
 
+@wrap_handler_errors
 def list_modules(project_root: Path) -> str:
     """List all modules in the project."""
-    try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        parsed_modules = parse_modules(dsl_files)
+    manifest = load_manifest(project_root / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_root, manifest)
+    parsed_modules = parse_modules(dsl_files)
 
-        modules = {}
-        for idx, module in enumerate(parsed_modules):
-            modules[module.name] = {
-                "file": str(dsl_files[idx].relative_to(project_root)),
-                "dependencies": module.uses,
-            }
+    modules = {}
+    for idx, module in enumerate(parsed_modules):
+        modules[module.name] = {
+            "file": str(dsl_files[idx].relative_to(project_root)),
+            "dependencies": module.uses,
+        }
 
-        return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
-    except Exception as e:
-        return json.dumps({"project_path": str(project_root), "error": str(e)}, indent=2)
+    return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
 
 
+@wrap_handler_errors
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
     entity_name = args.get("entity_name") or args.get("name")
     if not entity_name:
         return json.dumps({"error": "entity_name required"})
 
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
-        if not entity:
-            return json.dumps({"error": f"Entity '{entity_name}' not found"})
+    entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
+    if not entity:
+        return json.dumps({"error": f"Entity '{entity_name}' not found"})
 
-        return json.dumps(
-            {
-                "name": entity.name,
-                "description": entity.title,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type.kind),
-                        "required": f.is_required,
-                        "modifiers": [str(m) for m in f.modifiers],
-                    }
-                    for f in entity.fields
-                ],
-                "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "name": entity.name,
+            "description": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type.kind),
+                    "required": f.is_required,
+                    "modifiers": [str(m) for m in f.modifiers],
+                }
+                for f in entity.fields
+            ],
+            "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
+        },
+        indent=2,
+    )
 
 
+@wrap_handler_errors
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
     surface_name = args.get("surface_name") or args.get("name")
     if not surface_name:
         return json.dumps({"error": "surface_name required"})
 
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
-        if not surface:
-            return json.dumps({"error": f"Surface '{surface_name}' not found"})
+    surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
+    if not surface:
+        return json.dumps({"error": f"Surface '{surface_name}' not found"})
 
-        return json.dumps(
-            {
-                "name": surface.name,
-                "entity": surface.entity_ref,
-                "mode": str(surface.mode),
-                "description": surface.title,
-                "sections": len(surface.sections) if surface.sections else 0,
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "name": surface.name,
+            "entity": surface.entity_ref,
+            "mode": str(surface.mode),
+            "description": surface.title,
+            "sections": len(surface.sections) if surface.sections else 0,
+        },
+        indent=2,
+    )
 
 
+@wrap_handler_errors
 def analyze_patterns(project_root: Path) -> str:
     """Analyze the project for patterns."""
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        crud_patterns = detect_crud_patterns(app_spec)
-        integration_patterns = detect_integration_patterns(app_spec)
+    crud_patterns = detect_crud_patterns(app_spec)
+    integration_patterns = detect_integration_patterns(app_spec)
 
-        return json.dumps(
-            {
-                "crud_patterns": [
-                    {
-                        "entity": p.entity_name,
-                        "has_create": p.has_create,
-                        "has_list": p.has_list,
-                        "has_detail": p.has_detail,
-                        "has_edit": p.has_edit,
-                        "is_complete": p.is_complete,
-                        "missing_operations": p.missing_operations,
-                    }
-                    for p in crud_patterns
-                ],
-                "integration_patterns": [
-                    {
-                        "name": p.integration_name,
-                        "service": p.service_name,
-                        "has_actions": p.has_actions,
-                        "has_syncs": p.has_syncs,
-                        "action_count": p.action_count,
-                        "sync_count": p.sync_count,
-                        "connected_entities": list(p.connected_entities or []),
-                        "connected_surfaces": list(p.connected_surfaces or []),
-                    }
-                    for p in integration_patterns
-                ],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "crud_patterns": [
+                {
+                    "entity": p.entity_name,
+                    "has_create": p.has_create,
+                    "has_list": p.has_list,
+                    "has_detail": p.has_detail,
+                    "has_edit": p.has_edit,
+                    "is_complete": p.is_complete,
+                    "missing_operations": p.missing_operations,
+                }
+                for p in crud_patterns
+            ],
+            "integration_patterns": [
+                {
+                    "name": p.integration_name,
+                    "service": p.service_name,
+                    "has_actions": p.has_actions,
+                    "has_syncs": p.has_syncs,
+                    "action_count": p.action_count,
+                    "sync_count": p.sync_count,
+                    "connected_entities": list(p.connected_entities or []),
+                    "connected_surfaces": list(p.connected_surfaces or []),
+                }
+                for p in integration_patterns
+            ],
+        },
+        indent=2,
+    )
 
 
+@wrap_handler_errors
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
     extended = args.get("extended", False)
 
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        warnings, _, _relevance = lint_appspec(app_spec, extended=extended)
+    warnings, _, _relevance = lint_appspec(app_spec, extended=extended)
 
-        return json.dumps(
-            {"warnings": len(warnings), "issues": [str(w) for w in warnings]},
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {"warnings": len(warnings), "issues": [str(w) for w in warnings]},
+        indent=2,
+    )
 
 
 # ============================================================================
@@ -772,51 +758,47 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
 # ============================================================================
 
 
+@wrap_handler_errors
 def get_entities(project_path: Path) -> str:
     """Get all entity definitions from project."""
-    try:
-        app_spec = load_project_appspec(project_path)
+    app_spec = load_project_appspec(project_path)
 
-        entities = {}
-        for entity in app_spec.domain.entities:
-            entities[entity.name] = {
-                "name": entity.name,
-                "title": entity.title,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type),
-                        "required": f.is_required,
-                        "unique": f.is_unique,
-                        "is_pk": f.is_primary_key,
-                    }
-                    for f in entity.fields
-                ],
-            }
+    entities = {}
+    for entity in app_spec.domain.entities:
+        entities[entity.name] = {
+            "name": entity.name,
+            "title": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type),
+                    "required": f.is_required,
+                    "unique": f.is_unique,
+                    "is_pk": f.is_primary_key,
+                }
+                for f in entity.fields
+            ],
+        }
 
-        return json.dumps(entities, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(entities, indent=2)
 
 
+@wrap_handler_errors
 def get_surfaces(project_path: Path) -> str:
     """Get all surface definitions from project."""
-    try:
-        app_spec = load_project_appspec(project_path)
+    app_spec = load_project_appspec(project_path)
 
-        surfaces = {}
-        for surface in app_spec.surfaces:
-            surfaces[surface.name] = {
-                "name": surface.name,
-                "title": surface.title,
-                "mode": surface.mode,
-                "entity": surface.entity_ref,
-                "has_ux": surface.ux is not None,
-            }
+    surfaces = {}
+    for surface in app_spec.surfaces:
+        surfaces[surface.name] = {
+            "name": surface.name,
+            "title": surface.title,
+            "mode": surface.mode,
+            "entity": surface.entity_ref,
+            "has_ux": surface.ux is not None,
+        }
 
-        return json.dumps(surfaces, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(surfaces, indent=2)
 
 
 # ============================================================================
@@ -999,233 +981,227 @@ def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
 # ============================================================================
 
 
+@wrap_handler_errors
 def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get complete DSL specification for story generation."""
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        # Build comprehensive spec
-        spec: dict[str, Any] = {
-            "project_path": str(project_root),
-            "app_name": app_spec.name,
-            "entities": [],
-            "surfaces": [],
-            "personas": [],
-            "workspaces": [],
-            "state_machines": [],
+    # Build comprehensive spec
+    spec: dict[str, Any] = {
+        "project_path": str(project_root),
+        "app_name": app_spec.name,
+        "entities": [],
+        "surfaces": [],
+        "personas": [],
+        "workspaces": [],
+        "state_machines": [],
+    }
+
+    # Entities with fields and state machines
+    for entity in app_spec.domain.entities:
+        entity_info: dict[str, Any] = {
+            "name": entity.name,
+            "title": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type.kind.value) if f.type.kind else str(f.type),
+                    "required": f.is_required,
+                }
+                for f in entity.fields
+            ],
         }
 
-        # Entities with fields and state machines
-        for entity in app_spec.domain.entities:
-            entity_info: dict[str, Any] = {
-                "name": entity.name,
-                "title": entity.title,
-                "fields": [
+        # Add state machine if present
+        if entity.state_machine:
+            sm = entity.state_machine
+            entity_info["state_machine"] = {
+                "field": sm.status_field,
+                "states": sm.states,
+                "transitions": [
                     {
-                        "name": f.name,
-                        "type": str(f.type.kind.value) if f.type.kind else str(f.type),
-                        "required": f.is_required,
+                        "from": t.from_state,
+                        "to": t.to_state,
+                        "trigger": t.trigger.value if t.trigger else None,
                     }
-                    for f in entity.fields
+                    for t in sm.transitions
                 ],
             }
-
-            # Add state machine if present
-            if entity.state_machine:
-                sm = entity.state_machine
-                entity_info["state_machine"] = {
-                    "field": sm.status_field,
-                    "states": sm.states,
-                    "transitions": [
-                        {
-                            "from": t.from_state,
-                            "to": t.to_state,
-                            "trigger": t.trigger.value if t.trigger else None,
-                        }
-                        for t in sm.transitions
-                    ],
-                }
-                spec["state_machines"].append(
-                    {"entity": entity.name, "field": sm.status_field, "states": sm.states}
-                )
-
-            spec["entities"].append(entity_info)
-
-        # Surfaces with modes
-        for surface in app_spec.surfaces:
-            spec["surfaces"].append(
-                {
-                    "name": surface.name,
-                    "title": surface.title,
-                    "entity": surface.entity_ref,
-                    "mode": surface.mode.value if surface.mode else None,
-                }
+            spec["state_machines"].append(
+                {"entity": entity.name, "field": sm.status_field, "states": sm.states}
             )
 
-        # Personas
-        for persona in app_spec.personas:
-            spec["personas"].append(
-                {
-                    "id": persona.id,
-                    "label": persona.label,
-                    "description": persona.description,
-                }
-            )
+        spec["entities"].append(entity_info)
 
-        # Workspaces
-        for workspace in app_spec.workspaces:
-            spec["workspaces"].append(
-                {
-                    "name": workspace.name,
-                    "title": workspace.title,
-                    "purpose": workspace.purpose,
-                    "regions": [r.name for r in workspace.regions],
-                }
-            )
+    # Surfaces with modes
+    for surface in app_spec.surfaces:
+        spec["surfaces"].append(
+            {
+                "name": surface.name,
+                "title": surface.title,
+                "entity": surface.entity_ref,
+                "mode": surface.mode.value if surface.mode else None,
+            }
+        )
 
-        return json.dumps(spec, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    # Personas
+    for persona in app_spec.personas:
+        spec["personas"].append(
+            {
+                "id": persona.id,
+                "label": persona.label,
+                "description": persona.description,
+            }
+        )
+
+    # Workspaces
+    for workspace in app_spec.workspaces:
+        spec["workspaces"].append(
+            {
+                "name": workspace.name,
+                "title": workspace.title,
+                "purpose": workspace.purpose,
+                "regions": [r.name for r in workspace.regions],
+            }
+        )
+
+    return json.dumps(spec, indent=2)
 
 
+@wrap_handler_errors
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import get_next_story_id_from_appspec
 
-    try:
-        app_spec = load_project_appspec(project_root)
+    app_spec = load_project_appspec(project_root)
 
-        max_stories = args.get("max_stories", 30)
-        filter_entities = args.get("entities")
+    max_stories = args.get("max_stories", 30)
+    filter_entities = args.get("entities")
 
-        stories: list[StorySpec] = []
-        story_count = 0
+    stories: list[StorySpec] = []
+    story_count = 0
 
-        # Get starting story ID
-        base_id = get_next_story_id_from_appspec(list(app_spec.stories) if app_spec.stories else [])
-        base_num = int(base_id[3:])
+    # Get starting story ID
+    base_id = get_next_story_id_from_appspec(list(app_spec.stories) if app_spec.stories else [])
+    base_num = int(base_id[3:])
 
-        def next_id() -> str:
-            nonlocal story_count
-            result = f"ST-{base_num + story_count:03d}"
-            story_count += 1
-            return result
+    def next_id() -> str:
+        nonlocal story_count
+        result = f"ST-{base_num + story_count:03d}"
+        story_count += 1
+        return result
 
-        # Default persona
-        default_actor = "User"
-        if app_spec.personas:
-            default_actor = app_spec.personas[0].label or app_spec.personas[0].id
+    # Default persona
+    default_actor = "User"
+    if app_spec.personas:
+        default_actor = app_spec.personas[0].label or app_spec.personas[0].id
 
-        # Generate stories from entities
-        for entity in app_spec.domain.entities:
-            if filter_entities and entity.name not in filter_entities:
-                continue
+    # Generate stories from entities
+    for entity in app_spec.domain.entities:
+        if filter_entities and entity.name not in filter_entities:
+            continue
 
-            if story_count >= max_stories:
+        if story_count >= max_stories:
+            break
+
+        # Find persona for this entity (from workspace regions or UX variants)
+        actor = default_actor
+        for ws in app_spec.workspaces:
+            if any(
+                r.name == entity.name or entity.name.lower() in r.name.lower() for r in ws.regions
+            ):
+                # Workspace doesn't have persona directly, use default
                 break
 
-            # Find persona for this entity (from workspace regions or UX variants)
-            actor = default_actor
-            for ws in app_spec.workspaces:
-                if any(
-                    r.name == entity.name or entity.name.lower() in r.name.lower()
-                    for r in ws.regions
-                ):
-                    # Workspace doesn't have persona directly, use default
+        # Story: Create entity via form
+        stories.append(
+            StorySpec(
+                story_id=next_id(),
+                title=f"{actor} creates a new {entity.title or entity.name}",
+                actor=actor,
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=[entity.name],
+                given=[
+                    StoryCondition(expression=f"{actor} has permission to create {entity.name}"),
+                ],
+                when=[
+                    StoryCondition(expression=f"{actor} submits {entity.name} creation form"),
+                ],
+                then=[
+                    StoryCondition(expression=f"New {entity.name} is saved to database"),
+                    StoryCondition(expression=f"{actor} sees confirmation message"),
+                ],
+                status=StoryStatus.DRAFT,
+            )
+        )
+
+        # Story: State machine transitions
+        if entity.state_machine and story_count < max_stories:
+            sm = entity.state_machine
+            for transition in sm.transitions[:3]:  # Limit transitions
+                if story_count >= max_stories:
                     break
 
-            # Story: Create entity via form
-            stories.append(
-                StorySpec(
-                    story_id=next_id(),
-                    title=f"{actor} creates a new {entity.title or entity.name}",
-                    actor=actor,
-                    trigger=StoryTrigger.FORM_SUBMITTED,
-                    scope=[entity.name],
-                    given=[
-                        StoryCondition(
-                            expression=f"{actor} has permission to create {entity.name}"
-                        ),
-                    ],
-                    when=[
-                        StoryCondition(expression=f"{actor} submits {entity.name} creation form"),
-                    ],
-                    then=[
-                        StoryCondition(expression=f"New {entity.name} is saved to database"),
-                        StoryCondition(expression=f"{actor} sees confirmation message"),
-                    ],
-                    status=StoryStatus.DRAFT,
-                )
-            )
-
-            # Story: State machine transitions
-            if entity.state_machine and story_count < max_stories:
-                sm = entity.state_machine
-                for transition in sm.transitions[:3]:  # Limit transitions
-                    if story_count >= max_stories:
-                        break
-
-                    stories.append(
-                        StorySpec(
-                            story_id=next_id(),
-                            title=f"{actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
-                            actor=actor,
-                            trigger=StoryTrigger.STATUS_CHANGED,
-                            scope=[entity.name],
-                            given=[
-                                StoryCondition(
-                                    expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
-                                    field_path=f"{entity.name}.{sm.status_field}",
-                                ),
-                            ],
-                            when=[
-                                StoryCondition(
-                                    expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
-                                    field_path=f"{entity.name}.{sm.status_field}",
-                                ),
-                            ],
-                            then=[
-                                StoryCondition(
-                                    expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
-                                    field_path=f"{entity.name}.{sm.status_field}",
-                                ),
-                                StoryCondition(expression="Timestamp is recorded"),
-                            ],
-                            status=StoryStatus.DRAFT,
-                        )
+                stories.append(
+                    StorySpec(
+                        story_id=next_id(),
+                        title=f"{actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        actor=actor,
+                        trigger=StoryTrigger.STATUS_CHANGED,
+                        scope=[entity.name],
+                        given=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                        ],
+                        when=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                        ],
+                        then=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                            StoryCondition(expression="Timestamp is recorded"),
+                        ],
+                        status=StoryStatus.DRAFT,
                     )
+                )
 
-        # Convert to JSON-serializable format
-        stories_data = [
-            {
-                "story_id": s.story_id,
-                "title": s.title,
-                "actor": s.actor,
-                "trigger": s.trigger.value,
-                "scope": s.scope,
-                "given": [c.expression for c in s.given],
-                "when": [c.expression for c in s.when],
-                "then": [c.expression for c in s.then],
-                "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
-                "status": s.status.value,
-            }
-            for s in stories
-        ]
+    # Convert to JSON-serializable format
+    stories_data = [
+        {
+            "story_id": s.story_id,
+            "title": s.title,
+            "actor": s.actor,
+            "trigger": s.trigger.value,
+            "scope": s.scope,
+            "given": [c.expression for c in s.given],
+            "when": [c.expression for c in s.when],
+            "then": [c.expression for c in s.then],
+            "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
+            "status": s.status.value,
+        }
+        for s in stories
+    ]
 
-        return json.dumps(
-            {
-                "proposed_count": len(stories_data),
-                "max_stories": max_stories,
-                "note": "These are draft stories. Review and call save_stories with accepted stories.",
-                "stories": stories_data,
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "proposed_count": len(stories_data),
+            "max_stories": max_stories,
+            "note": "These are draft stories. Review and call save_stories with accepted stories.",
+            "stories": stories_data,
+        },
+        indent=2,
+    )
 
 
+@wrap_handler_errors
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save stories to dsl/stories.dsl."""
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
@@ -1236,85 +1212,80 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     if not stories_data:
         return json.dumps({"error": "No stories provided"})
 
-    try:
-        # Convert to StorySpec objects with validation
-        stories: list[StorySpec] = []
-        for s in stories_data:
-            from dazzle.core.ir.stories import StoryCondition
+    # Convert to StorySpec objects with validation
+    stories: list[StorySpec] = []
+    for s in stories_data:
+        from dazzle.core.ir.stories import StoryCondition
 
-            # Convert to Gherkin fields, with legacy fallback
-            given_raw = s.get("given") or s.get("preconditions", [])
-            then_raw = s.get("then") or s.get("happy_path_outcome", [])
-            when_raw = s.get("when", [])
+        # Convert to Gherkin fields, with legacy fallback
+        given_raw = s.get("given") or s.get("preconditions", [])
+        then_raw = s.get("then") or s.get("happy_path_outcome", [])
+        when_raw = s.get("when", [])
 
-            story = StorySpec(
-                story_id=s["story_id"],
-                title=s["title"],
-                actor=s["actor"],
-                trigger=StoryTrigger(s["trigger"]),
-                scope=s.get("scope", []),
-                given=[StoryCondition(expression=c) for c in given_raw],
-                when=[StoryCondition(expression=c) for c in when_raw],
-                then=[StoryCondition(expression=c) for c in then_raw],
-                status=StoryStatus(s.get("status", "draft")),
-            )
-            stories.append(story)
-
-        # Save stories to DSL
-        dsl_file = append_stories_to_dsl(project_root, stories)
-
-        return json.dumps(
-            {
-                "status": "saved",
-                "file": str(dsl_file),
-                "saved_count": len(stories),
-            },
-            indent=2,
+        story = StorySpec(
+            story_id=s["story_id"],
+            title=s["title"],
+            actor=s["actor"],
+            trigger=StoryTrigger(s["trigger"]),
+            scope=s.get("scope", []),
+            given=[StoryCondition(expression=c) for c in given_raw],
+            when=[StoryCondition(expression=c) for c in when_raw],
+            then=[StoryCondition(expression=c) for c in then_raw],
+            status=StoryStatus(s.get("status", "draft")),
         )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        stories.append(story)
+
+    # Save stories to DSL
+    dsl_file = append_stories_to_dsl(project_root, stories)
+
+    return json.dumps(
+        {
+            "status": "saved",
+            "file": str(dsl_file),
+            "saved_count": len(stories),
+        },
+        indent=2,
+    )
 
 
+@wrap_handler_errors
 def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Retrieve stories filtered by status."""
     from dazzle.core.ir.stories import StoryStatus
 
     status_filter = args.get("status_filter", "all")
 
-    try:
-        app_spec = load_project_appspec(project_root)
-        all_stories = list(app_spec.stories) if app_spec.stories else []
+    app_spec = load_project_appspec(project_root)
+    all_stories = list(app_spec.stories) if app_spec.stories else []
 
-        if status_filter != "all":
-            target_status = StoryStatus(status_filter)
-            all_stories = [s for s in all_stories if s.status == target_status]
+    if status_filter != "all":
+        target_status = StoryStatus(status_filter)
+        all_stories = [s for s in all_stories if s.status == target_status]
 
-        stories_data = [
-            {
-                "story_id": s.story_id,
-                "title": s.title,
-                "actor": s.actor,
-                "trigger": s.trigger.value if s.trigger else None,
-                "scope": s.scope,
-                "given": [c.expression for c in s.given],
-                "when": [c.expression for c in s.when],
-                "then": [c.expression for c in s.then],
-                "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
-                "status": s.status.value,
-            }
-            for s in all_stories
-        ]
+    stories_data = [
+        {
+            "story_id": s.story_id,
+            "title": s.title,
+            "actor": s.actor,
+            "trigger": s.trigger.value if s.trigger else None,
+            "scope": s.scope,
+            "given": [c.expression for c in s.given],
+            "when": [c.expression for c in s.when],
+            "then": [c.expression for c in s.then],
+            "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
+            "status": s.status.value,
+        }
+        for s in all_stories
+    ]
 
-        return json.dumps(
-            {
-                "filter": status_filter,
-                "count": len(stories_data),
-                "stories": stories_data,
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "filter": status_filter,
+            "count": len(stories_data),
+            "stories": stories_data,
+        },
+        indent=2,
+    )
 
 
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:

@@ -1,5 +1,14 @@
 # Smells Log
 
+## Smells Run — 2026-05-04
+- Regressions: 6/9 hard gates PASS; 3 TRACK (1.5b getattr 1,027; 1.6 fns >150ln 119; 1.7 classes >800ln 9)
+- New patterns: 15 (consolidated from prior 17 — silent-swallow merged with broad-except)
+- Top concern: ~85 silent-swallow sites (`except Exception: return None|{}|[]`) escape today's gate
+- Resolved since last: 1.1 strict bare-except-pass 28 → 0 ✅
+- Worsened: 1.5b getattr +111; mutable_globals 3 → 7 (6 lru_cache singletons + _state hub now both surfaced)
+- Recommended next 3: (1) tighten silent-exception gate to catch `return None|{}|[]` variants; (2) delete 5 ADR-0003 shim modules + lock with test; (3) replace 6 lru_cache(maxsize=1) singletons with RuntimeServices/ServerState
+- Commit: 0c625b73
+
 ## Fix Cycle — 2026-04-16 (post-baseline)
 - Patterns addressed: 14/18
 - Correctness fixes: 3 (DB silent failures, foreach errors, email handler)

@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.15] - 2026-05-04
+
+### Changed
+- **Migrated 12 sites in `src/dazzle/mcp/server/tool_handlers.py` to
+  `@wrap_handler_errors`** (#1010). Each function now relies on the
+  shared decorator instead of inlining a `try/except Exception as e:
+  return json.dumps({"error": str(e)}, indent=2)` block. Plus one
+  follow-up site in `src/dazzle/mcp/server/handlers/e2e.py`. Behaviour
+  identical (the decorator was already used elsewhere in the handlers
+  package); the win is consistency and one fewer place to drift.
+- **Reordered import setup in `tests/unit/test_test_intelligence.py`**
+  to load progress + parent-package mocks before `common.py` is
+  exec_module'd. Without this the new import in `tool_handlers.py`
+  triggers a circular load via `dazzle.mcp.server.__init__` during
+  the test's manual file-spec loading.
+
+### Agent Guidance
+- New MCP handlers should use `@wrap_handler_errors` from
+  `dazzle.mcp.server.handlers.common` instead of inlining the
+  `try/except Exception as e: return json.dumps({"error": str(e)})`
+  pattern. The acceptance gate is
+  `grep -rn 'json.dumps.*"error".*str(e)' src/dazzle/mcp/server/ |
+  grep -v 'common.py'` returning 0.
+
 ## [0.65.14] - 2026-05-04
 
 ### Security
