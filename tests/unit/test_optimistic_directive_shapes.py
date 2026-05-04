@@ -157,11 +157,13 @@ class TestRollback:
         could re-trigger restore() with a stale snapshot. After a
         successful response, both placeholder and snapshot must be
         cleared."""
-        # Cycle-3 expanded the success branch; the cleanup happens
-        # at both ends of the same block — widen the window.
+        # Cycle-3 + cycle-4 expanded the success branch substantially
+        # (undo entry construction + reconcile dispatch). Widen the
+        # window further; the closing `snapshot = null` lives near the
+        # end of the success branch.
         idx = js.find("if (ok) {")
         assert idx != -1
-        block = js[idx : idx + 2500]
+        block = js[idx : idx + 5000]
         assert "removePlaceholder()" in block
         assert "snapshot = null" in block
 

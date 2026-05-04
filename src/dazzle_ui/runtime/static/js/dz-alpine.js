@@ -406,29 +406,38 @@ document.addEventListener("alpine:init", () => {
       // hidden form trigger).
       const _DZ_OPTIMISTIC_UNDO_MAX = 20;
       const _dzOptimisticUndoStack = [];
+      // Cycle 4 — redo stack. Cmd+Z moves entries from undo→redo;
+      // Shift+Cmd+Z moves them back. A NEW mutation push clears the
+      // redo stack — standard editor convention (you can't redo
+      // through a divergent history).
+      const _dzOptimisticRedoStack = [];
 
       function _pushOptimisticUndo(entry) {
         _dzOptimisticUndoStack.push(entry);
         while (_dzOptimisticUndoStack.length > _DZ_OPTIMISTIC_UNDO_MAX) {
           _dzOptimisticUndoStack.shift();
         }
+        // New mutation — divergent history, redo no longer applies.
+        _dzOptimisticRedoStack.length = 0;
       }
 
-      // Expose the stack for tests + adopter introspection. Read-only
+      // Expose both stacks for tests + adopter introspection. Read-only
       // by convention; popping should go through the keyboard handler.
       window.dzOptimisticUndoStack = _dzOptimisticUndoStack;
+      window.dzOptimisticRedoStack = _dzOptimisticRedoStack;
 
       // Single global keydown handler — registered once per page load
       // even with many x-optimistic instances.
       if (!window._dzOptimisticUndoBound) {
         window._dzOptimisticUndoBound = true;
         document.addEventListener("keydown", (e) => {
-          // Cmd+Z on macOS, Ctrl+Z elsewhere. Skip Shift+Z (browser redo).
-          const isUndo =
-            e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey;
-          if (!isUndo) return;
-          // Don't hijack undo when the user is typing — let the input's
-          // native undo handle text edits.
+          // Cmd+Z on macOS, Ctrl+Z elsewhere.
+          // Shift+Cmd+Z = redo (cycle 4).
+          const isModified = (e.metaKey || e.ctrlKey) && e.key === "z";
+          if (!isModified) return;
+
+          // Don't hijack undo/redo when the user is typing — let the
+          // input's native undo handle text edits.
           const t = e.target;
           if (t) {
             const tag = (t.tagName || "").toLowerCase();
@@ -436,14 +445,30 @@ document.addEventListener("alpine:init", () => {
               return;
             }
           }
+
+          if (e.shiftKey) {
+            // Redo: pop from redo, run redo(), push back to undo.
+            const entry = _dzOptimisticRedoStack.pop();
+            if (!entry) return;
+            e.preventDefault();
+            try {
+              if (typeof entry.redo === "function") entry.redo();
+              _dzOptimisticUndoStack.push(entry);
+            } catch {
+              // Defensive — stale entry shouldn't break later presses.
+            }
+            return;
+          }
+
+          // Undo: pop from undo, run undo(), push to redo.
           const entry = _dzOptimisticUndoStack.pop();
           if (!entry) return;
           e.preventDefault();
           try {
             entry.undo();
+            _dzOptimisticRedoStack.push(entry);
           } catch {
-            // Defensive — a stale undo (e.g. element gone from DOM)
-            // shouldn't break subsequent presses.
+            // Defensive — stale undo shouldn't break later presses.
           }
         });
       }
@@ -659,7 +684,43 @@ document.addEventListener("alpine:init", () => {
                   }),
                 );
               },
+              // Cycle 4 — redo. Reverses the undo: removes the
+              // restored node (remove/replace) and re-fires the
+              // mutation event for adopter-wired forward action.
+              redo: () => {
+                if (
+                  undoSnapshot &&
+                  (verb === "remove" || verb === "replace") &&
+                  undoSnapshot.node &&
+                  undoSnapshot.node.parentNode
+                ) {
+                  try {
+                    undoSnapshot.node.parentNode.removeChild(undoSnapshot.node);
+                  } catch {
+                    // Defensive — node already detached.
+                  }
+                }
+                el.dispatchEvent(
+                  new CustomEvent("dz:optimistic-redo", {
+                    bubbles: true,
+                    detail: { verb: verb, snapshot: undoSnapshot },
+                  }),
+                );
+              },
             });
+            // Cycle 4 — reconciliation hook. Adopters that need to
+            // merge state (focus, scroll, custom attributes) between
+            // the optimistic placeholder and the server response can
+            // listen for `dz:optimistic-reconcile` on the bound
+            // element. Detail carries the verb + the htmx response
+            // xhr (when available) so handlers can inspect the
+            // returned HTML before deciding what to merge.
+            el.dispatchEvent(
+              new CustomEvent("dz:optimistic-reconcile", {
+                bubbles: true,
+                detail: { verb: verb, xhr: xhr },
+              }),
+            );
             snapshot = null;
             return;
           }

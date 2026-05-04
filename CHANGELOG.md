@@ -9,6 +9,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.109] - 2026-05-04
+
+### Added
+- **#959 cycle 4 — redo stack + reconciliation hook. Closes #959.**
+
+  **Redo (Shift+Cmd+Z / Shift+Ctrl+Z):**
+  - New `_dzOptimisticRedoStack` mirrors the undo stack
+    (`window.dzOptimisticRedoStack` exposed for adopter
+    introspection).
+  - Each undo entry now carries both `undo()` and `redo()`. Cycle 3
+    only stored `undo()`.
+  - Cmd+Z: pop from undo, run `entry.undo()`, push entry to redo.
+  - Shift+Cmd+Z: pop from redo, run `entry.redo()`, push entry back
+    to undo.
+  - **New mutation clears the redo stack** (standard editor
+    convention — divergent history isn't reachable via redo).
+  - Per-verb redo:
+    - `remove`/`replace`: removes the restored node from the DOM.
+    - All verbs: dispatches `dz:optimistic-redo` CustomEvent on the
+      original element so adopters can wire the server-side replay
+      (e.g. re-POST the delete after the user undid it).
+
+  **Reconciliation hook (`dz:optimistic-reconcile`):**
+  - Fires on **every** successful optimistic mutation — not just
+    rollback paths — so adopters can merge state between the
+    optimistic placeholder and the server response (preserve focus,
+    scroll position, expanded sub-rows, custom attributes).
+  - `detail: { verb, xhr }` — the xhr reference lets handlers
+    inspect the response body before deciding what to merge.
+  - Bubbles, so a parent list container can delegate the
+    reconciliation logic instead of wiring it per-row.
+
+  All 4 cycles of #959 now shipped:
+  1. `x-optimistic="remove"` directive
+  2. `prepend` / `append` / `replace` shapes + placeholder builder
+  3. Undo stack + Cmd+Z
+  4. Redo stack (Shift+Cmd+Z) + reconciliation hook
+
+  Tests: `tests/unit/test_optimistic_redo_reconcile.py` (15 cases)
+  cover the redo stack data structure, new-mutation-clears-redo
+  invariant, keyboard handler shift branch, per-verb redo behaviour,
+  and the reconcile dispatch's detail shape + success-only gating.
+  Two cycle-3 tests updated for the cycle-4 shift semantics + the
+  larger success block.
+
+  Adopters who want to wire server-side undo/redo:
+
+  ```html
+  <button hx-delete="/api/tasks/{id}"
+          x-optimistic="remove"
+          hx-on:dz:optimistic-undo="htmx.ajax('POST', '/api/tasks/{id}/restore')"
+          hx-on:dz:optimistic-redo="htmx.ajax('DELETE', '/api/tasks/{id}')">
+    Delete
+  </button>
+  ```
+
 ## [0.63.108] - 2026-05-04
 
 ### Added

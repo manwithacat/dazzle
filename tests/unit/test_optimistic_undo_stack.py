@@ -76,10 +76,14 @@ def test_handler_fires_on_cmd_or_ctrl_plus_z(js: str) -> None:
     assert "ctrlKey" in js
 
 
-def test_handler_skips_when_shift_pressed(js: str) -> None:
-    """Shift+Cmd+Z is the conventional REDO chord — must not be
-    consumed by undo (cycle 4 may add redo separately)."""
-    assert "!e.shiftKey" in js
+def test_handler_branches_on_shift_modifier(js: str) -> None:
+    """Cycle 3 originally bailed on shiftKey to leave room for redo.
+    Cycle 4 routes shiftKey into the redo branch; either way, the
+    code must inspect `e.shiftKey` so the two chords are
+    distinguishable."""
+    assert "e.shiftKey" in js
+    # Cycle 4 form — explicit shift→redo branch.
+    assert "if (e.shiftKey)" in js
 
 
 def test_handler_skips_when_user_is_typing(js: str) -> None:
