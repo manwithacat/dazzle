@@ -42,7 +42,11 @@
 }
 
 .dz-workspace-title {
-  font-size: var(--text-lg);
+  /* #983 — canonical app page-title scale. Was hard-coded to
+   * `--text-lg`; promoting to the named token unifies workspace
+   * titles with list-page titles + leaves the visual size
+   * unchanged (token resolves to --text-lg). */
+  font-size: var(--dz-heading-app-page-title);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
   margin: 0;

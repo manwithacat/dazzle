@@ -51,6 +51,27 @@
   --text-3xl: clamp(2.25rem, 1.9rem + 1.5vw, 3rem);
   --text-display: clamp(3rem, 2.4rem + 2.5vw, 4.5rem);
 
+  /* ─────────────────────────── heading scale (#983) ────────────────
+   * Two scales for two contexts. The app shell is dense and
+   * compact (h1 ~18px); the marketing site is editorial and
+   * expansive (h1 ~3.5rem). Pre-#983 every renderer hard-coded its
+   * own font-size, so promoting `.dz-table-title` from `--text-base`
+   * to `--text-lg` was a one-off tweak instead of a tokenised
+   * decision.
+   *
+   * The marketing tokens are also defined in `design-system.css`
+   * (canonical home for site/marketing variables). Mirroring them
+   * here keeps app-shell + marketing token discovery in one file
+   * for adopters reading tokens.css to understand the system.
+   */
+  --dz-heading-app-page-title: var(--text-lg);
+  --dz-heading-app-section-title: var(--text-base);
+  --dz-heading-app-subsection-title: var(--text-sm);
+
+  --dz-heading-marketing-hero: var(--dz-font-size-hero-headline, 3.5rem);
+  --dz-heading-marketing-cta: var(--dz-font-size-cta-headline, 3rem);
+  --dz-heading-marketing-section: var(--dz-font-size-section-headline, 2.25rem);
+
   /* ─────────────────────────── font families ─────────────────────
    * `--font-system` is the OS-default sans stack; `--font-mono` is
    * used by tabular numerics in chart summaries (bar_track etc.). */

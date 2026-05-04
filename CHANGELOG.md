@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.110] - 2026-05-04
+
+### Added
+- **#983 — heading scale tokens + page-title landmark. Closes #983.**
+  Pre-#983 the three rendering paths (workspace shell, list view,
+  marketing) hardcoded their own font-sizes — there was no
+  heading-scale token layer adopters could reason about. Approach 1
+  from the issue: token-first, two scales (app + marketing),
+  additive.
+
+  Token additions in `tokens.css`:
+  - `--dz-heading-app-page-title` → `var(--text-lg)`
+  - `--dz-heading-app-section-title` → `var(--text-base)`
+  - `--dz-heading-app-subsection-title` → `var(--text-sm)`
+  - `--dz-heading-marketing-hero` → mirrors
+    `--dz-font-size-hero-headline`
+  - `--dz-heading-marketing-cta` → mirrors
+    `--dz-font-size-cta-headline`
+  - `--dz-heading-marketing-section` → mirrors
+    `--dz-font-size-section-headline`
+
+  `--dz-font-size-cta-headline` was an inline fallback in
+  site-sections.css; now declared canonically in design-system.css
+  alongside hero / section.
+
+  Component updates:
+  - `.dz-workspace-title` and `.dz-table-title` both promoted to
+    consume `var(--dz-heading-app-page-title)`. List-page titles
+    bump from `--text-base` (16px) to `--text-lg` (18px) — a
+    deliberate small lift so workspace + list-page titles share
+    the same visual emphasis.
+
+  Page-title landmark in `templates/components/filterable_table.html`:
+  - Added a `visually-hidden` `<h1 class="dz-page-title">` so list
+    pages have a proper page-title in the accessibility tree.
+    Pre-#983 the table emitted only an h2 — screenreaders had no
+    h1 anchor on list views.
+  - Visible h2 stays unchanged. Promoting it to h1 would have
+    conflicted with the workspace shell h1 on dashboard pages
+    where a list sits inside the dashboard.
+
+  Approach 2 (collapse marketing into the app's compact scale) is
+  intentionally deferred — it's a bigger philosophical change
+  (visual brand distinction vs. unified scale) and the token-first
+  groundwork laid here makes a future migration straightforward
+  if you change your mind.
+
+  Tests: `tests/unit/test_heading_scale_tokens.py` (15 cases)
+  cover token presence, canonical CTA declaration, component
+  consumption, h1 landmark presence + gating, visible h2 unchanged,
+  and resolution-chain values.
+
+### Agent Guidance
+- New components that render headings should consume the
+  `--dz-heading-{app,marketing}-*` tokens, not raw `--text-*`
+  scale tokens. The scale represents a deliberate decision; the
+  text-* tokens are an implementation detail of that decision.
+
 ## [0.63.109] - 2026-05-04
 
 ### Added

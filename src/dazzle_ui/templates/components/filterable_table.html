@@ -38,6 +38,15 @@
      class="dz-table">
 
   {# ── Table header: title + actions ───────────────────────────────────────── #}
+  {# #983 — visually-hidden h1 landmark so list pages have a proper
+     "page title" in the accessibility tree. Pre-#983 the table
+     emitted only an h2; screenreaders had nothing at h1 to anchor
+     on. The table-title h2 stays as the visible heading — promoting
+     it to h1 would conflict with the workspace shell h1 on
+     dashboard pages. #}
+  {% if page_title %}
+    <h1 class="dz-page-title visually-hidden">{{ page_title }}</h1>
+  {% endif %}
   {% block table_header %}
   <div class="dz-table-header">
     <h2 class="dz-table-title">{{ table.title }}</h2>

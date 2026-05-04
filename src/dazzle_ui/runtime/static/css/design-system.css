@@ -189,6 +189,11 @@
   --dz-font-size-subhead: 1.25rem;
   --dz-line-height-subhead: 1.5;
 
+  /* Typography — CTA (#983). Pre-tokenisation, site-sections.css
+   * inlined the 3rem fallback. Defining it here keeps the marketing
+   * heading scale discoverable in one place. */
+  --dz-font-size-cta-headline: 3rem;
+
   /* Typography — sections */
   --dz-font-size-section-headline: 2.25rem;
   --dz-font-weight-section-headline: 700;

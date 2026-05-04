@@ -39,7 +39,12 @@
 }
 
 .dz-table-title {
-  font-size: var(--text-base);
+  /* #983 — promoted from --text-base to the canonical app page-title
+   * scale so workspace titles and list-page titles share a single
+   * weighted decision. Visible bump from 16px → 18px (small, but
+   * the list view's only "page title" deserves the same emphasis
+   * as the workspace shell title). */
+  font-size: var(--dz-heading-app-page-title);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
   margin: 0;
