@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.4] - 2026-05-04
+
+### Added
+- **#977 cycle 5 — dz-richtext DSL knobs + drift gate. Closes #977.**
+  Per-field `rich_text_toolbar` and `rich_text_max_length` flow from
+  DSL through the IR options dict, into `FieldContext.extra`, into
+  the `data-dz-options` JSON on the editor mount, and finally into
+  the cycle-2 toolbar config and cycle-4 length cap on
+  `dz-richtext.js` mount.
+
+  ```dsl
+  field body "Body" widget=rich_text
+                    rich_text_toolbar="bold,italic,link"
+                    rich_text_max_length="5000"
+  ```
+
+  - **Template compiler** propagates the two knobs via `extra` in
+    both flat (`_build_form_fields`) and sectioned
+    (`_build_form_sections`) builders. Comma-split for the toolbar,
+    int-coerce (with quiet ValueError fallback) for the length.
+  - **`form_field.html`** composes the JSON object from
+    `field.extra.rich_text_*` and emits it as the
+    `data-dz-options` attribute via `tojson`.
+  - **`fixtures/component_showcase`** exercises both knobs on its
+    Notes field so the coverage gate sees the path end-to-end.
+  - **COMMANDS drift gate** (`TestCycle5CommandsDriftGate`) pins the
+    JS toolbar command keyset — a new command can't ship without an
+    explicit update to the test + a thought about whether the IR
+    allowlist needs to grow.
+
+  This closes #977. The five-cycle plan delivered: closed-schema
+  Dazzle-native rich-text editor, ~236 KB of vendor assets reclaimed,
+  client-server allowlist parity gated, paste sanitisation pipeline
+  hardened against Word/Docs/Notion HTML, undo/redo shipped, DSL
+  knobs operational.
+
+### Agent Guidance
+- New rich-text features go via the IR + form_field.html
+  options-JSON path established in cycle 5. Don't pass widget config
+  through ad-hoc template variables — keep the shape `field.extra` →
+  `data-dz-options` → bridge mount options. The drift gate +
+  parity gate together pin the contract.
+
 ## [0.64.3] - 2026-05-04
 
 ### Added

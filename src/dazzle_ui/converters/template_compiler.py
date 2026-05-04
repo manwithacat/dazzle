@@ -636,6 +636,23 @@ def _build_form_fields(
             if capture:
                 extra["capture"] = capture
 
+        # #977 cycle 5 — rich-text DSL knobs. Field-level overrides
+        # propagate into the form_field.html data-dz-options JSON; the
+        # dz-richtext.js mount reads `options.toolbar` (list of command
+        # names) and `options.maxLength` (int).
+        if widget_hint == "rich_text":
+            toolbar_csv = element_options.get("rich_text_toolbar")
+            if toolbar_csv:
+                extra["rich_text_toolbar"] = [
+                    item.strip() for item in toolbar_csv.split(",") if item.strip()
+                ]
+            max_len = element_options.get("rich_text_max_length")
+            if max_len:
+                try:
+                    extra["rich_text_max_length"] = int(max_len)
+                except ValueError:
+                    pass  # silently ignore malformed value; lint catches it
+
         fields.append(
             FieldContext(
                 name=field_name,
@@ -736,6 +753,20 @@ def _build_form_sections(
                 capture = element.options.get("capture")
                 if capture:
                     extra["capture"] = capture
+
+            # #977 cycle 5 — rich-text DSL knobs (sectioned forms).
+            if widget_hint == "rich_text":
+                toolbar_csv = element.options.get("rich_text_toolbar")
+                if toolbar_csv:
+                    extra["rich_text_toolbar"] = [
+                        item.strip() for item in toolbar_csv.split(",") if item.strip()
+                    ]
+                max_len = element.options.get("rich_text_max_length")
+                if max_len:
+                    try:
+                        extra["rich_text_max_length"] = int(max_len)
+                    except ValueError:
+                        pass
 
             when_str = str(element.when_expr) if element.when_expr else ""
             vis = element.visible.model_dump() if element.visible else None

@@ -87,7 +87,7 @@ surface showcase_create "Create Showcase":
   section text_inputs:
     field title "Plain Text Input"
     field description "Rich Text (textarea)" widget=rich_text
-    field notes "Notes (textarea)" widget=rich_text
+    field notes "Notes (compact toolbar, capped)" widget=rich_text rich_text_toolbar="bold,italic,link" rich_text_max_length="5000"
   section selection_inputs:
     field status "Status (select)"
     field category "Category (select)"

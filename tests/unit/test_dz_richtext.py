@@ -1,4 +1,4 @@
-"""Source-regression tests for dz-richtext.js (#977 cycles 1–4).
+"""Source-regression tests for dz-richtext.js (#977 cycles 1–5).
 
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md
 
@@ -592,3 +592,75 @@ class TestCycle4ServerField:
         assert "from dazzle.core.ir.richtext import" in src
         assert "RICH_TEXT_ALLOWED_TAGS" in src
         assert "RICH_TEXT_ALLOWED_ATTRS" in src
+
+
+# ───────────────────────────── cycle 5 ────────────────────────────────
+
+
+class TestCycle5DSLKnobs:
+    """Field-level `rich_text_toolbar` and `rich_text_max_length` flow
+    from DSL → IR options → FieldContext.extra → form_field.html
+    → data-dz-options JSON → dz-richtext.js mount options."""
+
+    def test_template_compiler_propagates_toolbar(self) -> None:
+        """`rich_text_toolbar="bold,italic"` becomes a list in extra."""
+        src = (ROOT / "src" / "dazzle_ui" / "converters" / "template_compiler.py").read_text()
+        assert src.count('extra["rich_text_toolbar"]') >= 2
+        assert src.count('extra["rich_text_max_length"]') >= 2
+        assert 'toolbar_csv.split(",")' in src
+
+    def test_form_field_template_emits_options_json(self) -> None:
+        tpl = (ROOT / "src" / "dazzle_ui" / "templates" / "macros" / "form_field.html").read_text()
+        assert "{{ _rt_opts | tojson }}" in tpl
+        assert "field.extra.rich_text_toolbar" in tpl
+        assert "field.extra.rich_text_max_length" in tpl
+
+    def test_compiler_max_length_value_error_swallowed(self) -> None:
+        """A non-numeric `rich_text_max_length="oops"` doesn't crash
+        the compile."""
+        src = (ROOT / "src" / "dazzle_ui" / "converters" / "template_compiler.py").read_text()
+        assert "except ValueError" in src
+
+    def test_showcase_uses_per_field_overrides(self) -> None:
+        """The shipping example app exercises both knobs so the coverage
+        gate sees them."""
+        dsl = (ROOT / "fixtures" / "component_showcase" / "dsl" / "app.dsl").read_text()
+        assert 'rich_text_toolbar="bold,italic,link"' in dsl
+        assert 'rich_text_max_length="5000"' in dsl
+
+
+class TestCycle5CommandsDriftGate:
+    """If a new toolbar command is added to dz-richtext.js, it must be
+    a known name. The drift gate pins the COMMANDS keyset."""
+
+    EXPECTED_COMMANDS = frozenset(
+        {
+            "bold",
+            "italic",
+            "underline",
+            "code",
+            "h2",
+            "h3",
+            "blockquote",
+            "paragraph",
+            "ul",
+            "ol",
+            "link",
+            "clear",
+        }
+    )
+
+    def test_commands_keyset_pinned(self) -> None:
+        import re
+
+        src = JS_PATH.read_text()
+        m = re.search(r"var\s+COMMANDS\s*=\s*\{([\s\S]+?)\n  \};", src)
+        assert m, "Could not find COMMANDS in dz-richtext.js"
+        body = m.group(1)
+        keys = set(re.findall(r"^\s+([a-z][a-z0-9_]*)\s*:\s*\{", body, re.MULTILINE))
+        assert keys == self.EXPECTED_COMMANDS, (
+            f"COMMANDS drift: JS={keys}, expected={self.EXPECTED_COMMANDS}. "
+            "If the new command is intentional, update EXPECTED_COMMANDS in "
+            "tests/unit/test_dz_richtext.py and consider whether the IR "
+            "allowlist needs to grow to support its tag."
+        )

@@ -270,7 +270,16 @@
   {% if field.help %}
   <p id="hint-{{ field.name }}" class="dz-form-hint">{{ field.help }}</p>
   {% endif %}
-  <div data-dz-widget="richtext" data-dz-options='{}'
+  {%- set _rt_opts = {} -%}
+  {%- if field.extra is defined and field.extra -%}
+    {%- if field.extra.rich_text_toolbar -%}
+      {%- set _ = _rt_opts.update({'toolbar': field.extra.rich_text_toolbar}) -%}
+    {%- endif -%}
+    {%- if field.extra.rich_text_max_length -%}
+      {%- set _ = _rt_opts.update({'maxLength': field.extra.rich_text_max_length}) -%}
+    {%- endif -%}
+  {%- endif -%}
+  <div data-dz-widget="richtext" data-dz-options='{{ _rt_opts | tojson }}'
        class="dz-form-richtext"
        {% if errors.get(field.name) %}aria-invalid="true"{% endif %}>
     <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
