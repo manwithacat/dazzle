@@ -113,30 +113,27 @@ def _grant_cond(relation: str = "viewer", scope_field: str = "department") -> Co
 # ---------------------------------------------------------------------------
 
 
-class TestUnprotectedEntity:
-    def test_no_access_spec(self) -> None:
-        entity = _make_entity("Task", access=None)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
+def test_unprotected_entity_combined() -> None:
+    """Combined PERMIT_UNPROTECTED contract:
+    - access=None on every operation → PERMIT_UNPROTECTED.
+    - emits an unprotected_entity warning.
+    - access=AccessSpec(permissions=[]) is also treated as unprotected.
+    """
+    # access=None on every op.
+    entity = _make_entity("Task", access=None)
+    appspec = _make_appspec([entity], [_make_persona("admin")])
+    matrix = generate_access_matrix(appspec)
+    for op in ["list", "read", "create", "update", "delete"]:
+        assert matrix.get("admin", "Task", op) == PolicyDecision.PERMIT_UNPROTECTED
+    assert "unprotected_entity" in [w.kind for w in matrix.warnings]
 
-        for op in ["list", "read", "create", "update", "delete"]:
-            assert matrix.get("admin", "Task", op) == PolicyDecision.PERMIT_UNPROTECTED
-
-    def test_warning_emitted_for_unprotected(self) -> None:
-        entity = _make_entity("Task", access=None)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-
-        warn_kinds = [w.kind for w in matrix.warnings]
-        assert "unprotected_entity" in warn_kinds
-
-    def test_empty_permissions_list(self) -> None:
-        """AccessSpec with empty permissions list is treated as unprotected."""
-        entity = _make_entity("Task", access=AccessSpec(permissions=[]))
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT_UNPROTECTED
+    # Empty permissions list also unprotected.
+    entity_empty = _make_entity("Task", access=AccessSpec(permissions=[]))
+    appspec2 = _make_appspec([entity_empty], [_make_persona("admin")])
+    assert (
+        generate_access_matrix(appspec2).get("admin", "Task", "read")
+        == PolicyDecision.PERMIT_UNPROTECTED
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -144,57 +141,31 @@ class TestUnprotectedEntity:
 # ---------------------------------------------------------------------------
 
 
-class TestPureRoleGate:
-    def test_permit_for_matching_role(self) -> None:
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
+def test_pure_role_gate_combined() -> None:
+    """Combined pure role gate contract:
+    - PERMIT for matching role; DENY for non-matching.
+    - Empty personas list matches all roles.
+    - No rule for operation → DENY.
+    """
+    # PERMIT/DENY by persona membership.
+    access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
+    entity = _make_entity("Task", access=access)
+    appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
+    matrix = generate_access_matrix(appspec)
+    assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
+    assert matrix.get("guest", "Task", "read") == PolicyDecision.DENY
+    # Operation with no rule → DENY.
+    assert matrix.get("admin", "Task", "delete") == PolicyDecision.DENY
 
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
-
-    def test_deny_for_non_matching_role(self) -> None:
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("guest", "Task", "read") == PolicyDecision.DENY
-
-    def test_permit_empty_personas_matches_all_roles(self) -> None:
-        """A rule with empty personas list applies to all roles."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.LIST, personas=[]),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "list") == PolicyDecision.PERMIT
-        assert matrix.get("guest", "Task", "list") == PolicyDecision.PERMIT
-
-    def test_no_rule_for_operation_is_deny(self) -> None:
-        """Only read is permitted; delete should be DENY."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "delete") == PolicyDecision.DENY
+    # Empty personas list applies to all roles.
+    access_open = AccessSpec(permissions=[_permit_rule(PermissionKind.LIST, personas=[])])
+    appspec_open = _make_appspec(
+        [_make_entity("Task", access=access_open)],
+        [_make_persona("admin"), _make_persona("guest")],
+    )
+    matrix_open = generate_access_matrix(appspec_open)
+    assert matrix_open.get("admin", "Task", "list") == PolicyDecision.PERMIT
+    assert matrix_open.get("guest", "Task", "list") == PolicyDecision.PERMIT
 
 
 # ---------------------------------------------------------------------------
@@ -224,32 +195,29 @@ class TestRoleCheckCondition:
 # ---------------------------------------------------------------------------
 
 
-class TestFieldCondition:
-    def test_field_condition_gives_permit_filtered(self) -> None:
-        cond = _field_cond("owner_id")
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["user"], condition=cond),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("user")])
-        matrix = generate_access_matrix(appspec)
+def test_field_condition_gives_permit_filtered_combined() -> None:
+    """Both field comparisons and grant_check conditions resolve to PERMIT_FILTERED."""
+    # Field comparison condition.
+    field_access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.READ, personas=["user"], condition=_field_cond("owner_id"))
+        ]
+    )
+    appspec1 = _make_appspec([_make_entity("Task", access=field_access)], [_make_persona("user")])
+    assert (
+        generate_access_matrix(appspec1).get("user", "Task", "read")
+        == PolicyDecision.PERMIT_FILTERED
+    )
 
-        assert matrix.get("user", "Task", "read") == PolicyDecision.PERMIT_FILTERED
-
-    def test_grant_check_gives_permit_filtered(self) -> None:
-        cond = _grant_cond()
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.LIST, personas=["staff"], condition=cond),
-            ]
-        )
-        entity = _make_entity("Doc", access=access)
-        appspec = _make_appspec([entity], [_make_persona("staff")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("staff", "Doc", "list") == PolicyDecision.PERMIT_FILTERED
+    # grant_check condition.
+    grant_access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.LIST, personas=["staff"], condition=_grant_cond())]
+    )
+    appspec2 = _make_appspec([_make_entity("Doc", access=grant_access)], [_make_persona("staff")])
+    assert (
+        generate_access_matrix(appspec2).get("staff", "Doc", "list")
+        == PolicyDecision.PERMIT_FILTERED
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -257,51 +225,54 @@ class TestFieldCondition:
 # ---------------------------------------------------------------------------
 
 
-class TestForbidOverride:
-    def test_forbid_overrides_permit_same_role(self) -> None:
-        """FORBID beats PERMIT for the same role on the same operation."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.DELETE, personas=["admin"]),
-                _forbid_rule(PermissionKind.DELETE, personas=["admin"]),
-            ]
+def test_forbid_override_combined() -> None:
+    """Combined FORBID-override contract:
+    - FORBID beats PERMIT for the same role.
+    - FORBID with empty personas (wildcard) overrides PERMIT for any role.
+    - FORBID for one role does not affect other permitted roles.
+    """
+    # 1) Same-role FORBID beats PERMIT.
+    a1 = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.DELETE, personas=["admin"]),
+            _forbid_rule(PermissionKind.DELETE, personas=["admin"]),
+        ]
+    )
+    m1 = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a1)], [_make_persona("admin")])
+    )
+    assert m1.get("admin", "Task", "delete") == PolicyDecision.DENY
+
+    # 2) Wildcard FORBID overrides all permits.
+    a2 = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.DELETE, personas=["admin"]),
+            _forbid_rule(PermissionKind.DELETE, personas=[]),
+        ]
+    )
+    m2 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a2)], [_make_persona("admin"), _make_persona("guest")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
+    )
+    assert m2.get("admin", "Task", "delete") == PolicyDecision.DENY
+    assert m2.get("guest", "Task", "delete") == PolicyDecision.DENY
 
-        assert matrix.get("admin", "Task", "delete") == PolicyDecision.DENY
-
-    def test_forbid_wildcard_overrides_all_permit(self) -> None:
-        """A FORBID with empty personas overrides a PERMIT for any role."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.DELETE, personas=["admin"]),
-                _forbid_rule(PermissionKind.DELETE, personas=[]),  # wildcard
-            ]
+    # 3) Forbidding one role doesn't affect others.
+    a3 = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.READ, personas=["admin"]),
+            _permit_rule(PermissionKind.READ, personas=["editor"]),
+            _forbid_rule(PermissionKind.READ, personas=["editor"]),
+        ]
+    )
+    m3 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a3)], [_make_persona("admin"), _make_persona("editor")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "delete") == PolicyDecision.DENY
-        assert matrix.get("guest", "Task", "delete") == PolicyDecision.DENY
-
-    def test_forbid_one_role_does_not_affect_others(self) -> None:
-        """Forbidding one role should not deny others that have a permit."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-                _permit_rule(PermissionKind.READ, personas=["editor"]),
-                _forbid_rule(PermissionKind.READ, personas=["editor"]),
-            ]
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("editor")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
-        assert matrix.get("editor", "Task", "read") == PolicyDecision.DENY
+    )
+    assert m3.get("admin", "Task", "read") == PolicyDecision.PERMIT
+    assert m3.get("editor", "Task", "read") == PolicyDecision.DENY
 
 
 # ---------------------------------------------------------------------------
@@ -370,89 +341,39 @@ class TestMatrixGet:
 # ---------------------------------------------------------------------------
 
 
-class TestToTable:
-    def test_table_contains_roles_and_entities(self) -> None:
-        access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-        table = matrix.to_table()
+def test_matrix_serialization_combined() -> None:
+    """Combined to_table / to_json / to_csv contract on a single
+    minimal Task+admin matrix (5 ops × 1 entity) plus the empty-matrix
+    placeholder for to_table."""
+    access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
+    entity = _make_entity("Task", access=access)
+    appspec = _make_appspec([entity], [_make_persona("admin")])
+    matrix = generate_access_matrix(appspec)
 
-        assert "admin" in table
-        assert "Task" in table
-        assert "PERMIT" in table
-        assert "DENY" in table
+    # to_table — contains roles, entities, decisions.
+    table = matrix.to_table()
+    for token in ("admin", "Task", "PERMIT", "DENY"):
+        assert token in table
 
-    def test_empty_matrix_returns_placeholder(self) -> None:
-        appspec = _make_appspec([], [])
-        matrix = generate_access_matrix(appspec)
-        table = matrix.to_table()
+    # to_table empty placeholder.
+    empty_table = generate_access_matrix(_make_appspec([], [])).to_table()
+    assert "empty" in empty_table.lower()
 
-        assert "empty" in table.lower()
+    # to_json — structure + populated roles/entities + per-cell keys.
+    data = matrix.to_json()
+    for k in ("roles", "entities", "operations", "cells", "warnings"):
+        assert k in data
+    assert "admin" in data["roles"]
+    assert "Task" in data["entities"]
+    for cell in data["cells"]:
+        for k in ("role", "entity", "operation", "decision"):
+            assert k in cell
 
-
-# ---------------------------------------------------------------------------
-# Test: to_json()
-# ---------------------------------------------------------------------------
-
-
-class TestToJson:
-    def test_json_structure(self) -> None:
-        access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-        data = matrix.to_json()
-
-        assert "roles" in data
-        assert "entities" in data
-        assert "operations" in data
-        assert "cells" in data
-        assert "warnings" in data
-        assert "admin" in data["roles"]
-        assert "Task" in data["entities"]
-
-    def test_json_cells_have_required_keys(self) -> None:
-        access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-        data = matrix.to_json()
-
-        for cell in data["cells"]:
-            assert "role" in cell
-            assert "entity" in cell
-            assert "operation" in cell
-            assert "decision" in cell
-
-
-# ---------------------------------------------------------------------------
-# Test: to_csv()
-# ---------------------------------------------------------------------------
-
-
-class TestToCsv:
-    def test_csv_has_header(self) -> None:
-        access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-        csv_text = matrix.to_csv()
-        lines = csv_text.strip().splitlines()
-
-        assert lines[0].startswith("entity,operation")
-        assert "admin" in lines[0]
-
-    def test_csv_has_correct_row_count(self) -> None:
-        access = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-        csv_text = matrix.to_csv()
-        lines = csv_text.strip().splitlines()
-
-        # 1 header + 5 operations × 1 entity = 6 lines
-        assert len(lines) == 6
+    # to_csv — header row + 5 ops × 1 entity = 6 lines.
+    lines = matrix.to_csv().strip().splitlines()
+    assert lines[0].startswith("entity,operation")
+    assert "admin" in lines[0]
+    assert len(lines) == 6
 
 
 # ---------------------------------------------------------------------------
@@ -460,47 +381,38 @@ class TestToCsv:
 # ---------------------------------------------------------------------------
 
 
-class TestWarnings:
-    def test_redundant_forbid_warning(self) -> None:
-        """Warn when FORBID exists but no PERMIT for that role on that operation."""
-        access = AccessSpec(
-            permissions=[
-                _forbid_rule(PermissionKind.DELETE, personas=["guest"]),
-            ]
+def test_warnings_combined() -> None:
+    """Combined warnings contract:
+    - Redundant FORBID (no matching PERMIT) emits redundant_forbid.
+    - Persona never referenced emits orphan_role.
+    - When all personas are used, no orphan_role warning.
+    """
+    # Redundant FORBID.
+    a1 = AccessSpec(permissions=[_forbid_rule(PermissionKind.DELETE, personas=["guest"])])
+    m1 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a1)], [_make_persona("admin"), _make_persona("guest")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
+    )
+    assert "redundant_forbid" in [w.kind for w in m1.warnings]
 
-        warn_kinds = [w.kind for w in matrix.warnings]
-        assert "redundant_forbid" in warn_kinds
-
-    def test_orphan_role_warning(self) -> None:
-        """Persona not referenced in any rule emits orphan_role warning."""
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-            ]
+    # Orphan role.
+    a2 = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])])
+    m2 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a2)], [_make_persona("admin"), _make_persona("orphan")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("orphan")])
-        matrix = generate_access_matrix(appspec)
+    )
+    assert any(w.role == "orphan" for w in m2.warnings if w.kind == "orphan_role")
 
-        orphan_warns = [w for w in matrix.warnings if w.kind == "orphan_role"]
-        assert any(w.role == "orphan" for w in orphan_warns)
-
-    def test_no_orphan_when_all_roles_used(self) -> None:
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin", "editor"]),
-            ]
+    # No orphan when all roles used.
+    a3 = AccessSpec(permissions=[_permit_rule(PermissionKind.READ, personas=["admin", "editor"])])
+    m3 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a3)], [_make_persona("admin"), _make_persona("editor")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("editor")])
-        matrix = generate_access_matrix(appspec)
-
-        orphan_warns = [w for w in matrix.warnings if w.kind == "orphan_role"]
-        assert len(orphan_warns) == 0
+    )
+    assert not [w for w in m3.warnings if w.kind == "orphan_role"]
 
 
 # ---------------------------------------------------------------------------
@@ -516,101 +428,87 @@ def _scope_rule(
     return ScopeRule(operation=operation, personas=personas, condition=condition)
 
 
-class TestScopeRules:
-    def test_permit_scope_all_gives_permit(self) -> None:
-        """Permit + scope rule with condition=None (scope: all) → PERMIT."""
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
-            scopes=[_scope_rule(PermissionKind.READ, personas=["admin"], condition=None)],
+def test_scope_rules_combined() -> None:
+    """Combined scope-rule decision contract:
+    - PERMIT + scope rule with condition=None ('scope: all') → PERMIT.
+    - PERMIT + scope rule with field condition → PERMIT_SCOPED.
+    - PERMIT + no matching scope rule → PERMIT_NO_SCOPE + no_scope_rule warning
+      with correct entity/role/operation.
+    - DENY for non-permitted roles is unchanged by scope rules.
+    - personas=['*'] in scope matches any permitted role → PERMIT_SCOPED.
+    - Legacy entity (no scopes block) with field condition still → PERMIT_FILTERED.
+    """
+    # 1) scope: all (condition=None) → PERMIT.
+    a1 = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.READ, personas=["admin"], condition=None)],
+    )
+    m1 = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a1)], [_make_persona("admin")])
+    )
+    assert m1.get("admin", "Task", "read") == PolicyDecision.PERMIT
+
+    # 2) scope with field condition → PERMIT_SCOPED.
+    a2 = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.READ, personas=["user"])],
+        scopes=[
+            _scope_rule(PermissionKind.READ, personas=["user"], condition=_field_cond("owner_id"))
+        ],
+    )
+    m2 = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a2)], [_make_persona("user")])
+    )
+    assert m2.get("user", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+
+    # 3) PERMIT but no matching scope → PERMIT_NO_SCOPE + warning with correct fields.
+    a3 = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.LIST, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["editor"], condition=None)],
+    )
+    m3 = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a3)], [_make_persona("admin")])
+    )
+    assert m3.get("admin", "Task", "list") == PolicyDecision.PERMIT_NO_SCOPE
+    no_scope = [w for w in m3.warnings if w.kind == "no_scope_rule"]
+    assert any(w.entity == "Task" and w.role == "admin" and w.operation == "list" for w in no_scope)
+
+    # 4) Non-permitted role stays DENY despite scope rules.
+    a4 = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.READ, personas=["*"], condition=None)],
+    )
+    m4 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a4)], [_make_persona("admin"), _make_persona("guest")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
+    )
+    assert m4.get("guest", "Task", "read") == PolicyDecision.DENY
 
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
-
-    def test_permit_scope_with_condition_gives_permit_scoped(self) -> None:
-        """Permit + scope rule with a field condition → PERMIT_SCOPED."""
-        cond = _field_cond("owner_id")
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.READ, personas=["user"])],
-            scopes=[_scope_rule(PermissionKind.READ, personas=["user"], condition=cond)],
+    # 5) personas=['*'] in scope matches any permitted role.
+    a5 = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.READ, personas=["admin"]),
+            _permit_rule(PermissionKind.READ, personas=["editor"]),
+        ],
+        scopes=[
+            _scope_rule(PermissionKind.READ, personas=["*"], condition=_field_cond("owner_id"))
+        ],
+    )
+    m5 = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=a5)], [_make_persona("admin"), _make_persona("editor")]
         )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("user")])
-        matrix = generate_access_matrix(appspec)
+    )
+    assert m5.get("admin", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+    assert m5.get("editor", "Task", "read") == PolicyDecision.PERMIT_SCOPED
 
-        assert matrix.get("user", "Task", "read") == PolicyDecision.PERMIT_SCOPED
-
-    def test_permit_no_matching_scope_gives_permit_no_scope(self) -> None:
-        """Permit + no matching scope rule → PERMIT_NO_SCOPE + no_scope_rule warning."""
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
-            scopes=[_scope_rule(PermissionKind.READ, personas=["editor"], condition=None)],
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT_NO_SCOPE
-        warn_kinds = [w.kind for w in matrix.warnings]
-        assert "no_scope_rule" in warn_kinds
-
-    def test_no_scope_rule_warning_has_correct_fields(self) -> None:
-        """no_scope_rule warning has the correct entity, role, and operation."""
-        # Scope rules present but none match admin on LIST — triggers PERMIT_NO_SCOPE.
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.LIST, personas=["admin"])],
-            scopes=[_scope_rule(PermissionKind.LIST, personas=["editor"], condition=None)],
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin")])
-        matrix = generate_access_matrix(appspec)
-
-        no_scope_warns = [w for w in matrix.warnings if w.kind == "no_scope_rule"]
-        assert any(
-            w.entity == "Task" and w.role == "admin" and w.operation == "list"
-            for w in no_scope_warns
-        )
-
-    def test_deny_unchanged_with_scope_rules(self) -> None:
-        """A role that has no PERMIT rule stays DENY even when scope rules exist."""
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
-            scopes=[_scope_rule(PermissionKind.READ, personas=["*"], condition=None)],
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("guest", "Task", "read") == PolicyDecision.DENY
-
-    def test_scope_wildcard_persona_matches_any_role(self) -> None:
-        """A scope rule with personas=['*'] matches any permitted role."""
-        cond = _field_cond("owner_id")
-        access = AccessSpec(
-            permissions=[
-                _permit_rule(PermissionKind.READ, personas=["admin"]),
-                _permit_rule(PermissionKind.READ, personas=["editor"]),
-            ],
-            scopes=[_scope_rule(PermissionKind.READ, personas=["*"], condition=cond)],
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("editor")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT_SCOPED
-        assert matrix.get("editor", "Task", "read") == PolicyDecision.PERMIT_SCOPED
-
-    def test_legacy_no_scopes_still_gives_permit_filtered(self) -> None:
-        """Legacy path: no scopes on entity, field condition → PERMIT_FILTERED (unchanged)."""
-        cond = _field_cond("owner_id")
-        access = AccessSpec(
-            permissions=[_permit_rule(PermissionKind.READ, personas=["user"], condition=cond)],
-            # scopes intentionally empty — legacy entity
-        )
-        entity = _make_entity("Task", access=access)
-        appspec = _make_appspec([entity], [_make_persona("user")])
-        matrix = generate_access_matrix(appspec)
-
-        assert matrix.get("user", "Task", "read") == PolicyDecision.PERMIT_FILTERED
+    # 6) Legacy entity with no scopes block still resolves field condition → PERMIT_FILTERED.
+    a6 = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.READ, personas=["user"], condition=_field_cond("owner_id"))
+        ],
+    )
+    m6 = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a6)], [_make_persona("user")])
+    )
+    assert m6.get("user", "Task", "read") == PolicyDecision.PERMIT_FILTERED

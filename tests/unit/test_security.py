@@ -342,16 +342,16 @@ class TestSecurityDocs:
 # =============================================================================
 
 
-class TestSecurityParser:
-    """Tests for security_profile parsing."""
+def test_security_profile_parsing_combined() -> None:
+    """Combined parser contract for the `security_profile:` app field —
+    parses standard/strict, defaults to basic when omitted, and the
+    `multi_tenant:` flag rides alongside on the same app config."""
+    from pathlib import Path
 
-    def test_parse_security_profile(self) -> None:
-        """Test parsing security_profile in app config."""
-        from pathlib import Path
+    from dazzle.core.dsl_parser_impl import parse_dsl
 
-        from dazzle.core.dsl_parser_impl import parse_dsl
-
-        dsl = """
+    # standard + multi_tenant.
+    dsl_a = """
 module test_app
 app TestApp "Test Application":
   description: "Test app"
@@ -362,19 +362,13 @@ entity Task "Task":
   id: uuid pk
   title: str(200) required
 """
-        _, _, _, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
+    _, _, _, cfg_a, _, _ = parse_dsl(dsl_a, Path("test.dsl"))
+    assert cfg_a is not None
+    assert cfg_a.security_profile == "standard"
+    assert cfg_a.multi_tenant is True
 
-        assert app_config is not None
-        assert app_config.security_profile == "standard"
-        assert app_config.multi_tenant is True
-
-    def test_parse_security_profile_strict(self) -> None:
-        """Test parsing strict security profile."""
-        from pathlib import Path
-
-        from dazzle.core.dsl_parser_impl import parse_dsl
-
-        dsl = """
+    # strict.
+    dsl_b = """
 module secure_app
 app SecureApp "Secure Application":
   security_profile: strict
@@ -383,18 +377,12 @@ entity User "User":
   id: uuid pk
   name: str(100) required
 """
-        _, _, _, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
+    _, _, _, cfg_b, _, _ = parse_dsl(dsl_b, Path("test.dsl"))
+    assert cfg_b is not None
+    assert cfg_b.security_profile == "strict"
 
-        assert app_config is not None
-        assert app_config.security_profile == "strict"
-
-    def test_default_security_profile(self) -> None:
-        """Test default security profile is basic."""
-        from pathlib import Path
-
-        from dazzle.core.dsl_parser_impl import parse_dsl
-
-        dsl = """
+    # default → basic when omitted.
+    dsl_c = """
 module basic_app
 app BasicApp "Basic Application":
   description: "No security profile specified"
@@ -403,10 +391,9 @@ entity Task "Task":
   id: uuid pk
   title: str(200) required
 """
-        _, _, _, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
-
-        assert app_config is not None
-        assert app_config.security_profile == "basic"
+    _, _, _, cfg_c, _, _ = parse_dsl(dsl_c, Path("test.dsl"))
+    assert cfg_c is not None
+    assert cfg_c.security_profile == "basic"
 
 
 # =============================================================================
@@ -469,36 +456,31 @@ class TestCSPDefaults:
         assert directives["script-src"] == "script-src 'self'"
 
 
-class TestCSPReportOnly:
-    """The middleware must emit the Report-Only header when configured."""
+def test_csp_report_only_combined() -> None:
+    """Combined CSP Report-Only contract:
+    - SecurityHeadersConfig accepts csp_report_only flag in both modes.
+    - create_security_headers_middleware constructs from enforcing config.
+    - STANDARD profile uses Report-Only; STRICT enforces.
+    """
+    from dazzle_back.runtime.security_middleware import (
+        SecurityHeadersConfig,
+        configure_headers_for_profile,
+        create_security_headers_middleware,
+    )
 
-    def test_enforcing_header_by_default(self) -> None:
-        from dazzle_back.runtime.security_middleware import (
-            SecurityHeadersConfig,
-            create_security_headers_middleware,
-        )
+    # Enforcing config builds a middleware.
+    middleware = create_security_headers_middleware(
+        SecurityHeadersConfig(enable_csp=True, csp_report_only=False)
+    )
+    assert middleware is not None
 
-        config = SecurityHeadersConfig(enable_csp=True, csp_report_only=False)
-        middleware = create_security_headers_middleware(config)
-        # Structural smoke test — the middleware class carries the config.
-        assert middleware is not None
+    # Report-Only config carries the flag.
+    assert SecurityHeadersConfig(enable_csp=True, csp_report_only=True).csp_report_only is True
 
-    def test_report_only_config_exists(self) -> None:
-        from dazzle_back.runtime.security_middleware import SecurityHeadersConfig
-
-        config = SecurityHeadersConfig(enable_csp=True, csp_report_only=True)
-        assert config.csp_report_only is True
-
-    def test_standard_profile_uses_report_only(self) -> None:
-        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
-
-        config = configure_headers_for_profile("standard")
-        assert config.enable_csp is True
-        assert config.csp_report_only is True
-
-    def test_strict_profile_enforces(self) -> None:
-        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
-
-        config = configure_headers_for_profile("strict")
-        assert config.enable_csp is True
-        assert config.csp_report_only is False
+    # STANDARD → Report-Only; STRICT → enforce.
+    standard = configure_headers_for_profile("standard")
+    assert standard.enable_csp is True
+    assert standard.csp_report_only is True
+    strict = configure_headers_for_profile("strict")
+    assert strict.enable_csp is True
+    assert strict.csp_report_only is False

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.25] - 2026-05-04
+
+### Changed
+- **Distillation cycle 23** — Batch CC continued on test_rbac_matrix and
+  test_security. 41 tests pass. Suite total: 12,671 → 12,639 (32 fewer
+  this cycle). Cumulative: 14,295 → 12,639 (1,656 tests removed across
+  23 cycles). Need 639 more.
+
 ## [0.66.24] - 2026-05-04
 
 ### Changed
