@@ -158,34 +158,45 @@ class TestFilterableColumns:
             columns.append(col)
         return columns
 
-    def test_enum_column_is_filterable_with_options(self) -> None:
-        f = _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "closed", "pending"])
-        entity = _make_entity("Task", [f])
-        cols = self._build_columns(entity)
+    def test_filterable_columns(self) -> None:
+        """Columns are filterable when enum/bool/state_machine; str is not.
+
+        Combined: enum_column_is_filterable_with_options, bool_column_is_filterable,
+        str_column_not_filterable, state_machine_status_filterable_with_states.
+        """
+        # Enum field — filterable with enum values as options
+        cols = self._build_columns(
+            _make_entity(
+                "Task",
+                [
+                    _make_field(
+                        "status", FieldTypeKind.ENUM, enum_values=["open", "closed", "pending"]
+                    )
+                ],
+            )
+        )
         assert len(cols) == 1
         assert cols[0]["filterable"] is True
         assert cols[0]["filter_options"] == ["open", "closed", "pending"]
 
-    def test_bool_column_is_filterable(self) -> None:
-        f = _make_field("completed", FieldTypeKind.BOOL)
-        entity = _make_entity("Task", [f])
-        cols = self._build_columns(entity)
+        # Bool field — filterable with true/false options
+        cols = self._build_columns(
+            _make_entity("Task", [_make_field("completed", FieldTypeKind.BOOL)])
+        )
         assert len(cols) == 1
         assert cols[0]["filterable"] is True
         assert cols[0]["filter_options"] == ["true", "false"]
 
-    def test_str_column_not_filterable(self) -> None:
-        f = _make_field("title", FieldTypeKind.STR)
-        entity = _make_entity("Task", [f])
-        cols = self._build_columns(entity)
+        # Str field — not filterable
+        cols = self._build_columns(_make_entity("Task", [_make_field("title", FieldTypeKind.STR)]))
         assert len(cols) == 1
         assert "filterable" not in cols[0]
 
-    def test_state_machine_status_filterable_with_states(self) -> None:
-        f = _make_field("status", FieldTypeKind.STR)
+        # State-machine status field — filterable with states list
         sm = SimpleNamespace(status_field="status", states=["draft", "active", "done"])
-        entity = _make_entity("Task", [f], state_machine=sm)
-        cols = self._build_columns(entity)
+        cols = self._build_columns(
+            _make_entity("Task", [_make_field("status", FieldTypeKind.STR)], state_machine=sm)
+        )
         assert len(cols) == 1
         assert cols[0]["filterable"] is True
         assert cols[0]["filter_options"] == ["draft", "active", "done"]
@@ -269,19 +280,23 @@ class TestAttentionHighlighting:
                     best = {"level": lvl, "message": sig.message}
         return best
 
-    def test_warning_condition_matches(self) -> None:
+    def test_attention_evaluation(self) -> None:
+        """Attention signals: matching condition wins, no match returns None, highest severity wins.
+
+        Combined: warning_condition_matches, no_condition_match_returns_none,
+        multiple_signals_highest_severity_wins.
+        """
+        # Matching condition produces signal
         sig = self._make_signal("warning", "status", "=", "overdue", "Task is overdue")
         result = self._evaluate_attention([sig], {"status": "overdue", "title": "Fix bug"})
         assert result is not None
         assert result["level"] == "warning"
         assert result["message"] == "Task is overdue"
 
-    def test_no_condition_match_returns_none(self) -> None:
-        sig = self._make_signal("warning", "status", "=", "overdue", "Task is overdue")
-        result = self._evaluate_attention([sig], {"status": "active", "title": "Fix bug"})
-        assert result is None
+        # No matching condition → None
+        assert self._evaluate_attention([sig], {"status": "active", "title": "Fix bug"}) is None
 
-    def test_multiple_signals_highest_severity_wins(self) -> None:
+        # Multiple signals — critical beats warning
         sig_warning = self._make_signal("warning", "status", "=", "overdue", "Overdue")
         sig_critical = self._make_signal("critical", "priority", "=", "high", "High priority")
         item = {"status": "overdue", "priority": "high"}
@@ -432,56 +447,54 @@ class TestCrossEntityAction:
         domain = SimpleNamespace(entities=entities)
         return SimpleNamespace(surfaces=[surface], domain=domain)
 
-    def test_same_entity_uses_id(self) -> None:
+    def test_action_url_resolution(self) -> None:
+        """Action URL resolution: same-entity, cross-entity FK, fallback to {id}.
+
+        Combined: same_entity_uses_id, cross_entity_resolves_fk_field,
+        cross_entity_fallback_to_id.
+        """
         from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
+        # Same entity → /app/<entity>/{id}
         region = WorkspaceRegion(name="tasks", source="Task", action="task_edit")
         ws = WorkspaceSpec(name="dashboard", regions=[region])
-        app_spec = self._make_app_spec("task_edit", "Task")
-
-        ctx = build_workspace_context(ws, app_spec)
+        ctx = build_workspace_context(ws, self._make_app_spec("task_edit", "Task"))
         assert ctx.regions[0].action_url == "/app/task/{id}"
 
-    def test_cross_entity_resolves_fk_field(self) -> None:
-        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        # Order has a ref field "customer" pointing at Customer
-        order_fields = [
+        # Cross-entity: FK on source resolves to action_id_field
+        order_fields_fk = [
             _make_field("title", FieldTypeKind.STR),
             _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
         ]
-        region = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
-        ws = WorkspaceSpec(name="dashboard", regions=[region])
-        app_spec = self._make_app_spec(
-            "customer_detail",
-            "Customer",
-            source_entity_name="Order",
-            source_fields=order_fields,
+        region2 = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
+        ws2 = WorkspaceSpec(name="dashboard", regions=[region2])
+        ctx2 = build_workspace_context(
+            ws2,
+            self._make_app_spec(
+                "customer_detail",
+                "Customer",
+                source_entity_name="Order",
+                source_fields=order_fields_fk,
+            ),
         )
+        assert ctx2.regions[0].action_url == "/app/customer/{id}"
+        assert ctx2.regions[0].action_id_field == "customer"
 
-        ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].action_url == "/app/customer/{id}"
-        assert ctx.regions[0].action_id_field == "customer"
-
-    def test_cross_entity_fallback_to_id(self) -> None:
-        """When no FK field links source to target, fall back to {id}."""
-        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        order_fields = [_make_field("title", FieldTypeKind.STR)]
-        region = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
-        ws = WorkspaceSpec(name="dashboard", regions=[region])
-        app_spec = self._make_app_spec(
-            "customer_detail",
-            "Customer",
-            source_entity_name="Order",
-            source_fields=order_fields,
+        # Cross-entity: no FK link → fallback to {id}
+        order_fields_no_fk = [_make_field("title", FieldTypeKind.STR)]
+        region3 = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
+        ws3 = WorkspaceSpec(name="dashboard", regions=[region3])
+        ctx3 = build_workspace_context(
+            ws3,
+            self._make_app_spec(
+                "customer_detail",
+                "Customer",
+                source_entity_name="Order",
+                source_fields=order_fields_no_fk,
+            ),
         )
-
-        ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].action_url == "/app/customer/{id}"
+        assert ctx3.regions[0].action_url == "/app/customer/{id}"
 
 
 # ===========================================================================
@@ -1080,26 +1093,28 @@ class TestCurrentUserTestMode:
 class TestCurrentUserDotNotation:
     """Tests for current_user.<field> dot-notation in condition evaluator (#486)."""
 
-    def test_resolve_current_user_department(self) -> None:
-        """current_user.department resolves to user entity's department field."""
+    def test_resolve_current_user_dot_notation(self) -> None:
+        """current_user.<field> dot-notation: scalar, ref dict, plain, missing entity, missing field.
+
+        Combined: department, department_ref_dict, plain_still_works, missing_entity, missing_field.
+        """
         from dazzle_back.runtime.condition_evaluator import _resolve_value
 
-        context = {
+        # Scalar field (uuid string)
+        ctx_scalar = {
             "current_user_id": "user-123",
             "current_user_entity": {
                 "id": "user-123",
                 "department": "f6ac5054-79ff-5b1a-acd0-f1c832d3433b",
             },
         }
-        value = {"literal": "current_user.department"}
-        result = _resolve_value(value, context)
-        assert result == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+        assert (
+            _resolve_value({"literal": "current_user.department"}, ctx_scalar)
+            == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+        )
 
-    def test_resolve_current_user_department_ref_dict(self) -> None:
-        """current_user.department resolves ref stored as {id, name} dict."""
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
-
-        context = {
+        # Ref dict — extract id from {id, name}
+        ctx_ref = {
             "current_user_id": "user-123",
             "current_user_entity": {
                 "id": "user-123",
@@ -1109,39 +1124,29 @@ class TestCurrentUserDotNotation:
                 },
             },
         }
-        value = {"literal": "current_user.department"}
-        result = _resolve_value(value, context)
-        assert result == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+        assert (
+            _resolve_value({"literal": "current_user.department"}, ctx_ref)
+            == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+        )
 
-    def test_resolve_current_user_plain_still_works(self) -> None:
-        """current_user (no dot) still resolves to user ID."""
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
+        # Plain current_user (no dot) → user_id
+        assert (
+            _resolve_value({"literal": "current_user"}, {"current_user_id": "user-123"})
+            == "user-123"
+        )
 
-        context = {"current_user_id": "user-123"}
-        value = {"literal": "current_user"}
-        result = _resolve_value(value, context)
-        assert result == "user-123"
+        # Missing entity → None
+        assert (
+            _resolve_value({"literal": "current_user.department"}, {"current_user_id": "user-123"})
+            is None
+        )
 
-    def test_resolve_current_user_missing_entity(self) -> None:
-        """current_user.<field> returns None when entity not in context."""
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
-
-        context = {"current_user_id": "user-123"}
-        value = {"literal": "current_user.department"}
-        result = _resolve_value(value, context)
-        assert result is None
-
-    def test_resolve_current_user_missing_field(self) -> None:
-        """current_user.<field> returns None for nonexistent field."""
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
-
-        context = {
+        # Missing field on entity → None
+        ctx_missing_field = {
             "current_user_id": "user-123",
             "current_user_entity": {"id": "user-123", "name": "Alice"},
         }
-        value = {"literal": "current_user.department"}
-        result = _resolve_value(value, context)
-        assert result is None
+        assert _resolve_value({"literal": "current_user.department"}, ctx_missing_field) is None
 
     def test_condition_to_sql_filter_with_dot_notation(self) -> None:
         """condition_to_sql_filter resolves current_user.department in filters."""

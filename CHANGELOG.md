@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.23] - 2026-05-04
+
+### Changed
+- **Distillation cycle 21** — Batch AA final report -70 (combine-into-single
+  approach). Batch BB partial collapse on test_workspace_rendering. 53 tests
+  pass. Suite total: 12,745 → 12,720 (25 fewer this cycle). Cumulative
+  cycles 1-21: 14,295 → 12,720 (1,575 tests removed). Need 720 more.
+
+### Agent Guidance
+- **Combine-into-single vs parametrize trade-off**: When same setup
+  fixture supports multiple distinct assertions, *merging* tests into a
+  single combined test reduces collected count too — `parametrize` keeps
+  it flat. Use combine when assertions complement (different aspects of
+  one setup). Use parametrize when shape genuinely varies (different
+  inputs, different expected outputs).
+
 ## [0.66.22] - 2026-05-04
 
 ### Changed
