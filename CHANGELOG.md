@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.19] - 2026-05-04
+
+### Fixed
+- **`ScalarType.FLOAT` no longer falls through to `str` in
+  `_scalar_type_to_python`** (#1012). DSL `float` fields had been
+  generating Pydantic models with field type `str`, so reading a row
+  with a real float value raised `ValidationError: Input should be a
+  valid string [type=string_type, input_value=0.678, input_type=float]`.
+  Added the explicit `ScalarType.FLOAT: float` mapping. Money fields
+  are unaffected — the entity converter pre-expands them into
+  `_minor` (INT) + `_currency` (STR) so they never reach this
+  mapping directly.
+
+### Added
+- **`tests/unit/test_model_generator_scalar_types.py`** — regression gate
+  that asserts every `ScalarType` member has an explicit mapping (or
+  is on the allow-list of intentionally-string types). Catches the
+  silent-fallback bug class. New `ScalarType` members will fail this
+  test until they get a mapping.
+
+### Agent Guidance
+- When adding a new `ScalarType` enum member to
+  `dazzle_back/specs/entity.py`, also add an explicit entry to
+  `_scalar_type_to_python` in `dazzle_back/runtime/model_generator.py`.
+  The `mapping.get(scalar_type, str)` fallback is a footgun — it lets
+  new types silently produce string-typed pydantic models. The new
+  regression test fails loudly when this happens.
+
 ## [0.65.18] - 2026-05-04
 
 ### Added

@@ -33,12 +33,22 @@ except ImportError:
 
 
 def _scalar_type_to_python(scalar_type: ScalarType) -> type:
-    """Map scalar types to Python types."""
+    """Map scalar types to Python types.
+
+    Keep this aligned with the runtime ``ScalarType`` enum in
+    ``dazzle_back/specs/entity.py``; the silent ``str`` fallback used to
+    let new types slip through (#1012 — ``FLOAT`` fields produced models
+    typed as ``str``, breaking pydantic validation when the DB returned
+    an actual float). Money fields are pre-expanded by the entity
+    converter into ``_minor`` (INT) + ``_currency`` (STR), so they
+    never reach this mapping directly.
+    """
     mapping: dict[ScalarType, type] = {
         ScalarType.STR: str,
         ScalarType.TEXT: str,
         ScalarType.INT: int,
         ScalarType.DECIMAL: Decimal,
+        ScalarType.FLOAT: float,
         ScalarType.BOOL: bool,
         ScalarType.DATE: date,
         ScalarType.DATETIME: datetime,
