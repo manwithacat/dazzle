@@ -24,8 +24,10 @@
 @import url("reset.css") layer(reset);
 @import url("../vendor/tom-select.css") layer(vendor);
 @import url("../vendor/flatpickr.css") layer(vendor);
-@import url("../vendor/quill.snow.css") layer(vendor);
-/* vendor/pickr.css removed in #976 — `widget=color` uses native input. */
+/* vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
+ * dz-richtext (Dazzle-native, bundled). Caught by the /fuzz runtime
+ * pass: every rich_text page was 404ing on this stale @import.
+ * vendor/pickr.css removed in #976 — `widget=color` uses native input. */
 @import url("tokens.css") layer(tokens);
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);

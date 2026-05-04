@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.4] - 2026-05-04
+
+### Fixed
+- **#1001 — stale Quill CSS refs surviving cycle-4 removal** caused
+  a 404 on every rich_text page (`/static/vendor/quill.snow.css`)
+  + ~160 lines of dead `.ql-*` token-overrides shipped in every
+  bundle. Caught by the new wide runtime-fuzz: the static `/fuzz`
+  doesn't see CSS imports, and boot-stderr doesn't see browser
+  fetches.
+
+  Removed the `@import url("../vendor/quill.snow.css")` line from
+  `dazzle.css` and the entire `.ql-*` block from `design-system.css`
+  (lines 1097-1256, 160 lines deleted). Drift gate
+  `tests/unit/test_no_stale_quill_refs.py` (3 assertions) prevents
+  re-introduction by failing CI on any `quill` reference or `.ql-`
+  rule outside a CSS comment.
+
+### Changed
+- **`fuzz_runtime` runner improvements** (caught while running the
+  wide sweep that found #1001):
+  - Reads the actual port from `.dazzle/runtime.json` (`ui_url`)
+    instead of hard-coding `:3158`. `dazzle serve` allocates its
+    own port; back-to-back runs against different projects had been
+    hitting connection refused on a stale assumed port.
+  - Clears the runtime file before boot so a stale secret from a
+    prior aborted run doesn't get read back.
+  - Probes the openapi spec for `/app/*/create` surfaces instead of
+    a hard-coded candidate list — works generically across any app.
+  - Cleanup waits for SIGTERM ack + a short port-release pause so
+    successive boots don't race the OS releasing the listening port.
+
+### Agent Guidance
+- When removing a vendored asset (Quill, Pickr, etc.), grep
+  `src/dazzle_ui/runtime/static/css/` for `@import` lines AND for
+  any `.<vendor-prefix>-*` rule blocks — vendor stylesheets usually
+  ship both the loader and theme overrides, and removing one
+  without the other leaves a 404 + dead CSS shipping silently.
+  The `/fuzz` runtime sweep is the canonical detection pass.
+
 ## [0.65.3] - 2026-05-04
 
 ### Added

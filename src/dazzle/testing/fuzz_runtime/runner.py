@@ -45,12 +45,24 @@ class FuzzReport:
 
 
 @contextmanager
-def _booted_app(project_root: Path, port: int = 3158) -> Iterator[tuple[str, str]]:
-    """Boot the app under test on `port`; yield (base_url, test_secret).
+def _booted_app(project_root: Path) -> Iterator[tuple[str, str]]:
+    """Boot the app under test; yield (base_url, test_secret).
 
-    Cleanup tears down the subprocess.
+    `dazzle serve` allocates its own port and publishes both the URL
+    and the test secret to `.dazzle/runtime.json`. We read both from
+    there rather than hard-coding — that's what the e2e runner does
+    and it lets parallel runs share the implementation.
+
+    Cleanup tears down the subprocess (and waits for the port to
+    actually release before returning, so the next run on the same
+    project doesn't hit a stale-port connect).
     """
     env = {"DAZZLE_SKIP_INFRA_CHECK": "1"}
+    runtime_path = project_root / ".dazzle" / "runtime.json"
+    # Stale runtime file from the previous run would let us read an
+    # old secret before the new boot writes its own. Clear it.
+    if runtime_path.exists():
+        runtime_path.unlink()
     proc = subprocess.Popen(
         ["dazzle", "serve", "--local", "--test-mode"],
         cwd=str(project_root),
@@ -58,26 +70,25 @@ def _booted_app(project_root: Path, port: int = 3158) -> Iterator[tuple[str, str
         stderr=subprocess.STDOUT,
         env={**__import__("os").environ, **env},
     )
-    base = f"http://127.0.0.1:{port}"
-    runtime_path = project_root / ".dazzle" / "runtime.json"
-    deadline = time.time() + 15
+    deadline = time.time() + 20
     secret = ""
+    base = ""
     try:
         while time.time() < deadline:
             if runtime_path.exists():
                 try:
-                    secret = json.loads(runtime_path.read_text()).get("test_secret", "")
-                    if secret:
+                    rt = json.loads(runtime_path.read_text())
+                    secret = rt.get("test_secret", "")
+                    base = rt.get("ui_url", "")
+                    if secret and base:
                         break
                 except Exception:
                     pass
             time.sleep(0.2)
-        if not secret:
-            raise RuntimeError("test_secret not published in runtime.json")
+        if not secret or not base:
+            raise RuntimeError("test_secret / ui_url not published in runtime.json")
         # Wait until /openapi.json is reachable. Use httpx (existing
-        # framework dependency) — avoids the standard-library scanner
-        # warning about dynamic URL construction even though the URL
-        # is always a fixed loopback string.
+        # framework dependency).
         import httpx
 
         for _ in range(40):
@@ -94,6 +105,10 @@ def _booted_app(project_root: Path, port: int = 3158) -> Iterator[tuple[str, str
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.wait(timeout=2)
+        # Give the OS a moment to actually release the listening port
+        # so back-to-back boots of different projects don't fight.
+        time.sleep(0.5)
 
 
 def _authenticate(base: str, secret: str, role: str = "admin") -> dict[str, str]:
@@ -269,26 +284,34 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
         report.skipped_reason = f"playwright not installed: {exc}"
         return report
 
-    # Discover the first surface that hosts a rich_text widget by
-    # scanning the DSL — keeps the runner generic.
-    dsl_text = "\n".join(p.read_text() for p in (project_root / "dsl").glob("*.dsl"))
-    if "widget=rich_text" not in dsl_text and "widget: rich_text" not in dsl_text:
-        report.skipped_reason = "no rich_text widget declared in this project"
-        return report
+    # We boot first and probe rendered HTML rather than DSL text —
+    # text-typed fields auto-pick the rich_text widget without an
+    # explicit `widget=rich_text` declaration in DSL, so a string
+    # search would miss real mount points.
 
-    # Convention: a `*_create` surface is the easiest to reach. We
-    # don't try to be clever — the user can extend this.
-    candidate_paths = [
-        "/app/showcase/create",
-        "/app/contact/create",
-        "/app/task/create",
-        "/app/ticket/create",
-        "/app/comment/create",
-        "/app/feedbackreport/create",
-    ]
+    # Convention: probe `<entity_lower>/create` for every entity in
+    # the openapi spec. `*_create` surfaces are the cheapest to reach.
+    # The first hit with a `[data-dz-widget="richtext"]` mount wins.
 
     with _booted_app(project_root) as (base, secret):
         cookies = _authenticate(base, secret, role="admin")
+        # Probe the openapi spec for create surfaces — generic and
+        # works regardless of the app's entity naming conventions.
+        import httpx
+
+        candidate_paths: list[str] = []
+        try:
+            with httpx.Client(timeout=2.0) as c:
+                spec = c.get(f"{base}/openapi.json").json()
+            for path in spec.get("paths", {}):
+                if path.startswith("/app/") and path.endswith("/create"):
+                    candidate_paths.append(path)
+        except Exception:
+            pass
+        if not candidate_paths:
+            report.skipped_reason = "no /app/*/create surfaces in openapi"
+            return report
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             ctx = browser.new_context()
@@ -311,12 +334,17 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
 
             mounted = False
             for path in candidate_paths:
-                page.goto(f"{base}{path}", wait_until="domcontentloaded")
+                try:
+                    page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=5000)
+                except Exception:
+                    continue
                 if page.locator('[data-dz-widget="richtext"]').count() > 0:
                     mounted = True
                     break
             if not mounted:
-                report.skipped_reason = "no rich_text mount point reachable on probed surfaces"
+                report.skipped_reason = (
+                    f"no rich_text mount on any of {len(candidate_paths)} create surfaces"
+                )
                 browser.close()
                 return report
 
