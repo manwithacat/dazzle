@@ -171,8 +171,64 @@ class TestCronMatchesEveryField:
 
 
 class TestDueJobs:
-    def test_empty_jobs_returns_empty(self):
-        assert due_jobs([], now=_at(), last_fired_minute={}) == []
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "empty_jobs",
+            "already_fired_this_minute",
+            "fired_different_minute",
+            "multiple_jobs_subset",
+            "seconds_truncated",
+        ],
+        ids=[
+            "test_empty_jobs_returns_empty",
+            "test_already_fired_this_minute_dedupes",
+            "test_fired_a_different_minute_does_not_dedupe",
+            "test_multiple_jobs_subset_due",
+            "test_seconds_truncated_for_dedupe_key",
+        ],
+    )
+    def test_due_jobs(self, scenario: str):
+        if scenario == "empty_jobs":
+            assert due_jobs([], now=_at(), last_fired_minute={}) == []
+        elif scenario == "already_fired_this_minute":
+            c = parse_cron("0 1 * * *")
+            already = _at(hour=1, minute=0)
+            result = due_jobs(
+                [("daily_summary", c)],
+                now=already,
+                last_fired_minute={"daily_summary": already.replace(second=0, microsecond=0)},
+            )
+            assert result == []
+        elif scenario == "fired_different_minute":
+            c = parse_cron("0 1 * * *")
+            result = due_jobs(
+                [("daily_summary", c)],
+                now=_at(hour=1, minute=0),
+                last_fired_minute={
+                    "daily_summary": _at(hour=1, minute=0).replace(day=3),
+                },
+            )
+            assert result == ["daily_summary"]
+        elif scenario == "multiple_jobs_subset":
+            every_minute = parse_cron("* * * * *")
+            only_at_two = parse_cron("0 2 * * *")
+            result = due_jobs(
+                [("a", every_minute), ("b", only_at_two)],
+                now=_at(hour=1, minute=0),
+                last_fired_minute={},
+            )
+            assert result == ["a"]
+        elif scenario == "seconds_truncated":
+            c = parse_cron("* * * * *")
+            now_with_seconds = datetime(2026, 5, 4, 1, 0, 30, tzinfo=UTC)
+            truncated = now_with_seconds.replace(second=0, microsecond=0)
+            result = due_jobs(
+                [("x", c)],
+                now=now_with_seconds,
+                last_fired_minute={"x": truncated},
+            )
+            assert result == []
 
     @pytest.mark.parametrize(
         ("now_kwargs", "expected"),
@@ -193,48 +249,3 @@ class TestDueJobs:
             last_fired_minute={},
         )
         assert result == expected
-
-    def test_already_fired_this_minute_dedupes(self):
-        c = parse_cron("0 1 * * *")
-        already = _at(hour=1, minute=0)
-        result = due_jobs(
-            [("daily_summary", c)],
-            now=already,
-            last_fired_minute={"daily_summary": already.replace(second=0, microsecond=0)},
-        )
-        assert result == []
-
-    def test_fired_a_different_minute_does_not_dedupe(self):
-        c = parse_cron("0 1 * * *")
-        result = due_jobs(
-            [("daily_summary", c)],
-            now=_at(hour=1, minute=0),
-            last_fired_minute={
-                "daily_summary": _at(hour=1, minute=0).replace(day=3),  # yesterday's fire
-            },
-        )
-        assert result == ["daily_summary"]
-
-    def test_multiple_jobs_subset_due(self):
-        every_minute = parse_cron("* * * * *")
-        only_at_two = parse_cron("0 2 * * *")
-        result = due_jobs(
-            [("a", every_minute), ("b", only_at_two)],
-            now=_at(hour=1, minute=0),
-            last_fired_minute={},
-        )
-        assert result == ["a"]
-
-    def test_seconds_truncated_for_dedupe_key(self):
-        # `now` carries seconds, but the dedupe key is the minute —
-        # re-call within the same minute (different second) should
-        # still return empty when last_fired_minute is set.
-        c = parse_cron("* * * * *")
-        now_with_seconds = datetime(2026, 5, 4, 1, 0, 30, tzinfo=UTC)
-        truncated = now_with_seconds.replace(second=0, microsecond=0)
-        result = due_jobs(
-            [("x", c)],
-            now=now_with_seconds,
-            last_fired_minute={"x": truncated},
-        )
-        assert result == []

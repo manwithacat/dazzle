@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from dazzle.core.manifest import (
     ProjectManifest,
     URLsConfig,
@@ -76,65 +78,68 @@ api_url = "https://api.prod.com"
         assert manifest.urls.api_url == "https://api.prod.com"
 
 
-class TestResolveSiteUrl:
-    def test_default_when_no_manifest_no_env(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            assert resolve_site_url() == "http://localhost:3000"
-
-    def test_env_var_wins(self) -> None:
-        with patch.dict(os.environ, {"DAZZLE_SITE_URL": "https://env.example.com"}):
-            manifest = ProjectManifest(
-                name="test",
-                version="0.1.0",
-                project_root="",
-                module_paths=["./dsl"],
-                urls=URLsConfig(site_url="https://toml.example.com"),
-            )
-            assert resolve_site_url(manifest) == "https://env.example.com"
-
-    def test_manifest_wins_over_default(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            manifest = ProjectManifest(
-                name="test",
-                version="0.1.0",
-                project_root="",
-                module_paths=["./dsl"],
-                urls=URLsConfig(site_url="https://toml.example.com"),
-            )
-            assert resolve_site_url(manifest) == "https://toml.example.com"
-
-    def test_trailing_slash_stripped(self) -> None:
-        with patch.dict(os.environ, {"DAZZLE_SITE_URL": "https://example.com/"}):
-            assert resolve_site_url() == "https://example.com"
+def _manifest(*, site_url: str | None = None, api_url: str | None = None) -> ProjectManifest:
+    kwargs: dict = {}
+    if site_url is not None:
+        kwargs["site_url"] = site_url
+    if api_url is not None:
+        kwargs["api_url"] = api_url
+    return ProjectManifest(
+        name="test",
+        version="0.1.0",
+        project_root="",
+        module_paths=["./dsl"],
+        urls=URLsConfig(**kwargs) if kwargs else URLsConfig(),
+    )
 
 
-class TestResolveApiUrl:
-    def test_default_when_no_manifest_no_env(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            assert resolve_api_url() == "http://localhost:8000"
+@pytest.mark.parametrize(
+    ("env", "manifest", "expected"),
+    [
+        ({}, None, "http://localhost:3000"),
+        (
+            {"DAZZLE_SITE_URL": "https://env.example.com"},
+            _manifest(site_url="https://toml.example.com"),
+            "https://env.example.com",
+        ),
+        ({}, _manifest(site_url="https://toml.example.com"), "https://toml.example.com"),
+        ({"DAZZLE_SITE_URL": "https://example.com/"}, None, "https://example.com"),
+    ],
+    ids=[
+        "test_default_when_no_manifest_no_env",
+        "test_env_var_wins",
+        "test_manifest_wins_over_default",
+        "test_trailing_slash_stripped",
+    ],
+)
+def test_resolve_site_url(
+    env: dict[str, str], manifest: ProjectManifest | None, expected: str
+) -> None:
+    with patch.dict(os.environ, env, clear=True):
+        assert resolve_site_url(manifest) == expected
 
-    def test_env_var_wins(self) -> None:
-        with patch.dict(os.environ, {"DAZZLE_API_URL": "https://api.env.com"}):
-            manifest = ProjectManifest(
-                name="test",
-                version="0.1.0",
-                project_root="",
-                module_paths=["./dsl"],
-                urls=URLsConfig(api_url="https://api.toml.com"),
-            )
-            assert resolve_api_url(manifest) == "https://api.env.com"
 
-    def test_manifest_wins_over_default(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            manifest = ProjectManifest(
-                name="test",
-                version="0.1.0",
-                project_root="",
-                module_paths=["./dsl"],
-                urls=URLsConfig(api_url="https://api.toml.com"),
-            )
-            assert resolve_api_url(manifest) == "https://api.toml.com"
-
-    def test_trailing_slash_stripped(self) -> None:
-        with patch.dict(os.environ, {"DAZZLE_API_URL": "https://api.example.com/"}):
-            assert resolve_api_url() == "https://api.example.com"
+@pytest.mark.parametrize(
+    ("env", "manifest", "expected"),
+    [
+        ({}, None, "http://localhost:8000"),
+        (
+            {"DAZZLE_API_URL": "https://api.env.com"},
+            _manifest(api_url="https://api.toml.com"),
+            "https://api.env.com",
+        ),
+        ({}, _manifest(api_url="https://api.toml.com"), "https://api.toml.com"),
+        ({"DAZZLE_API_URL": "https://api.example.com/"}, None, "https://api.example.com"),
+    ],
+    ids=[
+        "test_default_when_no_manifest_no_env",
+        "test_env_var_wins",
+        "test_manifest_wins_over_default",
+        "test_trailing_slash_stripped",
+    ],
+)
+def test_resolve_api_url(
+    env: dict[str, str], manifest: ProjectManifest | None, expected: str
+) -> None:
+    with patch.dict(os.environ, env, clear=True):
+        assert resolve_api_url(manifest) == expected

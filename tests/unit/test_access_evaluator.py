@@ -84,80 +84,80 @@ def superuser_context() -> AccessRuntimeContext:
 class TestComparisonConditions:
     """Test basic comparison conditions."""
 
-    def test_equals_current_user(self, user_context: AccessRuntimeContext):
-        """Test owner_id = current_user comparison."""
-        condition = AccessConditionSpec(
-            kind="comparison",
-            field="owner_id",
-            comparison_op=AccessComparisonKind.EQUALS,
-            value="current_user",
-        )
-
-        record = {"id": "1", "owner_id": "user-456"}
-        assert evaluate_access_condition(condition, record, user_context) is True
-
-        other_record = {"id": "2", "owner_id": "user-789"}
-        assert evaluate_access_condition(condition, other_record, user_context) is False
-
-    def test_equals_literal(self, user_context: AccessRuntimeContext):
-        """Test field = literal comparison."""
-        condition = AccessConditionSpec(
-            kind="comparison",
-            field="status",
-            comparison_op=AccessComparisonKind.EQUALS,
-            value="active",
-        )
-
-        active_record = {"id": "1", "status": "active"}
-        assert evaluate_access_condition(condition, active_record, user_context) is True
-
-        inactive_record = {"id": "2", "status": "inactive"}
-        assert evaluate_access_condition(condition, inactive_record, user_context) is False
-
-    def test_not_equals(self, user_context: AccessRuntimeContext):
-        """Test != operator."""
-        condition = AccessConditionSpec(
-            kind="comparison",
-            field="status",
-            comparison_op=AccessComparisonKind.NOT_EQUALS,
-            value="deleted",
-        )
-
-        active_record = {"id": "1", "status": "active"}
-        assert evaluate_access_condition(condition, active_record, user_context) is True
-
-        deleted_record = {"id": "2", "status": "deleted"}
-        assert evaluate_access_condition(condition, deleted_record, user_context) is False
-
-    def test_greater_than(self, user_context: AccessRuntimeContext):
-        """Test > operator for numeric comparison."""
-        condition = AccessConditionSpec(
-            kind="comparison",
-            field="priority",
-            comparison_op=AccessComparisonKind.GREATER_THAN,
-            value=5,
-        )
-
-        high_priority = {"id": "1", "priority": 10}
-        assert evaluate_access_condition(condition, high_priority, user_context) is True
-
-        low_priority = {"id": "2", "priority": 3}
-        assert evaluate_access_condition(condition, low_priority, user_context) is False
-
-    def test_in_operator(self, user_context: AccessRuntimeContext):
-        """Test IN operator with value list."""
-        condition = AccessConditionSpec(
-            kind="comparison",
-            field="category",
-            comparison_op=AccessComparisonKind.IN,
-            value_list=["work", "personal", "urgent"],
-        )
-
-        work_record = {"id": "1", "category": "work"}
-        assert evaluate_access_condition(condition, work_record, user_context) is True
-
-        other_record = {"id": "2", "category": "archive"}
-        assert evaluate_access_condition(condition, other_record, user_context) is False
+    @pytest.mark.parametrize(
+        ("field", "comparison_op", "value", "value_list", "match_record", "miss_record"),
+        [
+            (
+                "owner_id",
+                AccessComparisonKind.EQUALS,
+                "current_user",
+                None,
+                {"id": "1", "owner_id": "user-456"},
+                {"id": "2", "owner_id": "user-789"},
+            ),
+            (
+                "status",
+                AccessComparisonKind.EQUALS,
+                "active",
+                None,
+                {"id": "1", "status": "active"},
+                {"id": "2", "status": "inactive"},
+            ),
+            (
+                "status",
+                AccessComparisonKind.NOT_EQUALS,
+                "deleted",
+                None,
+                {"id": "1", "status": "active"},
+                {"id": "2", "status": "deleted"},
+            ),
+            (
+                "priority",
+                AccessComparisonKind.GREATER_THAN,
+                5,
+                None,
+                {"id": "1", "priority": 10},
+                {"id": "2", "priority": 3},
+            ),
+            (
+                "category",
+                AccessComparisonKind.IN,
+                None,
+                ["work", "personal", "urgent"],
+                {"id": "1", "category": "work"},
+                {"id": "2", "category": "archive"},
+            ),
+        ],
+        ids=[
+            "test_equals_current_user",
+            "test_equals_literal",
+            "test_not_equals",
+            "test_greater_than",
+            "test_in_operator",
+        ],
+    )
+    def test_comparison(
+        self,
+        user_context: AccessRuntimeContext,
+        field: str,
+        comparison_op: AccessComparisonKind,
+        value,
+        value_list,
+        match_record: dict,
+        miss_record: dict,
+    ):
+        kwargs: dict = {
+            "kind": "comparison",
+            "field": field,
+            "comparison_op": comparison_op,
+        }
+        if value is not None:
+            kwargs["value"] = value
+        if value_list is not None:
+            kwargs["value_list"] = value_list
+        condition = AccessConditionSpec(**kwargs)
+        assert evaluate_access_condition(condition, match_record, user_context) is True
+        assert evaluate_access_condition(condition, miss_record, user_context) is False
 
 
 # =============================================================================

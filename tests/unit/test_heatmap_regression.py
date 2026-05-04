@@ -4,6 +4,8 @@
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle_back.runtime.workspace_rendering import (
     _inject_display_names,
     _resolve_display_name,
@@ -139,37 +141,32 @@ class TestHeatmapRowIds:
 class TestHeatmapThresholds:
     """Threshold resolution should produce correct lists for both static and ParamRef cases."""
 
-    def test_static_thresholds_from_ctx_region(self) -> None:
-        """Static thresholds on ctx_region should pass through unchanged."""
+    @pytest.mark.parametrize(
+        ("resolved", "ctx_thresholds", "expected"),
+        [
+            (None, [0.4, 0.6], [0.4, 0.6]),
+            (None, [], []),
+            (None, [0.3, 0.7], [0.3, 0.7]),
+            ([0.5, 0.8], [0.3, 0.7], [0.5, 0.8]),
+        ],
+        ids=[
+            "test_static_thresholds_from_ctx_region",
+            "test_empty_thresholds_stay_empty",
+            "test_paramref_fallback_to_ctx_defaults",
+            "test_paramref_runtime_override_wins",
+        ],
+    )
+    def test_threshold_resolution(
+        self,
+        resolved: list[float] | None,
+        ctx_thresholds: list[float],
+        expected: list[float],
+    ) -> None:
+        """Static and ParamRef threshold resolution paths."""
         ctx_region = MagicMock()
-        ctx_region.heatmap_thresholds = [0.4, 0.6]
-        # Simulate the else branch (non-ParamRef)
-        thresholds = list(getattr(ctx_region, "heatmap_thresholds", None) or [])
-        assert thresholds == [0.4, 0.6]
-
-    def test_empty_thresholds_stay_empty(self) -> None:
-        """When no thresholds configured, result should be empty list."""
-        ctx_region = MagicMock()
-        ctx_region.heatmap_thresholds = []
-        thresholds = list(getattr(ctx_region, "heatmap_thresholds", None) or [])
-        assert thresholds == []
-
-    def test_paramref_fallback_to_ctx_defaults(self) -> None:
-        """ParamRef with no runtime override should fall back to ctx_region defaults."""
-        # Simulate: resolve_value returns None, ctx_region has defaults
-        _resolved = None
-        ctx_region = MagicMock()
-        ctx_region.heatmap_thresholds = [0.3, 0.7]
-        thresholds = list(_resolved or getattr(ctx_region, "heatmap_thresholds", None) or [])
-        assert thresholds == [0.3, 0.7]
-
-    def test_paramref_runtime_override_wins(self) -> None:
-        """ParamRef with runtime override should use the resolved value."""
-        _resolved = [0.5, 0.8]
-        ctx_region = MagicMock()
-        ctx_region.heatmap_thresholds = [0.3, 0.7]
-        thresholds = list(_resolved or getattr(ctx_region, "heatmap_thresholds", None) or [])
-        assert thresholds == [0.5, 0.8]
+        ctx_region.heatmap_thresholds = ctx_thresholds
+        thresholds = list(resolved or getattr(ctx_region, "heatmap_thresholds", None) or [])
+        assert thresholds == expected
 
     def test_thresholds_length_for_rag_colours(self) -> None:
         """Template needs >= 2 thresholds for RAG colours."""
@@ -209,28 +206,29 @@ class TestHeatmapTemplateActionUrl:
 class TestResolveThresholdsFunction:
     """Test _resolve_thresholds from the UI renderer."""
 
-    def test_literal_list(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
-        assert _resolve_thresholds([0.4, 0.6]) == [0.4, 0.6]
-
-    def test_none_returns_empty(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
-        assert _resolve_thresholds(None) == []
-
-    def test_paramref_uses_default(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
+    @staticmethod
+    def _paramref(default: Any) -> MagicMock:
         ref = MagicMock()
         ref.key = "thresholds_key"
-        ref.default = [0.3, 0.7]
-        assert _resolve_thresholds(ref) == [0.3, 0.7]
+        ref.default = default
+        return ref
 
-    def test_paramref_no_default(self) -> None:
+    @pytest.mark.parametrize(
+        ("input_factory", "expected"),
+        [
+            (lambda: [0.4, 0.6], [0.4, 0.6]),
+            (lambda: None, []),
+            (lambda: TestResolveThresholdsFunction._paramref([0.3, 0.7]), [0.3, 0.7]),
+            (lambda: TestResolveThresholdsFunction._paramref(None), []),
+        ],
+        ids=[
+            "test_literal_list",
+            "test_none_returns_empty",
+            "test_paramref_uses_default",
+            "test_paramref_no_default",
+        ],
+    )
+    def test_resolve_thresholds(self, input_factory: Any, expected: list[float]) -> None:
         from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
 
-        ref = MagicMock()
-        ref.key = "thresholds_key"
-        ref.default = None
-        assert _resolve_thresholds(ref) == []
+        assert _resolve_thresholds(input_factory()) == expected

@@ -6,6 +6,8 @@ notifications, search on surfaces, and date-range reporting.
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     BulkConfig,
@@ -152,65 +154,30 @@ surface task_list "Tasks":
 
 
 class TestBulkConfig:
-    def test_bulk_all(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk: all
-"""
-        )
+    @pytest.mark.parametrize(
+        ("bulk_clause", "import_enabled", "export_enabled"),
+        [
+            ("  bulk: all\n", True, True),
+            ("  bulk: import\n", True, False),
+            ("  bulk: export\n", False, True),
+            ("  bulk: true\n", True, True),
+            ("  bulk:\n    import: false\n    export: true\n", False, True),
+        ],
+        ids=[
+            "test_bulk_all",
+            "test_bulk_import_only",
+            "test_bulk_export_only",
+            "test_bulk_true",
+            "test_bulk_block_import_disabled",
+        ],
+    )
+    def test_bulk_modes(self, bulk_clause: str, import_enabled: bool, export_enabled: bool) -> None:
+        dsl = 'module test\nentity Task "Task":\n  id: uuid pk\n  title: str(200)\n' + bulk_clause
+        frag = _parse(dsl)
         entity = frag.entities[0]
         assert entity.bulk is not None
-        assert entity.bulk.import_enabled is True
-        assert entity.bulk.export_enabled is True
-
-    def test_bulk_import_only(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk: import
-"""
-        )
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is True
-        assert entity.bulk.export_enabled is False
-
-    def test_bulk_export_only(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk: export
-"""
-        )
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is False
-        assert entity.bulk.export_enabled is True
-
-    def test_bulk_true(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk: true
-"""
-        )
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is True
-        assert entity.bulk.export_enabled is True
+        assert entity.bulk.import_enabled is import_enabled
+        assert entity.bulk.export_enabled is export_enabled
 
     def test_bulk_block_with_formats(self):
         frag = _parse(
@@ -232,23 +199,6 @@ entity Task "Task":
         assert BulkFormat.CSV in entity.bulk.formats
         assert BulkFormat.JSON in entity.bulk.formats
         assert BulkFormat.XLSX in entity.bulk.formats
-
-    def test_bulk_block_import_disabled(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk:
-    import: false
-    export: true
-"""
-        )
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is False
-        assert entity.bulk.export_enabled is True
 
     def test_no_bulk_default(self):
         frag = _parse(

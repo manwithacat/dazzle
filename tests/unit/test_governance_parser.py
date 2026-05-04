@@ -299,72 +299,58 @@ class TestTenancyParser:
     verify the keys that *are* handled correctly via IDENTIFIER tokens.
     """
 
-    def test_basic_tenancy_defaults(self) -> None:
-        """A minimal tenancy block produces the correct default isolation mode."""
-        from dazzle.core.ir.governance import TenancyMode
-
-        dsl = (
-            _HEADER
-            + """\
-tenancy:
-  mode: shared_schema
-  partition_key: tenant_id
-"""
-        )
-        fragment = _parse(dsl)
-
+    @pytest.mark.parametrize(
+        ("body", "extractor_factory"),
+        [
+            (
+                "tenancy:\n  mode: shared_schema\n  partition_key: tenant_id\n",
+                lambda: (
+                    lambda f: f.tenancy.isolation.mode,
+                    __import__(
+                        "dazzle.core.ir.governance", fromlist=["TenancyMode"]
+                    ).TenancyMode.SHARED_SCHEMA,
+                ),
+            ),
+            (
+                "tenancy:\n  partition_key: org_id\n",
+                lambda: (lambda f: f.tenancy.isolation.partition_key, "tenant_id"),
+            ),
+            (
+                "tenancy:\n  topics: namespace_per_tenant\n",
+                lambda: (
+                    lambda f: f.tenancy.isolation.topic_namespace,
+                    __import__(
+                        "dazzle.core.ir.governance", fromlist=["TopicNamespaceMode"]
+                    ).TopicNamespaceMode.NAMESPACE_PER_TENANT,
+                ),
+            ),
+            (
+                "tenancy:\n  partition_key: tenant_id\n",
+                lambda: (
+                    lambda f: f.tenancy.isolation.topic_namespace,
+                    __import__(
+                        "dazzle.core.ir.governance", fromlist=["TopicNamespaceMode"]
+                    ).TopicNamespaceMode.SHARED,
+                ),
+            ),
+            (
+                "tenancy:\n  exclude: [AuditLog]\n",
+                lambda: (lambda f: f.tenancy.entities_excluded, ["AuditLog"]),
+            ),
+        ],
+        ids=[
+            "test_basic_tenancy_defaults",
+            "test_tenancy_partition_key_default",
+            "test_tenancy_topics_namespace_per_tenant",
+            "test_tenancy_topics_defaults_to_shared",
+            "test_tenancy_exclude_single",
+        ],
+    )
+    def test_tenancy_attr(self, body: str, extractor_factory) -> None:
+        fragment = _parse(_HEADER + body)
+        extractor, expected = extractor_factory()
         assert fragment.tenancy is not None
-        # mode: is a keyword token so the parser silently skips it; default applies.
-        assert fragment.tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA
-
-    def test_tenancy_partition_key_default(self) -> None:
-        """partition_key is a keyword token and is silently skipped; default 'tenant_id' applies."""
-        dsl = (
-            _HEADER
-            + """\
-tenancy:
-  partition_key: org_id
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.tenancy is not None
-        # partition_key lexes as TokenType.PARTITION_KEY (a keyword), so the
-        # IDENTIFIER-keyed dispatch branch silently ignores it and the default
-        # value 'tenant_id' is preserved.
-        assert fragment.tenancy.isolation.partition_key == "tenant_id"
-
-    def test_tenancy_topics_namespace_per_tenant(self) -> None:
-        """topics: namespace_per_tenant sets TopicNamespaceMode.NAMESPACE_PER_TENANT."""
-        from dazzle.core.ir.governance import TopicNamespaceMode
-
-        dsl = (
-            _HEADER
-            + """\
-tenancy:
-  topics: namespace_per_tenant
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.tenancy is not None
-        assert fragment.tenancy.isolation.topic_namespace == TopicNamespaceMode.NAMESPACE_PER_TENANT
-
-    def test_tenancy_topics_defaults_to_shared(self) -> None:
-        """topics defaults to TopicNamespaceMode.SHARED when not specified."""
-        from dazzle.core.ir.governance import TopicNamespaceMode
-
-        dsl = (
-            _HEADER
-            + """\
-tenancy:
-  partition_key: tenant_id
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.tenancy is not None
-        assert fragment.tenancy.isolation.topic_namespace == TopicNamespaceMode.SHARED
+        assert extractor(fragment) == expected
 
     def test_tenancy_cross_tenant_access_false(self) -> None:
         """cross_tenant_access: false is parsed correctly."""
@@ -409,20 +395,6 @@ tenancy:
         assert "AuditLog" in fragment.tenancy.entities_excluded
         assert "SystemConfig" in fragment.tenancy.entities_excluded
         assert len(fragment.tenancy.entities_excluded) == 2
-
-    def test_tenancy_exclude_single(self) -> None:
-        """exclude list with one entry populates entities_excluded correctly."""
-        dsl = (
-            _HEADER
-            + """\
-tenancy:
-  exclude: [AuditLog]
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.tenancy is not None
-        assert fragment.tenancy.entities_excluded == ["AuditLog"]
 
     def test_tenancy_absent(self) -> None:
         """fragment.tenancy is None when no tenancy block is present."""

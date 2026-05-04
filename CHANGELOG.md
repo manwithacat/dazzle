@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.15] - 2026-05-04
+
+### Added
+- **Pass-3 cross-file audit** — `scripts/distill/cross_file.py` adds three
+  views the per-file Pass-2 cluster doesn't capture: cross-file shape clusters
+  (46 found, ~547 theoretical saving), implementation-mirror file candidates
+  (10 files, 136 tests), twin-file pairs by body-shape multiset overlap.
+  Outputs to `tests/audit/cross_file.json` + `cross_file_report.md`. The
+  sentinel `test_agent_*` family (deployment_state, integration_dependency,
+  operational_hygiene, performance_resource) shows 0.8-0.94 pairwise overlap
+  — primary target for next cycles.
+
+### Changed
+- **Distillation cycle 14** — Batch V finished mid-flight: -82 tests across
+  21 size-5 clusters in 19 files (test_audit_history, test_cron,
+  test_pdf_viewer_component, test_workspace_rendering, test_governance_parser,
+  test_pii_filter, test_qa_trial, test_sla_manager, etc.). 320 tests pass
+  across modified-this-cycle files. Suite total: 13,135 → 13,090 (45 fewer
+  this cycle, additional V work). Cumulative cycles 1-14: 14,295 → 13,090
+  (1,205 tests removed).
+
 ## [0.66.14] - 2026-05-04
 
 ### Changed

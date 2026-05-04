@@ -7,7 +7,10 @@ Covers:
 - Static heatmap thresholds (no ParamRef) still work in workspace rendering
 """
 
+from typing import Any
 from unittest.mock import MagicMock
+
+import pytest
 
 from dazzle.core.ir.params import ParamRef, ParamSpec
 from dazzle_back.runtime.param_store import ParamResolver, resolve_value
@@ -148,30 +151,27 @@ class TestWorkspaceHeatmapThresholdsStatic:
 class TestParamRefInRegionContext:
     """Regression test for #575 — ParamRef must not crash RegionContext validation."""
 
-    def test_resolve_thresholds_with_param_ref(self) -> None:
-        from dazzle.core.ir.params import ParamRef
+    @pytest.mark.parametrize(
+        ("input_factory", "expected"),
+        [
+            (
+                lambda: ParamRef(
+                    key="heatmap.rag.thresholds", param_type="list[float]", default=[40, 60]
+                ),
+                [40.0, 60.0],
+            ),
+            (lambda: [30, 70], [30.0, 70.0]),
+            (lambda: None, []),
+            (lambda: ParamRef(key="x.y", param_type="list[float]", default=[]), []),
+        ],
+        ids=[
+            "test_resolve_thresholds_with_param_ref",
+            "test_resolve_thresholds_with_list",
+            "test_resolve_thresholds_with_none",
+            "test_resolve_thresholds_with_empty_default",
+        ],
+    )
+    def test_resolve_thresholds(self, input_factory: Any, expected: list[float]) -> None:
         from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
 
-        ref = ParamRef(key="heatmap.rag.thresholds", param_type="list[float]", default=[40, 60])
-        result = _resolve_thresholds(ref)
-        assert result == [40.0, 60.0]
-
-    def test_resolve_thresholds_with_list(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
-        result = _resolve_thresholds([30, 70])
-        assert result == [30.0, 70.0]
-
-    def test_resolve_thresholds_with_none(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
-        result = _resolve_thresholds(None)
-        assert result == []
-
-    def test_resolve_thresholds_with_empty_default(self) -> None:
-        from dazzle.core.ir.params import ParamRef
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
-
-        ref = ParamRef(key="x.y", param_type="list[float]", default=[])
-        result = _resolve_thresholds(ref)
-        assert result == []
+        assert _resolve_thresholds(input_factory()) == expected

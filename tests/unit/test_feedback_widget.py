@@ -219,48 +219,28 @@ class TestFeedbackWidgetParser:
         assert frag.feedback_widget is not None
         assert frag.feedback_widget.enabled is False
 
-    def test_custom_position(self) -> None:
-        """Custom position sub-key."""
-        dsl = 'module test\napp test "Test"\n\nfeedback_widget: enabled\n  position: top-left\n'
+    @pytest.mark.parametrize(
+        ("subkey_line", "attr", "expected"),
+        [
+            ("  position: top-left\n", "position", "top-left"),
+            ("  categories: [bug, other]\n", "categories", ["bug", "other"]),
+            ("  severities: [critical, minor]\n", "severities", ["critical", "minor"]),
+            ("  capture: [url, persona]\n", "capture", ["url", "persona"]),
+            ("  shortcut: f1\n", "shortcut", "f1"),
+        ],
+        ids=[
+            "test_custom_position",
+            "test_custom_categories_list",
+            "test_custom_severities",
+            "test_custom_capture",
+            "test_custom_shortcut",
+        ],
+    )
+    def test_custom_subkeys(self, subkey_line: str, attr: str, expected) -> None:
+        dsl = 'module test\napp test "Test"\n\nfeedback_widget: enabled\n' + subkey_line
         frag = _parse(dsl)
         assert frag.feedback_widget is not None
-        assert frag.feedback_widget.position == "top-left"
-
-    def test_custom_categories_list(self) -> None:
-        """Custom categories as bracket list."""
-        dsl = (
-            'module test\napp test "Test"\n\nfeedback_widget: enabled\n  categories: [bug, other]\n'
-        )
-        frag = _parse(dsl)
-        assert frag.feedback_widget is not None
-        assert frag.feedback_widget.categories == ["bug", "other"]
-
-    def test_custom_severities(self) -> None:
-        """Custom severities."""
-        dsl = (
-            'module test\napp test "Test"\n\n'
-            "feedback_widget: enabled\n"
-            "  severities: [critical, minor]\n"
-        )
-        frag = _parse(dsl)
-        assert frag.feedback_widget is not None
-        assert frag.feedback_widget.severities == ["critical", "minor"]
-
-    def test_custom_capture(self) -> None:
-        """Custom capture list."""
-        dsl = (
-            'module test\napp test "Test"\n\nfeedback_widget: enabled\n  capture: [url, persona]\n'
-        )
-        frag = _parse(dsl)
-        assert frag.feedback_widget is not None
-        assert frag.feedback_widget.capture == ["url", "persona"]
-
-    def test_custom_shortcut(self) -> None:
-        """Custom shortcut."""
-        dsl = 'module test\napp test "Test"\n\nfeedback_widget: enabled\n  shortcut: f1\n'
-        frag = _parse(dsl)
-        assert frag.feedback_widget is not None
-        assert frag.feedback_widget.shortcut == "f1"
+        assert getattr(frag.feedback_widget, attr) == expected
 
     def test_partial_subkeys_use_defaults(self) -> None:
         """Partial sub-keys fill remaining with defaults."""

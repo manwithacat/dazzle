@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (13,135 test functions)
+# Test Suite Taxonomy — Pass 1 (13,090 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,19 +6,19 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 11,213 | 85.4% | 0 |
-| smoke | 1,372 | 10.4% | 535 |
-| parametric_cluster | 313 | 2.4% | 313 |
-| regression_pin | 167 | 1.3% | 167 |
+| contract | 11,163 | 85.3% | 0 |
+| smoke | 1,367 | 10.4% | 535 |
+| parametric_cluster | 325 | 2.5% | 325 |
+| regression_pin | 165 | 1.3% | 165 |
 | implementation_mirror | 52 | 0.4% | 0 |
 | snapshot | 12 | 0.1% | 12 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 11,705 (contract + regression_pin + parametric + snapshot)
+- **Definitely keep**: 11,665 (contract + regression_pin + parametric + snapshot)
 - **Review for collapse/rewrite**: 58 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,372
+- **Smoke tests** (canary; keep but never as sole coverage): 1,367
 
 ## Top 10 implementation-mirror files
 

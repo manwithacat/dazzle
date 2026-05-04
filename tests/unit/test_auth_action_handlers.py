@@ -285,8 +285,27 @@ class TestAssertCookieClearedAction:
 
 
 class TestAssertRedirectUrlAction:
-    def test_location_header_match(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=302, headers={"location": "/app"})
+    @pytest.mark.parametrize(
+        ("response_kwargs", "expected_result"),
+        [
+            ({"status_code": 302, "headers": {"location": "/app"}}, TestResult.PASSED),
+            ({"status_code": 302, "headers": {"location": "/login"}}, TestResult.FAILED),
+            ({"status_code": 200, "json_body": {"redirect_url": "/app"}}, TestResult.PASSED),
+            ({"status_code": 200, "headers": {"hx-redirect": "/app"}}, TestResult.PASSED),
+            ({"status_code": 302, "headers": {"location": "/app/"}}, TestResult.PASSED),
+        ],
+        ids=[
+            "test_location_header_match",
+            "test_location_header_mismatch",
+            "test_json_redirect_url",
+            "test_hx_redirect_header",
+            "test_trailing_slash_tolerance",
+        ],
+    )
+    def test_redirect_assertion(
+        self, runner: TestRunner, response_kwargs: dict, expected_result: TestResult
+    ) -> None:
+        resp = _make_response(**response_kwargs)
         context = {"last_response": resp}
 
         result = runner.execute_step(
@@ -298,67 +317,7 @@ class TestAssertRedirectUrlAction:
             design={},
             context=context,
         )
-        assert result.result == TestResult.PASSED
-
-    def test_location_header_mismatch(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=302, headers={"location": "/login"})
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_redirect_url",
-                "target": "last_response",
-                "data": {"redirect_url": "/app"},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.FAILED
-
-    def test_json_redirect_url(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=200, json_body={"redirect_url": "/app"})
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_redirect_url",
-                "target": "last_response",
-                "data": {"redirect_url": "/app"},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.PASSED
-
-    def test_hx_redirect_header(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=200, headers={"hx-redirect": "/app"})
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_redirect_url",
-                "target": "last_response",
-                "data": {"redirect_url": "/app"},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.PASSED
-
-    def test_trailing_slash_tolerance(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=302, headers={"location": "/app/"})
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_redirect_url",
-                "target": "last_response",
-                "data": {"redirect_url": "/app"},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.PASSED
+        assert result.result == expected_result
 
 
 class TestAssertUnauthenticatedAction:

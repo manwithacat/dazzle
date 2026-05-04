@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.compliance.analytics import (
     resolve_active_providers,
 )
@@ -23,17 +25,26 @@ def _spec(*providers: tuple[str, dict[str, str]]) -> AnalyticsSpec:
 
 
 class TestResolveActiveProviders:
-    def test_none_analytics_returns_empty(self) -> None:
+    @pytest.mark.parametrize(
+        "spec_factory",
+        [
+            lambda: None,
+            lambda: AnalyticsSpec(),
+            lambda: _spec(("no_such_provider", {"id": "x"})),
+            lambda: _spec(("plausible", {})),  # missing required `domain`
+        ],
+        ids=[
+            "test_none_analytics_returns_empty",
+            "test_no_providers_returns_empty",
+            "test_unknown_provider_skipped",
+            "test_missing_required_params_skipped",
+        ],
+    )
+    def test_returns_empty(self, spec_factory) -> None:
         state = build_decided_state(
             analytics=True, advertising=True, personalization=True, functional=True
         )
-        assert resolve_active_providers(None, state) == []
-
-    def test_no_providers_returns_empty(self) -> None:
-        state = build_decided_state(
-            analytics=True, advertising=True, personalization=True, functional=True
-        )
-        assert resolve_active_providers(AnalyticsSpec(), state) == []
+        assert resolve_active_providers(spec_factory(), state) == []
 
     def test_plausible_gated_on_analytics_consent(self) -> None:
         spec = _spec(("plausible", {"domain": "example.com"}))
@@ -62,22 +73,6 @@ class TestResolveActiveProviders:
         assert len(active) == 1
         assert active[0]["name"] == "gtm"
         assert active[0]["params"]["id"] == "GTM-X"
-
-    def test_unknown_provider_skipped(self) -> None:
-        spec = _spec(("no_such_provider", {"id": "x"}))
-        state = build_decided_state(
-            analytics=True, advertising=True, personalization=True, functional=True
-        )
-        assert resolve_active_providers(spec, state) == []
-
-    def test_missing_required_params_skipped(self) -> None:
-        """Provider instance missing a required param is skipped silently
-        with a warning log."""
-        spec = _spec(("plausible", {}))  # no `domain`
-        state = build_decided_state(
-            analytics=True, advertising=False, personalization=False, functional=True
-        )
-        assert resolve_active_providers(spec, state) == []
 
     def test_undecided_consent_state(self) -> None:
         """EU default-undecided state: analytics denied → no plausible, but

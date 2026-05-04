@@ -157,30 +157,33 @@ class TestSLATimer:
 
 
 class TestConditionMatching:
-    def test_transition_operator(self) -> None:
-        cond = SLAConditionSpec(field="status", operator="->", value="open")
-        result = SLAManager._matches(cond, {"status": "open"}, {"status": "draft"})
-        assert result is True
-
-    def test_transition_no_change(self) -> None:
-        cond = SLAConditionSpec(field="status", operator="->", value="open")
-        result = SLAManager._matches(cond, {"status": "open"}, {"status": "open"})
-        assert result is False
-
-    def test_transition_no_old_data(self) -> None:
-        cond = SLAConditionSpec(field="status", operator="->", value="open")
-        result = SLAManager._matches(cond, {"status": "open"}, None)
-        assert result is True
-
-    def test_equals_operator(self) -> None:
-        cond = SLAConditionSpec(field="status", operator="=", value="on_hold")
-        result = SLAManager._matches(cond, {"status": "on_hold"}, None)
-        assert result is True
-
-    def test_equals_mismatch(self) -> None:
-        cond = SLAConditionSpec(field="status", operator="=", value="on_hold")
-        result = SLAManager._matches(cond, {"status": "open"}, None)
-        assert result is False
+    @pytest.mark.parametrize(
+        ("operator", "value", "new_data", "old_data", "expected"),
+        [
+            ("->", "open", {"status": "open"}, {"status": "draft"}, True),
+            ("->", "open", {"status": "open"}, {"status": "open"}, False),
+            ("->", "open", {"status": "open"}, None, True),
+            ("=", "on_hold", {"status": "on_hold"}, None, True),
+            ("=", "on_hold", {"status": "open"}, None, False),
+        ],
+        ids=[
+            "test_transition_operator",
+            "test_transition_no_change",
+            "test_transition_no_old_data",
+            "test_equals_operator",
+            "test_equals_mismatch",
+        ],
+    )
+    def test_matches(
+        self,
+        operator: str,
+        value: str,
+        new_data: dict,
+        old_data: dict | None,
+        expected: bool,
+    ) -> None:
+        cond = SLAConditionSpec(field="status", operator=operator, value=value)
+        assert SLAManager._matches(cond, new_data, old_data) is expected
 
     def test_matches_state(self) -> None:
         cond = SLAConditionSpec(field="status", operator="->", value="on_hold")

@@ -264,25 +264,26 @@ class TestTrialCompletion:
     def _make_action(self, action_type: ActionType, target: str | None = None) -> AgentAction:
         return AgentAction(type=action_type, target=target)
 
-    def test_submit_verdict_tool_action_returns_true(self) -> None:
-        action = self._make_action(ActionType.TOOL, "submit_verdict")
-        assert _trial_completion(action, []) is True
-
-    def test_done_action_returns_true(self) -> None:
-        action = self._make_action(ActionType.DONE)
-        assert _trial_completion(action, []) is True
-
-    def test_record_friction_tool_does_not_terminate(self) -> None:
-        action = self._make_action(ActionType.TOOL, "record_friction")
-        assert _trial_completion(action, []) is False
-
-    def test_navigate_action_does_not_terminate(self) -> None:
-        action = self._make_action(ActionType.NAVIGATE, "/app/tickets")
-        assert _trial_completion(action, []) is False
-
-    def test_click_action_does_not_terminate(self) -> None:
-        action = self._make_action(ActionType.CLICK, "#btn-save")
-        assert _trial_completion(action, []) is False
+    @pytest.mark.parametrize(
+        ("action_type", "target", "expected"),
+        [
+            (ActionType.TOOL, "submit_verdict", True),
+            (ActionType.DONE, None, True),
+            (ActionType.TOOL, "record_friction", False),
+            (ActionType.NAVIGATE, "/app/tickets", False),
+            (ActionType.CLICK, "#btn-save", False),
+        ],
+        ids=[
+            "test_submit_verdict_tool_action_returns_true",
+            "test_done_action_returns_true",
+            "test_record_friction_tool_does_not_terminate",
+            "test_navigate_action_does_not_terminate",
+            "test_click_action_does_not_terminate",
+        ],
+    )
+    def test_completion(self, action_type: ActionType, target: str | None, expected: bool) -> None:
+        action = self._make_action(action_type, target)
+        assert _trial_completion(action, []) is expected
 
 
 # ---------------------------------------------------------------------------
