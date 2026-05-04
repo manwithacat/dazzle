@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.8] - 2026-05-04
+
+### Fixed
+- **page-routes plural-redirect dangling target**: when an entity
+  has no surfaces, the `/<plural>` 301 redirect to `/<singular>`
+  was registered but the singular target never mounted — clicking
+  the link 301'd straight to a 404. Caught by the wide runtime fuzz
+  (`/app/user`, `/app/users` in component_showcase). Fix: only
+  register the plural redirect when the singular canonical target
+  exists in the registered route set. The plural URL now 404s
+  cleanly instead of misleading users via a redirect to nothing.
+
+### Result
+- All 7 example/fixture apps green in the runtime fuzz: every
+  check passes, zero console errors. Closes the bug haul that
+  started with #1000–#1003.
+
 ## [0.65.7] - 2026-05-04
 
 ### Fixed

@@ -1598,6 +1598,14 @@ def create_page_routes(
         if plural_reg_path in _registered_reg_paths:
             # Something real already lives here — don't shadow it.
             continue
+        # #1004 — only register the plural redirect when the singular
+        # canonical target exists. When an entity has no surfaces, the
+        # singular page never gets registered, so a `/users` redirect
+        # to `/user` would 301 → 404. Drop the redirect in that case;
+        # there's nothing useful to point at.
+        singular_reg_path = f"/{singular_slug}"
+        if singular_reg_path not in _registered_reg_paths:
+            continue
 
         redirect_target = f"{app_prefix}/{singular_slug}"
 
