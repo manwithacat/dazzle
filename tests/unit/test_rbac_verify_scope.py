@@ -73,14 +73,14 @@ def _make_appspec(entities: list[EntitySpec]) -> MagicMock:
 
 
 class TestAnalyzeScopeTargets:
-    def test_entity_without_access_ignored(self) -> None:
-        entity = _make_entity("Task", scopes=None)
-        appspec = _make_appspec([entity])
+    def test_entities_without_targets_ignored(self) -> None:
+        """Combined: entity without access AND entity with empty scope list both yield no targets."""
+        # No access spec
+        appspec = _make_appspec([_make_entity("Task", scopes=None)])
         assert analyze_scope_targets(appspec) == []
 
-    def test_entity_with_no_scopes_ignored(self) -> None:
-        entity = _make_entity("Task", scopes=[])
-        appspec = _make_appspec([entity])
+        # Empty scopes list
+        appspec = _make_appspec([_make_entity("Task", scopes=[])])
         assert analyze_scope_targets(appspec) == []
 
     def test_read_scope_with_condition(self) -> None:
@@ -109,35 +109,33 @@ class TestAnalyzeScopeTargets:
         assert len(targets) == 1
         assert targets[0].is_all is True
 
-    def test_list_scope_included(self) -> None:
-        scope = _make_scope(
+    def test_operation_filtering_and_wildcard(self) -> None:
+        """Combined: LIST included, CREATE excluded, wildcard persona expands to '*'."""
+        # LIST is included
+        scope_list = _make_scope(
             operation=PermissionKind.LIST,
             condition=_make_condition(),
             personas=["viewer"],
         )
-        entity = _make_entity("Task", scopes=[scope])
-        appspec = _make_appspec([entity])
-        targets = analyze_scope_targets(appspec)
-        assert len(targets) == 1
+        appspec = _make_appspec([_make_entity("Task", scopes=[scope_list])])
+        assert len(analyze_scope_targets(appspec)) == 1
 
-    def test_create_scope_excluded(self) -> None:
-        scope = _make_scope(
+        # CREATE is excluded (no row-level scope)
+        scope_create = _make_scope(
             operation=PermissionKind.CREATE,
             condition=_make_condition(),
             personas=["editor"],
         )
-        entity = _make_entity("Task", scopes=[scope])
-        appspec = _make_appspec([entity])
+        appspec = _make_appspec([_make_entity("Task", scopes=[scope_create])])
         assert analyze_scope_targets(appspec) == []
 
-    def test_wildcard_persona(self) -> None:
-        scope = _make_scope(
+        # Empty personas list expands to a wildcard target
+        scope_wild = _make_scope(
             operation=PermissionKind.READ,
             condition=_make_condition(),
             personas=[],
         )
-        entity = _make_entity("Task", scopes=[scope])
-        appspec = _make_appspec([entity])
+        appspec = _make_appspec([_make_entity("Task", scopes=[scope_wild])])
         targets = analyze_scope_targets(appspec)
         assert len(targets) == 1
         assert targets[0].persona_id == "*"

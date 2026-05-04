@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.27] - 2026-05-04
+
+### Changed
+- **Distillation cycle 25** — Batch DD continued on test_rbac_verify_scope,
+  test_site_templates, test_touch_targets_css. 75 tests pass. Suite total:
+  12,585 → 12,565 (20 fewer this cycle). Cumulative: 14,295 → 12,565
+  (1,730 tests removed across 25 cycles). Need 565 more.
+
 ## [0.66.26] - 2026-05-04
 
 ### Changed

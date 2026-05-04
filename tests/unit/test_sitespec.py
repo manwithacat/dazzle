@@ -45,8 +45,9 @@ from dazzle.core.sitespec_loader import (
 class TestSiteSpecIR:
     """Tests for SiteSpec IR types."""
 
-    def test_brand_spec(self) -> None:
-        """Test BrandSpec creation."""
+    def test_basic_spec_construction(self) -> None:
+        """Combined: BrandSpec, LogoSpec (text+image), NavItemSpec construction."""
+        # BrandSpec
         brand = BrandSpec(
             product_name="TestApp",
             tagline="Build amazing things",
@@ -55,17 +56,16 @@ class TestSiteSpecIR:
         assert brand.product_name == "TestApp"
         assert brand.tagline == "Build amazing things"
 
-    def test_logo_spec(self) -> None:
-        """Test LogoSpec with different modes."""
+        # LogoSpec — text mode
         text_logo = LogoSpec(mode=LogoMode.TEXT, text="MyApp")
         assert text_logo.mode == LogoMode.TEXT
         assert text_logo.text == "MyApp"
 
+        # LogoSpec — image mode
         image_logo = LogoSpec(mode=LogoMode.IMAGE, image_path="/img/logo.png")
         assert image_logo.mode == LogoMode.IMAGE
 
-    def test_nav_item_spec(self) -> None:
-        """Test NavItemSpec creation."""
+        # NavItemSpec
         item = NavItemSpec(label="Home", href="/")
         assert item.label == "Home"
         assert item.href == "/"

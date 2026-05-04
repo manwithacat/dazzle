@@ -36,41 +36,27 @@ def tokens_css() -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_touch_target_token_present(tokens_css: str) -> None:
-    """The `--dz-touch-target-min` token must exist in tokens.css —
-    components/touch-targets.css references it via `var(...)`."""
+def test_token_and_media_query_invariants(tokens_css: str, touch_css: str) -> None:
+    """Combined: token present, token >=44px, pointer:coarse media query, components layer."""
+    # token name present
     assert "--dz-touch-target-min:" in tokens_css
 
-
-def test_touch_target_token_value_at_least_44px(tokens_css: str) -> None:
-    """Apple HIG floor. The token can be larger but never smaller."""
-    # Find the line with the token value.
+    # token value at least 44px
+    found_token = False
     for line in tokens_css.splitlines():
         if "--dz-touch-target-min:" in line:
-            # Extract numeric value before "px"; tolerant to whitespace.
             value = line.split(":", 1)[1].strip().rstrip(";").strip()
             assert value.endswith("px"), f"token value should be px, got {value!r}"
             assert int(value.removesuffix("px")) >= 44
-            return
-    pytest.fail("token line not found")
+            found_token = True
+            break
+    if not found_token:
+        pytest.fail("token line not found")
 
-
-# ---------------------------------------------------------------------------
-# Media-query gating
-# ---------------------------------------------------------------------------
-
-
-def test_uses_pointer_coarse_media_query(touch_css: str) -> None:
-    """Touch detection via `pointer: coarse`, not viewport width.
-    A touch tablet in landscape can be 'wide' but still needs 44px;
-    a mouse user on a narrow window doesn't."""
+    # media query gating
     assert "@media (pointer: coarse)" in touch_css
 
-
-def test_wraps_in_components_layer(touch_css: str) -> None:
-    """The framework uses `@layer components` so component-specific
-    overrides can win at higher specificity. The touch-target rule
-    must respect that layer."""
+    # cascade layer
     assert "@layer components" in touch_css
 
 

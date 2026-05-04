@@ -394,59 +394,36 @@ class TestSitePageTemplate:
         assert "Our Story" in html
         assert "/img/team.webp" in html
 
-    def test_renders_trust_bar(self) -> None:
+    def test_renders_misc_sections(self) -> None:
+        """Combined: trust_bar, value_highlight, comparison, logo_cloud each render
+        the canonical class + content."""
         from dazzle_ui.runtime.site_context import build_site_page_context
 
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        page_data = {
-            "title": "Home",
-            "sections": [
+        cases: list[tuple[dict[str, Any], list[str]]] = [
+            # trust_bar
+            (
                 {
                     "type": "trust_bar",
                     "items": [
                         {"text": "ICAEW Certified", "icon": "shield-check"},
                         {"text": "GDPR Compliant", "icon": "lock"},
                     ],
-                }
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
-
-        assert "dz-section-trust-bar" in html
-        assert "ICAEW Certified" in html
-        assert 'data-lucide="shield-check"' in html
-
-    def test_renders_value_highlight(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        page_data = {
-            "title": "Home",
-            "sections": [
+                },
+                ["dz-section-trust-bar", "ICAEW Certified", 'data-lucide="shield-check"'],
+            ),
+            # value_highlight
+            (
                 {
                     "type": "value_highlight",
                     "headline": "Our Commitment",
                     "subhead": "Quality first",
                     "body": "We deliver excellence",
                     "primary_cta": {"label": "Get Started", "href": "/start"},
-                }
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
-
-        assert "dz-section-value-highlight" in html
-        assert "Our Commitment" in html
-        assert "Quality first" in html
-
-    def test_renders_comparison(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        page_data = {
-            "title": "Plans",
-            "sections": [
+                },
+                ["dz-section-value-highlight", "Our Commitment", "Quality first"],
+            ),
+            # comparison
+            (
                 {
                     "type": "comparison",
                     "headline": "Plans",
@@ -454,41 +431,29 @@ class TestSitePageTemplate:
                         {"label": "Free", "highlighted": False},
                         {"label": "Pro", "highlighted": True},
                     ],
-                    "items": [
-                        {"feature": "Users", "cells": ["5", "Unlimited"]},
-                    ],
-                }
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
-
-        assert "dz-section-comparison" in html
-        assert "dz-comparison-highlighted" in html
-        assert "Free" in html
-        assert "Unlimited" in html
-
-    def test_renders_logo_cloud(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        page_data = {
-            "title": "Home",
-            "sections": [
+                    "items": [{"feature": "Users", "cells": ["5", "Unlimited"]}],
+                },
+                ["dz-section-comparison", "dz-comparison-highlighted", "Free", "Unlimited"],
+            ),
+            # logo_cloud
+            (
                 {
                     "type": "logo_cloud",
                     "headline": "Trusted By",
                     "items": [
                         {"name": "Acme", "src": "/logos/acme.png", "href": "https://acme.com"},
                     ],
-                }
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
-
-        assert "dz-section-logo-cloud" in html
-        assert "Acme" in html
+                },
+                ["dz-section-logo-cloud", "Acme"],
+            ),
+        ]
+        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
+        for section, expected in cases:
+            page_data = {"title": "X", "sections": [section]}
+            ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+            html = _render("site/page.html", ctx)
+            for needle in expected:
+                assert needle in html, f"missing {needle!r} in section type={section['type']}"
 
     def test_renders_multiple_sections(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_page_context
