@@ -60,26 +60,37 @@ class TestMT01MissingPartitionKey:
         assert findings[0].severity == Severity.CRITICAL
         assert "tenant_id" in findings[0].title
 
-    def test_passes_when_field_present(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity(
-            "Task",
-            [pk_field(), str_field("title"), make_field("tenant_id", FieldTypeKind.UUID)],
-        )
-        tenancy = _tenancy()
-        assert agent.mt_01_missing_partition_key(make_appspec([entity], tenancy=tenancy)) == []
-
-    def test_skips_excluded_entities(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Config", [pk_field()])
-        tenancy = _tenancy(excluded=["Config"])
-        assert agent.mt_01_missing_partition_key(make_appspec([entity], tenancy=tenancy)) == []
-
-    def test_no_tenancy(self, agent: MultiTenancyAgent) -> None:
-        assert agent.mt_01_missing_partition_key(make_appspec()) == []
-
-    def test_non_shared_schema_skipped(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Task", [pk_field()])
-        tenancy = _tenancy(mode=TenancyMode.DATABASE_PER_TENANT)
-        assert agent.mt_01_missing_partition_key(make_appspec([entity], tenancy=tenancy)) == []
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "passes_when_field_present",
+            "skips_excluded_entities",
+            "no_tenancy",
+            "non_shared_schema_skipped",
+        ],
+        ids=[
+            "test_passes_when_field_present",
+            "test_skips_excluded_entities",
+            "test_no_tenancy",
+            "test_non_shared_schema_skipped",
+        ],
+    )
+    def test_mt_01_returns_empty(self, agent: MultiTenancyAgent, scenario: str) -> None:
+        if scenario == "passes_when_field_present":
+            entity = make_entity(
+                "Task",
+                [pk_field(), str_field("title"), make_field("tenant_id", FieldTypeKind.UUID)],
+            )
+            spec = make_appspec([entity], tenancy=_tenancy())
+        elif scenario == "skips_excluded_entities":
+            entity = make_entity("Config", [pk_field()])
+            spec = make_appspec([entity], tenancy=_tenancy(excluded=["Config"]))
+        elif scenario == "no_tenancy":
+            spec = make_appspec()
+        else:  # non_shared_schema_skipped
+            entity = make_entity("Task", [pk_field()])
+            spec = make_appspec([entity], tenancy=_tenancy(mode=TenancyMode.DATABASE_PER_TENANT))
+        assert agent.mt_01_missing_partition_key(spec) == []
 
 
 # =============================================================================

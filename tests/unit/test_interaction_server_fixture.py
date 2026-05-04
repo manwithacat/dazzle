@@ -214,8 +214,15 @@ class TestServerReadinessProbe:
     runtime.json was written before uvicorn bound its port).
     """
 
-    def test_returns_when_http_responds(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Opt out of the autouse stub so the real function runs.
+    @pytest.mark.parametrize(
+        "status_code",
+        [200, 403],
+        ids=["test_returns_when_http_responds", "test_4xx_counts_as_listening"],
+    )
+    def test_returns_when_server_listening(
+        self, monkeypatch: pytest.MonkeyPatch, status_code: int
+    ) -> None:
+        """Any HTTP response (200 or 4xx) means the server is bound and listening."""
         from dazzle.testing.ux.interactions import server_fixture as sf
 
         monkeypatch.setattr(
@@ -225,16 +232,12 @@ class TestServerReadinessProbe:
 
         fake_client = MagicMock()
         fake_response = MagicMock()
-        fake_response.status_code = 200
+        fake_response.status_code = status_code
         fake_client.__enter__ = MagicMock(return_value=fake_client)
         fake_client.__exit__ = MagicMock(return_value=False)
         fake_client.get = MagicMock(return_value=fake_response)
 
-        with patch(
-            "httpx.Client",
-            return_value=fake_client,
-        ):
-            # Should return promptly, no exception.
+        with patch("httpx.Client", return_value=fake_client):
             sf._wait_for_server_ready("http://localhost:9999", timeout=1.0)
 
     def test_raises_on_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -257,24 +260,3 @@ class TestServerReadinessProbe:
         with patch("httpx.Client", return_value=fake_client):
             with pytest.raises(InteractionServerError, match="did not accept connections"):
                 sf._wait_for_server_ready("http://localhost:9999", timeout=0.1)
-
-    def test_4xx_counts_as_listening(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # A 401/403/404 means the server is bound and answering —
-        # Playwright can goto, even if the content redirects to login.
-        from dazzle.testing.ux.interactions import server_fixture as sf
-
-        monkeypatch.setattr(
-            "dazzle.testing.ux.interactions.server_fixture._wait_for_server_ready",
-            _real_wait_for_server_ready,
-        )
-
-        fake_client = MagicMock()
-        fake_response = MagicMock()
-        fake_response.status_code = 403
-        fake_client.__enter__ = MagicMock(return_value=fake_client)
-        fake_client.__exit__ = MagicMock(return_value=False)
-        fake_client.get = MagicMock(return_value=fake_response)
-
-        with patch("httpx.Client", return_value=fake_client):
-            # Returns without exception.
-            sf._wait_for_server_ready("http://localhost:9999", timeout=1.0)

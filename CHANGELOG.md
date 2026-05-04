@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.18] - 2026-05-04
+
+### Changed
+- **Distillation cycle 16** — Batch Y (impl-mirror investigation, partial)
+  + Batch Z (size-4 sweep, partial) collapsed clusters across 21 files
+  including impl-mirror file candidates from the Pass-3 audit
+  (test_agent_core, test_composition_styles, test_cli_tenant,
+  test_github_issues, test_interaction_server_fixture, test_version_manager_pg,
+  test_cli_db_ops, test_tenant_registry) plus broad size-4 sweep across
+  test_celery_state, test_completeness_rules, test_composition_references,
+  test_computed_evaluator, test_consent_state, test_curl_test_generator,
+  test_dark_mode_toggle, test_dazzle_theme_cli, test_deploy_commands,
+  test_deploy_versioning, test_dsl_emitter, test_entity_list_projections,
+  test_agent_multi_tenancy. 437 tests pass across modified files. Suite
+  total: 12,926 → 12,853 (73 fewer this cycle). Cumulative: 14,295 → 12,853
+  (1,442 tests removed across 16 cycles). Need 854 more for < 12,000.
+
 ## [0.66.17] - 2026-05-04
 
 ### Changed

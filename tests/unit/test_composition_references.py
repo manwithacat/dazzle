@@ -156,12 +156,6 @@ class TestLoadReferences:
         assert "hero" not in refs
         assert refs == {}
 
-    def test_load_nonexistent_dir(self, tmp_path: Path) -> None:
-        from dazzle.core.composition_references import load_references
-
-        refs = load_references(tmp_path / "nonexistent")
-        assert refs == {}
-
     def test_max_per_section(self, tmp_path: Path) -> None:
         from dazzle.core.composition_references import load_references
 
@@ -170,37 +164,47 @@ class TestLoadReferences:
 
         assert len(refs["hero"]) == 1
 
-    def test_missing_image_skipped(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "nonexistent_dir",
+            "missing_image",
+            "bad_manifest_json",
+        ],
+        ids=[
+            "test_load_nonexistent_dir",
+            "test_missing_image_skipped",
+            "test_bad_manifest_json_skipped",
+        ],
+    )
+    def test_load_returns_empty_dict(self, tmp_path: Path, scenario: str) -> None:
         from dazzle.core.composition_references import load_references
 
-        hero_dir = tmp_path / "hero"
-        hero_dir.mkdir()
-        manifest = {
-            "section_type": "hero",
-            "references": [
-                {
-                    "filename": "missing.png",
-                    "label": "good",
-                    "section_type": "hero",
-                    "dimensions": [],
-                    "description": "",
-                    "source": "test",
-                }
-            ],
-        }
-        (hero_dir / "manifest.json").write_text(json.dumps(manifest))
-
-        refs = load_references(tmp_path)
-        assert refs == {}
-
-    def test_bad_manifest_json_skipped(self, tmp_path: Path) -> None:
-        from dazzle.core.composition_references import load_references
-
-        hero_dir = tmp_path / "hero"
-        hero_dir.mkdir()
-        (hero_dir / "manifest.json").write_text("not json{")
-
-        refs = load_references(tmp_path)
+        if scenario == "nonexistent_dir":
+            refs = load_references(tmp_path / "nonexistent")
+        elif scenario == "missing_image":
+            hero_dir = tmp_path / "hero"
+            hero_dir.mkdir()
+            manifest = {
+                "section_type": "hero",
+                "references": [
+                    {
+                        "filename": "missing.png",
+                        "label": "good",
+                        "section_type": "hero",
+                        "dimensions": [],
+                        "description": "",
+                        "source": "test",
+                    }
+                ],
+            }
+            (hero_dir / "manifest.json").write_text(json.dumps(manifest))
+            refs = load_references(tmp_path)
+        else:  # bad_manifest_json
+            hero_dir = tmp_path / "hero"
+            hero_dir.mkdir()
+            (hero_dir / "manifest.json").write_text("not json{")
+            refs = load_references(tmp_path)
         assert refs == {}
 
 

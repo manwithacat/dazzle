@@ -14,25 +14,23 @@ from dazzle.core.process.celery_state import ProcessStateStore, _ProcessEncoder
 class TestProcessEncoder:
     """Test _ProcessEncoder handles DB types."""
 
-    def test_uuid(self):
-        uid = uuid.UUID("12345678-1234-5678-1234-567812345678")
-        result = json.dumps({"id": uid}, cls=_ProcessEncoder)
-        assert '"12345678-1234-5678-1234-567812345678"' in result
-
-    def test_datetime(self):
-        dt = datetime(2026, 2, 20, 12, 30, 0)
-        result = json.dumps({"ts": dt}, cls=_ProcessEncoder)
-        assert "2026-02-20T12:30:00" in result
-
-    def test_date(self):
-        d = date(2026, 2, 20)
-        result = json.dumps({"d": d}, cls=_ProcessEncoder)
-        assert "2026-02-20" in result
-
-    def test_decimal(self):
-        dec = Decimal("123.45")
-        result = json.dumps({"amount": dec}, cls=_ProcessEncoder)
-        assert "123.45" in result
+    @pytest.mark.parametrize(
+        "key,value,expected",
+        [
+            (
+                "id",
+                uuid.UUID("12345678-1234-5678-1234-567812345678"),
+                '"12345678-1234-5678-1234-567812345678"',
+            ),
+            ("ts", datetime(2026, 2, 20, 12, 30, 0), "2026-02-20T12:30:00"),
+            ("d", date(2026, 2, 20), "2026-02-20"),
+            ("amount", Decimal("123.45"), "123.45"),
+        ],
+        ids=["test_uuid", "test_datetime", "test_date", "test_decimal"],
+    )
+    def test_encoder_handles_type(self, key, value, expected):
+        result = json.dumps({key: value}, cls=_ProcessEncoder)
+        assert expected in result
 
     def test_nested_uuids(self):
         data = {

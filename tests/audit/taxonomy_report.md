@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (12,926 test functions)
+# Test Suite Taxonomy — Pass 1 (12,853 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,19 +6,19 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 10,968 | 84.9% | 0 |
-| smoke | 1,349 | 10.4% | 535 |
-| parametric_cluster | 375 | 2.9% | 375 |
-| regression_pin | 164 | 1.3% | 164 |
+| contract | 10,887 | 84.7% | 0 |
+| smoke | 1,334 | 10.4% | 533 |
+| parametric_cluster | 399 | 3.1% | 399 |
+| regression_pin | 163 | 1.3% | 163 |
 | implementation_mirror | 52 | 0.4% | 0 |
 | snapshot | 12 | 0.1% | 12 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 11,519 (contract + regression_pin + parametric + snapshot)
+- **Definitely keep**: 11,461 (contract + regression_pin + parametric + snapshot)
 - **Review for collapse/rewrite**: 58 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,349
+- **Smoke tests** (canary; keep but never as sole coverage): 1,334
 
 ## Top 10 implementation-mirror files
 
@@ -44,7 +44,7 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 - `tests/unit/test_grant_store.py` — 13 smoke tests
 - `tests/unit/test_job_queue.py` — 13 smoke tests
 - `tests/unit/test_notification_providers_ses_sendgrid.py` — 13 smoke tests
-- `tests/unit/test_computed_evaluator.py` — 12 smoke tests
+- `tests/e2e/test_fieldtest_hub_screenshots.py` — 11 smoke tests
 
 ## Notes on the classifier
 

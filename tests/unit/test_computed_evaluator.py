@@ -46,30 +46,32 @@ class TestFieldRefExpression:
         expr = ComputedExprSpec(kind="field_ref", path=["amount"])
         assert evaluate_expression(expr, {"amount": 100}) == 100
 
-    def test_missing_field(self) -> None:
-        expr = ComputedExprSpec(kind="field_ref", path=["missing"])
-        assert evaluate_expression(expr, {"amount": 100}) is None
-
     def test_string_numeric_coercion(self) -> None:
         expr = ComputedExprSpec(kind="field_ref", path=["price"])
         assert evaluate_expression(expr, {"price": "49.99"}) == 49.99
-
-    def test_non_numeric_string(self) -> None:
-        expr = ComputedExprSpec(kind="field_ref", path=["name"])
-        assert evaluate_expression(expr, {"name": "hello"}) is None
 
     def test_decimal_field(self) -> None:
         expr = ComputedExprSpec(kind="field_ref", path=["total"])
         assert evaluate_expression(expr, {"total": Decimal("10.50")}) == Decimal("10.50")
 
-    def test_empty_path(self) -> None:
-        expr = ComputedExprSpec(kind="field_ref", path=[])
-        assert evaluate_expression(expr, {"x": 1}) is None
-
-    def test_multi_segment_path_returns_none(self) -> None:
-        """Multi-segment paths are for aggregates, not direct field refs."""
-        expr = ComputedExprSpec(kind="field_ref", path=["items", "amount"])
-        assert evaluate_expression(expr, {"items": [{"amount": 10}]}) is None
+    @pytest.mark.parametrize(
+        "path,record",
+        [
+            (["missing"], {"amount": 100}),
+            (["name"], {"name": "hello"}),
+            ([], {"x": 1}),
+            (["items", "amount"], {"items": [{"amount": 10}]}),
+        ],
+        ids=[
+            "test_missing_field",
+            "test_non_numeric_string",
+            "test_empty_path",
+            "test_multi_segment_path_returns_none",
+        ],
+    )
+    def test_field_ref_returns_none(self, path: list[str], record: dict) -> None:
+        expr = ComputedExprSpec(kind="field_ref", path=path)
+        assert evaluate_expression(expr, record) is None
 
 
 # ---------------------------------------------------------------------------

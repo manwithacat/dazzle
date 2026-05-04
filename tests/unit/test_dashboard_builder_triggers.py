@@ -109,23 +109,23 @@ class TestDomDirectHelpers:
     """The DOM-direct helpers replace the array operations of the
     pre-#948 architecture."""
 
-    def test_helper_for_all_cards(self) -> None:
-        source = _load_js()
-        assert "_allCards()" in source
-
-    def test_helper_for_card_by_id(self) -> None:
-        source = _load_js()
-        assert "_cardById(cardId)" in source
-
-    def test_workspace_name_read_from_dom_attr(self) -> None:
-        source = _load_js()
-        # `_workspaceName()` reads the data-workspace-name attribute.
-        assert "data-workspace-name" in source
-
-    def test_catalog_read_from_dom_attr(self) -> None:
-        source = _load_js()
-        # `_catalog()` parses data-card-catalog when the picker opens.
-        assert "data-card-catalog" in source
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            "_allCards()",
+            "_cardById(cardId)",
+            "data-workspace-name",
+            "data-card-catalog",
+        ],
+        ids=[
+            "test_helper_for_all_cards",
+            "test_helper_for_card_by_id",
+            "test_workspace_name_read_from_dom_attr",
+            "test_catalog_read_from_dom_attr",
+        ],
+    )
+    def test_js_contains_helper(self, expected: str) -> None:
+        assert expected in _load_js()
 
     def test_apply_drag_transform_targets_dom_directly(self) -> None:
         """Drag preview now mutates `cardEl.style.cssText` rather than

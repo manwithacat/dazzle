@@ -33,22 +33,24 @@ class TestCreateGithubIssue:
             result = create_github_issue("title", "body", ["bug"])
             assert result == {"url": "https://github.com/manwithacat/dazzle/issues/42"}
 
-    def test_gh_not_available_returns_fallback(self) -> None:
+    def test_failure_modes_return_fallback(self) -> None:
+        """Each failure mode (gh missing, gh nonzero exit, gh binary not on PATH)
+        produces a fallback result with manual_url."""
+        # gh not available
         with patch("dazzle.mcp.server.github_issues._gh_available", return_value=False):
             result = create_github_issue("title", "body", ["bug"])
             assert result["fallback"] is True
             assert "manual_url" in result
 
-    def test_gh_run_fails_returns_fallback(self) -> None:
+        # gh available but command fails
         with (
             patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
             patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(returncode=1, stderr="auth error")
-            result = create_github_issue("title", "body", ["bug"])
-            assert result["fallback"] is True
+            assert create_github_issue("title", "body", ["bug"])["fallback"] is True
 
-    def test_gh_file_not_found_returns_fallback(self) -> None:
+        # gh binary not found at exec time
         with (
             patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
             patch(
@@ -56,8 +58,7 @@ class TestCreateGithubIssue:
                 side_effect=FileNotFoundError,
             ),
         ):
-            result = create_github_issue("title", "body", ["bug"])
-            assert result["fallback"] is True
+            assert create_github_issue("title", "body", ["bug"])["fallback"] is True
 
     def test_labels_passed_to_command(self) -> None:
         with (

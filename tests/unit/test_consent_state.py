@@ -88,24 +88,23 @@ class TestConsentStateSerialization:
         assert s.undecided
         assert s.analytics == "granted"
 
-    def test_malformed_cookie_falls_back(self) -> None:
-        s = parse_consent_cookie("not json", ConsentDefaults.for_jurisdiction("EU"))
-        assert s.undecided
-
-    def test_wrong_version_falls_back(self) -> None:
-        bad = '{"v":1,"a":"granted","d":"granted","p":"granted","f":"granted"}'
-        s = parse_consent_cookie(bad, ConsentDefaults.for_jurisdiction("EU"))
-        assert s.undecided
-
-    def test_invalid_choice_value_falls_back(self) -> None:
-        bad = (
-            f'{{"v":{CONSENT_COOKIE_VERSION},"a":"maybe","d":"denied","p":"denied","f":"granted"}}'
-        )
-        s = parse_consent_cookie(bad, ConsentDefaults.for_jurisdiction("EU"))
-        assert s.undecided
-
-    def test_non_object_cookie_falls_back(self) -> None:
-        s = parse_consent_cookie("[1, 2, 3]", ConsentDefaults.for_jurisdiction("EU"))
+    @pytest.mark.parametrize(
+        "cookie",
+        [
+            "not json",
+            '{"v":1,"a":"granted","d":"granted","p":"granted","f":"granted"}',
+            f'{{"v":{CONSENT_COOKIE_VERSION},"a":"maybe","d":"denied","p":"denied","f":"granted"}}',
+            "[1, 2, 3]",
+        ],
+        ids=[
+            "test_malformed_cookie_falls_back",
+            "test_wrong_version_falls_back",
+            "test_invalid_choice_value_falls_back",
+            "test_non_object_cookie_falls_back",
+        ],
+    )
+    def test_invalid_cookie_falls_back(self, cookie: str) -> None:
+        s = parse_consent_cookie(cookie, ConsentDefaults.for_jurisdiction("EU"))
         assert s.undecided
 
 

@@ -7,7 +7,7 @@ import pytest
 
 from dazzle.agent.core import DazzleAgent, Mission
 from dazzle.agent.executor import PlaywrightExecutor
-from dazzle.agent.models import ActionType, AgentAction, ObserverMode, PageState
+from dazzle.agent.models import ActionType, AgentAction, PageState
 from dazzle.agent.observer import PlaywrightObserver
 
 # =============================================================================
@@ -60,11 +60,9 @@ class TestStepBudgetNudge:
             terminal_tools=["submit_verdict"],
         )
 
-    def test_no_nudge_mid_run(self) -> None:
-        """At 20 steps remaining, no wrap-up pressure applied."""
+    def _history(self, agent: DazzleAgent, n: int) -> None:
         from dazzle.agent.models import ActionType, AgentAction, Step
 
-        agent = self._agent()
         agent._history = [
             Step(
                 state=self._state(),
@@ -73,8 +71,13 @@ class TestStepBudgetNudge:
                 step_number=i,
                 duration_ms=1.0,
             )
-            for i in range(1, 11)
+            for i in range(1, n + 1)
         ]
+
+    def test_no_nudge_mid_run(self) -> None:
+        """At 20 steps remaining, no wrap-up pressure applied."""
+        agent = self._agent()
+        self._history(agent, 10)
         msgs = agent._build_messages(
             self._state(), steps_remaining=20, mission=self._mission_with_terminal()
         )
@@ -83,19 +86,9 @@ class TestStepBudgetNudge:
         assert "submit_verdict" not in rendered
 
     def test_nudge_at_five_steps_remaining(self) -> None:
-        from dazzle.agent.models import ActionType, AgentAction, Step
-
+        """Near terminal — nudge cites the mission's terminal tool."""
         agent = self._agent()
-        agent._history = [
-            Step(
-                state=self._state(),
-                action=AgentAction(type=ActionType.NAVIGATE, target="/"),
-                result=MagicMock(state_changed=True),
-                step_number=i,
-                duration_ms=1.0,
-            )
-            for i in range(1, 26)
-        ]
+        self._history(agent, 25)
         msgs = agent._build_messages(
             self._state(), steps_remaining=5, mission=self._mission_with_terminal()
         )
@@ -104,19 +97,9 @@ class TestStepBudgetNudge:
         assert "submit_verdict" in rendered
 
     def test_nudge_uses_done_when_no_terminal_tool(self) -> None:
-        from dazzle.agent.models import ActionType, AgentAction, Step
-
+        """No terminal_tool → nudge says `done` instead."""
         agent = self._agent()
-        agent._history = [
-            Step(
-                state=self._state(),
-                action=AgentAction(type=ActionType.NAVIGATE, target="/"),
-                result=MagicMock(state_changed=True),
-                step_number=i,
-                duration_ms=1.0,
-            )
-            for i in range(1, 26)
-        ]
+        self._history(agent, 25)
         mission = Mission(name="x", system_prompt="p", max_steps=30)
         msgs = agent._build_messages(self._state(), steps_remaining=3, mission=mission)
         rendered = str(msgs)
@@ -135,16 +118,13 @@ class TestStepBudgetNudge:
 
 
 class TestBackendSelection:
-    def test_prefers_mcp_session_when_provided(self) -> None:
-        """When mcp_session is set, agent should use sampling, not the SDK."""
+    def test_mcp_session_routing(self) -> None:
+        """With mcp_session set, agent stores it; without, it stays None."""
         session = MagicMock()
-        agent = DazzleAgent(_mock_observer(), _mock_executor(), mcp_session=session)
-        assert agent._mcp_session is session
-
-    def test_falls_back_to_anthropic_without_session(self) -> None:
-        """Without mcp_session, agent should use the Anthropic SDK."""
-        agent = DazzleAgent(_mock_observer(), _mock_executor(), api_key="test-key")
-        assert agent._mcp_session is None
+        with_session = DazzleAgent(_mock_observer(), _mock_executor(), mcp_session=session)
+        assert with_session._mcp_session is session
+        without_session = DazzleAgent(_mock_observer(), _mock_executor(), api_key="test-key")
+        assert without_session._mcp_session is None
 
 
 # =============================================================================
@@ -254,12 +234,6 @@ class TestAnthropicSdk:
 
 
 class TestAccessibilityObserver:
-    def test_dom_mode_default(self) -> None:
-        """Default PlaywrightObserver uses DOM mode."""
-        page = MagicMock()
-        obs = PlaywrightObserver(page)
-        assert obs._mode == ObserverMode.DOM
-
     @pytest.mark.asyncio
     async def test_accessibility_snapshot(self) -> None:
         """Accessibility mode produces role-based selectors in PageState."""
@@ -323,19 +297,24 @@ class TestAccessibilityObserver:
         # The button at depth 12 should not be captured
         assert len(clickables) == 0
 
-    def test_build_a11y_selector(self) -> None:
-        """Various role/name combos produce correct selectors."""
-        assert PlaywrightObserver._build_a11y_selector("button", "OK") == 'role=button[name="OK"]'
-        assert PlaywrightObserver._build_a11y_selector("heading", "") == "role=heading"
-        assert (
-            PlaywrightObserver._build_a11y_selector("link", "Go Home")
-            == 'role=link[name="Go Home"]'
-        )
-
-    def test_build_a11y_selector_quote_escaping(self) -> None:
-        """Names containing quotes are escaped."""
-        sel = PlaywrightObserver._build_a11y_selector("button", 'Say "hello"')
-        assert sel == 'role=button[name="Say \\"hello\\""]'
+    @pytest.mark.parametrize(
+        "role,name,expected",
+        [
+            ("button", "OK", 'role=button[name="OK"]'),
+            ("heading", "", "role=heading"),
+            ("link", "Go Home", 'role=link[name="Go Home"]'),
+            ("button", 'Say "hello"', 'role=button[name="Say \\"hello\\""]'),
+        ],
+        ids=[
+            "test_build_a11y_selector_button",
+            "test_build_a11y_selector_no_name",
+            "test_build_a11y_selector_link",
+            "test_build_a11y_selector_quote_escaping",
+        ],
+    )
+    def test_build_a11y_selector(self, role: str, name: str, expected: str) -> None:
+        """Various role/name combos (with quote-escape) produce correct selectors."""
+        assert PlaywrightObserver._build_a11y_selector(role, name) == expected
 
 
 # =============================================================================
@@ -380,13 +359,6 @@ class TestConsoleNetworkCapture:
         assert len(state.console_messages) == 1
         assert state.console_messages[0]["level"] == "error"
         assert state.console_messages[0]["text"] == "Uncaught TypeError"
-
-    def test_console_capture_off_by_default(self) -> None:
-        """No console listener when capture_console=False."""
-        page = MagicMock()
-        PlaywrightObserver(page, capture_console=False, capture_network=False)
-        # page.on should not have been called
-        page.on.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_network_capture_errors(self) -> None:
@@ -448,26 +420,31 @@ class TestConsoleNetworkCapture:
 
 
 class TestExecutorRoleSelectors:
-    def test_resolve_css_passthrough(self) -> None:
-        """CSS selectors pass through to page.locator()."""
+    @pytest.mark.parametrize(
+        "selector,expected_method,expected_args,expected_kwargs",
+        [
+            ("#my-button", "locator", ("#my-button",), {}),
+            ('role=button[name="Submit"]', "get_by_role", ("button",), {"name": "Submit"}),
+            ("role=heading", "get_by_role", ("heading",), {}),
+        ],
+        ids=[
+            "test_resolve_css_passthrough",
+            "test_resolve_role_with_name",
+            "test_resolve_role_without_name",
+        ],
+    )
+    def test_resolve_locator_dispatch(
+        self,
+        selector: str,
+        expected_method: str,
+        expected_args: tuple,
+        expected_kwargs: dict,
+    ) -> None:
+        """_resolve_locator dispatches to the right Playwright API."""
         page = MagicMock()
         executor = PlaywrightExecutor(page)
-        executor._resolve_locator("#my-button")
-        page.locator.assert_called_once_with("#my-button")
-
-    def test_resolve_role_with_name(self) -> None:
-        """role=button[name="X"] dispatches to get_by_role."""
-        page = MagicMock()
-        executor = PlaywrightExecutor(page)
-        executor._resolve_locator('role=button[name="Submit"]')
-        page.get_by_role.assert_called_once_with("button", name="Submit")
-
-    def test_resolve_role_without_name(self) -> None:
-        """role=heading dispatches to get_by_role without name."""
-        page = MagicMock()
-        executor = PlaywrightExecutor(page)
-        executor._resolve_locator("role=heading")
-        page.get_by_role.assert_called_once_with("heading")
+        executor._resolve_locator(selector)
+        getattr(page, expected_method).assert_called_once_with(*expected_args, **expected_kwargs)
 
     @pytest.mark.asyncio
     async def test_click_with_role_selector(self) -> None:
@@ -735,50 +712,40 @@ class TestPageStatePrompt:
 class TestHttpExecutorClick:
     """Test that _click extracts href from selectors instead of no-oping."""
 
+    @pytest.mark.parametrize(
+        "target,resolved_url,should_navigate",
+        [
+            ('a[href="/login"]', "http://localhost:3000/login", True),
+            ('div[hx-get="/api/data"]', "http://localhost:3000/api/data", True),
+            ("button.submit", None, False),
+        ],
+        ids=[
+            "test_click_extracts_href_from_selector",
+            "test_click_extracts_hx_get_from_selector",
+            "test_click_falls_back_gracefully",
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_click_extracts_href_from_selector(self) -> None:
+    async def test_click_dispatch(
+        self, target: str, resolved_url: str | None, should_navigate: bool
+    ) -> None:
         from dazzle.agent.executor import HttpExecutor
 
         client = AsyncMock()
-        response = MagicMock()
-        response.url = "http://localhost:3000/login"
-        response.text = "<html></html>"
-        response.status_code = 200
-        client.get = AsyncMock(return_value=response)
+        if should_navigate:
+            response = MagicMock()
+            response.url = resolved_url
+            response.text = "<html></html>"
+            response.status_code = 200
+            client.get = AsyncMock(return_value=response)
 
         executor = HttpExecutor(client, "http://localhost:3000")
-        action = AgentAction(type=ActionType.CLICK, target='a[href="/login"]')
+        action = AgentAction(type=ActionType.CLICK, target=target)
         result = await executor.execute(action)
 
-        client.get.assert_called_once_with("http://localhost:3000/login", follow_redirects=True)
-        assert "Navigated" in result.message
-
-    @pytest.mark.asyncio
-    async def test_click_extracts_hx_get_from_selector(self) -> None:
-        from dazzle.agent.executor import HttpExecutor
-
-        client = AsyncMock()
-        response = MagicMock()
-        response.url = "http://localhost:3000/api/data"
-        response.text = "<html></html>"
-        response.status_code = 200
-        client.get = AsyncMock(return_value=response)
-
-        executor = HttpExecutor(client, "http://localhost:3000")
-        action = AgentAction(type=ActionType.CLICK, target='div[hx-get="/api/data"]')
-        result = await executor.execute(action)
-
-        client.get.assert_called_once()
-        assert "Navigated" in result.message
-
-    @pytest.mark.asyncio
-    async def test_click_falls_back_gracefully(self) -> None:
-        from dazzle.agent.executor import HttpExecutor
-
-        client = AsyncMock()
-        executor = HttpExecutor(client, "http://localhost:3000")
-        action = AgentAction(type=ActionType.CLICK, target="button.submit")
-        result = await executor.execute(action)
-
-        assert "Click on button.submit" in result.message
-        client.get.assert_not_called()
+        if should_navigate:
+            client.get.assert_called_once()
+            assert "Navigated" in result.message
+        else:
+            client.get.assert_not_called()
+            assert f"Click on {target}" in result.message

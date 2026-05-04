@@ -1,5 +1,7 @@
 """Tests for CRUD completeness relevance rules."""
 
+import pytest
+
 from dazzle.core.discovery.completeness_rules import check_completeness_relevance
 from dazzle.core.ir.domain import AccessSpec, EntitySpec, PermissionKind, PermissionRule
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
@@ -157,44 +159,42 @@ def test_entity_with_surfaces_but_no_entity_ref_is_unreachable() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_entity_with_all_surfaces_matching_produces_no_relevance() -> None:
-    """Entity with create/update/list permits and all three matching surfaces → no relevance."""
-    entity = _make_entity(
-        "Task",
-        [PermissionKind.CREATE, PermissionKind.UPDATE, PermissionKind.LIST],
-    )
-    surfaces = [
-        _make_surface("task_create", "Task", SurfaceMode.CREATE),
-        _make_surface("task_edit", "Task", SurfaceMode.EDIT),
-        _make_surface("task_list", "Task", SurfaceMode.LIST),
-    ]
-    results = check_completeness_relevance(entities=[entity], surfaces=surfaces)
-    assert results == []
-
-
-def test_entity_without_access_spec_produces_no_relevance() -> None:
-    """Entity with no access spec → no relevance (no declared permissions)."""
-    entity = _make_entity_no_access("Task")
-    results = check_completeness_relevance(entities=[entity], surfaces=[])
-    assert results == []
-
-
-def test_entity_with_empty_permissions_produces_no_relevance() -> None:
-    """Entity with an AccessSpec but empty permissions list → no relevance."""
-    access = AccessSpec(permissions=[])
-    entity = EntitySpec(name="Task", fields=[_str_field()], access=access)
-    results = check_completeness_relevance(entities=[entity], surfaces=[])
-    assert results == []
-
-
-# ---------------------------------------------------------------------------
-# Edge cases
-# ---------------------------------------------------------------------------
-
-
-def test_empty_inputs_return_empty_list() -> None:
-    """No entities or surfaces → empty results."""
-    results = check_completeness_relevance(entities=[], surfaces=[])
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "all_surfaces_matching",
+        "without_access_spec",
+        "empty_permissions",
+        "empty_inputs",
+    ],
+    ids=[
+        "test_entity_with_all_surfaces_matching_produces_no_relevance",
+        "test_entity_without_access_spec_produces_no_relevance",
+        "test_entity_with_empty_permissions_produces_no_relevance",
+        "test_empty_inputs_return_empty_list",
+    ],
+)
+def test_no_relevance_scenarios(scenario: str) -> None:
+    if scenario == "all_surfaces_matching":
+        entity = _make_entity(
+            "Task",
+            [PermissionKind.CREATE, PermissionKind.UPDATE, PermissionKind.LIST],
+        )
+        surfaces = [
+            _make_surface("task_create", "Task", SurfaceMode.CREATE),
+            _make_surface("task_edit", "Task", SurfaceMode.EDIT),
+            _make_surface("task_list", "Task", SurfaceMode.LIST),
+        ]
+        results = check_completeness_relevance(entities=[entity], surfaces=surfaces)
+    elif scenario == "without_access_spec":
+        entity = _make_entity_no_access("Task")
+        results = check_completeness_relevance(entities=[entity], surfaces=[])
+    elif scenario == "empty_permissions":
+        access = AccessSpec(permissions=[])
+        entity = EntitySpec(name="Task", fields=[_str_field()], access=access)
+        results = check_completeness_relevance(entities=[entity], surfaces=[])
+    else:  # empty_inputs
+        results = check_completeness_relevance(entities=[], surfaces=[])
     assert results == []
 
 

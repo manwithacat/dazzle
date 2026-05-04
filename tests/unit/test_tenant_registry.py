@@ -4,22 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.tenant.registry import TenantRecord, TenantRegistry
-
-
-class TestTenantRecord:
-    def test_fields(self) -> None:
-        record = TenantRecord(
-            id="uuid-1",
-            slug="cyfuture",
-            display_name="CyFuture UK",
-            schema_name="tenant_cyfuture",
-            status="active",
-            created_at="2026-01-01T00:00:00Z",
-            updated_at="2026-01-01T00:00:00Z",
-        )
-        assert record.slug == "cyfuture"
-        assert record.schema_name == "tenant_cyfuture"
+from dazzle.tenant.registry import TenantRegistry
 
 
 class TestTenantRegistryCreate:

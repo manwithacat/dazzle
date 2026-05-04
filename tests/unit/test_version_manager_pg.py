@@ -22,31 +22,36 @@ pytestmark = pytest.mark.postgres
 class TestVersionManagerPgInit:
     """Tests for VersionManager PostgreSQL initialization."""
 
-    def test_constructor_accepts_database_url(self) -> None:
-        """Test that constructor accepts database_url parameter."""
-        vm = VersionManager(db_path="test.db", database_url="postgresql://localhost/test")
-        assert vm._database_url == "postgresql://localhost/test"
-        assert vm._use_postgres is True
-
-    def test_constructor_default_sqlite(self) -> None:
-        """Test that constructor defaults to SQLite mode."""
-        vm = VersionManager(db_path="test.db")
-        assert vm._database_url is None
-        assert vm._use_postgres is False
-
-    def test_constructor_database_url_none_is_sqlite(self) -> None:
-        """Test that None database_url means SQLite mode."""
-        vm = VersionManager(db_path="test.db", database_url=None)
-        assert vm._use_postgres is False
+    def test_constructor_routes_database_mode(self) -> None:
+        """Constructor sets _use_postgres based on database_url presence."""
+        # Postgres mode
+        vm_pg = VersionManager(db_path="test.db", database_url="postgresql://localhost/test")
+        assert vm_pg._database_url == "postgresql://localhost/test"
+        assert vm_pg._use_postgres is True
+        # Default SQLite mode
+        vm_default = VersionManager(db_path="test.db")
+        assert vm_default._database_url is None
+        assert vm_default._use_postgres is False
+        # Explicit None is also SQLite mode
+        vm_none = VersionManager(db_path="test.db", database_url=None)
+        assert vm_none._use_postgres is False
 
 
 class TestVersionManagerPgConnect:
     """Tests for VersionManager._connect with PostgreSQL."""
 
+    @pytest.mark.parametrize(
+        "input_url",
+        ["postgresql://localhost/test", "postgres://localhost/test"],
+        ids=[
+            "test_connect_returns_psycopg_connection",
+            "test_connect_normalizes_postgres_url",
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_connect_returns_psycopg_connection(self) -> None:
-        """Test that _connect returns psycopg connection in pg mode."""
-        vm = VersionManager(db_path="test.db", database_url="postgresql://localhost/test")
+    async def test_connect_returns_psycopg_connection(self, input_url: str) -> None:
+        """_connect returns psycopg connection in pg mode and normalizes postgres:// → postgresql://."""
+        vm = VersionManager(db_path="test.db", database_url=input_url)
 
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
@@ -69,44 +74,7 @@ class TestVersionManagerPgConnect:
         try:
             conn = await vm._connect()
             assert conn is mock_conn
-            mock_psycopg.AsyncConnection.connect.assert_called_once_with(
-                "postgresql://localhost/test", row_factory=mock_rows.dict_row
-            )
-        finally:
-            if saved_psycopg is None:
-                sys.modules.pop("psycopg", None)
-            else:
-                sys.modules["psycopg"] = saved_psycopg
-            if saved_rows is None:
-                sys.modules.pop("psycopg.rows", None)
-            else:
-                sys.modules["psycopg.rows"] = saved_rows
-
-    @pytest.mark.asyncio
-    async def test_connect_normalizes_postgres_url(self) -> None:
-        """Test that _connect normalizes postgres:// to postgresql://."""
-        vm = VersionManager(db_path="test.db", database_url="postgres://localhost/test")
-
-        mock_conn = AsyncMock()
-        mock_conn.execute = AsyncMock()
-        mock_conn.fetchone = AsyncMock()
-        mock_conn.fetchall = AsyncMock()
-        mock_conn.commit = AsyncMock()
-        mock_conn.close = AsyncMock()
-
-        mock_psycopg = MagicMock()
-        mock_async_conn_cls = MagicMock()
-        mock_async_conn_cls.connect = AsyncMock(return_value=mock_conn)
-        mock_psycopg.AsyncConnection = mock_async_conn_cls
-        mock_rows = MagicMock()
-        mock_rows.dict_row = MagicMock()
-        saved_psycopg = sys.modules.get("psycopg")
-        saved_rows = sys.modules.get("psycopg.rows")
-        sys.modules["psycopg"] = mock_psycopg
-        sys.modules["psycopg.rows"] = mock_rows
-
-        try:
-            await vm._connect()
+            # Both inputs must reach psycopg as the normalized form.
             mock_psycopg.AsyncConnection.connect.assert_called_once_with(
                 "postgresql://localhost/test", row_factory=mock_rows.dict_row
             )

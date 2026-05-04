@@ -37,21 +37,24 @@ class TestGenerateProductionDockerfile:
 class TestGenerateHerokuFiles:
     """Tests for Heroku file generation."""
 
-    def test_procfile_uses_production_flag(self) -> None:
-        procfile, runtime, requirements = generate_heroku_files("0.46.2")
-        assert "dazzle serve --production" in procfile
-
-    def test_runtime_is_python_312(self) -> None:
-        _, runtime, _ = generate_heroku_files("0.46.2")
-        assert "python-3.12" in runtime
-
-    def test_requirements_pins_dazzle_version(self) -> None:
-        _, _, requirements = generate_heroku_files("0.46.2")
-        assert "dazzle-dsl==0.46.2" in requirements
-
-    def test_requirements_includes_psycopg(self) -> None:
-        _, _, requirements = generate_heroku_files("0.46.2")
-        assert "psycopg[binary]" in requirements
+    @pytest.mark.parametrize(
+        "index,expected",
+        [
+            (0, "dazzle serve --production"),
+            (1, "python-3.12"),
+            (2, "dazzle-dsl==0.46.2"),
+            (2, "psycopg[binary]"),
+        ],
+        ids=[
+            "test_procfile_uses_production_flag",
+            "test_runtime_is_python_312",
+            "test_requirements_pins_dazzle_version",
+            "test_requirements_includes_psycopg",
+        ],
+    )
+    def test_heroku_file_contains(self, index: int, expected: str) -> None:
+        files = generate_heroku_files("0.46.2")
+        assert expected in files[index]
 
 
 class TestGenerateComposeYaml:

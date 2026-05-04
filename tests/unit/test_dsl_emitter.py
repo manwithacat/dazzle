@@ -156,17 +156,18 @@ class TestUniqueName:
 
 
 class TestIsCommentOnly:
-    def test_comments(self) -> None:
-        assert _is_comment_only("# This is a comment\n# Another") is True
-
-    def test_empty(self) -> None:
-        assert _is_comment_only("") is True
-
-    def test_code(self) -> None:
-        assert _is_comment_only('surface foo "Foo":\n  mode: list') is False
-
-    def test_mixed(self) -> None:
-        assert _is_comment_only("# comment\nsurface foo") is False
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("# This is a comment\n# Another", True),
+            ("", True),
+            ('surface foo "Foo":\n  mode: list', False),
+            ("# comment\nsurface foo", False),
+        ],
+        ids=["test_comments", "test_empty", "test_code", "test_mixed"],
+    )
+    def test_is_comment_only(self, text: str, expected: bool) -> None:
+        assert _is_comment_only(text) is expected
 
 
 # =============================================================================

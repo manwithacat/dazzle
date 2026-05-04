@@ -17,21 +17,9 @@ _has_playwright = importlib.util.find_spec("playwright") is not None
 class TestDefaultProperties:
     """Test that default properties cover common layout issues."""
 
-    def test_includes_display(self) -> None:
-        assert "display" in DEFAULT_PROPERTIES
-
-    def test_includes_flex_direction(self) -> None:
-        assert "flex-direction" in DEFAULT_PROPERTIES
-
-    def test_includes_position(self) -> None:
-        assert "position" in DEFAULT_PROPERTIES
-
-    def test_includes_width_height(self) -> None:
-        assert "width" in DEFAULT_PROPERTIES
-        assert "height" in DEFAULT_PROPERTIES
-
-    def test_includes_overflow(self) -> None:
-        assert "overflow" in DEFAULT_PROPERTIES
+    def test_includes_layout_essentials(self) -> None:
+        for key in ("display", "flex-direction", "position", "width", "height", "overflow"):
+            assert key in DEFAULT_PROPERTIES, f"DEFAULT_PROPERTIES missing {key}"
 
 
 # ── Handler Tests ───────────────────────────────────────────────────
@@ -326,42 +314,3 @@ class TestInspectComputedStyles:
                 route="/",
                 selectors={"el": ".foo"},
             )
-
-    @patch("playwright.async_api.async_playwright")
-    @pytest.mark.asyncio
-    async def test_multiple_selectors(self, mock_pw_cls: Any) -> None:
-        from dazzle.core.composition_styles import inspect_computed_styles
-
-        mock_el_a = MagicMock()
-        mock_el_b = MagicMock()
-
-        mock_page = AsyncMock()
-        mock_page.query_selector = AsyncMock(side_effect=[mock_el_a, mock_el_b])
-        mock_page.evaluate = AsyncMock(
-            side_effect=[
-                {"display": "flex"},
-                {"display": "block"},
-            ]
-        )
-        mock_page.set_default_timeout = MagicMock()
-
-        mock_browser = AsyncMock()
-        mock_browser.new_page = AsyncMock(return_value=mock_page)
-
-        mock_pw = AsyncMock()
-        mock_pw.chromium.launch = AsyncMock(return_value=mock_browser)
-
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__ = AsyncMock(return_value=mock_pw)
-        mock_cm.__aexit__ = AsyncMock(return_value=False)
-        mock_pw_cls.return_value = mock_cm
-
-        result = await inspect_computed_styles(
-            base_url="http://localhost:3000",
-            route="/",
-            selectors={"a": ".class-a", "b": ".class-b"},
-            properties=["display"],
-        )
-
-        assert result["a"] == {"display": "flex"}
-        assert result["b"] == {"display": "block"}

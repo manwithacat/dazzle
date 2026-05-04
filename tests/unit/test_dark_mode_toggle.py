@@ -4,6 +4,10 @@ Unit tests for DAZZLE dark mode toggle (v0.16.0 - Issue #26).
 Tests for site page dark mode toggle functionality.
 """
 
+from pathlib import Path
+
+import pytest
+
 
 class TestDarkModeCSSClasses:
     """Tests for dark mode CSS classes in site-sections.css."""
@@ -82,58 +86,42 @@ class TestDarkModeCSSClasses:
 class TestSitePageToggleButton:
     """Tests for toggle button in site pages."""
 
-    def test_site_page_includes_toggle_button(self):
-        """Test that site page HTML includes toggle button."""
-        from pathlib import Path
-
-        # Toggle button HTML is in the Jinja2 template
-        tpl_path = Path("src/dazzle_ui/templates/site/includes/theme_toggle.html")
-        tpl_content = tpl_path.read_text()
-
-        # Check toggle button is included
-        assert "dz-theme-toggle" in tpl_content
-        assert "Toggle dark mode" in tpl_content
-
-    def test_site_page_toggle_has_icons(self):
-        """Test that toggle button has sun and moon icons."""
-        from pathlib import Path
-
-        # Toggle button HTML is in the Jinja2 template
-        tpl_path = Path("src/dazzle_ui/templates/site/includes/theme_toggle.html")
-        tpl_content = tpl_path.read_text()
-
-        # Check for sun and moon SVG icons
-        assert "dz-theme-toggle__sun" in tpl_content
-        assert "dz-theme-toggle__moon" in tpl_content
-
-    def test_site_js_includes_theme_init(self):
-        """Test that site.js includes theme initialization."""
-        from pathlib import Path
-
-        js_path = Path("src/dazzle_ui/static/js/site.js")
-        js_content = js_path.read_text()
-
-        # Check for theme initialization in site.js
-        assert "initTheme()" in js_content
-        assert "toggleTheme()" in js_content
+    @pytest.mark.parametrize(
+        "path,tokens",
+        [
+            (
+                "src/dazzle_ui/templates/site/includes/theme_toggle.html",
+                ["dz-theme-toggle", "Toggle dark mode"],
+            ),
+            (
+                "src/dazzle_ui/templates/site/includes/theme_toggle.html",
+                ["dz-theme-toggle__sun", "dz-theme-toggle__moon"],
+            ),
+            (
+                "src/dazzle_ui/static/js/site.js",
+                ["initTheme()", "toggleTheme()"],
+            ),
+            (
+                "src/dazzle_ui/static/js/site.js",
+                ["prefers-color-scheme", "addEventListener"],
+            ),
+        ],
+        ids=[
+            "test_site_page_includes_toggle_button",
+            "test_site_page_toggle_has_icons",
+            "test_site_js_includes_theme_init",
+            "test_site_js_listens_for_system_preference",
+        ],
+    )
+    def test_file_contains_tokens(self, path: str, tokens: list[str]) -> None:
+        content = Path(path).read_text()
+        for token in tokens:
+            assert token in content
 
     def test_site_js_uses_storage_key(self):
         """Test that site.js uses the same storage key."""
-        from pathlib import Path
-
         js_path = Path("src/dazzle_ui/static/js/site.js")
         js_content = js_path.read_text()
 
         # Check for storage key in site.js
         assert "dz-theme-variant" in js_content
-
-    def test_site_js_listens_for_system_preference(self):
-        """Test that site.js listens for system preference changes."""
-        from pathlib import Path
-
-        js_path = Path("src/dazzle_ui/static/js/site.js")
-        js_content = js_path.read_text()
-
-        # Check for system preference listener
-        assert "prefers-color-scheme" in js_content
-        assert "addEventListener" in js_content

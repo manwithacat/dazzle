@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.db import db_app
@@ -144,22 +145,21 @@ class TestDbCleanupCommand:
 
 
 class TestDbStampCommand:
+    @pytest.mark.parametrize(
+        "revision",
+        ["head", "6ff3f549985c"],
+        ids=["test_stamp_head", "test_stamp_specific_revision"],
+    )
     @patch("dazzle.cli.db._get_alembic_cfg")
     @patch("alembic.command.stamp")
-    def test_stamp_head(self, mock_stamp: MagicMock, mock_cfg: MagicMock) -> None:
-        """'dazzle db stamp head' calls alembic.command.stamp with 'head'."""
-        result = runner.invoke(db_app, ["stamp", "head"])
+    def test_stamp_revision(
+        self, mock_stamp: MagicMock, mock_cfg: MagicMock, revision: str
+    ) -> None:
+        """'dazzle db stamp <rev>' forwards the revision arg to alembic.command.stamp."""
+        result = runner.invoke(db_app, ["stamp", revision])
         assert result.exit_code == 0
-        mock_stamp.assert_called_once_with(mock_cfg.return_value, "head")
-        assert "Stamped at: head" in result.output
-
-    @patch("dazzle.cli.db._get_alembic_cfg")
-    @patch("alembic.command.stamp")
-    def test_stamp_specific_revision(self, mock_stamp: MagicMock, mock_cfg: MagicMock) -> None:
-        """'dazzle db stamp <rev>' calls alembic.command.stamp with that rev."""
-        result = runner.invoke(db_app, ["stamp", "6ff3f549985c"])
-        assert result.exit_code == 0
-        mock_stamp.assert_called_once_with(mock_cfg.return_value, "6ff3f549985c")
+        mock_stamp.assert_called_once_with(mock_cfg.return_value, revision)
+        assert f"Stamped at: {revision}" in result.output
 
     def test_stamp_requires_revision_arg(self) -> None:
         """'dazzle db stamp' without argument shows error."""

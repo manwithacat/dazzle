@@ -1,5 +1,7 @@
 """Tests for build_entity_list_projections() — money field expansion and view projections."""
 
+import pytest
+
 import dazzle.core.ir as ir
 from dazzle_back.runtime.app_factory import build_entity_list_projections
 
@@ -159,34 +161,39 @@ class TestRequiredFieldInclusion:
 
 
 class TestEdgeCases:
-    def test_surface_without_view_ref_or_sections_not_projected(self) -> None:
-        entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
-        surface = ir.SurfaceSpec(
-            name="task_list", entity_ref="Task", view_ref=None, mode=ir.SurfaceMode.LIST
-        )
-
-        result = build_entity_list_projections([entity], [surface], [])
-
-        assert result == {}
-
-    def test_surface_with_missing_view_ignored(self) -> None:
-        entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
-        surface = _surface("task_list", "Task", "nonexistent_view")
-
-        result = build_entity_list_projections([entity], [surface], [])
-
-        assert result == {}
-
-    def test_empty_inputs(self) -> None:
-        assert build_entity_list_projections([], [], []) == {}
-
-    def test_view_with_empty_fields(self) -> None:
-        entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
-        surface = _surface("task_list", "Task", "task_view")
-        view = ir.ViewSpec(name="task_view", fields=[])
-
-        result = build_entity_list_projections([entity], [surface], [view])
-
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "surface_without_view_ref_or_sections",
+            "surface_with_missing_view",
+            "empty_inputs",
+            "view_with_empty_fields",
+        ],
+        ids=[
+            "test_surface_without_view_ref_or_sections_not_projected",
+            "test_surface_with_missing_view_ignored",
+            "test_empty_inputs",
+            "test_view_with_empty_fields",
+        ],
+    )
+    def test_returns_empty_dict(self, scenario: str) -> None:
+        if scenario == "surface_without_view_ref_or_sections":
+            entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
+            surface = ir.SurfaceSpec(
+                name="task_list", entity_ref="Task", view_ref=None, mode=ir.SurfaceMode.LIST
+            )
+            result = build_entity_list_projections([entity], [surface], [])
+        elif scenario == "surface_with_missing_view":
+            entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
+            surface = _surface("task_list", "Task", "nonexistent_view")
+            result = build_entity_list_projections([entity], [surface], [])
+        elif scenario == "empty_inputs":
+            result = build_entity_list_projections([], [], [])
+        else:  # view_with_empty_fields
+            entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
+            surface = _surface("task_list", "Task", "task_view")
+            view = ir.ViewSpec(name="task_view", fields=[])
+            result = build_entity_list_projections([entity], [surface], [view])
         assert result == {}
 
 

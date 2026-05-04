@@ -248,11 +248,6 @@ class TestScriptStructure:
 class TestCrudTests:
     """Test CRUD test generation."""
 
-    def test_pluralized_endpoints(self, simple_appspec: AppSpec) -> None:
-        gen = CurlTestGenerator(simple_appspec)
-        script = gen.generate(suites=["crud"])
-        assert "/api/tasks" in script
-
     def test_crud_operations(self, simple_appspec: AppSpec) -> None:
         gen = CurlTestGenerator(simple_appspec)
         script = gen.generate(suites=["crud"])
@@ -261,21 +256,25 @@ class TestCrudTests:
         assert '"Get Task"' in script
         assert '"Delete Task"' in script
 
-    def test_create_payload_has_required_fields(self, simple_appspec: AppSpec) -> None:
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            "/api/tasks",
+            '"title"',
+            "Updated value",
+            "ID_TASK=$(extract_json",
+        ],
+        ids=[
+            "test_pluralized_endpoints",
+            "test_create_payload_has_required_fields",
+            "test_update_payload",
+            "test_id_variable_extraction",
+        ],
+    )
+    def test_crud_script_contains(self, simple_appspec: AppSpec, expected: str) -> None:
         gen = CurlTestGenerator(simple_appspec)
         script = gen.generate(suites=["crud"])
-        # title is required
-        assert '"title"' in script
-
-    def test_update_payload(self, simple_appspec: AppSpec) -> None:
-        gen = CurlTestGenerator(simple_appspec)
-        script = gen.generate(suites=["crud"])
-        assert "Updated value" in script
-
-    def test_id_variable_extraction(self, simple_appspec: AppSpec) -> None:
-        gen = CurlTestGenerator(simple_appspec)
-        script = gen.generate(suites=["crud"])
-        assert "ID_TASK=$(extract_json" in script
+        assert expected in script
 
 
 class TestMoneyFields:

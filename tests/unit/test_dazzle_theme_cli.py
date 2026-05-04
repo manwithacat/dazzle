@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.theme import theme_app
@@ -191,40 +192,45 @@ class TestThemeInit:
         assert "Notion" in toml_text  # paper's inspired_by
         assert 'default_color_scheme = "light"' in toml_text  # paper's default
 
-    def test_init_unknown_inspired_by_exits_2(self, tmp_path: Path) -> None:
-        result = runner.invoke(
-            theme_app,
-            [
-                "init",
-                "x",
-                "--inspired-by",
-                "doesnt-exist",
-                "--project-root",
-                str(tmp_path),
-            ],
-        )
+    @pytest.mark.parametrize(
+        "args,prepare,expected",
+        [
+            (
+                ["init", "x", "--inspired-by", "doesnt-exist"],
+                False,
+                "not found",
+            ),
+            (
+                ["init", "Bad Name"],
+                False,
+                "Invalid theme name",
+            ),
+            (
+                ["init", "MyBrand"],
+                False,
+                "should be lowercase",
+            ),
+            (
+                ["init", "duplicate"],
+                True,
+                "already exists",
+            ),
+        ],
+        ids=[
+            "test_init_unknown_inspired_by_exits_2",
+            "test_init_invalid_name_exits_2",
+            "test_init_uppercase_name_exits_2",
+            "test_init_existing_theme_exits_2",
+        ],
+    )
+    def test_init_failure_exits_2(
+        self, tmp_path: Path, args: list[str], prepare: bool, expected: str
+    ) -> None:
+        if prepare:
+            runner.invoke(theme_app, [*args, "--project-root", str(tmp_path)])
+        result = runner.invoke(theme_app, [*args, "--project-root", str(tmp_path)])
         assert result.exit_code == 2
-        assert "not found" in result.output
-
-    def test_init_invalid_name_exits_2(self, tmp_path: Path) -> None:
-        # Name with a space — invalid
-        result = runner.invoke(theme_app, ["init", "Bad Name", "--project-root", str(tmp_path)])
-        assert result.exit_code == 2
-        assert "Invalid theme name" in result.output
-
-    def test_init_uppercase_name_exits_2(self, tmp_path: Path) -> None:
-        result = runner.invoke(theme_app, ["init", "MyBrand", "--project-root", str(tmp_path)])
-        assert result.exit_code == 2
-        assert "should be lowercase" in result.output
-
-    def test_init_existing_theme_exits_2(self, tmp_path: Path) -> None:
-        """Init refuses to overwrite — user must delete first."""
-        # Create the theme once
-        runner.invoke(theme_app, ["init", "duplicate", "--project-root", str(tmp_path)])
-        # Try to create again
-        result = runner.invoke(theme_app, ["init", "duplicate", "--project-root", str(tmp_path)])
-        assert result.exit_code == 2
-        assert "already exists" in result.output
+        assert expected in result.output
 
     def test_init_then_list_shows_new_theme(self, tmp_path: Path) -> None:
         """End-to-end: init scaffolds → list discovers immediately."""

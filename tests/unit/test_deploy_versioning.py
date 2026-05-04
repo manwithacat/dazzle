@@ -210,125 +210,88 @@ class TestChecksums:
         assert len(checksum1) == 16
 
 
+def _sv(name: str, checksum: str) -> object:
+    from dazzle.deploy.versioning import StackVersion
+
+    return StackVersion(name, checksum, "2024-01-01T00:00:00Z", f"stacks/{name.lower()}.py")
+
+
+def _iv(version: str, stacks: list) -> object:
+    from dazzle.deploy.versioning import InfraVersion
+
+    return InfraVersion(
+        version=version,
+        dazzle_version="0.5.0",
+        generated_at="2024-01-01T00:00:00Z",
+        environment="staging",
+        stacks=stacks,
+    )
+
+
 class TestVersionComparison:
     """Test version comparison."""
 
-    def test_compare_versions_first_deploy(self) -> None:
-        """First deploy should show all stacks as added."""
-        from dazzle.deploy.versioning import InfraVersion, StackVersion, compare_versions
+    @pytest.mark.parametrize(
+        "old_stacks,new_stacks,added,modified,removed,unchanged",
+        [
+            (
+                None,
+                [("Network", "abc"), ("Data", "def")],
+                ["Data", "Network"],
+                [],
+                [],
+                [],
+            ),
+            (
+                [("Network", "abc")],
+                [("Network", "abc")],
+                [],
+                [],
+                [],
+                ["Network"],
+            ),
+            (
+                [("Network", "abc")],
+                [("Network", "xyz")],
+                [],
+                ["Network"],
+                [],
+                [],
+            ),
+            (
+                [("Network", "abc"), ("Messaging", "def")],
+                [("Network", "abc"), ("TigerBeetle", "ghi")],
+                ["TigerBeetle"],
+                [],
+                ["Messaging"],
+                ["Network"],
+            ),
+        ],
+        ids=[
+            "test_compare_versions_first_deploy",
+            "test_compare_versions_no_changes",
+            "test_compare_versions_with_modifications",
+            "test_compare_versions_with_additions_and_removals",
+        ],
+    )
+    def test_compare_versions(
+        self,
+        old_stacks: list | None,
+        new_stacks: list,
+        added: list,
+        modified: list,
+        removed: list,
+        unchanged: list,
+    ) -> None:
+        from dazzle.deploy.versioning import compare_versions
 
-        new = InfraVersion(
-            version="v1",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-01T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-01T00:00:00Z", "stacks/network.py"),
-                StackVersion("Data", "def", "2024-01-01T00:00:00Z", "stacks/data.py"),
-            ],
-        )
-
-        diff = compare_versions(None, new)
-
-        assert diff.added == ["Data", "Network"]
-        assert diff.modified == []
-        assert diff.removed == []
-        assert diff.unchanged == []
-
-    def test_compare_versions_no_changes(self) -> None:
-        """Same checksums should show no changes."""
-        from dazzle.deploy.versioning import InfraVersion, StackVersion, compare_versions
-
-        old = InfraVersion(
-            version="v1",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-01T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-01T00:00:00Z", "stacks/network.py"),
-            ],
-        )
-
-        new = InfraVersion(
-            version="v2",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-02T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-02T00:00:00Z", "stacks/network.py"),
-            ],
-        )
-
+        old = _iv("v1", [_sv(n, c) for n, c in old_stacks]) if old_stacks is not None else None
+        new = _iv("v2", [_sv(n, c) for n, c in new_stacks])
         diff = compare_versions(old, new)
-
-        assert diff.added == []
-        assert diff.modified == []
-        assert diff.removed == []
-        assert diff.unchanged == ["Network"]
-
-    def test_compare_versions_with_modifications(self) -> None:
-        """Changed checksums should show as modified."""
-        from dazzle.deploy.versioning import InfraVersion, StackVersion, compare_versions
-
-        old = InfraVersion(
-            version="v1",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-01T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-01T00:00:00Z", "stacks/network.py"),
-            ],
-        )
-
-        new = InfraVersion(
-            version="v2",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-02T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "xyz", "2024-01-02T00:00:00Z", "stacks/network.py"),
-            ],
-        )
-
-        diff = compare_versions(old, new)
-
-        assert diff.added == []
-        assert diff.modified == ["Network"]
-        assert diff.removed == []
-        assert diff.unchanged == []
-
-    def test_compare_versions_with_additions_and_removals(self) -> None:
-        """Should detect added and removed stacks."""
-        from dazzle.deploy.versioning import InfraVersion, StackVersion, compare_versions
-
-        old = InfraVersion(
-            version="v1",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-01T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-01T00:00:00Z", "stacks/network.py"),
-                StackVersion("Messaging", "def", "2024-01-01T00:00:00Z", "stacks/messaging.py"),
-            ],
-        )
-
-        new = InfraVersion(
-            version="v2",
-            dazzle_version="0.5.0",
-            generated_at="2024-01-02T00:00:00Z",
-            environment="staging",
-            stacks=[
-                StackVersion("Network", "abc", "2024-01-02T00:00:00Z", "stacks/network.py"),
-                StackVersion("TigerBeetle", "ghi", "2024-01-02T00:00:00Z", "stacks/tigerbeetle.py"),
-            ],
-        )
-
-        diff = compare_versions(old, new)
-
-        assert diff.added == ["TigerBeetle"]
-        assert diff.modified == []
-        assert diff.removed == ["Messaging"]
-        assert diff.unchanged == ["Network"]
+        assert diff.added == added
+        assert diff.modified == modified
+        assert diff.removed == removed
+        assert diff.unchanged == unchanged
 
 
 class TestVersionFileIO:

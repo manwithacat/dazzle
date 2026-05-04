@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.tenant import tenant_app
@@ -135,49 +136,47 @@ class TestTenantStatus:
         assert "not found" in result.output
 
 
-class TestTenantSuspend:
+class TestTenantStatusTransition:
+    """Both `tenant suspend` and `tenant activate` go through the same
+    update_status call — happy path forwards the new status, missing tenant
+    raises ValueError surfaced as 'not found'."""
+
+    @pytest.mark.parametrize(
+        "action,status",
+        [("suspend", "suspended"), ("activate", "active")],
+        ids=["test_suspend_tenant", "test_activate_tenant"],
+    )
     @patch("dazzle.cli.tenant._get_registry")
     @patch("dazzle.cli.tenant._check_tenant_enabled")
-    def test_suspend_tenant(self, mock_check: MagicMock, mock_reg: MagicMock) -> None:
+    def test_status_transition_happy(
+        self,
+        mock_check: MagicMock,
+        mock_reg: MagicMock,
+        action: str,
+        status: str,
+    ) -> None:
         registry = MagicMock()
-        registry.update_status.return_value = MagicMock(slug="cyfuture", status="suspended")
+        registry.update_status.return_value = MagicMock(slug="cyfuture", status=status)
         mock_reg.return_value = registry
 
-        result = runner.invoke(tenant_app, ["suspend", "cyfuture"])
+        result = runner.invoke(tenant_app, [action, "cyfuture"])
         assert result.exit_code == 0
-        registry.update_status.assert_called_once_with("cyfuture", "suspended")
+        registry.update_status.assert_called_once_with("cyfuture", status)
 
+    @pytest.mark.parametrize(
+        "action",
+        ["suspend", "activate"],
+        ids=["test_suspend_not_found", "test_activate_not_found"],
+    )
     @patch("dazzle.cli.tenant._get_registry")
     @patch("dazzle.cli.tenant._check_tenant_enabled")
-    def test_suspend_not_found(self, mock_check: MagicMock, mock_reg: MagicMock) -> None:
+    def test_status_transition_missing(
+        self, mock_check: MagicMock, mock_reg: MagicMock, action: str
+    ) -> None:
         registry = MagicMock()
         registry.update_status.side_effect = ValueError("Tenant 'unknown' not found")
         mock_reg.return_value = registry
 
-        result = runner.invoke(tenant_app, ["suspend", "unknown"])
-        assert result.exit_code == 1
-        assert "not found" in result.output
-
-
-class TestTenantActivate:
-    @patch("dazzle.cli.tenant._get_registry")
-    @patch("dazzle.cli.tenant._check_tenant_enabled")
-    def test_activate_tenant(self, mock_check: MagicMock, mock_reg: MagicMock) -> None:
-        registry = MagicMock()
-        registry.update_status.return_value = MagicMock(slug="cyfuture", status="active")
-        mock_reg.return_value = registry
-
-        result = runner.invoke(tenant_app, ["activate", "cyfuture"])
-        assert result.exit_code == 0
-        registry.update_status.assert_called_once_with("cyfuture", "active")
-
-    @patch("dazzle.cli.tenant._get_registry")
-    @patch("dazzle.cli.tenant._check_tenant_enabled")
-    def test_activate_not_found(self, mock_check: MagicMock, mock_reg: MagicMock) -> None:
-        registry = MagicMock()
-        registry.update_status.side_effect = ValueError("Tenant 'unknown' not found")
-        mock_reg.return_value = registry
-
-        result = runner.invoke(tenant_app, ["activate", "unknown"])
+        result = runner.invoke(tenant_app, [action, "unknown"])
         assert result.exit_code == 1
         assert "not found" in result.output

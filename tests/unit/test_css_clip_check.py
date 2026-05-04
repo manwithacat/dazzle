@@ -129,8 +129,9 @@ class TestClipDetection:
 
 
 class TestSelectorIgnoreList:
-    def test_icon_selector_skipped(self, tmp_path: Path) -> None:
-        findings = _scan(
+    @pytest.mark.parametrize(
+        "css",
+        [
             """
             .dz-card-icon {
               height: 16px;
@@ -139,12 +140,6 @@ class TestSelectorIgnoreList:
               line-height: 1.5;
             }
             """,
-            tmp_path,
-        )
-        assert findings == []
-
-    def test_skeleton_selector_skipped(self, tmp_path: Path) -> None:
-        findings = _scan(
             """
             .dz-card-skeleton-line {
               height: 8px;
@@ -153,12 +148,6 @@ class TestSelectorIgnoreList:
               line-height: 1.5;
             }
             """,
-            tmp_path,
-        )
-        assert findings == []
-
-    def test_svg_selector_skipped(self, tmp_path: Path) -> None:
-        findings = _scan(
             """
             svg.icon {
               height: 14px;
@@ -167,9 +156,15 @@ class TestSelectorIgnoreList:
               line-height: 1.5;
             }
             """,
-            tmp_path,
-        )
-        assert findings == []
+        ],
+        ids=[
+            "test_icon_selector_skipped",
+            "test_skeleton_selector_skipped",
+            "test_svg_selector_skipped",
+        ],
+    )
+    def test_selector_skipped(self, tmp_path: Path, css: str) -> None:
+        assert _scan(css, tmp_path) == []
 
     def test_multi_selector_keeps_text_bearing_only(self, tmp_path: Path) -> None:
         """Comma-separated selector list: chrome selectors filtered out,
