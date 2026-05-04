@@ -68,30 +68,25 @@ class TestParseAcceptLanguage:
 
 
 class TestPickSupported:
-    def test_exact_match_wins(self) -> None:
-        candidates = [("en-gb", 1.0), ("en", 0.8)]
-        assert _pick_supported(candidates, frozenset({"en-gb", "en"}), "en") == "en-gb"
-
-    def test_primary_subtag_fallback(self) -> None:
-        """Browser sends en-GB, project supports only `en` → match on `en`."""
-        candidates = [("en-gb", 1.0)]
-        assert _pick_supported(candidates, frozenset({"en"}), "fr") == "en"
-
-    def test_default_when_none_match(self) -> None:
-        candidates = [("ja", 1.0), ("ko", 0.8)]
-        assert _pick_supported(candidates, frozenset({"en", "fr"}), "en") == "en"
-
-    def test_empty_supported_picks_first_candidate(self) -> None:
-        """An empty supported set means "any locale ok" — return the
-        first candidate. ``parse_accept_language`` sorts by quality
-        descending so callers passing the helper's output get the
-        highest-quality locale automatically."""
-        # As parse_accept_language would yield: highest q first.
-        candidates = [("en", 1.0), ("ja", 0.9)]
-        assert _pick_supported(candidates, frozenset(), "fr") == "en"
-
-    def test_empty_supported_no_candidates_falls_back(self) -> None:
-        assert _pick_supported([], frozenset(), "en") == "en"
+    @pytest.mark.parametrize(
+        ("candidates", "supported", "default", "expected"),
+        [
+            ([("en-gb", 1.0), ("en", 0.8)], frozenset({"en-gb", "en"}), "en", "en-gb"),
+            ([("en-gb", 1.0)], frozenset({"en"}), "fr", "en"),
+            ([("ja", 1.0), ("ko", 0.8)], frozenset({"en", "fr"}), "en", "en"),
+            ([("en", 1.0), ("ja", 0.9)], frozenset(), "fr", "en"),
+            ([], frozenset(), "en", "en"),
+        ],
+        ids=[
+            "test_exact_match_wins",
+            "test_primary_subtag_fallback",
+            "test_default_when_none_match",
+            "test_empty_supported_picks_first_candidate",
+            "test_empty_supported_no_candidates_falls_back",
+        ],
+    )
+    def test_pick(self, candidates, supported, default, expected) -> None:
+        assert _pick_supported(candidates, supported, default) == expected
 
 
 @pytest.fixture()

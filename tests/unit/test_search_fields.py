@@ -214,38 +214,45 @@ def _make_surface_with_ux(
 class TestBuildEntityFilterFields:
     """build_entity_filter_fields() should extract ux.filter from surface specs."""
 
-    def test_extracts_filter_fields(self) -> None:
-        surfaces = [_make_surface_with_ux("Contact", filter_fields=["company_name", "status"])]
-        result = build_entity_filter_fields(surfaces)
-        assert result == {"Contact": ["company_name", "status"]}
-
-    def test_no_ux_excluded(self) -> None:
-        surfaces = [_make_surface("Task")]
-        result = build_entity_filter_fields(surfaces)
-        assert result == {}
-
-    def test_empty_filter_excluded(self) -> None:
-        surfaces = [_make_surface_with_ux("Task")]
-        result = build_entity_filter_fields(surfaces)
-        assert result == {}
-
-    def test_multiple_entities(self) -> None:
-        surfaces = [
-            _make_surface_with_ux("Task", filter_fields=["status"]),
-            _make_surface_with_ux("Bug", filter_fields=["severity", "assignee"]),
-        ]
-        result = build_entity_filter_fields(surfaces)
-        assert result == {"Task": ["status"], "Bug": ["severity", "assignee"]}
-
-    def test_first_surface_wins(self) -> None:
-        surfaces = [
-            _make_surface_with_ux("Task", filter_fields=["status"]),
-            SurfaceSpec(
-                name="task_detail",
-                entity_ref="Task",
-                mode="list",
-                ux=None,
+    @pytest.mark.parametrize(
+        ("builder", "expected"),
+        [
+            (
+                lambda: [
+                    _make_surface_with_ux("Contact", filter_fields=["company_name", "status"])
+                ],
+                {"Contact": ["company_name", "status"]},
             ),
-        ]
-        result = build_entity_filter_fields(surfaces)
-        assert result == {"Task": ["status"]}
+            (lambda: [_make_surface("Task")], {}),
+            (lambda: [_make_surface_with_ux("Task")], {}),
+            (
+                lambda: [
+                    _make_surface_with_ux("Task", filter_fields=["status"]),
+                    _make_surface_with_ux("Bug", filter_fields=["severity", "assignee"]),
+                ],
+                {"Task": ["status"], "Bug": ["severity", "assignee"]},
+            ),
+            (
+                lambda: [
+                    _make_surface_with_ux("Task", filter_fields=["status"]),
+                    SurfaceSpec(
+                        name="task_detail",
+                        entity_ref="Task",
+                        mode="list",
+                        ux=None,
+                    ),
+                ],
+                {"Task": ["status"]},
+            ),
+        ],
+        ids=[
+            "test_extracts_filter_fields",
+            "test_no_ux_excluded",
+            "test_empty_filter_excluded",
+            "test_multiple_entities",
+            "test_first_surface_wins",
+        ],
+    )
+    def test_filter_fields(self, builder, expected) -> None:
+        result = build_entity_filter_fields(builder())
+        assert result == expected

@@ -100,34 +100,26 @@ class TestBasicExpressions:
 
 
 class TestDuration:
-    def test_days(self) -> None:
-        expr = InvariantExprSpec(
-            kind="duration", duration_value=14, duration_unit=DurationUnitKind.DAYS
-        )
-        result = evaluate_invariant_expr(expr, {})
-        assert result == timedelta(days=14)
-
-    def test_hours(self) -> None:
-        expr = InvariantExprSpec(
-            kind="duration", duration_value=2, duration_unit=DurationUnitKind.HOURS
-        )
-        assert evaluate_invariant_expr(expr, {}) == timedelta(hours=2)
-
-    def test_minutes(self) -> None:
-        expr = InvariantExprSpec(
-            kind="duration", duration_value=30, duration_unit=DurationUnitKind.MINUTES
-        )
-        assert evaluate_invariant_expr(expr, {}) == timedelta(minutes=30)
-
-    def test_default_unit(self) -> None:
-        expr = InvariantExprSpec(kind="duration", duration_value=5, duration_unit=None)
-        assert evaluate_invariant_expr(expr, {}) == timedelta(days=5)
-
-    def test_none_value(self) -> None:
-        expr = InvariantExprSpec(
-            kind="duration", duration_value=None, duration_unit=DurationUnitKind.DAYS
-        )
-        assert evaluate_invariant_expr(expr, {}) == timedelta(days=0)
+    @pytest.mark.parametrize(
+        ("value", "unit", "expected"),
+        [
+            (14, DurationUnitKind.DAYS, timedelta(days=14)),
+            (2, DurationUnitKind.HOURS, timedelta(hours=2)),
+            (30, DurationUnitKind.MINUTES, timedelta(minutes=30)),
+            (5, None, timedelta(days=5)),
+            (None, DurationUnitKind.DAYS, timedelta(days=0)),
+        ],
+        ids=[
+            "test_days",
+            "test_hours",
+            "test_minutes",
+            "test_default_unit",
+            "test_none_value",
+        ],
+    )
+    def test_duration(self, value, unit, expected) -> None:
+        expr = InvariantExprSpec(kind="duration", duration_value=value, duration_unit=unit)
+        assert evaluate_invariant_expr(expr, {}) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -231,33 +223,55 @@ class TestDateComparisons:
 
 
 class TestLogical:
-    def test_and_both_true(self) -> None:
-        left = _comparison(_field_ref("a"), InvariantComparisonKind.GT, _literal(0))
-        right = _comparison(_field_ref("b"), InvariantComparisonKind.GT, _literal(0))
-        expr = _logical(left, InvariantLogicalKind.AND, right)
-        assert evaluate_invariant_expr(expr, {"a": 1, "b": 1}) is True
-
-    def test_and_one_false(self) -> None:
-        left = _comparison(_field_ref("a"), InvariantComparisonKind.GT, _literal(0))
-        right = _comparison(_field_ref("b"), InvariantComparisonKind.GT, _literal(0))
-        expr = _logical(left, InvariantLogicalKind.AND, right)
-        assert evaluate_invariant_expr(expr, {"a": 1, "b": -1}) is False
-
-    def test_or_one_true(self) -> None:
-        left = _comparison(_field_ref("status"), InvariantComparisonKind.EQ, _literal("active"))
-        right = _comparison(_field_ref("status"), InvariantComparisonKind.EQ, _literal("pending"))
-        expr = _logical(left, InvariantLogicalKind.OR, right)
-        assert evaluate_invariant_expr(expr, {"status": "pending"}) is True
-
-    def test_or_both_false(self) -> None:
-        left = _comparison(_field_ref("x"), InvariantComparisonKind.EQ, _literal(1))
-        right = _comparison(_field_ref("x"), InvariantComparisonKind.EQ, _literal(2))
-        expr = _logical(left, InvariantLogicalKind.OR, right)
-        assert evaluate_invariant_expr(expr, {"x": 3}) is False
-
-    def test_missing_parts(self) -> None:
-        expr = InvariantExprSpec(kind="logical")
-        assert evaluate_invariant_expr(expr, {}) is False
+    @pytest.mark.parametrize(
+        ("left_spec", "op", "right_spec", "record", "expected"),
+        [
+            (
+                ("a", InvariantComparisonKind.GT, 0),
+                InvariantLogicalKind.AND,
+                ("b", InvariantComparisonKind.GT, 0),
+                {"a": 1, "b": 1},
+                True,
+            ),
+            (
+                ("a", InvariantComparisonKind.GT, 0),
+                InvariantLogicalKind.AND,
+                ("b", InvariantComparisonKind.GT, 0),
+                {"a": 1, "b": -1},
+                False,
+            ),
+            (
+                ("status", InvariantComparisonKind.EQ, "active"),
+                InvariantLogicalKind.OR,
+                ("status", InvariantComparisonKind.EQ, "pending"),
+                {"status": "pending"},
+                True,
+            ),
+            (
+                ("x", InvariantComparisonKind.EQ, 1),
+                InvariantLogicalKind.OR,
+                ("x", InvariantComparisonKind.EQ, 2),
+                {"x": 3},
+                False,
+            ),
+            (None, None, None, {}, False),
+        ],
+        ids=[
+            "test_and_both_true",
+            "test_and_one_false",
+            "test_or_one_true",
+            "test_or_both_false",
+            "test_missing_parts",
+        ],
+    )
+    def test_logical(self, left_spec, op, right_spec, record, expected) -> None:
+        if left_spec is None:
+            expr = InvariantExprSpec(kind="logical")
+        else:
+            left = _comparison(_field_ref(left_spec[0]), left_spec[1], _literal(left_spec[2]))
+            right = _comparison(_field_ref(right_spec[0]), right_spec[1], _literal(right_spec[2]))
+            expr = _logical(left, op, right)
+        assert evaluate_invariant_expr(expr, record) is expected
 
 
 # ---------------------------------------------------------------------------

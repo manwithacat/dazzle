@@ -37,82 +37,85 @@ from dazzle.core.ir.expressions import (
 class TestTokenizer:
     """Tokenizer produces correct token sequences."""
 
-    def test_integer(self) -> None:
-        tokens = tokenize("42")
-        assert tokens[0].kind == TokenKind.INT
-        assert tokens[0].value == "42"
-
-    def test_float(self) -> None:
-        tokens = tokenize("3.14")
-        assert tokens[0].kind == TokenKind.FLOAT
-        assert tokens[0].value == "3.14"
-
-    def test_string_double_quotes(self) -> None:
-        tokens = tokenize('"hello"')
-        assert tokens[0].kind == TokenKind.STRING
-        assert tokens[0].value == "hello"
-
-    def test_string_single_quotes(self) -> None:
-        tokens = tokenize("'world'")
-        assert tokens[0].kind == TokenKind.STRING
-        assert tokens[0].value == "world"
-
-    def test_string_escape(self) -> None:
-        tokens = tokenize('"he\\"llo"')
-        assert tokens[0].value == 'he"llo'
-
-    def test_keywords(self) -> None:
-        source = "true false null and or not in is if elif else"
+    @pytest.mark.parametrize(
+        ("source", "expected_kind", "expected_value"),
+        [
+            ("42", TokenKind.INT, "42"),
+            ("3.14", TokenKind.FLOAT, "3.14"),
+            ('"hello"', TokenKind.STRING, "hello"),
+            ("'world'", TokenKind.STRING, "world"),
+            ('"he\\"llo"', None, 'he"llo'),
+        ],
+        ids=[
+            "test_integer",
+            "test_float",
+            "test_string_double_quotes",
+            "test_string_single_quotes",
+            "test_string_escape",
+        ],
+    )
+    def test_first_token(self, source, expected_kind, expected_value) -> None:
         tokens = tokenize(source)
-        expected = [
-            TokenKind.TRUE,
-            TokenKind.FALSE,
-            TokenKind.NULL,
-            TokenKind.AND,
-            TokenKind.OR,
-            TokenKind.NOT,
-            TokenKind.IN,
-            TokenKind.IS,
-            TokenKind.IF,
-            TokenKind.ELIF,
-            TokenKind.ELSE,
-            TokenKind.EOF,
-        ]
-        assert [t.kind for t in tokens] == expected
+        if expected_kind is not None:
+            assert tokens[0].kind == expected_kind
+        assert tokens[0].value == expected_value
 
-    def test_operators(self) -> None:
-        source = "+ - * / % == != < > <= >= ->"
+    @pytest.mark.parametrize(
+        ("source", "expected_kinds"),
+        [
+            (
+                "true false null and or not in is if elif else",
+                [
+                    TokenKind.TRUE,
+                    TokenKind.FALSE,
+                    TokenKind.NULL,
+                    TokenKind.AND,
+                    TokenKind.OR,
+                    TokenKind.NOT,
+                    TokenKind.IN,
+                    TokenKind.IS,
+                    TokenKind.IF,
+                    TokenKind.ELIF,
+                    TokenKind.ELSE,
+                    TokenKind.EOF,
+                ],
+            ),
+            (
+                "+ - * / % == != < > <= >= ->",
+                [
+                    TokenKind.PLUS,
+                    TokenKind.MINUS,
+                    TokenKind.STAR,
+                    TokenKind.SLASH,
+                    TokenKind.PERCENT,
+                    TokenKind.EQ,
+                    TokenKind.NE,
+                    TokenKind.LT,
+                    TokenKind.GT,
+                    TokenKind.LE,
+                    TokenKind.GE,
+                    TokenKind.ARROW,
+                    TokenKind.EOF,
+                ],
+            ),
+            (
+                "()[],.",
+                [
+                    TokenKind.LPAREN,
+                    TokenKind.RPAREN,
+                    TokenKind.LBRACKET,
+                    TokenKind.RBRACKET,
+                    TokenKind.COMMA,
+                    TokenKind.DOT,
+                    TokenKind.EOF,
+                ],
+            ),
+        ],
+        ids=["test_keywords", "test_operators", "test_punctuation"],
+    )
+    def test_token_kinds(self, source, expected_kinds) -> None:
         tokens = tokenize(source)
-        expected_kinds = [
-            TokenKind.PLUS,
-            TokenKind.MINUS,
-            TokenKind.STAR,
-            TokenKind.SLASH,
-            TokenKind.PERCENT,
-            TokenKind.EQ,
-            TokenKind.NE,
-            TokenKind.LT,
-            TokenKind.GT,
-            TokenKind.LE,
-            TokenKind.GE,
-            TokenKind.ARROW,
-            TokenKind.EOF,
-        ]
         assert [t.kind for t in tokens] == expected_kinds
-
-    def test_punctuation(self) -> None:
-        source = "()[],."
-        tokens = tokenize(source)
-        expected = [
-            TokenKind.LPAREN,
-            TokenKind.RPAREN,
-            TokenKind.LBRACKET,
-            TokenKind.RBRACKET,
-            TokenKind.COMMA,
-            TokenKind.DOT,
-            TokenKind.EOF,
-        ]
-        assert [t.kind for t in tokens] == expected
 
     def test_duration_literals(self) -> None:
         for src, expected in [

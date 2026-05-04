@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 _TEMPLATE_PATH = (
     Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates/workspace/regions/metrics.html"
 )
@@ -31,45 +33,30 @@ class TestMetricsTemplateHasNoItemsTable:
     def _text(self) -> str:
         return _TEMPLATE_PATH.read_text()
 
-    def test_no_table_tag(self) -> None:
-        text = self._text()
-        assert "<table" not in text, (
-            "metrics.html must NOT render a `<table>` — items belong on "
-            "display: list regions, not summary/metrics tiles (#905)"
-        )
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "<table",
+            "for item in items",
+            "for col in columns",
+            'class="h-px',
+            "overflow-x-auto",
+        ],
+        ids=[
+            "test_no_table_tag",
+            "test_no_items_iteration",
+            "test_no_columns_iteration",
+            "test_no_divider_before_table",
+            "test_no_overflow_x_auto_wrapper",
+        ],
+    )
+    def test_template_excludes(self, needle: str) -> None:
+        assert needle not in self._text()
 
     def test_no_thead_or_tbody(self) -> None:
         text = self._text()
         assert "<thead" not in text
         assert "<tbody" not in text
-
-    def test_no_items_iteration(self) -> None:
-        """The `{% for item in items %}` loop drove the row rendering."""
-        text = self._text()
-        assert "for item in items" not in text, (
-            "metrics.html must not iterate `items` — the dz-metrics-grid "
-            "loop iterates `metrics` instead (#905)"
-        )
-
-    def test_no_columns_iteration(self) -> None:
-        text = self._text()
-        assert "for col in columns" not in text
-
-    def test_no_divider_before_table(self) -> None:
-        """The `<div class="h-px ... my-3"></div>` separator only
-        existed to visually divide the metrics tiles from the unwanted
-        rows table — should be gone with the table."""
-        text = self._text()
-        assert 'class="h-px' not in text, (
-            "Stray rule line — should be removed alongside the items table block (#905)"
-        )
-
-    def test_no_overflow_x_auto_wrapper(self) -> None:
-        """The `<div class="overflow-x-auto">` wrapper enabled
-        horizontal table scrolling on narrow tiles. No table → no
-        wrapper."""
-        text = self._text()
-        assert "overflow-x-auto" not in text
 
 
 class TestMetricsTemplateStillRendersTiles:

@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from dazzle.rbac.audit import AccessDecisionRecord
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision, PolicyWarning
 from dazzle.rbac.verifier import CellResult, VerificationReport, VerifiedCell, compare_cell
@@ -124,30 +126,27 @@ class TestCompareCellPermit:
 
 
 class TestCompareCellPermitFiltered:
-    def test_filtered_200_partial_count_is_pass(self):
-        # count < total and count > 0
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, 200, 3, total=10) == CellResult.PASS
-
-    def test_filtered_200_count_equals_total_is_violation(self):
-        # count == total → unfiltered → VIOLATION
-        assert (
-            compare_cell(PolicyDecision.PERMIT_FILTERED, 200, 10, total=10) == CellResult.VIOLATION
-        )
-
-    def test_filtered_200_count_zero_is_warning(self):
-        # count == 0 → WARNING (might be over-filtering)
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, 200, 0, total=10) == CellResult.WARNING
-
-    def test_filtered_200_no_count_is_warning(self):
-        # No count available — can't determine filtering.
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, 200, None) == CellResult.WARNING
-
-    def test_filtered_non_200_is_warning(self):
-        # 403 for PERMIT_FILTERED is not in the main table.
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, 403, None) == CellResult.WARNING
-
-    def test_filtered_count_one_of_many_is_pass(self):
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, 200, 1, total=100) == CellResult.PASS
+    @pytest.mark.parametrize(
+        ("status", "count", "kwargs", "expected"),
+        [
+            (200, 3, {"total": 10}, CellResult.PASS),
+            (200, 10, {"total": 10}, CellResult.VIOLATION),
+            (200, 0, {"total": 10}, CellResult.WARNING),
+            (200, None, {}, CellResult.WARNING),
+            (403, None, {}, CellResult.WARNING),
+            (200, 1, {"total": 100}, CellResult.PASS),
+        ],
+        ids=[
+            "test_filtered_200_partial_count_is_pass",
+            "test_filtered_200_count_equals_total_is_violation",
+            "test_filtered_200_count_zero_is_warning",
+            "test_filtered_200_no_count_is_warning",
+            "test_filtered_non_200_is_warning",
+            "test_filtered_count_one_of_many_is_pass",
+        ],
+    )
+    def test_compare_cell_permit_filtered(self, status, count, kwargs, expected):
+        assert compare_cell(PolicyDecision.PERMIT_FILTERED, status, count, **kwargs) == expected
 
 
 class TestCompareCellPermitUnprotected:

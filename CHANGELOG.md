@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.14] - 2026-05-04
+
+### Changed
+- **Distillation cycle 13** — Batches U+V (V partial) collapsed clusters
+  across 20 files: test_template_pages, test_dashboard_gates,
+  test_e2e_harness, test_expression_lang, test_invariant_evaluator,
+  test_locale_middleware, test_metrics_no_items_table, test_money_expansion,
+  test_optimistic_directive, test_pitch_ir, test_rbac_verifier,
+  test_route_overrides, test_route_validator, test_search_fields, test_totp,
+  test_triples, test_ux_contract_checker, test_viewport, test_widget_rules,
+  test_workspace_status_list. 723 tests pass. Suite total: 13,227 → 13,135
+  (92 fewer). Cumulative cycles 1-13: 14,295 → 13,135 (1,160 tests removed).
+
 ## [0.66.13] - 2026-05-04
 
 ### Changed

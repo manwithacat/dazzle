@@ -55,36 +55,28 @@ def browser_page(server):
 class TestDashboardQualityGates:
     """5 quality gates from ux-architect/components/dashboard-grid.md"""
 
-    def test_gate1_drag_threshold(self, browser_page):
-        """Gate 1: Click without moving stays put. 3px stays put. 5px lifts."""
-        result = browser_page.evaluate("window.qualityGates.testDragThreshold()")
-        assert result is True, (
-            f"Drag threshold failed: {browser_page.evaluate('window.qualityGates.results.dragThreshold')}"
-        )
-
-    def test_gate2_drag_uses_transform(self, browser_page):
-        """Gate 2: Drag uses transform:translate(), not left/top. Has scale, opacity, shadow, z-index."""
-        result = browser_page.evaluate("window.qualityGates.testDragTransform()")
-        details = browser_page.evaluate("window.qualityGates.results.dragTransform")
-        assert result is True, f"Drag transform failed: {details}"
-
-    def test_gate3_save_lifecycle(self, browser_page):
-        """Gate 3: Save button transitions through clean → dirty states."""
-        result = browser_page.evaluate("window.qualityGates.testSaveLifecycle()")
-        details = browser_page.evaluate("window.qualityGates.results.saveLifecycle")
-        assert result is True, f"Save lifecycle failed: {details}"
-
-    def test_gate4_persistence_boundary(self, browser_page):
-        """Gate 4: Cards match data island on load (unsaved changes don't persist)."""
-        result = browser_page.evaluate("window.qualityGates.testPersistenceBoundary()")
-        details = browser_page.evaluate("window.qualityGates.results.persistenceBoundary")
-        assert result is True, f"Persistence boundary failed: {details}"
-
-    def test_gate5_keyboard_accessibility(self, browser_page):
-        """Gate 5: Keyboard move mode works. Live region with aria-live exists."""
-        result = browser_page.evaluate("window.qualityGates.testKeyboardAccessibility()")
-        details = browser_page.evaluate("window.qualityGates.results.keyboardAccessibility")
-        assert result is True, f"Keyboard accessibility failed: {details}"
+    @pytest.mark.parametrize(
+        ("test_fn", "result_key", "label"),
+        [
+            ("testDragThreshold", "dragThreshold", "Drag threshold"),
+            ("testDragTransform", "dragTransform", "Drag transform"),
+            ("testSaveLifecycle", "saveLifecycle", "Save lifecycle"),
+            ("testPersistenceBoundary", "persistenceBoundary", "Persistence boundary"),
+            ("testKeyboardAccessibility", "keyboardAccessibility", "Keyboard accessibility"),
+        ],
+        ids=[
+            "test_gate1_drag_threshold",
+            "test_gate2_drag_uses_transform",
+            "test_gate3_save_lifecycle",
+            "test_gate4_persistence_boundary",
+            "test_gate5_keyboard_accessibility",
+        ],
+    )
+    def test_gate(self, browser_page, test_fn, result_key, label):
+        """Run an individual quality gate test."""
+        result = browser_page.evaluate(f"window.qualityGates.{test_fn}()")
+        details = browser_page.evaluate(f"window.qualityGates.results.{result_key}")
+        assert result is True, f"{label} failed: {details}"
 
     def test_all_gates_pass(self, browser_page):
         """Meta-gate: all 5 gates pass together."""

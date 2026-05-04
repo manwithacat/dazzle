@@ -215,34 +215,31 @@ class TestNavigation:
 class TestDazzleAttributes:
     """Tests for data-dazzle-* semantic attributes in rendered HTML."""
 
-    def test_list_page_has_dazzle_view(self, client: TestClient) -> None:
-        resp = client.get("/task")
-        assert 'data-dazzle-view="task_list"' in resp.text
-
-    def test_list_page_has_dazzle_table(self, client: TestClient) -> None:
-        resp = client.get("/task")
-        assert 'data-dazzle-table="Task"' in resp.text
-
-    def test_list_page_has_dazzle_view_on_root(self, client: TestClient) -> None:
-        resp = client.get("/")
-        assert 'data-dazzle-view="task_list"' in resp.text
-
-    def test_list_page_has_dazzle_action_create(self, client: TestClient) -> None:
-        resp = client.get("/task")
-        assert 'data-dazzle-action="Task.create"' in resp.text
-
-    def test_create_page_has_dazzle_form(self, client: TestClient) -> None:
-        resp = client.get("/task/create")
-        assert 'data-dazzle-form="Task"' in resp.text
-        assert 'data-dazzle-form-mode="create"' in resp.text
-
-    def test_create_page_has_dazzle_field(self, client: TestClient) -> None:
-        resp = client.get("/task/create")
-        assert 'data-dazzle-field="title"' in resp.text
-
-    def test_create_page_has_dazzle_action_save(self, client: TestClient) -> None:
-        resp = client.get("/task/create")
-        assert 'data-dazzle-action="Task.save"' in resp.text
+    @pytest.mark.parametrize(
+        ("path", "expected"),
+        [
+            ("/task", ['data-dazzle-view="task_list"']),
+            ("/task", ['data-dazzle-table="Task"']),
+            ("/", ['data-dazzle-view="task_list"']),
+            ("/task", ['data-dazzle-action="Task.create"']),
+            ("/task/create", ['data-dazzle-form="Task"', 'data-dazzle-form-mode="create"']),
+            ("/task/create", ['data-dazzle-field="title"']),
+            ("/task/create", ['data-dazzle-action="Task.save"']),
+        ],
+        ids=[
+            "test_list_page_has_dazzle_view",
+            "test_list_page_has_dazzle_table",
+            "test_list_page_has_dazzle_view_on_root",
+            "test_list_page_has_dazzle_action_create",
+            "test_create_page_has_dazzle_form",
+            "test_create_page_has_dazzle_field",
+            "test_create_page_has_dazzle_action_save",
+        ],
+    )
+    def test_dazzle_attributes(self, client: TestClient, path: str, expected: list[str]) -> None:
+        resp = client.get(path)
+        for marker in expected:
+            assert marker in resp.text
 
     def test_detail_page_nonexistent_returns_404(self, client: TestClient) -> None:
         """Detail page for non-existent record returns 404 (#599)."""

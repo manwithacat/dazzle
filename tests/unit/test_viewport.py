@@ -291,19 +291,53 @@ class TestDerivePatterns:
         assert "/" in result
         assert DRAWER_PATTERN in result["/"]
 
-    def test_dual_pane_flow_stage(self) -> None:
-        spec = _mock_appspec(workspaces=[{"name": "orders", "stage": "dual_pane_flow"}])
+    @pytest.mark.parametrize(
+        ("workspace", "path", "expected_pattern"),
+        [
+            ({"name": "orders", "stage": "dual_pane_flow"}, "/orders", "grid_1_2"),
+            ({"name": "status", "stage": "monitor_wall"}, "/status", "grid_2_3"),
+            (
+                {
+                    "name": "items",
+                    "stage": "focus_metric",
+                    "regions": [{"display": "GRID"}],
+                },
+                "/items",
+                "grid_1_2_3",
+            ),
+            (
+                {
+                    "name": "dash",
+                    "stage": "focus_metric",
+                    "regions": [{"display": "METRICS"}],
+                },
+                "/dash",
+                "stats",
+            ),
+            (
+                {
+                    "name": "detail",
+                    "stage": "focus_metric",
+                    "regions": [{"display": "DETAIL"}],
+                },
+                "/detail",
+                "detail_view",
+            ),
+        ],
+        ids=[
+            "test_dual_pane_flow_stage",
+            "test_monitor_wall_stage",
+            "test_region_grid_display",
+            "test_region_metrics_display",
+            "test_region_detail_display",
+        ],
+    )
+    def test_workspace_pattern(self, workspace, path, expected_pattern) -> None:
+        spec = _mock_appspec(workspaces=[workspace])
         result = derive_patterns_from_appspec(spec)
-        assert "/orders" in result
-        pattern_names = [p.name for p in result["/orders"]]
-        assert "grid_1_2" in pattern_names
-
-    def test_monitor_wall_stage(self) -> None:
-        spec = _mock_appspec(workspaces=[{"name": "status", "stage": "monitor_wall"}])
-        result = derive_patterns_from_appspec(spec)
-        assert "/status" in result
-        pattern_names = [p.name for p in result["/status"]]
-        assert "grid_2_3" in pattern_names
+        assert path in result
+        pattern_names = [p.name for p in result[path]]
+        assert expected_pattern in pattern_names
 
     def test_focus_metric_stage_no_grid_pattern(self) -> None:
         spec = _mock_appspec(workspaces=[{"name": "home", "stage": "focus_metric"}])
@@ -313,48 +347,6 @@ class TestDerivePatterns:
         pattern_names = [p.name for p in result["/home"]]
         assert "drawer" in pattern_names
         assert "grid_1_2" not in pattern_names
-
-    def test_region_grid_display(self) -> None:
-        spec = _mock_appspec(
-            workspaces=[
-                {
-                    "name": "items",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "GRID"}],
-                }
-            ]
-        )
-        result = derive_patterns_from_appspec(spec)
-        pattern_names = [p.name for p in result["/items"]]
-        assert "grid_1_2_3" in pattern_names
-
-    def test_region_metrics_display(self) -> None:
-        spec = _mock_appspec(
-            workspaces=[
-                {
-                    "name": "dash",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "METRICS"}],
-                }
-            ]
-        )
-        result = derive_patterns_from_appspec(spec)
-        pattern_names = [p.name for p in result["/dash"]]
-        assert "stats" in pattern_names
-
-    def test_region_detail_display(self) -> None:
-        spec = _mock_appspec(
-            workspaces=[
-                {
-                    "name": "detail",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "DETAIL"}],
-                }
-            ]
-        )
-        result = derive_patterns_from_appspec(spec)
-        pattern_names = [p.name for p in result["/detail"]]
-        assert "detail_view" in pattern_names
 
     def test_list_surface_gets_grid_1_2(self) -> None:
         spec = _mock_appspec(surfaces=[{"name": "tasks", "mode": "list"}])

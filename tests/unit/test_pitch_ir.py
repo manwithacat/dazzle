@@ -119,37 +119,50 @@ class TestExtraSlide:
         assert es.layout == ExtraSlideLayout.STATS
         assert len(es.items) == 2
 
-    def test_image_layout(self):
-        es = ExtraSlide(
-            title="Screenshot",
-            layout=ExtraSlideLayout.IMAGE,
-            image_path="assets/screenshot.png",
-        )
-        assert es.image_path == "assets/screenshot.png"
-
-    def test_theme_default(self):
-        es = ExtraSlide(title="Demo")
-        assert es.theme == "dark"
-
-    def test_theme_light(self):
-        es = ExtraSlide(title="Demo", theme="light")
-        assert es.theme == "light"
-
-    def test_table_layout(self):
-        es = ExtraSlide(
-            title="Data",
-            layout=ExtraSlideLayout.TABLE,
-            items=["A|B|C", "1|2|3"],
-        )
-        assert es.layout == ExtraSlideLayout.TABLE
-
-    def test_callout_layout(self):
-        es = ExtraSlide(
-            title="Quote",
-            layout=ExtraSlideLayout.CALLOUT,
-            items=["Big statement", "Supporting point"],
-        )
-        assert es.layout == ExtraSlideLayout.CALLOUT
+    @pytest.mark.parametrize(
+        ("kwargs", "attr", "expected"),
+        [
+            (
+                {
+                    "title": "Screenshot",
+                    "layout": ExtraSlideLayout.IMAGE,
+                    "image_path": "assets/screenshot.png",
+                },
+                "image_path",
+                "assets/screenshot.png",
+            ),
+            ({"title": "Demo"}, "theme", "dark"),
+            ({"title": "Demo", "theme": "light"}, "theme", "light"),
+            (
+                {
+                    "title": "Data",
+                    "layout": ExtraSlideLayout.TABLE,
+                    "items": ["A|B|C", "1|2|3"],
+                },
+                "layout",
+                ExtraSlideLayout.TABLE,
+            ),
+            (
+                {
+                    "title": "Quote",
+                    "layout": ExtraSlideLayout.CALLOUT,
+                    "items": ["Big statement", "Supporting point"],
+                },
+                "layout",
+                ExtraSlideLayout.CALLOUT,
+            ),
+        ],
+        ids=[
+            "test_image_layout",
+            "test_theme_default",
+            "test_theme_light",
+            "test_table_layout",
+            "test_callout_layout",
+        ],
+    )
+    def test_extra_slide_attr(self, kwargs, attr, expected):
+        es = ExtraSlide(**kwargs)
+        assert getattr(es, attr) == expected
 
 
 class TestSpeakerNotes:

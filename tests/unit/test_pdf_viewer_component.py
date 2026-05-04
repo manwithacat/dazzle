@@ -251,43 +251,26 @@ class TestBundleIntegration:
     cycle 1b shape (standalone <script> in base.html) shipped with
     the wrong default; #946 fixes it by bundling."""
 
-    def test_css_listed_in_build_dist(self) -> None:
-        source = (REPO_ROOT / "scripts" / "build_dist.py").read_text()
-        assert '"pdf-viewer.css"' in source
-
-    def test_css_listed_in_runtime_loader(self) -> None:
-        """The runtime CSS bundle (served at /styles/dazzle.css via
-        css_loader.py) must include pdf-viewer.css too — projects
-        using the dev-time direct-import path see the same set of
-        component families as projects shipping dist/dazzle.min.css."""
-        source = (REPO_ROOT / "src/dazzle_ui/runtime/css_loader.py").read_text()
-        assert "components/pdf-viewer.css" in source
-
-    def test_css_imported_from_dazzle_entry(self) -> None:
-        """``dazzle.css`` (the canonical entry stylesheet referenced
-        from base.html) must @import pdf-viewer.css. Pre-#946 the
-        @import was missing, so projects using base.html got the JS
-        bridge but no CSS — panels rendered inline because the
-        chrome rules never loaded."""
-        source = (REPO_ROOT / "src/dazzle_ui/runtime/static/css/dazzle.css").read_text()
-        assert "components/pdf-viewer.css" in source
-
-    def test_js_listed_in_build_dist(self) -> None:
-        """``dist/dazzle.min.js`` must include the pdf-viewer bridge
-        handler. Pre-#946 the JS shipped only as a standalone
-        ``<script>`` tag in base.html; projects with their own base
-        template (loading dist/dazzle.min.js) lost the bridge and
-        every keyboard shortcut was inert."""
-        source = (REPO_ROOT / "scripts" / "build_dist.py").read_text()
-        assert '"js" / "pdf-viewer.js"' in source
-
-    def test_js_in_framework_set_for_comment_stripping(self) -> None:
-        """FRAMEWORK_JS controls which files get comment-stripping
-        in the dist bundle. pdf-viewer.js carries a multi-line
-        docstring + section banners that should be stripped along
-        with the other framework scripts."""
-        source = (REPO_ROOT / "scripts" / "build_dist.py").read_text()
-        assert '"pdf-viewer.js"' in source
+    @pytest.mark.parametrize(
+        ("path", "needle"),
+        [
+            ("scripts/build_dist.py", '"pdf-viewer.css"'),
+            ("src/dazzle_ui/runtime/css_loader.py", "components/pdf-viewer.css"),
+            ("src/dazzle_ui/runtime/static/css/dazzle.css", "components/pdf-viewer.css"),
+            ("scripts/build_dist.py", '"js" / "pdf-viewer.js"'),
+            ("scripts/build_dist.py", '"pdf-viewer.js"'),
+        ],
+        ids=[
+            "test_css_listed_in_build_dist",
+            "test_css_listed_in_runtime_loader",
+            "test_css_imported_from_dazzle_entry",
+            "test_js_listed_in_build_dist",
+            "test_js_in_framework_set_for_comment_stripping",
+        ],
+    )
+    def test_bundle_contains(self, path: str, needle: str) -> None:
+        source = (REPO_ROOT / path).read_text()
+        assert needle in source
 
 
 # ---------------------------------------------------------------------------

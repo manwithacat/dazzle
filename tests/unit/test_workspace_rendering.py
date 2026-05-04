@@ -206,37 +206,27 @@ class TestTimeagoFilter:
         result = _timeago_filter(dt)
         assert "seconds ago" in result
 
-    def test_hours_ago(self) -> None:
+    @pytest.mark.parametrize(
+        ("input_factory", "expected"),
+        [
+            (lambda: datetime.now() - timedelta(hours=3), "3 hours ago"),
+            (lambda: datetime.now() - timedelta(days=5), "5 days ago"),
+            (lambda: "not-a-date", "not-a-date"),
+            (lambda: None, ""),
+            (lambda: (datetime.now() - timedelta(minutes=10)).isoformat(), "10 minutes ago"),
+        ],
+        ids=[
+            "test_hours_ago",
+            "test_days_ago",
+            "test_invalid_input_returns_original",
+            "test_none_returns_empty",
+            "test_iso_string_parsed",
+        ],
+    )
+    def test_filter(self, input_factory, expected) -> None:
         from dazzle_ui.runtime.template_renderer import _timeago_filter
 
-        dt = datetime.now() - timedelta(hours=3)
-        result = _timeago_filter(dt)
-        assert "3 hours ago" == result
-
-    def test_days_ago(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
-
-        dt = datetime.now() - timedelta(days=5)
-        result = _timeago_filter(dt)
-        assert "5 days ago" == result
-
-    def test_invalid_input_returns_original(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
-
-        result = _timeago_filter("not-a-date")
-        assert result == "not-a-date"
-
-    def test_none_returns_empty(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
-
-        assert _timeago_filter(None) == ""
-
-    def test_iso_string_parsed(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
-
-        dt = datetime.now() - timedelta(minutes=10)
-        result = _timeago_filter(dt.isoformat())
-        assert "10 minutes ago" == result
+        assert _timeago_filter(input_factory()) == expected
 
 
 # ===========================================================================
@@ -971,54 +961,33 @@ class TestWorkspaceRegionContextUXMetadata:
 class TestViewportLazyLoading:
     """Regions below the fold use intersect-based lazy loading (#378)."""
 
-    def test_fold_count_default(self) -> None:
-        """Default fold_count is 3 (no stage)."""
+    @pytest.mark.parametrize(
+        ("stage", "expected"),
+        [
+            (None, 3),
+            ("command_center", 6),
+            ("monitor_wall", 6),
+            ("scanner_table", 2),
+            ("dual_pane_flow", 4),
+        ],
+        ids=[
+            "test_fold_count_default",
+            "test_fold_count_command_center",
+            "test_fold_count_monitor_wall",
+            "test_fold_count_scanner_table",
+            "test_fold_count_dual_pane",
+        ],
+    )
+    def test_fold_count(self, stage, expected) -> None:
         from dazzle.core.ir.workspaces import WorkspaceSpec
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
-        ws = WorkspaceSpec(name="dashboard", regions=[])
+        kwargs = {"name": "dashboard", "regions": []}
+        if stage is not None:
+            kwargs["stage"] = stage
+        ws = WorkspaceSpec(**kwargs)
         ctx = build_workspace_context(ws)
-        assert ctx.fold_count == 3
-
-    def test_fold_count_command_center(self) -> None:
-        """command_center stage gets fold_count=6."""
-        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = WorkspaceSpec(
-            name="dashboard",
-            stage="command_center",
-            regions=[WorkspaceRegion(name=f"r{i}", source="Task") for i in range(10)],
-        )
-        ctx = build_workspace_context(ws)
-        assert ctx.fold_count == 6
-
-    def test_fold_count_monitor_wall(self) -> None:
-        """monitor_wall stage gets fold_count=6."""
-        from dazzle.core.ir.workspaces import WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = WorkspaceSpec(name="dashboard", stage="monitor_wall", regions=[])
-        ctx = build_workspace_context(ws)
-        assert ctx.fold_count == 6
-
-    def test_fold_count_scanner_table(self) -> None:
-        """scanner_table stage gets fold_count=2."""
-        from dazzle.core.ir.workspaces import WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = WorkspaceSpec(name="dashboard", stage="scanner_table", regions=[])
-        ctx = build_workspace_context(ws)
-        assert ctx.fold_count == 2
-
-    def test_fold_count_dual_pane(self) -> None:
-        """dual_pane_flow stage gets fold_count=4."""
-        from dazzle.core.ir.workspaces import WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = WorkspaceSpec(name="dashboard", stage="dual_pane_flow", regions=[])
-        ctx = build_workspace_context(ws)
-        assert ctx.fold_count == 4
+        assert ctx.fold_count == expected
 
     def test_stage_fold_count_map_keys(self) -> None:
         """All stages in STAGE_DEFAULT_SPANS have a corresponding fold count."""

@@ -57,56 +57,66 @@ class TestDiscoverRouteOverrides:
         assert len(result) == 1
         assert result[0].method == "GET"
 
-    def test_ignores_files_without_declaration(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("setup", "expected_len"),
+        [
+            (
+                lambda d: [(d / "helper.py", "def utility(): pass\n")],
+                0,
+            ),
+            (
+                lambda d: [
+                    (
+                        d / "__init__.py",
+                        "# dazzle:route-override GET /test\nasync def handler(): return {}\n",
+                    )
+                ],
+                0,
+            ),
+            (
+                lambda d: [
+                    (
+                        d / "no_handler.py",
+                        "# dazzle:route-override GET /test\ndef not_handler(): pass\n",
+                    )
+                ],
+                0,
+            ),
+            (None, 0),  # nonexistent dir
+            (
+                lambda d: [
+                    (
+                        d / "a.py",
+                        "# dazzle:route-override GET /a\nasync def handler(): return {}\n",
+                    ),
+                    (
+                        d / "b.py",
+                        "# dazzle:route-override POST /b\nasync def handler(): return {}\n",
+                    ),
+                ],
+                2,
+            ),
+        ],
+        ids=[
+            "test_ignores_files_without_declaration",
+            "test_ignores_underscore_files",
+            "test_warns_on_missing_handler",
+            "test_nonexistent_dir_returns_empty",
+            "test_multiple_overrides",
+        ],
+    )
+    def test_discover_count(self, tmp_path: Path, setup, expected_len) -> None:
         from dazzle_back.runtime.route_overrides import discover_route_overrides
 
+        if setup is None:
+            assert discover_route_overrides(Path("/nonexistent")) == []
+            return
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
-        (routes_dir / "helper.py").write_text("def utility(): pass\n")
+        for path, content in setup(routes_dir):
+            path.write_text(content)
         result = discover_route_overrides(routes_dir)
-        assert result == []
-
-    def test_ignores_underscore_files(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.route_overrides import discover_route_overrides
-
-        routes_dir = tmp_path / "routes"
-        routes_dir.mkdir()
-        (routes_dir / "__init__.py").write_text(
-            "# dazzle:route-override GET /test\nasync def handler(): return {}\n"
-        )
-        result = discover_route_overrides(routes_dir)
-        assert result == []
-
-    def test_warns_on_missing_handler(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.route_overrides import discover_route_overrides
-
-        routes_dir = tmp_path / "routes"
-        routes_dir.mkdir()
-        (routes_dir / "no_handler.py").write_text(
-            "# dazzle:route-override GET /test\ndef not_handler(): pass\n"
-        )
-        result = discover_route_overrides(routes_dir)
-        assert result == []
-
-    def test_nonexistent_dir_returns_empty(self) -> None:
-        from dazzle_back.runtime.route_overrides import discover_route_overrides
-
-        result = discover_route_overrides(Path("/nonexistent"))
-        assert result == []
-
-    def test_multiple_overrides(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.route_overrides import discover_route_overrides
-
-        routes_dir = tmp_path / "routes"
-        routes_dir.mkdir()
-        (routes_dir / "a.py").write_text(
-            "# dazzle:route-override GET /a\nasync def handler(): return {}\n"
-        )
-        (routes_dir / "b.py").write_text(
-            "# dazzle:route-override POST /b\nasync def handler(): return {}\n"
-        )
-        result = discover_route_overrides(routes_dir)
-        assert len(result) == 2
+        assert len(result) == expected_len
 
 
 class TestBuildOverrideRouter:

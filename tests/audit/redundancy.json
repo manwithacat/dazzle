@@ -151,38 +151,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_compliance_matching.py",
-    "class": "TestUKGovernmentIdentifiers",
-    "assertion_shape": "('gte', 'isnot')",
-    "size": 7,
-    "members": [
-      "test_ni_number_matches",
-      "test_nino_matches",
-      "test_national_insurance_prefix_matches",
-      "test_personal_utr_matches",
-      "test_unique_taxpayer_reference_matches",
-      "test_sort_code_matches_financial",
-      "test_sort_code_standalone"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_condition_evaluator_role_check.py",
-    "class": "TestEvaluateConditionRoleCheck",
-    "assertion_shape": "('is',)",
-    "size": 7,
-    "members": [
-      "test_role_check_true_when_user_has_role",
-      "test_role_check_false_when_user_lacks_role",
-      "test_role_check_false_with_empty_roles_list",
-      "test_role_check_false_with_missing_user_roles_key",
-      "test_role_check_false_with_empty_role_name",
-      "test_role_check_false_with_missing_role_name_key",
-      "test_role_check_exact_match_only"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_persona_journey.py",
     "class": "TestNavigationScope",
     "assertion_shape": "('eq',)",
@@ -211,54 +179,6 @@
       "test_evaluate_surface_reuse_no_expects_no_advisory",
       "test_fidelity_scene_without_expects_served",
       "test_fidelity_passive_action_always_matches"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_search_fields.py",
-    "class": "TestBuildEntitySearchFields",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_extracts_search_fields",
-      "test_no_search_fields_excluded",
-      "test_multiple_entities",
-      "test_first_surface_wins",
-      "test_no_entity_ref_ignored",
-      "test_falls_back_to_ux_search_when_surface_lacks_search_fields",
-      "test_top_level_search_fields_wins_over_ux_search"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_template_rendering.py",
-    "class": "TestJinjaFilters",
-    "assertion_shape": "('in',)",
-    "size": 7,
-    "members": [
-      "test_status_badge_macro_tone_override",
-      "test_status_badge_macro_size_sm",
-      "test_status_badge_macro_display_override",
-      "test_timeago_tz_aware_datetime_does_not_raise",
-      "test_timeago_date_object",
-      "test_timeago_iso_string",
-      "test_timeago_naive_datetime_treated_as_local"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestValidateEntities",
-    "assertion_shape": "('call_any',)",
-    "size": 7,
-    "members": [
-      "test_duplicate_field_names",
-      "test_decimal_scale_greater_than_precision",
-      "test_string_very_large_max_length_warning",
-      "test_conflicting_modifiers",
-      "test_auto_modifier_on_non_datetime",
-      "test_constraint_references_nonexistent_field",
-      "test_permit_without_scope_warns"
     ],
     "recommendation": "parametrise"
   },
@@ -293,36 +213,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_composition_audit.py",
-    "class": "TestScoring",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_no_violations_scores_100",
-      "test_one_high_deducts_15",
-      "test_one_medium_deducts_5",
-      "test_one_low_deducts_2",
-      "test_multiple_violations",
-      "test_score_floors_at_zero"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_content_negotiation.py",
-    "class": "TestIsHtmxRequest",
-    "assertion_shape": "('is',)",
-    "size": 6,
-    "members": [
-      "test_htmx_header",
-      "test_accept_text_html_is_not_htmx",
-      "test_browser_accept_is_not_htmx",
-      "test_json_accept",
-      "test_empty_accept",
-      "test_no_headers_attr"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_expression_lang.py",
     "class": "TestTokenizer",
     "assertion_shape": "('eq', 'eq')",
@@ -353,81 +243,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_fidelity_scorer.py",
-    "class": "TestCreateModeStoryGapSuppression",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_create_skips_precondition_when_default_matches",
-      "test_create_still_flags_precondition_when_default_differs",
-      "test_edit_still_flags_precondition_even_when_default_matches",
-      "test_create_skips_outcome_for_becomes_transition",
-      "test_create_skips_outcome_for_transitions_through_phrase",
-      "test_edit_still_flags_transition_outcome"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_heading_scale_tokens.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 6,
-    "members": [
-      "test_app_heading_token_present",
-      "test_marketing_heading_token_present",
-      "test_cta_headline_canonically_defined",
-      "test_filterable_table_emits_h1_landmark",
-      "test_visible_h2_table_title_unchanged",
-      "test_tokens_in_dist_bundle"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_journey_reporter.py",
-    "class": "TestRenderReport",
-    "assertion_shape": "('in', 'in')",
-    "size": 6,
-    "members": [
-      "test_contains_persona_names",
-      "test_contains_verdict_counts",
-      "test_contains_cross_persona_patterns",
-      "test_contains_dead_ends",
-      "test_contains_nav_breaks",
-      "test_contains_recommendations"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_layout_engine.py",
-    "class": "TestArchetypeSelection",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_select_focus_metric_single_kpi",
-      "test_select_scanner_table_single_table",
-      "test_select_monitor_wall_multiple_signals",
-      "test_select_dual_pane_list_detail",
-      "test_select_command_center_expert_many_signals",
-      "test_select_respects_stage"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_locale_middleware.py",
-    "class": "TestParseAcceptLanguage",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_single_locale",
-      "test_multiple_with_quality",
-      "test_quality_zero_excluded",
-      "test_malformed_q_value_skipped",
-      "test_empty_header",
-      "test_garbage_entries_skipped"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_null_event_bus.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -443,21 +258,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestBusinessPriority",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_surface_priority_critical",
-      "test_surface_priority_low",
-      "test_surface_priority_defaults_to_medium",
-      "test_experience_priority_critical",
-      "test_experience_priority_defaults_to_medium",
-      "test_all_priority_levels_valid"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_persona_journey.py",
     "class": "TestExperienceReachability",
     "assertion_shape": "('eq',)",
@@ -469,21 +269,6 @@
       "test_access_spec_empty_allow_no_deny_no_gap",
       "test_access_spec_denies_persona_still_gap",
       "test_access_spec_allows_other_persona_still_gap"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_predicate_builder.py",
-    "class": "(module)",
-    "assertion_shape": "('call_isinstance', 'eq', 'eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_simple_field_equals_literal",
-      "test_field_equals_current_user",
-      "test_field_equals_current_user_dot_attr",
-      "test_dotted_field_becomes_path_check",
-      "test_field_equals_null",
-      "test_field_not_equals_null"
     ],
     "recommendation": "parametrise"
   },
@@ -848,20 +633,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_fidelity_scorer.py",
-    "class": "TestStatusChangedTriggerExclusion",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_status_changed_excluded_from_create",
-      "test_user_click_still_matches_create",
-      "test_form_submitted_still_matches_create",
-      "test_status_changed_still_matches_edit",
-      "test_status_changed_still_matches_list_and_detail"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_file_max_size.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -886,6 +657,20 @@
       "test_tenancy_topics_namespace_per_tenant",
       "test_tenancy_topics_defaults_to_shared",
       "test_tenancy_exclude_single"
+    ],
+    "recommendation": "parametrise"
+  },
+  {
+    "file": "tests/unit/test_heading_scale_tokens.py",
+    "class": "(module)",
+    "assertion_shape": "('in',)",
+    "size": 5,
+    "members": [
+      "test_heading_token_present",
+      "test_cta_headline_canonically_defined",
+      "test_filterable_table_emits_h1_landmark",
+      "test_visible_h2_table_title_unchanged",
+      "test_tokens_in_dist_bundle"
     ],
     "recommendation": "parametrise"
   },
@@ -1668,32 +1453,6 @@
   },
   {
     "file": "tests/unit/sentinel/test_agent_deployment_state.py",
-    "class": "TestDS01InterfaceWithoutAuth",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_passes_with_oauth2",
-      "test_passes_with_api_key",
-      "test_no_interfaces_returns_empty",
-      "test_empty_apis_list"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_deployment_state.py",
-    "class": "TestDS04QueueDirectDelivery",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_passes_queue_with_outbox_send",
-      "test_ignores_non_queue_channel_with_direct",
-      "test_ignores_stream_channel",
-      "test_no_channels_returns_empty"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_deployment_state.py",
     "class": "TestDS05PiiWithoutErasure",
     "assertion_shape": "('eq',)",
     "size": 4,
@@ -2183,19 +1942,6 @@
       "test_position_skips_non_landing",
       "test_position_skips_missing_section",
       "test_position_range_pass"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_composition_audit.py",
-    "class": "TestCheckStackedMedia",
-    "assertion_shape": "('is',)",
-    "size": 4,
-    "members": [
-      "test_side_by_side_passes",
-      "test_no_media_passes",
-      "test_no_content_passes",
-      "test_overlapping_passes"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -2695,19 +2441,6 @@
   },
   {
     "file": "tests/unit/test_expression_lang.py",
-    "class": "TestParserComparison",
-    "assertion_shape": "('call_isinstance', 'eq')",
-    "size": 4,
-    "members": [
-      "test_equality",
-      "test_inequality",
-      "test_less_than",
-      "test_greater_equal"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_expression_lang.py",
     "class": "TestEvalFunctions",
     "assertion_shape": "('eq',)",
     "size": 4,
@@ -3058,19 +2791,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
-    "file": "tests/unit/test_invariant_evaluator.py",
-    "class": "TestBasicExpressions",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_literal",
-      "test_literal_string",
-      "test_field_ref_simple",
-      "test_field_ref_nested"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
     "file": "tests/unit/test_ir_grant_registration.py",
     "class": "TestAppSpecGrantSchemas",
     "assertion_shape": "('eq',)",
@@ -3201,6 +2921,19 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_layout_engine.py",
+    "class": "TestArchetypeSelection",
+    "assertion_shape": "('eq',)",
+    "size": 4,
+    "members": [
+      "test_select_monitor_wall_multiple_signals",
+      "test_select_dual_pane_list_detail",
+      "test_select_command_center_expert_many_signals",
+      "test_select_respects_stage"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_layout_rules.py",
     "class": "TestRelatedGroupsRule",
     "assertion_shape": "('eq',)",
@@ -3223,19 +2956,6 @@
       "test_create_surface_with_multiple_sections_no_relevance",
       "test_create_surface_with_4_fields_single_section_no_relevance",
       "test_view_surface_not_checked_for_multi_section"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_ledger_parser.py",
-    "class": "TestTransactionPriorities",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_priority_critical",
-      "test_priority_high",
-      "test_priority_normal",
-      "test_priority_low"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -3708,6 +3428,19 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_predicate_builder.py",
+    "class": "(module)",
+    "assertion_shape": "('call_isinstance', 'eq', 'eq', 'eq')",
+    "size": 4,
+    "members": [
+      "test_simple_field_equals_literal",
+      "test_field_equals_current_user",
+      "test_field_equals_current_user_dot_attr",
+      "test_dotted_field_becomes_path_check"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_process_coverage.py",
     "class": "TestUIOutcomeAutoSatisfaction",
     "assertion_shape": "('is',)",
@@ -4085,6 +3818,19 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_template_rendering.py",
+    "class": "TestJinjaFilters",
+    "assertion_shape": "('in',)",
+    "size": 4,
+    "members": [
+      "test_timeago_tz_aware_datetime_does_not_raise",
+      "test_timeago_date_object",
+      "test_timeago_iso_string",
+      "test_timeago_naive_datetime_treated_as_local"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_tenant_config_coercion.py",
     "class": "TestStrCoercion",
     "assertion_shape": "('eq',)",
@@ -4380,19 +4126,6 @@
       "test_simple_path",
       "test_nested_path",
       "test_trailing_slash"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_viewport_suggestions.py",
-    "class": "TestViewportPrefixMapping",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_mobile_has_no_prefix",
-      "test_tablet_prefix",
-      "test_desktop_prefix",
-      "test_wide_prefix"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -7384,18 +7117,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
-    "file": "tests/unit/test_fidelity_scorer.py",
-    "class": "TestSearchSelectErrorHandlerCheck",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_aria_invalid_satisfies_error_handler_check",
-      "test_destructive_token_satisfies_error_handler_check",
-      "test_legacy_text_error_class_still_satisfies_check"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
     "file": "tests/unit/test_filter_ref_select_cancellation.py",
     "class": "(module)",
     "assertion_shape": "('in',)",
@@ -7824,18 +7545,6 @@
       "test_cache_24h",
       "test_cache_5m",
       "test_cache_30s"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_invariant_evaluator.py",
-    "class": "TestBasicExpressions",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_field_ref_missing",
-      "test_field_ref_empty_path",
-      "test_field_ref_nested_non_dict"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -8628,6 +8337,18 @@
       "test_process_with_manual_trigger",
       "test_process_with_timeout",
       "test_process_with_step_compensate"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
+    "file": "tests/unit/test_parser.py",
+    "class": "TestBusinessPriority",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_experience_priority_critical",
+      "test_experience_priority_defaults_to_medium",
+      "test_all_priority_levels_valid"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -10068,18 +9789,6 @@
       "test_render_page_contains_table",
       "test_render_page_contains_htmx",
       "test_render_detail_page"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_template_rendering.py",
-    "class": "TestJinjaFilters",
-    "assertion_shape": "('in', 'in')",
-    "size": 3,
-    "members": [
-      "test_dateformat_filter_iso_string",
-      "test_dateformat_filter_datetime",
-      "test_status_badge_macro_bordered"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },

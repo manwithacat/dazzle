@@ -252,9 +252,25 @@ class TestStatusListTemplateBinding:
         )
         return path.read_text()
 
-    def test_template_iterates_status_entries(self) -> None:
-        text = self._text()
-        assert "for entry in status_entries" in text
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "for entry in status_entries",
+            "data-lucide=",
+            'data-dz-state="',
+            "{% call region_card",
+            "_state != 'neutral'",
+        ],
+        ids=[
+            "test_template_iterates_status_entries",
+            "test_template_uses_lucide_icon_attr",
+            "test_template_emits_data_dz_state_attribute",
+            "test_template_uses_region_card_macro",
+            "test_neutral_state_omits_pill",
+        ],
+    )
+    def test_template_contains(self, needle: str) -> None:
+        assert needle in self._text()
 
     def test_template_renders_each_field(self) -> None:
         text = self._text()
@@ -262,40 +278,11 @@ class TestStatusListTemplateBinding:
         assert "entry.caption" in text
         assert "entry.icon" in text
 
-    def test_template_uses_lucide_icon_attr(self) -> None:
-        """Mirrors action_grid (#891) icon rendering — `data-lucide`
-        attribute, no inline SVG paths."""
-        text = self._text()
-        assert "data-lucide=" in text
-
-    def test_template_emits_data_dz_state_attribute(self) -> None:
-        """v0.61.70 (#906): pill + icon tints come from `dz-tones.css`
-        keyed off `data-dz-state`, NOT from inline Tailwind arbitrary
-        values built at IR-render time (those were JIT-invisible and
-        shipped without rules). The template must still emit the
-        attribute so the CSS can match it. Per-state branches pinned
-        in `test_dz_tones_css.py::TestDzTonesCssRulesPresent`."""
-        text = self._text()
-        assert 'data-dz-state="' in text, (
-            "status_list.html must emit data-dz-state — dz-tones.css keys off it"
-        )
-
-    def test_template_uses_region_card_macro(self) -> None:
-        text = self._text()
-        assert "{% call region_card" in text
-
     def test_template_emits_canonical_class_markers(self) -> None:
         text = self._text()
         assert "dz-status-list-region" in text
         assert "dz-status-list" in text
         assert "dz-status-list-entry" in text
-
-    def test_neutral_state_omits_pill(self) -> None:
-        """Neutral state is the default — entries that don't explicitly
-        set a state shouldn't render a pill saying "NEUTRAL". The
-        template gates the pill on `_state != 'neutral'`."""
-        text = self._text()
-        assert "_state != 'neutral'" in text
 
 
 # ───────────────────────── empty state ──────────────────────────

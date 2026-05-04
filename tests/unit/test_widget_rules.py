@@ -65,16 +65,78 @@ class TestWidgetRules:
         assert "body" in r.context
         assert "post_create" in r.context
 
-    def test_ref_field_without_widget_no_source_returns_combobox(self):
-        entity = _entity(
-            "Task",
-            [_field("assignee", FieldTypeKind.REF, ref_entity="User")],
-        )
-        surface = _surface("task_edit", "Task", SurfaceMode.EDIT, [_element("assignee")])
+    @pytest.mark.parametrize(
+        (
+            "field_name",
+            "field_kind",
+            "field_kwargs",
+            "entity_name",
+            "surface_name",
+            "mode",
+            "expected_capability",
+        ),
+        [
+            (
+                "assignee",
+                FieldTypeKind.REF,
+                {"ref_entity": "User"},
+                "Task",
+                "task_edit",
+                SurfaceMode.EDIT,
+                "widget=combobox",
+            ),
+            (
+                "starts_on",
+                FieldTypeKind.DATE,
+                {},
+                "Event",
+                "event_create",
+                SurfaceMode.CREATE,
+                "widget=picker",
+            ),
+            (
+                "scheduled_at",
+                FieldTypeKind.DATETIME,
+                {},
+                "Meeting",
+                "meeting_edit",
+                SurfaceMode.EDIT,
+                "widget=picker",
+            ),
+            (
+                "tags",
+                FieldTypeKind.STR,
+                {},
+                "Article",
+                "article_create",
+                SurfaceMode.CREATE,
+                "widget=tags",
+            ),
+        ],
+        ids=[
+            "test_ref_field_without_widget_no_source_returns_combobox",
+            "test_date_field_without_widget_returns_picker",
+            "test_datetime_field_without_widget_returns_picker",
+            "test_str_field_named_tags_returns_tags_widget",
+        ],
+    )
+    def test_field_capability(
+        self,
+        field_name,
+        field_kind,
+        field_kwargs,
+        entity_name,
+        surface_name,
+        mode,
+        expected_capability,
+    ):
+        entity = _entity(entity_name, [_field(field_name, field_kind, **field_kwargs)])
+        surface = _surface(surface_name, entity_name, mode, [_element(field_name)])
         results = check_widget_relevance([entity], [surface])
         assert len(results) == 1
-        assert results[0].capability == "widget=combobox"
-        assert results[0].kg_entity == "capability:widget_combobox"
+        assert results[0].capability == expected_capability
+        kg_suffix = expected_capability.split("=")[1]
+        assert results[0].kg_entity == f"capability:widget_{kg_suffix}"
 
     def test_ref_field_with_source_option_no_relevance(self):
         entity = _entity(
@@ -89,34 +151,6 @@ class TestWidgetRules:
         )
         results = check_widget_relevance([entity], [surface])
         assert results == []
-
-    def test_date_field_without_widget_returns_picker(self):
-        entity = _entity("Event", [_field("starts_on", FieldTypeKind.DATE)])
-        surface = _surface("event_create", "Event", SurfaceMode.CREATE, [_element("starts_on")])
-        results = check_widget_relevance([entity], [surface])
-        assert len(results) == 1
-        assert results[0].capability == "widget=picker"
-        assert results[0].kg_entity == "capability:widget_picker"
-
-    def test_datetime_field_without_widget_returns_picker(self):
-        entity = _entity("Meeting", [_field("scheduled_at", FieldTypeKind.DATETIME)])
-        surface = _surface(
-            "meeting_edit",
-            "Meeting",
-            SurfaceMode.EDIT,
-            [_element("scheduled_at")],
-        )
-        results = check_widget_relevance([entity], [surface])
-        assert len(results) == 1
-        assert results[0].capability == "widget=picker"
-
-    def test_str_field_named_tags_returns_tags_widget(self):
-        entity = _entity("Article", [_field("tags", FieldTypeKind.STR)])
-        surface = _surface("article_create", "Article", SurfaceMode.CREATE, [_element("tags")])
-        results = check_widget_relevance([entity], [surface])
-        assert len(results) == 1
-        assert results[0].capability == "widget=tags"
-        assert results[0].kg_entity == "capability:widget_tags"
 
     def test_str7_field_named_color_returns_color_widget(self):
         entity = _entity("Theme", [_field("color_hex", FieldTypeKind.STR, max_length=7)])

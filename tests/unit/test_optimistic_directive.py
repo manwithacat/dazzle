@@ -24,17 +24,25 @@ def js() -> str:
     return DZ_ALPINE_JS.read_text()
 
 
-def test_directive_registered(js: str) -> None:
-    """Alpine.directive('optimistic', ...) must be present so
-    x-optimistic in templates resolves to the handler."""
-    assert 'Alpine.directive("optimistic"' in js
-
-
-def test_remove_shape_implemented(js: str) -> None:
-    """Cycle 1 ships the remove shape — the workhorse for instant
-    delete actions. Cycle 2 added prepend/append/replace; remove
-    must still be in the verb set."""
-    assert '"remove"' in js
+@pytest.mark.parametrize(
+    "needle",
+    [
+        'Alpine.directive("optimistic"',
+        '"remove"',
+        'startsWith("closest ")',
+        "ev.target !== el",
+        "x-optimistic",
+    ],
+    ids=[
+        "test_directive_registered",
+        "test_remove_shape_implemented",
+        "test_supports_closest_selector_form",
+        "test_only_reacts_to_own_events",
+        "test_directive_listed_in_module_header",
+    ],
+)
+def test_js_contains(js: str, needle: str) -> None:
+    assert needle in js
 
 
 def test_unknown_shape_warns(js: str) -> None:
@@ -47,13 +55,6 @@ def test_unknown_shape_warns(js: str) -> None:
     assert "Known shapes" in js
 
 
-def test_supports_closest_selector_form(js: str) -> None:
-    """Mirror htmx's `closest <selector>` semantics — most common
-    pattern in DSL-rendered list rows where the button is inside
-    the row it's deleting."""
-    assert 'startsWith("closest ")' in js
-
-
 def test_subscribes_to_htmx_lifecycle_events(js: str) -> None:
     """The directive needs all three htmx events:
     - beforeRequest: apply optimistic change
@@ -63,14 +64,6 @@ def test_subscribes_to_htmx_lifecycle_events(js: str) -> None:
     assert 'addEventListener("htmx:beforeRequest"' in js
     assert 'addEventListener("htmx:afterRequest"' in js
     assert 'addEventListener("htmx:sendError"' in js
-
-
-def test_only_reacts_to_own_events(js: str) -> None:
-    """htmx events bubble. If the directive reacted to a child's
-    htmx request it would rip the row out mid-handler. Filter via
-    `ev.target !== el` so only the bound element's mutations
-    trigger the directive."""
-    assert "ev.target !== el" in js
 
 
 def test_snapshots_parent_and_next_sibling_for_rollback(js: str) -> None:
@@ -123,11 +116,6 @@ def test_response_error_branch(js: str) -> None:
     (htmx 1.x convention) and falls back to xhr.status."""
     assert "successful" in js
     assert "xhr.status < 400" in js
-
-
-def test_directive_listed_in_module_header(js: str) -> None:
-    """Public-API list entry — discoverability for future readers."""
-    assert "x-optimistic" in js
 
 
 def test_directive_present_in_dist_bundle() -> None:

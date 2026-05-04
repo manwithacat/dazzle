@@ -124,50 +124,28 @@ class TestStepResult:
 class TestDazzleAdapterURLResolution:
     """Tests for DNR adapter URL resolution."""
 
-    def test_resolve_list_view_url(self) -> None:
-        """Test resolving a list view URL."""
+    @pytest.mark.parametrize(
+        ("view", "expected"),
+        [
+            ("task_list", "http://localhost:3000/app/task"),
+            ("task_create", "http://localhost:3000/app/task/create"),
+            ("task_detail", "http://localhost:3000/app/task/{id}"),
+            ("task_edit", "http://localhost:3000/app/task/{id}/edit"),
+            ("admin_dashboard", "http://localhost:3000/app/admin/dashboard"),
+        ],
+        ids=[
+            "test_resolve_list_view_url",
+            "test_resolve_create_view_url",
+            "test_resolve_detail_view_url",
+            "test_resolve_edit_view_url",
+            "test_resolve_dashboard_url",
+        ],
+    )
+    def test_resolve_view_url(self, view: str, expected: str) -> None:
         from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
         adapter = DazzleAdapter(base_url="http://localhost:3000")
-        url = adapter.resolve_view_url("task_list")
-
-        assert url == "http://localhost:3000/app/task"
-
-    def test_resolve_create_view_url(self) -> None:
-        """Test resolving a create view URL."""
-        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
-
-        adapter = DazzleAdapter(base_url="http://localhost:3000")
-        url = adapter.resolve_view_url("task_create")
-
-        assert url == "http://localhost:3000/app/task/create"
-
-    def test_resolve_detail_view_url(self) -> None:
-        """Test resolving a detail view URL."""
-        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
-
-        adapter = DazzleAdapter(base_url="http://localhost:3000")
-        url = adapter.resolve_view_url("task_detail")
-
-        assert url == "http://localhost:3000/app/task/{id}"
-
-    def test_resolve_edit_view_url(self) -> None:
-        """Test resolving an edit view URL."""
-        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
-
-        adapter = DazzleAdapter(base_url="http://localhost:3000")
-        url = adapter.resolve_view_url("task_edit")
-
-        assert url == "http://localhost:3000/app/task/{id}/edit"
-
-    def test_resolve_dashboard_url(self) -> None:
-        """Test resolving a dashboard view URL."""
-        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
-
-        adapter = DazzleAdapter(base_url="http://localhost:3000")
-        url = adapter.resolve_view_url("admin_dashboard")
-
-        assert url == "http://localhost:3000/app/admin/dashboard"
+        assert adapter.resolve_view_url(view) == expected
 
 
 class TestBaseAdapterURLResolution:

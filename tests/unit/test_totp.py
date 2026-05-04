@@ -28,11 +28,26 @@ RFC_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"  # nosemgrep: generic.secrets.se
 class TestGenerateTotpSecret:
     """Tests for generate_totp_secret()."""
 
-    def test_returns_valid_base32(self) -> None:
-        secret = generate_totp_secret()
-        # base32 decoding should not raise
+    @pytest.mark.parametrize(
+        ("length", "expected_decoded_len"),
+        [
+            (None, 20),  # default
+            (10, 10),
+            (32, 32),
+            (1, 1),
+        ],
+        ids=[
+            "test_returns_valid_base32",
+            "test_custom_length_10",
+            "test_custom_length_32",
+            "test_custom_length_1",
+        ],
+    )
+    def test_secret_length(self, length, expected_decoded_len) -> None:
+        kwargs = {"length": length} if length is not None else {}
+        secret = generate_totp_secret(**kwargs)
         decoded = base64.b32decode(secret)
-        assert len(decoded) == 20  # default 20 bytes
+        assert len(decoded) == expected_decoded_len
 
     def test_output_is_ascii_base32_chars(self) -> None:
         secret = generate_totp_secret()
@@ -43,21 +58,6 @@ class TestGenerateTotpSecret:
         secrets_set = {generate_totp_secret() for _ in range(50)}
         # With 160-bit randomness, collisions are astronomically unlikely
         assert len(secrets_set) == 50
-
-    def test_custom_length_10(self) -> None:
-        secret = generate_totp_secret(length=10)
-        decoded = base64.b32decode(secret)
-        assert len(decoded) == 10
-
-    def test_custom_length_32(self) -> None:
-        secret = generate_totp_secret(length=32)
-        decoded = base64.b32decode(secret)
-        assert len(decoded) == 32
-
-    def test_custom_length_1(self) -> None:
-        secret = generate_totp_secret(length=1)
-        decoded = base64.b32decode(secret)
-        assert len(decoded) == 1
 
 
 # ===================================================================

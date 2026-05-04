@@ -19,6 +19,8 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
+import pytest
+
 from dazzle_back.runtime.audit_history import (
     HistoryChange,
     HistoryEntry,
@@ -147,8 +149,51 @@ def _entry(*, at, field_name, by="user-1", op="update", entity_id="x", entity_ty
 
 
 class TestGroupByChange:
-    def test_empty_input(self):
-        assert group_by_change([]) == []
+    @pytest.mark.parametrize(
+        ("entries", "expected_count"),
+        [
+            ([], 0),
+            (
+                [
+                    {"at": "2026-05-03T12:00:00", "field_name": "status"},
+                    {"at": "2026-05-03T12:00:01", "field_name": "title"},
+                ],
+                2,
+            ),
+            (
+                [
+                    {"at": "2026-05-03T12:00:00", "field_name": "status", "by": "user-1"},
+                    {"at": "2026-05-03T12:00:00", "field_name": "title", "by": "user-2"},
+                ],
+                2,
+            ),
+            (
+                [
+                    {"at": "2026-05-03T12:00:00", "field_name": "status", "op": "update"},
+                    {"at": "2026-05-03T12:00:00", "field_name": "title", "op": "create"},
+                ],
+                2,
+            ),
+            (
+                [
+                    {"at": "2026-05-03T12:00:00", "field_name": "status", "entity_id": "row-1"},
+                    {"at": "2026-05-03T12:00:00", "field_name": "status", "entity_id": "row-2"},
+                ],
+                2,
+            ),
+        ],
+        ids=[
+            "test_empty_input",
+            "test_different_timestamps_split",
+            "test_different_users_split",
+            "test_different_operations_split",
+            "test_different_entity_ids_split",
+        ],
+    )
+    def test_group_count(self, entries, expected_count):
+        built = [_entry(**kwargs) for kwargs in entries]
+        changes = group_by_change(built)
+        assert len(changes) == expected_count
 
     def test_single_entry(self):
         entries = [_entry(at="2026-05-03T12:00:00", field_name="status")]
@@ -170,43 +215,6 @@ class TestGroupByChange:
         assert len(changes) == 1
         names = [e.field_name for e in changes[0].fields]
         assert names == ["status", "title"]
-
-    def test_different_timestamps_split(self):
-        entries = [
-            _entry(at="2026-05-03T12:00:00", field_name="status"),
-            _entry(at="2026-05-03T12:00:01", field_name="title"),
-        ]
-        changes = group_by_change(entries)
-        assert len(changes) == 2
-
-    def test_different_users_split(self):
-        same_at = "2026-05-03T12:00:00"
-        entries = [
-            _entry(at=same_at, field_name="status", by="user-1"),
-            _entry(at=same_at, field_name="title", by="user-2"),
-        ]
-        changes = group_by_change(entries)
-        assert len(changes) == 2
-
-    def test_different_operations_split(self):
-        same_at = "2026-05-03T12:00:00"
-        entries = [
-            _entry(at=same_at, field_name="status", op="update"),
-            _entry(at=same_at, field_name="title", op="create"),
-        ]
-        changes = group_by_change(entries)
-        assert len(changes) == 2
-
-    def test_different_entity_ids_split(self):
-        # Two changes to different rows of the same entity type at
-        # the same instant — must NOT collapse.
-        same_at = "2026-05-03T12:00:00"
-        entries = [
-            _entry(at=same_at, field_name="status", entity_id="row-1"),
-            _entry(at=same_at, field_name="status", entity_id="row-2"),
-        ]
-        changes = group_by_change(entries)
-        assert len(changes) == 2
 
     def test_change_facets_propagate(self):
         # The grouped HistoryChange carries the shared facets so the

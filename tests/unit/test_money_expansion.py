@@ -62,20 +62,26 @@ class TestExpandMoneyField:
             modifiers=modifiers,
         )
 
-    def test_expands_to_two_fields(self):
-        """Money field produces exactly two BackendSpec fields."""
-        result = _expand_money_field(self._make_money_field())
-        assert len(result) == 2
-
-    def test_minor_field_name(self):
-        """First field is {name}_minor."""
-        result = _expand_money_field(self._make_money_field())
-        assert result[0].name == "monthly_fee_minor"
-
-    def test_currency_field_name(self):
-        """Second field is {name}_currency."""
-        result = _expand_money_field(self._make_money_field())
-        assert result[1].name == "monthly_fee_currency"
+    @pytest.mark.parametrize(
+        ("currency", "extractor", "expected"),
+        [
+            ("GBP", lambda r: len(r), 2),
+            ("GBP", lambda r: r[0].name, "monthly_fee_minor"),
+            ("GBP", lambda r: r[1].name, "monthly_fee_currency"),
+            ("GBP", lambda r: r[1].default, "GBP"),
+            ("USD", lambda r: r[1].default, "USD"),
+        ],
+        ids=[
+            "test_expands_to_two_fields",
+            "test_minor_field_name",
+            "test_currency_field_name",
+            "test_currency_default_gbp",
+            "test_currency_default_usd",
+        ],
+    )
+    def test_expand_basic(self, currency, extractor, expected):
+        result = _expand_money_field(self._make_money_field(currency=currency))
+        assert extractor(result) == expected
 
     def test_minor_field_is_int(self):
         """_minor field is scalar INT."""
@@ -89,16 +95,6 @@ class TestExpandMoneyField:
         assert result[1].type.kind == "scalar"
         assert result[1].type.scalar_type == ScalarType.STR
         assert result[1].type.max_length == 3
-
-    def test_currency_default_gbp(self):
-        """_currency field defaults to GBP."""
-        result = _expand_money_field(self._make_money_field(currency="GBP"))
-        assert result[1].default == "GBP"
-
-    def test_currency_default_usd(self):
-        """_currency field uses the currency from DSL."""
-        result = _expand_money_field(self._make_money_field(currency="USD"))
-        assert result[1].default == "USD"
 
     def test_minor_preserves_required(self):
         """_minor field inherits required from original."""

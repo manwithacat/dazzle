@@ -300,63 +300,74 @@ def _make_personas(*ids: str) -> list[PersonaSpec]:
 
 
 class TestGetPermittedPersonas:
-    def test_open_permissions_all_personas(self) -> None:
-        """A permit rule with no personas list returns all personas."""
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, [])],
-        )
-        personas = _make_personas("admin", "viewer", "editor")
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
-        assert set(result) == {"admin", "viewer", "editor"}
-
-    def test_restricted_to_named_personas_only(self) -> None:
-        """A permit rule naming specific personas returns only those IDs."""
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.UPDATE, ["editor", "admin"])],
-        )
-        personas = _make_personas("admin", "viewer", "editor")
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.UPDATE)
-        assert set(result) == {"editor", "admin"}
-
-    def test_no_access_spec_defaults_to_all_personas(self) -> None:
-        """Entity with no access spec at all defaults to all personas."""
-        entity = _make_entity("Task")  # no permissions
-        personas = _make_personas("admin", "viewer")
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
-        assert set(result) == {"admin", "viewer"}
-
-    def test_entity_not_found_returns_all_personas(self) -> None:
-        """Requesting an unknown entity name returns all personas (safe default)."""
-        entity = _make_entity("Task", permissions=[(PermissionKind.READ, ["admin"])])
-        personas = _make_personas("admin", "viewer")
-        result = get_permitted_personas([entity], personas, "Other", PermissionKind.READ)
-        assert set(result) == {"admin", "viewer"}
-
-    def test_operation_without_rule_returns_empty(self) -> None:
-        """If the entity has access spec but no rule for the operation, returns empty."""
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, ["admin"])],
-        )
-        personas = _make_personas("admin", "viewer")
-        # DELETE has no rule, so permitted set is empty
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.DELETE)
-        assert result == []
-
-    def test_multiple_rules_same_operation_union(self) -> None:
-        """Multiple permit rules for the same operation produce a union."""
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                (PermissionKind.READ, ["admin"]),
-                (PermissionKind.READ, ["viewer"]),
-            ],
-        )
-        personas = _make_personas("admin", "viewer", "editor")
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
-        assert set(result) == {"admin", "viewer"}
+    @pytest.mark.parametrize(
+        ("permissions", "persona_ids", "query_entity", "query_op", "expected"),
+        [
+            (
+                [(PermissionKind.READ, [])],
+                ("admin", "viewer", "editor"),
+                "Task",
+                PermissionKind.READ,
+                {"admin", "viewer", "editor"},
+            ),
+            (
+                [(PermissionKind.UPDATE, ["editor", "admin"])],
+                ("admin", "viewer", "editor"),
+                "Task",
+                PermissionKind.UPDATE,
+                {"editor", "admin"},
+            ),
+            (
+                None,
+                ("admin", "viewer"),
+                "Task",
+                PermissionKind.READ,
+                {"admin", "viewer"},
+            ),
+            (
+                [(PermissionKind.READ, ["admin"])],
+                ("admin", "viewer"),
+                "Other",
+                PermissionKind.READ,
+                {"admin", "viewer"},
+            ),
+            (
+                [(PermissionKind.READ, ["admin"])],
+                ("admin", "viewer"),
+                "Task",
+                PermissionKind.DELETE,
+                set(),
+            ),
+            (
+                [
+                    (PermissionKind.READ, ["admin"]),
+                    (PermissionKind.READ, ["viewer"]),
+                ],
+                ("admin", "viewer", "editor"),
+                "Task",
+                PermissionKind.READ,
+                {"admin", "viewer"},
+            ),
+        ],
+        ids=[
+            "test_open_permissions_all_personas",
+            "test_restricted_to_named_personas_only",
+            "test_no_access_spec_defaults_to_all_personas",
+            "test_entity_not_found_returns_all_personas",
+            "test_operation_without_rule_returns_empty",
+            "test_multiple_rules_same_operation_union",
+        ],
+    )
+    def test_get_permitted_personas(
+        self, permissions, persona_ids, query_entity, query_op, expected
+    ) -> None:
+        if permissions is None:
+            entity = _make_entity("Task")
+        else:
+            entity = _make_entity("Task", permissions=permissions)
+        personas = _make_personas(*persona_ids)
+        result = get_permitted_personas([entity], personas, query_entity, query_op)
+        assert set(result) == expected
 
 
 # ---------------------------------------------------------------------------
