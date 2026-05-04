@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.7] - 2026-05-04
+
+### Added
+- **#996 — `dazzle validate` now errors on unresolved `source=<pack>.<op>`
+  field options.** Pre-#996 the runtime resolved field source
+  references lazily and silently swallowed `ImportError` / `pack
+  not found` exceptions — typos rendered the field as a plain
+  `<input type="text">` with no autocomplete and no warning. The
+  fuzz sweep that landed v0.64.5 caught a suspected case in
+  fieldtest_hub which turned out to be a false positive (the pack
+  and op both exist), but the validator gap itself was real.
+
+  `validate_surfaces` now walks every field's `source=` option,
+  resolves it against `dazzle.api_kb.list_packs()`, and emits a
+  validation error with the known-pack/known-op list when the
+  reference doesn't resolve. Self-disables on slim installs where
+  `api_kb` isn't importable.
+
+  Closes #996.
+
 ## [0.64.6] - 2026-05-04
 
 ### Fixed

@@ -337,6 +337,11 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     Checks:
     - Entity references exist (already done by linker, but check fields)
     - Surface fields match entity fields when entity_ref is set
+    - `source=<pack>.<op>` field options resolve to a known API pack
+      (#996 — fuzz-sweep caught fieldtest_hub referencing
+      `companies_house_lookup.search_companies` with no pack declared;
+      runtime silently swallowed the resolution failure and the
+      autocomplete just rendered as a plain text input)
     - Actions have valid outcomes
     - Modes are appropriate for the surface structure
 
@@ -345,6 +350,26 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     errors = []
     warnings = []
+
+    # Pre-resolve API pack metadata once. The list_packs() discovery
+    # walks the api-kb directory, so do it lazily and cache. Empty
+    # mapping on ImportError keeps validate functional in slim
+    # installs (gate self-disables — typo-detection is best-effort).
+    pack_ops_cache: dict[str, set[str]] | None = None
+
+    def _resolve_pack_ops() -> dict[str, set[str]]:
+        nonlocal pack_ops_cache
+        if pack_ops_cache is None:
+            try:
+                from dazzle.api_kb import list_packs
+
+                pack_ops_cache = {
+                    p.name: {getattr(op, "name", str(op)) for op in p.operations}
+                    for p in list_packs()
+                }
+            except Exception:
+                pack_ops_cache = {}
+        return pack_ops_cache
 
     for surface in appspec.surfaces:
         # Validate entity field matching
@@ -360,6 +385,34 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                 f"references non-existent field '{element.field_name}' "
                                 f"from entity '{entity.name}'"
                             )
+
+        # Validate field source= references resolve to a known API pack
+        # AND a known operation on that pack. #996 — typos and dropped
+        # packs would fail silently at runtime; the autocomplete just
+        # rendered as a plain text input.
+        for section in surface.sections:
+            for element in section.elements:
+                source_ref = element.options.get("source") if element.options else None
+                if not source_ref or "." not in source_ref:
+                    continue
+                pack_name, op_name = source_ref.rsplit(".", 1)
+                packs = _resolve_pack_ops()
+                if not packs:
+                    continue  # api_kb unavailable — skip the gate
+                if pack_name not in packs:
+                    errors.append(
+                        f"Surface '{surface.name}' field '{element.field_name}' "
+                        f"references source '{source_ref}' but no API pack "
+                        f"named '{pack_name}' is declared. "
+                        f"Known packs: {sorted(packs)}"
+                    )
+                elif op_name not in packs[pack_name]:
+                    errors.append(
+                        f"Surface '{surface.name}' field '{element.field_name}' "
+                        f"references source '{source_ref}' but operation "
+                        f"'{op_name}' is not defined on pack '{pack_name}'. "
+                        f"Known ops: {sorted(packs[pack_name])}"
+                    )
 
         # Validate search fields reference valid entity fields
         if surface.search_fields and surface.entity_ref:
