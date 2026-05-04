@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.2] - 2026-05-04
+
+### Added
+- **#977 cycle 3 — dz-richtext paste sanitisation pipeline.** The
+  paste path everyone gets wrong gets a closed-schema treatment.
+  Pipeline (DOMParser → drop dangerous subtrees → rewrite synonyms
+  → normalise list structure → schema sanitiseTree → insert via
+  Range.insertNode):
+  - **Tag synonyms** — Word/Docs/Notion produce HTML our schema
+    doesn't recognise. Rewritten in place: `B→STRONG`, `I→EM`,
+    `STRIKE/DEL→S`, `H1→H2` (per #983 — surface owns h1),
+    `H4/H5/H6→H3`, `DIV→P`. Result: paste preserves the formatting
+    intent while the output stays inside the closed schema.
+  - **Dangerous subtrees** — `script / style / iframe / object /
+    embed / meta / link / noscript / template` dropped with
+    children before the synonym pass, so a script wrapping known
+    tags doesn't leak its body. Comments and processing
+    instructions also stripped (Word's `<!--[if mso]>` lives here).
+  - **Structural normalisation** — orphan `<li>` outside any
+    ul/ol gets wrapped in a fresh `<ul>` (or merged into a
+    previous-sibling list); `<p>` inside `<li>` is collapsed into
+    inline content with `<br>` separators.
+  - **Plain-text fallback** — when the clipboard has only
+    text/plain, blank-line splits become paragraphs and single
+    newlines become `<br>` so the inserted content respects the
+    schema.
+  - **Same SAFE_HREF gate** — pasted `<a>` tags go through the
+    cycle 2 protocol allowlist; `javascript:` and `data:` links
+    have their href stripped on the way in.
+  - +16 source-regression tests (61 total).
+
+### Agent Guidance
+- The paste pipeline (`pasteSanitise`) is the model for how all
+  untrusted HTML enters the editor. When extending the schema in
+  cycle 4 (server allowlist parity), keep these passes in this
+  order: drop-dangerous → rewrite-synonyms → normalise-structure
+  → schema-walk. Any reordering risks leaking script children.
+
 ## [0.64.1] - 2026-05-04
 
 ### Added

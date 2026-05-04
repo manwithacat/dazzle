@@ -1,4 +1,4 @@
-"""Source-regression tests for dz-richtext.js (#977 cycles 1–2).
+"""Source-regression tests for dz-richtext.js (#977 cycles 1–3).
 
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md
 
@@ -338,3 +338,131 @@ class TestCycle2Lifecycle:
         """Tests can pass options.linkPrompt to avoid window.prompt."""
         src = JS_PATH.read_text()
         assert "options && options.linkPrompt" in src or "options.linkPrompt" in src
+
+
+# ───────────────────────────── cycle 3 ────────────────────────────────
+
+
+class TestCycle3PasteSanitiser:
+    """Paste pipeline: DOMParser walk + tag-synonym rewrites +
+    structural normalisation + dangerous-subtree drop."""
+
+    def test_paste_handler_wired_on_editor(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'on(editor, "paste"' in src
+        assert "handlePaste(editor, e)" in src
+
+    def test_paste_uses_clipboard_data(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'data.getData("text/html")' in src
+        assert 'data.getData("text/plain")' in src
+
+    def test_paste_prevents_default(self) -> None:
+        """We always own insertion — never let the browser drop raw HTML."""
+        src = JS_PATH.read_text()
+        assert "function handlePaste" in src
+        assert "event.preventDefault()" in src
+
+    def test_paste_uses_domparser(self) -> None:
+        src = JS_PATH.read_text()
+        assert "function pasteSanitise" in src
+        assert "new DOMParser().parseFromString" in src
+
+    def test_paste_inserts_via_range(self) -> None:
+        """Insertion goes through Range.insertNode after deleteContents,
+        so existing selection is replaced cleanly."""
+        src = JS_PATH.read_text()
+        assert "range.deleteContents()" in src
+        assert "range.insertNode(frag)" in src
+
+
+class TestCycle3TagSynonyms:
+    def test_synonym_table_present(self) -> None:
+        src = JS_PATH.read_text()
+        assert "TAG_SYNONYMS" in src
+        # Common Word/Docs synonyms
+        assert 'B: "STRONG"' in src
+        assert 'I: "EM"' in src
+        assert 'STRIKE: "S"' in src
+        assert 'DEL: "S"' in src
+
+    def test_h1_demoted_to_h2(self) -> None:
+        """Per #983: editor never produces h1 — surface owns it."""
+        src = JS_PATH.read_text()
+        assert 'H1: "H2"' in src
+
+    def test_h4_h5_h6_promoted_to_h3(self) -> None:
+        """Schema only has h2 + h3; deeper nesting collapses to h3."""
+        src = JS_PATH.read_text()
+        assert 'H4: "H3"' in src
+        assert 'H5: "H3"' in src
+        assert 'H6: "H3"' in src
+
+    def test_div_collapses_to_p(self) -> None:
+        """Word/Docs paste lots of divs; collapse to paragraphs."""
+        src = JS_PATH.read_text()
+        assert 'DIV: "P"' in src
+
+    def test_synonym_walker_replaces_in_place(self) -> None:
+        src = JS_PATH.read_text()
+        assert "function rewriteSynonyms" in src
+        assert "n.parentNode.replaceChild(replacement, n)" in src
+
+
+class TestCycle3DangerousSubtreeDrop:
+    """Defence-in-depth: explicitly drop script/style/iframe subtrees."""
+
+    def test_drop_table_has_script_iframe_object(self) -> None:
+        src = JS_PATH.read_text()
+        assert "PASTE_DROP_WITH_CHILDREN" in src
+        for tag in [
+            "SCRIPT:",
+            "STYLE:",
+            "IFRAME:",
+            "OBJECT:",
+            "EMBED:",
+            "META:",
+            "LINK:",
+            "NOSCRIPT:",
+            "TEMPLATE:",
+        ]:
+            assert tag in src
+
+    def test_drops_comments_and_processing_instructions(self) -> None:
+        """Word HTML is full of <!-- conditional comments -->."""
+        src = JS_PATH.read_text()
+        assert "function dropDangerousSubtrees" in src
+        # nodeType 8 = COMMENT_NODE, 7 = PROCESSING_INSTRUCTION_NODE
+        assert "child.nodeType === 8" in src
+        assert "child.nodeType === 7" in src
+
+
+class TestCycle3StructuralNormalisation:
+    def test_orphan_li_lifted(self) -> None:
+        """A bare <li> outside ul/ol gets wrapped (or merged into a
+        previous-sibling ul) — Notion paste does this."""
+        src = JS_PATH.read_text()
+        assert "function normaliseListStructure" in src
+        assert "orphans" in src
+
+    def test_p_inside_li_collapsed(self) -> None:
+        """<li><p>text</p></li> → <li>text</li>."""
+        src = JS_PATH.read_text()
+        assert 'querySelectorAll("p")' in src
+        assert "li.insertBefore" in src
+
+
+class TestCycle3PlainTextFallback:
+    def test_plain_text_split_into_paragraphs(self) -> None:
+        """text/plain only: blank-line-split → <p>; single newlines → <br>."""
+        src = JS_PATH.read_text()
+        assert "text.split(/\\n{2,}/)" in src
+        assert 'document.createElement("br")' in src
+
+
+class TestCycle3SafeHrefInPaste:
+    """Pasted links go through the same SAFE_HREF gate."""
+
+    def test_a_href_validated_in_sanitise_tree(self) -> None:
+        src = JS_PATH.read_text()
+        assert "if (!SAFE_HREF.test(href))" in src

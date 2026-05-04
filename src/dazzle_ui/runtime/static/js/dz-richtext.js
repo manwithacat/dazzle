@@ -6,8 +6,10 @@
  * Cycle 1: bold/italic/underline + emit pass + a11y baseline.
  * Cycle 2: lists (ul/ol), headings (h2/h3), blockquote, inline code,
  *          link prompt, clear-format, full keyboard shortcuts.
- * Cycles 3–5: paste sanitisation, undo/redo + server allowlist parity,
- *             DSL knobs.
+ * Cycle 3: paste sanitisation pipeline — DOMParser walk, tag-synonym
+ *          rewrites (b→strong, i→em, font→text), structural normalisation
+ *          (lift orphan li, collapse p-in-li), inline-style flood scrub.
+ * Cycles 4–5: undo/redo + server allowlist parity, DSL knobs.
  *
  * Coexists with the Quill bridge (registered as "richtext"); this
  * editor is registered as "richtext-native" until cycle 4 flips the
@@ -299,6 +301,169 @@
     while (w.nextNode()) nodes.push(w.currentNode);
     nodes.reverse().forEach(unwrap);
     return true;
+  }
+
+  // Cycle 3: tag synonyms rewritten before the schema walk so the
+  // result of pasting from Word/Docs/Notion produces our canonical
+  // tags rather than dropping the formatting entirely. Anything not
+  // listed here goes through the standard sanitiseTree drop path.
+  var TAG_SYNONYMS = {
+    B: "STRONG",
+    I: "EM",
+    STRIKE: "S",
+    DEL: "S",
+    H1: "H2", // never produce H1 — surface owns it (#983)
+    H4: "H3",
+    H5: "H3",
+    H6: "H3",
+    DIV: "P",
+  };
+
+  // Block-level tags we drop from the paste tree without preserving
+  // their formatting (script/style/iframe/etc.). Defence in depth —
+  // the closed allowlist would drop them anyway, but explicit removal
+  // means the children don't get unwrapped into the document.
+  var PASTE_DROP_WITH_CHILDREN = {
+    SCRIPT: 1,
+    STYLE: 1,
+    IFRAME: 1,
+    OBJECT: 1,
+    EMBED: 1,
+    META: 1,
+    LINK: 1,
+    NOSCRIPT: 1,
+    TEMPLATE: 1,
+  };
+
+  // Rewrite `from` tags to `to` tags in place. Returns the (possibly
+  // new) root for chaining.
+  function rewriteSynonyms(root) {
+    var nodes = [];
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(function (n) {
+      var target = TAG_SYNONYMS[n.tagName];
+      if (!target) return;
+      var replacement = document.createElement(target);
+      while (n.firstChild) replacement.appendChild(n.firstChild);
+      n.parentNode.replaceChild(replacement, n);
+    });
+    return root;
+  }
+
+  // Lift orphan <li> nodes (no parent ul/ol) into a synthetic <ul>.
+  // Also collapse <p> children of <li> into the li directly so the
+  // paste matches the schema (li contains inline, not block).
+  function normaliseListStructure(root) {
+    var orphans = [];
+    Array.prototype.forEach.call(root.querySelectorAll("li"), function (li) {
+      var parent = li.parentNode;
+      if (parent.tagName !== "UL" && parent.tagName !== "OL") {
+        orphans.push(li);
+      }
+      // Collapse <p> children into the li.
+      Array.prototype.forEach.call(li.querySelectorAll("p"), function (p) {
+        if (p.parentNode === li) {
+          while (p.firstChild) li.insertBefore(p.firstChild, p);
+          if (li.lastChild !== p)
+            li.insertBefore(document.createElement("br"), p);
+          li.removeChild(p);
+        }
+      });
+    });
+    orphans.forEach(function (li) {
+      var prev = li.previousElementSibling;
+      if (prev && prev.tagName === "UL") {
+        prev.appendChild(li);
+        return;
+      }
+      var ul = document.createElement("ul");
+      li.parentNode.insertBefore(ul, li);
+      ul.appendChild(li);
+    });
+    return root;
+  }
+
+  // Strip pre-walk: drop entire subtrees whose root is in
+  // PASTE_DROP_WITH_CHILDREN (script/style/iframe/etc.) plus comment
+  // and processing-instruction nodes. Done before the synonym pass so
+  // <script><b>x</b></script> doesn't leak its <b>.
+  function dropDangerousSubtrees(root) {
+    var children = Array.prototype.slice.call(root.childNodes);
+    children.forEach(function (child) {
+      if (child.nodeType === 8 || child.nodeType === 7) {
+        child.parentNode.removeChild(child);
+        return;
+      }
+      if (child.nodeType !== 1) return;
+      if (PASTE_DROP_WITH_CHILDREN[child.tagName]) {
+        child.parentNode.removeChild(child);
+        return;
+      }
+      dropDangerousSubtrees(child);
+    });
+    return root;
+  }
+
+  // Cycle 3 entry point — given an HTML string from the clipboard,
+  // produce a DocumentFragment of editor-safe nodes ready to insert
+  // via Range.insertNode. Pure: no DOM mutation outside the parsed
+  // tree.
+  function pasteSanitise(html) {
+    var doc = new DOMParser().parseFromString(
+      "<div>" + html + "</div>",
+      "text/html",
+    );
+    var root = doc.body.firstChild;
+    if (!root) return document.createDocumentFragment();
+    dropDangerousSubtrees(root);
+    rewriteSynonyms(root);
+    normaliseListStructure(root);
+    sanitiseTree(root);
+    var frag = document.createDocumentFragment();
+    while (root.firstChild) frag.appendChild(root.firstChild);
+    return frag;
+  }
+
+  function handlePaste(editor, event) {
+    var data = event.clipboardData;
+    if (!data) return;
+    var html = data.getData("text/html");
+    var text = data.getData("text/plain");
+    if (!html && !text) return;
+    event.preventDefault();
+    var frag = html
+      ? pasteSanitise(html)
+      : (function () {
+          // Plain-text paste: split on blank lines into <p>, single
+          // newlines become <br>. Avoids dumping a raw text node
+          // outside any block.
+          var f = document.createDocumentFragment();
+          text.split(/\n{2,}/).forEach(function (para) {
+            var p = document.createElement("p");
+            var lines = para.split("\n");
+            lines.forEach(function (line, i) {
+              if (i > 0) p.appendChild(document.createElement("br"));
+              p.appendChild(document.createTextNode(line));
+            });
+            f.appendChild(p);
+          });
+          return f;
+        })();
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    range.deleteContents();
+    var lastNode = frag.lastChild;
+    range.insertNode(frag);
+    if (lastNode) {
+      var r = document.createRange();
+      r.setStartAfter(lastNode);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
   }
 
   function sanitiseTree(rootClone) {
@@ -615,6 +780,10 @@
       });
 
       on(editor, "input", commit);
+      on(editor, "paste", function (e) {
+        handlePaste(editor, e);
+        commit();
+      });
       on(document, "selectionchange", function () {
         if (
           document.activeElement === editor ||
@@ -661,6 +830,13 @@
     _selectionHas: selectionHas,
     _replaceEditorContents: replaceEditorContents,
     _matchKeyEvent: matchKeyEvent,
+    _pasteSanitise: pasteSanitise,
+    _handlePaste: handlePaste,
+    _rewriteSynonyms: rewriteSynonyms,
+    _normaliseListStructure: normaliseListStructure,
+    _dropDangerousSubtrees: dropDangerousSubtrees,
+    TAG_SYNONYMS: TAG_SYNONYMS,
+    PASTE_DROP_WITH_CHILDREN: PASTE_DROP_WITH_CHILDREN,
     COMMANDS: COMMANDS,
   };
 })();
