@@ -73,14 +73,19 @@ entity Alert "Alert":
   severity: enum[low,medium,high,critical]=low
   message: str(500) required
   triggered_at: datetime auto_add
-  acknowledged: bool = false
+  # #999 — replaced `acknowledged: bool` with a 3-state lifecycle so
+  # the alert_pipeline / ops_actions chart regions (lines 354/371/374/377)
+  # can count by status name. Pre-fix those regions referenced
+  # `where status = active|acknowledged|resolved` against an entity
+  # that had no `status` field — silent zero-counts in the dashboard.
+  status: enum[active,acknowledged,resolved]=active
   acknowledged_by: str(200)
 
   # Computed field: hours since alert was triggered
   hours_open: computed days_since(triggered_at)
 
-  # Invariant: acknowledged alerts must have acknowledger
-  invariant: acknowledged = false or acknowledged_by != null
+  # Invariant: alerts past the active state must record who acknowledged.
+  invariant: status = active or acknowledged_by != null
 
   # Access control
   permit:
@@ -95,7 +100,7 @@ entity Alert "Alert":
       as: ops_engineer, admin
 
   fitness:
-    repr_fields: [system, severity, message, acknowledged, triggered_at]
+    repr_fields: [system, severity, message, status, triggered_at]
 
 # v0.61.72 (#6) — single-row Integration entity for the
 # confirm_action_panel demo. AegisMark UX patterns roadmap item #6
@@ -144,7 +149,7 @@ workspace command_center "Command Center":
   # Alert Feed - Shows active alerts
   active_alerts:
     source: Alert
-    filter: acknowledged = false
+    filter: status = active
     sort: severity desc, triggered_at desc
     limit: 20
 
@@ -271,7 +276,7 @@ workspace command_center "Command Center":
   # Acknowledgement Queue — review queue for unacked alerts
   ack_queue:
     source: Alert
-    filter: acknowledged = false
+    filter: status = active
     display: queue
     sort: severity desc, triggered_at desc
     action: alert_ack
@@ -442,7 +447,7 @@ workspace incident_review "Incident Review":
     source: Alert
     display: metrics
     aggregate:
-      active: count(Alert WHERE acknowledged = false)
+      active: count(Alert WHERE status = active)
       resolved: count(Alert WHERE status = 'resolved')
     tones:
       active: warning
@@ -593,12 +598,12 @@ surface alert_list "Alerts":
     field severity "Severity"
     field message "Message"
     field triggered_at "Triggered"
-    field acknowledged "Acknowledged"
+    field status "Status"
 
   ux:
     purpose: "Review active alerts sorted by severity and acknowledge them as they're handled"
     sort: triggered_at desc
-    filter: severity, acknowledged
+    filter: severity, status
     search: message, acknowledged_by
     empty: "No alerts. All systems operational."
 
@@ -611,7 +616,7 @@ surface alert_detail "Alert Detail":
     field severity "Severity"
     field message "Message"
     field triggered_at "Triggered"
-    field acknowledged "Acknowledged"
+    field status "Status"
     field acknowledged_by "Acknowledged By"
 
   ux:
@@ -622,7 +627,7 @@ surface alert_ack "Acknowledge Alert":
   mode: edit
 
   section main "Acknowledge":
-    field acknowledged "Acknowledged"
+    field status "Status"
     field acknowledged_by "Acknowledged By"
 
 # =============================================================================

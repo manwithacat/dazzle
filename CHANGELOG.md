@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.1] - 2026-05-04
+
+### Fixed
+- **#999 — ops_dashboard Alert.status field referenced but didn't
+  exist.** The `alert_pipeline` and `ops_actions` chart regions
+  referenced `count(Alert where status = active|acknowledged|resolved)`
+  on an entity that only had `acknowledged: bool`. Result: silent
+  zero-counts in the dashboard.
+
+  Replaced `acknowledged: bool` with `status: enum[active,
+  acknowledged, resolved]=active` — a 3-state lifecycle that
+  matches what the chart regions expect. Migrated the invariant
+  (`status = active or acknowledged_by != null`), the fitness
+  repr_fields, every workspace filter (`filter: status = active`),
+  the alert_list/alert_detail/alert_ack surface field references,
+  and the empty-state count aggregate. Closes #999.
+
 ## [0.65.0] - 2026-05-04
 
 ### Changed
