@@ -161,15 +161,66 @@ class TestDI05DeadEndStates:
             sm.transitions.append(t)
         return sm
 
-    def test_flags_dead_end_state(self, agent: DataIntegrityAgent) -> None:
+    def test_flags_dead_end_state_when_name_is_transient(self, agent: DataIntegrityAgent) -> None:
+        """A reachable state with no outbound transitions and a name that
+        does NOT suggest a terminal outcome IS a real dead-end (record
+        gets stuck in `awaiting_review` forever)."""
+        sm = self._sm(
+            ["draft", "review", "awaiting_review", "published"],
+            [
+                ("draft", "review"),
+                ("review", "published"),
+                ("review", "awaiting_review"),
+            ],
+        )
+        entity = mock_entity("Article", state_machine=sm)
+        findings = agent.check_dead_end_states(make_appspec([entity]))
+        assert len(findings) == 1
+        assert "awaiting_review" in findings[0].title
+
+    def test_silences_terminal_named_states(self, agent: DataIntegrityAgent) -> None:
+        """#1004 — state names like `rejected`, `resolved`, `wont_fix` are
+        clearly intentional outcomes. State machines with multiple
+        terminal outcomes (FeedbackReport-style) flooded DI-05 with
+        false positives pre-fix; the heuristic now silences them."""
         sm = self._sm(
             ["draft", "review", "rejected", "published"],
             [("draft", "review"), ("review", "published"), ("review", "rejected")],
         )
         entity = mock_entity("Article", state_machine=sm)
         findings = agent.check_dead_end_states(make_appspec([entity]))
-        assert len(findings) == 1
-        assert "rejected" in findings[0].title
+        assert findings == [], (
+            f"`rejected` should be silenced as a terminal-named state; "
+            f"got {[f.title for f in findings]}"
+        )
+
+    def test_silences_multiple_terminal_outcomes(self, agent: DataIntegrityAgent) -> None:
+        """FeedbackReport-style: many terminal states, all named clearly."""
+        sm = self._sm(
+            [
+                "new",
+                "triaged",
+                "in_progress",
+                "resolved",
+                "verified",
+                "wont_fix",
+                "duplicate",
+            ],
+            [
+                ("new", "triaged"),
+                ("triaged", "in_progress"),
+                ("in_progress", "resolved"),
+                ("resolved", "verified"),
+                ("triaged", "wont_fix"),
+                ("triaged", "duplicate"),
+            ],
+        )
+        entity = mock_entity("FeedbackReport", state_machine=sm)
+        findings = agent.check_dead_end_states(make_appspec([entity]))
+        assert findings == [], (
+            f"Every leaf state has a terminal-outcome name; expected zero "
+            f"findings, got {[f.title for f in findings]}"
+        )
 
     def test_last_state_is_terminal(self, agent: DataIntegrityAgent) -> None:
         sm = self._sm(

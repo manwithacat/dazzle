@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
@@ -301,6 +301,38 @@ class DataIntegrityAgent(DetectionAgent):
     # DI-05  Dead-end state-machine states
     # ------------------------------------------------------------------
 
+    # State names that strongly suggest a state is INTENTIONALLY terminal.
+    # When a state has no outbound transitions AND its name matches one of
+    # these, DI-05 is silenced. State machines routinely have multiple
+    # terminal states (resolved / cancelled / archived / wont_fix), so the
+    # pre-fix heuristic of "only the last-declared state is terminal"
+    # produced a flood of false positives — see #1004.
+    _TERMINAL_STATE_NAMES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "approved",
+            "archived",
+            "cancelled",
+            "canceled",  # US spelling
+            "closed",
+            "complete",
+            "completed",
+            "deleted",
+            "done",
+            "duplicate",
+            "expired",
+            "failed",
+            "finished",
+            "rejected",
+            "resolved",
+            "retired",
+            "revoked",
+            "superseded",
+            "terminated",
+            "verified",
+            "wont_fix",
+        }
+    )
+
     @heuristic(
         heuristic_id="DI-05",
         category="data_integrity",
@@ -308,12 +340,22 @@ class DataIntegrityAgent(DetectionAgent):
         title="Dead-end state in state machine",
     )
     def check_dead_end_states(self, appspec: AppSpec) -> list[Finding]:
-        """Flag states that are transition targets but have no outbound transitions.
+        """Flag states reachable as a ``to_state`` but with no outbound
+        transitions, where the state name does NOT suggest it's terminal.
 
-        A state that is reachable (appears as ``to_state``) but has no outbound
-        transition and is not the final state in the declared list is likely a
-        dead-end.  Terminal states (the last declared state, or states that are
-        never a ``to_state``) are excluded because they are intentionally final.
+        Pre-fix this only excluded the last-declared state. State machines
+        regularly have multiple terminal states (e.g. resolved / wont_fix /
+        duplicate in FeedbackReport), so every multi-terminal-outcome
+        workflow generated false-positive findings on every scan.
+
+        Now: a state is treated as intentionally terminal if EITHER
+          (a) its name appears in ``_TERMINAL_STATE_NAMES`` (clearly an
+              outcome label), OR
+          (b) it's the last-declared state (legacy heuristic).
+
+        States whose names suggest transient/in-progress meaning
+        (`pending`, `processing`, `in_progress`, etc.) without outbound
+        transitions ARE the bug class this check is meant to catch.
         """
         findings: list[Finding] = []
 
@@ -322,59 +364,59 @@ class DataIntegrityAgent(DetectionAgent):
             if sm is None or not sm.states or not sm.transitions:
                 continue
 
-            # States used as a from_state (excluding wildcard "*").
             from_states: set[str] = set()
-            # States used as a to_state.
             to_states: set[str] = set()
-
             for t in sm.transitions:
                 if t.from_state != "*":
                     from_states.add(t.from_state)
                 to_states.add(t.to_state)
 
-            # The last declared state is typically the terminal state.
             terminal_state = sm.states[-1] if sm.states else None
 
             for state in sm.states:
-                # Dead-end: reachable (is a to_state) but no outgoing
-                # transitions, and not the conventional terminal state.
-                if state in to_states and state not in from_states and state != terminal_state:
-                    findings.append(
-                        Finding(
-                            agent=AgentId.DI,
-                            heuristic_id="DI-05",
-                            category="data_integrity",
-                            subcategory="dead_end_state",
-                            severity=Severity.LOW,
-                            confidence=Confidence.POSSIBLE,
-                            title=(f"Potential dead-end state '{state}' in {entity.name}"),
-                            description=(
-                                f"State '{state}' in entity '{entity.name}' is "
-                                f"the target of a transition but has no outbound "
-                                f"transitions defined. If this is not intentionally "
-                                f"terminal, records may become stuck."
-                            ),
-                            entity_name=entity.name,
-                            evidence=[
-                                Evidence(
-                                    evidence_type="ir_pattern",
-                                    location=(f"entity.{entity.name}.state_machine"),
-                                    context=(
-                                        f"state={state}, states={sm.states}, outbound_transitions=0"
-                                    ),
-                                )
-                            ],
-                            remediation=Remediation(
-                                summary=(
-                                    f"Either add an outbound transition from "
-                                    f"'{state}' or confirm it is a valid terminal "
-                                    f"state."
+                if state not in to_states or state in from_states:
+                    continue
+                if state == terminal_state:
+                    continue
+                # #1004 — silence if name suggests an outcome label.
+                if state.lower() in self._TERMINAL_STATE_NAMES:
+                    continue
+                findings.append(
+                    Finding(
+                        agent=AgentId.DI,
+                        heuristic_id="DI-05",
+                        category="data_integrity",
+                        subcategory="dead_end_state",
+                        severity=Severity.LOW,
+                        confidence=Confidence.POSSIBLE,
+                        title=(f"Potential dead-end state '{state}' in {entity.name}"),
+                        description=(
+                            f"State '{state}' in entity '{entity.name}' is "
+                            f"the target of a transition but has no outbound "
+                            f"transitions defined. If this is not intentionally "
+                            f"terminal, records may become stuck."
+                        ),
+                        entity_name=entity.name,
+                        evidence=[
+                            Evidence(
+                                evidence_type="ir_pattern",
+                                location=(f"entity.{entity.name}.state_machine"),
+                                context=(
+                                    f"state={state}, states={sm.states}, outbound_transitions=0"
                                 ),
-                                effort=RemediationEffort.SMALL,
-                                dsl_example=(f"  {state} -> next_state: requires some_field"),
+                            )
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                f"Either add an outbound transition from "
+                                f"'{state}' or confirm it is a valid terminal "
+                                f"state."
                             ),
-                        )
+                            effort=RemediationEffort.SMALL,
+                            dsl_example=(f"  {state} -> next_state: requires some_field"),
+                        ),
                     )
+                )
 
         return findings
 

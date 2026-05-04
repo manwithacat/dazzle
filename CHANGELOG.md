@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.10] - 2026-05-04
+
+### Fixed
+- **Sentinel DI-05 false-positive flood on multi-terminal-outcome
+  state machines.** Pre-fix the heuristic only treated the
+  *last-declared* state as terminal, but state machines routinely
+  have multiple terminal outcomes (FeedbackReport's `resolved`,
+  `verified`, `wont_fix`, `duplicate` all flagged). Every scan
+  surfaced the same noise.
+
+  Fix: introduce `_TERMINAL_STATE_NAMES` allowlist of 21 outcome
+  labels (approved, archived, cancelled, closed, complete,
+  completed, deleted, done, duplicate, expired, failed, finished,
+  rejected, resolved, retired, revoked, superseded, terminated,
+  verified, wont_fix). DI-05 silences any state with no outbound
+  transitions whose name matches. Transient-named states without
+  outbound transitions (`pending`, `processing`, `awaiting_review`)
+  are still flagged — that's the bug class the heuristic targets.
+
+  Tests: `test_silences_terminal_named_states`,
+  `test_silences_multiple_terminal_outcomes`, plus the existing
+  positive case retargeted to `awaiting_review`.
+
+- **#1004 — virtual entities 500'd on /list.** SystemHealth,
+  SystemMetric, ProcessRun, LogEntry, EventTrace are framework
+  virtual entities (no DB table). The linker correctly skips
+  migrations but the route generator still mounted a list endpoint;
+  the handler did `SELECT COUNT(*) FROM "SystemHealth"` and 500'd.
+
+  Fix: short-circuit `Repository.list()` for virtual entities to
+  return an empty result. Cycle-1 fix; cycle 2 wires a per-entity
+  runtime-state provider so live health-check data flows through.
+
+  Caught by `dazzle qa capture` — every showcase boot logged the
+  500 traceback on the platform-admin region fetch.
+
+  Closes #1004 (cycle 1).
+
 ## [0.65.9] - 2026-05-04
 
 ### Fixed

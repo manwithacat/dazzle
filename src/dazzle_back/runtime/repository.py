@@ -483,7 +483,24 @@ class Repository(Generic[T]):
         Returns:
             Dictionary with items, total, page, and page_size
         """
+        # #1004 — virtual entities (SystemHealth, SystemMetric,
+        # ProcessRun, LogEntry, EventTrace) have no DB table. The
+        # linker correctly skips migrations for them, but the route
+        # generator still mounts a list endpoint that calls this
+        # method, which then 500s on `SELECT COUNT(*) FROM "<entity>"`
+        # against a non-existent relation. Short-circuit with an
+        # empty result; a future cycle can wire a runtime-state
+        # provider per virtual entity.
+        from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES as _VIRTUAL
         from dazzle_back.runtime.query_builder import QueryBuilder
+
+        if self.entity_spec is not None and self.entity_spec.name in _VIRTUAL:
+            return {
+                "items": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size,
+            }
 
         # Build query using QueryBuilder
         builder = QueryBuilder(table_name=self.table_name, placeholder_style=self.db.placeholder)
