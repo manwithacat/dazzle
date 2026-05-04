@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.108] - 2026-05-04
+
+### Added
+- **#959 cycle 3 — undo stack + Cmd+Z for `x-optimistic`.**
+  Successful optimistic mutations now push an entry onto a
+  session-level stack (capped at 20 — older evictions fall off
+  via `Array.shift`). Cmd+Z (or Ctrl+Z elsewhere) pops the most
+  recent entry and:
+
+  1. **DOM-level reversal** for `remove` and `replace` (re-inserts
+     the original captured node at its recorded position via
+     `parent.insertBefore`).
+  2. **Dispatches `dz:optimistic-undo` CustomEvent** on the original
+     element (`bubbles: true`, `detail: {verb, snapshot}`) so the
+     adopter can wire the server-side reversal:
+
+     ```html
+     <button hx-delete="/api/tasks/{id}" x-optimistic="remove"
+             hx-on:dz:optimistic-undo="htmx.ajax('POST', '/api/tasks/{id}/restore')">
+       Delete
+     </button>
+     ```
+
+  Keyboard handler is bound once (sentinel: `_dzOptimisticUndoBound`)
+  so multiple directive instances share one listener. The handler:
+  - Triggers on Cmd+Z / Ctrl+Z, **NOT** Shift+Cmd+Z (that's redo,
+    reserved for cycle 4).
+  - Skips when focus is in `<input>`, `<textarea>`, or
+    `[contenteditable]` so text-edit undo isn't hijacked.
+  - Calls `e.preventDefault()` only when an entry actually pops —
+    Cmd+Z still triggers browser-native undo when the stack is
+    empty.
+  - Wraps `entry.undo()` in `try/catch` so a stale undo (element
+    gone from DOM) doesn't break subsequent presses.
+
+  `window.dzOptimisticUndoStack` is exposed read-only for tests
+  and adopter introspection (e.g. "12 actions can be undone").
+
+  Tests: `tests/unit/test_optimistic_undo_stack.py` (17 cases) pin
+  the stack data structure (cap, eviction, window export), the
+  keyboard handler shape (modifiers, shift skip, focus guard,
+  preventDefault, error-swallow), the success-branch push site,
+  per-verb undo behaviour, and bundle inclusion. Existing cycle-2
+  test widened to accommodate the larger success block.
+
+  #959 progress: 3 of 4 cycles shipped. Remaining: cycle 4
+  (server-response reconciliation: merge attributes when shape
+  drifts between optimistic placeholder and actual response,
+  optionally support a redo stack on Shift+Cmd+Z).
+
 ## [0.63.107] - 2026-05-04
 
 ### Added

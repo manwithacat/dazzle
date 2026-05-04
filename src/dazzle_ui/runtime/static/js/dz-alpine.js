@@ -396,6 +396,58 @@ document.addEventListener("alpine:init", () => {
       // removed node is re-inserted at its original position and a
       // toast surfaces the failure. Adopters can listen for
       // `dz:optimistic-rollback` if they want custom recovery UI.
+      //
+      // Cycle 3 — undo stack. Successful optimistic mutations push
+      // an entry onto a session-level stack capped at 20. Cmd+Z
+      // (Ctrl+Z elsewhere) pops the most recent entry, reverses the
+      // DOM where possible (remove/replace via the captured snapshot),
+      // and dispatches `dz:optimistic-undo` so the adopter can issue
+      // the server-side reversal request (e.g. an `hx-post` on a
+      // hidden form trigger).
+      const _DZ_OPTIMISTIC_UNDO_MAX = 20;
+      const _dzOptimisticUndoStack = [];
+
+      function _pushOptimisticUndo(entry) {
+        _dzOptimisticUndoStack.push(entry);
+        while (_dzOptimisticUndoStack.length > _DZ_OPTIMISTIC_UNDO_MAX) {
+          _dzOptimisticUndoStack.shift();
+        }
+      }
+
+      // Expose the stack for tests + adopter introspection. Read-only
+      // by convention; popping should go through the keyboard handler.
+      window.dzOptimisticUndoStack = _dzOptimisticUndoStack;
+
+      // Single global keydown handler — registered once per page load
+      // even with many x-optimistic instances.
+      if (!window._dzOptimisticUndoBound) {
+        window._dzOptimisticUndoBound = true;
+        document.addEventListener("keydown", (e) => {
+          // Cmd+Z on macOS, Ctrl+Z elsewhere. Skip Shift+Z (browser redo).
+          const isUndo =
+            e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey;
+          if (!isUndo) return;
+          // Don't hijack undo when the user is typing — let the input's
+          // native undo handle text edits.
+          const t = e.target;
+          if (t) {
+            const tag = (t.tagName || "").toLowerCase();
+            if (tag === "input" || tag === "textarea" || t.isContentEditable) {
+              return;
+            }
+          }
+          const entry = _dzOptimisticUndoStack.pop();
+          if (!entry) return;
+          e.preventDefault();
+          try {
+            entry.undo();
+          } catch {
+            // Defensive — a stale undo (e.g. element gone from DOM)
+            // shouldn't break subsequent presses.
+          }
+        });
+      }
+
       Alpine.directive("optimistic", (el, { expression }) => {
         const action = (expression || "remove").trim();
         // Parse "<verb>:<selector>" — selector defaults to the element
@@ -567,6 +619,47 @@ document.addEventListener("alpine:init", () => {
             // the snapshot so we don't accidentally restore a stale
             // node on a later event.
             removePlaceholder();
+            // Cycle 3 — push an undo entry so Cmd+Z reverses the
+            // optimistic mutation. Capture `snapshot` by closure
+            // BEFORE clearing it; the entry's `undo` runs at an
+            // arbitrary later time when the directive's `snapshot`
+            // local has already been set to null by another mutation.
+            const undoSnapshot = snapshot;
+            _pushOptimisticUndo({
+              el: el,
+              verb: verb,
+              undo: () => {
+                // DOM-level reversal where possible: re-insert the
+                // captured node at its original position. Only meaningful
+                // for `remove` and `replace` — `prepend`/`append` have
+                // no captured snapshot (the placeholder was the only
+                // tracked node, and it's already gone).
+                if (undoSnapshot && (verb === "remove" || verb === "replace")) {
+                  const { node, parent, nextSibling } = undoSnapshot;
+                  try {
+                    if (nextSibling && nextSibling.parentNode === parent) {
+                      parent.insertBefore(node, nextSibling);
+                    } else if (parent) {
+                      parent.appendChild(node);
+                    }
+                  } catch {
+                    // Parent gone — DOM-level undo not possible. The
+                    // dz:optimistic-undo event still fires so the
+                    // adopter can reconcile server-side state.
+                  }
+                }
+                // Always dispatch — adopter wires the server-side
+                // reversal (e.g. POST /restore endpoint) through this
+                // event. Detail carries the verb + snapshot so the
+                // handler can branch on what was originally done.
+                el.dispatchEvent(
+                  new CustomEvent("dz:optimistic-undo", {
+                    bubbles: true,
+                    detail: { verb: verb, snapshot: undoSnapshot },
+                  }),
+                );
+              },
+            });
             snapshot = null;
             return;
           }
