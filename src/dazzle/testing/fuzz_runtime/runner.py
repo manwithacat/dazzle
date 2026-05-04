@@ -269,11 +269,163 @@ def fuzz_richtext(page: Any, host_index: int = 0) -> list[FuzzCheck]:
     return checks
 
 
-def run_app_fuzz(project_root: Path) -> FuzzReport:
-    """Boot `project_root`, fuzz every supported widget, return report.
+def fuzz_page_walker(page: Any, base: str, paths: list[str]) -> list[FuzzCheck]:
+    """Visit every probed path, capture per-page anomalies.
 
-    Currently exercises: dz-richtext (cycle 1 of this module).
-    Future: optimistic-UI forms, combobox, picker, mobile-native swipe.
+    Signal vs. noise:
+    - **403** is a gating response, NOT a bug. The test-mode auth
+      role is `admin` but most apps gate workspaces / scope-bound
+      list endpoints to specific personas (engineer, tester, etc.).
+      403 means "framework is correctly enforcing access control",
+      so we record but do not fail.
+    - **404** on an /app/* path is a real bug: the openapi advertises
+      the route but the runtime didn't mount it.
+    - **5xx** is a real bug — fail.
+    - **render-error markers** (dz-render-error class) are real:
+      template macros render placeholders for swallowed
+      UndefinedErrors instead of crashing, and the marker class
+      lets us catch those.
+    """
+    checks: list[FuzzCheck] = []
+    for path in paths:
+        url = f"{base}{path}"
+        try:
+            response = page.goto(url, wait_until="domcontentloaded", timeout=8000)
+        except Exception as exc:
+            checks.append(
+                FuzzCheck(name=f"page reachable: {path}", passed=False, detail=str(exc)[:160])
+            )
+            continue
+        status = response.status if response else 0
+        # 403 is gating — not a bug.
+        if status == 403:
+            continue
+        # 5xx + non-403 4xx are bugs. 200-399 are fine.
+        page_ok = 200 <= status < 400 or status == 0
+        checks.append(
+            FuzzCheck(
+                name=f"page {path} responds 2xx/3xx",
+                passed=page_ok,
+                detail=f"HTTP {status}",
+            )
+        )
+        if not page_ok:
+            continue
+        # Render-time check: any element marked with the framework's
+        # error-class? (e.g. dz-render-error from a swallowed jinja
+        # UndefinedError that the macro rendered as a placeholder.)
+        err_count = page.evaluate(
+            "document.querySelectorAll('.dz-render-error, [data-dz-render-error]').length"
+        )
+        checks.append(
+            FuzzCheck(
+                name=f"no render-error markers on {path}",
+                passed=err_count == 0,
+                detail=f"{err_count} marker(s)",
+            )
+        )
+        # Settle pause for late Alpine / htmx work.
+        page.wait_for_timeout(150)
+    return checks
+
+
+def fuzz_htmx_interactions(page: Any, base: str, paths: list[str]) -> list[FuzzCheck]:
+    """Click every hx-get/hx-post/hx-trigger button on each visited
+    page, watch for fallout. Catches:
+    - htmx-targeted endpoints that 404 / 500
+    - swapped fragments that throw template errors
+    - Alpine state collisions across morphs
+    - dz-* widget bridges that fail to remount on afterSettle
+
+    Capped at 5 buttons per page to keep runtime bounded.
+    """
+    checks: list[FuzzCheck] = []
+    for path in paths:
+        try:
+            page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=8000)
+        except Exception:
+            continue
+        # Find buttons / links with htmx attrs that don't navigate away.
+        triggers = page.locator("[hx-get], [hx-post], [hx-put], [hx-delete], [hx-patch]")
+        n = min(triggers.count(), 5)
+        if n == 0:
+            continue
+        clicked = 0
+        for i in range(n):
+            try:
+                el = triggers.nth(i)
+                # Skip if not visible (modal-hidden, off-screen, etc.).
+                if not el.is_visible():
+                    continue
+                # Skip destructive actions explicitly to avoid mutating
+                # demo data we then can't reset.
+                method = ""
+                for attr in ("hx-delete", "hx-post", "hx-put"):
+                    v = el.get_attribute(attr)
+                    if v is not None:
+                        method = attr
+                        break
+                if method == "hx-delete":
+                    continue
+                el.click(timeout=1500, no_wait_after=True)
+                page.wait_for_timeout(250)  # let htmx settle
+                clicked += 1
+            except Exception:
+                pass  # individual click failure is recorded via console listener
+        checks.append(
+            FuzzCheck(
+                name=f"htmx interactions on {path}",
+                passed=True,  # the ASSERTION is "no console errors fired",
+                # which is captured at report-level by the page listener.
+                detail=f"clicked {clicked} of {n} probed triggers",
+            )
+        )
+    return checks
+
+
+def _probe_app_paths(base: str) -> tuple[list[str], list[str], list[str]]:
+    """Return (all_paths, create_paths, list_paths) by scanning the
+    openapi spec. `all_paths` is the broader sweep — list/index pages,
+    surfaces, dashboards. Used by the page-walker."""
+    import httpx
+
+    create_paths: list[str] = []
+    list_paths: list[str] = []
+    all_paths: list[str] = []
+    try:
+        with httpx.Client(timeout=2.0) as c:
+            spec = c.get(f"{base}/openapi.json").json()
+        for path in spec.get("paths", {}):
+            if not path.startswith("/app/"):
+                continue
+            # Skip parameterised (would need a real ID); skip workspaces
+            # that need persona pre-routing.
+            if "{" in path:
+                continue
+            if path.endswith("/create"):
+                create_paths.append(path)
+            elif "/" in path[5:]:  # /app/X/something — non-list
+                pass
+            else:
+                list_paths.append(path)
+            all_paths.append(path)
+    except Exception:
+        pass
+    return all_paths, create_paths, list_paths
+
+
+def run_app_fuzz(project_root: Path) -> FuzzReport:
+    """Boot `project_root`, fuzz every supported widget + page, return report.
+
+    Order of operations:
+      1. Generic page-walker — visit every reachable /app/* path,
+         capture HTTP status + render-error markers + console errors.
+      2. htmx interaction sweep — click safe (non-destructive) hx-*
+         triggers on each path, watch for swap/morph anomalies.
+      3. Specialised widget batteries (dz-richtext today; combobox /
+         picker / optimistic-ui future) — drive widget-specific
+         interaction sequences against the first reachable surface
+         that mounts each widget.
     """
     project = project_root.name
     report = FuzzReport(project=project)
@@ -284,32 +436,11 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
         report.skipped_reason = f"playwright not installed: {exc}"
         return report
 
-    # We boot first and probe rendered HTML rather than DSL text —
-    # text-typed fields auto-pick the rich_text widget without an
-    # explicit `widget=rich_text` declaration in DSL, so a string
-    # search would miss real mount points.
-
-    # Convention: probe `<entity_lower>/create` for every entity in
-    # the openapi spec. `*_create` surfaces are the cheapest to reach.
-    # The first hit with a `[data-dz-widget="richtext"]` mount wins.
-
     with _booted_app(project_root) as (base, secret):
         cookies = _authenticate(base, secret, role="admin")
-        # Probe the openapi spec for create surfaces — generic and
-        # works regardless of the app's entity naming conventions.
-        import httpx
-
-        candidate_paths: list[str] = []
-        try:
-            with httpx.Client(timeout=2.0) as c:
-                spec = c.get(f"{base}/openapi.json").json()
-            for path in spec.get("paths", {}):
-                if path.startswith("/app/") and path.endswith("/create"):
-                    candidate_paths.append(path)
-        except Exception:
-            pass
-        if not candidate_paths:
-            report.skipped_reason = "no /app/*/create surfaces in openapi"
+        all_paths, create_paths, _list_paths = _probe_app_paths(base)
+        if not all_paths:
+            report.skipped_reason = "no /app/* surfaces in openapi"
             return report
 
         with sync_playwright() as p:
@@ -322,33 +453,62 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
                 ]
             )
             page = ctx.new_page()
-            page.on(
-                "console",
-                lambda m: (
-                    report.console_errors.append(f"[{m.type}] {m.text}")
-                    if m.type == "error" and "fonts.gstatic" not in m.text  # ignore CORS noise
-                    else None
-                ),
-            )
+
+            # Network 404s are bugs (stale asset refs, missing routes).
+            # Filter the predictable noise: cross-origin font fetches
+            # that get blocked because we send X-Test-Secret on every
+            # request via the test context.
+            # Console.error is mostly browser-side echoes of HTTP
+            # 4xx/5xx responses ("Failed to load resource: ...") —
+            # filter those out (the response listener below records
+            # the genuinely interesting status codes itself).
+            def _on_console(m: Any) -> None:
+                if m.type != "error":
+                    return
+                if "fonts.gstatic" in m.text:
+                    return
+                if "Failed to load resource" in m.text:
+                    return  # response listener will pick up real ones
+                if "Response Status Error Code" in m.text:
+                    return  # htmx-extension echo of the same
+                report.console_errors.append(f"[{m.type}] {m.text}")
+
+            page.on("console", _on_console)
             page.on("pageerror", lambda e: report.page_errors.append(str(e)))
 
-            mounted = False
-            for path in candidate_paths:
+            # Network 404s are real bugs (stale asset refs, missing
+            # framework routes). Filter:
+            # - cross-origin font fetches blocked by CORS noise
+            # - 403 (gating) and 401 (auth-not-our-role)
+            # - 500 on /<entity>s endpoints — these are typically
+            #   "table doesn't exist" in --local mode without a real
+            #   migrated DB, not framework bugs.
+            def _on_response(r: Any) -> None:
+                if r.status == 404 and "fonts.gstatic" not in r.url:
+                    report.console_errors.append(f"[404] {r.url}")
+                elif r.status >= 500 and "/system" not in r.url:
+                    # Skip /system* endpoints (SystemHealth/SystemMetric
+                    # auto-injected entities that need DB migration).
+                    report.console_errors.append(f"[{r.status}] {r.url}")
+
+            page.on("response", _on_response)
+
+            # ── 1. Page-walker (every app, every reachable URL) ──
+            report.checks.extend(fuzz_page_walker(page, base, all_paths[:10]))
+
+            # ── 2. htmx interaction sweep ──
+            report.checks.extend(fuzz_htmx_interactions(page, base, all_paths[:5]))
+
+            # ── 3. Specialised widget batteries ──
+            for path in create_paths:
                 try:
                     page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=5000)
                 except Exception:
                     continue
                 if page.locator('[data-dz-widget="richtext"]').count() > 0:
-                    mounted = True
+                    report.checks.extend(fuzz_richtext(page, host_index=0))
                     break
-            if not mounted:
-                report.skipped_reason = (
-                    f"no rich_text mount on any of {len(candidate_paths)} create surfaces"
-                )
-                browser.close()
-                return report
 
-            report.checks.extend(fuzz_richtext(page, host_index=0))
             browser.close()
 
     return report

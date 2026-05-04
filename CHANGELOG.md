@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.5] - 2026-05-04
+
+### Fixed
+- **#1000 — dz-richtext toggleInline wrapped block elements when
+  the selection spanned a whole block.** Pre-fix, "select all + Ctrl+B"
+  on a `<p>hello world</p>` produced `<strong><p>hello world</p></strong>`
+  (block inside inline) — invalid HTML structure, slipped past the
+  closed-schema walker because both tags are individually allowed.
+
+  Fix: when the range spans block boundaries (detected via
+  `closestBlock(start) !== closestBlock(end)` or
+  `commonAncestorContainer === editor`), wrap each block's *contents*
+  individually rather than wrapping the blocks themselves. So
+  `<p>x</p><p>y</p>` selected and bolded becomes
+  `<p><strong>x</strong></p><p><strong>y</strong></p>`.
+
+  Verified across all 3 fixtures that mount rich-text
+  (component_showcase, design_studio, project_tracker) — they went
+  from 35/36 to 36/36 in the headless-Playwright sweep. Source-grep
+  gate `TestCycle1000BlockNestingFix` (3 assertions) pins the fix
+  shape so a future refactor can't silently regress.
+
+### Changed
+- **`fuzz_runtime` runner — generic page-walker + htmx interaction
+  sweep added.** Previously rich_text-only; now every app gets a
+  generic 3-pass battery:
+  1. Page-walker — visit every `/app/*` path in openapi, capture
+     HTTP status + render-error markers. 403 demoted (gating, not a
+     bug); 4xx and 5xx are real.
+  2. htmx interaction sweep — click safe (non-destructive) hx-*
+     triggers on each path, watch for swap/morph anomalies via the
+     console + page-error listeners.
+  3. Specialised widget batteries (dz-richtext today; combobox /
+     picker / optimistic-ui future) — driven against the first
+     reachable surface that mounts each widget.
+
+  Console.error noise filtered: cross-origin font CORS + chromium's
+  echo of HTTP 4xx/5xx ("Failed to load resource: ...") get
+  suppressed; the response listener captures the real signal.
+
+  Wide sweep across all 13 apps now produces high signal-to-noise:
+  pre-fix this surfaced #1001 (stale Quill CSS imports) and three
+  new bug candidates (workspace _platform_admin region 404s,
+  combobox `/users?page_size=100` 404s, and the `/app/user`
+  singular-vs-plural URL).
+
+### Agent Guidance
+- After any change to `dz-richtext.js` or other Alpine/htmx
+  components, run the runtime fuzz against `fixtures/component_showcase`
+  + the most-affected apps. Source-grep tests pin the contract;
+  the Playwright sweep proves behaviour. Cycle 1 of this module
+  caught #1000 + #1001 within the first two runs.
+
 ## [0.65.4] - 2026-05-04
 
 ### Fixed

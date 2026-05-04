@@ -629,6 +629,33 @@ class TestCycle5DSLKnobs:
         assert 'rich_text_max_length="5000"' in dsl
 
 
+class TestCycle1000BlockNestingFix:
+    """#1000 — toggleInline must not wrap a block element in an inline
+    tag when the selection spans full blocks. Source-grep gate to
+    pin the fix shape; behavioural verification lives in
+    `dazzle.testing.fuzz_runtime` (Playwright)."""
+
+    def test_spans_blocks_branch_present(self) -> None:
+        src = JS_PATH.read_text()
+        assert "spansBlocks" in src
+        assert "BLOCK_TAGS[child.tagName]" in src
+
+    def test_per_block_wrap_walks_children(self) -> None:
+        """Fix wraps each block's CONTENTS individually rather than
+        the blocks themselves."""
+        src = JS_PATH.read_text()
+        assert "blocksToWrap" in src
+        assert "block.appendChild(inner)" in src
+
+    def test_detection_uses_closest_block(self) -> None:
+        """Detection compares closestBlock(start) to closestBlock(end)
+        plus the editor-as-commonAncestor case."""
+        src = JS_PATH.read_text()
+        assert "closestBlock(range.startContainer, editor)" in src
+        assert "closestBlock(range.endContainer, editor)" in src
+        assert "range.commonAncestorContainer === editor" in src
+
+
 class TestCycle5CommandsDriftGate:
     """If a new toolbar command is added to dz-richtext.js, it must be
     a known name. The drift gate pins the COMMANDS keyset."""

@@ -144,6 +144,46 @@
       while (w.nextNode()) nodes.push(w.currentNode);
       nodes.forEach(unwrap);
     } else {
+      // #1000 — if the range spans block boundaries, wrap each
+      // block's *contents* in `tagName` (one wrapper per block)
+      // rather than wrapping the blocks themselves. Wrapping a
+      // block element in an inline tag (`<strong><p>...</p></strong>`)
+      // is invalid HTML and breaks the closed schema's inline-only
+      // contract for `tagName`.
+      //
+      // Detection: the range spans blocks iff the closest block to
+      // startContainer differs from the closest block to endContainer,
+      // OR the range's commonAncestorContainer is the editor itself
+      // (which only happens when the range crosses block siblings).
+      var startBlock = closestBlock(range.startContainer, editor);
+      var endBlock = closestBlock(range.endContainer, editor);
+      var spansBlocks =
+        range.commonAncestorContainer === editor ||
+        (startBlock && endBlock && startBlock !== endBlock);
+      if (spansBlocks) {
+        // Wrap each block's contents individually. Walk the editor's
+        // direct children that intersect the range; for each block
+        // (P / H2 / H3 / BLOCKQUOTE / PRE / LI), wrap its contents.
+        var blocksToWrap = [];
+        var children = Array.prototype.slice.call(editor.children);
+        children.forEach(function (child) {
+          if (range.intersectsNode(child) && BLOCK_TAGS[child.tagName]) {
+            blocksToWrap.push(child);
+          }
+        });
+        if (blocksToWrap.length === 0) return false;
+        blocksToWrap.forEach(function (block) {
+          var inner = document.createElement(tagName);
+          while (block.firstChild) inner.appendChild(block.firstChild);
+          block.appendChild(inner);
+        });
+        sel.removeAllRanges();
+        var rAll = document.createRange();
+        rAll.setStartBefore(blocksToWrap[0]);
+        rAll.setEndAfter(blocksToWrap[blocksToWrap.length - 1]);
+        sel.addRange(rAll);
+        return true;
+      }
       var wrapper = document.createElement(tagName);
       try {
         wrapper.appendChild(range.extractContents());
