@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.12] - 2026-05-04
+
+### Added
+- **`dazzle inspect --injected`** (#1006) — render the framework's auto-injected
+  platform admin infrastructure (entities, surfaces, workspaces with regions
+  and nav_groups) as synthetic DSL. Authors can now see what the framework
+  contributes to their appspec without reading framework source. The output
+  is labelled `# AUTO-GENERATED` and stays accurate by construction (rendered
+  from the live appspec, not a hand-maintained doc).
+- **Boot-time injection log line** (#1006) — every `dazzle serve` now logs
+  one line summarising injected counts plus a pointer to
+  `dazzle inspect --injected`. Authors discover the platform-admin workspace
+  the first time they read server logs.
+
+### Fixed
+- **Nav-group children now gated on list-surface existence** (#1005) — fixes
+  chaos-monkey 404s on `/app/user` (and any other entity referenced by a
+  nav_group but lacking a list surface). The auto-injected `Management`
+  group references User/Tenant which don't have admin list surfaces, so
+  those nav links would 404. Both `template_compiler.py` and `page_routes.py`
+  now silently skip nav-group children whose target entity has no
+  `_list_surfaces_by_entity` entry, mirroring the gate on the auto-discovery
+  path. Author-declared `nav_group` items pointing at surfaceless entities
+  are also dropped — a nav link to nowhere is a bug.
+
+### Agent Guidance
+- When adding a nav-group entry to a workspace, the target entity must have
+  a `list` surface — otherwise the link is silently dropped (#1005). The
+  framework's `_platform_admin` workspace currently includes `Management`
+  → `[users, tenants, sessions]`, but only `sessions` has an admin list
+  surface (`_admin_sessions`); `users` and `tenants` are dropped. To
+  surface them, add an entry to `_ADMIN_SURFACE_DEFS` in
+  `src/dazzle/core/admin_builder.py`.
+- When debugging "why does X exist in my nav?" — run
+  `dazzle inspect --injected` first. The synthetic DSL view shows every
+  framework-injected entity, surface, workspace, region, and nav_group.
+
 ## [0.65.11] - 2026-05-04
 
 ### Added

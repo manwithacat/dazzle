@@ -1538,23 +1538,33 @@ def compile_appspec_to_templates(
     for ws in appspec.workspaces:
         ws_pids = _ws_personas.get(ws.name, [])
         for ng in getattr(ws, "nav_groups", None) or []:
+            # Gate children on list-surface existence (#1005). Without this
+            # the auto-injected platform-admin Management group emits
+            # `/app/user` and `/app/tenant` even though `_ADMIN_SURFACE_DEFS`
+            # only mounts list surfaces for 7 of the 10 platform entities —
+            # those routes 404. Mirrors the gate on the auto-discovery path
+            # 30 lines above. User-authored DSL nav_groups that point at
+            # entities without surfaces are also silently dropped, which
+            # is the right behaviour: a nav link to nowhere is a bug.
+            group_children: list[dict[str, Any]] = []
+            for item in ng.items:
+                if item.entity not in _list_surfaces_by_entity:
+                    continue
+                surface = _list_surfaces_by_entity[item.entity]
+                group_children.append(
+                    {
+                        "label": (surface.title or item.entity.replace("_", " ").title()),
+                        "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                        "icon": item.icon,
+                    }
+                )
+            if not group_children:
+                continue
             group: dict[str, Any] = {
                 "label": ng.label,
                 "icon": ng.icon,
                 "collapsed": ng.collapsed,
-                "children": [
-                    {
-                        "label": (
-                            _list_surfaces_by_entity[item.entity].title
-                            if item.entity in _list_surfaces_by_entity
-                            and _list_surfaces_by_entity[item.entity].title
-                            else item.entity.replace("_", " ").title()
-                        ),
-                        "route": (f"{app_prefix}/{item.entity.lower().replace('_', '-')}"),
-                        "icon": item.icon,
-                    }
-                    for item in ng.items
-                ],
+                "children": group_children,
             }
             # Dedup across workspaces by label: multiple workspaces declaring
             # the same group ("Admin", say) should render once in the global

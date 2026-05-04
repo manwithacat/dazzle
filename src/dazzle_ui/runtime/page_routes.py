@@ -1726,29 +1726,36 @@ def create_page_routes(
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
-        # Build nav groups per workspace from nav_group declarations (v0.38.0)
+        # Build nav groups per workspace from nav_group declarations (v0.38.0).
+        # Children are gated on list-surface existence (#1005) — mirrors
+        # template_compiler.py. The auto-injected platform-admin Management
+        # group references User/Tenant which have no admin list surface, so
+        # those children would 404; same applies to any author-declared
+        # nav_group pointing at a surfaceless entity.
         ws_nav_group_map: dict[str, list[dict[str, Any]]] = {}
         for ws in workspaces:
             groups: list[dict[str, Any]] = []
             for ng in getattr(ws, "nav_groups", []) or []:
+                children: list[dict[str, Any]] = []
+                for item in ng.items:
+                    if item.entity not in _list_surfaces_by_entity:
+                        continue
+                    surface = _list_surfaces_by_entity[item.entity]
+                    children.append(
+                        {
+                            "label": (surface.title or item.entity.replace("_", " ").title()),
+                            "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                            "icon": item.icon,
+                        }
+                    )
+                if not children:
+                    continue
                 groups.append(
                     {
                         "label": ng.label,
                         "icon": ng.icon,
                         "collapsed": ng.collapsed,
-                        "children": [
-                            {
-                                "label": (
-                                    _list_surfaces_by_entity[item.entity].title
-                                    if item.entity in _list_surfaces_by_entity
-                                    and _list_surfaces_by_entity[item.entity].title
-                                    else item.entity.replace("_", " ").title()
-                                ),
-                                "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
-                                "icon": item.icon,
-                            }
-                            for item in ng.items
-                        ],
+                        "children": children,
                     }
                 )
             ws_nav_group_map[ws.name] = groups

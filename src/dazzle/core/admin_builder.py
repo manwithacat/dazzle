@@ -727,3 +727,126 @@ def build_admin_infrastructure(
     )
 
     return admin_entities, admin_surfaces, admin_workspaces
+
+
+# ---------------------------------------------------------------------------
+# Visibility helpers (#1006) — surface auto-injection to authors
+# ---------------------------------------------------------------------------
+
+
+def _is_injected_entity(entity: ir.EntitySpec) -> bool:
+    """Identify framework-injected entities by their reserved domain marker."""
+    return getattr(entity, "domain", None) == "platform"
+
+
+def _is_injected_surface(surface: ir.SurfaceSpec) -> bool:
+    """Identify framework-injected surfaces by name prefix."""
+    return surface.name.startswith("_admin_")
+
+
+def _is_injected_workspace(workspace: WorkspaceSpec) -> bool:
+    """Identify framework-injected workspaces by name prefix."""
+    return workspace.name.startswith("_platform_")
+
+
+def appspec_injected_summary(appspec: ir.AppSpec) -> dict[str, list[str]]:
+    """Return the names of framework-injected entities, surfaces, and workspaces.
+
+    Used by the boot log and ``dazzle inspect --injected`` to surface
+    auto-injection (#1006). The framework injects platform entities
+    (User, Tenant, SystemHealth, …), admin list surfaces (_admin_health,
+    _admin_deploys, …), and the _platform_admin workspace — none of
+    which appear in the author's DSL. This summary makes them visible.
+    """
+    return {
+        "entities": sorted(e.name for e in appspec.domain.entities if _is_injected_entity(e)),
+        "surfaces": sorted(s.name for s in appspec.surfaces if _is_injected_surface(s)),
+        "workspaces": sorted(w.name for w in appspec.workspaces if _is_injected_workspace(w)),
+    }
+
+
+def format_injected_as_dsl(appspec: ir.AppSpec) -> str:
+    """Render the auto-injected portion of the appspec as synthetic DSL.
+
+    Output mirrors the shape an author would write — entity blocks,
+    surface blocks, workspace blocks with regions and nav_groups —
+    prefixed with ``# AUTO-GENERATED`` so it's clearly distinguished
+    from author-written DSL. Stays accurate by construction (renders
+    from the live appspec, not a hand-maintained doc).
+    """
+    summary = appspec_injected_summary(appspec)
+    lines: list[str] = [
+        "# AUTO-GENERATED — framework-injected platform admin infrastructure",
+        "# Source: src/dazzle/core/admin_builder.py",
+        "# Visible at: /app/workspaces/_platform_admin (gated by role=admin)",
+        "",
+    ]
+
+    injected_entity_names = set(summary["entities"])
+    if summary["entities"]:
+        lines.append(f"# {len(summary['entities'])} entities (read-only)")
+        for entity in appspec.domain.entities:
+            if entity.name not in injected_entity_names:
+                continue
+            field_count = len(entity.fields or [])
+            title = entity.title or entity.name
+            lines.append(f'entity {entity.name} "{title}":  # {field_count} fields, read-only')
+        lines.append("")
+
+    injected_surface_names = set(summary["surfaces"])
+    if summary["surfaces"]:
+        lines.append(f"# {len(summary['surfaces'])} admin list surfaces")
+        for surface in appspec.surfaces:
+            if surface.name not in injected_surface_names:
+                continue
+            entity_ref = surface.entity_ref or "—"
+            title = surface.title or surface.name
+            mode = surface.mode.value if hasattr(surface.mode, "value") else surface.mode
+            lines.append(f'surface {surface.name} "{title}":  # mode={mode}, entity={entity_ref}')
+        lines.append("")
+
+    injected_ws_names = set(summary["workspaces"])
+    if summary["workspaces"]:
+        lines.append(f"# {len(summary['workspaces'])} workspaces")
+        for ws in appspec.workspaces:
+            if ws.name not in injected_ws_names:
+                continue
+            title = ws.title or ws.name
+            lines.append(f'workspace {ws.name} "{title}":')
+            for region in ws.regions or []:
+                source = getattr(region, "source", None) or "—"
+                display = getattr(region, "display", None)
+                if display is None:
+                    display_str = "—"
+                elif hasattr(display, "value"):
+                    display_str = display.value
+                else:
+                    display_str = str(display)
+                lines.append(f"  region {region.name}: source={source}, display={display_str}")
+            for ng in getattr(ws, "nav_groups", None) or []:
+                items = ", ".join(item.entity for item in ng.items)
+                lines.append(f"  nav_group {ng.label!r}: [{items}]")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def boot_log_line(appspec: ir.AppSpec) -> str:
+    """One-line boot summary of injected infrastructure (#1006).
+
+    Logged once at server startup so authors discover the concept the
+    first time they look at logs — no DSL change needed, and it stays
+    accurate by construction.
+    """
+    summary = appspec_injected_summary(appspec)
+    n_ent = len(summary["entities"])
+    n_surf = len(summary["surfaces"])
+    n_ws = len(summary["workspaces"])
+    region_count = sum(
+        len(ws.regions or []) for ws in appspec.workspaces if _is_injected_workspace(ws)
+    )
+    return (
+        f"injected: {n_ent} entities, {n_surf} admin surfaces, {n_ws} workspaces "
+        f"({region_count} regions, gated by role=admin) — "
+        f"see `dazzle inspect --injected`"
+    )

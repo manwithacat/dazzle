@@ -516,6 +516,12 @@ def inspect_command(
     entity: str | None = typer.Option(None, "--entity", "-e", help="Inspect a specific entity"),
     surface: str | None = typer.Option(None, "--surface", "-s", help="Inspect a specific surface"),
     format: str = typer.Option("tree", "--format", "-f", help="Output format: 'tree' or 'json'"),
+    injected: bool = typer.Option(
+        False,
+        "--injected",
+        help="Show framework auto-injected entities, surfaces, and workspaces "
+        "(platform-admin infrastructure) as synthetic DSL.",
+    ),
 ) -> None:
     """
     Inspect project entities, surfaces, and structure.
@@ -525,6 +531,12 @@ def inspect_command(
 
     try:
         appspec = load_project_appspec(root)
+
+        if injected:
+            from dazzle.core.admin_builder import format_injected_as_dsl
+
+            typer.echo(format_injected_as_dsl(appspec))
+            return
 
         if format == "json":
             import json

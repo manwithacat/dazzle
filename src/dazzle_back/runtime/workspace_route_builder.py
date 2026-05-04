@@ -459,6 +459,14 @@ class WorkspaceRouteBuilder:
                 len(workspaces),
             )
 
+            # #1006: surface framework auto-injection on every boot so
+            # authors discover the platform-admin workspace + injected
+            # entities. `dazzle inspect --injected` prints the full
+            # synthetic DSL view.
+            from dazzle.core.admin_builder import boot_log_line
+
+            logging.getLogger("dazzle.server").info(boot_log_line(self._appspec))
+
         except ImportError as e:
             logging.getLogger("dazzle.server").debug("Workspace renderer not available: %s", e)
 
