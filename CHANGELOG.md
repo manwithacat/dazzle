@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.6] - 2026-05-04
+
+### Fixed
+- **#1003 — combobox autocomplete 404 on no-surface FK targets.**
+  When an entity is referenced as a FK target but has no list surface
+  (intentional — User-as-FK in design_studio, project_tracker), the
+  framework wasn't generating a `/<plural>` list endpoint, so the
+  combobox bridge fetched a 404. Dropdown silently broken.
+
+  Fix: `convert_surfaces_to_services` now walks the domain entities
+  after the surface pass and, for each entity that has an explicit
+  `permit: list:` rule but no list surface, generates a synthetic
+  LIST endpoint at `/<plural>`. The route inherits the permit's
+  persona list (or empty for legacy `role(...)` conditions, where
+  the per-request entity-access check still enforces).
+
+  Verified across the wide runtime fuzz: design_studio + project_tracker
+  went from 1 console error each to 0.
+
+  Closes #1003.
+
 ## [0.65.5] - 2026-05-04
 
 ### Fixed

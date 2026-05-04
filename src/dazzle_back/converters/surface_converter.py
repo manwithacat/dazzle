@@ -357,4 +357,48 @@ def convert_surfaces_to_services(
         )
         endpoints.append(delete_endpoint)
 
+    # #1003 — FK-target entities without a list surface still need a
+    # /<plural> list endpoint so combobox autocomplete works. Walk the
+    # domain entities; for each entity that has a `permit: list:` rule
+    # but no list surface, generate a synthetic LIST endpoint. Personas
+    # field is populated when the DSL uses the post-#998 `as:` clause;
+    # legacy `role(x)` conditions land in `condition` instead. Either
+    # way, the entity has DECLARED list access — the endpoint should
+    # exist and the runtime evaluates the per-request condition.
+    if domain:
+        for entity in domain.entities:
+            if entity.name in entities_with_list:
+                continue  # already has a list surface
+            if not entity.access:
+                continue
+            list_permit = entity.access.get_permission_for(ir.PermissionKind.LIST)
+            if list_permit is None or list_permit.effect != ir.PolicyEffect.PERMIT:
+                continue
+            entity_lower = entity.name.lower()
+            entity_plural = to_api_plural(entity.name)
+            list_service = ServiceSpec(
+                name=f"list_{entity_lower}_fk_lookup",
+                inputs=SchemaSpec(fields=[]),
+                outputs=SchemaSpec(fields=[]),
+                domain_operation=DomainOperation(
+                    entity=entity.name,
+                    kind=OperationKind.LIST,
+                ),
+            )
+            services.append(list_service)
+            list_endpoint = EndpointSpec(
+                name=f"list_{entity_lower}_fk_lookup_endpoint",
+                service=list_service.name,
+                method=HttpMethod.GET,
+                path=f"/{entity_plural}",
+                description=f"List {entity.name} (synthetic FK-lookup endpoint, #1003)",
+                tags=[entity.name],
+                # require_roles=[] means "any authenticated user" at
+                # the route layer — the actual permit condition is
+                # enforced by the entity-level access check at
+                # request time.
+                require_roles=list(list_permit.personas),
+            )
+            endpoints.append(list_endpoint)
+
     return services, endpoints
