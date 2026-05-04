@@ -26,46 +26,42 @@ from dazzle_ui.themes.app_theme_registry import (
 # ─────────────────────── shipped-theme discovery ──────────────────────
 
 
-class TestShippedThemes:
-    """Each of the three shipped themes (linear-dark / paper / stripe)
-    must discover with a parsed manifest."""
+def test_shipped_themes_combined() -> None:
+    """Combined: each shipped theme (linear-dark/paper/stripe) discovers
+    with its manifest, list_theme_names contains all three, unknown returns
+    None, and every css_path points at a real file."""
+    # Per-theme manifest assertions.
+    linear = get_theme("linear-dark")
+    assert linear is not None
+    assert linear.name == "linear-dark"
+    assert linear.default_color_scheme == "dark"
+    assert linear.source == "framework"
+    assert "Linear" in linear.inspired_by
+    assert "dark" in linear.tags
 
-    def test_linear_dark_discovered(self) -> None:
-        m = get_theme("linear-dark")
+    paper = get_theme("paper")
+    assert paper is not None
+    assert paper.default_color_scheme == "light"
+    assert "warm" in paper.tags
+
+    stripe = get_theme("stripe")
+    assert stripe is not None
+    assert stripe.default_color_scheme == "light"
+    assert "Stripe" in stripe.inspired_by
+
+    # list_theme_names contains all three.
+    names = list_theme_names()
+    for n in ("linear-dark", "paper", "stripe"):
+        assert n in names
+
+    # Unknown returns None.
+    assert get_theme("does-not-exist") is None
+
+    # Every css_path resolves to a real file.
+    for n in ("linear-dark", "paper", "stripe"):
+        m = get_theme(n)
         assert m is not None
-        assert m.name == "linear-dark"
-        assert m.default_color_scheme == "dark"
-        assert m.source == "framework"
-        assert "Linear" in m.inspired_by
-        assert "dark" in m.tags
-
-    def test_paper_discovered(self) -> None:
-        m = get_theme("paper")
-        assert m is not None
-        assert m.default_color_scheme == "light"
-        assert "warm" in m.tags
-
-    def test_stripe_discovered(self) -> None:
-        m = get_theme("stripe")
-        assert m is not None
-        assert m.default_color_scheme == "light"
-        assert "Stripe" in m.inspired_by
-
-    def test_list_contains_all_three(self) -> None:
-        names = list_theme_names()
-        assert "linear-dark" in names
-        assert "paper" in names
-        assert "stripe" in names
-
-    def test_unknown_theme_returns_none(self) -> None:
-        assert get_theme("does-not-exist") is None
-
-    def test_css_paths_resolve(self) -> None:
-        """Each shipped theme's css_path must point at an existing file."""
-        for name in ("linear-dark", "paper", "stripe"):
-            m = get_theme(name)
-            assert m is not None
-            assert m.css_path.is_file(), f"{name} css_path missing: {m.css_path}"
+        assert m.css_path.is_file(), f"{n} css_path missing: {m.css_path}"
 
 
 # ─────────────────────── manifest parsing ──────────────────────
@@ -170,64 +166,67 @@ class TestProjectLocalOverride:
 # ─────────────────────── registry shape ──────────────────────
 
 
-class TestRegistryShape:
-    def test_manifest_is_frozen_dataclass(self) -> None:
-        """AppThemeManifest must be frozen so consumers can rely on
-        immutability."""
-        from dataclasses import FrozenInstanceError
+def test_registry_shape_combined() -> None:
+    """Combined: AppThemeManifest is frozen, list_theme_names sorted,
+    discover_themes returns dict keyed by manifest name."""
+    from dataclasses import FrozenInstanceError
 
-        m = get_theme("linear-dark")
-        assert m is not None
-        with pytest.raises(FrozenInstanceError):
-            m.name = "tampered"  # type: ignore[misc]
+    # Frozen
+    m = get_theme("linear-dark")
+    assert m is not None
+    with pytest.raises(FrozenInstanceError):
+        m.name = "tampered"  # type: ignore[misc]
 
-    def test_list_theme_names_is_sorted(self) -> None:
-        names = list_theme_names()
-        assert names == sorted(names)
+    # Sorted
+    names = list_theme_names()
+    assert names == sorted(names)
 
-    def test_returned_dict_keyed_by_name(self) -> None:
-        themes = discover_themes()
-        for name, m in themes.items():
-            assert isinstance(m, AppThemeManifest)
-            assert m.name == name
+    # Dict keyed by name
+    themes = discover_themes()
+    for name, mf in themes.items():
+        assert isinstance(mf, AppThemeManifest)
+        assert mf.name == name
 
 
 # ─────────────────────── inheritance (Phase C Patch 1) ──────────────────────
 
 
-class TestThemeInheritance:
-    """A theme can declare ``extends = "<parent>"`` in its manifest.
-    The registry walks the chain so the runtime can emit parent + child
-    CSS links in cascade order. Phase C Patch 1."""
+def test_theme_inheritance_combined(tmp_path: Path) -> None:
+    """Combined ``extends`` contract (Phase C Patch 1):
+    - ``extends = "<parent>"`` parses into the manifest.
+    - Default is None when omitted.
+    - Non-string extends raises.
+    - Theme that extends itself raises.
+    """
+    themes_dir = tmp_path / "themes"
+    themes_dir.mkdir()
 
-    def test_extends_field_parses(self, tmp_path: Path) -> None:
-        themes_dir = tmp_path / "themes"
-        themes_dir.mkdir()
-        (themes_dir / "child.css").write_text("/* child */")
-        (themes_dir / "child.toml").write_text('name = "child"\nextends = "linear-dark"\n')
-        m = discover_themes(project_root=tmp_path)["child"]
-        assert m.extends == "linear-dark"
+    # 1) extends parses.
+    (themes_dir / "child.css").write_text("/* child */")
+    (themes_dir / "child.toml").write_text('name = "child"\nextends = "linear-dark"\n')
+    m = discover_themes(project_root=tmp_path)["child"]
+    assert m.extends == "linear-dark"
 
-    def test_extends_default_is_none(self) -> None:
-        m = get_theme("linear-dark")
-        assert m is not None
-        assert m.extends is None
+    # 2) Default is None for shipped themes (no extends in manifest).
+    linear = get_theme("linear-dark")
+    assert linear is not None
+    assert linear.extends is None
 
-    def test_extends_must_be_string(self, tmp_path: Path) -> None:
-        themes_dir = tmp_path / "themes"
-        themes_dir.mkdir()
-        (themes_dir / "bad.css").write_text("/* */")
-        (themes_dir / "bad.toml").write_text('name = "bad"\nextends = 42\n')
-        with pytest.raises(ValueError, match="must be a string"):
-            discover_themes(project_root=tmp_path)
+    # 3) Non-string extends raises.
+    bad_dir = tmp_path / "bad-extends" / "themes"
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "bad.css").write_text("/* */")
+    (bad_dir / "bad.toml").write_text('name = "bad"\nextends = 42\n')
+    with pytest.raises(ValueError, match="must be a string"):
+        discover_themes(project_root=bad_dir.parent)
 
-    def test_extends_self_raises(self, tmp_path: Path) -> None:
-        themes_dir = tmp_path / "themes"
-        themes_dir.mkdir()
-        (themes_dir / "narcissus.css").write_text("/* */")
-        (themes_dir / "narcissus.toml").write_text('name = "narcissus"\nextends = "narcissus"\n')
-        with pytest.raises(ValueError, match="cannot extend itself"):
-            discover_themes(project_root=tmp_path)
+    # 4) Self-extends raises.
+    self_dir = tmp_path / "self-extends" / "themes"
+    self_dir.mkdir(parents=True)
+    (self_dir / "narcissus.css").write_text("/* */")
+    (self_dir / "narcissus.toml").write_text('name = "narcissus"\nextends = "narcissus"\n')
+    with pytest.raises(ValueError, match="cannot extend itself"):
+        discover_themes(project_root=self_dir.parent)
 
 
 class TestResolveInheritanceChain:
@@ -309,45 +308,38 @@ class TestResolveInheritanceChain:
 # ─────────────────────── templates_dir (Phase C Patch 2) ──────────────────────
 
 
-class TestThemeTemplatesDir:
-    """A theme can ship template overrides at ``<theme>/templates/``
-    alongside its CSS. The registry resolves the path so the runtime
-    knows where to point the Jinja loader."""
-
-    def test_templates_dir_none_when_absent(self) -> None:
-        """All three shipped themes are CSS-only — none has a sibling
-        templates/ directory."""
-        for name in ("linear-dark", "paper", "stripe"):
-            m = get_theme(name)
-            assert m is not None
-            assert m.templates_dir is None
-
-    def test_templates_dir_resolved_when_present(self, tmp_path: Path) -> None:
-        themes_dir = tmp_path / "themes"
-        themes_dir.mkdir()
-        (themes_dir / "shaped.css").write_text("/* */")
-        # Sibling directory matching the CSS file stem
-        shaped_dir = themes_dir / "shaped"
-        shaped_dir.mkdir()
-        (shaped_dir / "templates").mkdir()
-        (shaped_dir / "templates" / "card_wrapper.html").write_text(
-            '<div class="theme-card">override</div>'
-        )
-
-        m = discover_themes(project_root=tmp_path)["shaped"]
-        assert m.templates_dir == shaped_dir / "templates"
-
-    def test_templates_dir_skipped_when_dir_exists_but_no_templates_subdir(
-        self, tmp_path: Path
-    ) -> None:
-        """A bare `<theme>/` dir without a `templates/` subdir resolves
-        to None — only the conventional layout enables overrides."""
-        themes_dir = tmp_path / "themes"
-        themes_dir.mkdir()
-        (themes_dir / "named.css").write_text("/* */")
-        (themes_dir / "named").mkdir()  # no templates/ subdir
-        m = discover_themes(project_root=tmp_path)["named"]
+def test_theme_templates_dir_combined(tmp_path: Path) -> None:
+    """Combined templates_dir resolution (Phase C Patch 2):
+    - Shipped themes are CSS-only → templates_dir is None.
+    - <theme>/templates/ directory present → resolved to that path.
+    - <theme>/ exists but no templates/ subdir → None (conventional layout only).
+    """
+    # Shipped themes: no templates_dir.
+    for name in ("linear-dark", "paper", "stripe"):
+        m = get_theme(name)
+        assert m is not None
         assert m.templates_dir is None
+
+    # Resolved when <theme>/templates/ present.
+    themes_dir_a = tmp_path / "case_a" / "themes"
+    themes_dir_a.mkdir(parents=True)
+    (themes_dir_a / "shaped.css").write_text("/* */")
+    shaped_dir = themes_dir_a / "shaped"
+    shaped_dir.mkdir()
+    (shaped_dir / "templates").mkdir()
+    (shaped_dir / "templates" / "card_wrapper.html").write_text(
+        '<div class="theme-card">override</div>'
+    )
+    m = discover_themes(project_root=themes_dir_a.parent)["shaped"]
+    assert m.templates_dir == shaped_dir / "templates"
+
+    # Bare <theme>/ without templates/ subdir → None.
+    themes_dir_b = tmp_path / "case_b" / "themes"
+    themes_dir_b.mkdir(parents=True)
+    (themes_dir_b / "named.css").write_text("/* */")
+    (themes_dir_b / "named").mkdir()  # no templates/ subdir
+    m = discover_themes(project_root=themes_dir_b.parent)["named"]
+    assert m.templates_dir is None
 
 
 class TestAddThemeTemplateDirs:

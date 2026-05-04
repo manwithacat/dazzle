@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle_back.runtime.aggregate import (
     AggregateBucket,
     Dimension,
@@ -34,28 +36,26 @@ from dazzle_back.runtime.aggregate import (
 # ---------------------------------------------------------------------------
 
 
-class TestMeasureToSQL:
-    def test_count_is_count_star(self) -> None:
-        assert measure_to_sql("count") == "COUNT(*)"
-
-    def test_unary_measures_quote_column(self) -> None:
-        assert measure_to_sql("sum:score") == 'SUM("score")'
-        assert measure_to_sql("avg:score") == 'AVG("score")'
-        assert measure_to_sql("min:score") == 'MIN("score")'
-        assert measure_to_sql("max:score") == 'MAX("score")'
-
-    def test_unsupported_returns_none(self) -> None:
-        assert measure_to_sql("median:score") is None
-        assert measure_to_sql("count:score") is None  # `count` doesn't take arg
-        assert measure_to_sql("sum:") is None  # missing column
-        assert measure_to_sql("") is None
-
-    def test_column_name_is_quoted_against_injection(self) -> None:
-        # quote_identifier doubles up embedded quotes — `score"; DROP` becomes
-        # `"score""; DROP"` which is a valid (if useless) identifier.
-        assert measure_to_sql('sum:score"; DROP TABLE x; --') == (
-            'SUM("score""; DROP TABLE x; --")'
-        )
+def test_measure_to_sql_combined() -> None:
+    """Combined measure_to_sql contract:
+    - COUNT(*) for plain "count"
+    - quoted column for unary aggregators (sum/avg/min/max)
+    - None for unsupported / malformed inputs
+    - quote_identifier doubles up embedded quotes (injection-safe)
+    """
+    # Aggregators
+    assert measure_to_sql("count") == "COUNT(*)"
+    assert measure_to_sql("sum:score") == 'SUM("score")'
+    assert measure_to_sql("avg:score") == 'AVG("score")'
+    assert measure_to_sql("min:score") == 'MIN("score")'
+    assert measure_to_sql("max:score") == 'MAX("score")'
+    # Unsupported/malformed
+    assert measure_to_sql("median:score") is None
+    assert measure_to_sql("count:score") is None  # count takes no arg
+    assert measure_to_sql("sum:") is None  # missing column
+    assert measure_to_sql("") is None
+    # Injection — embedded quotes are doubled up.
+    assert measure_to_sql('sum:score"; DROP TABLE x; --') == ('SUM("score""; DROP TABLE x; --")')
 
 
 # ---------------------------------------------------------------------------
@@ -67,25 +67,22 @@ def _entity_with_fields(*field_names: str) -> SimpleNamespace:
     return SimpleNamespace(fields=[SimpleNamespace(name=n) for n in field_names])
 
 
-class TestResolveFKDisplayField:
-    def test_probe_order_display_name_wins(self) -> None:
-        e = _entity_with_fields("id", "display_name", "name", "code")
-        assert resolve_fk_display_field(e) == "display_name"
-
-    def test_falls_back_to_name(self) -> None:
-        e = _entity_with_fields("id", "name", "title")
-        assert resolve_fk_display_field(e) == "name"
-
-    def test_falls_back_to_code(self) -> None:
-        e = _entity_with_fields("id", "code")
-        assert resolve_fk_display_field(e) == "code"
-
-    def test_returns_none_when_no_probe_matches(self) -> None:
-        e = _entity_with_fields("id", "email", "ssn")
-        assert resolve_fk_display_field(e) is None
-
-    def test_none_entity_returns_none(self) -> None:
-        assert resolve_fk_display_field(None) is None
+def test_resolve_fk_display_field_combined() -> None:
+    """Combined probe-order contract: display_name > name > code, else None;
+    None entity returns None."""
+    # Probe order — display_name wins when present.
+    assert (
+        resolve_fk_display_field(_entity_with_fields("id", "display_name", "name", "code"))
+        == "display_name"
+    )
+    # Falls back to name.
+    assert resolve_fk_display_field(_entity_with_fields("id", "name", "title")) == "name"
+    # Falls back to code.
+    assert resolve_fk_display_field(_entity_with_fields("id", "code")) == "code"
+    # No probe matches.
+    assert resolve_fk_display_field(_entity_with_fields("id", "email", "ssn")) is None
+    # None entity.
+    assert resolve_fk_display_field(None) is None
 
 
 # ---------------------------------------------------------------------------
@@ -93,32 +90,29 @@ class TestResolveFKDisplayField:
 # ---------------------------------------------------------------------------
 
 
-class TestDimension:
-    def test_scalar_dimension_has_no_fk_join(self) -> None:
-        dim = Dimension(name="status")
-        assert dim.has_fk_join is False
-        assert dim.fk_table is None
-        assert dim.fk_display_field is None
+def test_dimension_invariants() -> None:
+    """Combined Dimension dataclass invariants — has_fk_join requires both
+    fk_table + fk_display_field, scalar dims have no join, and the dataclass
+    is frozen so callers can hash/cache safely."""
+    import dataclasses
 
-    def test_fk_dimension_has_join_when_both_set(self) -> None:
-        dim = Dimension(name="assessment_objective", fk_table="AO", fk_display_field="label")
-        assert dim.has_fk_join is True
+    # Scalar dim — no join, no fk attrs.
+    scalar = Dimension(name="status")
+    assert scalar.has_fk_join is False
+    assert scalar.fk_table is None
+    assert scalar.fk_display_field is None
 
-    def test_partial_fk_spec_does_not_join(self) -> None:
-        """Either both fk_table + fk_display_field, or neither."""
-        assert Dimension(name="x", fk_table="X", fk_display_field=None).has_fk_join is False
-        assert Dimension(name="x", fk_table=None, fk_display_field="label").has_fk_join is False
+    # Both fk attrs set → has_fk_join.
+    full_fk = Dimension(name="assessment_objective", fk_table="AO", fk_display_field="label")
+    assert full_fk.has_fk_join is True
 
-    def test_dimension_is_frozen(self) -> None:
-        """Frozen so caller can hash / cache safely."""
-        import dataclasses
+    # Either-or → no join (must be both, or neither).
+    assert Dimension(name="x", fk_table="X", fk_display_field=None).has_fk_join is False
+    assert Dimension(name="x", fk_table=None, fk_display_field="label").has_fk_join is False
 
-        dim = Dimension(name="status")
-        try:
-            dim.name = "other"  # type: ignore[misc]
-        except dataclasses.FrozenInstanceError:
-            return
-        raise AssertionError("Dimension should be frozen")
+    # Frozen — mutation raises.
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        scalar.name = "other"  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------
@@ -533,19 +527,18 @@ class TestRowsToBuckets:
 # ---------------------------------------------------------------------------
 
 
-class TestAggregateBucket:
-    def test_default_factories(self) -> None:
-        b = AggregateBucket()
-        assert b.dimensions == {}
-        assert b.measures == {}
+def test_aggregate_bucket_construction() -> None:
+    """Default and explicit AggregateBucket construction."""
+    empty = AggregateBucket()
+    assert empty.dimensions == {}
+    assert empty.measures == {}
 
-    def test_explicit_construction(self) -> None:
-        b = AggregateBucket(
-            dimensions={"status": "draft"},
-            measures={"count": 5, "avg_score": 12.4},
-        )
-        assert b.dimensions["status"] == "draft"
-        assert b.measures["avg_score"] == 12.4
+    explicit = AggregateBucket(
+        dimensions={"status": "draft"},
+        measures={"count": 5, "avg_score": 12.4},
+    )
+    assert explicit.dimensions["status"] == "draft"
+    assert explicit.measures["avg_score"] == 12.4
 
 
 # ---------------------------------------------------------------------------
@@ -553,98 +546,68 @@ class TestAggregateBucket:
 # ---------------------------------------------------------------------------
 
 
-class TestExplainAggregate:
-    """Explain returns exactly what aggregate would execute — byte-for-byte."""
-
-    def test_explain_returns_same_sql_as_build(self) -> None:
-        """explain_aggregate is a thin wrapper around build_aggregate_sql."""
-
-        from dazzle_back.runtime.repository import Repository
-
-        # Build a minimal repo that carries the bits explain_aggregate reads.
-        db = SimpleNamespace(placeholder="%s")
-        entity_spec = SimpleNamespace(
-            name="Alert",
-            fields=[SimpleNamespace(name="severity")],
-            computed_fields=[],
-        )
-        repo = Repository.__new__(Repository)
-        repo.db = db
-        repo.table_name = "Alert"
-        repo.entity_spec = entity_spec
-        repo._relation_loader = None
-        repo._metrics = None
-        repo._field_types = {}
-        repo._computed_fields = []
-
-        sql, params = repo.explain_aggregate(
-            dimensions=[Dimension(name="severity")],
-            measures={"count": "count"},
-            filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
-        )
-
-        # Byte-for-byte equivalence with the builder.
-        from dazzle_back.runtime.aggregate import build_aggregate_sql
-
-        expected_sql, expected_params = build_aggregate_sql(
-            table_name="Alert",
-            placeholder_style="%s",
-            dimensions=[Dimension(name="severity")],
-            measures={"count": "count"},
-            filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
-        )
-        assert sql == expected_sql
-        assert params == expected_params
-
-    def test_explain_does_not_touch_db(self) -> None:
-        """No side effects — the db connection must never be called."""
-        from dazzle_back.runtime.repository import Repository
-
-        db = SimpleNamespace(placeholder="%s", connection=lambda: _raise_on_connect())
-        entity_spec = SimpleNamespace(
-            name="Alert",
-            fields=[SimpleNamespace(name="severity")],
-            computed_fields=[],
-        )
-        repo = Repository.__new__(Repository)
-        repo.db = db
-        repo.table_name = "Alert"
-        repo.entity_spec = entity_spec
-        repo._relation_loader = None
-        repo._metrics = None
-        repo._field_types = {}
-        repo._computed_fields = []
-
-        # Must not raise — no DB connection attempted.
-        sql, _ = repo.explain_aggregate(
-            dimensions=[Dimension(name="severity")],
-            measures={"count": "count"},
-        )
-        assert sql.startswith("SELECT")
-
-    def test_explain_returns_empty_for_unsupported_measures(self) -> None:
-        """Same short-circuit as aggregate: unsupported → empty tuple."""
-        from dazzle_back.runtime.repository import Repository
-
-        repo = Repository.__new__(Repository)
-        repo.db = SimpleNamespace(placeholder="%s")
-        repo.table_name = "Alert"
-        repo.entity_spec = SimpleNamespace(name="Alert", fields=[], computed_fields=[])
-        repo._relation_loader = None
-        repo._metrics = None
-        repo._field_types = {}
-        repo._computed_fields = []
-
-        sql, params = repo.explain_aggregate(
-            dimensions=[Dimension(name="severity")],
-            measures={"weird": "median:score"},
-        )
-        assert sql == ""
-        assert params == []
-
-
 def _raise_on_connect() -> None:
     raise AssertionError("explain_aggregate must not open a DB connection")
+
+
+def _make_repo(*, fields: list[str] | None = None, raise_on_connect: bool = False):
+    """Build a minimal Repository with only the bits explain_aggregate reads."""
+    from dazzle_back.runtime.repository import Repository
+
+    field_specs = [SimpleNamespace(name=n) for n in (fields or [])]
+    db = SimpleNamespace(placeholder="%s")
+    if raise_on_connect:
+        db = SimpleNamespace(placeholder="%s", connection=lambda: _raise_on_connect())
+    repo = Repository.__new__(Repository)
+    repo.db = db
+    repo.table_name = "Alert"
+    repo.entity_spec = SimpleNamespace(name="Alert", fields=field_specs, computed_fields=[])
+    repo._relation_loader = None
+    repo._metrics = None
+    repo._field_types = {}
+    repo._computed_fields = []
+    return repo
+
+
+def test_explain_aggregate_combined() -> None:
+    """Explain is a thin wrapper around build_aggregate_sql:
+    - byte-for-byte equivalence with build_aggregate_sql
+    - no DB connection attempted (pure SQL composition)
+    - empty tuple for unsupported measures (same short-circuit as aggregate)
+    """
+    # 1) Byte-for-byte equivalence with the builder.
+    repo = _make_repo(fields=["severity"])
+    sql, params = repo.explain_aggregate(
+        dimensions=[Dimension(name="severity")],
+        measures={"count": "count"},
+        filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
+    )
+    expected_sql, expected_params = build_aggregate_sql(
+        table_name="Alert",
+        placeholder_style="%s",
+        dimensions=[Dimension(name="severity")],
+        measures={"count": "count"},
+        filters={"__scope_predicate": ('"Alert"."dept" = %s', ["d-1"])},
+    )
+    assert sql == expected_sql
+    assert params == expected_params
+
+    # 2) No DB connection attempted — repo's connection() raises if invoked.
+    repo_no_db = _make_repo(fields=["severity"], raise_on_connect=True)
+    sql2, _ = repo_no_db.explain_aggregate(
+        dimensions=[Dimension(name="severity")],
+        measures={"count": "count"},
+    )
+    assert sql2.startswith("SELECT")
+
+    # 3) Unsupported measure → empty tuple.
+    repo_unsup = _make_repo(fields=[])
+    sql3, params3 = repo_unsup.explain_aggregate(
+        dimensions=[Dimension(name="severity")],
+        measures={"weird": "median:score"},
+    )
+    assert sql3 == ""
+    assert params3 == []
 
 
 # ---------------------------------------------------------------------------
@@ -652,32 +615,30 @@ def _raise_on_connect() -> None:
 # ---------------------------------------------------------------------------
 
 
-class TestTimeBucketDimension:
-    def test_truncate_sets_is_time_bucket(self) -> None:
-        dim = Dimension(name="created_at", truncate="day")
-        assert dim.is_time_bucket is True
-        assert dim.has_fk_join is False
+def test_time_bucket_dimension_invariants() -> None:
+    """Combined Dimension.truncate invariants — truncate sets is_time_bucket,
+    None means not a time bucket, invalid units raise, and truncate cannot
+    combine with fk_table/fk_display_field (timestamps aren't FKs)."""
+    # truncate="day" → is_time_bucket, no fk join.
+    dim = Dimension(name="created_at", truncate="day")
+    assert dim.is_time_bucket is True
+    assert dim.has_fk_join is False
 
-    def test_truncate_none_is_not_time_bucket(self) -> None:
-        assert Dimension(name="status").is_time_bucket is False
+    # No truncate → not a time bucket.
+    assert Dimension(name="status").is_time_bucket is False
 
-    def test_invalid_truncate_unit_raises(self) -> None:
-        import pytest
+    # Invalid unit raises.
+    with pytest.raises(ValueError, match="Invalid truncate unit"):
+        Dimension(name="created_at", truncate="millennia")  # type: ignore[arg-type]
 
-        with pytest.raises(ValueError, match="Invalid truncate unit"):
-            Dimension(name="created_at", truncate="millennia")  # type: ignore[arg-type]
-
-    def test_truncate_with_fk_raises(self) -> None:
-        """A timestamp column is never a foreign key — guard in ctor."""
-        import pytest
-
-        with pytest.raises(ValueError, match="cannot combine truncate"):
-            Dimension(
-                name="created_at",
-                truncate="day",
-                fk_table="Something",
-                fk_display_field="name",
-            )
+    # truncate + fk → raises (timestamp is never a FK).
+    with pytest.raises(ValueError, match="cannot combine truncate"):
+        Dimension(
+            name="created_at",
+            truncate="day",
+            fk_table="Something",
+            fk_display_field="name",
+        )
 
 
 class TestBuildAggregateSQLTimeBucket:

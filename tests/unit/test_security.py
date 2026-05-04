@@ -20,75 +20,55 @@ import pytest
 # =============================================================================
 
 
-class TestSecurityConfig:
-    """Tests for security configuration types."""
+def test_security_config_combined() -> None:
+    """Combined SecurityConfig contract:
+    - SecurityProfile enum string values are 'basic'/'standard'/'strict'.
+    - BASIC profile is permissive (no HSTS/CSP/auth, cors=*).
+    - STANDARD enables HSTS + CSP (Report-Only) + auth.
+    - STRICT enables HSTS + CSP + auth.
+    - STRICT + multi_tenant=True enables tenant_isolation.
+    - Custom cors_origins override profile defaults.
+    """
+    from dazzle.core.ir.security import SecurityConfig, SecurityProfile
 
-    def test_security_profile_values(self) -> None:
-        """Test that security profiles have correct values."""
-        from dazzle.core.ir.security import SecurityProfile
+    # Enum values.
+    assert SecurityProfile.BASIC.value == "basic"
+    assert SecurityProfile.STANDARD.value == "standard"
+    assert SecurityProfile.STRICT.value == "strict"
 
-        assert SecurityProfile.BASIC.value == "basic"
-        assert SecurityProfile.STANDARD.value == "standard"
-        assert SecurityProfile.STRICT.value == "strict"
+    # BASIC defaults — permissive.
+    basic = SecurityConfig.from_profile(SecurityProfile.BASIC)
+    assert basic.profile == SecurityProfile.BASIC
+    assert basic.cors_origins == ["*"]
+    assert basic.enable_hsts is False
+    assert basic.enable_csp is False
+    assert basic.require_auth_by_default is False
+    assert basic.tenant_isolation is False
 
-    def test_basic_profile_defaults(self) -> None:
-        """Test basic profile has permissive defaults."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
+    # STANDARD — same-origin, HSTS + CSP, auth on.
+    standard = SecurityConfig.from_profile(SecurityProfile.STANDARD)
+    assert standard.profile == SecurityProfile.STANDARD
+    assert standard.cors_origins is None
+    assert standard.enable_hsts is True
+    assert standard.enable_csp is True  # #833 — runtime emits Report-Only
+    assert standard.require_auth_by_default is True
+    assert standard.tenant_isolation is False
 
-        config = SecurityConfig.from_profile(SecurityProfile.BASIC)
+    # STRICT defaults.
+    strict = SecurityConfig.from_profile(SecurityProfile.STRICT)
+    assert strict.profile == SecurityProfile.STRICT
+    assert strict.enable_hsts is True
+    assert strict.enable_csp is True
+    assert strict.require_auth_by_default is True
 
-        assert config.profile == SecurityProfile.BASIC
-        assert config.cors_origins == ["*"]
-        assert config.enable_hsts is False
-        assert config.enable_csp is False
-        assert config.require_auth_by_default is False
-        assert config.tenant_isolation is False
+    # STRICT + multi_tenant.
+    strict_mt = SecurityConfig.from_profile(SecurityProfile.STRICT, multi_tenant=True)
+    assert strict_mt.tenant_isolation is True
 
-    def test_standard_profile_defaults(self) -> None:
-        """Test standard profile has reasonable security."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-
-        config = SecurityConfig.from_profile(SecurityProfile.STANDARD)
-
-        assert config.profile == SecurityProfile.STANDARD
-        assert config.cors_origins is None  # Same-origin only
-        assert config.enable_hsts is True
-        # Post-#833: standard profile enables CSP — runtime middleware
-        # switches to Report-Only mode so violations surface without blocking.
-        assert config.enable_csp is True
-        assert config.require_auth_by_default is True
-        assert config.tenant_isolation is False
-
-    def test_strict_profile_defaults(self) -> None:
-        """Test strict profile has maximum security."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-
-        config = SecurityConfig.from_profile(SecurityProfile.STRICT)
-
-        assert config.profile == SecurityProfile.STRICT
-        assert config.enable_hsts is True
-        assert config.enable_csp is True
-        assert config.require_auth_by_default is True
-
-    def test_strict_profile_with_multi_tenant(self) -> None:
-        """Test strict profile enables tenant isolation when multi_tenant=True."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-
-        config = SecurityConfig.from_profile(SecurityProfile.STRICT, multi_tenant=True)
-
-        assert config.tenant_isolation is True
-
-    def test_custom_cors_origins(self) -> None:
-        """Test custom CORS origins override profile defaults."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-
-        custom_origins = ["https://app.example.com", "https://admin.example.com"]
-        config = SecurityConfig.from_profile(
-            SecurityProfile.STANDARD,
-            cors_origins=custom_origins,
-        )
-
-        assert config.cors_origins == custom_origins
+    # Custom cors_origins override.
+    custom = ["https://app.example.com", "https://admin.example.com"]
+    custom_cfg = SecurityConfig.from_profile(SecurityProfile.STANDARD, cors_origins=custom)
+    assert custom_cfg.cors_origins == custom
 
 
 # =============================================================================
@@ -96,88 +76,61 @@ class TestSecurityConfig:
 # =============================================================================
 
 
-class TestSecurityMiddleware:
-    """Tests for security middleware configuration."""
+def test_cors_config_combined() -> None:
+    """Combined configure_cors_for_profile contract for all 3 profiles
+    + custom-origins override + credentials toggling."""
+    from dazzle_back.runtime.security_middleware import configure_cors_for_profile
 
-    def test_basic_cors_config(self) -> None:
-        """Test basic profile CORS configuration."""
-        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
+    # BASIC — wildcard origins forbid credentials.
+    basic = configure_cors_for_profile("basic")
+    assert basic.allow_origins == ["*"]
+    assert basic.allow_credentials is False
 
-        config = configure_cors_for_profile("basic")
+    # BASIC with explicit origins → credentials allowed.
+    basic_custom = configure_cors_for_profile("basic", custom_origins=["https://myapp.com"])
+    assert basic_custom.allow_origins == ["https://myapp.com"]
+    assert basic_custom.allow_credentials is True
 
-        assert config.allow_origins == ["*"]
-        # credentials must be False when origins=["*"] (CORS spec violation)
-        assert config.allow_credentials is False
+    # STANDARD — same-origin, credentials on, headers include Authorization + X-Tenant-ID.
+    standard = configure_cors_for_profile("standard")
+    assert standard.allow_origins is None
+    assert standard.allow_credentials is True
+    assert "Authorization" in standard.allow_headers
+    assert "X-Tenant-ID" in standard.allow_headers
 
-    def test_basic_cors_with_explicit_origins_allows_credentials(self) -> None:
-        """Basic profile with explicit origins should allow credentials."""
-        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
+    # STRICT — same-origin, X-Request-ID exposed.
+    strict = configure_cors_for_profile("strict")
+    assert strict.allow_origins is None
+    assert "X-Request-ID" in strict.expose_headers
 
-        config = configure_cors_for_profile("basic", custom_origins=["https://myapp.com"])
+    # Custom origins override (positional arg).
+    custom = configure_cors_for_profile("basic", ["https://example.com"])
+    assert custom.allow_origins == ["https://example.com"]
 
-        assert config.allow_origins == ["https://myapp.com"]
-        assert config.allow_credentials is True
 
-    def test_standard_cors_config(self) -> None:
-        """Test standard profile CORS configuration."""
-        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
+def test_headers_config_combined() -> None:
+    """Combined configure_headers_for_profile contract for all 3 profiles."""
+    from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
-        config = configure_cors_for_profile("standard")
+    # BASIC — minimal: no HSTS/CSP, frame=SAMEORIGIN.
+    basic = configure_headers_for_profile("basic")
+    assert basic.enable_hsts is False
+    assert basic.enable_csp is False
+    assert basic.x_frame_options == "SAMEORIGIN"
 
-        assert config.allow_origins is None  # Same-origin
-        assert config.allow_credentials is True
-        assert "Authorization" in config.allow_headers
-        assert "X-Tenant-ID" in config.allow_headers
+    # STANDARD — HSTS+CSP, Report-Only (#833), frame=DENY.
+    standard = configure_headers_for_profile("standard")
+    assert standard.enable_hsts is True
+    assert standard.enable_csp is True
+    assert standard.csp_report_only is True
+    assert standard.x_frame_options == "DENY"
 
-    def test_strict_cors_config(self) -> None:
-        """Test strict profile CORS configuration."""
-        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
-
-        config = configure_cors_for_profile("strict")
-
-        assert config.allow_origins is None  # Must be explicitly set
-        assert "X-Request-ID" in config.expose_headers
-
-    def test_custom_origins_override(self) -> None:
-        """Test custom origins override profile defaults."""
-        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
-
-        custom = ["https://example.com"]
-        config = configure_cors_for_profile("basic", custom)
-
-        assert config.allow_origins == custom
-
-    def test_basic_headers_config(self) -> None:
-        """Test basic profile has minimal headers."""
-        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
-
-        config = configure_headers_for_profile("basic")
-
-        assert config.enable_hsts is False
-        assert config.enable_csp is False
-        assert config.x_frame_options == "SAMEORIGIN"
-
-    def test_standard_headers_config(self) -> None:
-        """Standard profile emits CSP in Report-Only mode (#833)."""
-        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
-
-        config = configure_headers_for_profile("standard")
-
-        assert config.enable_hsts is True
-        assert config.enable_csp is True
-        assert config.csp_report_only is True
-        assert config.x_frame_options == "DENY"
-
-    def test_strict_headers_config(self) -> None:
-        """Strict profile enforces CSP (not report-only)."""
-        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
-
-        config = configure_headers_for_profile("strict")
-
-        assert config.enable_hsts is True
-        assert config.enable_csp is True
-        assert config.csp_report_only is False
-        assert config.x_frame_options == "DENY"
+    # STRICT — HSTS+CSP enforced (not Report-Only).
+    strict = configure_headers_for_profile("strict")
+    assert strict.enable_hsts is True
+    assert strict.enable_csp is True
+    assert strict.csp_report_only is False
+    assert strict.x_frame_options == "DENY"
 
 
 # =============================================================================
@@ -185,128 +138,63 @@ class TestSecurityMiddleware:
 # =============================================================================
 
 
-class TestSurfaceAccess:
-    """Tests for surface access control."""
+def test_surface_access_combined() -> None:
+    """Combined check_surface_access contract:
+    - require_auth=False allows anyone (None user OK).
+    - require_auth=True without user → denied (is_auth_required=True).
+    - require_auth=True with user → allowed.
+    - allow_personas: matching persona allowed; non-matching denied.
+    - deny_personas: denied persona always denied (precedence over allow).
+    - redirect_unauthenticated provides redirect_url for UI requests.
+    """
+    from dazzle_back.runtime.surface_access import (
+        SurfaceAccessConfig,
+        SurfaceAccessDenied,
+        check_surface_access,
+    )
 
-    def test_no_auth_required(self) -> None:
-        """Test access allowed when auth not required."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            check_surface_access,
-        )
+    # No auth required — None user OK.
+    check_surface_access(SurfaceAccessConfig(require_auth=False), None)
 
-        config = SurfaceAccessConfig(require_auth=False)
-        # Should not raise
-        check_surface_access(config, None)
+    # Auth required, no user → denied with is_auth_required=True.
+    cfg_auth = SurfaceAccessConfig(require_auth=True)
+    with pytest.raises(SurfaceAccessDenied) as exc:
+        check_surface_access(cfg_auth, None)
+    assert exc.value.is_auth_required is True
+    assert "Authentication required" in exc.value.reason
 
-    def test_auth_required_no_user(self) -> None:
-        """Test access denied when auth required but no user."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            SurfaceAccessDenied,
-            check_surface_access,
-        )
+    # Auth required, user present → allowed.
+    check_surface_access(cfg_auth, {"id": "user-123"})
 
-        config = SurfaceAccessConfig(require_auth=True)
-        with pytest.raises(SurfaceAccessDenied) as exc:
-            check_surface_access(config, None)
+    # allow_personas match → allowed.
+    cfg_allow = SurfaceAccessConfig(require_auth=True, allow_personas=["admin", "manager"])
+    check_surface_access(cfg_allow, {"id": "user-123"}, ["admin"])
 
-        assert exc.value.is_auth_required is True
-        assert "Authentication required" in exc.value.reason
+    # allow_personas no match → denied (is_auth_required=False).
+    cfg_strict = SurfaceAccessConfig(require_auth=True, allow_personas=["admin"])
+    with pytest.raises(SurfaceAccessDenied) as exc2:
+        check_surface_access(cfg_strict, {"id": "user-123"}, ["viewer"])
+    assert exc2.value.is_auth_required is False
+    assert "admin" in exc2.value.reason
 
-    def test_auth_required_with_user(self) -> None:
-        """Test access allowed for authenticated user."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            check_surface_access,
-        )
+    # deny_personas → denied.
+    cfg_deny = SurfaceAccessConfig(require_auth=True, deny_personas=["blocked"])
+    with pytest.raises(SurfaceAccessDenied) as exc3:
+        check_surface_access(cfg_deny, {"id": "user-123"}, ["blocked"])
+    assert "blocked" in exc3.value.reason
 
-        config = SurfaceAccessConfig(require_auth=True)
-        # Should not raise
-        check_surface_access(config, {"id": "user-123"})
+    # deny precedence over allow.
+    cfg_both = SurfaceAccessConfig(
+        require_auth=True, allow_personas=["admin"], deny_personas=["suspended"]
+    )
+    with pytest.raises(SurfaceAccessDenied):
+        check_surface_access(cfg_both, {"id": "user-123"}, ["admin", "suspended"])
 
-    def test_allow_personas_match(self) -> None:
-        """Test access allowed when user has allowed persona."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            check_surface_access,
-        )
-
-        config = SurfaceAccessConfig(
-            require_auth=True,
-            allow_personas=["admin", "manager"],
-        )
-        # Should not raise
-        check_surface_access(config, {"id": "user-123"}, ["admin"])
-
-    def test_allow_personas_no_match(self) -> None:
-        """Test access denied when user lacks allowed persona."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            SurfaceAccessDenied,
-            check_surface_access,
-        )
-
-        config = SurfaceAccessConfig(
-            require_auth=True,
-            allow_personas=["admin"],
-        )
-        with pytest.raises(SurfaceAccessDenied) as exc:
-            check_surface_access(config, {"id": "user-123"}, ["viewer"])
-
-        assert exc.value.is_auth_required is False
-        assert "admin" in exc.value.reason
-
-    def test_deny_personas(self) -> None:
-        """Test access denied when user has denied persona."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            SurfaceAccessDenied,
-            check_surface_access,
-        )
-
-        config = SurfaceAccessConfig(
-            require_auth=True,
-            deny_personas=["blocked"],
-        )
-        with pytest.raises(SurfaceAccessDenied) as exc:
-            check_surface_access(config, {"id": "user-123"}, ["blocked"])
-
-        assert "blocked" in exc.value.reason
-
-    def test_deny_takes_precedence(self) -> None:
-        """Test deny list takes precedence over allow list."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            SurfaceAccessDenied,
-            check_surface_access,
-        )
-
-        config = SurfaceAccessConfig(
-            require_auth=True,
-            allow_personas=["admin"],
-            deny_personas=["suspended"],
-        )
-        with pytest.raises(SurfaceAccessDenied):
-            # User is admin but also suspended
-            check_surface_access(config, {"id": "user-123"}, ["admin", "suspended"])
-
-    def test_redirect_url_for_ui(self) -> None:
-        """Test redirect URL provided for UI requests."""
-        from dazzle_back.runtime.surface_access import (
-            SurfaceAccessConfig,
-            SurfaceAccessDenied,
-            check_surface_access,
-        )
-
-        config = SurfaceAccessConfig(
-            require_auth=True,
-            redirect_unauthenticated="/login",
-        )
-        with pytest.raises(SurfaceAccessDenied) as exc:
-            check_surface_access(config, None, is_api_request=False)
-
-        assert exc.value.redirect_url == "/login"
+    # redirect_url for UI request.
+    cfg_redir = SurfaceAccessConfig(require_auth=True, redirect_unauthenticated="/login")
+    with pytest.raises(SurfaceAccessDenied) as exc4:
+        check_surface_access(cfg_redir, None, is_api_request=False)
+    assert exc4.value.redirect_url == "/login"
 
 
 # =============================================================================

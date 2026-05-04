@@ -37,49 +37,38 @@ def _make_security(profile: SecurityProfile, *, multi_tenant: bool = False) -> S
 # ---------------------------------------------------------------------------
 
 
-class TestFieldTuples:
-    """Shape and content tests for the individual FIELDS constants."""
+def test_admin_entity_defs_combined() -> None:
+    """Combined ADMIN_ENTITY_DEFS shape contract:
+    - Exactly 7 entity definitions.
+    - Every field tuple is (str, str, tuple, str|None).
+    - Every entity has exactly one 'pk' field named 'id'.
+    - VIRTUAL_ENTITY_NAMES is a subset of all entity names.
+    """
+    # Top-level count.
+    assert len(ADMIN_ENTITY_DEFS) == 7
 
-    def _all_field_tuples(
-        self,
-    ) -> list[tuple[str, str, tuple[str, ...], str | None]]:
-        """Collect every field tuple across all entity defs."""
-        result = []
-        for _name, _title, _intent, fields_tuple, _patterns, _gate in ADMIN_ENTITY_DEFS:
-            result.extend(fields_tuple)
-        return result
+    all_names: set[str] = set()
+    for ent_name, _title, _intent, fields_tuple, _patterns, _gate in ADMIN_ENTITY_DEFS:
+        all_names.add(ent_name)
 
-    def test_field_tuples_have_correct_shape(self) -> None:
-        """Every field tuple is (str, str, tuple, str|None)."""
-        for entry in self._all_field_tuples():
-            assert len(entry) == 4, f"Expected 4-tuple, got {entry!r}"
+        # Field tuple shape.
+        for entry in fields_tuple:
+            assert len(entry) == 4, f"{ent_name}: expected 4-tuple, got {entry!r}"
             name, type_str, modifiers, default = entry
             assert isinstance(name, str)
             assert isinstance(type_str, str)
             assert isinstance(modifiers, tuple)
             assert default is None or isinstance(default, str)
 
-    def test_all_entities_have_pk(self) -> None:
-        """Every entity definition has exactly one 'pk' field named 'id'."""
-        for ent_name, _title, _intent, fields_tuple, _patterns, _gate in ADMIN_ENTITY_DEFS:
-            pk_fields = [f for f in fields_tuple if "pk" in f[2]]
-            assert len(pk_fields) == 1, (
-                f"{ent_name}: expected exactly one pk field, got {pk_fields}"
-            )
-            assert pk_fields[0][0] == "id", (
-                f"{ent_name}: pk field should be named 'id', got {pk_fields[0][0]!r}"
-            )
+        # Exactly one pk named 'id'.
+        pk_fields = [f for f in fields_tuple if "pk" in f[2]]
+        assert len(pk_fields) == 1, f"{ent_name}: expected one pk, got {pk_fields}"
+        assert pk_fields[0][0] == "id", f"{ent_name}: pk not 'id', got {pk_fields[0][0]!r}"
 
-    def test_admin_entity_defs_count(self) -> None:
-        """ADMIN_ENTITY_DEFS contains exactly 7 entity definitions."""
-        assert len(ADMIN_ENTITY_DEFS) == 7
-
-    def test_virtual_entities_are_subset(self) -> None:
-        """VIRTUAL_ENTITY_NAMES is a subset of all entity names in ADMIN_ENTITY_DEFS."""
-        all_names = {entry[0] for entry in ADMIN_ENTITY_DEFS}
-        assert VIRTUAL_ENTITY_NAMES <= all_names, (
-            f"Virtual names not subset: {VIRTUAL_ENTITY_NAMES - all_names}"
-        )
+    # VIRTUAL_ENTITY_NAMES subset of all defs.
+    assert VIRTUAL_ENTITY_NAMES <= all_names, (
+        f"Virtual names not subset: {VIRTUAL_ENTITY_NAMES - all_names}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -87,103 +76,52 @@ class TestFieldTuples:
 # ---------------------------------------------------------------------------
 
 
-class TestBuildAdminEntities:
-    """_build_admin_entities profile-gating and EntitySpec correctness."""
+def test_build_admin_entities_combined() -> None:
+    """Combined: _build_admin_entities profile-gating + EntitySpec invariants.
+    - BASIC profile: 3 entities (no profile_gate); STANDARD/STRICT: 7 entities.
+    - STANDARD includes LogEntry + EventTrace.
+    - All entities have domain='platform' and 'system' in patterns.
+    - All entities are read-only (only READ + LIST permissions).
+    - All permission rules require ['admin', 'super_admin'].
+    """
+    from dazzle.core.admin_builder import _build_admin_entities
+    from dazzle.core.ir.domain import PermissionKind
 
-    def test_basic_profile_gets_all_profile_entities(self) -> None:
-        """BASIC profile receives only entities with no profile gate (3 of 7)."""
-        from dazzle.core.admin_builder import _build_admin_entities
+    # BASIC profile: only entities with profile_gate=None.
+    basic_entities = _build_admin_entities(_make_security(SecurityProfile.BASIC))
+    basic_names = {e.name for e in basic_entities}
+    assert "SystemHealth" in basic_names
+    assert "DeployHistory" in basic_names
+    for gated in ("ProcessRun", "SessionInfo", "LogEntry", "EventTrace"):
+        assert gated not in basic_names
 
-        security = _make_security(SecurityProfile.BASIC)
-        entities = _build_admin_entities(security)
-        names = {e.name for e in entities}
-        # profile_gate=None entities (available on all profiles)
-        assert "SystemHealth" in names
-        assert "DeployHistory" in names
-        # profile_gate="standard" entities should NOT be present for basic
-        assert "ProcessRun" not in names
-        assert "SessionInfo" not in names
-        assert "LogEntry" not in names
-        assert "EventTrace" not in names
+    # STANDARD profile: all 7, including log/event.
+    standard_entities = _build_admin_entities(_make_security(SecurityProfile.STANDARD))
+    assert len(standard_entities) == 7
+    standard_names = {e.name for e in standard_entities}
+    assert "LogEntry" in standard_names
+    assert "EventTrace" in standard_names
 
-    def test_standard_profile_gets_all_entities(self) -> None:
-        """STANDARD profile receives all 7 admin entities."""
-        from dazzle.core.admin_builder import _build_admin_entities
+    # STRICT profile: all 7.
+    strict_entities = _build_admin_entities(_make_security(SecurityProfile.STRICT))
+    assert len(strict_entities) == 7
 
-        security = _make_security(SecurityProfile.STANDARD)
-        entities = _build_admin_entities(security)
-        assert len(entities) == 7
-
-    def test_strict_profile_gets_all_entities(self) -> None:
-        """STRICT profile receives all 7 admin entities."""
-        from dazzle.core.admin_builder import _build_admin_entities
-
-        security = _make_security(SecurityProfile.STRICT)
-        entities = _build_admin_entities(security)
-        assert len(entities) == 7
-
-    def test_standard_profile_includes_log_and_event_entities(self) -> None:
-        """STANDARD profile includes LogEntry and EventTrace."""
-        from dazzle.core.admin_builder import _build_admin_entities
-
-        security = _make_security(SecurityProfile.STANDARD)
-        entities = _build_admin_entities(security)
-        names = {e.name for e in entities}
-        assert "LogEntry" in names
-        assert "EventTrace" in names
-
-    def test_entities_have_platform_domain(self) -> None:
-        """All generated entities carry domain='platform'."""
-        from dazzle.core.admin_builder import _build_admin_entities
-
-        security = _make_security(SecurityProfile.STRICT)
-        for entity in _build_admin_entities(security):
-            assert entity.domain == "platform", (
-                f"{entity.name}: expected domain='platform', got {entity.domain!r}"
-            )
-
-    def test_entities_have_system_pattern(self) -> None:
-        """All generated entities include 'system' in their patterns list."""
-        from dazzle.core.admin_builder import _build_admin_entities
-
-        security = _make_security(SecurityProfile.STRICT)
-        for entity in _build_admin_entities(security):
-            assert "system" in entity.patterns, (
-                f"{entity.name}: 'system' not in patterns {entity.patterns!r}"
-            )
-
-    def test_entities_are_read_only(self) -> None:
-        """Generated entities only have READ and LIST permissions (no CREATE/UPDATE/DELETE)."""
-        from dazzle.core.admin_builder import _build_admin_entities
-        from dazzle.core.ir.domain import PermissionKind
-
-        security = _make_security(SecurityProfile.STRICT)
-        write_ops = {PermissionKind.CREATE, PermissionKind.UPDATE, PermissionKind.DELETE}
-
-        for entity in _build_admin_entities(security):
-            assert entity.access is not None, f"{entity.name}: access is None"
-            ops = {rule.operation for rule in entity.access.permissions}
-            illegal = ops & write_ops
-            assert not illegal, (
-                f"{entity.name}: found write operations {illegal!r} — should be read-only"
-            )
-            assert PermissionKind.READ in ops, f"{entity.name}: missing READ permission"
-            assert PermissionKind.LIST in ops, f"{entity.name}: missing LIST permission"
-
-    def test_entities_require_admin_personas(self) -> None:
-        """All permission rules are scoped to ['admin', 'super_admin']."""
-        from dazzle.core.admin_builder import _build_admin_entities
-
-        security = _make_security(SecurityProfile.STRICT)
-        expected_personas = ["admin", "super_admin"]
-
-        for entity in _build_admin_entities(security):
-            assert entity.access is not None, f"{entity.name}: access is None"
-            for rule in entity.access.permissions:
-                assert rule.personas == expected_personas, (
-                    f"{entity.name} op={rule.operation}: "
-                    f"expected personas {expected_personas!r}, got {rule.personas!r}"
-                )
+    # Per-entity invariants on the STRICT set (which has them all).
+    write_ops = {PermissionKind.CREATE, PermissionKind.UPDATE, PermissionKind.DELETE}
+    expected_personas = ["admin", "super_admin"]
+    for entity in strict_entities:
+        # domain + patterns
+        assert entity.domain == "platform", f"{entity.name}: bad domain"
+        assert "system" in entity.patterns, f"{entity.name}: 'system' not in patterns"
+        # read-only access
+        assert entity.access is not None, f"{entity.name}: access is None"
+        ops = {rule.operation for rule in entity.access.permissions}
+        assert not (ops & write_ops), f"{entity.name}: write ops {ops & write_ops!r}"
+        assert PermissionKind.READ in ops
+        assert PermissionKind.LIST in ops
+        # admin-only personas
+        for rule in entity.access.permissions:
+            assert rule.personas == expected_personas
 
 
 # ---------------------------------------------------------------------------
@@ -236,66 +174,36 @@ class TestCollisionDetection:
 # ---------------------------------------------------------------------------
 
 
-class TestBuildAdminSurfaces:
-    """_build_admin_surfaces profile-gating and SurfaceSpec shape."""
+def test_build_admin_surfaces_combined() -> None:
+    """Combined _build_admin_surfaces contract:
+    - STANDARD includes _admin_sessions; BASIC does not.
+    - _admin_deploys + _admin_health present on every profile.
+    - All surfaces are LIST mode, require_auth, admin/super_admin personas.
+    """
+    from dazzle.core.admin_builder import _build_admin_surfaces
 
-    def test_standard_generates_session_surface(self) -> None:
-        """STANDARD profile includes the _admin_sessions surface."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
+    # Profile-gated session surface.
+    standard_names = {
+        s.name for s in _build_admin_surfaces(_make_security(SecurityProfile.STANDARD))
+    }
+    assert "_admin_sessions" in standard_names
+    basic_names = {s.name for s in _build_admin_surfaces(_make_security(SecurityProfile.BASIC))}
+    assert "_admin_sessions" not in basic_names
 
-        security = _make_security(SecurityProfile.STANDARD)
-        surfaces = _build_admin_surfaces(security)
-        names = {s.name for s in surfaces}
-        assert "_admin_sessions" in names
+    # Universal surfaces — present on every profile.
+    for profile in SecurityProfile:
+        names = {s.name for s in _build_admin_surfaces(_make_security(profile))}
+        assert "_admin_deploys" in names, f"_admin_deploys missing for {profile}"
+        assert "_admin_health" in names, f"_admin_health missing for {profile}"
 
-    def test_basic_no_session_surface(self) -> None:
-        """BASIC profile does NOT include the _admin_sessions surface."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
-
-        security = _make_security(SecurityProfile.BASIC)
-        surfaces = _build_admin_surfaces(security)
-        names = {s.name for s in surfaces}
-        assert "_admin_sessions" not in names
-
-    def test_surfaces_require_admin_personas(self) -> None:
-        """All surfaces require auth and allow only admin/super_admin personas."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
-
-        security = _make_security(SecurityProfile.STANDARD)
-        for surface in _build_admin_surfaces(security):
-            assert surface.access is not None, f"{surface.name}: access is None"
-            assert surface.access.require_auth is True, f"{surface.name}: require_auth is False"
-            assert set(surface.access.allow_personas) == {"admin", "super_admin"}, (
-                f"{surface.name}: unexpected personas {surface.access.allow_personas!r}"
-            )
-
-    def test_surfaces_are_list_mode(self) -> None:
-        """All generated surfaces have mode=LIST."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
-
-        security = _make_security(SecurityProfile.STANDARD)
-        for surface in _build_admin_surfaces(security):
-            assert surface.mode == SurfaceMode.LIST, (
-                f"{surface.name}: expected LIST mode, got {surface.mode!r}"
-            )
-
-    def test_deploy_surface_always_present(self) -> None:
-        """_admin_deploys is present for all security profiles."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
-
-        for profile in SecurityProfile:
-            security = _make_security(profile)
-            names = {s.name for s in _build_admin_surfaces(security)}
-            assert "_admin_deploys" in names, f"_admin_deploys missing for profile={profile}"
-
-    def test_health_surface_always_present(self) -> None:
-        """_admin_health is present for all security profiles."""
-        from dazzle.core.admin_builder import _build_admin_surfaces
-
-        for profile in SecurityProfile:
-            security = _make_security(profile)
-            names = {s.name for s in _build_admin_surfaces(security)}
-            assert "_admin_health" in names, f"_admin_health missing for profile={profile}"
+    # Per-surface invariants (use STANDARD which has the most surfaces).
+    for surface in _build_admin_surfaces(_make_security(SecurityProfile.STANDARD)):
+        assert surface.mode == SurfaceMode.LIST, f"{surface.name}: not LIST mode"
+        assert surface.access is not None, f"{surface.name}: access is None"
+        assert surface.access.require_auth is True, f"{surface.name}: !require_auth"
+        assert set(surface.access.allow_personas) == {"admin", "super_admin"}, (
+            f"{surface.name}: bad personas {surface.access.allow_personas!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -315,27 +223,38 @@ class TestBuildAdminWorkspaces:
         names = {w.name for w in workspaces}
         assert names == {"_platform_admin"}
 
-    def test_multi_tenant_two_workspaces(self) -> None:
-        """Multi-tenant app produces _platform_admin and _tenant_admin."""
+    def test_multi_tenant_workspaces_combined(self) -> None:
+        """Combined multi-tenant workspace contract:
+        - Multi-tenant produces both _platform_admin and _tenant_admin.
+        - _platform_admin allows only super_admin (in MT mode).
+        - _tenant_admin allows only admin.
+        - _tenant_admin regions are a strict subset of platform's, and never
+          include 'tenants'.
+        """
         from dazzle.core.admin_builder import _build_admin_workspaces
 
         security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
-        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=True)
         names = {w.name for w in workspaces}
         assert names == {"_platform_admin", "_tenant_admin"}
 
-    def test_platform_admin_super_admin_only_multi_tenant(self) -> None:
-        """In multi-tenant mode, _platform_admin allows only super_admin."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
-
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
-        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
         platform = next(w for w in workspaces if w.name == "_platform_admin")
+        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
+
+        # Personas
         assert platform.access is not None
         assert platform.access.allow_personas == ["super_admin"]
+        assert tenant.access is not None
+        assert tenant.access.allow_personas == ["admin"]
 
-    def test_platform_admin_both_personas_single_tenant(self) -> None:
-        """In single-tenant mode, _platform_admin allows admin and super_admin."""
+        # Region subset, no 'tenants' in tenant.
+        platform_names = {r.name for r in platform.regions}
+        tenant_names = {r.name for r in tenant.regions}
+        assert tenant_names < platform_names
+        assert "tenants" not in tenant_names
+
+    def test_platform_admin_single_tenant_personas(self) -> None:
+        """Single-tenant _platform_admin allows admin AND super_admin."""
         from dazzle.core.admin_builder import _build_admin_workspaces
 
         security = _make_security(SecurityProfile.STANDARD)
@@ -344,70 +263,27 @@ class TestBuildAdminWorkspaces:
         assert platform.access is not None
         assert set(platform.access.allow_personas) == {"admin", "super_admin"}
 
-    def test_tenant_admin_persona(self) -> None:
-        """_tenant_admin allows only admin persona."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
-
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
-        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
-        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
-        assert tenant.access is not None
-        assert tenant.access.allow_personas == ["admin"]
-
-    def test_tenant_admin_has_subset_of_regions(self) -> None:
-        """_tenant_admin regions are a strict subset of _platform_admin regions."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
-
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
-        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=True)
-        platform = next(w for w in workspaces if w.name == "_platform_admin")
-        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
-        platform_names = {r.name for r in platform.regions}
-        tenant_names = {r.name for r in tenant.regions}
-        assert tenant_names < platform_names, (
-            f"Tenant regions {tenant_names!r} are not a strict subset of "
-            f"platform regions {platform_names!r}"
-        )
-
-    def test_tenant_admin_no_tenants_region(self) -> None:
-        """_tenant_admin does not include the 'tenants' region."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
-
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
-        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
-        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
-        tenant_region_names = {r.name for r in tenant.regions}
-        assert "tenants" not in tenant_region_names
-
-    def test_feedback_region_when_enabled(self) -> None:
-        """'feedback' region appears in _platform_admin when feedback is enabled."""
+    def test_feedback_region_toggle_combined(self) -> None:
+        """Combined: 'feedback' region appears iff feedback_enabled=True;
+        all three nav groups (Management, Observability, Operations) present."""
         from dazzle.core.admin_builder import _build_admin_workspaces
 
         security = _make_security(SecurityProfile.STANDARD)
-        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
-        platform = next(w for w in workspaces if w.name == "_platform_admin")
-        region_names = {r.name for r in platform.regions}
-        assert "feedback" in region_names
 
-    def test_no_feedback_region_when_disabled(self) -> None:
-        """'feedback' region is absent when feedback is disabled."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
+        # Enabled — region present, all three nav groups present.
+        ws_on = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
+        plat_on = next(w for w in ws_on if w.name == "_platform_admin")
+        assert "feedback" in {r.name for r in plat_on.regions}
+        assert {g.label for g in plat_on.nav_groups} == {
+            "Management",
+            "Observability",
+            "Operations",
+        }
 
-        security = _make_security(SecurityProfile.STANDARD)
-        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=False)
-        platform = next(w for w in workspaces if w.name == "_platform_admin")
-        region_names = {r.name for r in platform.regions}
-        assert "feedback" not in region_names
-
-    def test_nav_groups_present(self) -> None:
-        """All three nav groups (Management, Observability, Operations) are present."""
-        from dazzle.core.admin_builder import _build_admin_workspaces
-
-        security = _make_security(SecurityProfile.STANDARD)
-        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
-        platform = next(w for w in workspaces if w.name == "_platform_admin")
-        labels = {g.label for g in platform.nav_groups}
-        assert labels == {"Management", "Observability", "Operations"}
+        # Disabled — feedback region absent.
+        ws_off = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=False)
+        plat_off = next(w for w in ws_off if w.name == "_platform_admin")
+        assert "feedback" not in {r.name for r in plat_off.regions}
 
     def test_nav_items_use_entity_name_not_region_name(self) -> None:
         """#993 — nav URLs must resolve to real entity routes.
@@ -628,86 +504,76 @@ class TestAdminDefaultUX:
         assert ux.sort[0].field == "timestamp"
 
 
-class TestSyntheticLintSkips:
-    """Lint rules must skip framework-synthesised `_`-prefixed names
-    (#824). Adopters can't fix lint warnings about workspaces and
-    surfaces they don't declare."""
+def test_synthetic_lint_skips_combined() -> None:
+    """Combined #824 lint-skip contract for `_`-prefixed framework names:
+    - _platform_admin workspace skipped by persona + access-declaration lints.
+    - _admin_* synthetic surfaces skipped by UX lint.
+    - Real adopter workspaces (no `_` prefix) STILL trigger persona lint
+      (guard that the skip rule doesn't over-correct).
+    """
+    from dazzle.core import ir as _ir
+    from dazzle.core.validator import (
+        _lint_list_surface_ux,
+        _lint_workspace_access_declarations,
+        _lint_workspace_personas,
+    )
 
-    def test_platform_admin_workspace_skipped_by_persona_lint(self) -> None:
-        from dazzle.core import ir
-        from dazzle.core.validator import _lint_workspace_personas
+    # 1) _platform_admin skipped by persona lint (alongside a normal user_ws).
+    synthetic_ws = _ir.WorkspaceSpec(name="_platform_admin", title="Admin")
+    user_ws = _ir.WorkspaceSpec(
+        name="user_ws",
+        title="User",
+        access=_ir.WorkspaceAccessSpec(allow_personas=["admin"]),
+    )
+    spec_a = _ir.AppSpec(
+        name="t",
+        app_name="t",
+        app_title="T",
+        domain=_ir.DomainSpec(entities=[]),
+        workspaces=[synthetic_ws, user_ws],
+        personas=[_ir.PersonaSpec(id="admin", label="A")],
+    )
+    assert not any("_platform_admin" in w for w in _lint_workspace_personas(spec_a))
 
-        synthetic_ws = ir.WorkspaceSpec(name="_platform_admin", title="Admin")
-        user_ws = ir.WorkspaceSpec(
-            name="user_ws",
-            title="User",
-            access=ir.WorkspaceAccessSpec(allow_personas=["admin"]),
+    # 2) _platform_admin skipped by access-declaration lint.
+    spec_b = _ir.AppSpec(
+        name="t",
+        app_name="t",
+        app_title="T",
+        domain=_ir.DomainSpec(entities=[]),
+        workspaces=[_ir.WorkspaceSpec(name="_platform_admin", title="Admin")],
+        personas=[_ir.PersonaSpec(id="admin", label="A")],
+    )
+    assert not any("_platform_admin" in w for w in _lint_workspace_access_declarations(spec_b))
+
+    # 3) Synthetic _admin_* surfaces skipped by UX lint.
+    for name in ("_admin_metrics", "_admin_sessions", "_admin_events"):
+        synthetic = _ir.SurfaceSpec(
+            name=name,
+            title=name,
+            mode=_ir.SurfaceMode.LIST,
+            target="Entity",
+            entity_ref="Entity",
         )
-        spec = ir.AppSpec(
+        spec_c = _ir.AppSpec(
             name="t",
             app_name="t",
             app_title="T",
-            domain=ir.DomainSpec(entities=[]),
-            workspaces=[synthetic_ws, user_ws],
-            personas=[ir.PersonaSpec(id="admin", label="A")],
+            domain=_ir.DomainSpec(entities=[]),
+            surfaces=[synthetic],
         )
-        warnings = _lint_workspace_personas(spec)
-        assert not any("_platform_admin" in w for w in warnings)
-
-    def test_platform_admin_workspace_skipped_by_access_lint(self) -> None:
-        from dazzle.core import ir
-        from dazzle.core.validator import _lint_workspace_access_declarations
-
-        synthetic_ws = ir.WorkspaceSpec(name="_platform_admin", title="Admin")
-        spec = ir.AppSpec(
-            name="t",
-            app_name="t",
-            app_title="T",
-            domain=ir.DomainSpec(entities=[]),
-            workspaces=[synthetic_ws],
-            personas=[ir.PersonaSpec(id="admin", label="A")],
+        assert not any(name in w for w in _lint_list_surface_ux(spec_c)), (
+            f"synthetic surface {name} should not produce lint warnings"
         )
-        warnings = _lint_workspace_access_declarations(spec)
-        assert not any("_platform_admin" in w for w in warnings)
 
-    def test_admin_surfaces_skipped_by_ux_lint(self) -> None:
-        from dazzle.core import ir
-        from dazzle.core.validator import _lint_list_surface_ux
-
-        for name in ("_admin_metrics", "_admin_sessions", "_admin_events"):
-            synthetic = ir.SurfaceSpec(
-                name=name,
-                title=name,
-                mode=ir.SurfaceMode.LIST,
-                target="Entity",
-                entity_ref="Entity",
-            )
-            spec = ir.AppSpec(
-                name="t",
-                app_name="t",
-                app_title="T",
-                domain=ir.DomainSpec(entities=[]),
-                surfaces=[synthetic],
-            )
-            warnings = _lint_list_surface_ux(spec)
-            assert not any(name in w for w in warnings), (
-                f"synthetic surface {name} should not produce lint warnings"
-            )
-
-    def test_user_workspace_still_triggers_persona_lint(self) -> None:
-        """Guard that the `_` skip rule doesn't over-correct — real
-        adopter workspaces without personas must still be flagged."""
-        from dazzle.core import ir
-        from dazzle.core.validator import _lint_workspace_personas
-
-        unclaimed_ws = ir.WorkspaceSpec(name="orphan_workspace", title="Orphan")
-        spec = ir.AppSpec(
-            name="t",
-            app_name="t",
-            app_title="T",
-            domain=ir.DomainSpec(entities=[]),
-            workspaces=[unclaimed_ws],
-            personas=[ir.PersonaSpec(id="admin", label="A")],
-        )
-        warnings = _lint_workspace_personas(spec)
-        assert any("orphan_workspace" in w for w in warnings)
+    # 4) Adopter workspace (no `_` prefix) STILL triggers lint.
+    unclaimed_ws = _ir.WorkspaceSpec(name="orphan_workspace", title="Orphan")
+    spec_d = _ir.AppSpec(
+        name="t",
+        app_name="t",
+        app_title="T",
+        domain=_ir.DomainSpec(entities=[]),
+        workspaces=[unclaimed_ws],
+        personas=[_ir.PersonaSpec(id="admin", label="A")],
+    )
+    assert any("orphan_workspace" in w for w in _lint_workspace_personas(spec_d))

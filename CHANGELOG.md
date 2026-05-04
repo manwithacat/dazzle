@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.24] - 2026-05-04
+
+### Changed
+- **Distillation cycle 22** — Batch CC partial collapsed test_admin_builder,
+  test_aggregate_sql, test_app_theme_registry. 91 tests pass. Suite total:
+  12,720 → 12,671 (49 fewer). Cumulative: 14,295 → 12,671 (1,624 tests
+  removed across 22 cycles). Need 671 more.
+
 ## [0.66.23] - 2026-05-04
 
 ### Changed
