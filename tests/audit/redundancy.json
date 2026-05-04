@@ -1,52 +1,5 @@
 [
   {
-    "file": "tests/unit/test_template_rendering.py",
-    "class": "TestJinjaFilters",
-    "assertion_shape": "('eq',)",
-    "size": 38,
-    "members": [
-      "test_currency_filter_gbp",
-      "test_currency_filter_usd",
-      "test_currency_filter_none",
-      "test_truncate_text_none",
-      "test_truncate_text_dict_extracts_name",
-      "test_truncate_text_dict_falls_back_to_title",
-      "test_truncate_text_dict_falls_back_to_email",
-      "test_truncate_text_dict_falls_back_to_id",
-      "test_truncate_text_empty_dict",
-      "test_currency_filter_non_numeric",
-      "test_dateformat_filter_none",
-      "test_dateformat_filter_invalid_string",
-      "test_dateformat_filter_non_date_type",
-      "test_badge_tone_success_states",
-      "test_badge_tone_info_states",
-      "test_badge_tone_warning_states",
-      "test_badge_tone_destructive_states",
-      "test_badge_tone_neutral_fallback",
-      "test_badge_tone_none",
-      "test_metric_number_none",
-      "test_metric_number_float_sub_unit",
-      "test_metric_number_string_passthrough",
-      "test_timeago_none",
-      "test_timeago_invalid_string",
-      "test_timeago_non_datetime_type",
-      "test_timeago_future",
-      "test_timeago_singular_second",
-      "test_timeago_singular_minute",
-      "test_timeago_singular_hour",
-      "test_timeago_singular_day",
-      "test_timeago_singular_month",
-      "test_timeago_singular_year",
-      "test_slugify",
-      "test_slugify_none",
-      "test_basename_or_url_with_path",
-      "test_basename_or_url_with_url",
-      "test_basename_or_url_plain_name",
-      "test_basename_or_url_none"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_expression_lang.py",
     "class": "TestTypeInference",
     "assertion_shape": "('eq',)",
@@ -208,28 +161,6 @@
       "test_duplicate_widgets_deduplicated",
       "test_unknown_widget_ignored",
       "test_non_date_type_with_picker_widget_ignored"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_template_rendering.py",
-    "class": "TestJinjaFilters",
-    "assertion_shape": "('in',)",
-    "size": 13,
-    "members": [
-      "test_status_badge_macro_tone_override",
-      "test_status_badge_macro_size_sm",
-      "test_status_badge_macro_display_override",
-      "test_timeago_datetime",
-      "test_timeago_date_object",
-      "test_timeago_iso_string",
-      "test_timeago_tz_aware_datetime_does_not_raise",
-      "test_timeago_naive_datetime_treated_as_local",
-      "test_timeago_minutes",
-      "test_timeago_hours",
-      "test_timeago_days",
-      "test_timeago_months",
-      "test_timeago_years"
     ],
     "recommendation": "parametrise"
   },
@@ -1454,6 +1385,22 @@
     "recommendation": "parametrise"
   },
   {
+    "file": "tests/unit/test_template_rendering.py",
+    "class": "TestJinjaFilters",
+    "assertion_shape": "('in',)",
+    "size": 7,
+    "members": [
+      "test_status_badge_macro_tone_override",
+      "test_status_badge_macro_size_sm",
+      "test_status_badge_macro_display_override",
+      "test_timeago_tz_aware_datetime_does_not_raise",
+      "test_timeago_date_object",
+      "test_timeago_iso_string",
+      "test_timeago_naive_datetime_treated_as_local"
+    ],
+    "recommendation": "parametrise"
+  },
+  {
     "file": "tests/unit/test_totp.py",
     "class": "TestVerifyTotp",
     "assertion_shape": "('is',)",
@@ -2157,21 +2104,6 @@
       "test_other_users_prefix_403",
       "test_object_does_not_exist_400",
       "test_provider_head_object_raises_503"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_template_rendering.py",
-    "class": "TestJinjaFilters",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_badge_tone_case_insensitive",
-      "test_metric_number_small_int",
-      "test_metric_number_thousands",
-      "test_metric_number_negative",
-      "test_metric_number_float_ge_one",
-      "test_metric_number_bool"
     ],
     "recommendation": "parametrise"
   },

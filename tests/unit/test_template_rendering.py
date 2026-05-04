@@ -553,19 +553,20 @@ class TestJinjaFilters:
     def env(self):
         return create_jinja_env()
 
-    def test_currency_filter_gbp(self, env) -> None:
-        tmpl = env.from_string("{{ val|currency }}")
-        # Values are now in minor units (pence), so 4250 pence = £42.50
-        assert tmpl.render(val=4250) == "£42.50"
-
-    def test_currency_filter_usd(self, env) -> None:
-        tmpl = env.from_string("{{ val|currency('USD') }}")
-        # 10000 cents = $100.00
-        assert tmpl.render(val=10000) == "$100.00"
-
-    def test_currency_filter_none(self, env) -> None:
-        tmpl = env.from_string("{{ val|currency }}")
-        assert tmpl.render(val=None) == ""
+    @pytest.mark.parametrize(
+        ("template", "value", "expected"),
+        [
+            # Values are stored in minor units (pence/cents).
+            ("{{ val|currency }}", 4250, "£42.50"),
+            ("{{ val|currency('USD') }}", 10000, "$100.00"),
+            ("{{ val|currency }}", None, ""),
+            ("{{ val|currency }}", "not-a-number", "not-a-number"),  # non-numeric → str()
+        ],
+        ids=["gbp", "usd", "none", "non_numeric"],
+    )
+    def test_currency_filter(self, env, template, value, expected) -> None:
+        tmpl = env.from_string(template)
+        assert tmpl.render(val=value) == expected
 
     def test_dateformat_filter_date(self, env) -> None:
         tmpl = env.from_string("{{ val|dateformat }}")
@@ -595,64 +596,51 @@ class TestJinjaFilters:
         assert "✗" in result or "&#10005;" in result
 
     def test_truncate_text(self, env) -> None:
+        """Length-truncation behaviour with the tail ellipsis."""
         tmpl = env.from_string("{{ val|truncate_text(10) }}")
         assert tmpl.render(val="short") == "short"
         result = tmpl.render(val="a very long string here")
         assert result.endswith("...")
         assert len(result) == 13  # 10 chars + "..."
 
-    def test_truncate_text_none(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, ""),
+            # FK ref dicts should display a name, not Python repr (#308).
+            ({"id": "abc-123", "name": "John Doe", "email": "john@test.com"}, "John Doe"),
+            ({"id": "abc-123", "title": "My Company"}, "My Company"),
+            ({"id": "abc-123", "email": "user@example.com"}, "user@example.com"),
+            ({"id": "abc-123"}, "abc-123"),  # falls back to id
+            ({}, ""),
+        ],
+        ids=[
+            "none",
+            "dict_with_name",
+            "dict_falls_back_to_title",
+            "dict_falls_back_to_email",
+            "dict_falls_back_to_id",
+            "empty_dict",
+        ],
+    )
+    def test_truncate_text_value_resolution(self, env, value, expected) -> None:
+        """Resolution order for non-string inputs (#308)."""
         tmpl = env.from_string("{{ val|truncate_text }}")
-        assert tmpl.render(val=None) == ""
+        assert tmpl.render(val=value) == expected
 
-    def test_truncate_text_dict_extracts_name(self, env) -> None:
-        """FK ref dicts should display a name, not Python repr (#308)."""
-        tmpl = env.from_string("{{ val|truncate_text }}")
-        result = tmpl.render(val={"id": "abc-123", "name": "John Doe", "email": "john@test.com"})
-        assert result == "John Doe"
-
-    def test_truncate_text_dict_falls_back_to_title(self, env) -> None:
-        tmpl = env.from_string("{{ val|truncate_text }}")
-        result = tmpl.render(val={"id": "abc-123", "title": "My Company"})
-        assert result == "My Company"
-
-    def test_truncate_text_dict_falls_back_to_email(self, env) -> None:
-        tmpl = env.from_string("{{ val|truncate_text }}")
-        result = tmpl.render(val={"id": "abc-123", "email": "user@example.com"})
-        assert result == "user@example.com"
-
-    def test_truncate_text_dict_falls_back_to_id(self, env) -> None:
-        tmpl = env.from_string("{{ val|truncate_text }}")
-        result = tmpl.render(val={"id": "abc-123"})
-        assert result == "abc-123"
-
-    def test_truncate_text_empty_dict(self, env) -> None:
-        tmpl = env.from_string("{{ val|truncate_text }}")
-        result = tmpl.render(val={})
-        assert result == ""
-
-    # --- currency filter edge cases ---
-
-    def test_currency_filter_non_numeric(self, env) -> None:
-        """Non-numeric value returns str()."""
-        tmpl = env.from_string("{{ val|currency }}")
-        assert tmpl.render(val="not-a-number") == "not-a-number"
-
-    # --- dateformat filter edge cases ---
-
-    def test_dateformat_filter_none(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, ""),
+            ("not-a-date", "not-a-date"),  # unparseable string returns raw
+            (42, "42"),  # non-date types fall through to str()
+        ],
+        ids=["none", "invalid_string", "non_date_type"],
+    )
+    def test_dateformat_filter_passthrough(self, env, value, expected) -> None:
+        """dateformat returns str(val) when the value can't be parsed."""
         tmpl = env.from_string("{{ val|dateformat }}")
-        assert tmpl.render(val=None) == ""
-
-    def test_dateformat_filter_invalid_string(self, env) -> None:
-        """Unparseable ISO string returns the raw string."""
-        tmpl = env.from_string("{{ val|dateformat }}")
-        assert tmpl.render(val="not-a-date") == "not-a-date"
-
-    def test_dateformat_filter_non_date_type(self, env) -> None:
-        """Non-date types fall through to str()."""
-        tmpl = env.from_string("{{ val|dateformat }}")
-        assert tmpl.render(val=42) == "42"
+        assert tmpl.render(val=value) == expected
 
     def test_dateformat_filter_datetime(self, env) -> None:
         tmpl = env.from_string("{{ val|dateformat }}")
@@ -665,39 +653,52 @@ class TestJinjaFilters:
     # drift). Exercises the canonical semantic tone resolver used by the
     # `render_status_badge` macro. ---
 
-    def test_badge_tone_success_states(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("states", "expected_tone"),
+        [
+            (("active", "done", "completed", "approved", "resolved", "passed"), "success"),
+            (("in_progress", "open", "running", "processing"), "info"),
+            (
+                ("review", "pending", "on_hold", "waiting", "blocked", "high", "major"),
+                "warning",
+            ),
+            (
+                (
+                    "inactive",
+                    "overdue",
+                    "cancelled",
+                    "rejected",
+                    "failed",
+                    "critical",
+                    "urgent",
+                ),
+                "destructive",
+            ),
+            (
+                ("todo", "draft", "new", "backlog", "low", "minor", "unknown_value"),
+                "neutral",
+            ),
+            ((None,), "neutral"),  # None defaults to neutral
+        ],
+        ids=["success", "info", "warning", "destructive", "neutral_fallback", "none"],
+    )
+    def test_badge_tone_states(self, env, states, expected_tone) -> None:
+        """Each tone has a canonical state-name set; cycle 238, EX-041."""
         tmpl = env.from_string("{{ val|badge_tone }}")
-        for val in ("active", "done", "completed", "approved", "resolved", "passed"):
-            assert tmpl.render(val=val) == "success", f"{val} should map to success"
+        for val in states:
+            assert tmpl.render(val=val) == expected_tone, f"{val} should map to {expected_tone}"
 
-    def test_badge_tone_info_states(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected_tone"),
+        [
+            ("ACTIVE", "success"),  # uppercase normalises to success
+            ("In Progress", "info"),  # space-to-underscore
+        ],
+        ids=["uppercase", "space_to_underscore"],
+    )
+    def test_badge_tone_normalisation(self, env, value, expected_tone) -> None:
         tmpl = env.from_string("{{ val|badge_tone }}")
-        for val in ("in_progress", "open", "running", "processing"):
-            assert tmpl.render(val=val) == "info", f"{val} should map to info"
-
-    def test_badge_tone_warning_states(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_tone }}")
-        for val in ("review", "pending", "on_hold", "waiting", "blocked", "high", "major"):
-            assert tmpl.render(val=val) == "warning", f"{val} should map to warning"
-
-    def test_badge_tone_destructive_states(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_tone }}")
-        for val in ("inactive", "overdue", "cancelled", "rejected", "failed", "critical", "urgent"):
-            assert tmpl.render(val=val) == "destructive", f"{val} should map to destructive"
-
-    def test_badge_tone_neutral_fallback(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_tone }}")
-        for val in ("todo", "draft", "new", "backlog", "low", "minor", "unknown_value"):
-            assert tmpl.render(val=val) == "neutral", f"{val} should map to neutral"
-
-    def test_badge_tone_none(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_tone }}")
-        assert tmpl.render(val=None) == "neutral"
-
-    def test_badge_tone_case_insensitive(self, env) -> None:
-        tmpl = env.from_string("{{ val|badge_tone }}")
-        assert tmpl.render(val="ACTIVE") == "success"
-        assert tmpl.render(val="In Progress") == "info"  # space-to-underscore
+        assert tmpl.render(val=value) == expected_tone
 
     # --- status_badge macro (cycle 238) ---
     # The macro is the canonical renderer for every enum/state field across
@@ -803,70 +804,69 @@ class TestJinjaFilters:
     # --- metric_number filter (cycle 239, UX-042 metrics-region contract) ---
     # Canonical number formatter for every metric tile across the framework.
 
-    def test_metric_number_none(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, "0"),
+            (0, "0"),
+            (5, "5"),
+            (1234, "1,234"),
+            (1500000, "1,500,000"),
+            (-42, "-42"),
+            (-12345, "-12,345"),
+            (3.14159, "3.1"),  # ≥1 floats round to 1 decimal
+            (1234.56, "1,234.6"),
+            (0.25, "0.25"),  # sub-unit floats keep more precision
+            (True, "Yes"),  # bool gets a label, not 1
+            (False, "No"),
+            ("£1,234", "£1,234"),  # pre-formatted strings pass through verbatim
+        ],
+        ids=[
+            "none_zeros",
+            "zero",
+            "small_int",
+            "thousands",
+            "millions",
+            "negative_int",
+            "negative_thousands",
+            "float_ge_one_pi",
+            "float_ge_one_thousands",
+            "float_sub_unit",
+            "bool_true",
+            "bool_false",
+            "string_passthrough",
+        ],
+    )
+    def test_metric_number(self, env, value, expected) -> None:
+        """Canonical metric formatter (cycle 239, UX-042)."""
         tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=None) == "0"
-
-    def test_metric_number_small_int(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=5) == "5"
-        assert tmpl.render(val=0) == "0"
-
-    def test_metric_number_thousands(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=1234) == "1,234"
-        assert tmpl.render(val=1500000) == "1,500,000"
-
-    def test_metric_number_negative(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=-42) == "-42"
-        assert tmpl.render(val=-12345) == "-12,345"
-
-    def test_metric_number_float_ge_one(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=3.14159) == "3.1"
-        assert tmpl.render(val=1234.56) == "1,234.6"
-
-    def test_metric_number_float_sub_unit(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=0.25) == "0.25"
-
-    def test_metric_number_bool(self, env) -> None:
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val=True) == "Yes"
-        assert tmpl.render(val=False) == "No"
-
-    def test_metric_number_string_passthrough(self, env) -> None:
-        """Pre-formatted strings (e.g. '£12,345') pass through verbatim."""
-        tmpl = env.from_string("{{ val | metric_number }}")
-        assert tmpl.render(val="£1,234") == "£1,234"
+        assert tmpl.render(val=value) == expected
 
     # --- timeago filter ---
 
-    def test_timeago_none(self, env) -> None:
+    # Trivial passthrough cases — no time arithmetic involved.
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(None, ""), ("not-a-date", "not-a-date"), (12345, "12345")],
+        ids=["none", "invalid_string", "non_datetime_type"],
+    )
+    def test_timeago_passthrough(self, env, value, expected) -> None:
         tmpl = env.from_string("{{ val|timeago }}")
-        assert tmpl.render(val=None) == ""
+        assert tmpl.render(val=value) == expected
 
-    def test_timeago_datetime(self, env) -> None:
+    def test_timeago_future(self, env) -> None:
+        """Future datetimes return 'just now' (no negative durations)."""
         tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(seconds=30))
-        assert "second" in result
+        assert tmpl.render(val=datetime.now() + timedelta(hours=1)) == "just now"
 
-    def test_timeago_date_object(self, env) -> None:
+    def test_timeago_iso_string_with_z_suffix(self, env) -> None:
+        """`Z` is the canonical UTC suffix in ISO 8601 — fromisoformat used
+        to reject it on Python <3.11; we now normalise before parsing."""
         tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=date.today() - timedelta(days=3))
-        assert "day" in result
-
-    def test_timeago_iso_string(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        past = datetime.now() - timedelta(hours=2)
-        result = tmpl.render(val=past.isoformat())
-        assert "hour" in result
-
-    def test_timeago_invalid_string(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val="not-a-date")
-        assert result == "not-a-date"
+        result = tmpl.render(val="2026-04-22T10:00:00Z")
+        # Result depends on test clock; just confirm parsing succeeded
+        # (passthrough would mean parse failed).
+        assert result != "2026-04-22T10:00:00Z"
 
     def test_timeago_tz_aware_datetime_does_not_raise(self, env) -> None:
         """tz-aware values from Postgres TIMESTAMP WITH TIME ZONE columns
@@ -875,119 +875,88 @@ class TestJinjaFilters:
         from datetime import UTC
 
         tmpl = env.from_string("{{ val|timeago }}")
-        past_aware = datetime.now(tz=UTC) - timedelta(hours=2)
-        result = tmpl.render(val=past_aware)
+        result = tmpl.render(val=datetime.now(tz=UTC) - timedelta(hours=2))
         assert "hour" in result
 
-    def test_timeago_iso_string_with_z_suffix(self, env) -> None:
-        """`Z` is the canonical UTC suffix in ISO 8601 — fromisoformat used
-        to reject it on Python <3.11; we now normalise before parsing."""
+    # Plural buckets: the substring assertion confirms the right unit fires.
+    @pytest.mark.parametrize(
+        ("delta", "unit_substring"),
+        [
+            (timedelta(seconds=30), "second"),
+            (timedelta(minutes=5), "minute"),
+            (timedelta(hours=3), "hour"),
+            (timedelta(days=15), "day"),
+            (timedelta(days=60), "month"),
+            (timedelta(days=400), "year"),
+        ],
+        ids=["seconds", "minutes", "hours", "days", "months", "years"],
+    )
+    def test_timeago_plural_units(self, env, delta, unit_substring) -> None:
         tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val="2026-04-22T10:00:00Z")
-        # Result depends on test clock; just confirm no crash + no
-        # passthrough (which would mean parsing failed).
-        assert result != "2026-04-22T10:00:00Z"
+        result = tmpl.render(val=datetime.now() - delta)
+        assert unit_substring in result
+
+    def test_timeago_date_object(self, env) -> None:
+        """date (not datetime) inputs are accepted — used by audit fields."""
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=date.today() - timedelta(days=3))
+        assert "day" in result
+
+    def test_timeago_iso_string(self, env) -> None:
+        """ISO 8601 strings parse via fromisoformat."""
+        tmpl = env.from_string("{{ val|timeago }}")
+        past = datetime.now() - timedelta(hours=2)
+        assert "hour" in tmpl.render(val=past.isoformat())
 
     def test_timeago_naive_datetime_treated_as_local(self, env) -> None:
         """Naive datetimes are treated as local time (the convention every
         existing call site uses — `datetime.now() - delta`)."""
         tmpl = env.from_string("{{ val|timeago }}")
-        past_naive = datetime.now() - timedelta(minutes=5)
-        result = tmpl.render(val=past_naive)
-        assert "minute" in result
-
-    def test_timeago_non_datetime_type(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=12345)
-        assert result == "12345"
-
-    def test_timeago_future(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() + timedelta(hours=1))
-        assert result == "just now"
-
-    def test_timeago_minutes(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
         result = tmpl.render(val=datetime.now() - timedelta(minutes=5))
         assert "minute" in result
 
-    def test_timeago_hours(self, env) -> None:
+    # Singular bucket: exact-string match pins the "1 X ago" formatter
+    # (no leading "About"; no plural "s"; no "ago" elision).
+    @pytest.mark.parametrize(
+        ("delta", "expected"),
+        [
+            (timedelta(seconds=1), "1 second ago"),
+            (timedelta(minutes=1), "1 minute ago"),
+            (timedelta(hours=1), "1 hour ago"),
+            (timedelta(days=1), "1 day ago"),
+            (timedelta(days=30), "1 month ago"),
+            (timedelta(days=365), "1 year ago"),
+        ],
+        ids=["second", "minute", "hour", "day", "month", "year"],
+    )
+    def test_timeago_singular_format(self, env, delta, expected) -> None:
         tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(hours=3))
-        assert "hour" in result
-
-    def test_timeago_days(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=15))
-        assert "day" in result
-
-    def test_timeago_months(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=60))
-        assert "month" in result
-
-    def test_timeago_years(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=400))
-        assert "year" in result
-
-    def test_timeago_singular_second(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(seconds=1))
-        assert result == "1 second ago"
-
-    def test_timeago_singular_minute(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(minutes=1))
-        assert result == "1 minute ago"
-
-    def test_timeago_singular_hour(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(hours=1))
-        assert result == "1 hour ago"
-
-    def test_timeago_singular_day(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=1))
-        assert result == "1 day ago"
-
-    def test_timeago_singular_month(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=30))
-        assert result == "1 month ago"
-
-    def test_timeago_singular_year(self, env) -> None:
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(days=365))
-        assert result == "1 year ago"
+        assert tmpl.render(val=datetime.now() - delta) == expected
 
     # --- slugify filter ---
 
-    def test_slugify(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [("Hello World!", "hello-world"), (None, "")],
+        ids=["text", "none"],
+    )
+    def test_slugify(self, env, value, expected) -> None:
         tmpl = env.from_string("{{ val|slugify }}")
-        assert tmpl.render(val="Hello World!") == "hello-world"
+        assert tmpl.render(val=value) == expected
 
-    def test_slugify_none(self, env) -> None:
-        tmpl = env.from_string("{{ val|slugify }}")
-        assert tmpl.render(val=None) == ""
-
-    # --- basename_or_url filter ---
-
-    def test_basename_or_url_with_path(self, env) -> None:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("/uploads/docs/report.pdf", "report.pdf"),
+            ("https://example.com/file.txt?v=2", "file.txt"),
+            ("readme.txt", "readme.txt"),
+            (None, ""),
+        ],
+        ids=["path", "url_with_query", "plain_name", "none"],
+    )
+    def test_basename_or_url(self, env, value, expected) -> None:
         tmpl = env.from_string("{{ val|basename_or_url }}")
-        assert tmpl.render(val="/uploads/docs/report.pdf") == "report.pdf"
-
-    def test_basename_or_url_with_url(self, env) -> None:
-        tmpl = env.from_string("{{ val|basename_or_url }}")
-        assert tmpl.render(val="https://example.com/file.txt?v=2") == "file.txt"
-
-    def test_basename_or_url_plain_name(self, env) -> None:
-        tmpl = env.from_string("{{ val|basename_or_url }}")
-        assert tmpl.render(val="readme.txt") == "readme.txt"
-
-    def test_basename_or_url_none(self, env) -> None:
-        tmpl = env.from_string("{{ val|basename_or_url }}")
-        assert tmpl.render(val=None) == ""
+        assert tmpl.render(val=value) == expected
 
     # --- Jinja globals ---
 

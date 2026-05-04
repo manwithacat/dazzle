@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 1,049
-- **Tests inside those clusters**: 4,354
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **3,305 tests** (≈ 23.1% of the suite)
+- **Clusters of ≥3**: 1,047
+- **Tests inside those clusters**: 4,304
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **3,257 tests** (≈ 22.8% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -14,8 +14,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 | Size | Clusters |
 |---|---:|
-| 20+ | 4 |
-| 10-19 | 25 |
+| 20+ | 3 |
+| 10-19 | 24 |
 | 5-9 | 227 |
 | 3-4 | 793 |
 
@@ -23,14 +23,12 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 | File | Class | Size | Sample test names |
 |---|---|---:|---|
-| `tests/unit/test_template_rendering.py` | `TestJinjaFilters` | 38 | test_currency_filter_gbp, test_currency_filter_usd, test_currency_filter_none… |
 | `tests/unit/test_expression_lang.py` | `TestTypeInference` | 22 | test_int_literal, test_float_literal, test_string_literal… |
 | `tests/unit/test_ref_display.py` | `TestRefDisplayName` | 22 | test_name_field, test_company_name_field, test_first_last_name… |
 | `tests/unit/test_access_control.py` | `TestAccessRuleEvaluate` | 20 | test_public_rule, test_authenticated_rule_no_user, test_authenticated_rule_with_user… |
 | `tests/unit/test_pipeline_detail.py` | `TestStepHasIssues` | 19 | test_lint_with_errors, test_lint_with_warnings_only, test_lint_with_errors_and_warnings… |
 | `tests/unit/test_failure_classifier.py` | `TestClassifyFailure` | 15 | test_rbac_denied_401, test_rbac_denied_403, test_rbac_denied_permission… |
 | `tests/unit/test_asset_manifest.py` | `TestCollectRequiredAssets` | 13 | test_no_widgets_returns_empty, test_rich_text_requires_no_vendor_asset, test_combobox_requires_tom_select… |
-| `tests/unit/test_template_rendering.py` | `TestJinjaFilters` | 13 | test_status_badge_macro_tone_override, test_status_badge_macro_size_sm, test_status_badge_macro_display_override… |
 | `tests/unit/test_cedar_row_filters.py` | `TestExtractCedarRowFilters` | 12 | test_owner_equals_current_user, test_read_rule_also_applies, test_non_list_read_rules_ignored… |
 | `tests/unit/test_expression_lang.py` | `TestEvalArithmetic` | 12 | test_addition, test_subtraction, test_multiplication… |
 | `tests/unit/test_resolve_display_name.py` | `TestResolveDisplayName` | 12 | test_string_passthrough, test_int_passthrough, test_none_returns_empty… |
@@ -53,6 +51,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_url_consistency.py` | `TestResolveBackendUrl` | 10 | test_local_dev_uses_fallback, test_local_dev_uses_base_url, test_single_dyno_uses_port… |
 | `tests/unit/test_viewport_suggestions.py` | `TestSuggestFix` | 10 | test_display_grid_tablet, test_display_grid_desktop, test_display_grid_wide… |
 | `tests/unit/test_api_packs.py` | `TestFormatDuration` | 9 | test_days, test_hours, test_24_hours… |
+| `tests/unit/test_compliance_matching.py` | `TestNeutralizingContext` | 9 | test_ip_address_rejected, test_mac_address_rejected, test_wallet_address_rejected… |
+| `tests/unit/test_computed_evaluator.py` | `TestAggregateExpression` | 9 | test_count, test_count_empty, test_sum… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -60,7 +60,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | `tests/unit/test_expression_lang.py` | 88 |
 | `tests/unit/test_workspace_routes.py` | 80 |
-| `tests/unit/test_template_rendering.py` | 60 |
 | `tests/unit/test_composition_audit.py` | 43 |
 | `tests/unit/test_fidelity_scorer.py` | 38 |
 | `tests/unit/test_access_control.py` | 33 |
@@ -68,6 +67,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_invariant_evaluator.py` | 28 |
 | `tests/unit/test_anti_turing.py` | 27 |
 | `tests/unit/sentinel/test_agent_performance_resource.py` | 27 |
+| `tests/unit/test_workspace_rendering.py` | 26 |
 
 ## How to act on this
 

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.1] - 2026-05-04
+
+### Changed
+- **`tests/unit/test_template_rendering.py::TestJinjaFilters` collapsed
+  to parametrised form** — first concrete cleanup PR from the
+  test-suite distillation strategy (Pass 2 hotspot #1). 24 named test
+  functions removed (57 → 33), all 77 assertion cases retained via
+  `@pytest.mark.parametrize`. Affected groups: `currency_filter`,
+  `truncate_text_*`, `dateformat_filter_passthrough`, `badge_tone_*`,
+  `metric_number`, `timeago_*`, `slugify`, `basename_or_url`. Tests
+  whose docstring or shape carries unique signal
+  (`test_truncate_text` ellipsis behaviour, `test_timeago_z_suffix`,
+  `test_timeago_tz_aware_datetime_does_not_raise`, etc.) were kept
+  as standalone. Total suite count: 14,295 → 14,257.
+
+### Agent Guidance
+- When adding multiple tests of the same `assert tmpl.render(...) == X`
+  shape against the same callable, write a single
+  `@pytest.mark.parametrize` test with `ids=[...]` instead of N named
+  test functions. The `tests/audit/redundancy.json` listing surfaces
+  hotspots automatically; pick the largest cluster, refactor, re-run
+  `python3 scripts/distill/classify.py && python3 scripts/distill/cluster.py`.
+
 ## [0.66.0] - 2026-05-04
 
 This is a minor bump because the route-handler factory contracts changed
