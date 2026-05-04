@@ -222,7 +222,24 @@ def json_or_htmx_error(
     if is_htmx_request(request):
         messages = _errors_to_messages(errors)
         method = (getattr(request, "method", "") or "").upper()
-        if method == "GET":
+        # Form-context detection: only retarget #form-errors when the
+        # request originated from a form input. Pre-fix, any non-GET
+        # request 422'd with HX-Retarget #form-errors regardless of
+        # whether the page actually had that element. Chaos-monkey
+        # clicks on non-form hx-post buttons (bulk actions, toggles,
+        # nav buttons) flooded the console with htmx:targetError on
+        # pages without forms.
+        #
+        # `HX-Trigger-Name` is the `name` attribute of the triggering
+        # element. Form inputs always have a `name` (it's how form
+        # data is keyed); non-form buttons / hx-* triggers usually
+        # don't. Fall back to the toast path when the signal is missing.
+        headers = getattr(request, "headers", None)
+        trigger_name = ""
+        if headers is not None:
+            trigger_name = headers.get("HX-Trigger-Name") or headers.get("hx-trigger-name") or ""
+        is_form_context = bool(trigger_name) and method != "GET"
+        if not is_form_context:
             return htmx_toast_error_response(messages)
         return htmx_error_response(messages)
     return JSONResponse(

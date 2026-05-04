@@ -835,6 +835,7 @@ def _compile_list_surface(
     entity_slug: str,
     app_prefix: str,
     enums: list[ir.EnumSpec] | None = None,
+    entities_with_create_surface: frozenset[str] | None = None,
 ) -> PageContext:
     """Compile a LIST mode surface to a PageContext with table context."""
     ux = surface.ux
@@ -903,6 +904,19 @@ def _compile_list_surface(
     ]
 
     page_purpose, persona_purposes = _extract_surface_purpose(ux)
+
+    # Caught by the chaos-monkey fuzz: list surfaces on entities with
+    # no CREATE surface (virtual entities — SystemHealth, SystemMetric,
+    # ProcessRun, LogEntry, EventTrace; framework-only entities —
+    # DeployHistory, AuditEntry, AIJob, JobRun) emitted a "Create"
+    # button on the list page. Clicking it navigated to
+    # `/app/<entity>/create` which 404s because no create route is
+    # mounted. The right signal is "is there a CREATE-mode surface
+    # for this entity?" — passed as `entities_with_create_surface`.
+    create_url: str | None = None
+    if entities_with_create_surface is None or entity_name in entities_with_create_surface:
+        create_url = f"{app_prefix}/{entity_slug}/create"
+
     return PageContext(
         page_title=surface.title or f"{entity_name} List",
         page_purpose=page_purpose,
@@ -913,7 +927,7 @@ def _compile_list_surface(
             title=surface.title or f"{entity_name}s",
             columns=columns,
             api_endpoint=api_endpoint,
-            create_url=f"{app_prefix}/{entity_slug}/create",
+            create_url=create_url,
             detail_url_template=f"{app_prefix}/{entity_slug}/{{id}}",
             search_enabled=bool(search_fields),
             default_sort_field=default_sort_field,
@@ -1354,6 +1368,7 @@ def compile_surface_to_context(
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
     poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
     enums: list[ir.EnumSpec] | None = None,
+    entities_with_create_surface: frozenset[str] | None = None,
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -1380,7 +1395,14 @@ def compile_surface_to_context(
 
     if surface.mode == SurfaceMode.LIST:
         return _compile_list_surface(
-            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix, enums
+            surface,
+            entity,
+            entity_name,
+            api_endpoint,
+            entity_slug,
+            app_prefix,
+            enums,
+            entities_with_create_surface=entities_with_create_surface,
         )
     elif surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
         return _compile_form_surface(
@@ -1459,6 +1481,16 @@ def compile_appspec_to_templates(
     # Add entity surface links derived from workspace regions so that
     # entity pages show the same nav items as workspace pages.
     _list_surfaces_by_entity: dict[str, Any] = {}
+    # Track which entities have CREATE-mode surfaces — used to suppress
+    # the "Create" button on list pages whose entity has no real
+    # /<entity>/create route mounted (auto-injected platform entities
+    # like SystemHealth, DeployHistory, AuditEntry; FK-target-only
+    # entities). Caught by the chaos-monkey fuzz hitting 404s on the
+    # button. Computed once at compile time and threaded into
+    # `_compile_list_surface` so every list page gets the right answer.
+    _entities_with_create_surface: frozenset[str] = frozenset(
+        {s.entity_ref for s in appspec.surfaces if s.mode.value == "create" and s.entity_ref}
+    )
     for surface in appspec.surfaces:
         if surface.mode.value == "list" and surface.entity_ref:
             _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
@@ -1597,6 +1629,7 @@ def compile_appspec_to_templates(
             reverse_refs=_reverse_refs.get(entity_name),
             poly_refs=_poly_refs.get(entity_name),
             enums=list(appspec.enums) if appspec.enums else None,
+            entities_with_create_surface=_entities_with_create_surface,
         )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
@@ -1660,6 +1693,7 @@ def compile_appspec_to_templates(
                 entity,
                 app_prefix=app_prefix,
                 enums=list(appspec.enums) if appspec.enums else None,
+                entities_with_create_surface=_entities_with_create_surface,
             )
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
             root_ctx.nav_items = nav_items

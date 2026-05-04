@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.11] - 2026-05-04
+
+### Added
+- **Chaos-monkey mode in the runtime fuzz** (`fuzz_chaos_monkey()`)
+  — random clicking across visible interactive elements per app, 4
+  sessions × 15 clicks each, seeded for repeatability. Skips
+  destructive triggers, logout buttons, external links, off-viewport
+  elements. Fired by every wide-fuzz pass alongside the page-walker
+  + scripted batteries. Caught two real bugs (this changelog) on the
+  inaugural run.
+
+### Fixed
+- **htmx:targetError flood on showcase** — `json_or_htmx_error()`
+  retargeted `#form-errors` for any non-GET HTMX request, but the
+  element only exists on actual form pages. Chaos-monkey clicks on
+  bulk-action / toggle hx-post buttons triggered 8× console errors
+  + 3 page errors per session. Fix: only retarget when the request
+  carries `HX-Trigger-Name` (form input signal); otherwise route
+  to the existing toast path. 4 new tests cover the non-form-context
+  cases on POST/PUT/DELETE.
+
+- **`/app/<entity>/create` 404 from auto-injected list pages** —
+  list surfaces unconditionally emitted a "Create" button. For
+  entities with no CREATE-mode surface (auto-injected platform
+  entities like SystemHealth, DeployHistory, AuditEntry, AIJob,
+  JobRun; FK-target-only entities), clicking 404'd. Fix: thread
+  `entities_with_create_surface` from `compile_appspec_to_templates`
+  into `_compile_list_surface` so the create button only renders
+  when a real CREATE surface exists for the entity. Caught by
+  chaos-monkey hitting `/app/systemhealth/create` +
+  `/app/deployhistory/create` 404s on the platform admin workspace.
+
+### Agent Guidance
+- The chaos-monkey is the highest-yield runtime check we have for
+  framework-emitted nav/buttons that don't actually mount routes.
+  Run it (via `python3 /tmp/wide_fuzz.py` or
+  `from dazzle.testing.fuzz_runtime import run_app_fuzz`) after any
+  change to `template_compiler.py`, `route_generator.py`, or
+  `workspace_route_builder.py`. The seed defaults to 42 — bump it
+  to explore beyond the deterministic-but-fixed click sequence.
+
 ## [0.65.10] - 2026-05-04
 
 ### Fixed

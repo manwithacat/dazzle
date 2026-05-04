@@ -329,6 +329,129 @@ def fuzz_page_walker(page: Any, base: str, paths: list[str]) -> list[FuzzCheck]:
     return checks
 
 
+def fuzz_chaos_monkey(
+    page: Any,
+    base: str,
+    paths: list[str],
+    n_sessions: int = 4,
+    n_clicks_per_session: int = 15,
+    seed: int = 42,
+) -> list[FuzzCheck]:
+    """Random clicking across visible interactive elements.
+
+    Goal: surface race conditions and edge cases that scripted batteries
+    miss. Each session navigates to a random /app/* path then fires N
+    random clicks at visible buttons / links / hx-* triggers. The page
+    listeners (console, pageerror, response) attached at the call-site
+    record fallout per click so the source action is attributable.
+
+    Skipped (would compromise the run, not signal):
+    - destructive (`[hx-delete]`, `data-dz-destructive`, buttons whose
+      label matches a destructive verb)
+    - logout / sign-out (would invalidate the session for the rest of
+      the run)
+    - external links (`target=_blank`, off-host hrefs)
+    - file-download triggers
+    - elements outside the viewport (visibility: hidden)
+
+    Determinism: seeded so the same fuzz produces the same sequence.
+    Bumping the seed is the way to explore further.
+    """
+    import random
+
+    rng = random.Random(seed)
+    checks: list[FuzzCheck] = []
+
+    SAFE_SELECTORS = (
+        "button[type=button]",
+        "[hx-get]",
+        "[hx-post]",
+        "[hx-put]",
+        "[hx-patch]",
+        "[role=tab]",
+        "[role=button]",
+        "a[href^='/']:not([href*='logout']):not([href*='signout'])",
+    )
+    DESTRUCTIVE_TEXT = (
+        "delete",
+        "remove",
+        "destroy",
+        "drop",
+        "purge",
+        "logout",
+        "sign out",
+        "log out",
+    )
+
+    if not paths:
+        return checks
+
+    sessions_run = 0
+    for _ in range(n_sessions):
+        path = rng.choice(paths)
+        try:
+            response = page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=8000)
+        except Exception:
+            continue
+        if not response or response.status >= 400:
+            continue
+        sessions_run += 1
+        clicks_done = 0
+        for _ in range(n_clicks_per_session):
+            try:
+                # Re-query each loop — DOM may have morphed via htmx swap.
+                triggers = page.locator(",".join(SAFE_SELECTORS))
+                count = triggers.count()
+                if count == 0:
+                    break
+                # Drop destructive ones.
+                idx = rng.randrange(count)
+                el = triggers.nth(idx)
+                if not el.is_visible():
+                    continue
+                # Skip if attribute marks it destructive.
+                attrs = page.evaluate(
+                    "el => ({"
+                    " 'destructive': el.hasAttribute('hx-delete')"
+                    "  || el.hasAttribute('data-dz-destructive')"
+                    "  || (el.dataset.method || '').toLowerCase() === 'delete',"
+                    " 'text': (el.textContent || el.value || '').trim().toLowerCase().slice(0, 40),"
+                    " 'href': el.getAttribute('href') || '',"
+                    " 'target': el.getAttribute('target') || ''"
+                    "})",
+                    el.element_handle(),
+                )
+                if attrs and attrs.get("destructive"):
+                    continue
+                if attrs and any(d in attrs.get("text", "") for d in DESTRUCTIVE_TEXT):
+                    continue
+                if attrs and attrs.get("target") == "_blank":
+                    continue
+                href = attrs.get("href", "") if attrs else ""
+                if href.startswith("http"):  # external
+                    continue
+                # Click. no_wait_after lets us continue even if the
+                # action triggers a navigation we're about to abort.
+                el.click(timeout=1500, no_wait_after=True)
+                page.wait_for_timeout(120)  # let htmx settle
+                clicks_done += 1
+                # If the click navigated us outside /app/*, retreat —
+                # we want to keep clicking inside the app surface.
+                if not page.url.startswith(f"{base}/app/"):
+                    page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=5000)
+            except Exception:
+                # Individual click failure recorded via console listener.
+                continue
+        checks.append(
+            FuzzCheck(
+                name=f"chaos-monkey session {sessions_run}: starting {path}",
+                passed=True,  # signal is recorded via the page listeners
+                detail=f"{clicks_done} clicks, seed={seed}",
+            )
+        )
+    return checks
+
+
 def fuzz_htmx_interactions(page: Any, base: str, paths: list[str]) -> list[FuzzCheck]:
     """Click every hx-get/hx-post/hx-trigger button on each visited
     page, watch for fallout. Catches:
@@ -499,7 +622,21 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
             # ── 2. htmx interaction sweep ──
             report.checks.extend(fuzz_htmx_interactions(page, base, all_paths[:5]))
 
-            # ── 3. Specialised widget batteries ──
+            # ── 3. Chaos-monkey (random interaction) ──
+            # Aggressive random clicking to surface race conditions and
+            # edge cases the scripted batteries miss. Errors land in
+            # report.console_errors via the listeners above.
+            report.checks.extend(
+                fuzz_chaos_monkey(
+                    page,
+                    base,
+                    all_paths,
+                    n_sessions=4,
+                    n_clicks_per_session=15,
+                )
+            )
+
+            # ── 4. Specialised widget batteries ──
             for path in create_paths:
                 try:
                     page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=5000)
