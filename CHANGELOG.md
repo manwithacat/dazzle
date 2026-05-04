@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.3] - 2026-05-04
+
+### Changed
+- **`tests/unit/test_expression_lang.py` collapsed across 5 clusters** —
+  second cleanup PR from the test-suite distillation strategy. 5 of the
+  redundancy report's top hotspots are in this file:
+
+  | Class | Before | After | Cases |
+  |---|---:|---:|---:|
+  | `TestTypeInference` | 24 | 1 parametric | 26 |
+  | `TestEvalArithmetic` | 13 | 3 (parametric + approx + raises) | 13 |
+  | `TestEvalComparison` | 7 | 2 (parametric + special-case) | 13 |
+  | `TestEvalLogic` | 6 | 1 parametric | 7 |
+  | `TestEvalFunctions` | 17 | 7 (parametric + non-deterministic) | 19 |
+
+  All assertion cases retained via `@pytest.mark.parametrize`. Standalone
+  tests kept where they carry unique signal: `division_by_zero`
+  (raises), `today/now` (non-deterministic), `days_since/days_until`
+  (runtime arithmetic), `unknown_function` (raises).
+
+  Suite total: 14,257 → 14,205 (52 fewer test functions).
+
 ## [0.66.2] - 2026-05-04
 
 ### Note

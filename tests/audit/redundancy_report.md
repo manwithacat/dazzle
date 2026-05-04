@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 1,047
-- **Tests inside those clusters**: 4,304
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **3,257 tests** (≈ 22.8% of the suite)
+- **Clusters of ≥3**: 1,043
+- **Tests inside those clusters**: 4,252
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **3,209 tests** (≈ 22.4% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -14,30 +14,27 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 | Size | Clusters |
 |---|---:|
-| 20+ | 3 |
-| 10-19 | 24 |
-| 5-9 | 227 |
-| 3-4 | 793 |
+| 20+ | 2 |
+| 10-19 | 22 |
+| 5-9 | 225 |
+| 3-4 | 794 |
 
 ## Top 30 largest clusters
 
 | File | Class | Size | Sample test names |
 |---|---|---:|---|
-| `tests/unit/test_expression_lang.py` | `TestTypeInference` | 22 | test_int_literal, test_float_literal, test_string_literal… |
 | `tests/unit/test_ref_display.py` | `TestRefDisplayName` | 22 | test_name_field, test_company_name_field, test_first_last_name… |
 | `tests/unit/test_access_control.py` | `TestAccessRuleEvaluate` | 20 | test_public_rule, test_authenticated_rule_no_user, test_authenticated_rule_with_user… |
 | `tests/unit/test_pipeline_detail.py` | `TestStepHasIssues` | 19 | test_lint_with_errors, test_lint_with_warnings_only, test_lint_with_errors_and_warnings… |
 | `tests/unit/test_failure_classifier.py` | `TestClassifyFailure` | 15 | test_rbac_denied_401, test_rbac_denied_403, test_rbac_denied_permission… |
 | `tests/unit/test_asset_manifest.py` | `TestCollectRequiredAssets` | 13 | test_no_widgets_returns_empty, test_rich_text_requires_no_vendor_asset, test_combobox_requires_tom_select… |
 | `tests/unit/test_cedar_row_filters.py` | `TestExtractCedarRowFilters` | 12 | test_owner_equals_current_user, test_read_rule_also_applies, test_non_list_read_rules_ignored… |
-| `tests/unit/test_expression_lang.py` | `TestEvalArithmetic` | 12 | test_addition, test_subtraction, test_multiplication… |
 | `tests/unit/test_resolve_display_name.py` | `TestResolveDisplayName` | 12 | test_string_passthrough, test_int_passthrough, test_none_returns_empty… |
 | `tests/unit/test_rhythm_mcp.py` | `(module)` | 12 | test_get_rhythm_includes_phase_kind, test_get_rhythm_includes_phase_cadence, test_gaps_unmapped_scene… |
 | `tests/unit/test_template_overrides.py` | `TestSemanticBlocks` | 12 | test_app_shell_has_navbar_block, test_app_shell_has_sidebar_block, test_app_shell_has_sidebar_brand_block… |
 | `tests/unit/test_analytics_disable_modes.py` | `TestAnalyticsGloballyDisabled` | 11 | test_default_environment_enabled, test_dev_env_disables, test_development_env_disables… |
 | `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 11 | test_valid_entity_declaration, test_valid_surface_declaration, test_valid_workspace_with_filter… |
 | `tests/unit/test_blueprint_generator_heuristic.py` | `TestStrategyValueWrong` | 11 | test_date_relative_on_date_field_is_ok, test_date_relative_on_ref_field_is_wrong, test_date_relative_on_numeric_field_is_wrong… |
-| `tests/unit/test_expression_lang.py` | `TestEvalFunctions` | 11 | test_concat, test_concat_with_null, test_len… |
 | `tests/unit/test_lsp_completion.py` | `TestDetectCompletionContext` | 11 | test_top_level, test_mode_value, test_ref_target… |
 | `tests/unit/test_workspace_routes.py` | `TestAttentionAccentMacro` | 11 | test_border_critical_destructive, test_border_warning_warning, test_border_notice_primary… |
 | `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 10 | test_banned_if_keyword, test_banned_for_keyword, test_banned_while_keyword… |
@@ -53,14 +50,17 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_api_packs.py` | `TestFormatDuration` | 9 | test_days, test_hours, test_24_hours… |
 | `tests/unit/test_compliance_matching.py` | `TestNeutralizingContext` | 9 | test_ip_address_rejected, test_mac_address_rejected, test_wallet_address_rejected… |
 | `tests/unit/test_computed_evaluator.py` | `TestAggregateExpression` | 9 | test_count, test_count_empty, test_sum… |
+| `tests/unit/test_condition_evaluator_grant_check.py` | `TestGrantCheckEvaluation` | 9 | test_grant_check_true, test_grant_check_false_wrong_relation, test_grant_check_false_wrong_scope… |
+| `tests/unit/test_qa_trial.py` | `TestBuildTrialMission` | 9 | test_mission_name_incorporates_scenario, test_start_url_points_at_app, test_starting_url_relative_path_is_resolved_against_base… |
+| `tests/unit/test_sa_schema.py` | `TestScalarTypeMapping` | 9 | test_str_maps_to_text, test_int_maps_to_integer, test_decimal_maps_to_float… |
 
 ## Top 10 files by collapse-saving potential
 
 | File | Tests that could collapse |
 |---|---:|
-| `tests/unit/test_expression_lang.py` | 88 |
 | `tests/unit/test_workspace_routes.py` | 80 |
 | `tests/unit/test_composition_audit.py` | 43 |
+| `tests/unit/test_expression_lang.py` | 40 |
 | `tests/unit/test_fidelity_scorer.py` | 38 |
 | `tests/unit/test_access_control.py` | 33 |
 | `tests/unit/test_rhythm_mcp.py` | 29 |

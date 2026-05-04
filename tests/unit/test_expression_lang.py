@@ -460,109 +460,113 @@ class TestParserErrors:
 class TestEvalArithmetic:
     """Evaluator handles arithmetic correctly."""
 
-    def test_addition(self) -> None:
-        assert evaluate(parse_expr("a + b"), {"a": 10, "b": 20}) == 30
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            ("a + b", {"a": 10, "b": 20}, 30),
+            ("a - b", {"a": 50, "b": 20}, 30),
+            ("a * b", {"a": 5, "b": 4}, 20),
+            ("a / b", {"a": 10, "b": 4}, 2.5),
+            ("a % b", {"a": 10, "b": 3}, 1),
+            ("a + b * c", {"a": 2, "b": 3, "c": 4}, 14),  # precedence
+            ("(a + b) * c", {"a": 2, "b": 3, "c": 4}, 20),  # parentheses
+            ("-x", {"x": 5}, -5),
+            # Real-world: VAT 9-box calculation
+            ("box1 + box2 - box4", {"box1": 1000, "box2": 200, "box4": 350}, 850),
+            ('a + " " + b', {"a": "hello", "b": "world"}, "hello world"),
+        ],
+        ids=[
+            "addition",
+            "subtraction",
+            "multiplication",
+            "division",
+            "modulo",
+            "precedence",
+            "parentheses",
+            "unary_minus",
+            "vat_box",
+            "string_concat",
+        ],
+    )
+    def test_arithmetic(self, expr_str, ctx, expected) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) == expected
 
-    def test_subtraction(self) -> None:
-        assert evaluate(parse_expr("a - b"), {"a": 50, "b": 20}) == 30
-
-    def test_multiplication(self) -> None:
-        assert evaluate(parse_expr("a * b"), {"a": 5, "b": 4}) == 20
-
-    def test_division(self) -> None:
-        assert evaluate(parse_expr("a / b"), {"a": 10, "b": 4}) == 2.5
-
-    def test_modulo(self) -> None:
-        assert evaluate(parse_expr("a % b"), {"a": 10, "b": 3}) == 1
-
-    def test_precedence(self) -> None:
-        # a + b * c = 2 + 3 * 4 = 14
-        assert evaluate(parse_expr("a + b * c"), {"a": 2, "b": 3, "c": 4}) == 14
-
-    def test_parentheses(self) -> None:
-        # (a + b) * c = (2 + 3) * 4 = 20
-        assert evaluate(parse_expr("(a + b) * c"), {"a": 2, "b": 3, "c": 4}) == 20
-
-    def test_unary_minus(self) -> None:
-        assert evaluate(parse_expr("-x"), {"x": 5}) == -5
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            ("a * b", {"a": 3.5, "b": 2.0}, 7.0),
+            ("a + b", {"a": 1, "b": 0.5}, 1.5),
+        ],
+        ids=["float_mul", "int_plus_float_promotes"],
+    )
+    def test_arithmetic_approx(self, expr_str, ctx, expected) -> None:
+        """Float arithmetic: pinned with pytest.approx for IEEE-754 wobble."""
+        assert evaluate(parse_expr(expr_str), ctx) == pytest.approx(expected)
 
     def test_division_by_zero(self) -> None:
         with pytest.raises(ExpressionEvalError, match="Division by zero"):
             evaluate(parse_expr("x / y"), {"x": 10, "y": 0})
 
-    def test_float_arithmetic(self) -> None:
-        result = evaluate(parse_expr("a * b"), {"a": 3.5, "b": 2.0})
-        assert result == pytest.approx(7.0)
-
-    def test_mixed_int_float(self) -> None:
-        result = evaluate(parse_expr("a + b"), {"a": 1, "b": 0.5})
-        assert result == pytest.approx(1.5)
-
-    def test_vat_box_arithmetic(self) -> None:
-        """Real-world: VAT 9-box calculation."""
-        ctx = {"box1": 1000, "box2": 200, "box4": 350}
-        result = evaluate(parse_expr("box1 + box2 - box4"), ctx)
-        assert result == 850
-
-    def test_string_concatenation(self) -> None:
-        result = evaluate(parse_expr('a + " " + b'), {"a": "hello", "b": "world"})
-        assert result == "hello world"
-
 
 class TestEvalComparison:
     """Evaluator handles comparison operators."""
 
-    def test_equality(self) -> None:
-        assert evaluate(parse_expr('status == "active"'), {"status": "active"}) is True
-        assert evaluate(parse_expr('status == "active"'), {"status": "closed"}) is False
-
-    def test_inequality(self) -> None:
-        assert evaluate(parse_expr("x != 0"), {"x": 5}) is True
-        assert evaluate(parse_expr("x != 0"), {"x": 0}) is False
-
-    def test_less_than(self) -> None:
-        assert evaluate(parse_expr("age < 18"), {"age": 16}) is True
-        assert evaluate(parse_expr("age < 18"), {"age": 25}) is False
-
-    def test_greater_equal(self) -> None:
-        assert evaluate(parse_expr("score >= 90"), {"score": 90}) is True
-        assert evaluate(parse_expr("score >= 90"), {"score": 89}) is False
-
-    def test_null_equality(self) -> None:
-        assert evaluate(parse_expr("x is null"), {"x": None}) is True
-        assert evaluate(parse_expr("x is null"), {"x": 5}) is False
-
-    def test_null_inequality(self) -> None:
-        assert evaluate(parse_expr("x is not null"), {"x": 5}) is True
-        assert evaluate(parse_expr("x is not null"), {"x": None}) is False
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx_true", "ctx_false"),
+        [
+            ('status == "active"', {"status": "active"}, {"status": "closed"}),
+            ("x != 0", {"x": 5}, {"x": 0}),
+            ("age < 18", {"age": 16}, {"age": 25}),
+            ("score >= 90", {"score": 90}, {"score": 89}),
+            ("x is null", {"x": None}, {"x": 5}),
+            ("x is not null", {"x": 5}, {"x": None}),
+        ],
+        ids=[
+            "equality",
+            "inequality",
+            "less_than",
+            "greater_equal",
+            "null_equality",
+            "null_inequality",
+        ],
+    )
+    def test_comparison(self, expr_str, ctx_true, ctx_false) -> None:
+        expr = parse_expr(expr_str)
+        assert evaluate(expr, ctx_true) is True
+        assert evaluate(expr, ctx_false) is False
 
     def test_null_comparison_returns_false(self) -> None:
+        """Comparison against null returns False (3-valued logic short-circuit)."""
         assert evaluate(parse_expr("x > 0"), {"x": None}) is False
 
 
 class TestEvalLogic:
     """Evaluator handles logical operators with short-circuit."""
 
-    def test_and_true(self) -> None:
-        assert evaluate(parse_expr("a and b"), {"a": True, "b": True}) is True
-
-    def test_and_false(self) -> None:
-        assert evaluate(parse_expr("a and b"), {"a": False, "b": True}) is False
-
-    def test_or_true(self) -> None:
-        assert evaluate(parse_expr("a or b"), {"a": False, "b": True}) is True
-
-    def test_or_false(self) -> None:
-        assert evaluate(parse_expr("a or b"), {"a": False, "b": False}) is False
-
-    def test_not(self) -> None:
-        assert evaluate(parse_expr("not x"), {"x": False}) is True
-        assert evaluate(parse_expr("not x"), {"x": True}) is False
-
-    def test_compound_logic(self) -> None:
-        ctx = {"age": 25, "status": "active"}
-        result = evaluate(parse_expr('age >= 18 and status == "active"'), ctx)
-        assert result is True
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            ("a and b", {"a": True, "b": True}, True),
+            ("a and b", {"a": False, "b": True}, False),
+            ("a or b", {"a": False, "b": True}, True),
+            ("a or b", {"a": False, "b": False}, False),
+            ("not x", {"x": False}, True),
+            ("not x", {"x": True}, False),
+            # Compound: comparison + logic
+            ('age >= 18 and status == "active"', {"age": 25, "status": "active"}, True),
+        ],
+        ids=[
+            "and_true",
+            "and_false",
+            "or_true",
+            "or_false",
+            "not_false",
+            "not_true",
+            "compound",
+        ],
+    )
+    def test_logic(self, expr_str, ctx, expected) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) is expected
 
 
 class TestEvalIn:
@@ -587,47 +591,47 @@ class TestEvalIn:
 class TestEvalFunctions:
     """Evaluator handles built-in functions."""
 
-    def test_concat(self) -> None:
-        expr = parse_expr('concat(first, " ", last)')
-        result = evaluate(expr, {"first": "John", "last": "Doe"})
-        assert result == "John Doe"
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            # Stringy
+            ('concat(first, " ", last)', {"first": "John", "last": "Doe"}, "John Doe"),
+            ("concat(a, b)", {"a": "hello", "b": None}, "hello"),  # null skipped
+            # Sequence/length
+            ("len(items)", {"items": [1, 2, 3]}, 3),
+            ("len(items)", {"items": None}, 0),
+            # Numeric
+            ("abs(x)", {"x": -5}, 5),
+            ("abs(x)", {"x": 5}, 5),
+            ("min(a, b, c)", {"a": 3, "b": 1, "c": 2}, 1),
+            ("max(a, b, c)", {"a": 3, "b": 1, "c": 2}, 3),
+            ("round(x)", {"x": 3.7}, 4),
+            # Coalesce: first non-null
+            ("coalesce(a, b, c)", {"a": None, "b": None, "c": 42}, 42),
+            ("coalesce(a, b, c)", {"a": None, "b": 10, "c": 42}, 10),
+            ("coalesce(a, b)", {"a": None, "b": None}, None),
+        ],
+        ids=[
+            "concat_strings",
+            "concat_skips_null",
+            "len_list",
+            "len_null",
+            "abs_negative",
+            "abs_positive",
+            "min_three",
+            "max_three",
+            "round_default",
+            "coalesce_third",
+            "coalesce_second",
+            "coalesce_all_null",
+        ],
+    )
+    def test_function_call(self, expr_str, ctx, expected) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) == expected
 
-    def test_concat_with_null(self) -> None:
-        expr = parse_expr("concat(a, b)")
-        result = evaluate(expr, {"a": "hello", "b": None})
-        assert result == "hello"
-
-    def test_len(self) -> None:
-        expr = parse_expr("len(items)")
-        assert evaluate(expr, {"items": [1, 2, 3]}) == 3
-
-    def test_len_null(self) -> None:
-        assert evaluate(parse_expr("len(items)"), {"items": None}) == 0
-
-    def test_abs(self) -> None:
-        assert evaluate(parse_expr("abs(x)"), {"x": -5}) == 5
-        assert evaluate(parse_expr("abs(x)"), {"x": 5}) == 5
-
-    def test_min(self) -> None:
-        assert evaluate(parse_expr("min(a, b, c)"), {"a": 3, "b": 1, "c": 2}) == 1
-
-    def test_max(self) -> None:
-        assert evaluate(parse_expr("max(a, b, c)"), {"a": 3, "b": 1, "c": 2}) == 3
-
-    def test_round(self) -> None:
+    def test_round_with_digits(self) -> None:
+        """Float result needs pytest.approx for IEEE-754 wobble."""
         assert evaluate(parse_expr("round(x, 2)"), {"x": 3.14159}) == pytest.approx(3.14)
-
-    def test_round_no_digits(self) -> None:
-        assert evaluate(parse_expr("round(x)"), {"x": 3.7}) == 4
-
-    def test_coalesce(self) -> None:
-        expr = parse_expr("coalesce(a, b, c)")
-        assert evaluate(expr, {"a": None, "b": None, "c": 42}) == 42
-        assert evaluate(expr, {"a": None, "b": 10, "c": 42}) == 10
-
-    def test_coalesce_all_null(self) -> None:
-        expr = parse_expr("coalesce(a, b)")
-        assert evaluate(expr, {"a": None, "b": None}) is None
 
     def test_today(self) -> None:
         result = evaluate(parse_expr("today()"), {})
@@ -748,88 +752,75 @@ class TestEvalNullHandling:
 class TestTypeInference:
     """Type checker infers expression types correctly."""
 
-    def test_int_literal(self) -> None:
-        assert infer_type(parse_expr("42")) == ExprType.INT
-
-    def test_float_literal(self) -> None:
-        assert infer_type(parse_expr("3.14")) == ExprType.FLOAT
-
-    def test_string_literal(self) -> None:
-        assert infer_type(parse_expr('"hello"')) == ExprType.STR
-
-    def test_bool_literal(self) -> None:
-        assert infer_type(parse_expr("true")) == ExprType.BOOL
-
-    def test_null_literal(self) -> None:
-        assert infer_type(parse_expr("null")) == ExprType.NULL
-
-    def test_duration(self) -> None:
-        assert infer_type(parse_expr("7d")) == ExprType.DURATION
-
-    def test_field_with_context(self) -> None:
-        assert infer_type(parse_expr("amount"), {"amount": ExprType.MONEY}) == ExprType.MONEY
-
-    def test_field_without_context(self) -> None:
-        assert infer_type(parse_expr("amount")) == ExprType.ANY
-
-    def test_int_addition(self) -> None:
-        ctx = {"a": ExprType.INT, "b": ExprType.INT}
-        assert infer_type(parse_expr("a + b"), ctx) == ExprType.INT
-
-    def test_float_wins_over_int(self) -> None:
-        ctx = {"a": ExprType.INT, "b": ExprType.FLOAT}
-        assert infer_type(parse_expr("a + b"), ctx) == ExprType.FLOAT
-
-    def test_money_arithmetic(self) -> None:
-        ctx = {"price": ExprType.MONEY, "tax": ExprType.MONEY}
-        assert infer_type(parse_expr("price + tax"), ctx) == ExprType.MONEY
-
-    def test_money_times_scalar(self) -> None:
-        ctx = {"price": ExprType.MONEY, "qty": ExprType.INT}
-        assert infer_type(parse_expr("price * qty"), ctx) == ExprType.MONEY
-
-    def test_division_returns_float(self) -> None:
-        ctx = {"a": ExprType.INT, "b": ExprType.INT}
-        assert infer_type(parse_expr("a / b"), ctx) == ExprType.FLOAT
-
-    def test_comparison_returns_bool(self) -> None:
-        assert infer_type(parse_expr("x > 0")) == ExprType.BOOL
-        assert infer_type(parse_expr("x == y")) == ExprType.BOOL
-
-    def test_logic_returns_bool(self) -> None:
-        assert infer_type(parse_expr("a and b")) == ExprType.BOOL
-        assert infer_type(parse_expr("not x")) == ExprType.BOOL
-
-    def test_in_returns_bool(self) -> None:
-        assert infer_type(parse_expr("x in [1, 2]")) == ExprType.BOOL
-
-    def test_date_plus_duration(self) -> None:
-        ctx = {"start": ExprType.DATE}
-        assert infer_type(parse_expr("start + 7d"), ctx) == ExprType.DATE
-
-    def test_date_minus_date(self) -> None:
-        ctx = {"a": ExprType.DATE, "b": ExprType.DATE}
-        assert infer_type(parse_expr("a - b"), ctx) == ExprType.DURATION
-
-    def test_string_concat(self) -> None:
-        ctx = {"a": ExprType.STR, "b": ExprType.STR}
-        assert infer_type(parse_expr("a + b"), ctx) == ExprType.STR
-
-    def test_today_returns_date(self) -> None:
-        assert infer_type(parse_expr("today()")) == ExprType.DATE
-
-    def test_days_until_returns_int(self) -> None:
-        assert infer_type(parse_expr("days_until(x)")) == ExprType.INT
-
-    def test_concat_returns_str(self) -> None:
-        assert infer_type(parse_expr("concat(a, b)")) == ExprType.STR
-
-    def test_if_returns_then_type(self) -> None:
-        assert infer_type(parse_expr('if x: "yes" else: "no"')) == ExprType.STR
-
-    def test_abs_preserves_type(self) -> None:
-        ctx = {"x": ExprType.MONEY}
-        assert infer_type(parse_expr("abs(x)"), ctx) == ExprType.MONEY
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected_type"),
+        [
+            # Literals (no context needed)
+            ("42", {}, ExprType.INT),
+            ("3.14", {}, ExprType.FLOAT),
+            ('"hello"', {}, ExprType.STR),
+            ("true", {}, ExprType.BOOL),
+            ("null", {}, ExprType.NULL),
+            ("7d", {}, ExprType.DURATION),
+            # Field references resolve through context (or default to ANY)
+            ("amount", {"amount": ExprType.MONEY}, ExprType.MONEY),
+            ("amount", {}, ExprType.ANY),
+            # Arithmetic propagates / promotes type
+            ("a + b", {"a": ExprType.INT, "b": ExprType.INT}, ExprType.INT),
+            ("a + b", {"a": ExprType.INT, "b": ExprType.FLOAT}, ExprType.FLOAT),
+            ("price + tax", {"price": ExprType.MONEY, "tax": ExprType.MONEY}, ExprType.MONEY),
+            ("price * qty", {"price": ExprType.MONEY, "qty": ExprType.INT}, ExprType.MONEY),
+            ("a / b", {"a": ExprType.INT, "b": ExprType.INT}, ExprType.FLOAT),
+            ("a + b", {"a": ExprType.STR, "b": ExprType.STR}, ExprType.STR),
+            # Boolean-producing ops
+            ("x > 0", {}, ExprType.BOOL),
+            ("x == y", {}, ExprType.BOOL),
+            ("a and b", {}, ExprType.BOOL),
+            ("not x", {}, ExprType.BOOL),
+            ("x in [1, 2]", {}, ExprType.BOOL),
+            # Date arithmetic
+            ("start + 7d", {"start": ExprType.DATE}, ExprType.DATE),
+            ("a - b", {"a": ExprType.DATE, "b": ExprType.DATE}, ExprType.DURATION),
+            # Built-in functions
+            ("today()", {}, ExprType.DATE),
+            ("days_until(x)", {}, ExprType.INT),
+            ("concat(a, b)", {}, ExprType.STR),
+            # If-expression returns the type of its branches
+            ('if x: "yes" else: "no"', {}, ExprType.STR),
+            # abs() preserves operand type
+            ("abs(x)", {"x": ExprType.MONEY}, ExprType.MONEY),
+        ],
+        ids=[
+            "int_literal",
+            "float_literal",
+            "string_literal",
+            "bool_literal",
+            "null_literal",
+            "duration_literal",
+            "field_with_ctx",
+            "field_without_ctx",
+            "int_plus_int",
+            "int_plus_float_promotes",
+            "money_plus_money",
+            "money_times_int",
+            "int_div_int_returns_float",
+            "str_concat",
+            "comparison_gt",
+            "comparison_eq",
+            "logic_and",
+            "logic_not",
+            "in_list",
+            "date_plus_duration",
+            "date_minus_date",
+            "today_returns_date",
+            "days_until_returns_int",
+            "concat_returns_str",
+            "if_returns_branch_type",
+            "abs_preserves_type",
+        ],
+    )
+    def test_infer_type(self, expr_str, ctx, expected_type) -> None:
+        assert infer_type(parse_expr(expr_str), ctx) == expected_type
 
 
 # ============================================================================

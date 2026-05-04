@@ -1,36 +1,5 @@
 [
   {
-    "file": "tests/unit/test_expression_lang.py",
-    "class": "TestTypeInference",
-    "assertion_shape": "('eq',)",
-    "size": 22,
-    "members": [
-      "test_int_literal",
-      "test_float_literal",
-      "test_string_literal",
-      "test_bool_literal",
-      "test_null_literal",
-      "test_duration",
-      "test_field_with_context",
-      "test_field_without_context",
-      "test_int_addition",
-      "test_float_wins_over_int",
-      "test_money_arithmetic",
-      "test_money_times_scalar",
-      "test_division_returns_float",
-      "test_in_returns_bool",
-      "test_date_plus_duration",
-      "test_date_minus_date",
-      "test_string_concat",
-      "test_today_returns_date",
-      "test_days_until_returns_int",
-      "test_concat_returns_str",
-      "test_if_returns_then_type",
-      "test_abs_preserves_type"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_ref_display.py",
     "class": "TestRefDisplayName",
     "assertion_shape": "('eq',)",
@@ -186,27 +155,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_expression_lang.py",
-    "class": "TestEvalArithmetic",
-    "assertion_shape": "('eq',)",
-    "size": 12,
-    "members": [
-      "test_addition",
-      "test_subtraction",
-      "test_multiplication",
-      "test_division",
-      "test_modulo",
-      "test_precedence",
-      "test_parentheses",
-      "test_unary_minus",
-      "test_float_arithmetic",
-      "test_mixed_int_float",
-      "test_vat_box_arithmetic",
-      "test_string_concatenation"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_resolve_display_name.py",
     "class": "TestResolveDisplayName",
     "assertion_shape": "('eq',)",
@@ -326,26 +274,6 @@
       "test_none_value_not_flagged",
       "test_created_by_detected_as_ref_name",
       "test_foreign_id_suffix_detected_as_ref"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_expression_lang.py",
-    "class": "TestEvalFunctions",
-    "assertion_shape": "('eq',)",
-    "size": 11,
-    "members": [
-      "test_concat",
-      "test_concat_with_null",
-      "test_len",
-      "test_len_null",
-      "test_min",
-      "test_max",
-      "test_round",
-      "test_round_no_digits",
-      "test_today",
-      "test_days_since",
-      "test_days_until"
     ],
     "recommendation": "parametrise"
   },
@@ -1748,21 +1676,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_expression_lang.py",
-    "class": "TestEvalComparison",
-    "assertion_shape": "('is', 'is')",
-    "size": 6,
-    "members": [
-      "test_equality",
-      "test_inequality",
-      "test_less_than",
-      "test_greater_equal",
-      "test_null_equality",
-      "test_null_inequality"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_fidelity_scorer.py",
     "class": "TestCreateModeStoryGapSuppression",
     "assertion_shape": "('eq',)",
@@ -2926,20 +2839,6 @@
       "test_empty_string",
       "test_no_separator",
       "test_garbage_input"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_expression_lang.py",
-    "class": "TestEvalLogic",
-    "assertion_shape": "('is',)",
-    "size": 5,
-    "members": [
-      "test_and_true",
-      "test_and_false",
-      "test_or_true",
-      "test_or_false",
-      "test_compound_logic"
     ],
     "recommendation": "parametrise"
   },
@@ -5443,6 +5342,19 @@
       "test_inequality",
       "test_less_than",
       "test_greater_equal"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
+    "file": "tests/unit/test_expression_lang.py",
+    "class": "TestEvalFunctions",
+    "assertion_shape": "('eq',)",
+    "size": 4,
+    "members": [
+      "test_round_with_digits",
+      "test_today",
+      "test_days_since",
+      "test_days_until"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
