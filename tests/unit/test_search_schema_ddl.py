@@ -260,3 +260,60 @@ class TestEdgeCases:
         ddl = build_search_index_ddl([e], [spec])
         assert '"email"' in ddl[0]
         assert '"homepage"' in ddl[0]
+
+
+# ---------------------------------------------------------------------------
+# #997 — backend-shape entities must also work
+# ---------------------------------------------------------------------------
+
+
+class TestBackendConvertedEntityShape:
+    """The runtime calls build_search_index_ddl with backend-converted
+    entities (`dazzle_back.specs.entity.EntitySpec`) where
+    `field.type.kind` is the shape category `"scalar"` and the actual
+    scalar identity lives in `field.type.scalar_type`.
+
+    Pre-#997, the searchable-kind check looked at `field.type.kind`
+    against an allowlist of dazzle-IR `FieldTypeKind` values. Backend
+    fields silently failed every check ('scalar' isn't in the
+    allowlist), so apps that wired `search` blocks (contact_manager,
+    support_tickets) booted with 'not a text-shaped column' warnings
+    on every field and the FTS index was never created."""
+
+    def _backend_entity(self, name: str, fields: list[tuple[str, str]]) -> Any:
+        from types import SimpleNamespace
+
+        from dazzle_back.specs.entity import FieldType, ScalarType
+
+        scalar_by_str = {st.value: st for st in ScalarType}
+        field_specs = [
+            SimpleNamespace(
+                name=fname,
+                type=FieldType(kind="scalar", scalar_type=scalar_by_str[stype]),
+            )
+            for fname, stype in fields
+        ]
+        return SimpleNamespace(name=name, fields=field_specs)
+
+    def test_backend_str_field_indexed(self):
+        e = self._backend_entity("Contact", [("first_name", "str")])
+        spec = _spec("Contact", [("first_name", 4)])
+        ddl = build_search_index_ddl([e], [spec])
+        assert ddl, "DDL must be generated for backend STR field"
+        assert '"first_name"' in ddl[0]
+
+    def test_backend_text_email_url_all_searchable(self):
+        e = self._backend_entity(
+            "Contact",
+            [("body", "text"), ("email", "email"), ("link", "url")],
+        )
+        spec = _spec("Contact", [("body", 4), ("email", 2), ("link", 1)])
+        ddl = build_search_index_ddl([e], [spec])
+        for col in ('"body"', '"email"', '"link"'):
+            assert col in ddl[0], f"{col} missing from generated DDL"
+
+    def test_backend_int_field_skipped(self):
+        e = self._backend_entity("Contact", [("count", "int")])
+        spec = _spec("Contact", [("count", 4)])
+        ddl = build_search_index_ddl([e], [spec])
+        assert ddl == [], "non-text scalar must not produce DDL"

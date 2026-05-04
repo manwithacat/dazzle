@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.6] - 2026-05-04
+
+### Fixed
+- **#997 — search-block FTS check rejected every backend-shape field
+  ('not a text-shaped column').** Caught by the cycle-4 fuzz sweep
+  against contact_manager. Apps that wired `search on Entity:`
+  blocks booted with rejection warnings on every field and the FTS
+  generated column / GIN index were never created — search returned
+  empty results.
+
+  Root cause: `_resolve_searchable_field` checked
+  `field.type.kind in _SEARCHABLE_KINDS` where the allowlist held
+  dazzle-IR `FieldTypeKind` enum values. The runtime calls
+  `build_search_index_ddl` with backend-converted entities
+  (`dazzle_back.specs.entity`) where `field.type.kind` is the shape
+  category `"scalar"` and the actual scalar identity lives in
+  `field.type.scalar_type`. The check never matched the backend
+  shape.
+
+  Fix: `_resolve_searchable_field` now reads the scalar identity
+  from either shape (`scalar_type` first, falling back to `kind`
+  for direct-IR callers). Allowlist switched to plain string set
+  `{"str", "text", "email", "url"}` so it works against either enum.
+  3 new tests cover the backend shape end-to-end.
+
+  Closes #997.
+
 ## [0.64.5] - 2026-05-04
 
 ### Fixed

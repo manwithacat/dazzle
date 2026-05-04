@@ -39,8 +39,6 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
-from dazzle.core.ir.fields import FieldTypeKind
-
 logger = logging.getLogger(__name__)
 
 
@@ -86,14 +84,7 @@ _KNOWN_FTS_CONFIGS: frozenset[str] = frozenset(
 # Which field kinds make sense to drop into a tsvector. JSON could
 # work via an expression (``data->>'title'``) but cycle 2 keeps the
 # generator straightforward — JSON-targeted FTS is its own primitive.
-_SEARCHABLE_KINDS: frozenset[FieldTypeKind] = frozenset(
-    {
-        FieldTypeKind.STR,
-        FieldTypeKind.TEXT,
-        FieldTypeKind.EMAIL,
-        FieldTypeKind.URL,
-    }
-)
+_SEARCHABLE_SCALAR_TYPES: frozenset[str] = frozenset({"str", "text", "email", "url"})
 
 SEARCH_VECTOR_COLUMN = "search_vector"
 """Conventional name for the generated tsvector column. The cycle-3
@@ -153,17 +144,37 @@ def _validate_tokenizer(tokenizer: str, entity_name: str) -> str:
 def _resolve_searchable_field(entity: Any, path: str) -> Any | None:
     """Resolve a single-segment field path against *entity*'s fields.
 
-    Returns the IR field when the path resolves to a text-shaped
-    field on *entity* itself. Dotted paths (FK traversal) and
-    non-text fields return ``None`` so the caller can skip + log.
+    Returns the field when the path resolves to a text-shaped column
+    on *entity* itself. Dotted paths (FK traversal) and non-text
+    fields return ``None`` so the caller can skip + log.
+
+    Accepts either dazzle.core.ir entities (``field.type.kind`` is
+    a ``FieldTypeKind`` like ``str``/``text``/``email``) OR
+    backend-converted entities from
+    ``dazzle_back.converters.entity_converter`` (where
+    ``field.type.kind`` is the shape category ``"scalar"`` and the
+    actual scalar lives in ``field.type.scalar_type``). #997 — both
+    callers exist and the cycle-2 search check silently rejected the
+    backend shape because ``"scalar"`` isn't in the dazzle-IR-typed
+    allowlist, so no FTS index was built on apps that wired
+    ``search`` blocks (contact_manager, support_tickets).
     """
     if "." in path:
         return None
     for field in entity.fields:
-        if field.name == path:
-            if field.type.kind in _SEARCHABLE_KINDS:
-                return field
-            return None
+        if field.name != path:
+            continue
+        ftype = field.type
+        # Backend shape: kind="scalar", actual type in scalar_type.
+        scalar = getattr(ftype, "scalar_type", None)
+        kind_value = getattr(scalar, "value", None) if scalar is not None else None
+        if kind_value is None:
+            # IR shape: kind itself carries the scalar identity.
+            kind = getattr(ftype, "kind", None)
+            kind_value = getattr(kind, "value", None) if kind is not None else None
+        if kind_value in _SEARCHABLE_SCALAR_TYPES:
+            return field
+        return None
     return None
 
 
