@@ -32,52 +32,41 @@ def _spec_with_gtm():
 
 
 class TestAnalyticsGloballyDisabled:
-    def test_default_environment_enabled(self):
-        assert analytics_globally_disabled() is False
-
-    def test_dev_env_disables(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "dev")
-        assert analytics_globally_disabled() is True
-
-    def test_development_env_disables(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "development")
-        assert analytics_globally_disabled() is True
-
-    def test_test_env_disables(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "test")
-        assert analytics_globally_disabled() is True
-
-    def test_production_env_enabled(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "production")
-        assert analytics_globally_disabled() is False
-
-    def test_trial_mode_disables(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_MODE", "trial")
-        assert analytics_globally_disabled() is True
-
-    def test_qa_mode_disables(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_MODE", "qa")
-        assert analytics_globally_disabled() is True
-
-    def test_case_insensitive(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "DEV")
-        assert analytics_globally_disabled() is True
-
-    def test_force_overrides_dev(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "dev")
-        monkeypatch.setenv("DAZZLE_ANALYTICS_FORCE", "1")
-        assert analytics_globally_disabled() is False
-
-    def test_force_overrides_trial(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_MODE", "trial")
-        monkeypatch.setenv("DAZZLE_ANALYTICS_FORCE", "1")
-        assert analytics_globally_disabled() is False
-
-    def test_force_must_be_exactly_one(self, monkeypatch):
-        """Only DAZZLE_ANALYTICS_FORCE=1 bypasses. Other values ignored."""
-        monkeypatch.setenv("DAZZLE_ENV", "dev")
-        monkeypatch.setenv("DAZZLE_ANALYTICS_FORCE", "true")
-        assert analytics_globally_disabled() is True
+    @pytest.mark.parametrize(
+        ("env_vars", "expected"),
+        [
+            ({}, False),  # default — analytics enabled
+            ({"DAZZLE_ENV": "dev"}, True),
+            ({"DAZZLE_ENV": "development"}, True),
+            ({"DAZZLE_ENV": "test"}, True),
+            ({"DAZZLE_ENV": "production"}, False),
+            ({"DAZZLE_MODE": "trial"}, True),
+            ({"DAZZLE_MODE": "qa"}, True),
+            ({"DAZZLE_ENV": "DEV"}, True),  # case-insensitive
+            # FORCE=1 escape hatch overrides dev/trial
+            ({"DAZZLE_ENV": "dev", "DAZZLE_ANALYTICS_FORCE": "1"}, False),
+            ({"DAZZLE_MODE": "trial", "DAZZLE_ANALYTICS_FORCE": "1"}, False),
+            # Only "1" bypasses; other values ignored
+            ({"DAZZLE_ENV": "dev", "DAZZLE_ANALYTICS_FORCE": "true"}, True),
+        ],
+        ids=[
+            "default_enabled",
+            "dev_env",
+            "development_env",
+            "test_env",
+            "production_env_enabled",
+            "trial_mode",
+            "qa_mode",
+            "case_insensitive",
+            "force_overrides_dev",
+            "force_overrides_trial",
+            "force_must_be_exactly_one",
+        ],
+    )
+    def test_globally_disabled(self, monkeypatch, env_vars, expected) -> None:
+        for k, v in env_vars.items():
+            monkeypatch.setenv(k, v)
+        assert analytics_globally_disabled() is expected
 
 
 class TestResolveActiveProvidersIntegration:

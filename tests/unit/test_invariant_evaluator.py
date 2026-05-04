@@ -130,54 +130,52 @@ class TestDuration:
 
 
 class TestComparison:
-    def test_eq_true(self) -> None:
-        expr = _comparison(_field_ref("status"), InvariantComparisonKind.EQ, _literal("active"))
-        assert evaluate_invariant_expr(expr, {"status": "active"}) is True
-
-    def test_eq_false(self) -> None:
-        expr = _comparison(_field_ref("status"), InvariantComparisonKind.EQ, _literal("active"))
-        assert evaluate_invariant_expr(expr, {"status": "pending"}) is False
-
-    def test_ne(self) -> None:
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.NE, _literal(0))
-        assert evaluate_invariant_expr(expr, {"x": 5}) is True
-
-    def test_gt(self) -> None:
-        expr = _comparison(_field_ref("amount"), InvariantComparisonKind.GT, _literal(0))
-        assert evaluate_invariant_expr(expr, {"amount": 10}) is True
-        assert evaluate_invariant_expr(expr, {"amount": 0}) is False
-
-    def test_lt(self) -> None:
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.LT, _literal(100))
-        assert evaluate_invariant_expr(expr, {"x": 50}) is True
-
-    def test_ge(self) -> None:
-        expr = _comparison(_field_ref("qty"), InvariantComparisonKind.GE, _literal(0))
-        assert evaluate_invariant_expr(expr, {"qty": 0}) is True
-
-    def test_le(self) -> None:
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.LE, _literal(10))
-        assert evaluate_invariant_expr(expr, {"x": 10}) is True
-        assert evaluate_invariant_expr(expr, {"x": 11}) is False
-
-    def test_none_eq_none(self) -> None:
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.EQ, _literal(None))
-        assert evaluate_invariant_expr(expr, {}) is True  # both None
-
-    def test_none_ne_value(self) -> None:
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.NE, _literal(None))
-        assert evaluate_invariant_expr(expr, {"x": 5}) is True
-
-    def test_none_ordered_comparison_returns_true(self) -> None:
-        """Null fields satisfy ordered comparisons (SQL CHECK semantics, #491)."""
-        expr = _comparison(_field_ref("x"), InvariantComparisonKind.GT, _literal(0))
-        assert evaluate_invariant_expr(expr, {}) is True
+    @pytest.mark.parametrize(
+        ("left_field", "op", "right_value", "record", "expected"),
+        [
+            # eq
+            ("status", InvariantComparisonKind.EQ, "active", {"status": "active"}, True),
+            ("status", InvariantComparisonKind.EQ, "active", {"status": "pending"}, False),
+            # ne / gt / lt / ge / le
+            ("x", InvariantComparisonKind.NE, 0, {"x": 5}, True),
+            ("amount", InvariantComparisonKind.GT, 0, {"amount": 10}, True),
+            ("amount", InvariantComparisonKind.GT, 0, {"amount": 0}, False),
+            ("x", InvariantComparisonKind.LT, 100, {"x": 50}, True),
+            ("qty", InvariantComparisonKind.GE, 0, {"qty": 0}, True),
+            ("x", InvariantComparisonKind.LE, 10, {"x": 10}, True),
+            ("x", InvariantComparisonKind.LE, 10, {"x": 11}, False),
+            # null handling
+            ("x", InvariantComparisonKind.EQ, None, {}, True),  # both None → equal
+            ("x", InvariantComparisonKind.NE, None, {"x": 5}, True),
+            # SQL CHECK semantics: null vs ordered comparison → true (#491)
+            ("x", InvariantComparisonKind.GT, 0, {}, True),
+        ],
+        ids=[
+            "eq_true",
+            "eq_false",
+            "ne",
+            "gt_above",
+            "gt_at_threshold",
+            "lt",
+            "ge_at_zero",
+            "le_at_threshold",
+            "le_above_threshold",
+            "none_eq_none",
+            "none_ne_value",
+            "none_ordered_returns_true",
+        ],
+    )
+    def test_field_vs_literal(self, left_field, op, right_value, record, expected) -> None:
+        expr = _comparison(_field_ref(left_field), op, _literal(right_value))
+        assert evaluate_invariant_expr(expr, record) is expected
 
     def test_incompatible_types(self) -> None:
+        """`'text' > 5` is incomparable; gracefully returns False rather than raising."""
         expr = _comparison(_literal("text"), InvariantComparisonKind.GT, _literal(5))
         assert evaluate_invariant_expr(expr, {}) is False
 
     def test_missing_parts(self) -> None:
+        """A comparison with no left/right operands evaluates to False, not crash."""
         expr = InvariantExprSpec(kind="comparison")
         assert evaluate_invariant_expr(expr, {}) is False
 

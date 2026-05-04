@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.5] - 2026-05-04
+
+### Changed
+- **Distillation cycle 4** — collapsed 9 hotspot clusters across 9 files:
+  test_resolve_display_name (12→1), test_template_overrides
+  (TestSemanticBlocks 12→1), test_analytics_disable_modes (11→1),
+  test_lsp_completion (11→1), test_blueprint_generator_heuristic
+  (TestStrategyValueWrong 11→1), test_composition_audit
+  (TestComputeAttentionWeight 15→8), test_e2e_harness
+  (TestAuthLocatorMapping 10→2), test_invariant_evaluator
+  (TestComparison 12→3), test_manifest_database
+  (TestResolveDatabaseUrl 10→1). Suite total: 14,132 → 14,045
+  (87 fewer test functions).
+
 ## [0.66.4] - 2026-05-04
 
 ### Changed

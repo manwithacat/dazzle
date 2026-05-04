@@ -89,73 +89,93 @@ class TestLoadManifestDatabase:
 
 
 class TestResolveDatabaseUrl:
-    def test_explicit_wins(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """CLI --database-url beats everything."""
-        monkeypatch.setenv("DATABASE_URL", "postgresql://env:5432/envdb")
-        manifest = _make_manifest("postgresql://toml:5432/tomldb")
-        result = resolve_database_url(manifest, explicit_url="postgresql://cli:5432/clidb")
-        assert result == "postgresql://cli:5432/clidb"
+    """Resolution chain: explicit > env > manifest > default.
 
-    def test_env_wins_over_manifest(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """DATABASE_URL env var beats manifest."""
-        monkeypatch.setenv("DATABASE_URL", "postgresql://env:5432/envdb")
-        manifest = _make_manifest("postgresql://toml:5432/tomldb")
-        result = resolve_database_url(manifest)
-        assert result == "postgresql://env:5432/envdb"
+    Each row sets up env vars + manifest, then asserts the resolved URL.
+    Sentinel ``_DEFAULT`` in the expected column means "the framework default".
+    """
 
-    def test_manifest_direct_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Manifest URL used when no env var."""
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        manifest = _make_manifest("postgresql://toml:5433/tomldb")
-        result = resolve_database_url(manifest)
-        assert result == "postgresql://toml:5433/tomldb"
-
-    def test_manifest_env_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """env:VAR_NAME indirection resolves at runtime."""
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.setenv("MY_DB_URL", "postgresql://resolved:5432/db")
-        manifest = _make_manifest("env:MY_DB_URL")
-        result = resolve_database_url(manifest)
-        assert result == "postgresql://resolved:5432/db"
-
-    def test_manifest_env_prefix_missing_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """env:VAR_NAME falls through to default when var is unset."""
+    @pytest.mark.parametrize(
+        ("env_setup", "manifest_url", "explicit_url", "expected"),
+        [
+            # Precedence chain
+            (
+                {"DATABASE_URL": "postgresql://env:5432/envdb"},
+                "postgresql://toml:5432/tomldb",
+                "postgresql://cli:5432/clidb",
+                "postgresql://cli:5432/clidb",  # explicit wins
+            ),
+            (
+                {"DATABASE_URL": "postgresql://env:5432/envdb"},
+                "postgresql://toml:5432/tomldb",
+                None,
+                "postgresql://env:5432/envdb",  # env wins over manifest
+            ),
+            ({}, "postgresql://toml:5433/tomldb", None, "postgresql://toml:5433/tomldb"),
+            # env: indirection
+            (
+                {"MY_DB_URL": "postgresql://resolved:5432/db"},
+                "env:MY_DB_URL",
+                None,
+                "postgresql://resolved:5432/db",
+            ),
+            # env: indirection with missing var → default
+            ({}, "env:MY_DB_URL", None, "_DEFAULT"),
+            # No config at all → default
+            ({}, "_NO_MANIFEST", None, "_DEFAULT"),
+            # Default manifest URL → default
+            ({}, "_DEFAULT_MANIFEST", None, "_DEFAULT"),
+            # Heroku-style postgres:// → postgresql:// (explicit)
+            ({}, None, "postgres://user:pass@host:5432/db", "postgresql://user:pass@host:5432/db"),
+            # Heroku-style postgres:// from env
+            (
+                {"DATABASE_URL": "postgres://user:pass@host:5432/db"},
+                None,
+                None,
+                "postgresql://user:pass@host:5432/db",
+            ),
+            # Heroku-style postgres:// from manifest
+            ({}, "postgres://user:pass@host:5432/db", None, "postgresql://user:pass@host:5432/db"),
+        ],
+        ids=[
+            "explicit_wins",
+            "env_wins_over_manifest",
+            "manifest_direct_url",
+            "manifest_env_prefix",
+            "manifest_env_prefix_missing_var",
+            "default_fallback_no_manifest",
+            "default_fallback_default_manifest",
+            "heroku_normalization_explicit",
+            "heroku_normalization_env",
+            "heroku_normalization_manifest",
+        ],
+    )
+    def test_resolve(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        env_setup: dict,
+        manifest_url: str | None,
+        explicit_url: str | None,
+        expected: str,
+    ) -> None:
+        # Clear DATABASE_URL by default; tests opt in via env_setup
         monkeypatch.delenv("DATABASE_URL", raising=False)
         monkeypatch.delenv("MY_DB_URL", raising=False)
-        manifest = _make_manifest("env:MY_DB_URL")
-        result = resolve_database_url(manifest)
-        assert result == _DEFAULT_DATABASE_URL
+        for key, value in env_setup.items():
+            monkeypatch.setenv(key, value)
 
-    def test_default_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """No config anywhere → default."""
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        result = resolve_database_url(None)
-        assert result == _DEFAULT_DATABASE_URL
+        if manifest_url == "_NO_MANIFEST":
+            manifest = None
+        elif manifest_url == "_DEFAULT_MANIFEST":
+            manifest = _make_manifest()
+        else:
+            manifest = _make_manifest(manifest_url) if manifest_url else None
 
-    def test_default_fallback_with_default_manifest(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Manifest with default URL → default."""
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        manifest = _make_manifest()
-        result = resolve_database_url(manifest)
-        assert result == _DEFAULT_DATABASE_URL
-
-    def test_heroku_normalization_explicit(self) -> None:
-        """postgres:// normalised to postgresql:// for explicit URL."""
-        result = resolve_database_url(None, explicit_url="postgres://user:pass@host:5432/db")
-        assert result == "postgresql://user:pass@host:5432/db"
-
-    def test_heroku_normalization_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """postgres:// normalised from env var."""
-        monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@host:5432/db")
-        result = resolve_database_url(None)
-        assert result == "postgresql://user:pass@host:5432/db"
-
-    def test_heroku_normalization_manifest(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """postgres:// normalised from manifest."""
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        manifest = _make_manifest("postgres://user:pass@host:5432/db")
-        result = resolve_database_url(manifest)
-        assert result == "postgresql://user:pass@host:5432/db"
+        result = resolve_database_url(manifest, explicit_url=explicit_url)
+        if expected == "_DEFAULT":
+            assert result == _DEFAULT_DATABASE_URL
+        else:
+            assert result == expected
 
 
 # ---------------------------------------------------------------------------

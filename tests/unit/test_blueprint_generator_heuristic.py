@@ -8,6 +8,8 @@ the seed on a type-cast failure.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.core.ir.demo_blueprint import FieldPattern, FieldStrategy
 from dazzle.demo_data.blueprint_generator import _strategy_value_obviously_wrong
 
@@ -19,53 +21,47 @@ def _pat(field_name: str, strategy: FieldStrategy) -> FieldPattern:
 class TestStrategyValueWrong:
     """Catches the common blueprint authoring-drift patterns."""
 
-    def test_date_relative_on_date_field_is_ok(self) -> None:
-        p = _pat("created_at", FieldStrategy.DATE_RELATIVE)
-        assert _strategy_value_obviously_wrong(p, "2026-01-23") is False
-
-    def test_date_relative_on_ref_field_is_wrong(self) -> None:
-        p = _pat("created_by", FieldStrategy.DATE_RELATIVE)
-        assert _strategy_value_obviously_wrong(p, "2026-01-23") is True
-
-    def test_date_relative_on_numeric_field_is_wrong(self) -> None:
-        p = _pat("error_rate", FieldStrategy.DATE_RELATIVE)
-        assert _strategy_value_obviously_wrong(p, "2026-01-23") is True
-
-    def test_date_relative_on_url_field_is_wrong(self) -> None:
-        p = _pat("avatar_url", FieldStrategy.DATE_RELATIVE)
-        assert _strategy_value_obviously_wrong(p, "2026-01-23") is True
-
-    def test_lorem_on_ref_field_is_wrong(self) -> None:
-        """E.g. assigned_to (ref User) populated by free_text_lorem."""
-        p = _pat("assigned_to", FieldStrategy.FREE_TEXT_LOREM)
-        assert _strategy_value_obviously_wrong(p, "Aut fugit.") is True
-
-    def test_uuid_on_ref_field_is_ok(self) -> None:
-        p = _pat("assigned_to", FieldStrategy.FOREIGN_KEY)
-        assert _strategy_value_obviously_wrong(p, "550e8400-e29b-41d4-a716-446655440000") is False
-
-    def test_lorem_on_text_field_is_ok(self) -> None:
-        p = _pat("description", FieldStrategy.FREE_TEXT_LOREM)
-        assert _strategy_value_obviously_wrong(p, "Some description text") is False
-
-    def test_non_date_string_on_date_field_is_ok(self) -> None:
-        """Only the YYYY-MM-DD shape triggers date-mismatch; other
-        strings on date-looking fields are not rejected by this
-        heuristic."""
-        p = _pat("deadline", FieldStrategy.STATIC_LIST)
-        assert _strategy_value_obviously_wrong(p, "later") is False
-
-    def test_none_value_not_flagged(self) -> None:
-        p = _pat("created_by", FieldStrategy.DATE_RELATIVE)
-        assert _strategy_value_obviously_wrong(p, None) is False
-
-    def test_created_by_detected_as_ref_name(self) -> None:
-        p = _pat("created_by", FieldStrategy.FREE_TEXT_LOREM)
-        assert _strategy_value_obviously_wrong(p, "lorem") is True
-
-    def test_foreign_id_suffix_detected_as_ref(self) -> None:
-        p = _pat("system_id", FieldStrategy.FREE_TEXT_LOREM)
-        assert _strategy_value_obviously_wrong(p, "lorem") is True
+    @pytest.mark.parametrize(
+        ("field_name", "strategy", "value", "expected"),
+        [
+            # DATE_RELATIVE: only valid on date-looking fields
+            ("created_at", FieldStrategy.DATE_RELATIVE, "2026-01-23", False),
+            ("created_by", FieldStrategy.DATE_RELATIVE, "2026-01-23", True),  # ref field
+            ("error_rate", FieldStrategy.DATE_RELATIVE, "2026-01-23", True),  # numeric
+            ("avatar_url", FieldStrategy.DATE_RELATIVE, "2026-01-23", True),  # url
+            # FREE_TEXT_LOREM: not for ref fields (e.g. ref User)
+            ("assigned_to", FieldStrategy.FREE_TEXT_LOREM, "Aut fugit.", True),
+            ("description", FieldStrategy.FREE_TEXT_LOREM, "Some description text", False),
+            ("created_by", FieldStrategy.FREE_TEXT_LOREM, "lorem", True),  # _by suffix → ref
+            ("system_id", FieldStrategy.FREE_TEXT_LOREM, "lorem", True),  # _id suffix → ref
+            # FOREIGN_KEY: a UUID on a ref field is fine
+            (
+                "assigned_to",
+                FieldStrategy.FOREIGN_KEY,
+                "550e8400-e29b-41d4-a716-446655440000",
+                False,
+            ),
+            # STATIC_LIST: non-date strings on date-looking fields are not flagged
+            ("deadline", FieldStrategy.STATIC_LIST, "later", False),
+            # None values are never flagged (the check requires a value)
+            ("created_by", FieldStrategy.DATE_RELATIVE, None, False),
+        ],
+        ids=[
+            "date_relative_on_date_field_is_ok",
+            "date_relative_on_ref_field_is_wrong",
+            "date_relative_on_numeric_field_is_wrong",
+            "date_relative_on_url_field_is_wrong",
+            "lorem_on_ref_field_is_wrong",
+            "lorem_on_text_field_is_ok",
+            "created_by_detected_as_ref_name",
+            "foreign_id_suffix_detected_as_ref",
+            "uuid_on_ref_field_is_ok",
+            "non_date_string_on_date_field_is_ok",
+            "none_value_not_flagged",
+        ],
+    )
+    def test_obviously_wrong(self, field_name, strategy, value, expected) -> None:
+        assert _strategy_value_obviously_wrong(_pat(field_name, strategy), value) is expected
 
 
 class TestEmailFromNameFallback:

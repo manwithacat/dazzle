@@ -4,6 +4,8 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dazzle.core.composition import (
     _match_sitespec_section,
     audit_page,
@@ -33,67 +35,58 @@ from dazzle.core.composition_capture import (
 class TestComputeAttentionWeight:
     """Test the 5-factor attention weight system."""
 
-    def test_h1_weight_matches_spec(self) -> None:
-        w = compute_attention_weight("h1")
-        assert w == 7.30
-
-    def test_h2_weight_matches_spec(self) -> None:
-        w = compute_attention_weight("h2")
-        assert w == 5.51
-
-    def test_h3_weight_matches_spec(self) -> None:
-        w = compute_attention_weight("h3")
-        assert w == 2.71
-
-    def test_subhead_weight(self) -> None:
-        w = compute_attention_weight("subhead")
-        assert w == 2.39
-
-    def test_primary_cta_weight(self) -> None:
-        w = compute_attention_weight("primary_cta")
-        assert w == 4.73
-
-    def test_secondary_cta_weight(self) -> None:
-        w = compute_attention_weight("secondary_cta")
-        assert w == 3.53
-
-    def test_hero_image_weight(self) -> None:
-        w = compute_attention_weight("hero_image")
-        assert w == 4.63
+    @pytest.mark.parametrize(
+        ("role", "expected"),
+        [
+            ("h1", 7.30),
+            ("h2", 5.51),
+            ("h3", 2.71),
+            ("subhead", 2.39),
+            ("primary_cta", 4.73),
+            ("secondary_cta", 3.53),
+            ("hero_image", 4.63),
+            ("step_number", 4.24),
+        ],
+        ids=[
+            "h1",
+            "h2",
+            "h3",
+            "subhead",
+            "primary_cta",
+            "secondary_cta",
+            "hero_image",
+            "step_number",
+        ],
+    )
+    def test_role_weight_matches_spec(self, role, expected) -> None:
+        assert compute_attention_weight(role) == expected
 
     def test_pricing_price_weight(self) -> None:
-        w = compute_attention_weight("pricing_price")
-        # font_size_score(2.5) + area(2.5) + contrast(1.3) + distinct(0.8)
-        assert w > 6.0
-
-    def test_step_number_weight(self) -> None:
-        w = compute_attention_weight("step_number")
-        assert w == 4.24
+        """font_size_score(2.5) + area(2.5) + contrast(1.3) + distinct(0.8)."""
+        assert compute_attention_weight("pricing_price") > 6.0
 
     def test_unknown_role_gets_baseline(self) -> None:
-        w = compute_attention_weight("unknown_thing")
-        assert 0 < w < 3  # Low weight for unknown roles
+        assert 0 < compute_attention_weight("unknown_thing") < 3
 
     def test_section_override_cta_h2(self) -> None:
-        w = compute_attention_weight("h2", section_type="cta")
-        assert w == 7.09
+        """h2 in a CTA section weighs more than a plain h2."""
+        assert compute_attention_weight("h2", section_type="cta") == 7.09
 
     def test_no_override_for_other_sections(self) -> None:
-        w_plain = compute_attention_weight("h2")
-        w_hero = compute_attention_weight("h2", section_type="hero")
-        assert w_plain == w_hero
+        """Hero section doesn't override h2 weight (only CTA does)."""
+        assert compute_attention_weight("h2") == compute_attention_weight("h2", section_type="hero")
 
-    def test_weight_capped_at_10(self) -> None:
-        # Even with max scores the weight shouldn't exceed 10
-        for role in ("h1", "h2", "primary_cta", "hero_image", "pricing_price"):
-            w = compute_attention_weight(role)
-            assert w <= 10.0
+    @pytest.mark.parametrize("role", ["h1", "h2", "primary_cta", "hero_image", "pricing_price"])
+    def test_weight_capped_at_10(self, role) -> None:
+        assert compute_attention_weight(role) <= 10.0
 
-    def test_h1_dominates_h2(self) -> None:
-        assert compute_attention_weight("h1") > compute_attention_weight("h2")
-
-    def test_primary_cta_dominates_secondary(self) -> None:
-        assert compute_attention_weight("primary_cta") > compute_attention_weight("secondary_cta")
+    @pytest.mark.parametrize(
+        ("dominant", "subordinate"),
+        [("h1", "h2"), ("primary_cta", "secondary_cta")],
+        ids=["h1_over_h2", "primary_cta_over_secondary"],
+    )
+    def test_role_dominance(self, dominant, subordinate) -> None:
+        assert compute_attention_weight(dominant) > compute_attention_weight(subordinate)
 
 
 # ── Section Role Derivation Tests ────────────────────────────────────

@@ -135,62 +135,25 @@ class TestSemanticBlocks:
 
         return create_jinja_env()
 
-    def test_app_shell_has_navbar_block(self) -> None:
+    @pytest.mark.parametrize(
+        ("template", "block_name"),
+        [
+            ("layouts/app_shell.html", "navbar"),
+            ("layouts/app_shell.html", "sidebar"),
+            ("layouts/app_shell.html", "sidebar_brand"),
+            ("layouts/app_shell.html", "sidebar_nav"),
+            ("layouts/app_shell.html", "sidebar_footer"),
+            ("components/detail_view.html", "detail_header"),
+            ("components/detail_view.html", "detail_fields"),
+            ("components/detail_view.html", "detail_transitions"),
+            ("components/form.html", "form_header"),
+            ("components/form.html", "form_fields"),
+            ("components/form.html", "form_actions"),
+            ("components/filterable_table.html", "table_header"),
+        ],
+        ids=lambda v: v.replace("/", "_").replace(".html", "") if "/" in str(v) else str(v),
+    )
+    def test_template_has_block(self, template: str, block_name: str) -> None:
         env = self._get_env()
-        source = env.loader.get_source(env, "layouts/app_shell.html")[0]
-        assert "{% block navbar %}" in source
-
-    def test_app_shell_has_sidebar_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "layouts/app_shell.html")[0]
-        assert "{% block sidebar %}" in source
-
-    def test_app_shell_has_sidebar_brand_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "layouts/app_shell.html")[0]
-        assert "{% block sidebar_brand %}" in source
-
-    def test_app_shell_has_sidebar_nav_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "layouts/app_shell.html")[0]
-        assert "{% block sidebar_nav %}" in source
-
-    def test_app_shell_has_sidebar_footer_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "layouts/app_shell.html")[0]
-        assert "{% block sidebar_footer %}" in source
-
-    def test_detail_view_has_header_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/detail_view.html")[0]
-        assert "{% block detail_header %}" in source
-
-    def test_detail_view_has_fields_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/detail_view.html")[0]
-        assert "{% block detail_fields %}" in source
-
-    def test_detail_view_has_transitions_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/detail_view.html")[0]
-        assert "{% block detail_transitions %}" in source
-
-    def test_form_has_header_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/form.html")[0]
-        assert "{% block form_header %}" in source
-
-    def test_form_has_fields_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/form.html")[0]
-        assert "{% block form_fields %}" in source
-
-    def test_form_has_actions_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/form.html")[0]
-        assert "{% block form_actions %}" in source
-
-    def test_table_has_header_block(self) -> None:
-        env = self._get_env()
-        source = env.loader.get_source(env, "components/filterable_table.html")[0]
-        assert "{% block table_header %}" in source
+        source = env.loader.get_source(env, template)[0]
+        assert f"{{% block {block_name} %}}" in source

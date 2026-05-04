@@ -334,140 +334,48 @@ class TestAuthTargetParsing:
 
 
 class TestAuthLocatorMapping:
-    """Tests for _get_auth_locator function."""
+    """Tests for _get_auth_locator function — auth-target → CSS-selector map."""
 
-    def test_get_auth_locator_login_button(self) -> None:
-        """Test getting auth locator for login_button."""
+    @pytest.mark.parametrize(
+        ("identifier", "expected_selector"),
+        [
+            ("login_button", '[data-dazzle-auth-action="login"]'),
+            ("logout_button", '[data-dazzle-auth-action="logout"]'),
+            ("modal", "#dz-auth-modal"),
+            ("form", "#dz-auth-form"),
+            ("submit", "#dz-auth-submit"),
+            ("error", "#dz-auth-error:not(.hidden)"),
+            ("user_indicator", "[data-dazzle-auth-user]"),
+            ("field.email", '#dz-auth-form [name="email"]'),
+            ("field.password", '#dz-auth-form [name="password"]'),
+            ("toggle.register", '[data-dazzle-auth-toggle="register"]'),
+        ],
+        ids=[
+            "login_button",
+            "logout_button",
+            "modal",
+            "form",
+            "submit",
+            "error",
+            "user_indicator",
+            "field_email",
+            "field_password",
+            "toggle_register",
+        ],
+    )
+    def test_get_auth_locator(self, identifier: str, expected_selector: str) -> None:
         from unittest.mock import MagicMock
 
         from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
 
         page = MagicMock()
         locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "login_button")
+        result = _get_auth_locator(locators, identifier)
 
-        page.locator.assert_called_once_with('[data-dazzle-auth-action="login"]')
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_logout_button(self) -> None:
-        """Test getting auth locator for logout_button."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "logout_button")
-
-        page.locator.assert_called_once_with('[data-dazzle-auth-action="logout"]')
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_modal(self) -> None:
-        """Test getting auth locator for modal."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "modal")
-
-        page.locator.assert_called_once_with("#dz-auth-modal")
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_form(self) -> None:
-        """Test getting auth locator for form."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "form")
-
-        page.locator.assert_called_once_with("#dz-auth-form")
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_submit(self) -> None:
-        """Test getting auth locator for submit button."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "submit")
-
-        page.locator.assert_called_once_with("#dz-auth-submit")
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_error(self) -> None:
-        """Test getting auth locator for error message."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "error")
-
-        page.locator.assert_called_once_with("#dz-auth-error:not(.hidden)")
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_user_indicator(self) -> None:
-        """Test getting auth locator for user indicator."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "user_indicator")
-
-        page.locator.assert_called_once_with("[data-dazzle-auth-user]")
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_field_email(self) -> None:
-        """Test getting auth locator for field.email."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "field.email")
-
-        page.locator.assert_called_once_with('#dz-auth-form [name="email"]')
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_field_password(self) -> None:
-        """Test getting auth locator for field.password."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "field.password")
-
-        page.locator.assert_called_once_with('#dz-auth-form [name="password"]')
-        assert result == page.locator.return_value
-
-    def test_get_auth_locator_toggle_register(self) -> None:
-        """Test getting auth locator for toggle.register."""
-        from unittest.mock import MagicMock
-
-        from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
-
-        page = MagicMock()
-        locators = DazzleLocators(page)
-        result = _get_auth_locator(locators, "toggle.register")
-
-        page.locator.assert_called_once_with('[data-dazzle-auth-toggle="register"]')
+        page.locator.assert_called_once_with(expected_selector)
         assert result == page.locator.return_value
 
     def test_get_auth_locator_unknown_raises(self) -> None:
-        """Test that unknown auth identifier raises ValueError."""
         from unittest.mock import MagicMock
 
         from dazzle_e2e.locators import DazzleLocators, _get_auth_locator
