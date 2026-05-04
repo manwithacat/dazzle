@@ -1,5 +1,7 @@
 """Tests for template compiler source= option wiring and route collision."""
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.fields import FieldModifier
@@ -593,58 +595,37 @@ class TestRelatedEntityTabs:
         assert len(detail_ctx.detail.related_groups) == 1
         assert len(detail_ctx.detail.related_groups[0].tabs) == 2
 
-    def test_related_tab_labels(self):
-        """Related tabs use the referenced entity's title."""
+    def test_related_tab_attributes(self):
+        """Related tab attributes — labels, filter_field, api_endpoint, columns, urls.
+
+        Combined: labels, filter_field, api_endpoint, columns_exclude_fk, create_url, detail_url.
+        """
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
         tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
+
+        # Labels
         labels = {t.label for t in tabs}
         assert "Contact" in labels
         assert "Task" in labels
 
-    def test_related_tab_filter_field(self):
-        """Each tab stores the FK field name for filtering."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
+        # Filter field — every tab uses 'company' FK
         for tab in tabs:
             assert tab.filter_field == "company"
 
-    def test_related_tab_api_endpoint(self):
-        """Each tab has the correct API endpoint for its entity."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
+        # API endpoints
         endpoints = {t.entity_name: t.api_endpoint for t in tabs}
         assert endpoints["Contact"] == "/contacts"
         assert endpoints["Task"] == "/tasks"
 
-    def test_related_tab_columns_exclude_fk(self):
-        """Related tab columns exclude the FK field (company) and PK."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
+        # Contact tab specific assertions
         contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         col_keys = [c.key for c in contact_tab.columns]
         assert "company" not in col_keys
         assert "id" not in col_keys
         assert "full_name" in col_keys
         assert "email" in col_keys
-
-    def test_related_tab_create_url(self):
-        """Related tabs have a create URL."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-        contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         assert contact_tab.create_url == "/contact/create"
-
-    def test_related_tab_detail_url(self):
-        """Related tabs have a detail URL template."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-        contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         assert contact_tab.detail_url_template == "/contact/{id}"
 
     def test_list_surface_has_no_related_tabs(self):
@@ -788,43 +769,30 @@ class TestPolymorphicFKTabs:
         audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
         assert len(audit_tabs) == 1
 
-    def test_polymorphic_tab_has_type_filter(self):
-        """Polymorphic tab stores the type discriminator field and value."""
+    def test_polymorphic_tab_attributes(self):
+        """Polymorphic tab attributes — type_filter, type_value_per_target, columns, api_endpoint.
+
+        Combined: has_type_filter, type_value_matches_target, columns_exclude_type_and_id, api_endpoint.
+        """
         appspec = self._make_poly_appspec()
         contexts = compile_appspec_to_templates(appspec)
+
+        # Company side: type discriminator + filter_field + columns + api endpoint
         tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         assert audit_tab.filter_type_field == "entity_type"
         assert audit_tab.filter_type_value == "company"
         assert audit_tab.filter_field == "entity_id"
-
-    def test_polymorphic_tab_type_value_matches_target(self):
-        """Each target entity gets the correct type discriminator value."""
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        # SoleTrader should get type_value="sole_trader"
-        tabs = contexts["/soletrader/{id}"].detail.related_groups[0].tabs
-        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
-        assert audit_tab.filter_type_value == "sole_trader"
-
-    def test_polymorphic_tab_columns_exclude_type_and_id(self):
-        """Polymorphic tab columns exclude both entity_type and entity_id."""
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         col_keys = [c.key for c in audit_tab.columns]
         assert "entity_type" not in col_keys
         assert "entity_id" not in col_keys
         assert "action" in col_keys
-
-    def test_polymorphic_tab_api_endpoint(self):
-        """Polymorphic tab uses the correct API endpoint."""
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         assert audit_tab.api_endpoint == "/auditlogs"
+
+        # SoleTrader side: type_value matches target entity
+        st_tabs = contexts["/soletrader/{id}"].detail.related_groups[0].tabs
+        st_audit_tab = next(t for t in st_tabs if t.entity_name == "AuditLog")
+        assert st_audit_tab.filter_type_value == "sole_trader"
 
     def test_non_enum_type_field_not_detected(self):
         """entity_type as str (not enum) should NOT trigger polymorphic detection."""
@@ -892,26 +860,19 @@ class TestPolymorphicFKTabs:
 class TestBuildEntityColumns:
     """Tests for _build_entity_columns helper."""
 
-    def test_excludes_pk(self):
-        """PK fields are excluded from entity columns."""
-        entity = _company_entity()
-        cols = _build_entity_columns(entity)
-        assert all(c.key != "id" for c in cols)
+    def test_company_entity_columns(self):
+        """Company entity columns exclude PK, include regular fields, enum is badge.
 
-    def test_includes_regular_fields(self):
-        """Regular fields are included."""
+        Combined: excludes_pk, includes_regular_fields, enum_field_is_badge_type.
+        """
         entity = _company_entity()
         cols = _build_entity_columns(entity)
         keys = [c.key for c in cols]
-        assert "name" in keys
+        assert all(k != "id" for k in keys)  # PK excluded
+        assert "name" in keys  # regular field included
         assert "status" in keys
-
-    def test_enum_field_is_badge_type(self):
-        """Enum fields map to badge column type."""
-        entity = _company_entity()
-        cols = _build_entity_columns(entity)
         status_col = next(c for c in cols if c.key == "status")
-        assert status_col.type == "badge"
+        assert status_col.type == "badge"  # enum → badge
 
     def test_bool_field_type(self):
         """Bool fields map to bool column type."""
@@ -927,11 +888,36 @@ class TestBuildEntityColumns:
         company_col = next(c for c in cols if c.key == "company")
         assert company_col.type == "ref"
 
-    def test_ref_field_id_suffix_stripped_for_column_key(self):
-        """Ref fields with _id suffix use relation name as column key (#553)."""
+    @pytest.mark.parametrize(
+        ("entity_name", "field_name", "kind", "ref_entity", "expected_key", "expected_label"),
+        [
+            pytest.param(
+                "Task",
+                "assigned_to_id",
+                FieldTypeKind.REF,
+                "User",
+                "assigned_to",
+                "Assigned To",
+                id="test_ref_field_id_suffix_stripped_for_column_key",
+            ),
+            pytest.param(
+                "LineItem",
+                "order_id",
+                FieldTypeKind.BELONGS_TO,
+                "Order",
+                "order",
+                "Order",
+                id="test_belongs_to_field_maps_to_ref_type",
+            ),
+        ],
+    )
+    def test_fk_id_suffix_stripped_for_column_key(
+        self, entity_name, field_name, kind, ref_entity, expected_key, expected_label
+    ):
+        """Ref/Belongs_to fields with _id suffix use relation name as column key (#553)."""
         entity = ir.EntitySpec(
-            name="Task",
-            title="Task",
+            name=entity_name,
+            title=entity_name,
             fields=[
                 ir.FieldSpec(
                     name="id",
@@ -939,37 +925,15 @@ class TestBuildEntityColumns:
                     modifiers=[FieldModifier.PK],
                 ),
                 ir.FieldSpec(
-                    name="assigned_to_id",
-                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                    name=field_name,
+                    type=ir.FieldType(kind=kind, ref_entity=ref_entity),
                 ),
             ],
         )
         cols = _build_entity_columns(entity)
         ref_col = next(c for c in cols if c.type == "ref")
-        assert ref_col.key == "assigned_to"
-        assert ref_col.label == "Assigned To"
-
-    def test_belongs_to_field_maps_to_ref_type(self):
-        """Belongs_to fields also map to ref column type (#553)."""
-        entity = ir.EntitySpec(
-            name="LineItem",
-            title="Line Item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="order_id",
-                    type=ir.FieldType(kind=FieldTypeKind.BELONGS_TO, ref_entity="Order"),
-                ),
-            ],
-        )
-        cols = _build_entity_columns(entity)
-        ref_col = next(c for c in cols if c.type == "ref")
-        assert ref_col.key == "order"
-        assert ref_col.label == "Order"
+        assert ref_col.key == expected_key
+        assert ref_col.label == expected_label
 
 
 class TestEnumFilterLabels:
@@ -1037,27 +1001,32 @@ class TestEnumFilterLabels:
 class TestRefFilterType:
     """Tests for #759 — ref/belongs_to fields render as select dropdowns."""
 
-    def test_ref_field_returns_select_filter_type(self):
-        """REF fields should infer filter_type 'select' with empty options."""
+    @pytest.mark.parametrize(
+        ("kind", "field_name", "ref_entity"),
+        [
+            pytest.param(
+                FieldTypeKind.REF,
+                "client_id",
+                "Client",
+                id="test_ref_field_returns_select_filter_type",
+            ),
+            pytest.param(
+                FieldTypeKind.BELONGS_TO,
+                "order_id",
+                "Order",
+                id="test_belongs_to_field_returns_select_filter_type",
+            ),
+        ],
+    )
+    def test_fk_field_returns_select_filter_type(self, kind, field_name, ref_entity):
+        """REF/BELONGS_TO fields should infer filter_type 'select' with empty options."""
         from dazzle_ui.converters.template_compiler import _infer_filter_type
 
         field = ir.FieldSpec(
-            name="client_id",
-            type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="Client"),
+            name=field_name,
+            type=ir.FieldType(kind=kind, ref_entity=ref_entity),
         )
-        ftype, opts = _infer_filter_type(field, None, "client_id")
-        assert ftype == "select"
-        assert opts == []
-
-    def test_belongs_to_field_returns_select_filter_type(self):
-        """BELONGS_TO fields should infer filter_type 'select' with empty options."""
-        from dazzle_ui.converters.template_compiler import _infer_filter_type
-
-        field = ir.FieldSpec(
-            name="order_id",
-            type=ir.FieldType(kind=FieldTypeKind.BELONGS_TO, ref_entity="Order"),
-        )
-        ftype, opts = _infer_filter_type(field, None, "order_id")
+        ftype, opts = _infer_filter_type(field, None, field_name)
         assert ftype == "select"
         assert opts == []
 

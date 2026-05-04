@@ -127,7 +127,10 @@ class TestFixtureGeneration:
     """Tests for fixture generation."""
 
     def test_generate_entity_fixtures(self, task_entity: EntitySpec) -> None:
-        """Test generating fixtures for an entity."""
+        """Test generating fixtures for an entity — IDs/data, types, PK exclusion.
+
+        Combined: fixture_values_match_field_types, fixtures_skip_pk_fields.
+        """
         fixtures = generate_entity_fixtures(task_entity)
 
         # Should generate at least 2 fixtures (valid and updated)
@@ -145,6 +148,16 @@ class TestFixtureGeneration:
         assert updated is not None
         assert updated.entity == "Task"
 
+        # Field types are appropriate
+        assert isinstance(valid.data["title"], str)  # str field
+        assert isinstance(valid.data["completed"], bool)  # bool field
+        assert valid.data["priority"] in ["low", "medium", "high"]  # enum field
+        assert isinstance(valid.data["due_date"], str)  # date as ISO string
+        assert "-" in valid.data["due_date"]
+
+        # PK field should not be in data
+        assert "id" not in valid.data
+
     def test_generate_fixtures_all_entities(self, simple_appspec: AppSpec) -> None:
         """Test generating fixtures for all entities in AppSpec."""
         fixtures = generate_fixtures(simple_appspec)
@@ -155,34 +168,6 @@ class TestFixtureGeneration:
         # All should be for Task entity
         for fixture in fixtures:
             assert fixture.entity == "Task"
-
-    def test_fixture_values_match_field_types(self, task_entity: EntitySpec) -> None:
-        """Test that fixture values are appropriate for field types."""
-        fixtures = generate_entity_fixtures(task_entity)
-        valid = next((f for f in fixtures if f.id == "Task_valid"), None)
-        assert valid is not None
-
-        # String field should have string value
-        assert isinstance(valid.data["title"], str)
-
-        # Bool field should have bool value
-        assert isinstance(valid.data["completed"], bool)
-
-        # Enum field should have valid enum value
-        assert valid.data["priority"] in ["low", "medium", "high"]
-
-        # Date field should have date string
-        assert isinstance(valid.data["due_date"], str)
-        assert "-" in valid.data["due_date"]  # ISO format
-
-    def test_fixtures_skip_pk_fields(self, task_entity: EntitySpec) -> None:
-        """Test that fixtures don't include PK fields."""
-        fixtures = generate_entity_fixtures(task_entity)
-        valid = next((f for f in fixtures if f.id == "Task_valid"), None)
-        assert valid is not None
-
-        # PK field should not be in data
-        assert "id" not in valid.data
 
 
 class TestCRUDFlowGeneration:
@@ -273,7 +258,10 @@ class TestValidationFlowGeneration:
     def test_generate_validation_flows(
         self, task_entity: EntitySpec, simple_appspec: AppSpec
     ) -> None:
-        """Test generating validation flows for required fields."""
+        """Generate validation flows — required-field flow exists with validation_error assertion.
+
+        Combined: validation_flow_asserts_error.
+        """
         flows = generate_validation_flows(task_entity, simple_appspec)
 
         # Should have at least one flow for the required 'title' field
@@ -285,16 +273,7 @@ class TestValidationFlowGeneration:
         assert title_flow.priority == FlowPriority.MEDIUM
         assert "validation" in title_flow.tags
 
-    def test_validation_flow_asserts_error(
-        self, task_entity: EntitySpec, simple_appspec: AppSpec
-    ) -> None:
-        """Test that validation flow asserts validation error."""
-        flows = generate_validation_flows(task_entity, simple_appspec)
-        title_flow = next((f for f in flows if "title" in f.id), None)
-
-        assert title_flow is not None
-
-        # Should assert validation error
+        # Should assert validation error on title
         assert_steps = [s for s in title_flow.steps if s.kind == FlowStepKind.ASSERT]
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.VALIDATION_ERROR
@@ -307,7 +286,10 @@ class TestSurfaceFlowGeneration:
     def test_generate_surface_flows(
         self, task_surfaces: list[SurfaceSpec], simple_appspec: AppSpec
     ) -> None:
-        """Test generating navigation flows for surfaces."""
+        """Generate navigation flows for surfaces — id/priority/tags + visibility assertion.
+
+        Combined: surface_flow_asserts_visible.
+        """
         surface = task_surfaces[0]  # task_list
         flows = generate_surface_flows(surface, simple_appspec)
 
@@ -317,14 +299,6 @@ class TestSurfaceFlowGeneration:
         assert nav_flow.id == "navigate_task_list"
         assert nav_flow.priority == FlowPriority.LOW
         assert "navigation" in nav_flow.tags
-
-    def test_surface_flow_asserts_visible(
-        self, task_surfaces: list[SurfaceSpec], simple_appspec: AppSpec
-    ) -> None:
-        """Test that surface flow asserts visibility."""
-        surface = task_surfaces[0]
-        flows = generate_surface_flows(surface, simple_appspec)
-        nav_flow = flows[0]
 
         # Last step should assert visibility
         assert_steps = [s for s in nav_flow.steps if s.kind == FlowStepKind.ASSERT]
@@ -674,7 +648,10 @@ class TestComputedFieldFlowGeneration:
     def test_generate_computed_field_flows(
         self, invoice_entity_with_computed: EntitySpec, invoice_appspec: AppSpec
     ) -> None:
-        """Test generating flows for computed fields."""
+        """Generate computed-field flows — flow per field + COMPUTED_VALUE assertion.
+
+        Combined: computed_field_flow_asserts_value.
+        """
         flows = generate_computed_field_flows(invoice_entity_with_computed, invoice_appspec)
 
         # Should have one flow per computed field
@@ -690,17 +667,10 @@ class TestComputedFieldFlowGeneration:
         total_flow = next((f for f in flows if "total" in f.id), None)
         assert total_flow is not None
 
-    def test_computed_field_flow_asserts_value(
-        self, invoice_entity_with_computed: EntitySpec, invoice_appspec: AppSpec
-    ) -> None:
-        """Test that computed field flow asserts the computed value."""
-        flows = generate_computed_field_flows(invoice_entity_with_computed, invoice_appspec)
-        flow = flows[0]
-
-        # Should have assertion for computed value
-        assert_steps = [s for s in flow.steps if s.kind == FlowStepKind.ASSERT]
+        # Each flow should have COMPUTED_VALUE assertion
+        first_flow = flows[0]
+        assert_steps = [s for s in first_flow.steps if s.kind == FlowStepKind.ASSERT]
         assert len(assert_steps) >= 1
-
         computed_value_assert = next(
             (s for s in assert_steps if s.assertion.kind == FlowAssertionKind.COMPUTED_VALUE),
             None,
@@ -764,54 +734,40 @@ class TestAccessControlFlowGeneration:
     def test_generate_access_control_flows(
         self, document_entity_with_access: EntitySpec, document_appspec: AppSpec
     ) -> None:
-        """Test generating access control flows."""
+        """Generate access control flows — allowed/denied pair structure + assertions.
+
+        Combined: access_allowed_flow_structure, access_denied_flow_structure.
+        """
         flows = generate_access_control_flows(document_entity_with_access, document_appspec)
 
         # Should have flows for allowed and denied for each permission
         assert len(flows) >= 3  # At least one pair per operation
 
-        # Check for allowed flows
         allowed_flows = [f for f in flows if "_allowed" in f.id]
         assert len(allowed_flows) >= 1
-
-        # Check for denied flows (anonymous user)
         denied_flows = [f for f in flows if "_denied" in f.id]
         assert len(denied_flows) >= 1
 
-    def test_access_allowed_flow_structure(
-        self, document_entity_with_access: EntitySpec, document_appspec: AppSpec
-    ) -> None:
-        """Test structure of access allowed flows."""
-        flows = generate_access_control_flows(document_entity_with_access, document_appspec)
+        # Allowed flow structure
         allowed_flow = next((f for f in flows if "create_allowed" in f.id), None)
-
         assert allowed_flow is not None
         assert allowed_flow.priority == FlowPriority.HIGH
         assert allowed_flow.preconditions is not None
         assert allowed_flow.preconditions.authenticated is True
         assert "access_control" in allowed_flow.tags
-
-        # Should assert permission granted
         assert_steps = [s for s in allowed_flow.steps if s.kind == FlowStepKind.ASSERT]
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_GRANTED
 
-    def test_access_denied_flow_structure(
-        self, document_entity_with_access: EntitySpec, document_appspec: AppSpec
-    ) -> None:
-        """Test structure of access denied flows."""
-        flows = generate_access_control_flows(document_entity_with_access, document_appspec)
+        # Denied flow structure
         denied_flow = next((f for f in flows if "_denied_anon" in f.id), None)
-
         assert denied_flow is not None
         assert denied_flow.preconditions is not None
         assert denied_flow.preconditions.authenticated is False
         assert "denied" in denied_flow.tags
-
-        # Should assert permission denied
-        assert_steps = [s for s in denied_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(assert_steps) >= 1
-        assert assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_DENIED
+        denied_assert_steps = [s for s in denied_flow.steps if s.kind == FlowStepKind.ASSERT]
+        assert len(denied_assert_steps) >= 1
+        assert denied_assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_DENIED
 
     def test_no_flows_for_entity_without_access(
         self, task_entity: EntitySpec, simple_appspec: AppSpec
@@ -895,72 +851,47 @@ class TestReferenceFlowGeneration:
     def test_generate_reference_flows(
         self, task_entity_with_ref: EntitySpec, task_ref_appspec: AppSpec
     ) -> None:
-        """Test generating reference integrity flows."""
+        """Generate reference flows — valid/invalid pair, fixture refs, fake UUIDs.
+
+        Combined: valid_ref_flow_uses_fixture, invalid_ref_flow_uses_fake_uuid.
+        """
         flows = generate_reference_flows(task_entity_with_ref, task_ref_appspec)
 
         # Should have valid and invalid ref flows
         assert len(flows) == 2
 
-        # Check for valid ref flow
+        # Valid ref flow — uses fixture
         valid_flow = next((f for f in flows if "_valid" in f.id), None)
         assert valid_flow is not None
         assert valid_flow.entity == "Task"
         assert "reference" in valid_flow.tags
         assert "valid" in valid_flow.tags
-
-        # Check for invalid ref flow
-        invalid_flow = next((f for f in flows if "_invalid" in f.id), None)
-        assert invalid_flow is not None
-        assert "invalid" in invalid_flow.tags
-
-    def test_valid_ref_flow_uses_fixture(
-        self, task_entity_with_ref: EntitySpec, task_ref_appspec: AppSpec
-    ) -> None:
-        """Test that valid ref flow uses fixture reference."""
-        flows = generate_reference_flows(task_entity_with_ref, task_ref_appspec)
-        valid_flow = next((f for f in flows if "_valid" in f.id), None)
-
-        assert valid_flow is not None
         assert valid_flow.priority == FlowPriority.HIGH
         assert valid_flow.preconditions is not None
-
-        # Should reference the Project fixture
         assert "Project_valid" in valid_flow.preconditions.fixtures
-
-        # Should have fixture_ref in fill step
         fill_steps = [s for s in valid_flow.steps if s.kind == FlowStepKind.FILL and s.fixture_ref]
         assert len(fill_steps) >= 1
-
-        # Should assert ref is valid
-        assert_steps = [s for s in valid_flow.steps if s.kind == FlowStepKind.ASSERT]
+        valid_asserts = [s for s in valid_flow.steps if s.kind == FlowStepKind.ASSERT]
         ref_valid_assert = next(
-            (s for s in assert_steps if s.assertion.kind == FlowAssertionKind.REF_VALID),
+            (s for s in valid_asserts if s.assertion.kind == FlowAssertionKind.REF_VALID),
             None,
         )
         assert ref_valid_assert is not None
 
-    def test_invalid_ref_flow_uses_fake_uuid(
-        self, task_entity_with_ref: EntitySpec, task_ref_appspec: AppSpec
-    ) -> None:
-        """Test that invalid ref flow uses non-existent UUID."""
-        flows = generate_reference_flows(task_entity_with_ref, task_ref_appspec)
+        # Invalid ref flow — fake UUID, REF_INVALID assertion
         invalid_flow = next((f for f in flows if "_invalid" in f.id), None)
-
         assert invalid_flow is not None
+        assert "invalid" in invalid_flow.tags
         assert invalid_flow.priority == FlowPriority.MEDIUM
-
-        # Should have fill step with fake UUID value
-        fill_steps = [
+        invalid_fills = [
             s
             for s in invalid_flow.steps
             if s.kind == FlowStepKind.FILL and s.value and "00000000" in s.value
         ]
-        assert len(fill_steps) >= 1
-
-        # Should assert ref is invalid
-        assert_steps = [s for s in invalid_flow.steps if s.kind == FlowStepKind.ASSERT]
+        assert len(invalid_fills) >= 1
+        invalid_asserts = [s for s in invalid_flow.steps if s.kind == FlowStepKind.ASSERT]
         ref_invalid_assert = next(
-            (s for s in assert_steps if s.assertion.kind == FlowAssertionKind.REF_INVALID),
+            (s for s in invalid_asserts if s.assertion.kind == FlowAssertionKind.REF_INVALID),
             None,
         )
         assert ref_invalid_assert is not None

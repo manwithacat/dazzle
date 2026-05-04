@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.21] - 2026-05-04
+
+### Changed
+- **Distillation cycle 19** — Batch AA partial collapsed clusters in 5
+  large files: test_integration_mapping, test_template_compiler,
+  test_template_rendering, test_testspec_generator, test_workspace_rendering.
+  288 tests pass across modified files. Suite total: 12,806 → 12,767
+  (39 fewer this cycle). Cumulative cycles 1-19: 14,295 → 12,767
+  (1,528 tests removed). Need 768 more for < 12,000.
+
 ## [0.66.20] - 2026-05-04
 
 ### Changed

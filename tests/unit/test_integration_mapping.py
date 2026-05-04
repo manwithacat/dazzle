@@ -62,52 +62,26 @@ integration external_api:
 class TestIntegrationAuth:
     """Tests for integration auth parsing."""
 
-    def test_api_key_auth(self) -> None:
-        dsl = """
-module test
-app test "Test"
+    def test_auth_types(self) -> None:
+        """Auth: keyword parses each auth type (api_key, oauth2, bearer) with env-var credentials.
 
-entity Company "Company":
-  id: uuid pk
-  name: str(200) required
-
-integration ch_api:
-  base_url: "https://api.company-information.service.gov.uk"
-  auth: api_key from env("COMPANIES_HOUSE_API_KEY")
-
-  mapping fetch on Company:
-    request: GET "/company/search"
-"""
-        fragment = _parse(dsl)
-        integration = fragment.integrations[0]
-        assert integration.auth is not None
-        assert integration.auth.auth_type == AuthType.API_KEY
-        assert integration.auth.credentials == ["COMPANIES_HOUSE_API_KEY"]
-
-    def test_oauth2_auth(self) -> None:
-        dsl = """
-module test
-app test "Test"
-
-entity VATReturn "VAT Return":
-  id: uuid pk
-  period_key: str(50) required
-
-integration hmrc:
-  base_url: "https://api.service.hmrc.gov.uk"
-  auth: oauth2 from env("HMRC_CLIENT_ID"), env("HMRC_CLIENT_SECRET")
-
-  mapping submit on VATReturn:
-    request: POST "/organisations/vat/returns"
-"""
-        fragment = _parse(dsl)
-        integration = fragment.integrations[0]
-        assert integration.auth is not None
-        assert integration.auth.auth_type == AuthType.OAUTH2
-        assert integration.auth.credentials == ["HMRC_CLIENT_ID", "HMRC_CLIENT_SECRET"]
-
-    def test_bearer_auth(self) -> None:
-        dsl = """
+        Combined: api_key_auth, oauth2_auth, bearer_auth.
+        """
+        cases = [
+            (
+                'api_key from env("COMPANIES_HOUSE_API_KEY")',
+                AuthType.API_KEY,
+                ["COMPANIES_HOUSE_API_KEY"],
+            ),
+            (
+                'oauth2 from env("HMRC_CLIENT_ID"), env("HMRC_CLIENT_SECRET")',
+                AuthType.OAUTH2,
+                ["HMRC_CLIENT_ID", "HMRC_CLIENT_SECRET"],
+            ),
+            ('bearer from env("MY_API_TOKEN")', AuthType.BEARER, ["MY_API_TOKEN"]),
+        ]
+        for auth_dsl, expected_type, expected_creds in cases:
+            dsl = f"""
 module test
 app test "Test"
 
@@ -116,16 +90,16 @@ entity Record "Record":
   title: str(100) required
 
 integration my_api:
-  auth: bearer from env("MY_API_TOKEN")
+  auth: {auth_dsl}
 
   mapping fetch on Record:
     request: GET "/records"
 """
-        fragment = _parse(dsl)
-        integration = fragment.integrations[0]
-        assert integration.auth is not None
-        assert integration.auth.auth_type == AuthType.BEARER
-        assert integration.auth.credentials == ["MY_API_TOKEN"]
+            fragment = _parse(dsl)
+            integration = fragment.integrations[0]
+            assert integration.auth is not None, auth_dsl
+            assert integration.auth.auth_type == expected_type, auth_dsl
+            assert integration.auth.credentials == expected_creds, auth_dsl
 
 
 class TestIntegrationMappingBlock:
@@ -493,8 +467,13 @@ integration hmrc:
 class TestCacheTtl:
     """Tests for cache: keyword parsing in mapping blocks."""
 
-    def test_cache_24h(self) -> None:
-        dsl = """
+    def test_cache_ttl_units(self) -> None:
+        """Cache: keyword parses unit suffixes (h, m, s) into seconds.
+
+        Combined: cache_24h (86400), cache_5m (300), cache_30s (30).
+        """
+        for cache_value, expected_ttl in [("24h", 86400), ("5m", 300), ("30s", 30)]:
+            dsl = f"""
 module test
 app test "Test"
 
@@ -505,47 +484,11 @@ entity Company "Company":
 integration ch_api:
   mapping fetch on Company:
     request: GET "/company/search"
-    cache: "24h"
+    cache: "{cache_value}"
 """
-        fragment = _parse(dsl)
-        mapping = fragment.integrations[0].mappings[0]
-        assert mapping.cache_ttl == 86400
-
-    def test_cache_5m(self) -> None:
-        dsl = """
-module test
-app test "Test"
-
-entity Company "Company":
-  id: uuid pk
-  name: str(200) required
-
-integration ch_api:
-  mapping fetch on Company:
-    request: GET "/company/search"
-    cache: "5m"
-"""
-        fragment = _parse(dsl)
-        mapping = fragment.integrations[0].mappings[0]
-        assert mapping.cache_ttl == 300
-
-    def test_cache_30s(self) -> None:
-        dsl = """
-module test
-app test "Test"
-
-entity Company "Company":
-  id: uuid pk
-  name: str(200) required
-
-integration ch_api:
-  mapping fetch on Company:
-    request: GET "/company/search"
-    cache: "30s"
-"""
-        fragment = _parse(dsl)
-        mapping = fragment.integrations[0].mappings[0]
-        assert mapping.cache_ttl == 30
+            fragment = _parse(dsl)
+            mapping = fragment.integrations[0].mappings[0]
+            assert mapping.cache_ttl == expected_ttl, cache_value
 
     def test_no_cache_defaults_to_none(self) -> None:
         dsl = """

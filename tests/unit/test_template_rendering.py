@@ -347,13 +347,22 @@ class TestRendering:
         )
 
     def test_render_page_produces_full_html(self) -> None:
+        """Combined: full HTML structure (doctype, html, nav, title), table content, htmx.
+
+        Subsumes: contains_table, contains_nav, contains_htmx.
+        """
         html = render_page(self._make_list_page_context())
 
+        # Full layout structure
         assert "<!DOCTYPE html>" in html or "<!doctype html>" in html.lower()
         assert "<html" in html
         assert "</html>" in html
         assert "<nav" in html or "navbar" in html.lower()
         assert "Tasks" in html
+        # Table markup
+        assert "<table" in html or "hx-get" in html
+        # HTMX attributes or script
+        assert "hx-" in html or "htmx" in html.lower()
 
     def test_nav_links_use_fragment_targeting(self) -> None:
         """Nav links should target #main-content with view transitions and preload."""
@@ -365,40 +374,23 @@ class TestRendering:
         assert 'hx-push-url="true"' in html
         assert 'preload="mousedown"' in html
 
-    def test_render_page_contains_table(self) -> None:
-        html = render_page(self._make_list_page_context())
-        assert "<table" in html or "hx-get" in html
-
-    def test_render_page_contains_nav(self) -> None:
-        html = render_page(self._make_list_page_context())
-        assert "Tasks" in html
-
-    def test_render_page_contains_htmx(self) -> None:
-        """Rendered pages should include HTMX attributes or script."""
-        html = render_page(self._make_list_page_context())
-        assert "hx-" in html or "htmx" in html.lower()
-
     def test_render_page_content_only(self) -> None:
-        """content_only=True returns just the content template, no layout."""
-        html = render_page(self._make_list_page_context(), content_only=True)
-        # Should NOT include layout elements
-        assert "<!DOCTYPE" not in html
-        assert "<html" not in html
-        assert "<nav" not in html
-        # Should still contain the content (table markup)
-        assert "<table" in html or "hx-get" in html
+        """content_only=True returns just content (no layout); is shorter than full output.
 
-    def test_render_page_content_only_vs_full(self) -> None:
-        """content_only output should be a subset of the full page output."""
+        Subsumes: content_only_vs_full.
+        """
         ctx = self._make_list_page_context()
         full = render_page(ctx)
         content_only = render_page(ctx, content_only=True)
-        # Content-only should be shorter than full page
-        assert len(content_only) < len(full)
-        # Full page should have layout elements that content_only lacks
-        assert "<!DOCTYPE" in full
+        # Content-only should NOT include layout elements
         assert "<!DOCTYPE" not in content_only
         assert "<html" not in content_only
+        assert "<nav" not in content_only
+        # Should still contain the content (table markup)
+        assert "<table" in content_only or "hx-get" in content_only
+        # Full page DOES have layout, and is longer
+        assert "<!DOCTYPE" in full
+        assert len(content_only) < len(full)
 
     def test_render_fragment_no_layout(self) -> None:
         """Fragments should NOT include DOCTYPE or full layout."""
