@@ -99,35 +99,32 @@ class TestGenerateSeedRows:
         )
         return SeedTemplateSpec(fields=fields, **kwargs)
 
-    def test_generates_correct_number_of_rows(self) -> None:
+    def test_window_and_template_outputs(self) -> None:
+        """Combined: row count, name templates, start/end dates, is_current."""
         from dazzle.seed.generator import generate_seed_rows
 
-        tmpl = self._make_template(window_start=-1, window_end=3)
-        rows = generate_seed_rows(tmpl, reference_date=datetime.date(2025, 6, 15))
-        # -1, 0, 1, 2, 3 = 5 rows
+        ref = datetime.date(2025, 6, 15)
+
+        rows = generate_seed_rows(
+            self._make_template(window_start=-1, window_end=3), reference_date=ref
+        )
         assert len(rows) == 5
 
-    def test_academic_year_names(self) -> None:
-        from dazzle.seed.generator import generate_seed_rows
+        rows = generate_seed_rows(
+            self._make_template(window_start=-1, window_end=2), reference_date=ref
+        )
+        assert [r["name"] for r in rows] == ["2024/25", "2025/26", "2026/27", "2027/28"]
 
-        tmpl = self._make_template(window_start=-1, window_end=2)
-        rows = generate_seed_rows(tmpl, reference_date=datetime.date(2025, 6, 15))
-        names = [r["name"] for r in rows]
-        assert names == ["2024/25", "2025/26", "2026/27", "2027/28"]
-
-    def test_start_and_end_dates(self) -> None:
-        from dazzle.seed.generator import generate_seed_rows
-
-        tmpl = self._make_template(window_start=0, window_end=0)
-        rows = generate_seed_rows(tmpl, reference_date=datetime.date(2025, 1, 1))
+        rows = generate_seed_rows(
+            self._make_template(window_start=0, window_end=0),
+            reference_date=datetime.date(2025, 1, 1),
+        )
         assert rows[0]["start_date"] == "2025-09-01"
         assert rows[0]["end_date"] == "2026-08-31"
 
-    def test_is_current_flag(self) -> None:
-        from dazzle.seed.generator import generate_seed_rows
-
-        tmpl = self._make_template(window_start=-1, window_end=1)
-        rows = generate_seed_rows(tmpl, reference_date=datetime.date(2025, 6, 15))
+        rows = generate_seed_rows(
+            self._make_template(window_start=-1, window_end=1), reference_date=ref
+        )
         is_current = {r["name"]: r["is_current"] for r in rows}
         assert is_current["2024/25"] == "false"
         assert is_current["2025/26"] == "true"

@@ -92,28 +92,30 @@ def _appspec(
 
 
 class TestBuildServerConfig:
-    def test_computes_entity_list_projections(self) -> None:
+    def test_computes_entity_derived_config(self) -> None:
+        """Combined: list projections, search fields, auto-includes, and status fields."""
+        # entity_list_projections
         config = build_server_config(_appspec())
         assert "Task" in config.entity_list_projections
         proj = config.entity_list_projections["Task"]
         assert "title" in proj
         assert "id" in proj
 
-    def test_computes_entity_search_fields(self) -> None:
-        appspec = _appspec(surfaces=[_surface(search_fields=["title"])])
-        config = build_server_config(appspec)
-        assert config.entity_search_fields == {"Task": ["title"]}
+        # entity_search_fields
+        appspec_search = _appspec(surfaces=[_surface(search_fields=["title"])])
+        config_search = build_server_config(appspec_search)
+        assert config_search.entity_search_fields == {"Task": ["title"]}
 
-    def test_computes_entity_auto_includes_from_ref_fields(self) -> None:
+        # entity_auto_includes from ref fields
         ref_field = FieldSpec(
             name="assignee",
             type=FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
         )
-        appspec = _appspec(entities=[_entity(extra_fields=[ref_field])])
-        config = build_server_config(appspec)
-        assert config.entity_auto_includes == {"Task": ["assignee"]}
+        appspec_ref = _appspec(entities=[_entity(extra_fields=[ref_field])])
+        config_ref = build_server_config(appspec_ref)
+        assert config_ref.entity_auto_includes == {"Task": ["assignee"]}
 
-    def test_computes_entity_status_fields_from_state_machine(self) -> None:
+        # entity_status_fields from state machine
         sm = StateMachineSpec(status_field="state", states=["open", "closed"])
         entity = EntitySpec(
             name="Task",
@@ -132,9 +134,9 @@ class TestBuildServerConfig:
             ],
             state_machine=sm,
         )
-        appspec = _appspec(entities=[entity])
-        config = build_server_config(appspec)
-        assert config.entity_status_fields == {"Task": "state"}
+        appspec_sm = _appspec(entities=[entity])
+        config_sm = build_server_config(appspec_sm)
+        assert config_sm.entity_status_fields == {"Task": "state"}
 
     def test_sets_schedule_specs_from_appspec(self) -> None:
         schedule = ScheduleSpec(name="daily_sync", cron="0 8 * * *")

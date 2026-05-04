@@ -171,38 +171,30 @@ class TestLLMReferenceValidation:
 
         assert errors == []
 
-    def test_invalid_model_reference(self):
-        """Test invalid model reference produces error."""
-        intent = LLMIntentSpec(
+    def test_invalid_or_missing_model_references(self):
+        """Combined: invalid model_ref AND intent without model/default both surface errors."""
+        # invalid model_ref
+        intent_bad = LLMIntentSpec(
             name="summarize",
             prompt_template="Summarize: {{ input.text }}",
             model_ref="nonexistent_model",
         )
-        module = make_module("test", llm_intents=[intent])
-
-        symbols = build_symbol_table([module])
-        errors = validate_references(symbols)
-
+        module = make_module("t1", llm_intents=[intent_bad])
+        errors = validate_references(build_symbol_table([module]))
         assert any("nonexistent_model" in e for e in errors)
 
-    def test_intent_without_model_or_default(self):
-        """Test intent without model and no default produces error."""
+        # intent without model_ref and no default_model
         model = LLMModelSpec(
             name="claude_sonnet",
             provider=LLMProvider.ANTHROPIC,
             model_id="claude-3-5-sonnet-20241022",
         )
-        intent = LLMIntentSpec(
+        intent_nodef = LLMIntentSpec(
             name="summarize",
             prompt_template="Summarize: {{ input.text }}",
-            # No model_ref
         )
-        # No llm_config with default_model
-        module = make_module("test", llm_models=[model], llm_intents=[intent])
-
-        symbols = build_symbol_table([module])
-        errors = validate_references(symbols)
-
+        module = make_module("t2", llm_models=[model], llm_intents=[intent_nodef])
+        errors = validate_references(build_symbol_table([module]))
         assert any("no model reference and no default_model" in e for e in errors)
 
     def test_intent_with_default_model(self):

@@ -22,27 +22,27 @@ def _run(coro: Any) -> Any:
 
 
 class TestDisabledCache:
-    def test_enabled_false_get_returns_none(self) -> None:
+    """All five no-op assertions for a disabled cache, run as a single test."""
+
+    def test_disabled_behaviour(self) -> None:
+        # enabled_false_get_returns_none
         cache = ApiResponseCache(enabled=False)
         assert _run(cache.get("scope", "http://x")) is None
 
-    def test_enabled_false_put_is_noop(self) -> None:
-        cache = ApiResponseCache(enabled=False)
+        # enabled_false_put_is_noop
         _run(cache.put("scope", "http://x", {"a": 1}))
         assert _run(cache.get("scope", "http://x")) is None
 
-    def test_enabled_false_lock_returns_true(self) -> None:
-        cache = ApiResponseCache(enabled=False)
+        # enabled_false_lock_returns_true
         assert _run(cache.acquire_lock("scope", "http://x")) is True
 
-    def test_no_redis_url_get_returns_none(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            cache = ApiResponseCache(redis_url="")
-        assert _run(cache.get("scope", "http://x")) is None
-
-    def test_available_false_when_disabled(self) -> None:
-        cache = ApiResponseCache(enabled=False)
+        # available_false_when_disabled
         assert cache.available is False
+
+        # no_redis_url_get_returns_none
+        with patch.dict("os.environ", {}, clear=True):
+            cache2 = ApiResponseCache(redis_url="")
+        assert _run(cache2.get("scope", "http://x")) is None
 
 
 # ---------------------------------------------------------------------------

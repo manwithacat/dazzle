@@ -153,100 +153,62 @@ class TestStepExecutor:
         assert run.completed_at is not None
         store.save_run.assert_called_once()
 
-    def test_check_task_timeout_not_due(self):
+    def test_check_task_timeout_all_branches(self):
+        """Combined: not_due / escalates / expires / completed_skips / not_found."""
         from dazzle.core.process.step_executor import check_task_timeout
 
+        def _task(status: TaskStatus, due_at: datetime) -> ProcessTask:
+            return ProcessTask(
+                task_id="t1",
+                run_id="r1",
+                step_name="review",
+                surface_name="form",
+                entity_name="Order",
+                entity_id="123",
+                status=status,
+                due_at=due_at,
+            )
+
+        # not_due
         store = MagicMock()
-        task = ProcessTask(
-            task_id="t1",
-            run_id="r1",
-            step_name="review",
-            surface_name="form",
-            entity_name="Order",
-            entity_id="123",
-            status=TaskStatus.PENDING,
-            due_at=datetime.now(UTC) + timedelta(hours=1),
+        store.get_task.return_value = _task(
+            TaskStatus.PENDING, datetime.now(UTC) + timedelta(hours=1)
         )
-        store.get_task.return_value = task
+        assert check_task_timeout(store, "t1")["not_due"] is True
 
-        result = check_task_timeout(store, "t1")
-        assert result["not_due"] is True
-
-    def test_check_task_timeout_escalates(self):
-        from dazzle.core.process.step_executor import check_task_timeout
-
+        # escalates
         store = MagicMock()
-        task = ProcessTask(
-            task_id="t1",
-            run_id="r1",
-            step_name="review",
-            surface_name="form",
-            entity_name="Order",
-            entity_id="123",
-            status=TaskStatus.PENDING,
-            due_at=datetime.now(UTC) - timedelta(hours=1),
-        )
+        task = _task(TaskStatus.PENDING, datetime.now(UTC) - timedelta(hours=1))
         store.get_task.return_value = task
-
         result = check_task_timeout(store, "t1")
         assert result["status"] == "escalated"
         assert result["needs_followup"] is True
         assert task.status == TaskStatus.ESCALATED
 
-    def test_check_task_timeout_expires(self):
-        from dazzle.core.process.step_executor import check_task_timeout
-
+        # expires
         store = MagicMock()
-        task = ProcessTask(
-            task_id="t1",
-            run_id="r1",
-            step_name="review",
-            surface_name="form",
-            entity_name="Order",
-            entity_id="123",
-            status=TaskStatus.ESCALATED,
-            due_at=datetime.now(UTC) - timedelta(hours=1),
-        )
+        task = _task(TaskStatus.ESCALATED, datetime.now(UTC) - timedelta(hours=1))
         store.get_task.return_value = task
-
-        run = ProcessRun(
+        store.get_run.return_value = ProcessRun(
             run_id="r1",
             process_name="test",
             status=ProcessStatus.WAITING,
         )
-        store.get_run.return_value = run
-
         result = check_task_timeout(store, "t1")
         assert result["status"] == "expired"
         assert task.status == TaskStatus.EXPIRED
 
-    def test_check_task_timeout_completed_skips(self):
-        from dazzle.core.process.step_executor import check_task_timeout
-
+        # completed_skips
         store = MagicMock()
-        task = ProcessTask(
-            task_id="t1",
-            run_id="r1",
-            step_name="review",
-            surface_name="form",
-            entity_name="Order",
-            entity_id="123",
-            status=TaskStatus.COMPLETED,
-            due_at=datetime.now(UTC) - timedelta(hours=1),
+        store.get_task.return_value = _task(
+            TaskStatus.COMPLETED, datetime.now(UTC) - timedelta(hours=1)
         )
-        store.get_task.return_value = task
+        assert check_task_timeout(store, "t1")["skipped"] is True
 
-        result = check_task_timeout(store, "t1")
-        assert result["skipped"] is True
-
-    def test_check_task_timeout_not_found(self):
-        from dazzle.core.process.step_executor import check_task_timeout
-
+        # not_found
         store = MagicMock()
         store.get_task.return_value = None
-
-        result = check_task_timeout(store, "missing")
-        assert "error" in result
+        assert "error" in check_task_timeout(store, "missing")
 
     def test_run_compensation(self):
         from dazzle.core.process.step_executor import run_compensation

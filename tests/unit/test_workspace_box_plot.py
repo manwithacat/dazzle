@@ -98,12 +98,14 @@ class TestComputeBoxPlotStats:
         assert 100.0 in s["outliers"]
         assert s["whisker_high"] != 100.0  # whisker stops at last in-fence point
 
-    def test_show_outliers_false_returns_empty_list(self) -> None:
+    def test_basic_options_and_edge_cases(self) -> None:
+        """Combined: show_outliers=False, group ordering, single-value, no group_by, non-numeric, empty."""
+        # show_outliers=False → outliers list empty
         items = [{"v": v, "g": "X"} for v in [1, 2, 3, 4, 5, 6, 7, 8, 9, 100]]
         s = self.bp(items, "v", "g", show_outliers=False)[0]
         assert s["outliers"] == []
 
-    def test_groups_preserve_first_seen_order(self) -> None:
+        # group order = first-seen
         items = [
             {"v": 1, "g": "C"},
             {"v": 2, "g": "A"},
@@ -113,25 +115,21 @@ class TestComputeBoxPlotStats:
         stats = self.bp(items, "v", "g", show_outliers=True)
         assert [s["label"] for s in stats] == ["C", "A", "B"]
 
-    def test_single_value_group_returns_degenerate_box(self) -> None:
-        """n=1 returns Q1 = median = Q3 = the single value, IQR = 0,
-        no outliers — so the template can render a flat marker without
-        a divide-by-zero."""
-        items = [{"v": 7.0, "g": "Solo"}]
-        s = self.bp(items, "v", "g", show_outliers=True)[0]
+        # n=1 degenerate box
+        s = self.bp([{"v": 7.0, "g": "Solo"}], "v", "g", show_outliers=True)[0]
         assert s["q1"] == s["median"] == s["q3"] == 7.0
         assert s["iqr"] == 0.0
         assert s["outliers"] == []
         assert s["n"] == 1
 
-    def test_no_group_by_returns_one_global_bucket(self) -> None:
+        # no group_by → one global bucket
         items = [{"v": float(i)} for i in range(1, 11)]
         stats = self.bp(items, "v", group_by=None, show_outliers=True)
         assert len(stats) == 1
         assert stats[0]["label"] == ""
         assert stats[0]["n"] == 10
 
-    def test_skips_non_numeric_values(self) -> None:
+        # non-numeric values are skipped
         items = [
             {"v": 1.0, "g": "A"},
             {"v": None, "g": "A"},
@@ -139,9 +137,9 @@ class TestComputeBoxPlotStats:
             {"v": 9.0, "g": "A"},
         ]
         s = self.bp(items, "v", "g", show_outliers=True)[0]
-        assert s["n"] == 2  # only 1.0 and 9.0
+        assert s["n"] == 2
 
-    def test_empty_input_returns_empty(self) -> None:
+        # empty input → empty result
         assert self.bp([], "v", "g", show_outliers=True) == []
 
     # ─────────── FK display resolution (#889) ────────────

@@ -98,65 +98,44 @@ class TestSessionManager:
         (tmp_path / "dazzle.toml").write_text("[project]\nname = 'test'\n")
         return tmp_path
 
-    def test_init(self, tmp_project: Path) -> None:
+    def test_basics_save_load_cookies(self, tmp_project: Path) -> None:
+        """Combined: init dirs, empty list, missing-load, save+load roundtrip, cookies (sync + httpx)."""
         manager = SessionManager(tmp_project, base_url="http://localhost:8000")
         assert manager.base_url == "http://localhost:8000"
         assert manager.sessions_dir == tmp_project / ".dazzle" / "test_sessions"
 
-    def test_list_sessions_empty(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
+        # empty list + missing
         assert manager.list_sessions() == []
-
-    def test_load_session_not_found(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
         assert manager.load_session("nonexistent") is None
 
-    def test_save_and_load_session(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
-        session = PersonaSession(
+        # save + load roundtrip (admin + agent)
+        admin_session = PersonaSession(
             persona_id="admin",
             user_id="uuid-123",
             email="admin@test.local",
             role="admin",
             session_token="tok_abc",
         )
-        manager._save_session(session)
-
-        loaded = manager.load_session("admin")
-        assert loaded is not None
-        assert loaded.persona_id == "admin"
-        assert loaded.session_token == "tok_abc"
-
-    def test_get_cookies(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
-        session = PersonaSession(
+        agent_session = PersonaSession(
             persona_id="agent",
             user_id="uuid-456",
             email="agent@test.local",
             role="agent",
             session_token="tok_xyz",
         )
-        manager._save_session(session)
+        manager._save_session(admin_session)
+        manager._save_session(agent_session)
 
-        cookies = manager.get_cookies("agent")
-        assert cookies == {"dazzle_session": "tok_xyz"}
+        loaded = manager.load_session("admin")
+        assert loaded is not None
+        assert loaded.persona_id == "admin"
+        assert loaded.session_token == "tok_abc"
 
-    def test_get_cookies_no_session(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
-        cookies = manager.get_cookies("nonexistent")
-        assert cookies == {}
+        # get_cookies — present and missing personas
+        assert manager.get_cookies("agent") == {"dazzle_session": "tok_xyz"}
+        assert manager.get_cookies("nonexistent_persona") == {}
 
-    def test_get_httpx_cookies(self, tmp_project: Path) -> None:
-        manager = SessionManager(tmp_project)
-        session = PersonaSession(
-            persona_id="admin",
-            user_id="uuid-123",
-            email="admin@test.local",
-            role="admin",
-            session_token="tok_abc",
-        )
-        manager._save_session(session)
-
+        # get_httpx_cookies
         cookies = manager.get_httpx_cookies("admin")
         assert cookies.get("dazzle_session") == "tok_abc"
 

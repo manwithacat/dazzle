@@ -29,289 +29,158 @@ from dazzle.core.ir.demo_blueprint import (
 from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
 
 
-class TestFieldPattern:
-    """Tests for FieldPattern IR type."""
+def test_blueprint_ir_types_combined() -> None:
+    """Combined construction tests for the demo-blueprint IR types
+    (FieldPattern, EntityBlueprint, TenantBlueprint, PersonaBlueprint,
+    DemoDataBlueprint, BlueprintContainer) — defaults + populated fields."""
+    from pydantic import ValidationError
 
-    def test_create_field_pattern(self):
-        """Test creating a field pattern."""
-        pattern = FieldPattern(
-            field_name="title",
-            strategy=FieldStrategy.FREE_TEXT_LOREM,
-            params={"min_words": 3, "max_words": 8},
-        )
+    # FieldPattern — explicit + every FieldStrategy enum constructable.
+    pattern = FieldPattern(
+        field_name="title",
+        strategy=FieldStrategy.FREE_TEXT_LOREM,
+        params={"min_words": 3, "max_words": 8},
+    )
+    assert pattern.field_name == "title"
+    assert pattern.strategy == FieldStrategy.FREE_TEXT_LOREM
+    assert pattern.params["min_words"] == 3
+    for strategy in FieldStrategy:
+        assert FieldPattern(field_name="t", strategy=strategy).strategy == strategy
 
-        assert pattern.field_name == "title"
-        assert pattern.strategy == FieldStrategy.FREE_TEXT_LOREM
-        assert pattern.params["min_words"] == 3
+    # EntityBlueprint — populated + defaults.
+    entity = EntityBlueprint(
+        name="Task",
+        row_count_default=50,
+        notes="Task entity",
+        tenant_scoped=False,
+        field_patterns=[
+            FieldPattern(field_name="id", strategy=FieldStrategy.UUID_GENERATE),
+            FieldPattern(
+                field_name="title",
+                strategy=FieldStrategy.FREE_TEXT_LOREM,
+                params={"min_words": 3, "max_words": 8},
+            ),
+        ],
+    )
+    assert entity.name == "Task"
+    assert entity.row_count_default == 50
+    assert len(entity.field_patterns) == 2
+    assert entity.tenant_scoped is False
+    # defaults
+    e_default = EntityBlueprint(name="Simple")
+    assert e_default.row_count_default == 10
+    assert e_default.notes is None
+    assert e_default.tenant_scoped is False
+    assert e_default.field_patterns == []
 
-    def test_all_strategies_valid(self):
-        """Test all field strategies are valid."""
-        strategies = [
-            FieldStrategy.STATIC_LIST,
-            FieldStrategy.ENUM_WEIGHTED,
-            FieldStrategy.PERSON_NAME,
-            FieldStrategy.COMPANY_NAME,
-            FieldStrategy.EMAIL_FROM_NAME,
-            FieldStrategy.USERNAME_FROM_NAME,
-            FieldStrategy.HASHED_PASSWORD_PLACEHOLDER,
-            FieldStrategy.FREE_TEXT_LOREM,
-            FieldStrategy.NUMERIC_RANGE,
-            FieldStrategy.CURRENCY_AMOUNT,
-            FieldStrategy.DATE_RELATIVE,
-            FieldStrategy.BOOLEAN_WEIGHTED,
-            FieldStrategy.FOREIGN_KEY,
-            FieldStrategy.COMPOSITE,
-            FieldStrategy.CUSTOM_PROMPT,
-            FieldStrategy.UUID_GENERATE,
-        ]
+    # TenantBlueprint — full + minimal.
+    tenant = TenantBlueprint(
+        name="Alpha Solar Ltd", slug="alpha-solar", notes="Primary demo tenant"
+    )
+    assert (tenant.name, tenant.slug, tenant.notes) == (
+        "Alpha Solar Ltd",
+        "alpha-solar",
+        "Primary demo tenant",
+    )
+    minimal_tenant = TenantBlueprint(name="Test Co")
+    assert minimal_tenant.name == "Test Co"
+    assert minimal_tenant.slug is None
+    assert minimal_tenant.notes is None
 
-        for strategy in strategies:
-            pattern = FieldPattern(
-                field_name="test",
-                strategy=strategy,
+    # PersonaBlueprint.
+    persona = PersonaBlueprint(
+        persona_name="Staff",
+        description="Regular staff users",
+        default_role="role_staff",
+        default_user_count=3,
+    )
+    assert persona.persona_name == "Staff"
+    assert persona.description == "Regular staff users"
+    assert persona.default_role == "role_staff"
+    assert persona.default_user_count == 3
+
+    # DemoDataBlueprint — full populated + immutability.
+    blueprint = DemoDataBlueprint(
+        project_id="simple_task",
+        domain_description="Simple task management",
+        seed=42,
+        tenants=[TenantBlueprint(name="Alpha Tasks Ltd"), TenantBlueprint(name="Bravo Tasks Ltd")],
+        personas=[
+            PersonaBlueprint(persona_name="Staff", description="Staff users", default_user_count=2)
+        ],
+        entities=[
+            EntityBlueprint(
+                name="Task",
+                row_count_default=20,
+                field_patterns=[
+                    FieldPattern(field_name="title", strategy=FieldStrategy.FREE_TEXT_LOREM)
+                ],
             )
-            assert pattern.strategy == strategy
+        ],
+    )
+    assert blueprint.project_id == "simple_task"
+    assert blueprint.seed == 42
+    assert len(blueprint.tenants) == 2
+    assert len(blueprint.personas) == 1
+    assert len(blueprint.entities) == 1
+    # Frozen — pydantic raises ValidationError on field mutation.
+    with pytest.raises(ValidationError):
+        blueprint.project_id = "changed"
+
+    # BlueprintContainer wrapper.
+    container = BlueprintContainer(
+        blueprint=DemoDataBlueprint(project_id="test", domain_description="Test")
+    )
+    assert container.version == "1.0"
 
 
-class TestEntityBlueprint:
-    """Tests for EntityBlueprint IR type."""
+def test_blueprint_persistence_combined() -> None:
+    """Combined persistence-layer contract:
+    - get_blueprint_dir resolves to <project>/.dazzle/demo_data.
+    - load_blueprint returns None when no file exists.
+    - save+load round-trips a populated blueprint with fields preserved.
+    - JSON format wraps the blueprint under 'blueprint' with version '1.0'.
+    - delete_blueprint returns True when present, False when absent.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        project = Path(tmpdir)
 
-    def test_create_entity_blueprint(self):
-        """Test creating an entity blueprint."""
-        entity = EntityBlueprint(
-            name="Task",
-            row_count_default=50,
-            notes="Task entity",
-            tenant_scoped=False,
-            field_patterns=[
-                FieldPattern(
-                    field_name="id",
-                    strategy=FieldStrategy.UUID_GENERATE,
-                ),
-                FieldPattern(
-                    field_name="title",
-                    strategy=FieldStrategy.FREE_TEXT_LOREM,
-                    params={"min_words": 3, "max_words": 8},
-                ),
-            ],
-        )
+        # 1) Directory resolution.
+        assert get_blueprint_dir(project) == project / ".dazzle" / "demo_data"
 
-        assert entity.name == "Task"
-        assert entity.row_count_default == 50
-        assert len(entity.field_patterns) == 2
-        assert entity.tenant_scoped is False
+        # 2) load with no file → None.
+        assert load_blueprint(project) is None
 
-    def test_entity_defaults(self):
-        """Test entity blueprint defaults."""
-        entity = EntityBlueprint(name="Simple")
-
-        assert entity.row_count_default == 10
-        assert entity.notes is None
-        assert entity.tenant_scoped is False
-        assert entity.field_patterns == []
-
-
-class TestTenantBlueprint:
-    """Tests for TenantBlueprint IR type."""
-
-    def test_create_tenant_blueprint(self):
-        """Test creating a tenant blueprint."""
-        tenant = TenantBlueprint(
-            name="Alpha Solar Ltd",
-            slug="alpha-solar",
-            notes="Primary demo tenant",
-        )
-
-        assert tenant.name == "Alpha Solar Ltd"
-        assert tenant.slug == "alpha-solar"
-        assert tenant.notes == "Primary demo tenant"
-
-    def test_tenant_minimal(self):
-        """Test minimal tenant blueprint."""
-        tenant = TenantBlueprint(name="Test Co")
-
-        assert tenant.name == "Test Co"
-        assert tenant.slug is None
-        assert tenant.notes is None
-
-
-class TestPersonaBlueprint:
-    """Tests for PersonaBlueprint IR type."""
-
-    def test_create_persona_blueprint(self):
-        """Test creating a persona blueprint."""
-        persona = PersonaBlueprint(
-            persona_name="Staff",
-            description="Regular staff users",
-            default_role="role_staff",
-            default_user_count=3,
-        )
-
-        assert persona.persona_name == "Staff"
-        assert persona.description == "Regular staff users"
-        assert persona.default_role == "role_staff"
-        assert persona.default_user_count == 3
-
-
-class TestDemoDataBlueprint:
-    """Tests for DemoDataBlueprint IR type."""
-
-    def test_create_full_blueprint(self):
-        """Test creating a complete blueprint."""
-        blueprint = DemoDataBlueprint(
-            project_id="simple_task",
-            domain_description="Simple task management",
-            seed=42,
-            tenants=[
-                TenantBlueprint(name="Alpha Tasks Ltd"),
-                TenantBlueprint(name="Bravo Tasks Ltd"),
-            ],
-            personas=[
-                PersonaBlueprint(
-                    persona_name="Staff",
-                    description="Staff users",
-                    default_user_count=2,
-                ),
-            ],
-            entities=[
-                EntityBlueprint(
-                    name="Task",
-                    row_count_default=20,
-                    field_patterns=[
-                        FieldPattern(
-                            field_name="title",
-                            strategy=FieldStrategy.FREE_TEXT_LOREM,
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-        assert blueprint.project_id == "simple_task"
-        assert blueprint.seed == 42
-        assert len(blueprint.tenants) == 2
-        assert len(blueprint.personas) == 1
-        assert len(blueprint.entities) == 1
-
-    def test_blueprint_is_frozen(self):
-        """Test that blueprint is immutable."""
-        from pydantic import ValidationError
-
-        blueprint = DemoDataBlueprint(
-            project_id="test",
-            domain_description="Test",
-        )
-
-        with pytest.raises(ValidationError):
-            blueprint.project_id = "changed"
-
-
-class TestBlueprintContainer:
-    """Tests for BlueprintContainer."""
-
-    def test_create_container(self):
-        """Test creating a container."""
-        blueprint = DemoDataBlueprint(
-            project_id="test",
-            domain_description="Test",
-        )
-        container = BlueprintContainer(blueprint=blueprint)
-
-        assert container.version == "1.0"
-        assert container.blueprint == blueprint
-
-
-class TestBlueprintPersistence:
-    """Tests for blueprint persistence layer."""
-
-    @pytest.fixture
-    def temp_project(self):
-        """Create a temporary project directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            yield Path(tmpdir)
-
-    def test_get_blueprint_dir(self, temp_project):
-        """Test getting blueprint directory path."""
-        blueprint_dir = get_blueprint_dir(temp_project)
-
-        assert blueprint_dir == temp_project / ".dazzle" / "demo_data"
-
-    def test_load_nonexistent_blueprint(self, temp_project):
-        """Test loading when no blueprint exists."""
-        blueprint = load_blueprint(temp_project)
-
-        assert blueprint is None
-
-    def test_save_and_load_blueprint(self, temp_project):
-        """Test saving and loading a blueprint."""
-        blueprint = DemoDataBlueprint(
+        # 3) save + load round trip with fields intact.
+        bp = DemoDataBlueprint(
             project_id="test_project",
             domain_description="Test domain",
             seed=42,
             tenants=[TenantBlueprint(name="Alpha Ltd")],
-            personas=[
-                PersonaBlueprint(
-                    persona_name="User",
-                    description="Regular user",
-                ),
-            ],
-            entities=[
-                EntityBlueprint(
-                    name="Item",
-                    row_count_default=10,
-                ),
-            ],
+            personas=[PersonaBlueprint(persona_name="User", description="Regular user")],
+            entities=[EntityBlueprint(name="Item", row_count_default=10)],
         )
-
-        # Save
-        save_blueprint(temp_project, blueprint)
-
-        # Verify file exists
-        blueprint_file = get_blueprint_file(temp_project)
+        save_blueprint(project, bp)
+        blueprint_file = get_blueprint_file(project)
         assert blueprint_file.exists()
-
-        # Load and verify
-        loaded = load_blueprint(temp_project)
+        loaded = load_blueprint(project)
         assert loaded is not None
         assert loaded.project_id == "test_project"
         assert loaded.seed == 42
         assert len(loaded.tenants) == 1
         assert loaded.tenants[0].name == "Alpha Ltd"
 
-    def test_blueprint_json_format(self, temp_project):
-        """Test that blueprint is saved in correct JSON format."""
-        blueprint = DemoDataBlueprint(
-            project_id="test",
-            domain_description="Test domain",
-        )
-        save_blueprint(temp_project, blueprint)
-
-        blueprint_file = get_blueprint_file(temp_project)
+        # 4) JSON wrap shape.
         content = json.loads(blueprint_file.read_text())
-
         assert content["version"] == "1.0"
-        assert content["blueprint"]["project_id"] == "test"
+        assert content["blueprint"]["project_id"] == "test_project"
         assert content["blueprint"]["domain_description"] == "Test domain"
 
-    def test_delete_blueprint(self, temp_project):
-        """Test deleting a blueprint."""
-        blueprint = DemoDataBlueprint(
-            project_id="test",
-            domain_description="Test",
-        )
-        save_blueprint(temp_project, blueprint)
-
-        # Delete
-        result = delete_blueprint(temp_project)
-        assert result is True
-
-        # Verify deleted
-        assert load_blueprint(temp_project) is None
-
-    def test_delete_nonexistent_blueprint(self, temp_project):
-        """Test deleting a blueprint that doesn't exist."""
-        result = delete_blueprint(temp_project)
-        assert result is False
+        # 5) delete returns True when present; subsequent load is None;
+        # second delete returns False.
+        assert delete_blueprint(project) is True
+        assert load_blueprint(project) is None
+        assert delete_blueprint(project) is False
 
 
 class TestBlueprintDataGenerator:
@@ -358,150 +227,115 @@ class TestBlueprintDataGenerator:
             ],
         )
 
-    def test_create_generator(self, simple_blueprint):
-        """Test creating a generator."""
-        generator = BlueprintDataGenerator(simple_blueprint)
+    def test_field_strategy_generation_combined(self, simple_blueprint):
+        """Combined per-strategy field generation contract:
+        - generator construction carries blueprint + seed.
+        - UUID_GENERATE → 36-char string.
+        - STATIC_LIST → value drawn from the list.
+        - ENUM_WEIGHTED → values from enum_values, weights skew the distribution.
+        - NUMERIC_RANGE → int within [min,max].
+        - CURRENCY_AMOUNT → float within [min,max].
+        - BOOLEAN_WEIGHTED → distribution skewed by true_weight.
+        - DATE_RELATIVE → valid ISO date <= today (with anchor='today', max=0).
+        - EMAIL_FROM_NAME → ``<slug>.<4-digit>@<domain>`` shape.
+        - generate_entity → row_count rows with all field_patterns populated.
+        """
+        from datetime import date
 
+        generator = BlueprintDataGenerator(simple_blueprint)
+        # Construction
         assert generator.blueprint == simple_blueprint
         assert generator.seed == 42
 
-    def test_generate_uuid(self, simple_blueprint):
-        """Test UUID generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="id",
-            strategy=FieldStrategy.UUID_GENERATE,
+        # UUID
+        uuid_val = generator.generate_field_value(
+            FieldPattern(field_name="id", strategy=FieldStrategy.UUID_GENERATE), {}
         )
+        assert isinstance(uuid_val, str)
+        assert len(uuid_val) == 36
 
-        value = generator.generate_field_value(pattern, {})
-
-        assert isinstance(value, str)
-        assert len(value) == 36  # UUID format
-
-    def test_generate_static_list(self, simple_blueprint):
-        """Test static list generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="status",
-            strategy=FieldStrategy.STATIC_LIST,
-            params={"values": ["active", "inactive", "pending"]},
+        # STATIC_LIST
+        static_val = generator.generate_field_value(
+            FieldPattern(
+                field_name="status",
+                strategy=FieldStrategy.STATIC_LIST,
+                params={"values": ["active", "inactive", "pending"]},
+            ),
+            {},
         )
+        assert static_val in ["active", "inactive", "pending"]
 
-        value = generator.generate_field_value(pattern, {})
-
-        assert value in ["active", "inactive", "pending"]
-
-    def test_generate_enum_weighted(self, simple_blueprint):
-        """Test weighted enum generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
+        # ENUM_WEIGHTED — distribution skews to "published" (0.8 weight).
+        enum_pattern = FieldPattern(
             field_name="status",
             strategy=FieldStrategy.ENUM_WEIGHTED,
-            params={
-                "enum_values": ["draft", "published"],
-                "weights": [0.2, 0.8],
-            },
+            params={"enum_values": ["draft", "published"], "weights": [0.2, 0.8]},
         )
+        enum_vals = [generator.generate_field_value(enum_pattern, {}) for _ in range(100)]
+        assert all(v in ["draft", "published"] for v in enum_vals)
+        assert sum(1 for v in enum_vals if v == "published") > 50
 
-        # Generate many values to test distribution
-        values = [generator.generate_field_value(pattern, {}) for _ in range(100)]
-
-        assert all(v in ["draft", "published"] for v in values)
-        # Should have more "published" due to weights
-        published_count = sum(1 for v in values if v == "published")
-        assert published_count > 50  # Should be around 80
-
-    def test_generate_numeric_range(self, simple_blueprint):
-        """Test numeric range generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="count",
-            strategy=FieldStrategy.NUMERIC_RANGE,
-            params={"min": 10, "max": 20},
+        # NUMERIC_RANGE
+        num_val = generator.generate_field_value(
+            FieldPattern(
+                field_name="count",
+                strategy=FieldStrategy.NUMERIC_RANGE,
+                params={"min": 10, "max": 20},
+            ),
+            {},
         )
+        assert isinstance(num_val, int)
+        assert 10 <= num_val <= 20
 
-        value = generator.generate_field_value(pattern, {})
-
-        assert isinstance(value, int)
-        assert 10 <= value <= 20
-
-    def test_generate_currency_amount(self, simple_blueprint):
-        """Test currency amount generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="amount",
-            strategy=FieldStrategy.CURRENCY_AMOUNT,
-            params={"min": 100, "max": 1000, "decimals": 2},
+        # CURRENCY_AMOUNT
+        cur_val = generator.generate_field_value(
+            FieldPattern(
+                field_name="amount",
+                strategy=FieldStrategy.CURRENCY_AMOUNT,
+                params={"min": 100, "max": 1000, "decimals": 2},
+            ),
+            {},
         )
+        assert isinstance(cur_val, float)
+        assert 100 <= cur_val <= 1000
 
-        value = generator.generate_field_value(pattern, {})
-
-        assert isinstance(value, float)
-        assert 100 <= value <= 1000
-
-    def test_generate_boolean_weighted(self, simple_blueprint):
-        """Test weighted boolean generation."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
+        # BOOLEAN_WEIGHTED — true_weight=0.9 skews True.
+        bool_pattern = FieldPattern(
             field_name="active",
             strategy=FieldStrategy.BOOLEAN_WEIGHTED,
             params={"true_weight": 0.9},
         )
+        bool_vals = [generator.generate_field_value(bool_pattern, {}) for _ in range(100)]
+        assert sum(1 for v in bool_vals if v is True) > 70
 
-        # Generate many values
-        values = [generator.generate_field_value(pattern, {}) for _ in range(100)]
-
-        true_count = sum(1 for v in values if v is True)
-        assert true_count > 70  # Should be around 90
-
-    def test_generate_date_relative(self, simple_blueprint):
-        """Test relative date generation."""
-        from datetime import date
-
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="created_at",
-            strategy=FieldStrategy.DATE_RELATIVE,
-            params={"anchor": "today", "min_offset_days": -30, "max_offset_days": 0},
+        # DATE_RELATIVE
+        date_val = generator.generate_field_value(
+            FieldPattern(
+                field_name="created_at",
+                strategy=FieldStrategy.DATE_RELATIVE,
+                params={"anchor": "today", "min_offset_days": -30, "max_offset_days": 0},
+            ),
+            {},
         )
+        assert isinstance(date_val, str)
+        assert date.fromisoformat(date_val) <= date.today()
 
-        value = generator.generate_field_value(pattern, {})
-
-        assert isinstance(value, str)
-        # Should be a valid ISO date
-        parsed_date = date.fromisoformat(value)
-        assert parsed_date <= date.today()
-
-    def test_generate_email_from_name(self, simple_blueprint):
-        """Test email generation from name field.
-
-        The generator now appends a 4-digit suffix for uniqueness —
-        the previous shape ``john.smith@test.com`` collided on every
-        row across a 20-row batch because person_name draws from a
-        finite faker pool. New shape: ``john.smith.NNNN@test.com``.
-        """
-        generator = BlueprintDataGenerator(simple_blueprint)
-        pattern = FieldPattern(
-            field_name="email",
-            strategy=FieldStrategy.EMAIL_FROM_NAME,
-            params={"source_field": "full_name", "domains": ["test.com"]},
+        # EMAIL_FROM_NAME — shape <slug>.<4-digit-suffix>@<domain> for uniqueness.
+        email_val = generator.generate_field_value(
+            FieldPattern(
+                field_name="email",
+                strategy=FieldStrategy.EMAIL_FROM_NAME,
+                params={"source_field": "full_name", "domains": ["test.com"]},
+            ),
+            {"full_name": "John Smith"},
         )
-
-        value = generator.generate_field_value(pattern, {"full_name": "John Smith"})
-
-        # Shape: <name-slug>.<4-digit-suffix>@<domain>
-        assert value.startswith("john.smith.")
-        assert value.endswith("@test.com")
-        suffix = value.removeprefix("john.smith.").removesuffix("@test.com")
+        assert email_val.startswith("john.smith.")
+        assert email_val.endswith("@test.com")
+        suffix = email_val.removeprefix("john.smith.").removesuffix("@test.com")
         assert suffix.isdigit() and 1000 <= int(suffix) <= 9999
 
-    def test_generate_entity(self, simple_blueprint):
-        """Test generating entity rows."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-        entity = simple_blueprint.entities[0]  # Task entity
-
-        rows = generator.generate_entity(entity)
-
+        # generate_entity — populates all field_patterns × row_count_default.
+        rows = generator.generate_entity(simple_blueprint.entities[0])
         assert len(rows) == 5
         for row in rows:
             assert "id" in row
@@ -514,33 +348,24 @@ class TestBlueprintDataGenerator:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)
 
-    def test_generate_all_csv(self, simple_blueprint, temp_output_dir):
-        """Test generating all entities to CSV."""
-        generator = BlueprintDataGenerator(simple_blueprint)
+    def test_generate_all_combined(self, simple_blueprint, temp_output_dir):
+        """generate_all writes per-entity files in CSV or JSONL format with
+        the right suffix and a populated header / per-line shape."""
+        gen = BlueprintDataGenerator(simple_blueprint)
 
-        files = generator.generate_all(temp_output_dir, format="csv")
+        # CSV
+        csv_files = gen.generate_all(temp_output_dir / "csv", format="csv")
+        assert "Task" in csv_files
+        assert csv_files["Task"].exists()
+        assert csv_files["Task"].suffix == ".csv"
+        assert "id,title,completed" in csv_files["Task"].read_text()
 
-        assert "Task" in files
-        assert files["Task"].exists()
-        assert files["Task"].suffix == ".csv"
-
-        # Check content
-        content = files["Task"].read_text()
-        assert "id,title,completed" in content
-
-    def test_generate_all_jsonl(self, simple_blueprint, temp_output_dir):
-        """Test generating all entities to JSONL."""
-        generator = BlueprintDataGenerator(simple_blueprint)
-
-        files = generator.generate_all(temp_output_dir, format="jsonl")
-
-        assert "Task" in files
-        assert files["Task"].exists()
-        assert files["Task"].suffix == ".jsonl"
-
-        # Check content - each line should be valid JSON
-        lines = files["Task"].read_text().strip().split("\n")
-        for line in lines:
+        # JSONL
+        jsonl_files = gen.generate_all(temp_output_dir / "jsonl", format="jsonl")
+        assert "Task" in jsonl_files
+        assert jsonl_files["Task"].exists()
+        assert jsonl_files["Task"].suffix == ".jsonl"
+        for line in jsonl_files["Task"].read_text().strip().split("\n"):
             data = json.loads(line)
             assert "id" in data
             assert "title" in data

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.26] - 2026-05-04
+
+### Changed
+- **Distillation cycle 24** — Batch DD partial + CC tail collapsed
+  test_api_cache, test_build_server_config, test_demo_blueprint,
+  test_eventbus_adapter, test_llm_linker. Reverted DD's edit to
+  test_seed_generator (introduced TypeError calling generate_seed_rows
+  with 2 args when fn takes 1). 79 tests pass across modified files.
+  Suite total: 12,639 → 12,589 (50 fewer this cycle, accounting for
+  revert). Cumulative: 14,295 → 12,589 (1,706 tests removed across
+  24 cycles). Need 589 more.
+
 ## [0.66.25] - 2026-05-04
 
 ### Changed
