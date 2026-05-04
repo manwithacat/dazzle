@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-05-04
+
+### Added
+- **#977 cycle 1 — Dazzle-native rich-text editor (`dz-richtext`).**
+  Quill (236 KB of vendored JS+CSS, no upstream release in over a
+  year) is the worst cost-vs-coverage line in the asset pile per the
+  #931 audit. After surveying the wider ecosystem (Tiptap, Lexical,
+  ProseMirror, Trix, Editor.js, TinyMCE) and finding nothing that
+  slots cleanly into a server-rendered HTMX/Alpine stack, the
+  decision is to build a Dazzle-native editor.
+
+  Spec: `dev_docs/2026-05-04-dz-richtext-spec.md` — closed schema
+  (12 tags), bundle target ≤ 16 KB min / ≤ 6 KB gz, single source
+  of truth (HTML in hidden input, no Delta side-channel), Selection
+  / Range API only (no `document.execCommand`), allowlist sourced
+  from the IR with client-server parity drift gate (cycle 4),
+  five-cycle plan with Quill removal in cycle 4.
+
+  Cycle 1 ships:
+  - `src/dazzle_ui/runtime/static/js/dz-richtext.js` — toolbar
+    (`role="toolbar"` + roving tabindex), bold/italic/underline
+    (cmd-keys Ctrl+B/I/U), schema-closed emit pass, persisted-value
+    ingestion via `DOMParser` + closed-tag walker (no untrusted
+    `innerHTML` writes into the live tree), focus-stable mousedown
+    handling, `aria-live` announcer.
+  - `src/dazzle_ui/runtime/static/css/components/richtext.css` —
+    layered styling that reuses the existing `.dz-form-richtext`
+    shell from `form_field.html`.
+  - Bridge registers as `richtext-native`; coexists with the Quill
+    bridge (`richtext`) until cycle 4 flips the macro and removes
+    Quill.
+  - 24 source-regression tests pinning the cycle 1 contract.
+  - Wired into `css_loader.CSS_SOURCE_FILES`, `scripts/build_dist.py`
+    (both lists, per the recurring CSS-bundle gotcha), and
+    `base.html` script tags.
+
+### Agent Guidance
+- When adding a new contenteditable/rich-text-related feature in
+  cycles 2–5, read `dev_docs/2026-05-04-dz-richtext-spec.md` first.
+  Hard rules: no `document.execCommand`, no `innerHTML` writes of
+  untrusted strings into the live tree (use `DOMParser` + the
+  sanitiser walker), schema is closed (cycle 1 inline allowlist:
+  STRONG/EM/U/BR; block: P).
+
 ## [0.63.110] - 2026-05-04
 
 ### Added

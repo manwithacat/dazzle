@@ -55,6 +55,8 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     # #958 — mobile UX (cycle 1: touch targets, cycle 4: scroll containment).
     ("components", "css/components/touch-targets.css"),
     ("components", "css/components/mobile-scroll.css"),
+    # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
+    ("components", "css/components/richtext.css"),
     ("components", "css/dazzle-layer.css"),
     ("components", "css/site-sections.css"),
 )

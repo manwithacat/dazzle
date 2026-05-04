@@ -51,6 +51,8 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     # #958 — mobile UX (cycle 1: touch targets, cycle 4: scroll containment).
     ("components", STATIC / "css" / "components" / "touch-targets.css"),
     ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
+    # #977 cycle 1 — Dazzle-native rich-text editor.
+    ("components", STATIC / "css" / "components" / "richtext.css"),
     ("components", STATIC / "css" / "dazzle-layer.css"),
     ("components", STATIC / "css" / "site-sections.css"),
 ]
@@ -99,6 +101,9 @@ JS_SOURCES = [
     STATIC / "js" / "dz-islands.js",
     STATIC / "js" / "dz-component-bridge.js",
     STATIC / "js" / "dz-widget-registry.js",
+    # #977 cycle 1 — Dazzle-native rich-text editor (registers as
+    # "richtext-native" alongside the Quill bridge until cycle 4).
+    STATIC / "js" / "dz-richtext.js",
     # #946: pdf-viewer bridge handler. Bundled (rather than loaded as
     # a standalone <script> tag) so projects using `dist/dazzle.min.js`
     # get the chrome wired automatically when they adopt the

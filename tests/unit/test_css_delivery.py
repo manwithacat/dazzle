@@ -42,6 +42,8 @@ LAYERED_ORDER: tuple[tuple[str, str], ...] = (
     # #958 cycles 1 + 4 — mobile UX (touch targets + scroll containment).
     ("components", "css/components/touch-targets.css"),
     ("components", "css/components/mobile-scroll.css"),
+    # #977 cycle 1 — Dazzle-native rich-text editor.
+    ("components", "css/components/richtext.css"),
     ("components", "css/dazzle-layer.css"),
     ("components", "css/site-sections.css"),
 )
