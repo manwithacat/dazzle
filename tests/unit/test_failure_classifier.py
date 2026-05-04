@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _import_classifier():
     """Import failure_classifier directly to avoid MCP package init issues."""
@@ -30,68 +32,65 @@ classify_failure = _classifier.classify_failure
 
 
 class TestClassifyFailure:
-    """Test each failure type classification."""
+    """Test each failure type classification.
 
-    def test_rbac_denied_401(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "Got 401 Unauthorized")
-        assert result == "rbac_denied"
+    Each (test_name, persona, error_msg) tuple → expected category. The
+    classifier reads the message, persona, and step context to bucket
+    failures into actionable categories for the QA report.
+    """
 
-    def test_rbac_denied_403(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "403 Forbidden response")
-        assert result == "rbac_denied"
-
-    def test_rbac_denied_permission(self) -> None:
-        result = classify_failure("ACL_admin", "persona", "Permission denied for role")
-        assert result == "rbac_denied"
-
-    def test_validation_error_required(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "Field 'title' is required")
-        assert result == "validation_error"
-
-    def test_validation_error_422(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "422 Unprocessable Entity")
-        assert result == "validation_error"
-
-    def test_dsl_surface_gap_404(self) -> None:
-        result = classify_failure("CRUD_Widget_list", "crud", "404 Not Found for /api/widgets")
-        assert result == "dsl_surface_gap"
-
-    def test_dsl_surface_gap_no_surface(self) -> None:
-        result = classify_failure("WS_main", "workspace", "No surface found for widget_list")
-        assert result == "dsl_surface_gap"
-
-    def test_state_machine_transition(self) -> None:
-        result = classify_failure(
-            "CRUD_Task_update", "crud", "Invalid transition from draft to published"
-        )
-        assert result == "state_machine"
-
-    def test_state_machine_prefix(self) -> None:
-        result = classify_failure("SM_Task_approve", "state_machine", "Some error")
-        assert result == "state_machine"
-
-    def test_timeout(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "Request timed out after 30s")
-        assert result == "timeout"
-
-    def test_framework_bug_500(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "500 Internal Server Error")
-        assert result == "framework_bug"
-
-    def test_framework_bug_connection(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "Connection refused on port 8000")
-        assert result == "framework_bug"
-
-    def test_unknown_fallback(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", "Something unexpected happened")
-        assert result == "unknown"
-
-    def test_none_error_message(self) -> None:
-        result = classify_failure("CRUD_Task_create", "crud", None)
-        assert result == "unknown"
+    @pytest.mark.parametrize(
+        ("test_name", "persona", "error_msg", "expected"),
+        [
+            # rbac_denied: HTTP 401/403 + permission-denied phrases
+            ("CRUD_Task_create", "crud", "Got 401 Unauthorized", "rbac_denied"),
+            ("CRUD_Task_create", "crud", "403 Forbidden response", "rbac_denied"),
+            ("ACL_admin", "persona", "Permission denied for role", "rbac_denied"),
+            # validation_error: 422 + required-field phrases
+            ("CRUD_Task_create", "crud", "Field 'title' is required", "validation_error"),
+            ("CRUD_Task_create", "crud", "422 Unprocessable Entity", "validation_error"),
+            # dsl_surface_gap: 404 + missing-surface phrases
+            ("CRUD_Widget_list", "crud", "404 Not Found for /api/widgets", "dsl_surface_gap"),
+            ("WS_main", "workspace", "No surface found for widget_list", "dsl_surface_gap"),
+            # state_machine: explicit transition error OR SM_ test prefix
+            (
+                "CRUD_Task_update",
+                "crud",
+                "Invalid transition from draft to published",
+                "state_machine",
+            ),
+            ("SM_Task_approve", "state_machine", "Some error", "state_machine"),
+            # timeout
+            ("CRUD_Task_create", "crud", "Request timed out after 30s", "timeout"),
+            # framework_bug: 500 / connection refused
+            ("CRUD_Task_create", "crud", "500 Internal Server Error", "framework_bug"),
+            ("CRUD_Task_create", "crud", "Connection refused on port 8000", "framework_bug"),
+            # unknown: fallback
+            ("CRUD_Task_create", "crud", "Something unexpected happened", "unknown"),
+            ("CRUD_Task_create", "crud", None, "unknown"),
+        ],
+        ids=[
+            "rbac_denied_401",
+            "rbac_denied_403",
+            "rbac_denied_permission",
+            "validation_error_required",
+            "validation_error_422",
+            "dsl_surface_gap_404",
+            "dsl_surface_gap_no_surface",
+            "state_machine_transition",
+            "state_machine_prefix",
+            "timeout",
+            "framework_bug_500",
+            "framework_bug_connection",
+            "unknown_fallback",
+            "none_error_message",
+        ],
+    )
+    def test_classify(self, test_name, persona, error_msg, expected) -> None:
+        assert classify_failure(test_name, persona, error_msg) == expected
 
     def test_failed_step_contributes(self) -> None:
-        """Failed step message should also be checked."""
+        """Failed-step message is consulted in addition to the test-level error."""
         result = classify_failure(
             "CRUD_Task_create",
             "crud",

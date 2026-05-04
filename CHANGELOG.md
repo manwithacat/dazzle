@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.4] - 2026-05-04
+
+### Changed
+- **Test-suite distillation cycle 3** — collapsed 4 more Pass-2 hotspot
+  clusters in their respective files:
+
+  | File | Class | Before | After | Cases |
+  |---|---|---:|---:|---:|
+  | `test_ref_display.py` | `TestRefDisplayName` | 22 | 3 | 22 |
+  | `test_access_control.py` | `TestAccessRuleEvaluate` | 20 | 7 | 21 |
+  | `test_pipeline_detail.py` | `TestStepHasIssues` | 19 | 1 | 19 |
+  | `test_failure_classifier.py` | `TestClassifyFailure` | 15 | 2 | 15 |
+  | `test_asset_manifest.py` | `TestCollectRequiredAssets` | 13 | 4 | 13 |
+
+  Suite total: 14,205 → 14,132 (73 fewer test functions; all assertion
+  cases retained via `@pytest.mark.parametrize`). Pass-2 theoretical
+  saving: 3,209 → 3,127.
+
+  Cumulative across 3 cycles (v0.66.0 → v0.66.4): 14,295 → 14,132
+  (163 fewer test functions, 0 assertions lost).
+
 ## [0.66.3] - 2026-05-04
 
 ### Changed

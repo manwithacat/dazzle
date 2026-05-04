@@ -1,6 +1,8 @@
 # tests/unit/test_asset_manifest.py
 """Tests for conditional JS asset derivation from surface specs."""
 
+import pytest
+
 from dazzle_back.runtime.asset_manifest import collect_required_assets
 
 
@@ -20,67 +22,68 @@ class _FakeSurface:
 
 
 class TestCollectRequiredAssets:
-    def test_no_widgets_returns_empty(self):
+    """Each (field_type, widget) → expected asset set.
+
+    Drift gates are embedded in the parametric ids:
+    - ``rich_text_no_vendor`` pins the dz-richtext migration (#977 cycle 4) —
+      bundled with core JS, no Quill-style dependency.
+    - ``color_no_vendor`` pins the native <input type=color> migration (#976) —
+      no Pickr-style dependency.
+    """
+
+    @pytest.mark.parametrize(
+        ("field_type", "widget", "expected_assets"),
+        [
+            # Vendor-asset-bearing widgets
+            ("ref", "combobox", {"tom-select"}),
+            ("ref", "multi_select", {"tom-select"}),
+            ("str", "tags", {"tom-select"}),
+            ("date", "picker", {"flatpickr"}),
+            ("datetime", "picker", {"flatpickr"}),
+            ("date", "range", {"flatpickr"}),
+            # Native / bundled — no vendor asset (drift gates)
+            ("text", "rich_text", set()),
+            ("str", "color", set()),
+            # Defensive
+            ("str", "unknown_future_widget", set()),
+            ("str", "picker", set()),  # picker only applies to date/datetime
+        ],
+        ids=[
+            "combobox_requires_tom_select",
+            "multi_select_requires_tom_select",
+            "tags_requires_tom_select",
+            "date_picker_requires_flatpickr",
+            "datetime_picker_requires_flatpickr",
+            "date_range_requires_flatpickr",
+            "rich_text_no_vendor",
+            "color_no_vendor",
+            "unknown_widget_ignored",
+            "non_date_type_with_picker_ignored",
+        ],
+    )
+    def test_single_widget_field(self, field_type, widget, expected_assets) -> None:
+        surface = _FakeSurface([_FakeField(field_type, widget=widget)])
+        assert collect_required_assets(surface) == expected_assets
+
+    def test_no_widgets_returns_empty(self) -> None:
+        """Surface with only plain (no widget=) fields requires no vendor assets."""
         surface = _FakeSurface([_FakeField("str"), _FakeField("int")])
         assert collect_required_assets(surface) == set()
 
-    def test_rich_text_requires_no_vendor_asset(self):
-        """`widget=rich_text` is now dz-richtext (Dazzle-native, bundled
-        with the core JS) per #977 cycle 4. Drift gate: ensure
-        re-introducing a Quill-style dependency requires explicit work."""
-        surface = _FakeSurface([_FakeField("text", widget="rich_text")])
-        assert collect_required_assets(surface) == set()
-
-    def test_combobox_requires_tom_select(self):
-        surface = _FakeSurface([_FakeField("ref", widget="combobox")])
-        assert collect_required_assets(surface) == {"tom-select"}
-
-    def test_multi_select_requires_tom_select(self):
-        surface = _FakeSurface([_FakeField("ref", widget="multi_select")])
-        assert collect_required_assets(surface) == {"tom-select"}
-
-    def test_tags_requires_tom_select(self):
-        surface = _FakeSurface([_FakeField("str", widget="tags")])
-        assert collect_required_assets(surface) == {"tom-select"}
-
-    def test_date_picker_requires_flatpickr(self):
-        surface = _FakeSurface([_FakeField("date", widget="picker")])
-        assert collect_required_assets(surface) == {"flatpickr"}
-
-    def test_datetime_picker_requires_flatpickr(self):
-        surface = _FakeSurface([_FakeField("datetime", widget="picker")])
-        assert collect_required_assets(surface) == {"flatpickr"}
-
-    def test_date_range_requires_flatpickr(self):
-        surface = _FakeSurface([_FakeField("date", widget="range")])
-        assert collect_required_assets(surface) == {"flatpickr"}
-
-    def test_color_requires_no_vendor_asset(self):
-        """`widget=color` is now a native <input type=\"color\"> (#976) — no
-        vendor asset is loaded. Drift gate: ensure the colour field doesn't
-        re-introduce a Pickr-style dependency."""
-        surface = _FakeSurface([_FakeField("str", widget="color")])
-        assert collect_required_assets(surface) == set()
-
-    def test_multiple_widgets_collect_all(self):
-        # `widget=color` deliberately included to confirm it adds nothing
-        # to the required-asset set after the #976 native-input migration.
-        # `widget=rich_text` likewise after #977 cycle 4 (dz-richtext is
-        # bundled with the core JS, no vendor asset).
+    def test_multiple_widgets_collect_all(self) -> None:
+        """Mixed widget set — bundled widgets contribute nothing, vendor ones unify."""
         surface = _FakeSurface(
             [
-                _FakeField("text", widget="rich_text"),
-                _FakeField("ref", widget="combobox"),
-                _FakeField("date", widget="picker"),
-                _FakeField("str", widget="color"),
+                _FakeField("text", widget="rich_text"),  # bundled
+                _FakeField("ref", widget="combobox"),  # vendor
+                _FakeField("date", widget="picker"),  # vendor
+                _FakeField("str", widget="color"),  # bundled
             ]
         )
-        assert collect_required_assets(surface) == {
-            "tom-select",
-            "flatpickr",
-        }
+        assert collect_required_assets(surface) == {"tom-select", "flatpickr"}
 
-    def test_duplicate_widgets_deduplicated(self):
+    def test_duplicate_widgets_deduplicated(self) -> None:
+        """Multiple fields requiring the same vendor produce a single asset entry."""
         surface = _FakeSurface(
             [
                 _FakeField("ref", widget="combobox"),
@@ -89,12 +92,3 @@ class TestCollectRequiredAssets:
             ]
         )
         assert collect_required_assets(surface) == {"tom-select"}
-
-    def test_unknown_widget_ignored(self):
-        surface = _FakeSurface([_FakeField("str", widget="unknown_future_widget")])
-        assert collect_required_assets(surface) == set()
-
-    def test_non_date_type_with_picker_widget_ignored(self):
-        """Picker widget only applies to date/datetime fields."""
-        surface = _FakeSurface([_FakeField("str", widget="picker")])
-        assert collect_required_assets(surface) == set()

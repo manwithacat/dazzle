@@ -3,6 +3,8 @@
 import json
 import time
 
+import pytest
+
 from dazzle.mcp.server.handlers.orchestration import (
     aggregate_results as _build_pipeline_response,
 )
@@ -15,72 +17,68 @@ from dazzle.mcp.server.handlers.orchestration import (
 
 
 class TestStepHasIssues:
-    """Tests for _step_has_issues helper."""
+    """Tests for _step_has_issues helper.
 
-    def test_lint_with_errors(self):
-        assert _step_has_issues("dsl(lint)", {"errors": ["bad"], "warnings": []}) is True
+    Each (operation, result) pair pins what counts as a "user needs to look
+    at this step" signal — the issues-mode pipeline-detail builder uses
+    this to decide which steps to expand.
+    """
 
-    def test_lint_with_warnings_only(self):
-        # Warnings alone are baseline noise — don't expand
-        assert _step_has_issues("dsl(lint)", {"errors": [], "warnings": ["hmm"]}) is False
-
-    def test_lint_with_errors_and_warnings(self):
-        # Errors trigger expansion even when warnings are also present
-        assert _step_has_issues("dsl(lint)", {"errors": ["bad"], "warnings": ["hmm"]}) is True
-
-    def test_lint_clean(self):
-        assert _step_has_issues("dsl(lint)", {"errors": [], "warnings": []}) is False
-
-    def test_fidelity_with_gaps(self):
-        assert _step_has_issues("dsl(fidelity)", {"total_gaps": 3}) is True
-
-    def test_fidelity_no_gaps(self):
-        assert _step_has_issues("dsl(fidelity)", {"total_gaps": 0}) is False
-
-    def test_composition_low_score(self):
-        assert _step_has_issues("composition(audit)", {"overall_score": 85}) is True
-
-    def test_composition_perfect(self):
-        assert _step_has_issues("composition(audit)", {"overall_score": 100}) is False
-
-    def test_test_run_failures(self):
-        assert _step_has_issues("dsl_test(run_all)", {"failed": 2}) is True
-
-    def test_test_run_all_passed(self):
-        assert _step_has_issues("dsl_test(run_all)", {"failed": 0}) is False
-
-    def test_semantics_with_errors(self):
-        assert (
-            _step_has_issues("semantics(validate_events)", {"error_count": 1, "warning_count": 0})
-            is True
-        )
-
-    def test_semantics_clean(self):
-        assert (
-            _step_has_issues("semantics(validate_events)", {"error_count": 0, "warning_count": 0})
-            is False
-        )
-
-    def test_non_dict_result(self):
-        assert _step_has_issues("dsl(lint)", "some string") is False
-
-    def test_unknown_operation(self):
-        assert _step_has_issues("unknown_op", {"stuff": True}) is False
-
-    def test_test_design_gaps(self):
-        assert _step_has_issues("test_design(gaps)", {"gaps": [{"desc": "missing"}]}) is True
-
-    def test_test_design_no_gaps(self):
-        assert _step_has_issues("test_design(gaps)", {"gaps": []}) is False
-
-    def test_coverage_below_100(self):
-        assert _step_has_issues("dsl_test(coverage)", {"coverage_percent": 80}) is True
-
-    def test_coverage_at_100(self):
-        assert _step_has_issues("dsl_test(coverage)", {"coverage_percent": 100}) is False
-
-    def test_coverage_string_percent(self):
-        assert _step_has_issues("story(coverage)", {"coverage_percent": "75%"}) is True
+    @pytest.mark.parametrize(
+        ("operation", "result", "expected"),
+        [
+            # --- dsl(lint): errors expand, warnings alone don't ---
+            ("dsl(lint)", {"errors": ["bad"], "warnings": []}, True),
+            ("dsl(lint)", {"errors": [], "warnings": ["hmm"]}, False),  # warnings = baseline noise
+            ("dsl(lint)", {"errors": ["bad"], "warnings": ["hmm"]}, True),  # errors win
+            ("dsl(lint)", {"errors": [], "warnings": []}, False),
+            # --- dsl(fidelity): any gap counts ---
+            ("dsl(fidelity)", {"total_gaps": 3}, True),
+            ("dsl(fidelity)", {"total_gaps": 0}, False),
+            # --- composition(audit): below 100 expands ---
+            ("composition(audit)", {"overall_score": 85}, True),
+            ("composition(audit)", {"overall_score": 100}, False),
+            # --- dsl_test(run_all): any failure expands ---
+            ("dsl_test(run_all)", {"failed": 2}, True),
+            ("dsl_test(run_all)", {"failed": 0}, False),
+            # --- semantics(validate_events): only error_count expands ---
+            ("semantics(validate_events)", {"error_count": 1, "warning_count": 0}, True),
+            ("semantics(validate_events)", {"error_count": 0, "warning_count": 0}, False),
+            # --- test_design(gaps): non-empty gaps list expands ---
+            ("test_design(gaps)", {"gaps": [{"desc": "missing"}]}, True),
+            ("test_design(gaps)", {"gaps": []}, False),
+            # --- dsl_test(coverage): below 100% expands; supports int + "N%" ---
+            ("dsl_test(coverage)", {"coverage_percent": 80}, True),
+            ("dsl_test(coverage)", {"coverage_percent": 100}, False),
+            ("story(coverage)", {"coverage_percent": "75%"}, True),
+            # --- Defensive ---
+            ("dsl(lint)", "some string", False),  # non-dict result → false
+            ("unknown_op", {"stuff": True}, False),  # unknown op → false
+        ],
+        ids=[
+            "lint_with_errors",
+            "lint_with_warnings_only",
+            "lint_with_errors_and_warnings",
+            "lint_clean",
+            "fidelity_with_gaps",
+            "fidelity_no_gaps",
+            "composition_low_score",
+            "composition_perfect",
+            "test_run_failures",
+            "test_run_all_passed",
+            "semantics_with_errors",
+            "semantics_clean",
+            "test_design_gaps",
+            "test_design_no_gaps",
+            "coverage_below_100",
+            "coverage_at_100",
+            "coverage_string_percent",
+            "non_dict_result",
+            "unknown_operation",
+        ],
+    )
+    def test_has_issues(self, operation, result, expected) -> None:
+        assert _step_has_issues(operation, result) is expected
 
 
 class TestFilterIssuesResult:

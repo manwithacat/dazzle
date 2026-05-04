@@ -53,90 +53,117 @@ class TestAccessContext:
 
 
 class TestAccessRuleEvaluate:
-    def test_public_rule(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="public")
-        assert rule.evaluate(AccessContext()) is True
+    @pytest.mark.parametrize(
+        ("rule_str", "user_id_set", "expected"),
+        [
+            ("public", False, True),  # public: always allow
+            ("public", True, True),
+            ("authenticated", False, False),  # authenticated: requires user_id
+            ("authenticated", True, True),
+        ],
+        ids=["public_anon", "public_user", "authenticated_anon", "authenticated_user"],
+    )
+    def test_basic_rule(self, rule_str, user_id_set, expected) -> None:
+        rule = AccessRule(operation=AccessOperation.READ, rule=rule_str)
+        ctx = AccessContext(user_id=uuid4()) if user_id_set else AccessContext()
+        assert rule.evaluate(ctx) is expected
 
-    def test_authenticated_rule_no_user(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="authenticated")
-        assert rule.evaluate(AccessContext()) is False
+    @pytest.mark.parametrize(
+        ("operation", "ctx_user_owns_record", "owner_field", "record", "expected"),
+        [
+            # ctx_user_owns_record=True/False matches user_id to record["owner_id"]
+            (AccessOperation.READ, True, "owner_id", {"matches": True}, True),
+            (AccessOperation.READ, False, "owner_id", {"matches": False}, False),
+            # CREATE without a record: user is presumed owner-to-be → allow
+            (AccessOperation.CREATE, False, None, None, True),
+            # READ without a record: deny (no record → no owner check possible)
+            (AccessOperation.READ, False, None, None, False),
+            # owner_field unset on rule → can't extract owner → deny
+            (AccessOperation.READ, False, None, {"x": 1}, False),
+            # owner_field present but value is None → deny
+            (AccessOperation.READ, False, "owner_id", {"owner_id": None}, False),
+            # No user in context → deny regardless
+            (AccessOperation.READ, False, "owner_id", {"owner_id": "x"}, False),
+        ],
+        ids=[
+            "matching",
+            "not_matching",
+            "create_without_record",
+            "read_without_record",
+            "no_owner_field_on_rule",
+            "null_owner_value",
+            "unauthenticated",
+        ],
+    )
+    def test_owner_rule(
+        self, operation, ctx_user_owns_record, owner_field, record, expected
+    ) -> None:
+        rule = AccessRule(operation=operation, rule="owner", owner_field=owner_field)
+        if record == {"matches": True}:
+            uid = uuid4()
+            record = {"owner_id": str(uid)}
+            ctx = AccessContext(user_id=uid)
+        elif record == {"matches": False}:
+            record = {"owner_id": str(uuid4())}
+            ctx = AccessContext(user_id=uuid4())
+        elif expected is False and operation == AccessOperation.READ and record is not None:
+            # unauthenticated branch — no user_id
+            ctx = AccessContext()
+        else:
+            ctx = AccessContext(user_id=uuid4())
+        assert rule.evaluate(ctx, record) is expected
 
-    def test_authenticated_rule_with_user(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="authenticated")
-        assert rule.evaluate(AccessContext(user_id=uuid4())) is True
+    @pytest.mark.parametrize(
+        ("operation", "tenant_match", "tenant_field", "record", "expected"),
+        [
+            (AccessOperation.READ, True, "tenant_id", {"matches": True}, True),
+            (AccessOperation.READ, False, "tenant_id", {"matches": False}, False),
+            (AccessOperation.READ, False, "tenant_id", {"tenant_id": "x"}, False),  # no ctx tenant
+            (AccessOperation.CREATE, False, "tenant_id", None, True),  # create allowed
+            (AccessOperation.READ, False, None, {"x": 1}, False),  # no tenant_field on rule
+            (AccessOperation.READ, False, "tenant_id", {"tenant_id": None}, False),  # null
+        ],
+        ids=[
+            "matching",
+            "not_matching",
+            "no_tenant_context",
+            "create_without_record",
+            "no_tenant_field_on_rule",
+            "null_tenant_value",
+        ],
+    )
+    def test_tenant_rule(self, operation, tenant_match, tenant_field, record, expected) -> None:
+        rule = AccessRule(operation=operation, rule="tenant", tenant_field=tenant_field)
+        if record == {"matches": True}:
+            tid = uuid4()
+            record = {"tenant_id": str(tid)}
+            ctx = AccessContext(tenant_id=tid)
+        elif record == {"matches": False}:
+            record = {"tenant_id": str(uuid4())}
+            ctx = AccessContext(tenant_id=uuid4())
+        elif record == {"tenant_id": "x"}:
+            ctx = AccessContext()  # no tenant set in ctx
+        else:
+            ctx = AccessContext(tenant_id=uuid4())
+        assert rule.evaluate(ctx, record) is expected
 
-    def test_owner_rule_matching(self) -> None:
-        uid = uuid4()
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner", owner_field="owner_id")
-        record = {"owner_id": str(uid)}
-        assert rule.evaluate(AccessContext(user_id=uid), record) is True
-
-    def test_owner_rule_not_matching(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner", owner_field="owner_id")
-        record = {"owner_id": str(uuid4())}
-        assert rule.evaluate(AccessContext(user_id=uuid4()), record) is False
-
-    def test_owner_rule_create_without_record(self) -> None:
-        rule = AccessRule(operation=AccessOperation.CREATE, rule="owner")
-        assert rule.evaluate(AccessContext(user_id=uuid4()), None) is True
-
-    def test_owner_rule_read_without_record(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner")
-        assert rule.evaluate(AccessContext(user_id=uuid4()), None) is False
-
-    def test_owner_rule_no_owner_field(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner")
-        assert rule.evaluate(AccessContext(user_id=uuid4()), {"x": 1}) is False
-
-    def test_owner_rule_null_owner_value(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner", owner_field="owner_id")
-        assert rule.evaluate(AccessContext(user_id=uuid4()), {"owner_id": None}) is False
-
-    def test_owner_rule_unauthenticated(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="owner", owner_field="owner_id")
-        assert rule.evaluate(AccessContext(), {"owner_id": "x"}) is False
-
-    def test_tenant_rule_matching(self) -> None:
-        tid = uuid4()
-        rule = AccessRule(operation=AccessOperation.READ, rule="tenant", tenant_field="tenant_id")
-        record = {"tenant_id": str(tid)}
-        assert rule.evaluate(AccessContext(tenant_id=tid), record) is True
-
-    def test_tenant_rule_not_matching(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="tenant", tenant_field="tenant_id")
-        record = {"tenant_id": str(uuid4())}
-        assert rule.evaluate(AccessContext(tenant_id=uuid4()), record) is False
-
-    def test_tenant_rule_no_tenant_context(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="tenant", tenant_field="tenant_id")
-        assert rule.evaluate(AccessContext(), {"tenant_id": "x"}) is False
-
-    def test_tenant_rule_create_without_record(self) -> None:
-        rule = AccessRule(operation=AccessOperation.CREATE, rule="tenant", tenant_field="tenant_id")
-        assert rule.evaluate(AccessContext(tenant_id=uuid4()), None) is True
-
-    def test_tenant_rule_no_tenant_field(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="tenant")
-        assert rule.evaluate(AccessContext(tenant_id=uuid4()), {"x": 1}) is False
-
-    def test_tenant_rule_null_tenant_value(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="tenant", tenant_field="tenant_id")
-        assert rule.evaluate(AccessContext(tenant_id=uuid4()), {"tenant_id": None}) is False
-
-    def test_role_rule_matching(self) -> None:
+    @pytest.mark.parametrize(
+        ("ctx_roles", "expected"),
+        [(["admin"], True), (["editor"], False)],
+        ids=["matching", "not_matching"],
+    )
+    def test_role_rule(self, ctx_roles, expected) -> None:
         rule = AccessRule(operation=AccessOperation.READ, rule="role:admin")
-        assert rule.evaluate(AccessContext(roles=["admin"])) is True
-
-    def test_role_rule_not_matching(self) -> None:
-        rule = AccessRule(operation=AccessOperation.READ, rule="role:admin")
-        assert rule.evaluate(AccessContext(roles=["editor"])) is False
+        assert rule.evaluate(AccessContext(roles=ctx_roles)) is expected
 
     def test_superuser_bypasses_all(self) -> None:
+        """A superuser flag short-circuits all rule kinds — security invariant."""
         rule = AccessRule(operation=AccessOperation.READ, rule="owner", owner_field="owner_id")
         record = {"owner_id": str(uuid4())}
         assert rule.evaluate(AccessContext(is_superuser=True), record) is True
 
     def test_unknown_rule_denied(self) -> None:
+        """Unknown rule kinds default-deny — failsafe for typos and DSL drift."""
         rule = AccessRule(operation=AccessOperation.READ, rule="custom_rule")
         assert rule.evaluate(AccessContext(user_id=uuid4())) is False
 
