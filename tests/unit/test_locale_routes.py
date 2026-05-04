@@ -106,6 +106,22 @@ class TestSetLocale:
         assert response.status_code == 303
         assert response.headers["location"] == "/"
 
+    def test_open_redirect_attempt_falls_back_to_root(self, client: TestClient):
+        # CodeQL py/url-redirection — verify the inline regex sink rejects
+        # absolute URLs even though they reach the endpoint as form data.
+        for malicious in (
+            "https://evil.com/landing",
+            "//evil.com/x",
+            "javascript:alert(1)",
+            "/\r\nSet-Cookie: a=b",
+        ):
+            response = client.post(
+                "/_dazzle/i18n/locale",
+                data={"locale": "fr", "next": malicious},
+            )
+            assert response.status_code == 303, malicious
+            assert response.headers["location"] == "/", malicious
+
     def test_bcp47_locale_normalised_lowercase(self, client: TestClient):
         response = client.post("/_dazzle/i18n/locale", data={"locale": "EN-GB"})
         assert response.status_code == 303

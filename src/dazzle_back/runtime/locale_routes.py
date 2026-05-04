@@ -18,7 +18,7 @@ locale without losing the URL.
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlparse
+import re
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse, Response
@@ -29,25 +29,33 @@ LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 """1-year persistence — the user's choice should survive cookie
 sweeps. Modern browsers cap this at 400 days regardless."""
 
+# Strict allowlist regex applied at the redirect / cookie sinks so the
+# taint flow is visible to static analysis (CodeQL py/url-redirection,
+# py/cookie-injection). Inline checks at the sinks themselves are the
+# pattern CodeQL recognises as a sanitizer; helper functions get
+# elided from the taint trace.
+_SAFE_RELATIVE_PATH = re.compile(r"\A/(?!/)[A-Za-z0-9._~/\-?#=&%]{0,2048}\Z")
+"""Same-origin relative URL: starts with a single ``/`` (not ``//``,
+which would be protocol-relative), only safe URL characters, capped at
+2 KB. Rejects schemes, hosts, control characters, and CR/LF."""
+
+_SAFE_LOCALE_TAG = re.compile(r"\A[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,4}\Z")
+"""BCP-47 tag shape: 2-3 letter primary subtag, optionally followed by
+up to 4 alphanumeric subtags of length 2-8. No semicolons, CRLF, or
+other cookie-injection vectors can pass."""
+
 
 def _safe_redirect_target(raw: str | None) -> str:
     """Return *raw* iff it's a same-origin relative path; else ``"/"``.
 
-    Defends against open-redirect attacks: an attacker-controlled
-    ``next=https://evil.com`` mustn't bounce the user off-site after
-    they switch locale. Only relative paths starting with a single ``/``
-    (and not ``//`` which would be protocol-relative) pass through.
+    Test-only helper that delegates to the same regex used inline at
+    the redirect sink. The sink itself does NOT call this — CodeQL
+    elides helper calls from its taint trace, so the inline check at
+    the sink is what registers as a sanitizer.
     """
     if not raw:
         return "/"
-    parsed = urlparse(raw)
-    # Reject any URL with a scheme or netloc — those are absolute and
-    # potentially off-site. Also reject protocol-relative URLs (//evil/).
-    if parsed.scheme or parsed.netloc:
-        return "/"
-    if not raw.startswith("/") or raw.startswith("//"):
-        return "/"
-    return raw
+    return raw if _SAFE_RELATIVE_PATH.fullmatch(raw) else "/"
 
 
 def create_locale_routes(
@@ -92,7 +100,10 @@ def create_locale_routes(
                     media_type="text/plain",
                 )
 
-        target = _safe_redirect_target(next)
+        # Inline sanitization at the sink (CodeQL py/url-redirection).
+        # `next` is form-controlled so any non-matching value falls back
+        # to "/" — an attacker can't bounce us to https://evil.com.
+        target = next if _SAFE_RELATIVE_PATH.fullmatch(next or "") else "/"
 
         # HTMX: reply with HX-Refresh so the current page re-renders
         # against the new locale without a full navigation.
@@ -102,6 +113,17 @@ def create_locale_routes(
             response.headers["HX-Refresh"] = "true"
         else:
             response = RedirectResponse(url=target, status_code=303)
+
+        # Inline sanitization at the sink (CodeQL py/cookie-injection).
+        # `_normalise_locale` already strips garbage, but enforcing the
+        # BCP-47 shape one more time at the cookie sink makes the
+        # injection-defense visible to static analysis.
+        if not _SAFE_LOCALE_TAG.fullmatch(normalised):
+            return Response(
+                status_code=400,
+                content="Invalid locale tag",
+                media_type="text/plain",
+            )
 
         # Secure flag follows the request scheme so production (HTTPS)
         # gets the protection while dev (HTTP localhost) still

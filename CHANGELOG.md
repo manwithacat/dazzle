@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.14] - 2026-05-04
+
+### Security
+- **Inline sanitization at redirect / cookie sinks** in `locale_routes.py`
+  (CodeQL #89, #90 — both dismissed as false positives with rationale).
+  The previous `_safe_redirect_target` helper and `_normalise_locale`
+  validation were elided from CodeQL's taint trace because helper calls
+  break flow tracking. Replaced with two named regexes (`_SAFE_RELATIVE_PATH`,
+  `_SAFE_LOCALE_TAG`) applied directly at the `RedirectResponse` and
+  `set_cookie` sites. Defense-in-depth: `_normalise_locale` and
+  `supported_locales` allow-list still run first; the inline regex is
+  the final gate. New endpoint test
+  `test_open_redirect_attempt_falls_back_to_root` covers `https://evil.com`,
+  `//evil.com/x`, `javascript:`, and CRLF injection attempts.
+
+### Agent Guidance
+- For CodeQL py/url-redirection or py/cookie-injection alerts, prefer
+  inline sanitization at the sink (a regex `fullmatch` immediately
+  before `RedirectResponse(...)` / `set_cookie(...)`) over helper
+  functions. Helper calls are elided from CodeQL's taint trace; the
+  helper can still exist for unit-testing the predicate, but the sink
+  itself must do the check inline. See `locale_routes.py` for the
+  pattern.
+
 ## [0.65.13] - 2026-05-04
 
 ### Fixed
