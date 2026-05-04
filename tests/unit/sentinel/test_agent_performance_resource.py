@@ -74,73 +74,6 @@ class TestPR01NPlusOneListSurface:
         assert findings[0].severity == Severity.HIGH
         assert "order_list" in findings[0].title
 
-    def test_mixed_refs_and_has_many_only_counts_non_ref(
-        self, agent: PerformanceResourceAgent
-    ) -> None:
-        """ref fields are excluded, only has_many/has_one count toward threshold."""
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),  # auto-eager-loaded, excluded
-                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
-            ],
-        )
-        surface = self._list_surface("order_list", "Order")
-        appspec = make_appspec([entity], surfaces=[surface])
-        # Only 2 non-ref relationship fields (< threshold 3)
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_passes_entity_with_fewer_than_3_refs(self, agent: PerformanceResourceAgent) -> None:
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),
-                ref_field("product", "Product"),
-            ],
-        )
-        surface = self._list_surface("order_list", "Order")
-        appspec = make_appspec([entity], surfaces=[surface])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_ignores_non_list_surface(self, agent: PerformanceResourceAgent) -> None:
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),
-                ref_field("product", "Product"),
-                ref_field("warehouse", "Warehouse"),
-            ],
-        )
-        surface = MagicMock()
-        surface.name = "order_detail"
-        surface.mode = "detail"
-        surface.entity_ref = "Order"
-        appspec = make_appspec([entity], surfaces=[surface])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_ignores_surface_without_entity(self, agent: PerformanceResourceAgent) -> None:
-        surface = MagicMock()
-        surface.name = "dashboard"
-        surface.mode = "list"
-        surface.entity_ref = None
-        surface.entity = None
-        appspec = make_appspec(surfaces=[surface])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_no_surfaces(self, agent: PerformanceResourceAgent) -> None:
-        appspec = make_appspec(surfaces=[])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_entity_not_found(self, agent: PerformanceResourceAgent) -> None:
-        """Surface references an entity not present in the appspec."""
-        surface = self._list_surface("order_list", "NonExistent")
-        appspec = make_appspec(surfaces=[surface])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
     def test_flags_3_has_many_even_with_refs(self, agent: PerformanceResourceAgent) -> None:
         """Entity with both ref and has_many — only has_many count."""
         entity = make_entity(
@@ -158,6 +91,93 @@ class TestPR01NPlusOneListSurface:
         # 3 has_many fields → above threshold → flagged
         findings = agent.n_plus_1_list_surface(appspec)
         assert len(findings) == 1
+
+    @pytest.mark.parametrize(
+        "make_appspec_kwargs",
+        [
+            pytest.param(
+                "mixed_refs_and_has_many",
+                id="test_mixed_refs_and_has_many_only_counts_non_ref",
+            ),
+            pytest.param(
+                "fewer_than_3_refs",
+                id="test_passes_entity_with_fewer_than_3_refs",
+            ),
+            pytest.param(
+                "non_list_surface",
+                id="test_ignores_non_list_surface",
+            ),
+            pytest.param(
+                "no_entity_ref",
+                id="test_ignores_surface_without_entity",
+            ),
+            pytest.param(
+                "no_surfaces",
+                id="test_no_surfaces",
+            ),
+            pytest.param(
+                "entity_not_found",
+                id="test_entity_not_found",
+            ),
+        ],
+    )
+    def test_pr01_returns_empty(
+        self, agent: PerformanceResourceAgent, make_appspec_kwargs: str
+    ) -> None:
+        """Scenarios that should produce zero PR-01 findings."""
+        if make_appspec_kwargs == "mixed_refs_and_has_many":
+            # ref fields are excluded, only has_many/has_one count toward threshold
+            entity = make_entity(
+                "Order",
+                [
+                    pk_field(),
+                    ref_field("customer", "Customer"),  # auto-eager-loaded, excluded
+                    make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+                    make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
+                ],
+            )
+            surface = self._list_surface("order_list", "Order")
+            appspec = make_appspec([entity], surfaces=[surface])
+        elif make_appspec_kwargs == "fewer_than_3_refs":
+            entity = make_entity(
+                "Order",
+                [
+                    pk_field(),
+                    ref_field("customer", "Customer"),
+                    ref_field("product", "Product"),
+                ],
+            )
+            surface = self._list_surface("order_list", "Order")
+            appspec = make_appspec([entity], surfaces=[surface])
+        elif make_appspec_kwargs == "non_list_surface":
+            entity = make_entity(
+                "Order",
+                [
+                    pk_field(),
+                    ref_field("customer", "Customer"),
+                    ref_field("product", "Product"),
+                    ref_field("warehouse", "Warehouse"),
+                ],
+            )
+            surface = MagicMock()
+            surface.name = "order_detail"
+            surface.mode = "detail"
+            surface.entity_ref = "Order"
+            appspec = make_appspec([entity], surfaces=[surface])
+        elif make_appspec_kwargs == "no_entity_ref":
+            surface = MagicMock()
+            surface.name = "dashboard"
+            surface.mode = "list"
+            surface.entity_ref = None
+            surface.entity = None
+            appspec = make_appspec(surfaces=[surface])
+        elif make_appspec_kwargs == "no_surfaces":
+            appspec = make_appspec(surfaces=[])
+        else:  # entity_not_found
+            surface = self._list_surface("order_list", "NonExistent")
+            appspec = make_appspec(surfaces=[surface])
+
+        assert agent.n_plus_1_list_surface(appspec) == []
 
 
 # =============================================================================
@@ -341,23 +361,6 @@ class TestPR05LargeEntityListSurface:
         assert "big_list" in findings[0].title
         assert "BigEntity" in findings[0].title
 
-    def test_passes_entity_with_fewer_than_10_fields(self, agent: PerformanceResourceAgent) -> None:
-        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(8)]
-        entity = make_entity("SmallEntity", fields)
-        surface = self._list_surface("small_list", "SmallEntity")
-        appspec = make_appspec([entity], surfaces=[surface])
-        assert agent.large_entity_list_surface(appspec) == []
-
-    def test_ignores_non_list_surface(self, agent: PerformanceResourceAgent) -> None:
-        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(12)]
-        entity = make_entity("BigEntity", fields)
-        surface = MagicMock()
-        surface.name = "big_detail"
-        surface.mode = "detail"
-        surface.entity_ref = "BigEntity"
-        appspec = make_appspec([entity], surfaces=[surface])
-        assert agent.large_entity_list_surface(appspec) == []
-
     def test_exactly_10_fields_triggers(self, agent: PerformanceResourceAgent) -> None:
         fields = [pk_field()] + [str_field(f"f_{i}") for i in range(9)]
         assert len(fields) == 10
@@ -367,13 +370,36 @@ class TestPR05LargeEntityListSurface:
         findings = agent.large_entity_list_surface(appspec)
         assert len(findings) == 1
 
-    def test_no_surfaces(self, agent: PerformanceResourceAgent) -> None:
-        appspec = make_appspec(surfaces=[])
-        assert agent.large_entity_list_surface(appspec) == []
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            pytest.param("fewer_fields", id="test_passes_entity_with_fewer_than_10_fields"),
+            pytest.param("non_list_surface", id="test_ignores_non_list_surface"),
+            pytest.param("no_surfaces", id="test_no_surfaces"),
+            pytest.param("entity_not_found", id="test_entity_not_found"),
+        ],
+    )
+    def test_pr05_returns_empty(self, agent: PerformanceResourceAgent, scenario: str) -> None:
+        """Scenarios that should produce zero PR-05 findings."""
+        if scenario == "fewer_fields":
+            fields = [pk_field()] + [str_field(f"field_{i}") for i in range(8)]
+            entity = make_entity("SmallEntity", fields)
+            surface = self._list_surface("small_list", "SmallEntity")
+            appspec = make_appspec([entity], surfaces=[surface])
+        elif scenario == "non_list_surface":
+            fields = [pk_field()] + [str_field(f"field_{i}") for i in range(12)]
+            entity = make_entity("BigEntity", fields)
+            surface = MagicMock()
+            surface.name = "big_detail"
+            surface.mode = "detail"
+            surface.entity_ref = "BigEntity"
+            appspec = make_appspec([entity], surfaces=[surface])
+        elif scenario == "no_surfaces":
+            appspec = make_appspec(surfaces=[])
+        else:  # entity_not_found
+            surface = self._list_surface("ghost_list", "Ghost")
+            appspec = make_appspec(surfaces=[surface])
 
-    def test_entity_not_found(self, agent: PerformanceResourceAgent) -> None:
-        surface = self._list_surface("ghost_list", "Ghost")
-        appspec = make_appspec(surfaces=[surface])
         assert agent.large_entity_list_surface(appspec) == []
 
     def test_view_projection_reduces_field_count(self, agent: PerformanceResourceAgent) -> None:

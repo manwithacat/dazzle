@@ -130,50 +130,52 @@ class TestOP01AuditWithoutFieldTracking:
         assert findings[0].severity == Severity.MEDIUM
         assert "Customer" in findings[0].title
 
-    def test_passes_when_log_field_changes_enabled(self, agent: OperationalHygieneAgent) -> None:
-        audit = MagicMock()
-        audit.enabled = True
-        audit.log_field_changes = True
-        entity = mock_entity("Customer", audit=audit)
-        policies = _policies_with_classification("Customer", "email")
-        appspec = make_appspec([entity], policies=policies)
-
-        assert agent.audit_without_field_tracking(appspec) == []
-
-    def test_passes_when_audit_disabled(self, agent: OperationalHygieneAgent) -> None:
-        audit = MagicMock()
-        audit.enabled = False
-        audit.log_field_changes = False
-        entity = mock_entity("Customer", audit=audit)
-        policies = _policies_with_classification("Customer", "email")
-        appspec = make_appspec([entity], policies=policies)
-
-        assert agent.audit_without_field_tracking(appspec) == []
-
-    def test_passes_when_entity_not_classified(self, agent: OperationalHygieneAgent) -> None:
-        audit = MagicMock()
-        audit.enabled = True
-        audit.log_field_changes = False
-        entity = mock_entity("Task", audit=audit)
-        # Classification is for a different entity
-        policies = _policies_with_classification("Customer", "email")
-        appspec = make_appspec([entity], policies=policies)
-
-        assert agent.audit_without_field_tracking(appspec) == []
-
-    def test_passes_when_no_policies(self, agent: OperationalHygieneAgent) -> None:
-        audit = MagicMock()
-        audit.enabled = True
-        audit.log_field_changes = False
-        entity = mock_entity("Customer", audit=audit)
-        appspec = make_appspec([entity], policies=None)
-
-        assert agent.audit_without_field_tracking(appspec) == []
-
-    def test_passes_when_no_audit_config(self, agent: OperationalHygieneAgent) -> None:
-        entity = mock_entity("Customer", audit=None)
-        policies = _policies_with_classification("Customer", "email")
-        appspec = make_appspec([entity], policies=policies)
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            pytest.param(
+                "log_field_changes_enabled", id="test_passes_when_log_field_changes_enabled"
+            ),
+            pytest.param("audit_disabled", id="test_passes_when_audit_disabled"),
+            pytest.param("entity_not_classified", id="test_passes_when_entity_not_classified"),
+            pytest.param("no_policies", id="test_passes_when_no_policies"),
+            pytest.param("no_audit_config", id="test_passes_when_no_audit_config"),
+        ],
+    )
+    def test_op01_passes(self, agent: OperationalHygieneAgent, scenario: str) -> None:
+        """Scenarios where audit_without_field_tracking should return no findings."""
+        if scenario == "log_field_changes_enabled":
+            audit = MagicMock()
+            audit.enabled = True
+            audit.log_field_changes = True
+            entity = mock_entity("Customer", audit=audit)
+            policies = _policies_with_classification("Customer", "email")
+            appspec = make_appspec([entity], policies=policies)
+        elif scenario == "audit_disabled":
+            audit = MagicMock()
+            audit.enabled = False
+            audit.log_field_changes = False
+            entity = mock_entity("Customer", audit=audit)
+            policies = _policies_with_classification("Customer", "email")
+            appspec = make_appspec([entity], policies=policies)
+        elif scenario == "entity_not_classified":
+            audit = MagicMock()
+            audit.enabled = True
+            audit.log_field_changes = False
+            entity = mock_entity("Task", audit=audit)
+            # Classification is for a different entity
+            policies = _policies_with_classification("Customer", "email")
+            appspec = make_appspec([entity], policies=policies)
+        elif scenario == "no_policies":
+            audit = MagicMock()
+            audit.enabled = True
+            audit.log_field_changes = False
+            entity = mock_entity("Customer", audit=audit)
+            appspec = make_appspec([entity], policies=None)
+        else:  # no_audit_config
+            entity = mock_entity("Customer", audit=None)
+            policies = _policies_with_classification("Customer", "email")
+            appspec = make_appspec([entity], policies=policies)
 
         assert agent.audit_without_field_tracking(appspec) == []
 
@@ -260,34 +262,57 @@ class TestOP03LlmLoggingNoRedaction:
         assert findings[0].heuristic_id == "OP-03"
         assert findings[0].severity == Severity.MEDIUM
 
-    def test_flags_when_only_prompts_logged(self, agent: OperationalHygieneAgent) -> None:
-        cfg = _llm_config(redact_pii=False, log_prompts=True, log_completions=False)
+    @pytest.mark.parametrize(
+        ("log_prompts", "log_completions"),
+        [
+            (True, False),
+            (False, True),
+        ],
+        ids=[
+            "test_flags_when_only_prompts_logged",
+            "test_flags_when_only_completions_logged",
+        ],
+    )
+    def test_flags_when_partial_logging_no_redaction(
+        self,
+        agent: OperationalHygieneAgent,
+        log_prompts: bool,
+        log_completions: bool,
+    ) -> None:
+        cfg = _llm_config(
+            redact_pii=False, log_prompts=log_prompts, log_completions=log_completions
+        )
         appspec = make_appspec(llm_config=cfg)
+        assert len(agent.llm_logging_no_redaction(appspec)) == 1
 
-        findings = agent.llm_logging_no_redaction(appspec)
-        assert len(findings) == 1
-
-    def test_flags_when_only_completions_logged(self, agent: OperationalHygieneAgent) -> None:
-        cfg = _llm_config(redact_pii=False, log_prompts=False, log_completions=True)
-        appspec = make_appspec(llm_config=cfg)
-
-        findings = agent.llm_logging_no_redaction(appspec)
-        assert len(findings) == 1
-
-    def test_passes_when_redact_pii_enabled(self, agent: OperationalHygieneAgent) -> None:
-        cfg = _llm_config(redact_pii=True, log_prompts=True, log_completions=True)
-        appspec = make_appspec(llm_config=cfg)
-
-        assert agent.llm_logging_no_redaction(appspec) == []
-
-    def test_passes_when_no_logging(self, agent: OperationalHygieneAgent) -> None:
-        cfg = _llm_config(redact_pii=False, log_prompts=False, log_completions=False)
-        appspec = make_appspec(llm_config=cfg)
-
-        assert agent.llm_logging_no_redaction(appspec) == []
-
-    def test_passes_when_no_llm_config(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(llm_config=None)
+    @pytest.mark.parametrize(
+        ("redact_pii", "log_prompts", "log_completions", "config"),
+        [
+            (True, True, True, "cfg"),
+            (False, False, False, "cfg"),
+            (False, False, False, "none"),
+        ],
+        ids=[
+            "test_passes_when_redact_pii_enabled",
+            "test_passes_when_no_logging",
+            "test_passes_when_no_llm_config",
+        ],
+    )
+    def test_no_finding(
+        self,
+        agent: OperationalHygieneAgent,
+        redact_pii: bool,
+        log_prompts: bool,
+        log_completions: bool,
+        config: str,
+    ) -> None:
+        if config == "none":
+            appspec = make_appspec(llm_config=None)
+        else:
+            cfg = _llm_config(
+                redact_pii=redact_pii, log_prompts=log_prompts, log_completions=log_completions
+            )
+            appspec = make_appspec(llm_config=cfg)
         assert agent.llm_logging_no_redaction(appspec) == []
 
 
@@ -397,32 +422,43 @@ class TestOP06ProcessWithoutCompensation:
 
         assert agent.process_without_compensation(appspec) == []
 
-    def test_passes_when_fewer_than_two_service_steps(self, agent: OperationalHygieneAgent) -> None:
-        step1 = _service_step("validate")
-        proc = _process("simple_process", [step1], compensations=[])
-        appspec = make_appspec(processes=[proc])
-
-        assert agent.process_without_compensation(appspec) == []
-
-    def test_passes_when_non_service_steps_only(self, agent: OperationalHygieneAgent) -> None:
-        step1 = _non_service_step("notify", StepKind.SEND)
-        step2 = _non_service_step("pause", StepKind.WAIT)
-        proc = _process("notification_flow", [step1, step2], compensations=[])
-        appspec = make_appspec(processes=[proc])
-
-        assert agent.process_without_compensation(appspec) == []
-
     def test_passes_when_no_processes(self, agent: OperationalHygieneAgent) -> None:
         appspec = make_appspec(processes=[])
         assert agent.process_without_compensation(appspec) == []
 
-    def test_counts_only_service_steps(self, agent: OperationalHygieneAgent) -> None:
-        """Mixed steps: only 1 service step + 1 send step should NOT flag."""
-        step1 = _service_step("validate")
-        step2 = _non_service_step("notify", StepKind.SEND)
-        proc = _process("mixed_process", [step1, step2], compensations=[])
+    @pytest.mark.parametrize(
+        ("steps", "proc_name"),
+        [
+            (
+                [_service_step("validate")],
+                "simple_process",
+            ),
+            (
+                [
+                    _non_service_step("notify", StepKind.SEND),
+                    _non_service_step("pause", StepKind.WAIT),
+                ],
+                "notification_flow",
+            ),
+            (
+                [_service_step("validate"), _non_service_step("notify", StepKind.SEND)],
+                "mixed_process",
+            ),
+        ],
+        ids=[
+            "test_passes_when_fewer_than_two_service_steps",
+            "test_passes_when_non_service_steps_only",
+            "test_counts_only_service_steps",
+        ],
+    )
+    def test_no_finding_insufficient_service_steps(
+        self,
+        agent: OperationalHygieneAgent,
+        steps: list,
+        proc_name: str,
+    ) -> None:
+        proc = _process(proc_name, steps, compensations=[])
         appspec = make_appspec(processes=[proc])
-
         assert agent.process_without_compensation(appspec) == []
 
 

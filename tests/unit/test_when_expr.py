@@ -1,5 +1,7 @@
 """Tests for surface conditional field visibility (when_expr) (#363)."""
 
+import pytest
+
 from dazzle_ui.runtime.template_context import FieldContext
 from dazzle_ui.utils.expression_eval import evaluate_when_expr
 
@@ -11,30 +13,66 @@ from dazzle_ui.utils.expression_eval import evaluate_when_expr
 class TestEvaluateWhenExpr:
     """evaluate_when_expr() should evaluate serialized Expr strings against record data."""
 
-    def test_empty_expr_returns_true(self) -> None:
-        assert evaluate_when_expr("", {"status": "active"}) is True
+    @pytest.mark.parametrize(
+        ("expr", "data", "expected"),
+        [
+            ("", {"status": "active"}, True),
+            ('(status == "shipped")', {"status": "shipped"}, True),
+            ('(status == "shipped")', {"status": "pending"}, False),
+            ('(status == "active")', {}, False),
+            ("!!! invalid !!!", {"status": "x"}, True),
+        ],
+        ids=[
+            "test_empty_expr_returns_true",
+            "test_equality_match",
+            "test_equality_no_match",
+            "test_missing_field_returns_false",
+            "test_invalid_expr_fails_open",
+        ],
+    )
+    def test_single_assertion(self, expr: str, data: dict, expected: bool) -> None:
+        assert evaluate_when_expr(expr, data) is expected
 
-    def test_equality_match(self) -> None:
-        assert evaluate_when_expr('(status == "shipped")', {"status": "shipped"}) is True
-
-    def test_equality_no_match(self) -> None:
-        assert evaluate_when_expr('(status == "shipped")', {"status": "pending"}) is False
-
-    def test_not_equal(self) -> None:
-        assert evaluate_when_expr('(status != "cancelled")', {"status": "active"}) is True
-        assert evaluate_when_expr('(status != "cancelled")', {"status": "cancelled"}) is False
-
-    def test_numeric_comparison(self) -> None:
-        assert evaluate_when_expr("(amount > 100)", {"amount": 200}) is True
-        assert evaluate_when_expr("(amount > 100)", {"amount": 50}) is False
-
-    def test_missing_field_returns_false(self) -> None:
-        """If the referenced field doesn't exist in data, comparison returns False."""
-        assert evaluate_when_expr('(status == "active")', {}) is False
-
-    def test_boolean_literal(self) -> None:
-        assert evaluate_when_expr("(is_active == true)", {"is_active": True}) is True
-        assert evaluate_when_expr("(is_active == true)", {"is_active": False}) is False
+    @pytest.mark.parametrize(
+        ("expr", "data_true", "data_false"),
+        [
+            (
+                '(status != "cancelled")',
+                {"status": "active"},
+                {"status": "cancelled"},
+            ),
+            (
+                "(amount > 100)",
+                {"amount": 200},
+                {"amount": 50},
+            ),
+            (
+                "(is_active == true)",
+                {"is_active": True},
+                {"is_active": False},
+            ),
+            (
+                '(status in ["active", "pending"])',
+                {"status": "active"},
+                {"status": "closed"},
+            ),
+            (
+                '(contact.status == "verified")',
+                {"contact": {"status": "verified"}},
+                {"contact": {"status": "pending"}},
+            ),
+        ],
+        ids=[
+            "test_not_equal",
+            "test_numeric_comparison",
+            "test_boolean_literal",
+            "test_in_expression",
+            "test_dotted_path",
+        ],
+    )
+    def test_true_and_false_pair(self, expr: str, data_true: dict, data_false: dict) -> None:
+        assert evaluate_when_expr(expr, data_true) is True
+        assert evaluate_when_expr(expr, data_false) is False
 
     def test_and_expression(self) -> None:
         expr = '((status == "shipped") and (amount > 100))'
@@ -47,28 +85,6 @@ class TestEvaluateWhenExpr:
         assert evaluate_when_expr(expr, {"status": "shipped"}) is True
         assert evaluate_when_expr(expr, {"status": "delivered"}) is True
         assert evaluate_when_expr(expr, {"status": "pending"}) is False
-
-    def test_in_expression(self) -> None:
-        expr = '(status in ["active", "pending"])'
-        assert evaluate_when_expr(expr, {"status": "active"}) is True
-        assert evaluate_when_expr(expr, {"status": "closed"}) is False
-
-    def test_invalid_expr_fails_open(self) -> None:
-        """Unparseable expressions should fail open (return True)."""
-        assert evaluate_when_expr("!!! invalid !!!", {"status": "x"}) is True
-
-    def test_dotted_path(self) -> None:
-        """Nested field references should resolve through dicts."""
-        assert (
-            evaluate_when_expr(
-                '(contact.status == "verified")', {"contact": {"status": "verified"}}
-            )
-            is True
-        )
-        assert (
-            evaluate_when_expr('(contact.status == "verified")', {"contact": {"status": "pending"}})
-            is False
-        )
 
 
 # =============================================================================

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.agent.core import _format_history_line, _is_stuck
 from dazzle.agent.models import ActionResult, ActionType, AgentAction, PageState, Step
 
@@ -134,39 +136,67 @@ class TestFormatHistoryLine:
 
 
 class TestIsStuck:
-    def test_empty_history_not_stuck(self) -> None:
-        assert _is_stuck([], window=3) is False
-
-    def test_fewer_than_window_not_stuck(self) -> None:
+    @pytest.mark.parametrize(
+        ("steps_spec", "window", "expected"),
+        [
+            # empty history
+            ([], 3, False),
+            # fewer steps than window — all no-ops but not enough
+            (
+                [(ActionType.CLICK, False), (ActionType.CLICK, False)],
+                3,
+                False,
+            ),
+            # exactly window consecutive no-ops → stuck
+            (
+                [
+                    (ActionType.CLICK, False),
+                    (ActionType.CLICK, False),
+                    (ActionType.CLICK, False),
+                ],
+                3,
+                True,
+            ),
+            # mixed history — a state-change in the window breaks the streak
+            (
+                [
+                    (ActionType.CLICK, False),
+                    (ActionType.CLICK, True),
+                    (ActionType.CLICK, False),
+                ],
+                3,
+                False,
+            ),
+            # Tool actions (state_changed=None) must NOT count as no-ops
+            (
+                [
+                    (ActionType.CLICK, False),
+                    (ActionType.TOOL, None),
+                    (ActionType.CLICK, False),
+                ],
+                3,
+                False,
+            ),
+        ],
+        ids=[
+            "empty_history_not_stuck",
+            "fewer_than_window_not_stuck",
+            "three_consecutive_no_ops_is_stuck",
+            "mixed_history_not_stuck",
+            "state_changed_none_does_not_count_as_noop",
+        ],
+    )
+    def test_is_stuck(
+        self,
+        steps_spec: list[tuple[ActionType, bool | None]],
+        window: int,
+        expected: bool,
+    ) -> None:
         steps = [
-            _make_step(1, ActionType.CLICK, result_kwargs={"state_changed": False}),
-            _make_step(2, ActionType.CLICK, result_kwargs={"state_changed": False}),
+            _make_step(i + 1, action_type, result_kwargs={"state_changed": sc})
+            for i, (action_type, sc) in enumerate(steps_spec)
         ]
-        assert _is_stuck(steps, window=3) is False
-
-    def test_three_consecutive_no_ops_is_stuck(self) -> None:
-        steps = [
-            _make_step(i, ActionType.CLICK, result_kwargs={"state_changed": False})
-            for i in (1, 2, 3)
-        ]
-        assert _is_stuck(steps, window=3) is True
-
-    def test_mixed_history_not_stuck(self) -> None:
-        steps = [
-            _make_step(1, ActionType.CLICK, result_kwargs={"state_changed": False}),
-            _make_step(2, ActionType.CLICK, result_kwargs={"state_changed": True}),
-            _make_step(3, ActionType.CLICK, result_kwargs={"state_changed": False}),
-        ]
-        assert _is_stuck(steps, window=3) is False
-
-    def test_state_changed_none_does_not_count_as_noop(self) -> None:
-        """Tool actions have state_changed=None and should NOT trigger stuck."""
-        steps = [
-            _make_step(1, ActionType.CLICK, result_kwargs={"state_changed": False}),
-            _make_step(2, ActionType.TOOL, result_kwargs={"state_changed": None}),
-            _make_step(3, ActionType.CLICK, result_kwargs={"state_changed": False}),
-        ]
-        assert _is_stuck(steps, window=3) is False
+        assert _is_stuck(steps, window=window) is expected
 
 
 from dazzle.agent.core import DazzleAgent  # noqa: E402

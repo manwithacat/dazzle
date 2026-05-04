@@ -152,74 +152,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_pitch_ir.py",
-    "class": "TestSpeakerNotes",
-    "assertion_shape": "('eq',)",
-    "size": 8,
-    "members": [
-      "test_company_speaker_notes",
-      "test_problem_speaker_notes",
-      "test_solution_speaker_notes",
-      "test_market_speaker_notes",
-      "test_business_model_speaker_notes",
-      "test_financials_speaker_notes",
-      "test_team_speaker_notes",
-      "test_milestones_speaker_notes"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_policy_handler.py",
-    "class": "TestEvaluateCondition",
-    "assertion_shape": "('is',)",
-    "size": 8,
-    "members": [
-      "test_none_condition_returns_true",
-      "test_role_check_matches",
-      "test_role_check_no_match",
-      "test_or_one_matches",
-      "test_or_neither_matches",
-      "test_and_both_match",
-      "test_and_one_fails",
-      "test_comparison_returns_none"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_pull_to_refresh_directive.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 8,
-    "members": [
-      "test_directive_registered",
-      "test_touch_only_via_pointer_coarse",
-      "test_threshold_constant_present",
-      "test_only_triggers_when_scrollTop_zero",
-      "test_passive_listeners",
-      "test_handles_touchcancel_alongside_touchend",
-      "test_directive_listed_in_module_header",
-      "test_directive_present_in_dist_bundle"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_validate_scope_predicates.py",
-    "class": "TestValidPredicates",
-    "assertion_shape": "('eq',)",
-    "size": 8,
-    "members": [
-      "test_tautology_produces_no_errors",
-      "test_column_check_valid_field",
-      "test_user_attr_check_valid_field",
-      "test_path_check_valid_fk_path",
-      "test_exists_check_valid_entity",
-      "test_bool_composite_valid",
-      "test_no_scopes_produces_no_errors",
-      "test_no_fk_graph_produces_no_errors"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_widget_rules.py",
     "class": "TestWidgetRules",
     "assertion_shape": "('eq',)",
@@ -233,23 +165,6 @@
       "test_str7_without_color_in_name_no_color_widget",
       "test_no_entity_ref_surface_skipped",
       "test_unknown_entity_ref_surface_skipped"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_workspace_profile_card.py",
-    "class": "TestInterpolateCardTemplate",
-    "assertion_shape": "('eq',)",
-    "size": 8,
-    "members": [
-      "test_simple_field",
-      "test_dotted_path",
-      "test_multiple_fields",
-      "test_missing_field_renders_empty",
-      "test_missing_dotted_path_renders_empty",
-      "test_fk_dict_resolves_via_display",
-      "test_empty_template_returns_empty",
-      "test_no_placeholders_passes_through"
     ],
     "recommendation": "parametrise"
   },
@@ -286,22 +201,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_asset_bundle.py",
-    "class": "TestShouldBundleAssets",
-    "assertion_shape": "('is',)",
-    "size": 7,
-    "members": [
-      "test_default_mode_default_env_returns_false",
-      "test_auto_in_production_env_returns_true",
-      "test_auto_in_staging_env_returns_true",
-      "test_auto_in_dev_env_returns_false",
-      "test_auto_with_no_env_returns_false",
-      "test_cli_bundle_override_wins_over_never",
-      "test_cli_no_bundle_override_wins_over_always"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_compliance_matching.py",
     "class": "TestUKGovernmentIdentifiers",
     "assertion_shape": "('gte', 'isnot')",
@@ -318,22 +217,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_compliance_slicer.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 7,
-    "members": [
-      "test_slice_by_status",
-      "test_slice_by_extract",
-      "test_slice_by_tier",
-      "test_empty_filter",
-      "test_combined_status_and_tier",
-      "test_new_schema_slice_by_control_id",
-      "test_new_schema_tier_filter"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_condition_evaluator_role_check.py",
     "class": "TestEvaluateConditionRoleCheck",
     "assertion_shape": "('is',)",
@@ -346,70 +229,6 @@
       "test_role_check_false_with_empty_role_name",
       "test_role_check_false_with_missing_role_name_key",
       "test_role_check_exact_match_only"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_cron.py",
-    "class": "TestDueJobs",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_empty_jobs_returns_empty",
-      "test_matching_job_due",
-      "test_non_matching_job_skipped",
-      "test_already_fired_this_minute_dedupes",
-      "test_fired_a_different_minute_does_not_dedupe",
-      "test_multiple_jobs_subset_due",
-      "test_seconds_truncated_for_dedupe_key"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_file_upload_form.py",
-    "class": "TestBasenameOrUrlFilter",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_url_extracts_filename",
-      "test_url_with_query_string",
-      "test_full_url",
-      "test_plain_filename",
-      "test_none_value",
-      "test_empty_string",
-      "test_trailing_slash"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_governance_parser.py",
-    "class": "TestInterfacesParser",
-    "assertion_shape": "('eq', 'isnot')",
-    "size": 7,
-    "members": [
-      "test_api_format_defaults_to_rest",
-      "test_api_auth_oauth2",
-      "test_api_auth_jwt",
-      "test_api_base_path_quoted",
-      "test_api_rate_limit_identifier",
-      "test_api_version",
-      "test_interfaces_default_auth"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_lifecycle_validation.py",
-    "class": "TestValidateLifecycles",
-    "assertion_shape": "('call_any',)",
-    "size": 7,
-    "members": [
-      "test_status_field_must_exist_on_entity",
-      "test_status_field_must_be_enum",
-      "test_state_names_must_match_enum_values",
-      "test_duplicate_order_values_are_rejected",
-      "test_transition_from_state_must_be_declared",
-      "test_transition_to_state_must_be_declared",
-      "test_empty_evidence_string_is_rejected"
     ],
     "recommendation": "parametrise"
   },
@@ -446,22 +265,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_route_overrides.py",
-    "class": "TestLoadExtensionRouters",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_empty_spec_list_returns_empty",
-      "test_rejects_path_traversal_in_module",
-      "test_skips_missing_module",
-      "test_skips_missing_attribute",
-      "test_skips_non_router_attribute",
-      "test_loads_multiple_routers",
-      "test_one_broken_spec_doesnt_block_others"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_search_fields.py",
     "class": "TestBuildEntitySearchFields",
     "assertion_shape": "('eq',)",
@@ -478,22 +281,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_swipe_directive.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 7,
-    "members": [
-      "test_directive_registered",
-      "test_touch_only_via_pointer_coarse",
-      "test_horizontal_threshold_constant",
-      "test_single_finger_only",
-      "test_passive_listeners",
-      "test_handles_touchcancel",
-      "test_directive_listed_in_module_header"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_template_rendering.py",
     "class": "TestJinjaFilters",
     "assertion_shape": "('in',)",
@@ -506,22 +293,6 @@
       "test_timeago_date_object",
       "test_timeago_iso_string",
       "test_timeago_naive_datetime_treated_as_local"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_totp.py",
-    "class": "TestVerifyTotp",
-    "assertion_shape": "('is',)",
-    "size": 7,
-    "members": [
-      "test_valid_code_returns_true",
-      "test_wrong_code_returns_false",
-      "test_completely_invalid_code_returns_false",
-      "test_adjacent_past_step_within_window",
-      "test_adjacent_future_step_within_window",
-      "test_code_outside_window_returns_false",
-      "test_code_outside_window_past"
     ],
     "recommendation": "parametrise"
   },
@@ -572,21 +343,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/mcp/test_demo_data_handlers.py",
-    "class": "TestInferFieldStrategy",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_id_field",
-      "test_name_field",
-      "test_email_field",
-      "test_boolean_field",
-      "test_date_field",
-      "test_amount_field"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/sentinel/test_agent_deployment_state.py",
     "class": "TestDS08AuditAccessDisabledSensitive",
     "assertion_shape": "('eq',)",
@@ -617,21 +373,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_analytics_audit.py",
-    "class": "TestPIINameHint",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_email_contact",
-      "test_phone_contact",
-      "test_ip_address_location_not_contact",
-      "test_address_still_contact",
-      "test_dob_identity",
-      "test_case_insensitive"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_api_surface_drift.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -643,21 +384,6 @@
       "test_public_helpers_snapshot_is_deterministic",
       "test_runtime_urls_snapshot_is_deterministic",
       "test_runtime_urls_no_trailing_whitespace"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_audit_emitter.py",
-    "class": "TestComputeDiff",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_unchanged_field_skipped_on_update",
-      "test_only_tracked_fields_emitted",
-      "test_empty_track_means_all_fields",
-      "test_uuid_round_trip_via_safe_json",
-      "test_datetime_round_trip",
-      "test_both_sides_none_emits_nothing"
     ],
     "recommendation": "parametrise"
   },
@@ -677,51 +403,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_composition_references.py",
-    "class": "TestShouldPromote",
-    "assertion_shape": "('is',)",
-    "size": 6,
-    "members": [
-      "test_both_above_threshold",
-      "test_dom_below_threshold",
-      "test_visual_below_threshold",
-      "test_visual_none",
-      "test_custom_thresholds",
-      "test_exact_threshold"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_composition_visual.py",
-    "class": "TestScoring",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_no_findings_perfect_score",
-      "test_high_severity_deduction",
-      "test_medium_severity_deduction",
-      "test_low_severity_deduction",
-      "test_multiple_findings_cumulative",
-      "test_score_floor_at_zero"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_conformance_derivation.py",
-    "class": "TestDerivationEngine",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_permit_deny",
-      "test_forbid_overrides_permit",
-      "test_wildcard_scope",
-      "test_unmatched_role_denied",
-      "test_create_single_case",
-      "test_operation_enum_value"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_content_negotiation.py",
     "class": "TestIsHtmxRequest",
     "assertion_shape": "('is',)",
@@ -733,96 +414,6 @@
       "test_json_accept",
       "test_empty_accept",
       "test_no_headers_attr"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_css_clip_check.py",
-    "class": "TestPaddingShorthand",
-    "assertion_shape": "('eq', 'eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_one_value",
-      "test_two_values",
-      "test_three_values",
-      "test_four_values",
-      "test_padding_block_overrides_shorthand",
-      "test_padding_top_bottom_overrides_shorthand"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_deploy_commands.py",
-    "class": "TestGenerateComposeYaml",
-    "assertion_shape": "('in',)",
-    "size": 6,
-    "members": [
-      "test_has_app_service",
-      "test_has_postgres_service",
-      "test_has_redis_service",
-      "test_postgres_has_healthcheck",
-      "test_has_pgdata_volume",
-      "test_app_port_maps_3000_to_8000"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_docs_update_scanner.py",
-    "class": "TestResolveSince",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_none_uses_latest_release",
-      "test_none_fallback_no_releases",
-      "test_relative_days",
-      "test_relative_day_singular",
-      "test_date_string_passthrough",
-      "test_tag_name"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_dsl_emitter.py",
-    "class": "TestInferMissingAction",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_delete",
-      "test_create",
-      "test_edit",
-      "test_list",
-      "test_view",
-      "test_generic"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_dsl_test_generator_auth.py",
-    "class": "TestAuthLifecycleGeneration",
-    "assertion_shape": "('in',)",
-    "size": 6,
-    "members": [
-      "test_login_valid_test_id",
-      "test_login_invalid_test_id",
-      "test_redirect_test_id",
-      "test_session_valid_test_id",
-      "test_session_expired_test_id",
-      "test_logout_test_id"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_entity_completeness.py",
-    "class": "TestStaticEntityAnalysis",
-    "assertion_shape": "('in',)",
-    "size": 6,
-    "members": [
-      "test_missing_list_surface",
-      "test_missing_create_surface",
-      "test_missing_edit_surface",
-      "test_missing_view_surface",
-      "test_no_transition_ui",
-      "test_report_summary_no_gaps"
     ],
     "recommendation": "parametrise"
   },
@@ -883,21 +474,6 @@
       "test_filterable_table_emits_h1_landmark",
       "test_visible_h2_table_title_unchanged",
       "test_tokens_in_dist_bundle"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_job_triggers.py",
-    "class": "TestShouldFireWhenCondition",
-    "assertion_shape": "('is',)",
-    "size": 6,
-    "members": [
-      "test_is_set_true_when_value_truthy",
-      "test_is_set_false_when_value_none",
-      "test_is_set_false_when_value_empty_string",
-      "test_is_null_true_when_value_none",
-      "test_unparseable_condition_fail_closed",
-      "test_unknown_operator_fail_closed"
     ],
     "recommendation": "parametrise"
   },
@@ -992,36 +568,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_policy_handler.py",
-    "class": "TestEvaluateRules",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_no_access_returns_default_deny",
-      "test_permit_returns_allow",
-      "test_forbid_returns_deny",
-      "test_forbid_overrides_permit",
-      "test_no_matching_rule_returns_default_deny",
-      "test_different_operation_not_matched"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_predicate_algebra.py",
-    "class": "TestSimplification",
-    "assertion_shape": "('call_isinstance',)",
-    "size": 6,
-    "members": [
-      "test_or_with_tautology_returns_tautology",
-      "test_and_with_contradiction_returns_contradiction",
-      "test_not_tautology_returns_contradiction",
-      "test_not_contradiction_returns_tautology",
-      "test_and_identity_both_tautologies",
-      "test_or_identity_both_contradictions"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_predicate_builder.py",
     "class": "(module)",
     "assertion_shape": "('call_isinstance', 'eq', 'eq', 'eq')",
@@ -1053,21 +599,6 @@
   },
   {
     "file": "tests/unit/test_process_propose.py",
-    "class": "TestCrudDetection",
-    "assertion_shape": "('is',)",
-    "size": 6,
-    "members": [
-      "test_simple_create_is_crud",
-      "test_status_changed_is_not_crud",
-      "test_crud_with_unless_is_not_crud",
-      "test_multi_entity_scope_is_not_crud",
-      "test_non_crud_outcome_is_not_crud",
-      "test_cron_trigger_is_not_crud"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_process_propose.py",
     "class": "TestDesignQuestions",
     "assertion_shape": "('call_any',)",
     "size": 6,
@@ -1078,21 +609,6 @@
       "test_exception_path_question",
       "test_multi_entity_scope_question",
       "test_integration_title_question"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_pulse_scoring.py",
-    "class": "TestSecurityScore",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_all_default_deny_is_100",
-      "test_mixed_allow_and_default_deny",
-      "test_partial_coverage_with_gaps",
-      "test_zero_combinations",
-      "test_empty_summary",
-      "test_all_three_types"
     ],
     "recommendation": "parametrise"
   },
@@ -1142,21 +658,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_scope_fidelity.py",
-    "class": "TestEntityMatchesTokens",
-    "assertion_shape": "('call__entity_matches_tokens',)",
-    "size": 6,
-    "members": [
-      "test_exact_match",
-      "test_case_insensitive",
-      "test_service_prefix",
-      "test_step_name_contains",
-      "test_snake_case_match",
-      "test_substring_in_service"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_social_auth.py",
     "class": "TestSocialAuthService",
     "assertion_shape": "('eq',)",
@@ -1168,21 +669,6 @@
       "test_verify_github_missing_credentials",
       "test_verify_github_code_not_configured",
       "test_get_or_create_user_uses_email_prefix_as_username"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_storage_cycle1.py",
-    "class": "TestEnvVarInterpolation",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_extract_refs_in_order",
-      "test_extract_dedupes",
-      "test_extract_none_safe",
-      "test_interpolate_substitutes",
-      "test_interpolate_passes_through_literals",
-      "test_lowercase_var_not_recognised"
     ],
     "recommendation": "parametrise"
   },
@@ -1824,6 +1310,20 @@
       "test_day_matches",
       "test_month_matches",
       "test_weekday_posix_sunday"
+    ],
+    "recommendation": "parametrise"
+  },
+  {
+    "file": "tests/unit/test_cron.py",
+    "class": "TestDueJobs",
+    "assertion_shape": "('eq',)",
+    "size": 5,
+    "members": [
+      "test_empty_jobs_returns_empty",
+      "test_already_fired_this_minute_dedupes",
+      "test_fired_a_different_minute_does_not_dedupe",
+      "test_multiple_jobs_subset_due",
+      "test_seconds_truncated_for_dedupe_key"
     ],
     "recommendation": "parametrise"
   },
@@ -2538,6 +2038,20 @@
       "test_warns_on_missing_handler",
       "test_nonexistent_dir_returns_empty",
       "test_multiple_overrides"
+    ],
+    "recommendation": "parametrise"
+  },
+  {
+    "file": "tests/unit/test_route_overrides.py",
+    "class": "TestLoadExtensionRouters",
+    "assertion_shape": "('eq',)",
+    "size": 5,
+    "members": [
+      "test_empty_spec_list_returns_empty",
+      "test_rejects_path_traversal_in_module",
+      "test_skips_missing_module",
+      "test_loads_multiple_routers",
+      "test_one_broken_spec_doesnt_block_others"
     ],
     "recommendation": "parametrise"
   },
@@ -3500,19 +3014,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
-    "file": "tests/unit/test_analytics_audit.py",
-    "class": "TestPIINameHint",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_ssn_identity",
-      "test_first_name_identity",
-      "test_biometric",
-      "test_health"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
     "file": "tests/unit/test_analytics_disable_modes.py",
     "class": "TestResolveActiveProvidersIntegration",
     "assertion_shape": "('eq',)",
@@ -3990,19 +3491,6 @@
       "test_days_since_past",
       "test_days_until_with_datetime_string",
       "test_days_until_with_date_object"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_conformance_derivation.py",
-    "class": "TestDerivationEngine",
-    "assertion_shape": "('eq', 'eq', 'eq')",
-    "size": 4,
-    "members": [
-      "test_scope_all",
-      "test_scope_filtered",
-      "test_scope_excluded_default_deny",
-      "test_read_generates_two_cases"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -5762,19 +5250,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
-    "file": "tests/unit/test_scope_fidelity.py",
-    "class": "TestPascalToSnake",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_simple",
-      "test_multi_word",
-      "test_already_lower",
-      "test_acronym"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
     "file": "tests/unit/test_scope_rules.py",
     "class": "TestPermitFieldConditionRejection",
     "assertion_shape": "('eq', 'isnot')",
@@ -6564,18 +6039,6 @@
       "test_finance_domain",
       "test_task_domain",
       "test_crm_domain"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/mcp/test_demo_data_handlers.py",
-    "class": "TestInferFieldStrategy",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_foreign_key_field",
-      "test_description_field",
-      "test_title_field"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -7576,6 +7039,18 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_audit_emitter.py",
+    "class": "TestComputeDiff",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_empty_track_means_all_fields",
+      "test_uuid_round_trip_via_safe_json",
+      "test_datetime_round_trip"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_audit_log.py",
     "class": "TestPerEntityAuditFiltering",
     "assertion_shape": "('is',)",
@@ -7828,6 +7303,18 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_compliance_slicer.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 3,
+    "members": [
+      "test_combined_status_and_tier",
+      "test_new_schema_slice_by_control_id",
+      "test_new_schema_tier_filter"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_compliance_wiring.py",
     "class": "TestCliWiring",
     "assertion_shape": "('in',)",
@@ -8016,6 +7503,18 @@
       "test_role_denied_with_empty_roles",
       "test_role_denied_with_missing_roles_key",
       "test_role_denied_in_and_with_comparison_has_sentinel"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
+    "file": "tests/unit/test_conformance_derivation.py",
+    "class": "TestDerivationEngine",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 3,
+    "members": [
+      "test_wildcard_scope",
+      "test_create_single_case",
+      "test_operation_enum_value"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -10696,18 +10195,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
-    "file": "tests/unit/test_predicate_algebra.py",
-    "class": "TestSimplification",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_and_with_tautology_returns_x",
-      "test_or_with_contradiction_returns_x",
-      "test_double_negation_elimination"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
     "file": "tests/unit/test_predicate_qualified_columns.py",
     "class": "TestUserAttrCheckQualifiesColumn",
     "assertion_shape": "('eq',)",
@@ -11796,18 +11283,6 @@
       "test_surface_access_authenticated",
       "test_surface_access_persona",
       "test_surface_access_single_persona"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)"
-  },
-  {
-    "file": "tests/unit/test_swipe_directive.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in')",
-    "size": 3,
-    "members": [
-      "test_max_vertical_drift_filter",
-      "test_max_duration_filter",
-      "test_directive_present_in_dist_bundle"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },

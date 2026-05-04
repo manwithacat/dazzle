@@ -20,14 +20,21 @@ from dazzle.fitness.triage import (
 
 
 class TestCanonicalizeSummary:
-    def test_lowercases(self) -> None:
-        assert canonicalize_summary("FooBar") == "foobar"
-
-    def test_strips_outer_whitespace(self) -> None:
-        assert canonicalize_summary("  hello  ") == "hello"
-
-    def test_collapses_internal_whitespace(self) -> None:
-        assert canonicalize_summary("a  b\t c\n d") == "a b c d"
+    @pytest.mark.parametrize(
+        ("input_", "expected"),
+        [
+            ("FooBar", "foobar"),
+            ("  hello  ", "hello"),
+            ("a  b\t c\n d", "a b c d"),
+        ],
+        ids=[
+            "test_lowercases",
+            "test_strips_outer_whitespace",
+            "test_collapses_internal_whitespace",
+        ],
+    )
+    def test_normalises_text(self, input_: str, expected: str) -> None:
+        assert canonicalize_summary(input_) == expected
 
     def test_truncates_at_120_chars(self) -> None:
         long = "x" * 200

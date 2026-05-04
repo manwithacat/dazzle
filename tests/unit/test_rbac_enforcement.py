@@ -510,30 +510,27 @@ class TestAuthDependencyRoleCheck:
 class TestNormalizeRole:
     """Tests that _normalize_role strips the role_ prefix from database roles."""
 
-    def test_strips_role_prefix(self) -> None:
+    @pytest.mark.parametrize(
+        ("role", "expected"),
+        [
+            ("role_school_admin", "school_admin"),
+            ("admin", "admin"),
+            ("user_admin", "user_admin"),
+            ("", ""),
+            ("role_", ""),
+        ],
+        ids=[
+            "test_strips_role_prefix",
+            "test_leaves_bare_name_unchanged",
+            "test_leaves_non_role_prefix_unchanged",
+            "test_empty_string",
+            "test_just_role_prefix",
+        ],
+    )
+    def test_normalize_role(self, role: str, expected: str) -> None:
         from dazzle_back.runtime.route_generator import _normalize_role
 
-        assert _normalize_role("role_school_admin") == "school_admin"
-
-    def test_leaves_bare_name_unchanged(self) -> None:
-        from dazzle_back.runtime.route_generator import _normalize_role
-
-        assert _normalize_role("admin") == "admin"
-
-    def test_leaves_non_role_prefix_unchanged(self) -> None:
-        from dazzle_back.runtime.route_generator import _normalize_role
-
-        assert _normalize_role("user_admin") == "user_admin"
-
-    def test_empty_string(self) -> None:
-        from dazzle_back.runtime.route_generator import _normalize_role
-
-        assert _normalize_role("") == ""
-
-    def test_just_role_prefix(self) -> None:
-        from dazzle_back.runtime.route_generator import _normalize_role
-
-        assert _normalize_role("role_") == ""
+        assert _normalize_role(role) == expected
 
 
 class TestBuildAccessContext:

@@ -407,27 +407,36 @@ class TestParseBaseUrl:
         runner = UnifiedTestRunner.__new__(UnifiedTestRunner)
         return runner._parse_base_url(url)
 
-    def test_localhost_8000_splits(self) -> None:
-        api, ui = self._parse("http://localhost:8000")
-        assert api == "http://localhost:8000"
-        assert ui == "http://localhost:3000"
-
-    def test_remote_https_no_port(self) -> None:
-        api, ui = self._parse("https://staging.example.com")
-        assert api == "https://staging.example.com"
-        assert ui == "https://staging.example.com"
-
-    def test_remote_https_with_port(self) -> None:
-        api, ui = self._parse("https://staging.example.com:4000")
-        assert api == "https://staging.example.com:4000"
-        assert ui == "https://staging.example.com:4000"
-
-    def test_trailing_slash_stripped(self) -> None:
-        api, ui = self._parse("https://example.com/")
-        assert api == "https://example.com"
-        assert ui == "https://example.com"
-
-    def test_heroku_url(self) -> None:
-        api, ui = self._parse("https://myapp-staging-abc123.herokuapp.com")
-        assert api == "https://myapp-staging-abc123.herokuapp.com"
-        assert ui == "https://myapp-staging-abc123.herokuapp.com"
+    @pytest.mark.parametrize(
+        ("url", "expected_api", "expected_ui"),
+        [
+            ("http://localhost:8000", "http://localhost:8000", "http://localhost:3000"),
+            (
+                "https://staging.example.com",
+                "https://staging.example.com",
+                "https://staging.example.com",
+            ),
+            (
+                "https://staging.example.com:4000",
+                "https://staging.example.com:4000",
+                "https://staging.example.com:4000",
+            ),
+            ("https://example.com/", "https://example.com", "https://example.com"),
+            (
+                "https://myapp-staging-abc123.herokuapp.com",
+                "https://myapp-staging-abc123.herokuapp.com",
+                "https://myapp-staging-abc123.herokuapp.com",
+            ),
+        ],
+        ids=[
+            "test_localhost_8000_splits",
+            "test_remote_https_no_port",
+            "test_remote_https_with_port",
+            "test_trailing_slash_stripped",
+            "test_heroku_url",
+        ],
+    )
+    def test_parse_base_url(self, url: str, expected_api: str, expected_ui: str) -> None:
+        api, ui = self._parse(url)
+        assert api == expected_api
+        assert ui == expected_ui

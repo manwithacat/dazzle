@@ -352,38 +352,42 @@ class TestAccessDenied:
 
 
 class TestFieldDetection:
-    def test_detect_owner_field_by_name(self) -> None:
-        fields = [
-            {"name": "id", "type": {}},
-            {"name": "owner_id", "type": {}},
-        ]
-        assert detect_owner_field(fields) == "owner_id"
+    @pytest.mark.parametrize(
+        ("fields", "expected"),
+        [
+            (
+                [{"name": "id", "type": {}}, {"name": "owner_id", "type": {}}],
+                "owner_id",
+            ),
+            ([{"name": "created_by", "type": {}}], "created_by"),
+            ([{"name": "author", "type": {"kind": "ref", "ref_entity": "User"}}], "author"),
+            ([{"name": "title", "type": {}}], None),
+        ],
+        ids=[
+            "detect_owner_field_by_name",
+            "detect_owner_field_created_by",
+            "detect_owner_field_by_ref",
+            "detect_owner_field_none",
+        ],
+    )
+    def test_detect_owner_field(self, fields: list, expected: str | None) -> None:
+        assert detect_owner_field(fields) == expected
 
-    def test_detect_owner_field_created_by(self) -> None:
-        fields = [{"name": "created_by", "type": {}}]
-        assert detect_owner_field(fields) == "created_by"
-
-    def test_detect_owner_field_by_ref(self) -> None:
-        fields = [
-            {"name": "author", "type": {"kind": "ref", "ref_entity": "User"}},
-        ]
-        assert detect_owner_field(fields) == "author"
-
-    def test_detect_owner_field_none(self) -> None:
-        fields = [{"name": "title", "type": {}}]
-        assert detect_owner_field(fields) is None
-
-    def test_detect_tenant_field(self) -> None:
-        fields = [{"name": "tenant_id", "type": {}}]
-        assert detect_tenant_field(fields) == "tenant_id"
-
-    def test_detect_tenant_field_org(self) -> None:
-        fields = [{"name": "organization_id", "type": {}}]
-        assert detect_tenant_field(fields) == "organization_id"
-
-    def test_detect_tenant_field_none(self) -> None:
-        fields = [{"name": "title", "type": {}}]
-        assert detect_tenant_field(fields) is None
+    @pytest.mark.parametrize(
+        ("fields", "expected"),
+        [
+            ([{"name": "tenant_id", "type": {}}], "tenant_id"),
+            ([{"name": "organization_id", "type": {}}], "organization_id"),
+            ([{"name": "title", "type": {}}], None),
+        ],
+        ids=[
+            "detect_tenant_field",
+            "detect_tenant_field_org",
+            "detect_tenant_field_none",
+        ],
+    )
+    def test_detect_tenant_field(self, fields: list, expected: str | None) -> None:
+        assert detect_tenant_field(fields) == expected
 
 
 # ---------------------------------------------------------------------------

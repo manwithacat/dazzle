@@ -8,54 +8,62 @@ pages a table has.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle_ui.runtime.template_renderer import _pagination_pages
 
 
 class TestSmallTotals:
     """Below the ellipsis threshold, every page is rendered explicitly."""
 
-    def test_zero_pages_returns_empty(self) -> None:
-        assert _pagination_pages(1, 0) == []
-
-    def test_one_page_returns_just_one(self) -> None:
-        assert _pagination_pages(1, 1) == [1]
-
-    def test_three_pages_no_ellipsis(self) -> None:
-        assert _pagination_pages(2, 3) == [1, 2, 3]
-
-    def test_seven_pages_no_ellipsis_default_window(self) -> None:
-        # threshold = 2*window+5 = 9 → up to 9 pages render explicit
-        assert _pagination_pages(4, 7) == [1, 2, 3, 4, 5, 6, 7]
-
-    def test_nine_pages_at_threshold_no_ellipsis(self) -> None:
-        assert _pagination_pages(5, 9) == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    @pytest.mark.parametrize(
+        ("current", "total", "expected"),
+        [
+            (1, 0, []),
+            (1, 1, [1]),
+            (2, 3, [1, 2, 3]),
+            (4, 7, [1, 2, 3, 4, 5, 6, 7]),
+            (5, 9, [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        ],
+        ids=[
+            "test_zero_pages_returns_empty",
+            "test_one_page_returns_just_one",
+            "test_three_pages_no_ellipsis",
+            "test_seven_pages_no_ellipsis_default_window",
+            "test_nine_pages_at_threshold_no_ellipsis",
+        ],
+    )
+    def test_small_total(self, current: int, total: int, expected: list) -> None:
+        assert _pagination_pages(current, total) == expected
 
 
 class TestEllipsisCollapse:
     """Above the threshold, the helper inserts `None` ellipsis markers."""
 
-    def test_current_in_middle_emits_two_ellipses(self) -> None:
-        # current=7, window=2 → window pages 5..9, ellipses on both sides
-        assert _pagination_pages(7, 120) == [1, None, 5, 6, 7, 8, 9, None, 120]
-
-    def test_current_near_start_left_window_collapses(self) -> None:
-        # current=3, window=2 → window 2..5; left ellipsis suppressed since
-        # win_start <= 2 (page 2 is in the window).
-        assert _pagination_pages(3, 120) == [1, 2, 3, 4, 5, None, 120]
-
-    def test_current_near_end_right_window_collapses(self) -> None:
-        # current=118, window=2, total=120 → window 116..119; right ellipsis
-        # suppressed since win_end == total-1 (page 119 already included).
-        assert _pagination_pages(118, 120) == [1, None, 116, 117, 118, 119, 120]
-
-    def test_current_is_first_page(self) -> None:
-        # current=1 → window clamps to [2, 3]; left ellipsis suppressed.
-        assert _pagination_pages(1, 120) == [1, 2, 3, None, 120]
-
-    def test_current_is_last_page(self) -> None:
-        # current=120, total=120 → window 118..119; right ellipsis
-        # suppressed since 119 == total-1.
-        assert _pagination_pages(120, 120) == [1, None, 118, 119, 120]
+    @pytest.mark.parametrize(
+        ("current", "total", "expected"),
+        [
+            # current=7, window=2 → window pages 5..9, ellipses on both sides
+            (7, 120, [1, None, 5, 6, 7, 8, 9, None, 120]),
+            # current=3, window=2 → window 2..5; left ellipsis suppressed since win_start <= 2
+            (3, 120, [1, 2, 3, 4, 5, None, 120]),
+            # current=118, window=2, total=120 → right ellipsis suppressed since win_end==total-1
+            (118, 120, [1, None, 116, 117, 118, 119, 120]),
+            # current=1 → window clamps to [2, 3]; left ellipsis suppressed
+            (1, 120, [1, 2, 3, None, 120]),
+            # current=120, total=120 → window 118..119; right ellipsis suppressed
+            (120, 120, [1, None, 118, 119, 120]),
+        ],
+        ids=[
+            "test_current_in_middle_emits_two_ellipses",
+            "test_current_near_start_left_window_collapses",
+            "test_current_near_end_right_window_collapses",
+            "test_current_is_first_page",
+            "test_current_is_last_page",
+        ],
+    )
+    def test_ellipsis_collapse(self, current: int, total: int, expected: list) -> None:
+        assert _pagination_pages(current, total) == expected
 
 
 class TestBoundedOutput:

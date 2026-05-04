@@ -485,8 +485,27 @@ class TestDS07ChannelWithoutThrottle:
 
 
 class TestDS08AuditAccessDisabledSensitive:
-    def test_flags_audit_disabled_with_pii(self, agent: DeploymentStateAgent) -> None:
-        cls_spec = _make_classification("Customer", "email", DataClassification.PII_DIRECT)
+    @pytest.mark.parametrize(
+        "entity, field, classification",
+        [
+            ("Customer", "email", DataClassification.PII_DIRECT),
+            ("Payment", "amount", DataClassification.FINANCIAL_TXN),
+            ("Account", "card_number", DataClassification.FINANCIAL_ACCOUNT),
+        ],
+        ids=[
+            "test_flags_audit_disabled_with_pii",
+            "test_flags_audit_disabled_with_financial_txn",
+            "test_flags_audit_disabled_with_financial_account",
+        ],
+    )
+    def test_flags_audit_disabled_with_sensitive_classification(
+        self,
+        agent: DeploymentStateAgent,
+        entity: str,
+        field: str,
+        classification: DataClassification,
+    ) -> None:
+        cls_spec = _make_classification(entity, field, classification)
         policies = _make_policies(classifications=[cls_spec], audit_access=False)
         appspec = make_appspec(policies=policies)
         findings = agent.audit_access_disabled_sensitive(appspec)
@@ -494,22 +513,6 @@ class TestDS08AuditAccessDisabledSensitive:
         assert findings[0].heuristic_id == "DS-08"
         assert findings[0].severity == Severity.HIGH
         assert "Audit access disabled" in findings[0].title
-
-    def test_flags_audit_disabled_with_financial_txn(self, agent: DeploymentStateAgent) -> None:
-        cls_spec = _make_classification("Payment", "amount", DataClassification.FINANCIAL_TXN)
-        policies = _make_policies(classifications=[cls_spec], audit_access=False)
-        appspec = make_appspec(policies=policies)
-        findings = agent.audit_access_disabled_sensitive(appspec)
-        assert len(findings) == 1
-
-    def test_flags_audit_disabled_with_financial_account(self, agent: DeploymentStateAgent) -> None:
-        cls_spec = _make_classification(
-            "Account", "card_number", DataClassification.FINANCIAL_ACCOUNT
-        )
-        policies = _make_policies(classifications=[cls_spec], audit_access=False)
-        appspec = make_appspec(policies=policies)
-        findings = agent.audit_access_disabled_sensitive(appspec)
-        assert len(findings) == 1
 
     def test_passes_with_audit_enabled(self, agent: DeploymentStateAgent) -> None:
         cls_spec = _make_classification("Customer", "email", DataClassification.PII_DIRECT)

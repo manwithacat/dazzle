@@ -87,20 +87,25 @@ def _proposal(
 
 
 class TestSanitizeIdentifier:
-    def test_simple(self) -> None:
-        assert _sanitize_identifier("Task") == "task"
-
-    def test_spaces(self) -> None:
-        assert _sanitize_identifier("My Task List") == "my_task_list"
-
-    def test_special_chars(self) -> None:
-        assert _sanitize_identifier("task-list!") == "task_list"
-
-    def test_empty(self) -> None:
-        assert _sanitize_identifier("") == "unnamed"
-
-    def test_multiple_underscores(self) -> None:
-        assert _sanitize_identifier("task__list") == "task_list"
+    @pytest.mark.parametrize(
+        ("input_str", "expected"),
+        [
+            ("Task", "task"),
+            ("My Task List", "my_task_list"),
+            ("task-list!", "task_list"),
+            ("", "unnamed"),
+            ("task__list", "task_list"),
+        ],
+        ids=[
+            "test_simple",
+            "test_spaces",
+            "test_special_chars",
+            "test_empty",
+            "test_multiple_underscores",
+        ],
+    )
+    def test_sanitize_identifier(self, input_str: str, expected: str) -> None:
+        assert _sanitize_identifier(input_str) == expected
 
 
 class TestPrimaryEntity:

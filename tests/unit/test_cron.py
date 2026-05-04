@@ -122,32 +122,36 @@ def _at(*, year=2026, month=5, day=4, hour=0, minute=0, weekday=None):
 
 
 class TestCronMatchesEveryField:
-    def test_minute_matches(self):
-        c = parse_cron("30 * * * *")
-        assert cron_matches(c, _at(minute=30)) is True
-        assert cron_matches(c, _at(minute=29)) is False
-
-    def test_hour_matches(self):
-        c = parse_cron("0 1 * * *")
-        assert cron_matches(c, _at(hour=1)) is True
-        assert cron_matches(c, _at(hour=2)) is False
-
-    def test_day_matches(self):
-        c = parse_cron("0 0 15 * *")
-        assert cron_matches(c, _at(day=15)) is True
-        assert cron_matches(c, _at(day=16)) is False
-
-    def test_month_matches(self):
-        c = parse_cron("0 0 1 6 *")
-        assert cron_matches(c, _at(year=2026, month=6, day=1)) is True
-        assert cron_matches(c, _at(year=2026, month=7, day=1)) is False
-
-    def test_weekday_posix_sunday(self):
-        # 2026-05-03 is a Sunday → POSIX weekday 0.
-        c = parse_cron("0 0 * * 0")
-        assert cron_matches(c, _at(year=2026, month=5, day=3, weekday=0)) is True
-        # Monday → POSIX 1, no match.
-        assert cron_matches(c, _at(year=2026, month=5, day=4, weekday=1)) is False
+    @pytest.mark.parametrize(
+        ("cron_expr", "true_kwargs", "false_kwargs"),
+        [
+            ("30 * * * *", {"minute": 30}, {"minute": 29}),
+            ("0 1 * * *", {"hour": 1}, {"hour": 2}),
+            ("0 0 15 * *", {"day": 15}, {"day": 16}),
+            (
+                "0 0 1 6 *",
+                {"year": 2026, "month": 6, "day": 1},
+                {"year": 2026, "month": 7, "day": 1},
+            ),
+            # 2026-05-03 is a Sunday (POSIX 0); 2026-05-04 is Monday (POSIX 1).
+            (
+                "0 0 * * 0",
+                {"year": 2026, "month": 5, "day": 3, "weekday": 0},
+                {"year": 2026, "month": 5, "day": 4, "weekday": 1},
+            ),
+        ],
+        ids=[
+            "test_minute_matches",
+            "test_hour_matches",
+            "test_day_matches",
+            "test_month_matches",
+            "test_weekday_posix_sunday",
+        ],
+    )
+    def test_field_match(self, cron_expr: str, true_kwargs: dict, false_kwargs: dict) -> None:
+        c = parse_cron(cron_expr)
+        assert cron_matches(c, _at(**true_kwargs)) is True
+        assert cron_matches(c, _at(**false_kwargs)) is False
 
     def test_weekday_posix_saturday(self):
         # 2026-05-02 is a Saturday → POSIX weekday 6.

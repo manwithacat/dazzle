@@ -243,27 +243,23 @@ class TestAuditLogging:
 
 
 class TestAuditQueries:
-    def test_query_by_entity(self, audit_logger, mock_conn) -> None:
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_sql_fragment"),
+        [
+            ({"entity_name": "Task"}, "entity_name = %s"),
+            ({"operation": "create"}, "operation = %s"),
+            ({"user_id": "alice"}, "user_id = %s"),
+        ],
+        ids=["query_by_entity", "query_by_operation", "query_by_user"],
+    )
+    def test_query_logs_filter(
+        self, audit_logger, mock_conn, kwargs: dict, expected_sql_fragment: str
+    ) -> None:
         conn, cursor = mock_conn
         cursor.fetchall.return_value = []
-        audit_logger.query_logs(entity_name="Task")
-        # Should have executed a SELECT with entity_name filter
+        audit_logger.query_logs(**kwargs)
         select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
-        assert any("entity_name = %s" in c[0] for c in select_calls)
-
-    def test_query_by_operation(self, audit_logger, mock_conn) -> None:
-        conn, cursor = mock_conn
-        cursor.fetchall.return_value = []
-        audit_logger.query_logs(operation="create")
-        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
-        assert any("operation = %s" in c[0] for c in select_calls)
-
-    def test_query_by_user(self, audit_logger, mock_conn) -> None:
-        conn, cursor = mock_conn
-        cursor.fetchall.return_value = []
-        audit_logger.query_logs(user_id="alice")
-        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
-        assert any("user_id = %s" in c[0] for c in select_calls)
+        assert any(expected_sql_fragment in c[0] for c in select_calls)
 
     def test_query_entity_logs(self, audit_logger, mock_conn) -> None:
         conn, cursor = mock_conn

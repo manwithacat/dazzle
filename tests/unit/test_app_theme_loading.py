@@ -19,57 +19,49 @@ from dazzle.core.manifest import load_manifest
 
 
 class TestManifestAppTheme:
-    def test_app_theme_defaults_to_none(self, tmp_path: Path) -> None:
-        (tmp_path / "dazzle.toml").write_text(
-            '[project]\nname = "x"\nversion = "1.0.0"\nroot = "x"\n[dsl]\npaths = ["dsl/"]\n'
-        )
+    _BASE_TOML = '[project]\nname = "x"\nversion = "1.0.0"\nroot = "x"\n[dsl]\npaths = ["dsl/"]\n'
+
+    @pytest.mark.parametrize(
+        ("extra_toml", "expected_theme"),
+        [
+            # No [ui] section → defaults to None
+            ("", None),
+            # [ui] theme = "..." key
+            ('[ui]\ntheme = "linear-dark"\n', "linear-dark"),
+            # [ui] app_theme = "..." alias — avoids keyword overlap with [theme] section
+            ('[ui]\napp_theme = "paper"\n', "paper"),
+        ],
+        ids=[
+            "app_theme_defaults_to_none",
+            "ui_theme_field_parses",
+            "ui_app_theme_alias_also_parses",
+        ],
+    )
+    def test_toml_theme_parsing(
+        self, tmp_path: Path, extra_toml: str, expected_theme: str | None
+    ) -> None:
+        (tmp_path / "dazzle.toml").write_text(self._BASE_TOML + extra_toml)
         mf = load_manifest(tmp_path / "dazzle.toml")
-        assert mf.app_theme is None
+        assert mf.app_theme == expected_theme
 
-    def test_ui_theme_field_parses(self, tmp_path: Path) -> None:
-        (tmp_path / "dazzle.toml").write_text(
-            '[project]\nname = "x"\nversion = "1.0.0"\nroot = "x"\n'
-            '[dsl]\npaths = ["dsl/"]\n'
-            '[ui]\ntheme = "linear-dark"\n'
-        )
-        mf = load_manifest(tmp_path / "dazzle.toml")
-        assert mf.app_theme == "linear-dark"
-
-    def test_ui_app_theme_alias_also_parses(self, tmp_path: Path) -> None:
-        """``[ui] app_theme = "..."`` works as an alias for ``theme`` —
-        avoids the keyword overlap with the ``[theme]`` section that
-        controls site/marketing-page tokens."""
-        (tmp_path / "dazzle.toml").write_text(
-            '[project]\nname = "x"\nversion = "1.0.0"\nroot = "x"\n'
-            '[dsl]\npaths = ["dsl/"]\n'
-            '[ui]\napp_theme = "paper"\n'
-        )
-        mf = load_manifest(tmp_path / "dazzle.toml")
-        assert mf.app_theme == "paper"
-
-    def test_ops_dashboard_uses_linear_dark(self) -> None:
-        """The shipped ops_dashboard example sets the linear-dark theme
-        as the v0.61.36 proof — this test pins the example so a
-        rename of the theme triggers a CI red rather than a silent
-        404 on the stylesheet."""
+    @pytest.mark.parametrize(
+        ("example", "expected_theme"),
+        [
+            ("ops_dashboard", "linear-dark"),
+            ("contact_manager", "paper"),
+            ("support_tickets", "stripe"),
+        ],
+        ids=[
+            "ops_dashboard_uses_linear_dark",
+            "contact_manager_uses_paper",
+            "support_tickets_uses_stripe",
+        ],
+    )
+    def test_example_app_theme(self, example: str, expected_theme: str) -> None:
+        """Pins example-app theme names so a rename triggers CI red."""
         repo_root = Path(__file__).resolve().parents[2]
-        mf = load_manifest(repo_root / "examples/ops_dashboard/dazzle.toml")
-        assert mf.app_theme == "linear-dark"
-
-    def test_contact_manager_uses_paper(self) -> None:
-        """v0.61.36 follow-up: contact_manager opts into the paper
-        theme (Notion-warm) since the small-firm-owner persona benefits
-        from readability over density."""
-        repo_root = Path(__file__).resolve().parents[2]
-        mf = load_manifest(repo_root / "examples/contact_manager/dazzle.toml")
-        assert mf.app_theme == "paper"
-
-    def test_support_tickets_uses_stripe(self) -> None:
-        """v0.61.36 follow-up: support_tickets opts into the stripe
-        theme (Stripe-formal) for the agent + manager personas."""
-        repo_root = Path(__file__).resolve().parents[2]
-        mf = load_manifest(repo_root / "examples/support_tickets/dazzle.toml")
-        assert mf.app_theme == "stripe"
+        mf = load_manifest(repo_root / f"examples/{example}/dazzle.toml")
+        assert mf.app_theme == expected_theme
 
 
 # ────────────────────────── theme CSS file ────────────────────────────

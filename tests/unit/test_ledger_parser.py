@@ -7,6 +7,8 @@ double-entry accounting constructs.
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     AccountFlag,
@@ -133,25 +135,26 @@ ledger Acct "Acct":
   idempotency_key: event.id
 """
 
-    def test_account_type_asset(self) -> None:
-        fragment = _parse(self._ledger_with_type("asset"))
-        assert fragment.ledgers[0].account_type == AccountType.ASSET
-
-    def test_account_type_liability(self) -> None:
-        fragment = _parse(self._ledger_with_type("liability"))
-        assert fragment.ledgers[0].account_type == AccountType.LIABILITY
-
-    def test_account_type_equity(self) -> None:
-        fragment = _parse(self._ledger_with_type("equity"))
-        assert fragment.ledgers[0].account_type == AccountType.EQUITY
-
-    def test_account_type_revenue(self) -> None:
-        fragment = _parse(self._ledger_with_type("revenue"))
-        assert fragment.ledgers[0].account_type == AccountType.REVENUE
-
-    def test_account_type_expense(self) -> None:
-        fragment = _parse(self._ledger_with_type("expense"))
-        assert fragment.ledgers[0].account_type == AccountType.EXPENSE
+    @pytest.mark.parametrize(
+        ("dsl_type", "expected"),
+        [
+            ("asset", AccountType.ASSET),
+            ("liability", AccountType.LIABILITY),
+            ("equity", AccountType.EQUITY),
+            ("revenue", AccountType.REVENUE),
+            ("expense", AccountType.EXPENSE),
+        ],
+        ids=[
+            "test_account_type_asset",
+            "test_account_type_liability",
+            "test_account_type_equity",
+            "test_account_type_revenue",
+            "test_account_type_expense",
+        ],
+    )
+    def test_account_type(self, dsl_type: str, expected: AccountType) -> None:
+        fragment = _parse(self._ledger_with_type(dsl_type))
+        assert fragment.ledgers[0].account_type == expected
 
 
 class TestLedgerFlags:

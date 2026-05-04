@@ -3,6 +3,8 @@
 Covers all six rules plus edge-cases (already annotated, wrong mode).
 """
 
+import pytest
+
 from dazzle.core.discovery.widget_rules import check_widget_relevance
 from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
@@ -124,14 +126,6 @@ class TestWidgetRules:
         assert results[0].capability == "widget=color"
         assert results[0].kg_entity == "capability:widget_color"
 
-    def test_int_field_named_score_returns_slider_widget(self):
-        entity = _entity("Review", [_field("score", FieldTypeKind.INT)])
-        surface = _surface("review_create", "Review", SurfaceMode.CREATE, [_element("score")])
-        results = check_widget_relevance([entity], [surface])
-        assert len(results) == 1
-        assert results[0].capability == "widget=slider"
-        assert results[0].kg_entity == "capability:widget_slider"
-
     def test_field_with_widget_annotation_returns_no_relevance(self):
         entity = _entity("Post", [_field("body", FieldTypeKind.TEXT)])
         surface = _surface(
@@ -143,15 +137,20 @@ class TestWidgetRules:
         results = check_widget_relevance([entity], [surface])
         assert results == []
 
-    def test_list_mode_surface_returns_no_relevance(self):
+    @pytest.mark.parametrize(
+        "mode, surface_name",
+        [
+            (SurfaceMode.LIST, "post_list"),
+            (SurfaceMode.VIEW, "post_view"),
+        ],
+        ids=[
+            "test_list_mode_surface_returns_no_relevance",
+            "test_view_mode_surface_returns_no_relevance",
+        ],
+    )
+    def test_non_edit_create_mode_returns_no_relevance(self, mode: SurfaceMode, surface_name: str):
         entity = _entity("Post", [_field("body", FieldTypeKind.TEXT)])
-        surface = _surface("post_list", "Post", SurfaceMode.LIST, [_element("body")])
-        results = check_widget_relevance([entity], [surface])
-        assert results == []
-
-    def test_view_mode_surface_returns_no_relevance(self):
-        entity = _entity("Post", [_field("body", FieldTypeKind.TEXT)])
-        surface = _surface("post_view", "Post", SurfaceMode.VIEW, [_element("body")])
+        surface = _surface(surface_name, "Post", mode, [_element("body")])
         results = check_widget_relevance([entity], [surface])
         assert results == []
 
@@ -190,9 +189,22 @@ class TestWidgetRules:
         results = check_widget_relevance([entity], [surface])
         assert results == []
 
-    def test_int_name_rating_returns_slider(self):
-        entity = _entity("Review", [_field("rating", FieldTypeKind.INT)])
-        surface = _surface("review_edit", "Review", SurfaceMode.EDIT, [_element("rating")])
+    @pytest.mark.parametrize(
+        "field_name, entity_name, surface_name, mode",
+        [
+            ("rating", "Review", "review_edit", SurfaceMode.EDIT),
+            ("score", "Review", "review_create2", SurfaceMode.CREATE),
+        ],
+        ids=[
+            "test_int_name_rating_returns_slider",
+            "test_int_name_score_returns_slider",
+        ],
+    )
+    def test_int_slider_field_names(
+        self, field_name: str, entity_name: str, surface_name: str, mode: SurfaceMode
+    ):
+        entity = _entity(entity_name, [_field(field_name, FieldTypeKind.INT)])
+        surface = _surface(surface_name, entity_name, mode, [_element(field_name)])
         results = check_widget_relevance([entity], [surface])
         assert len(results) == 1
         assert results[0].capability == "widget=slider"

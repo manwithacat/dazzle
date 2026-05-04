@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import Mock
 
+import pytest
+
 from dazzle.fitness.corrector import (
     Fix,
     generate_fix,
@@ -45,29 +47,26 @@ def _finding(**overrides: Any) -> Finding:
     return Finding(**base)
 
 
-def test_low_confidence_always_goes_soft() -> None:
-    f = _finding(low_confidence=True)
-    assert route_finding(f, maturity="mvp") == "soft"
-
-
-def test_stable_maturity_always_goes_soft() -> None:
-    f = _finding()
-    assert route_finding(f, maturity="stable") == "soft"
-
-
-def test_disambiguation_goes_soft() -> None:
-    f = _finding(disambiguation=True)
-    assert route_finding(f, maturity="mvp") == "soft"
-
-
-def test_mvp_clean_finding_goes_hard() -> None:
-    f = _finding()
-    assert route_finding(f, maturity="mvp") == "hard"
-
-
-def test_spec_stale_goes_soft_regardless() -> None:
-    f = _finding(locus="spec_stale")
-    assert route_finding(f, maturity="mvp") == "soft"
+@pytest.mark.parametrize(
+    ("kwargs", "maturity", "expected_route"),
+    [
+        ({"low_confidence": True}, "mvp", "soft"),
+        ({}, "stable", "soft"),
+        ({"disambiguation": True}, "mvp", "soft"),
+        ({}, "mvp", "hard"),
+        ({"locus": "spec_stale"}, "mvp", "soft"),
+    ],
+    ids=[
+        "test_low_confidence_always_goes_soft",
+        "test_stable_maturity_always_goes_soft",
+        "test_disambiguation_goes_soft",
+        "test_mvp_clean_finding_goes_hard",
+        "test_spec_stale_goes_soft_regardless",
+    ],
+)
+def test_route_finding(kwargs: dict, maturity: str, expected_route: str) -> None:
+    f = _finding(**kwargs)
+    assert route_finding(f, maturity=maturity) == expected_route
 
 
 def test_materially_same_identical_fixes() -> None:

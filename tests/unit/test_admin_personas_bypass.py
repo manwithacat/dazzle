@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
+
 from dazzle_back.runtime.access_control import (
     AccessContext,
     AccessOperation,
@@ -28,45 +30,31 @@ from dazzle_back.runtime.access_control import (
 
 
 class TestBypassProperty:
-    def test_default_no_bypass(self) -> None:
-        ctx = AccessContext(user_id=uuid4(), tenant_id=uuid4())
-        assert ctx.bypasses_tenant_filter is False
-
-    def test_persona_match_triggers_bypass(self) -> None:
-        ctx = AccessContext(
-            user_id=uuid4(),
-            tenant_id=uuid4(),
-            roles=["support"],
-            tenant_admin_personas=["super_admin", "support"],
-        )
-        assert ctx.bypasses_tenant_filter is True
-
-    def test_persona_mismatch_no_bypass(self) -> None:
-        ctx = AccessContext(
-            user_id=uuid4(),
-            tenant_id=uuid4(),
-            roles=["teacher"],
-            tenant_admin_personas=["super_admin", "support"],
-        )
-        assert ctx.bypasses_tenant_filter is False
-
-    def test_superuser_always_bypasses(self) -> None:
-        ctx = AccessContext(
-            user_id=uuid4(),
-            tenant_id=uuid4(),
-            is_superuser=True,
-            tenant_admin_personas=[],
-        )
-        assert ctx.bypasses_tenant_filter is True
-
-    def test_empty_admin_personas_means_no_bypass_even_with_roles(self) -> None:
-        ctx = AccessContext(
-            user_id=uuid4(),
-            tenant_id=uuid4(),
-            roles=["super_admin"],
-            tenant_admin_personas=[],  # Tenancy hasn't declared any
-        )
-        assert ctx.bypasses_tenant_filter is False
+    @pytest.mark.parametrize(
+        ("extra_kwargs", "expected"),
+        [
+            # Default context — no roles, no admin personas declared
+            ({}, False),
+            # Role matches a declared admin persona → bypass
+            ({"roles": ["support"], "tenant_admin_personas": ["super_admin", "support"]}, True),
+            # Role does NOT match any declared admin persona → no bypass
+            ({"roles": ["teacher"], "tenant_admin_personas": ["super_admin", "support"]}, False),
+            # Superuser flag short-circuits regardless of personas
+            ({"is_superuser": True, "tenant_admin_personas": []}, True),
+            # Role name matches nothing when persona list is empty
+            ({"roles": ["super_admin"], "tenant_admin_personas": []}, False),
+        ],
+        ids=[
+            "default_no_bypass",
+            "persona_match_triggers_bypass",
+            "persona_mismatch_no_bypass",
+            "superuser_always_bypasses",
+            "empty_admin_personas_means_no_bypass_even_with_roles",
+        ],
+    )
+    def test_bypasses_tenant_filter(self, extra_kwargs: dict, expected: bool) -> None:
+        ctx = AccessContext(user_id=uuid4(), tenant_id=uuid4(), **extra_kwargs)
+        assert ctx.bypasses_tenant_filter is expected
 
 
 class TestRuleEvaluation:

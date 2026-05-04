@@ -34,27 +34,25 @@ from dazzle_back.runtime.locale_routes import (
 
 
 class TestSafeRedirectTarget:
-    def test_relative_path_passes(self):
-        assert _safe_redirect_target("/app/users") == "/app/users"
-
-    def test_query_and_fragment_preserved(self):
-        assert (
-            _safe_redirect_target("/dashboard?tab=overview#row-3")
-            == "/dashboard?tab=overview#row-3"
-        )
-
-    def test_absolute_url_rejected(self):
-        # Attacker-controlled `next=https://evil.com` must NOT bounce off-site.
-        assert _safe_redirect_target("https://evil.com/landing") == "/"
-
-    def test_protocol_relative_rejected(self):
-        # `//evil/x` is protocol-relative and reaches off-site under https.
-        assert _safe_redirect_target("//evil.com/x") == "/"
-
-    def test_path_without_leading_slash_rejected(self):
-        # A path like `app/users` could resolve relative to current location;
-        # safer to refuse.
-        assert _safe_redirect_target("app/users") == "/"
+    @pytest.mark.parametrize(
+        ("target", "expected"),
+        [
+            ("/app/users", "/app/users"),
+            ("/dashboard?tab=overview#row-3", "/dashboard?tab=overview#row-3"),
+            ("https://evil.com/landing", "/"),
+            ("//evil.com/x", "/"),
+            ("app/users", "/"),
+        ],
+        ids=[
+            "test_relative_path_passes",
+            "test_query_and_fragment_preserved",
+            "test_absolute_url_rejected",
+            "test_protocol_relative_rejected",
+            "test_path_without_leading_slash_rejected",
+        ],
+    )
+    def test_safe_redirect_target(self, target: str, expected: str) -> None:
+        assert _safe_redirect_target(target) == expected
 
     def test_none_and_empty_default_to_root(self):
         assert _safe_redirect_target(None) == "/"

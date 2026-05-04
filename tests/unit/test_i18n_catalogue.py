@@ -99,25 +99,42 @@ class TestPrimarySubtagFallback:
 class TestTranslateHelper:
     """`translate(locale, msgid, **kwargs)` is the standalone API."""
 
-    def test_returns_translation_when_registered(self):
-        register_translations("fr", {"Welcome": "Bienvenue"})
-        assert translate("fr", "Welcome") == "Bienvenue"
-
-    def test_falls_back_to_msgid_on_miss(self):
-        assert translate("fr", "Welcome") == "Welcome"
-
-    def test_format_kwargs_against_translation(self):
-        register_translations("fr", {"Hello {name}": "Bonjour {name}"})
-        assert translate("fr", "Hello {name}", name="Alice") == "Bonjour Alice"
-
-    def test_format_kwargs_against_msgid_on_miss(self):
-        assert translate("fr", "Hello {name}", name="Alice") == "Hello Alice"
-
-    def test_malformed_format_returns_unsubstituted(self):
-        """Missing placeholder shouldn't raise — return the un-formatted
-        translation/msgid so a single bad string doesn't crash a whole page."""
-        register_translations("fr", {"Hello {name}": "Bonjour {name}"})
-        assert translate("fr", "Hello {name}") == "Bonjour {name}"
+    @pytest.mark.parametrize(
+        ("setup_locale", "setup_mapping", "locale", "msgid", "kwargs", "expected"),
+        [
+            ("fr", {"Welcome": "Bienvenue"}, "fr", "Welcome", {}, "Bienvenue"),
+            (None, {}, "fr", "Welcome", {}, "Welcome"),
+            (
+                "fr",
+                {"Hello {name}": "Bonjour {name}"},
+                "fr",
+                "Hello {name}",
+                {"name": "Alice"},
+                "Bonjour Alice",
+            ),
+            (None, {}, "fr", "Hello {name}", {"name": "Alice"}, "Hello Alice"),
+            ("fr", {"Hello {name}": "Bonjour {name}"}, "fr", "Hello {name}", {}, "Bonjour {name}"),
+        ],
+        ids=[
+            "test_returns_translation_when_registered",
+            "test_falls_back_to_msgid_on_miss",
+            "test_format_kwargs_against_translation",
+            "test_format_kwargs_against_msgid_on_miss",
+            "test_malformed_format_returns_unsubstituted",
+        ],
+    )
+    def test_translate(
+        self,
+        setup_locale: str | None,
+        setup_mapping: dict,
+        locale: str,
+        msgid: str,
+        kwargs: dict,
+        expected: str,
+    ) -> None:
+        if setup_locale:
+            register_translations(setup_locale, setup_mapping)
+        assert translate(locale, msgid, **kwargs) == expected
 
 
 class TestLocaleContextVar:
@@ -155,59 +172,49 @@ class TestLocaleContextVar:
 class TestGettextFilterReadsContextVar:
     """`_gettext` reads the locale ContextVar and looks up the catalogue."""
 
-    def test_passthrough_when_no_translation_registered(self):
+    @pytest.mark.parametrize(
+        ("reg_locale", "reg_mapping", "set_locale", "msgid", "kwargs", "expected"),
+        [
+            (None, {}, "fr", "Welcome", {}, "Welcome"),
+            ("fr", {"Welcome": "Bienvenue"}, "fr", "Welcome", {}, "Bienvenue"),
+            (None, {}, DEFAULT_LOCALE, "Welcome", {}, "Welcome"),
+            (
+                "fr",
+                {"Hello {name}": "Bonjour {name}"},
+                "fr",
+                "Hello {name}",
+                {"name": "Alice"},
+                "Bonjour Alice",
+            ),
+            ("en", {"Sign in": "Sign in (US)"}, "en-GB", "Sign in", {}, "Sign in (US)"),
+        ],
+        ids=[
+            "test_passthrough_when_no_translation_registered",
+            "test_returns_translation_when_locale_matches",
+            "test_default_locale_no_lookup_returns_source",
+            "test_kwargs_format_against_translation",
+            "test_subtag_fallback_through_filter",
+        ],
+    )
+    def test_gettext_filter(
+        self,
+        reg_locale: str | None,
+        reg_mapping: dict,
+        set_locale: str,
+        msgid: str,
+        kwargs: dict,
+        expected: str,
+    ) -> None:
         from dazzle_ui.runtime.template_renderer import _gettext
 
-        def _run():
-            locale_ctxvar.set("fr")
-            return _gettext("Welcome")
-
-        assert copy_context().run(_run) == "Welcome"
-
-    def test_returns_translation_when_locale_matches(self):
-        from dazzle_ui.runtime.template_renderer import _gettext
-
-        register_translations("fr", {"Welcome": "Bienvenue"})
+        if reg_locale:
+            register_translations(reg_locale, reg_mapping)
 
         def _run():
-            locale_ctxvar.set("fr")
-            return _gettext("Welcome")
+            locale_ctxvar.set(set_locale)
+            return _gettext(msgid, **kwargs)
 
-        assert copy_context().run(_run) == "Bienvenue"
-
-    def test_default_locale_no_lookup_returns_source(self):
-        """At default locale (en) with no translations registered, `_()`
-        must return the source verbatim — no spurious "missing
-        translation" markers, no logger noise."""
-        from dazzle_ui.runtime.template_renderer import _gettext
-
-        def _run():
-            locale_ctxvar.set(DEFAULT_LOCALE)
-            return _gettext("Welcome")
-
-        assert copy_context().run(_run) == "Welcome"
-
-    def test_kwargs_format_against_translation(self):
-        from dazzle_ui.runtime.template_renderer import _gettext
-
-        register_translations("fr", {"Hello {name}": "Bonjour {name}"})
-
-        def _run():
-            locale_ctxvar.set("fr")
-            return _gettext("Hello {name}", name="Alice")
-
-        assert copy_context().run(_run) == "Bonjour Alice"
-
-    def test_subtag_fallback_through_filter(self):
-        from dazzle_ui.runtime.template_renderer import _gettext
-
-        register_translations("en", {"Sign in": "Sign in (US)"})
-
-        def _run():
-            locale_ctxvar.set("en-GB")
-            return _gettext("Sign in")
-
-        assert copy_context().run(_run) == "Sign in (US)"
+        assert copy_context().run(_run) == expected
 
 
 class TestLocaleMiddlewareSetsContextVar:

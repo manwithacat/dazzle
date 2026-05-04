@@ -187,55 +187,57 @@ class TestBarTrackPostProcessing:
         assert rows[1]["fill_pct"] == 100.0
         assert rows[2]["fill_pct"] == 75.0
 
-    def test_format_spec_applied(self) -> None:
-        buckets = [{"label": "A", "value": 0.847}]
-        rows, _ = _build_rows(buckets, track_max=1.0, track_format="{:.0%}")
-        assert rows[0]["formatted_value"] == "85%"
+    @pytest.mark.parametrize(
+        "value, track_max, track_format, expected_formatted",
+        [
+            (0.847, 1.0, "{:.0%}", "85%"),
+            (12345.0, 20000.0, "{:,.0f}", "12,345"),
+            (42.0, 100.0, "", "42.0"),
+            (5.0, 10.0, "{:zz}", "5.0"),  # malformed → fallback to str
+        ],
+        ids=[
+            "test_format_spec_applied",
+            "test_format_spec_thousands_sep",
+            "test_no_format_spec_uses_str",
+            "test_invalid_format_spec_falls_back_to_str",
+        ],
+    )
+    def test_formatted_value(
+        self,
+        value: float,
+        track_max: float,
+        track_format: str,
+        expected_formatted: str,
+    ) -> None:
+        buckets = [{"label": "A", "value": value}]
+        rows, _ = _build_rows(buckets, track_max=track_max, track_format=track_format)
+        assert rows[0]["formatted_value"] == expected_formatted
 
-    def test_format_spec_thousands_sep(self) -> None:
-        buckets = [{"label": "Q1", "value": 12345.0}]
-        rows, _ = _build_rows(buckets, track_max=20000.0, track_format="{:,.0f}")
-        assert rows[0]["formatted_value"] == "12,345"
-
-    def test_no_format_spec_uses_str(self) -> None:
-        buckets = [{"label": "A", "value": 42.0}]
-        rows, _ = _build_rows(buckets, track_max=100.0)
-        assert rows[0]["formatted_value"] == "42.0"
-
-    def test_invalid_format_spec_falls_back_to_str(self) -> None:
-        """Malformed format spec (e.g. `{:zz}`) must not crash the
-        dashboard — fall back to raw str so the page still renders."""
-        buckets = [{"label": "A", "value": 5.0}]
-        rows, _ = _build_rows(buckets, track_max=10.0, track_format="{:zz}")
-        # Falls back to str(value)
-        assert rows[0]["formatted_value"] == "5.0"
-
-    def test_value_above_track_max_clamps_to_100(self) -> None:
-        """Values above the explicit max clamp to 100% fill so the bar
-        doesn't overflow the track visually."""
-        buckets = [{"label": "A", "value": 1.5}]
-        rows, _ = _build_rows(buckets, track_max=1.0)
-        assert rows[0]["fill_pct"] == 100.0
-
-    def test_negative_value_clamps_to_zero(self) -> None:
-        """Negative values clamp to 0% — bar doesn't render in
-        negative space (the issue notes this is a future
-        enhancement)."""
-        buckets = [{"label": "A", "value": -5.0}]
-        rows, _ = _build_rows(buckets, track_max=10.0)
-        assert rows[0]["fill_pct"] == 0.0
+    @pytest.mark.parametrize(
+        "value, track_max, expected_fill_pct",
+        [
+            (1.5, 1.0, 100.0),  # above max → clamp to 100
+            (-5.0, 10.0, 0.0),  # negative → clamp to 0
+            (0.0, 1.0, 0.0),  # zero → zero fill
+        ],
+        ids=[
+            "test_value_above_track_max_clamps_to_100",
+            "test_negative_value_clamps_to_zero",
+            "test_zero_value_yields_zero_fill",
+        ],
+    )
+    def test_fill_pct_clamping(
+        self, value: float, track_max: float, expected_fill_pct: float
+    ) -> None:
+        buckets = [{"label": "A", "value": value}]
+        rows, _ = _build_rows(buckets, track_max=track_max)
+        assert rows[0]["fill_pct"] == expected_fill_pct
 
     def test_empty_buckets_yields_empty_rows(self) -> None:
         rows, track_max = _build_rows([], track_max=None)
         assert rows == []
         # Auto-max falls back to 1.0 to avoid div-by-zero downstream
         assert track_max == 1.0
-
-    def test_zero_value_yields_zero_fill(self) -> None:
-        buckets = [{"label": "A", "value": 0.0}]
-        rows, _ = _build_rows(buckets, track_max=1.0)
-        assert rows[0]["fill_pct"] == 0.0
-        assert rows[0]["formatted_value"] == "0.0"
 
     def test_non_numeric_value_treated_as_zero(self) -> None:
         """Defensive: malformed bucket values shouldn't crash the

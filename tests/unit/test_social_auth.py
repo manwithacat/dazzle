@@ -269,142 +269,114 @@ class TestSocialAuthService:
         assert service.config is google_config
 
     @pytest.mark.asyncio
-    async def test_verify_google_missing_token(
+    @pytest.mark.parametrize(
+        "provider, request_kwargs, config_factory",
+        [
+            (
+                SocialProvider.GOOGLE,
+                {},
+                lambda: SocialAuthConfig(
+                    google_client_id="google-client-123.apps.googleusercontent.com"
+                ),
+            ),
+            (
+                SocialProvider.APPLE,
+                {},
+                lambda: SocialAuthConfig(
+                    apple_team_id="TEAM123",
+                    apple_key_id="KEY456",
+                    apple_private_key="mock-apple-private-key-for-testing",
+                    apple_bundle_id="com.example.app",
+                    github_client_id="gh-client-123",
+                    github_client_secret="gh-secret-456",
+                ),
+            ),
+            (
+                SocialProvider.GITHUB,
+                {},
+                lambda: SocialAuthConfig(
+                    google_client_id="google-client-123.apps.googleusercontent.com",
+                    apple_team_id="TEAM123",
+                    apple_key_id="KEY456",
+                    apple_private_key="mock-apple-private-key-for-testing",
+                    apple_bundle_id="com.example.app",
+                    github_client_id="gh-client-123",
+                    github_client_secret="gh-secret-456",
+                ),
+            ),
+        ],
+        ids=[
+            "test_verify_google_missing_token",
+            "test_verify_apple_missing_token",
+            "test_verify_github_missing_credentials",
+        ],
+    )
+    async def test_verify_provider_missing_token(
         self,
         mock_auth_store: MagicMock,
         mock_jwt_service: MagicMock,
         mock_token_store: MagicMock,
-        google_config: SocialAuthConfig,
+        provider: SocialProvider,
+        request_kwargs: dict,
+        config_factory,
     ) -> None:
-        """Test Google auth fails without id_token."""
+        """Provider auth fails when no credential is supplied."""
         service = SocialAuthService(
             auth_store=mock_auth_store,
             jwt_service=mock_jwt_service,
             token_store=mock_token_store,
-            config=google_config,
+            config=config_factory(),
         )
-
-        request = SocialTokenRequest()  # No token
-
+        request = SocialTokenRequest(**request_kwargs)
         with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.GOOGLE, request)
-
-        assert exc_info.value.code == "missing_token"
-        assert exc_info.value.provider == SocialProvider.GOOGLE
-
-    @pytest.mark.asyncio
-    async def test_verify_google_not_configured(
-        self,
-        mock_auth_store: MagicMock,
-        mock_jwt_service: MagicMock,
-        mock_token_store: MagicMock,
-    ) -> None:
-        """Test Google auth fails when not configured."""
-        config = SocialAuthConfig()  # No Google client ID
-        service = SocialAuthService(
-            auth_store=mock_auth_store,
-            jwt_service=mock_jwt_service,
-            token_store=mock_token_store,
-            config=config,
-        )
-
-        request = SocialTokenRequest(id_token="some-token")
-
-        with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.GOOGLE, request)
-
-        assert exc_info.value.code == "not_configured"
-
-    @pytest.mark.asyncio
-    async def test_verify_apple_missing_token(
-        self,
-        mock_auth_store: MagicMock,
-        mock_jwt_service: MagicMock,
-        mock_token_store: MagicMock,
-        full_config: SocialAuthConfig,
-    ) -> None:
-        """Test Apple auth fails without id_token."""
-        service = SocialAuthService(
-            auth_store=mock_auth_store,
-            jwt_service=mock_jwt_service,
-            token_store=mock_token_store,
-            config=full_config,
-        )
-
-        request = SocialTokenRequest()  # No token
-
-        with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.APPLE, request)
-
+            await service._verify_provider_token(provider, request)
         assert exc_info.value.code == "missing_token"
 
     @pytest.mark.asyncio
-    async def test_verify_apple_not_configured(
+    @pytest.mark.parametrize(
+        "provider, request_kwargs, config_factory",
+        [
+            (
+                SocialProvider.GOOGLE,
+                {"id_token": "some-token"},
+                lambda: SocialAuthConfig(),  # No Google client ID
+            ),
+            (
+                SocialProvider.APPLE,
+                {"id_token": "some-token"},
+                lambda: SocialAuthConfig(apple_team_id="TEAM123"),  # Partial config
+            ),
+            (
+                SocialProvider.GITHUB,
+                {"code": "auth-code"},
+                lambda: SocialAuthConfig(),  # No GitHub config
+            ),
+        ],
+        ids=[
+            "test_verify_google_not_configured",
+            "test_verify_apple_not_configured",
+            "test_verify_github_code_not_configured",
+        ],
+    )
+    async def test_verify_provider_not_configured(
         self,
         mock_auth_store: MagicMock,
         mock_jwt_service: MagicMock,
         mock_token_store: MagicMock,
+        provider: SocialProvider,
+        request_kwargs: dict,
+        config_factory,
     ) -> None:
-        """Test Apple auth fails when not fully configured."""
-        config = SocialAuthConfig(apple_team_id="TEAM123")  # Partial config
+        """Provider auth fails when provider is not fully configured."""
         service = SocialAuthService(
             auth_store=mock_auth_store,
             jwt_service=mock_jwt_service,
             token_store=mock_token_store,
-            config=config,
+            config=config_factory(),
         )
-
-        request = SocialTokenRequest(id_token="some-token")
-
+        request = SocialTokenRequest(**request_kwargs)
         with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.APPLE, request)
-
-        assert exc_info.value.code == "not_configured"
-
-    @pytest.mark.asyncio
-    async def test_verify_github_missing_credentials(
-        self,
-        mock_auth_store: MagicMock,
-        mock_jwt_service: MagicMock,
-        mock_token_store: MagicMock,
-        full_config: SocialAuthConfig,
-    ) -> None:
-        """Test GitHub auth fails without code or access_token."""
-        service = SocialAuthService(
-            auth_store=mock_auth_store,
-            jwt_service=mock_jwt_service,
-            token_store=mock_token_store,
-            config=full_config,
-        )
-
-        request = SocialTokenRequest()  # No credentials
-
-        with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.GITHUB, request)
-
-        assert exc_info.value.code == "missing_token"
-
-    @pytest.mark.asyncio
-    async def test_verify_github_code_not_configured(
-        self,
-        mock_auth_store: MagicMock,
-        mock_jwt_service: MagicMock,
-        mock_token_store: MagicMock,
-    ) -> None:
-        """Test GitHub code exchange fails when not configured."""
-        config = SocialAuthConfig()  # No GitHub config
-        service = SocialAuthService(
-            auth_store=mock_auth_store,
-            jwt_service=mock_jwt_service,
-            token_store=mock_token_store,
-            config=config,
-        )
-
-        request = SocialTokenRequest(code="auth-code")
-
-        with pytest.raises(SocialAuthError) as exc_info:
-            await service._verify_provider_token(SocialProvider.GITHUB, request)
-
+            await service._verify_provider_token(provider, request)
         assert exc_info.value.code == "not_configured"
 
     @pytest.mark.asyncio

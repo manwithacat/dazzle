@@ -259,23 +259,23 @@ class TestID05HardcodedWebhookUrl:
         assert findings[0].severity == Severity.LOW
         assert "order_notify" in findings[0].title
 
-    def test_passes_with_config_reference(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", url='config("WEBHOOK_ORDER_NOTIFY_URL")')
-        findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
-        assert findings == []
-
-    def test_passes_with_config_no_quotes(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", url="config(WEBHOOK_URL)")
-        findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
-        assert findings == []
-
-    def test_skips_empty_url(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", url="")
-        findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
-        assert findings == []
-
-    def test_skips_none_url(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", url=None)
+    @pytest.mark.parametrize(
+        "url",
+        [
+            'config("WEBHOOK_ORDER_NOTIFY_URL")',
+            "config(WEBHOOK_URL)",
+            "",
+            None,
+        ],
+        ids=[
+            "test_passes_with_config_reference",
+            "test_passes_with_config_no_quotes",
+            "test_skips_empty_url",
+            "test_skips_none_url",
+        ],
+    )
+    def test_no_finding_for_url(self, agent: IntegrationDependencyAgent, url: str | None) -> None:
+        webhook = _webhook("order_notify", url=url)
         findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
         assert findings == []
 
@@ -379,21 +379,21 @@ class TestID08IntegrationServiceNoGuarantees:
         findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
         assert findings == []
 
-    def test_ignores_non_integration_kind(self, agent: IntegrationDependencyAgent) -> None:
-        svc = _domain_service(
-            "validate_order",
-            kind=DomainServiceKind.VALIDATION,
-            guarantees=[],
-        )
-        findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
-        assert findings == []
-
-    def test_ignores_domain_logic_kind(self, agent: IntegrationDependencyAgent) -> None:
-        svc = _domain_service(
-            "calc_total",
-            kind=DomainServiceKind.DOMAIN_LOGIC,
-            guarantees=[],
-        )
+    @pytest.mark.parametrize(
+        "kind",
+        [
+            DomainServiceKind.VALIDATION,
+            DomainServiceKind.DOMAIN_LOGIC,
+        ],
+        ids=[
+            "test_ignores_non_integration_kind",
+            "test_ignores_domain_logic_kind",
+        ],
+    )
+    def test_ignores_non_integration_kinds(
+        self, agent: IntegrationDependencyAgent, kind: DomainServiceKind
+    ) -> None:
+        svc = _domain_service("svc", kind=kind, guarantees=[])
         findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
         assert findings == []
 

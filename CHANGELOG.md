@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.8] - 2026-05-04
+
+### Changed
+- **Distillation cycle 7** — collapsed ~25 more clusters via 4 parallel
+  sub-agents (batches I/J/K/L). Touched files include test_widget_rules,
+  test_search_fields, sentinel/test_agent_performance_resource,
+  sentinel/test_agent_deployment_state, sentinel/test_agent_operational_hygiene,
+  sentinel/test_agent_integration_dependency, test_social_auth, test_triples,
+  test_viewport_auth, test_workspace_bar_track, fitness/test_triage,
+  fitness/test_corrector, test_admin_personas_bypass, test_agent_discovery,
+  test_agent_history_rendering, test_alembic_env_url, test_app_theme_loading,
+  test_audit_log, test_aws_config, test_access_control (TestFieldDetection),
+  test_journey_reporter, test_layout_engine, test_parser, test_rbac_verifier,
+  test_rhythm_ir, test_theme_variant_middleware, test_when_expr.
+  Suite total: 13,657 → 13,545 (112 fewer).
+
+### Fixed
+- `test_viewport_auth.py::TestLoadPersonaCookies::test_cookie_attributes`
+  parameter name `base_url` clashed with pytest-base-url plugin's
+  session-scoped fixture. Renamed to `request_url`.
+
 ## [0.66.7] - 2026-05-04
 
 ### Changed

@@ -19,6 +19,8 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+import pytest
+
 from dazzle_back.runtime.route_generator import (
     _resolve_predicate_filters,
     _should_bypass_tenant_filter,
@@ -48,31 +50,34 @@ class TestShouldBypass:
         assert _should_bypass_tenant_filter(_make_auth(user), None) is False
         assert _should_bypass_tenant_filter(_make_auth(user), []) is False
 
-    def test_persona_match(self) -> None:
-        user = _make_user(roles=["support"])
-        assert _should_bypass_tenant_filter(_make_auth(user), ["super_admin", "support"]) is True
-
-    def test_persona_mismatch(self) -> None:
-        user = _make_user(roles=["teacher"])
-        assert _should_bypass_tenant_filter(_make_auth(user), ["super_admin"]) is False
-
     def test_superuser_bypasses_regardless(self) -> None:
         # Superuser bypasses even with empty admin_personas.
         user = _make_user(roles=[], is_superuser=True)
         assert _should_bypass_tenant_filter(_make_auth(user), []) is True
         assert _should_bypass_tenant_filter(_make_auth(user), None) is True
 
-    def test_role_prefix_normalised(self) -> None:
-        # AuthContext often carries `role_` prefixed names; the bypass
-        # check must compare against the bare DSL persona names.
-        user = _make_user(roles=["role_support"])
-        assert _should_bypass_tenant_filter(_make_auth(user), ["support"]) is True
-
     def test_user_none_no_bypass(self) -> None:
         # is_authenticated could be True with user=None in edge cases —
         # the helper must defend against that without crashing.
         ctx = SimpleNamespace(is_authenticated=True, user=None)
         assert _should_bypass_tenant_filter(ctx, ["support"]) is False
+
+    @pytest.mark.parametrize(
+        ("roles", "admin_personas", "expected"),
+        [
+            (["support"], ["super_admin", "support"], True),
+            (["teacher"], ["super_admin"], False),
+            (["role_support"], ["support"], True),
+        ],
+        ids=[
+            "test_persona_match",
+            "test_persona_mismatch",
+            "test_role_prefix_normalised",
+        ],
+    )
+    def test_role_bypass(self, roles: list[str], admin_personas: list[str], expected: bool) -> None:
+        user = _make_user(roles=roles)
+        assert _should_bypass_tenant_filter(_make_auth(user), admin_personas) is expected
 
 
 class TestResolvePredicateFilters:

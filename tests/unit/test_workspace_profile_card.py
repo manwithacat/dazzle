@@ -206,30 +206,27 @@ class TestInterpolateCardTemplate:
 
 
 class TestInitialsFrom:
-    def test_two_word_name(self) -> None:
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            ("Priya Sharma", "PS"),
+            ("Mary Anne Smith", "MA"),
+            ("Madonna", "M"),
+            ("", ""),
+            ("james barlow", "JB"),
+        ],
+        ids=[
+            "test_two_word_name",
+            "test_three_word_name_caps_at_two",
+            "test_single_word",
+            "test_empty_string",
+            "test_lowercase_input_uppercased",
+        ],
+    )
+    def test_initials_from(self, name: str, expected: str) -> None:
         from dazzle_back.runtime.workspace_rendering import _initials_from
 
-        assert _initials_from("Priya Sharma") == "PS"
-
-    def test_three_word_name_caps_at_two(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _initials_from
-
-        assert _initials_from("Mary Anne Smith") == "MA"
-
-    def test_single_word(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _initials_from
-
-        assert _initials_from("Madonna") == "M"
-
-    def test_empty_string(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _initials_from
-
-        assert _initials_from("") == ""
-
-    def test_lowercase_input_uppercased(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _initials_from
-
-        assert _initials_from("james barlow") == "JB"
+        assert _initials_from(name) == expected
 
 
 # ───────────────────────── _resolve_path ──────────────────────────

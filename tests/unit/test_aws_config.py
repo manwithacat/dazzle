@@ -43,36 +43,38 @@ def _clear_env_and_cache(monkeypatch: pytest.MonkeyPatch) -> None:
 class TestGetAwsConfigRegion:
     """Region precedence: DAZZLE_AWS_REGION > AWS_DEFAULT_REGION > AWS_REGION > us-east-1."""
 
-    def test_defaults_to_us_east_1(self) -> None:
-        cfg = get_aws_config()
-        assert cfg.region == "us-east-1"
-
-    def test_aws_region_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("AWS_REGION", "eu-west-1")
-        cfg = get_aws_config()
-        assert cfg.region == "eu-west-1"
-
-    def test_aws_default_region_takes_precedence_over_aws_region(
-        self, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        ("env_vars", "expected_region"),
+        [
+            ({}, "us-east-1"),
+            ({"AWS_REGION": "eu-west-1"}, "eu-west-1"),
+            ({"AWS_REGION": "eu-west-1", "AWS_DEFAULT_REGION": "ap-south-1"}, "ap-south-1"),
+            (
+                {
+                    "AWS_REGION": "eu-west-1",
+                    "AWS_DEFAULT_REGION": "ap-south-1",
+                    "DAZZLE_AWS_REGION": "us-west-2",
+                },
+                "us-west-2",
+            ),
+            ({"DAZZLE_AWS_REGION": "ca-central-1"}, "ca-central-1"),
+        ],
+        ids=[
+            "defaults_to_us_east_1",
+            "aws_region_env",
+            "aws_default_region_takes_precedence_over_aws_region",
+            "dazzle_aws_region_takes_precedence_over_all",
+            "dazzle_aws_region_alone",
+        ],
+    )
+    def test_region_resolution(
+        self, monkeypatch: pytest.MonkeyPatch, env_vars: dict, expected_region: str
     ) -> None:
-        monkeypatch.setenv("AWS_REGION", "eu-west-1")
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "ap-south-1")
+        for key, val in env_vars.items():
+            monkeypatch.setenv(key, val)
+        get_aws_config.cache_clear()
         cfg = get_aws_config()
-        assert cfg.region == "ap-south-1"
-
-    def test_dazzle_aws_region_takes_precedence_over_all(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("AWS_REGION", "eu-west-1")
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "ap-south-1")
-        monkeypatch.setenv("DAZZLE_AWS_REGION", "us-west-2")
-        cfg = get_aws_config()
-        assert cfg.region == "us-west-2"
-
-    def test_dazzle_aws_region_alone(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("DAZZLE_AWS_REGION", "ca-central-1")
-        cfg = get_aws_config()
-        assert cfg.region == "ca-central-1"
+        assert cfg.region == expected_region
 
 
 # ===================================================================

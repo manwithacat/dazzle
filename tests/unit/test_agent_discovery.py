@@ -104,34 +104,31 @@ def sample_appspec() -> SimpleNamespace:
 
 
 class TestDSLSummary:
-    def test_includes_entities(self, sample_appspec: SimpleNamespace) -> None:
+    @pytest.mark.parametrize(
+        "expected_tokens",
+        [
+            ["Task", "User"],
+            ["title", "status"],
+            ["open", "done"],
+            ["task_list", "task_detail"],
+            ["admin", "viewer"],
+            ["main_dashboard"],
+        ],
+        ids=[
+            "includes_entities",
+            "includes_fields",
+            "includes_state_machine",
+            "includes_surfaces",
+            "includes_personas",
+            "includes_workspaces",
+        ],
+    )
+    def test_summary_contains_tokens(
+        self, sample_appspec: SimpleNamespace, expected_tokens: list[str]
+    ) -> None:
         summary = _build_dsl_summary(sample_appspec)
-        assert "Task" in summary
-        assert "User" in summary
-
-    def test_includes_fields(self, sample_appspec: SimpleNamespace) -> None:
-        summary = _build_dsl_summary(sample_appspec)
-        assert "title" in summary
-        assert "status" in summary
-
-    def test_includes_state_machine(self, sample_appspec: SimpleNamespace) -> None:
-        summary = _build_dsl_summary(sample_appspec)
-        assert "open" in summary
-        assert "done" in summary
-
-    def test_includes_surfaces(self, sample_appspec: SimpleNamespace) -> None:
-        summary = _build_dsl_summary(sample_appspec)
-        assert "task_list" in summary
-        assert "task_detail" in summary
-
-    def test_includes_personas(self, sample_appspec: SimpleNamespace) -> None:
-        summary = _build_dsl_summary(sample_appspec)
-        assert "admin" in summary
-        assert "viewer" in summary
-
-    def test_includes_workspaces(self, sample_appspec: SimpleNamespace) -> None:
-        summary = _build_dsl_summary(sample_appspec)
-        assert "main_dashboard" in summary
+        for token in expected_tokens:
+            assert token in summary
 
     def test_empty_appspec(self) -> None:
         appspec = _make_appspec()

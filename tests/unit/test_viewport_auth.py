@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from dazzle.testing.viewport_auth import ensure_session_exists, load_persona_cookies
 
 
@@ -39,20 +41,27 @@ class TestLoadPersonaCookies:
         cookies = load_persona_cookies(tmp_path, "admin", "http://localhost:3000")
         assert cookies == []
 
-    def test_cookie_domain_from_base_url(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "request_url, attribute, expected",
+        [
+            ("http://myapp.example.com:3000", "domain", "myapp.example.com"),
+            ("http://localhost:3000", "domain", "localhost"),
+            ("http://localhost:3000", "path", "/"),
+        ],
+        ids=[
+            "test_cookie_domain_from_base_url",
+            "test_cookie_domain_defaults_to_localhost",
+            "test_cookie_path_is_root",
+        ],
+    )
+    def test_cookie_attributes(
+        self, tmp_path: Path, request_url: str, attribute: str, expected: str
+    ) -> None:
+        # Note: param name is `request_url` not `base_url` to avoid clash
+        # with pytest-base-url plugin's session-scoped `base_url` fixture.
         _write_session(tmp_path, "admin", "tok-123")
-        cookies = load_persona_cookies(tmp_path, "admin", "http://myapp.example.com:3000")
-        assert cookies[0]["domain"] == "myapp.example.com"
-
-    def test_cookie_domain_defaults_to_localhost(self, tmp_path: Path) -> None:
-        _write_session(tmp_path, "admin", "tok-123")
-        cookies = load_persona_cookies(tmp_path, "admin", "http://localhost:3000")
-        assert cookies[0]["domain"] == "localhost"
-
-    def test_cookie_path_is_root(self, tmp_path: Path) -> None:
-        _write_session(tmp_path, "admin", "tok-123")
-        cookies = load_persona_cookies(tmp_path, "admin", "http://localhost:3000")
-        assert cookies[0]["path"] == "/"
+        cookies = load_persona_cookies(tmp_path, "admin", request_url)
+        assert cookies[0][attribute] == expected
 
     def test_returns_empty_when_no_token_in_file(self, tmp_path: Path) -> None:
         sessions_dir = tmp_path / ".dazzle" / "test_sessions"
