@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.9] - 2026-05-04
+
+### Changed
+- **Distillation cycle 8** — sub-agents M/N/O completed batch processing
+  ~30 more clusters (size 5 + module-level). Touched files include
+  test_build_server_config, test_cli, test_cli_env, test_composite_guards,
+  test_conformance_stage_invariants, test_css_delivery, test_docker_generation,
+  test_dsl_app_theme_field, test_dz_debug, test_dz_richtext,
+  test_component_rules, test_agent_command_models, test_heading_scale_tokens,
+  test_null_event_bus, test_rhythm_ir, test_theme_variant_middleware,
+  test_predicate_builder, test_api_surface_drift. Suite total: 13,529 →
+  13,491 (38 fewer). Drift-gate safety preserved on test_api_surface_drift
+  refactor (5 cycles each parametrized over a `_CYCLES` list, content-check
+  tests stayed standalone).
+
 ## [0.66.8] - 2026-05-04
 
 ### Changed

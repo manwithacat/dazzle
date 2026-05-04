@@ -140,35 +140,107 @@ class TestVerifyHappyPath:
             user_id="u1",
         )
 
+    # ---------------------------------------------------------------------------
+    # verify_storage_field_keys — failure modes
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# verify_storage_field_keys — failure modes
-# ---------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "body,storage_bindings,registry_fn,user_id,expected_status,expected_reason_contains",
+        [
+            (
+                {"source_pdf": 42},
+                {"source_pdf": ("cohort_pdfs",)},
+                "default",
+                "u1",
+                400,
+                "must be a string",
+            ),
+            (
+                {"source_pdf": "uploads/u1/r1/x.pdf"},
+                {"source_pdf": ("cohort_pdfs",)},
+                None,
+                "u1",
+                500,
+                "no StorageRegistry",
+            ),
+            (
+                {"source_pdf": "uploads/u1/r1/x.pdf"},
+                {"source_pdf": ("missing_storage",)},
+                "empty",
+                "u1",
+                503,
+                "missing_storage",
+            ),
+            (
+                {"source_pdf": "uploads/u2/r1/x.pdf"},
+                {"source_pdf": ("cohort_pdfs",)},
+                "with_u2_object",
+                "u1",
+                403,
+                "sandbox",
+            ),
+            (
+                {"source_pdf": "uploads/u1/r1/never-uploaded.pdf"},
+                {"source_pdf": ("cohort_pdfs",)},
+                "default",
+                "u1",
+                400,
+                "no object",
+            ),
+            (
+                {"source_pdf": "uploads/u1/r1/x.pdf"},
+                {"source_pdf": ("cohort_pdfs",)},
+                "boom",
+                "u1",
+                503,
+                "head_object raised",
+            ),
+        ],
+        ids=[
+            "test_non_string_value_400",
+            "test_missing_registry_500",
+            "test_unregistered_storage_503",
+            "test_other_users_prefix_403",
+            "test_object_does_not_exist_400",
+            "test_provider_head_object_raises_503",
+        ],
+    )
+    def test_rejects(
+        self,
+        body: dict,
+        storage_bindings: dict,
+        registry_fn: str | None,
+        user_id: str,
+        expected_status: int,
+        expected_reason_contains: str,
+    ) -> None:
+        if registry_fn is None:
+            registry = None
+        elif registry_fn == "empty":
+            registry = StorageRegistry.from_manifest({})
+        elif registry_fn == "with_u2_object":
+            registry, provider = _registry_with_provider()
+            provider.put_object("uploads/u2/r1/x.pdf", b"x", content_type="application/pdf")
+        elif registry_fn == "boom":
+            registry, provider = _registry_with_provider()
 
+            def boom(_key: str) -> Any:
+                raise RuntimeError("boto auth failed")
 
-class TestVerifyRejects:
-    def test_non_string_value_400(self) -> None:
-        registry, _ = _registry_with_provider()
+            provider.head_object = boom  # type: ignore[method-assign]
+        else:
+            registry, _ = _registry_with_provider()
+
         with pytest.raises(StorageVerificationError) as exc_info:
             verify_storage_field_keys(
-                body={"source_pdf": 42},
-                storage_bindings={"source_pdf": ("cohort_pdfs",)},
+                body=body,
+                storage_bindings=storage_bindings,
                 registry=registry,
-                user_id="u1",
+                user_id=user_id,
             )
-        assert exc_info.value.status_code == 400
-        assert "must be a string" in exc_info.value.reason
-
-    def test_missing_registry_500(self) -> None:
-        with pytest.raises(StorageVerificationError) as exc_info:
-            verify_storage_field_keys(
-                body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": ("cohort_pdfs",)},
-                registry=None,
-                user_id="u1",
-            )
-        assert exc_info.value.status_code == 500
-        assert "no StorageRegistry" in exc_info.value.reason
+        assert exc_info.value.status_code == expected_status
+        if expected_reason_contains:
+            assert expected_reason_contains in exc_info.value.reason
 
     def test_missing_user_401(self) -> None:
         registry, provider = _registry_with_provider()
@@ -181,68 +253,6 @@ class TestVerifyRejects:
                 user_id=None,
             )
         assert exc_info.value.status_code == 401
-
-    def test_unregistered_storage_503(self) -> None:
-        registry = StorageRegistry.from_manifest({})
-        with pytest.raises(StorageVerificationError) as exc_info:
-            verify_storage_field_keys(
-                body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": ("missing_storage",)},
-                registry=registry,
-                user_id="u1",
-            )
-        assert exc_info.value.status_code == 503
-        assert "missing_storage" in exc_info.value.reason
-
-    def test_other_users_prefix_403(self) -> None:
-        """The security-critical case: user u1 tries to claim user u2's
-        already-uploaded object."""
-        registry, provider = _registry_with_provider()
-        provider.put_object("uploads/u2/r1/x.pdf", b"x", content_type="application/pdf")
-        with pytest.raises(StorageVerificationError) as exc_info:
-            verify_storage_field_keys(
-                body={"source_pdf": "uploads/u2/r1/x.pdf"},
-                storage_bindings={"source_pdf": ("cohort_pdfs",)},
-                registry=registry,
-                user_id="u1",
-            )
-        assert exc_info.value.status_code == 403
-        assert "sandbox" in exc_info.value.reason
-
-    def test_object_does_not_exist_400(self) -> None:
-        """User submits a key they never actually uploaded — the
-        mint-ticket flow may have happened, but the upload itself
-        either failed or didn't fire."""
-        registry, _ = _registry_with_provider()
-        with pytest.raises(StorageVerificationError) as exc_info:
-            verify_storage_field_keys(
-                body={"source_pdf": "uploads/u1/r1/never-uploaded.pdf"},
-                storage_bindings={"source_pdf": ("cohort_pdfs",)},
-                registry=registry,
-                user_id="u1",
-            )
-        assert exc_info.value.status_code == 400
-        assert "no object" in exc_info.value.reason
-
-    def test_provider_head_object_raises_503(self) -> None:
-        """Network/auth failure to S3 surfaces as 503 — distinguishable
-        from 400 (object missing) so clients don't retry indefinitely
-        on a transient infra fault."""
-        registry, provider = _registry_with_provider()
-
-        def boom(_key: str) -> Any:
-            raise RuntimeError("boto auth failed")
-
-        provider.head_object = boom  # type: ignore[method-assign]
-        with pytest.raises(StorageVerificationError) as exc_info:
-            verify_storage_field_keys(
-                body={"source_pdf": "uploads/u1/r1/x.pdf"},
-                storage_bindings={"source_pdf": ("cohort_pdfs",)},
-                registry=registry,
-                user_id="u1",
-            )
-        assert exc_info.value.status_code == 503
-        assert "head_object raised" in exc_info.value.reason
 
 
 # ---------------------------------------------------------------------------

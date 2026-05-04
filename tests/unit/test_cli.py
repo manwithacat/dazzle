@@ -162,13 +162,18 @@ class TestCommandsCommand:
         for cmd, info in data.items():
             assert "description" in info, f"'{cmd}' missing description in JSON output"
 
-    def test_commands_category_filter_runtime(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["commands", "--category", "Runtime"])
-        assert result.exit_code == 0
-        assert "serve" in result.output
-
-    def test_commands_category_filter_case_insensitive(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["commands", "--category", "runtime"])
+    @pytest.mark.parametrize(
+        "category",
+        ["Runtime", "runtime"],
+        ids=[
+            "test_commands_category_filter_runtime",
+            "test_commands_category_filter_case_insensitive",
+        ],
+    )
+    def test_commands_category_filter_serve_present(
+        self, cli_runner: CliRunner, category: str
+    ) -> None:
+        result = cli_runner.invoke(app, ["commands", "--category", category])
         assert result.exit_code == 0
         assert "serve" in result.output
 

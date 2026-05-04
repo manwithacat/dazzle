@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 967
-- **Tests inside those clusters**: 3,604
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,637 tests** (≈ 18.4% of the suite)
+- **Clusters of ≥3**: 934
+- **Tests inside those clusters**: 3,423
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,489 tests** (≈ 17.4% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 5 |
-| 5-9 | 170 |
-| 3-4 | 792 |
+| 5-9 | 134 |
+| 3-4 | 795 |
 
 ## Top 30 largest clusters
 
@@ -28,11 +28,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 11 | test_valid_entity_declaration, test_valid_surface_declaration, test_valid_workspace_with_filter… |
 | `tests/unit/test_workspace_routes.py` | `TestAttentionAccentMacro` | 11 | test_border_critical_destructive, test_border_warning_warning, test_border_notice_primary… |
 | `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 10 | test_banned_if_keyword, test_banned_for_keyword, test_banned_while_keyword… |
-| `tests/unit/sentinel/test_agent_performance_resource.py` | `TestPR01NPlusOneListSurface` | 8 | test_ref_only_entity_not_flagged, test_mixed_refs_and_has_many_only_counts_non_ref, test_passes_entity_with_fewer_than_3_refs… |
 | `tests/unit/test_cedar_row_filters.py` | `TestExtractConditionFilters` | 8 | test_simple_comparison_equals, test_not_equals_comparison, test_literal_value_equals… |
 | `tests/unit/test_cedar_row_filters.py` | `TestExtractConditionFiltersIR` | 8 | test_ir_current_user_equals, test_ir_literal_value, test_ir_boolean_value… |
-| `tests/unit/test_widget_rules.py` | `TestWidgetRules` | 8 | test_ref_field_with_source_option_no_relevance, test_field_with_widget_annotation_returns_no_relevance, test_list_mode_surface_returns_no_relevance… |
-| `tests/unit/sentinel/test_agent_performance_resource.py` | `TestPR05LargeEntityListSurface` | 7 | test_passes_entity_with_fewer_than_10_fields, test_ignores_non_list_surface, test_no_surfaces… |
 | `tests/unit/test_anti_turing.py` | `TestAntiTuringCycle998` | 7 | test_role_call_allowed, test_persona_call_allowed, test_via_entity_call_allowed… |
 | `tests/unit/test_compliance_matching.py` | `TestUKGovernmentIdentifiers` | 7 | test_ni_number_matches, test_nino_matches, test_national_insurance_prefix_matches… |
 | `tests/unit/test_condition_evaluator_role_check.py` | `TestEvaluateConditionRoleCheck` | 7 | test_role_check_true_when_user_has_role, test_role_check_false_when_user_lacks_role, test_role_check_false_with_empty_roles_list… |
@@ -43,8 +40,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_validator.py` | `TestValidateEntities` | 7 | test_duplicate_field_names, test_decimal_scale_greater_than_precision, test_string_very_large_max_length_warning… |
 | `tests/integration/test_template_pages.py` | `TestDazzleAttributes` | 6 | test_list_page_has_dazzle_view, test_list_page_has_dazzle_table, test_list_page_has_dazzle_view_on_root… |
 | `tests/quality_gates/test_dashboard_gates.py` | `TestDashboardQualityGates` | 6 | test_gate1_drag_threshold, test_gate2_drag_uses_transform, test_gate3_save_lifecycle… |
-| `tests/unit/sentinel/test_agent_deployment_state.py` | `TestDS08AuditAccessDisabledSensitive` | 6 | test_flags_audit_disabled_with_financial_txn, test_flags_audit_disabled_with_financial_account, test_passes_with_audit_enabled… |
-| `tests/unit/sentinel/test_agent_operational_hygiene.py` | `TestOP01AuditWithoutFieldTracking` | 6 | test_passes_when_log_field_changes_enabled, test_passes_when_audit_disabled, test_passes_when_entity_not_classified… |
 | `tests/unit/test_api_surface_drift.py` | `(module)` | 6 | test_dsl_constructs_snapshot_is_deterministic, test_ir_types_snapshot_is_deterministic, test_mcp_tools_snapshot_is_deterministic… |
 | `tests/unit/test_composition_audit.py` | `TestScoring` | 6 | test_no_violations_scores_100, test_one_high_deducts_15, test_one_medium_deducts_5… |
 | `tests/unit/test_content_negotiation.py` | `TestIsHtmxRequest` | 6 | test_htmx_header, test_accept_text_html_is_not_htmx, test_browser_accept_is_not_htmx… |
@@ -53,6 +48,11 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_fidelity_scorer.py` | `TestCreateModeStoryGapSuppression` | 6 | test_create_skips_precondition_when_default_matches, test_create_still_flags_precondition_when_default_differs, test_edit_still_flags_precondition_even_when_default_matches… |
 | `tests/unit/test_heading_scale_tokens.py` | `(module)` | 6 | test_app_heading_token_present, test_marketing_heading_token_present, test_cta_headline_canonically_defined… |
 | `tests/unit/test_journey_reporter.py` | `TestRenderReport` | 6 | test_contains_persona_names, test_contains_verdict_counts, test_contains_cross_persona_patterns… |
+| `tests/unit/test_layout_engine.py` | `TestArchetypeSelection` | 6 | test_select_focus_metric_single_kpi, test_select_scanner_table_single_table, test_select_monitor_wall_multiple_signals… |
+| `tests/unit/test_locale_middleware.py` | `TestParseAcceptLanguage` | 6 | test_single_locale, test_multiple_with_quality, test_quality_zero_excluded… |
+| `tests/unit/test_null_event_bus.py` | `(module)` | 6 | test_null_bus_replay_yields_nothing, test_null_bus_list_topics, test_null_bus_list_consumer_groups… |
+| `tests/unit/test_parser.py` | `TestBusinessPriority` | 6 | test_surface_priority_critical, test_surface_priority_low, test_surface_priority_defaults_to_medium… |
+| `tests/unit/test_persona_journey.py` | `TestExperienceReachability` | 6 | test_reachable_experience_no_gap, test_experience_for_other_persona_ignored, test_access_spec_allows_persona_no_gap… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -62,12 +62,12 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_expression_lang.py` | 40 |
 | `tests/unit/test_rhythm_mcp.py` | 29 |
 | `tests/unit/test_anti_turing.py` | 27 |
-| `tests/unit/sentinel/test_agent_performance_resource.py` | 27 |
 | `tests/unit/test_cedar_row_filters.py` | 25 |
 | `tests/unit/test_composition_audit.py` | 25 |
-| `tests/unit/sentinel/test_agent_operational_hygiene.py` | 24 |
-| `tests/unit/sentinel/test_agent_integration_dependency.py` | 24 |
-| `tests/unit/sentinel/test_agent_deployment_state.py` | 22 |
+| `tests/unit/test_fidelity_scorer.py` | 22 |
+| `tests/unit/test_parser.py` | 21 |
+| `tests/unit/test_docker_generation.py` | 20 |
+| `tests/unit/sentinel/test_agent_deployment_state.py` | 20 |
 
 ## How to act on this
 

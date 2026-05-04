@@ -275,20 +275,21 @@ def test_not_compound(empty_graph: FKGraph) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Role / grant checks raise ValueError
+# Role / grant checks raise ValueError — uniform shape, collapsed
 # ---------------------------------------------------------------------------
 
 
-def test_role_check_raises(empty_graph: FKGraph) -> None:
-    condition = ConditionExpr(role_check=RoleCheck(role_name="admin"))
-    with pytest.raises(ValueError, match="permit:"):
-        build_scope_predicate(condition, "Task", empty_graph)
-
-
-def test_grant_check_raises(empty_graph: FKGraph) -> None:
-    condition = ConditionExpr(
-        grant_check=GrantCheck(relation="acting_hod", scope_field="department")
-    )
+@pytest.mark.parametrize(
+    "condition",
+    [
+        ConditionExpr(role_check=RoleCheck(role_name="admin")),
+        ConditionExpr(grant_check=GrantCheck(relation="acting_hod", scope_field="department")),
+    ],
+    ids=["test_role_check_raises", "test_grant_check_raises"],
+)
+def test_permit_only_condition_raises(condition: ConditionExpr, empty_graph: FKGraph) -> None:
+    """Role and grant checks belong in `permit:`, not `scope:`.
+    Both must raise ValueError with a message referencing `permit:`."""
     with pytest.raises(ValueError, match="permit:"):
         build_scope_predicate(condition, "Task", empty_graph)
 

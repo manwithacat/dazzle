@@ -6,6 +6,8 @@ the real predicate builder and compiler.
 
 from typing import Any
 
+import pytest
+
 from dazzle.conformance.stage_invariants import (
     InvariantResult,
     StageVerification,
@@ -361,40 +363,58 @@ class TestVerifyRoundTrip:
 class TestBoolCompositeSimplifiation:
     """BoolComposite.make() algebraic laws should be verifiable."""
 
-    def test_and_tautology_identity(self) -> None:
-        """AND(x, Tautology) → x."""
-        x = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        result = BoolComposite.make(BoolOp.AND, [x, Tautology()])
-        assert isinstance(result, ColumnCheck)
-        assert result.field == "status"
-
-    def test_and_contradiction_absorption(self) -> None:
-        """AND(x, Contradiction) → Contradiction."""
-        x = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        result = BoolComposite.make(BoolOp.AND, [x, Contradiction()])
-        assert isinstance(result, Contradiction)
-
-    def test_or_tautology_absorption(self) -> None:
-        """OR(x, Tautology) → Tautology."""
-        x = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        result = BoolComposite.make(BoolOp.OR, [x, Tautology()])
-        assert isinstance(result, Tautology)
-
-    def test_or_contradiction_identity(self) -> None:
-        """OR(x, Contradiction) → x."""
-        x = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        result = BoolComposite.make(BoolOp.OR, [x, Contradiction()])
-        assert isinstance(result, ColumnCheck)
-
-    def test_not_tautology_contradiction(self) -> None:
-        """NOT(Tautology) → Contradiction."""
-        result = BoolComposite.make(BoolOp.NOT, [Tautology()])
-        assert isinstance(result, Contradiction)
-
-    def test_not_contradiction_tautology(self) -> None:
-        """NOT(Contradiction) → Tautology."""
-        result = BoolComposite.make(BoolOp.NOT, [Contradiction()])
-        assert isinstance(result, Tautology)
+    @pytest.mark.parametrize(
+        "op,operands,expected_type",
+        [
+            (
+                BoolOp.AND,
+                lambda: [
+                    ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                    Tautology(),
+                ],
+                ColumnCheck,
+            ),
+            (
+                BoolOp.AND,
+                lambda: [
+                    ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                    Contradiction(),
+                ],
+                Contradiction,
+            ),
+            (
+                BoolOp.OR,
+                lambda: [
+                    ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                    Tautology(),
+                ],
+                Tautology,
+            ),
+            (
+                BoolOp.OR,
+                lambda: [
+                    ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                    Contradiction(),
+                ],
+                ColumnCheck,
+            ),
+            (BoolOp.NOT, lambda: [Tautology()], Contradiction),
+            (BoolOp.NOT, lambda: [Contradiction()], Tautology),
+        ],
+        ids=[
+            "test_and_tautology_identity",
+            "test_and_contradiction_absorption",
+            "test_or_tautology_absorption",
+            "test_or_contradiction_identity",
+            "test_not_tautology_contradiction",
+            "test_not_contradiction_tautology",
+        ],
+    )
+    def test_bool_composite_algebraic_law(
+        self, op: BoolOp, operands: Any, expected_type: type
+    ) -> None:
+        result = BoolComposite.make(op, operands())
+        assert isinstance(result, expected_type)
 
     def test_double_negation_elimination(self) -> None:
         """NOT(NOT(x)) → x."""

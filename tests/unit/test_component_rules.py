@@ -1,5 +1,7 @@
 """Tests for component relevance rules."""
 
+import pytest
+
 from dazzle.core.discovery.component_rules import check_component_relevance
 from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
@@ -44,45 +46,40 @@ def _make_grid_workspace(name: str, source: str) -> WorkspaceSpec:
 # ---------------------------------------------------------------------------
 
 
-def test_command_palette_triggered_with_many_surfaces() -> None:
-    """25 surfaces with no command_palette fragment → dzCommandPalette relevance."""
-    surfaces = [_make_surface(f"s{i}") for i in range(25)]
-    results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
+@pytest.mark.parametrize(
+    "surface_count,fragments,expect_present",
+    [
+        (25, None, True),
+        (15, None, False),
+        (25, ["command_palette"], False),
+        (20, None, True),
+    ],
+    ids=[
+        "test_command_palette_triggered_with_many_surfaces",
+        "test_command_palette_not_triggered_with_medium_app",
+        "test_command_palette_not_triggered_when_fragment_present",
+        "test_command_palette_exactly_at_threshold",
+    ],
+)
+def test_command_palette_presence(
+    surface_count: int,
+    fragments: list[str] | None,
+    expect_present: bool,
+) -> None:
+    surfaces = [_make_surface(f"s{i}") for i in range(surface_count)]
+    kwargs = {"entities": [], "surfaces": surfaces, "workspaces": []}
+    if fragments is not None:
+        kwargs["fragments"] = fragments  # type: ignore[assignment]
+    results = check_component_relevance(**kwargs)  # type: ignore[arg-type]
     kg_entities = [r.kg_entity for r in results]
-    assert "capability:component_command_palette" in kg_entities
-    match = next(r for r in results if r.kg_entity == "capability:component_command_palette")
-    assert match.category == "component"
-    assert match.examples == []
-    assert "dzCommandPalette" in match.capability
-
-
-def test_command_palette_not_triggered_with_medium_app() -> None:
-    """15 surfaces → no command palette relevance (below threshold of 20)."""
-    surfaces = [_make_surface(f"s{i}") for i in range(15)]
-    results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
-    kg_entities = [r.kg_entity for r in results]
-    assert "capability:component_command_palette" not in kg_entities
-
-
-def test_command_palette_not_triggered_when_fragment_present() -> None:
-    """25 surfaces WITH command_palette fragment → no relevance."""
-    surfaces = [_make_surface(f"s{i}") for i in range(25)]
-    results = check_component_relevance(
-        entities=[],
-        surfaces=surfaces,
-        workspaces=[],
-        fragments=["command_palette"],
-    )
-    kg_entities = [r.kg_entity for r in results]
-    assert "capability:component_command_palette" not in kg_entities
-
-
-def test_command_palette_exactly_at_threshold() -> None:
-    """Exactly 20 surfaces (boundary) → command palette relevance triggered."""
-    surfaces = [_make_surface(f"s{i}") for i in range(20)]
-    results = check_component_relevance(entities=[], surfaces=surfaces, workspaces=[])
-    kg_entities = [r.kg_entity for r in results]
-    assert "capability:component_command_palette" in kg_entities
+    if expect_present:
+        assert "capability:component_command_palette" in kg_entities
+        match = next(r for r in results if r.kg_entity == "capability:component_command_palette")
+        assert match.category == "component"
+        assert match.examples == []
+        assert "dzCommandPalette" in match.capability
+    else:
+        assert "capability:component_command_palette" not in kg_entities
 
 
 # ---------------------------------------------------------------------------

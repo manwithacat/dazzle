@@ -104,27 +104,53 @@ class TestComputeHistogramBins:
         assert bins[0]["low"] == 0.0
         assert bins[1]["high"] == 9.0
 
-    def test_global_max_lands_in_final_bin(self) -> None:
-        """The hi value must NOT fall through past the last bin edge."""
-        items = [{"v": v} for v in [0, 5, 10]]
-        bins = self.bin(items, "v", bin_count=2)
-        # Bin 0 = [0, 5), bin 1 = [5, 10] (closed)
-        assert sum(b["count"] for b in bins) == 3
-
-    def test_auto_bin_count_uses_sturges(self) -> None:
-        import math
-
-        items = [{"v": float(i)} for i in range(100)]
-        bins = self.bin(items, "v", bin_count=None)
-        expected = math.ceil(math.log2(100) + 1)  # ⌈6.64+1⌉ = 8
-        assert len(bins) == expected
-
-    def test_empty_input_returns_empty(self) -> None:
-        assert self.bin([], "v", bin_count=10) == []
-
-    def test_no_numeric_values_returns_empty(self) -> None:
-        items = [{"v": None}, {"v": "not a number"}, {"other": 5}]
-        assert self.bin(items, "v", bin_count=5) == []
+    @pytest.mark.parametrize(
+        "items,key,bin_count,check",
+        [
+            (
+                [{"v": v} for v in [0, 5, 10]],
+                "v",
+                2,
+                lambda bins: sum(b["count"] for b in bins) == 3,
+            ),
+            (
+                [{"v": float(i)} for i in range(100)],
+                "v",
+                None,
+                lambda bins: len(bins) == __import__("math").ceil(__import__("math").log2(100) + 1),
+            ),
+            ([], "v", 10, lambda bins: bins == []),
+            (
+                [{"v": None}, {"v": "not a number"}, {"other": 5}],
+                "v",
+                5,
+                lambda bins: bins == [],
+            ),
+            (
+                [{"v": 1.0}, {"v": None}, {"v": "x"}, {"v": 9.0}],
+                "v",
+                2,
+                lambda bins: sum(b["count"] for b in bins) == 2,
+            ),
+            (
+                [{"v": 0.0}, {"v": 10.0}],
+                "v",
+                1,
+                lambda bins: bins[0]["label"] == "0–10",
+            ),
+        ],
+        ids=[
+            "test_global_max_lands_in_final_bin",
+            "test_auto_bin_count_uses_sturges",
+            "test_empty_input_returns_empty",
+            "test_no_numeric_values_returns_empty",
+            "test_skips_non_numeric_items",
+            "test_label_format_uses_g_format",
+        ],
+    )
+    def test_bin_behaviour(self, items: list, key: str, bin_count: int | None, check) -> None:
+        bins = self.bin(items, key, bin_count=bin_count)
+        assert check(bins)
 
     def test_single_distinct_value_returns_one_bin(self) -> None:
         items = [{"v": 7.0}, {"v": 7.0}, {"v": 7.0}]
@@ -132,17 +158,6 @@ class TestComputeHistogramBins:
         assert len(bins) == 1
         assert bins[0]["count"] == 3
         assert bins[0]["low"] == bins[0]["high"] == 7.0
-
-    def test_skips_non_numeric_items(self) -> None:
-        items = [{"v": 1.0}, {"v": None}, {"v": "x"}, {"v": 9.0}]
-        bins = self.bin(items, "v", bin_count=2)
-        assert sum(b["count"] for b in bins) == 2  # only 1.0 and 9.0
-
-    def test_label_format_uses_g_format(self) -> None:
-        items = [{"v": 0.0}, {"v": 10.0}]
-        bins = self.bin(items, "v", bin_count=1)
-        # label format is "<low:g>–<high:g>"
-        assert bins[0]["label"] == "0–10"
 
 
 # ─────────────────────── template rendering ─────────────────────

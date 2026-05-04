@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DZ_DEBUG_PATH = REPO_ROOT / "src/dazzle_ui/runtime/static/js/dz-debug.js"
 BASE_TEMPLATE_PATH = REPO_ROOT / "src/dazzle_ui/templates/base.html"
@@ -38,35 +40,26 @@ class TestSourceShape:
         source = self._load()
         assert "window.dzDebug" in source
 
-    def test_exposes_dataIdentity(self) -> None:
-        """The load-bearing API: returns a stable string identity
-        for an Alpine `$data` proxy at a selector. Two calls return
-        the same string iff the same proxy is active."""
+    @pytest.mark.parametrize(
+        "member",
+        [
+            "dataIdentity",
+            "componentRoots",
+            "lastSettleAt",
+            "lastSettleTarget",
+            "reset",
+        ],
+        ids=[
+            "test_exposes_dataIdentity",
+            "test_exposes_componentRoots",
+            "test_exposes_lastSettleAt",
+            "test_exposes_lastSettleTarget",
+            "test_exposes_reset",
+        ],
+    )
+    def test_exposes_member(self, member: str) -> None:
         source = self._load()
-        assert "dataIdentity:" in source or "dataIdentity," in source
-
-    def test_exposes_componentRoots(self) -> None:
-        """Lists `[x-data]` roots — useful for spotting zombie
-        roots after morph."""
-        source = self._load()
-        assert "componentRoots:" in source or "componentRoots," in source
-
-    def test_exposes_lastSettleAt(self) -> None:
-        """Returns the timestamp of the most recent
-        `htmx:afterSettle`. Tests poll on this rather than
-        `setTimeout`-and-pray."""
-        source = self._load()
-        assert "lastSettleAt:" in source or "lastSettleAt," in source
-
-    def test_exposes_lastSettleTarget(self) -> None:
-        source = self._load()
-        assert "lastSettleTarget:" in source or "lastSettleTarget," in source
-
-    def test_exposes_reset(self) -> None:
-        """Test convenience method to drop the proxy registry between
-        cases so proxy-id counters don't leak across tests."""
-        source = self._load()
-        assert "reset:" in source or "reset," in source
+        assert f"{member}:" in source or f"{member}," in source
 
 
 class TestRegistryHooks:

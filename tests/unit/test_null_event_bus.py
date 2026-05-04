@@ -1,5 +1,7 @@
 """Tests for NullBus and NullEventFramework no-op implementations."""
 
+from uuid import uuid4
+
 import pytest
 
 from dazzle_back.events.bus import NackReason
@@ -39,14 +41,10 @@ async def test_null_bus_unsubscribe(bus):
 
 
 async def test_null_bus_ack(bus):
-    from uuid import uuid4
-
     await bus.ack("app.Order", "group-1", uuid4())
 
 
 async def test_null_bus_nack(bus):
-    from uuid import uuid4
-
     reason = NackReason.transient_error("test")
     await bus.nack("app.Order", "group-1", uuid4(), reason)
 

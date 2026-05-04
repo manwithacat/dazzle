@@ -10,6 +10,8 @@ Covers:
 
 from typing import Any
 
+import pytest
+
 from dazzle_back.runtime.state_machine import (
     GuardNotSatisfiedError,
     TransitionValidator,
@@ -71,29 +73,42 @@ def _ne_expr(left_field: str, right_field: str) -> dict[str, Any]:
 class TestAllTrueGuard:
     """Verify all_true() composite boolean guard."""
 
-    def test_all_true_passes_when_all_fields_true(self) -> None:
-        """all_true(a, b, c) passes when all fields are True."""
-        expr = _all_true_expr("check_a", "check_b", "check_c")
-        data = {"check_a": True, "check_b": True, "check_c": True}
-        assert evaluate_guard_expr(expr, data) is True
-
-    def test_all_true_fails_when_one_field_false(self) -> None:
-        """all_true(a, b, c) fails when any field is False."""
-        expr = _all_true_expr("check_a", "check_b", "check_c")
-        data = {"check_a": True, "check_b": False, "check_c": True}
-        assert evaluate_guard_expr(expr, data) is False
-
-    def test_all_true_fails_when_field_missing(self) -> None:
-        """all_true(a, b) fails when a field is missing (None)."""
-        expr = _all_true_expr("check_a", "check_b")
-        data = {"check_a": True}  # check_b missing → None → falsy
-        assert evaluate_guard_expr(expr, data) is False
-
-    def test_all_true_fails_when_all_false(self) -> None:
-        """all_true(a, b) fails when all fields are False."""
-        expr = _all_true_expr("check_a", "check_b")
-        data = {"check_a": False, "check_b": False}
-        assert evaluate_guard_expr(expr, data) is False
+    @pytest.mark.parametrize(
+        "fields,data,expected",
+        [
+            (
+                ("check_a", "check_b", "check_c"),
+                {"check_a": True, "check_b": True, "check_c": True},
+                True,
+            ),
+            (
+                ("check_a", "check_b", "check_c"),
+                {"check_a": True, "check_b": False, "check_c": True},
+                False,
+            ),
+            (
+                ("check_a", "check_b"),
+                {"check_a": True},  # check_b missing → None → falsy
+                False,
+            ),
+            (
+                ("check_a", "check_b"),
+                {"check_a": False, "check_b": False},
+                False,
+            ),
+        ],
+        ids=[
+            "test_all_true_passes_when_all_fields_true",
+            "test_all_true_fails_when_one_field_false",
+            "test_all_true_fails_when_field_missing",
+            "test_all_true_fails_when_all_false",
+        ],
+    )
+    def test_all_true_evaluate(
+        self, fields: tuple[str, ...], data: dict[str, Any], expected: bool
+    ) -> None:
+        expr = _all_true_expr(*fields)
+        assert evaluate_guard_expr(expr, data) is expected
 
     def test_all_true_with_empty_args(self) -> None:
         """all_true() with no arguments passes (vacuous truth)."""

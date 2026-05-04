@@ -97,12 +97,25 @@ def test_rhythm_spec_full():
     assert rhythm.phases[0].scenes[0].name == "browse"
 
 
-def test_phase_kind_enum_values():
-    assert PhaseKind.ONBOARDING.value == "onboarding"
-    assert PhaseKind.ACTIVE.value == "active"
-    assert PhaseKind.PERIODIC.value == "periodic"
-    assert PhaseKind.AMBIENT.value == "ambient"
-    assert PhaseKind.OFFBOARDING.value == "offboarding"
+@pytest.mark.parametrize(
+    "member,expected_value",
+    [
+        (PhaseKind.ONBOARDING, "onboarding"),
+        (PhaseKind.ACTIVE, "active"),
+        (PhaseKind.PERIODIC, "periodic"),
+        (PhaseKind.AMBIENT, "ambient"),
+        (PhaseKind.OFFBOARDING, "offboarding"),
+    ],
+    ids=[
+        "test_phase_kind_onboarding",
+        "test_phase_kind_active",
+        "test_phase_kind_periodic",
+        "test_phase_kind_ambient",
+        "test_phase_kind_offboarding",
+    ],
+)
+def test_phase_kind_enum_values(member: PhaseKind, expected_value: str) -> None:
+    assert member.value == expected_value
 
 
 def test_phase_spec_kind_none_by_default():

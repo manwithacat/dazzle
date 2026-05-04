@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.cli.runtime_impl.docker import (
     dev_compose_path,
     dev_database_url,
@@ -21,40 +23,48 @@ from dazzle.cli.runtime_impl.docker import (
 class TestGenerateDevCompose:
     """Tests for dev infrastructure docker-compose.yml generation."""
 
-    def test_contains_postgres_service(self) -> None:
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "pg_isready",
+            "redis-cli",
+            "pgdata:",
+        ],
+        ids=[
+            "test_healthchecks_present_pg",
+            "test_healthchecks_present_redis",
+            "test_pgdata_volume_defined",
+        ],
+    )
+    def test_dev_compose_myapp_contains(self, needle: str) -> None:
         result = generate_dev_compose("myapp")
-        assert "postgres:" in result
-        assert "postgres:16" in result
+        assert needle in result
 
-    def test_contains_redis_service(self) -> None:
-        result = generate_dev_compose("myapp")
-        assert "redis:" in result
-        assert "redis:7-alpine" in result
+    @pytest.mark.parametrize(
+        "app_name,kwargs,needles",
+        [
+            ("myapp", {}, ["postgres:", "postgres:16"]),
+            ("myapp", {}, ["redis:", "redis:7-alpine"]),
+            ("myapp", {}, ['"5432:5432"', '"6379:6379"']),
+            ("myapp", {"pg_port": 5433, "redis_port": 6380}, ['"5433:5432"', '"6380:6379"']),
+        ],
+        ids=[
+            "test_contains_postgres_service",
+            "test_contains_redis_service",
+            "test_default_ports",
+            "test_custom_ports",
+        ],
+    )
+    def test_dev_compose_content(self, app_name: str, kwargs: dict, needles: list) -> None:
+        result = generate_dev_compose(app_name, **kwargs)
+        for needle in needles:
+            assert needle in result
 
     def test_postgres_uses_dazzle_credentials(self) -> None:
         result = generate_dev_compose("myapp")
         assert "POSTGRES_DB: dazzle" in result
         assert "POSTGRES_USER: dazzle" in result
         assert "POSTGRES_PASSWORD: dazzle" in result
-
-    def test_default_ports(self) -> None:
-        result = generate_dev_compose("myapp")
-        assert '"5432:5432"' in result
-        assert '"6379:6379"' in result
-
-    def test_custom_ports(self) -> None:
-        result = generate_dev_compose("myapp", pg_port=5433, redis_port=6380)
-        assert '"5433:5432"' in result
-        assert '"6380:6379"' in result
-
-    def test_healthchecks_present(self) -> None:
-        result = generate_dev_compose("myapp")
-        assert "pg_isready" in result
-        assert "redis-cli" in result
-
-    def test_pgdata_volume_defined(self) -> None:
-        result = generate_dev_compose("myapp")
-        assert "pgdata:" in result
 
     def test_no_app_service(self) -> None:
         """Dev compose provides infrastructure only, no app container."""
@@ -70,21 +80,33 @@ class TestGenerateDevCompose:
 class TestDevComposeHelpers:
     """Tests for dev compose helper functions."""
 
-    def test_dev_database_url_default_port(self) -> None:
-        url = dev_database_url()
-        assert url == "postgresql://dazzle:dazzle@localhost:5432/dazzle"
+    @pytest.mark.parametrize(
+        "kwargs,expected_url",
+        [
+            ({}, "postgresql://dazzle:dazzle@localhost:5432/dazzle"),
+            ({"pg_port": 5433}, "postgresql://dazzle:dazzle@localhost:5433/dazzle"),
+        ],
+        ids=[
+            "test_dev_database_url_default_port",
+            "test_dev_database_url_custom_port",
+        ],
+    )
+    def test_dev_database_url(self, kwargs: dict, expected_url: str) -> None:
+        assert dev_database_url(**kwargs) == expected_url
 
-    def test_dev_database_url_custom_port(self) -> None:
-        url = dev_database_url(pg_port=5433)
-        assert url == "postgresql://dazzle:dazzle@localhost:5433/dazzle"
-
-    def test_dev_redis_url_default_port(self) -> None:
-        url = dev_redis_url()
-        assert url == "redis://localhost:6379/0"
-
-    def test_dev_redis_url_custom_port(self) -> None:
-        url = dev_redis_url(redis_port=6380)
-        assert url == "redis://localhost:6380/0"
+    @pytest.mark.parametrize(
+        "kwargs,expected_url",
+        [
+            ({}, "redis://localhost:6379/0"),
+            ({"redis_port": 6380}, "redis://localhost:6380/0"),
+        ],
+        ids=[
+            "test_dev_redis_url_default_port",
+            "test_dev_redis_url_custom_port",
+        ],
+    )
+    def test_dev_redis_url(self, kwargs: dict, expected_url: str) -> None:
+        assert dev_redis_url(**kwargs) == expected_url
 
     def test_dev_compose_path(self) -> None:
         root = Path("/tmp/myproject")
@@ -109,38 +131,42 @@ class TestDevComposeHelpers:
 class TestGenerateLocalCompose:
     """Tests for docker-compose.local.yml generation."""
 
-    def test_contains_postgres_service(self) -> None:
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "5433",  # postgres port offset to avoid conflicts
+            "6380",  # redis port offset to avoid conflicts
+        ],
+        ids=[
+            "test_postgres_port_offset",
+            "test_redis_port_offset",
+        ],
+    )
+    def test_local_compose_port_offsets(self, needle: str) -> None:
         result = generate_local_compose("myapp")
-        assert "postgres:" in result
-        assert "postgres:16-alpine" in result
+        assert needle in result
 
-    def test_contains_redis_service(self) -> None:
-        result = generate_local_compose("myapp")
-        assert "redis:" in result
-        assert "redis:7-alpine" in result
-
-    def test_postgres_uses_app_name(self) -> None:
-        result = generate_local_compose("cyfuture")
-        assert "POSTGRES_DB: cyfuture" in result
-        assert "POSTGRES_USER: cyfuture" in result
-
-    def test_postgres_port_offset(self) -> None:
-        result = generate_local_compose("myapp")
-        assert "5433" in result  # Offset to avoid conflicts
-
-    def test_redis_port_offset(self) -> None:
-        result = generate_local_compose("myapp")
-        assert "6380" in result  # Offset to avoid conflicts
-
-    def test_healthchecks_present(self) -> None:
-        result = generate_local_compose("myapp")
-        assert "pg_isready" in result
-        assert "redis-cli" in result
-
-    def test_volumes_defined(self) -> None:
-        result = generate_local_compose("myapp")
-        assert "pgdata:" in result
-        assert "redisdata:" in result
+    @pytest.mark.parametrize(
+        "app_name,needles",
+        [
+            ("myapp", ["postgres:", "postgres:16-alpine"]),
+            ("myapp", ["redis:", "redis:7-alpine"]),
+            ("cyfuture", ["POSTGRES_DB: cyfuture", "POSTGRES_USER: cyfuture"]),
+            ("myapp", ["pg_isready", "redis-cli"]),
+            ("myapp", ["pgdata:", "redisdata:"]),
+        ],
+        ids=[
+            "test_contains_postgres_service",
+            "test_contains_redis_service",
+            "test_postgres_uses_app_name",
+            "test_healthchecks_present",
+            "test_volumes_defined",
+        ],
+    )
+    def test_local_compose_content(self, app_name: str, needles: list) -> None:
+        result = generate_local_compose(app_name)
+        for needle in needles:
+            assert needle in result
 
 
 class TestGenerateLocalRunScript:

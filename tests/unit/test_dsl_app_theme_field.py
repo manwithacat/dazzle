@@ -216,20 +216,30 @@ class TestEnvOverrideTakesPrecedence:
         ``subsystems/system_routes.py:_AppShellThemeSubsystem``."""
         return env or dsl or toml
 
-    def test_env_wins_over_dsl(self) -> None:
-        assert self._resolve(env="paper", dsl="stripe", toml=None) == "paper"
-
-    def test_env_wins_over_toml(self) -> None:
-        assert self._resolve(env="paper", dsl=None, toml="linear-dark") == "paper"
-
-    def test_env_wins_over_both(self) -> None:
-        assert self._resolve(env="paper", dsl="stripe", toml="linear-dark") == "paper"
-
-    def test_dsl_used_when_env_unset(self) -> None:
-        assert self._resolve(env=None, dsl="paper", toml="stripe") == "paper"
-
-    def test_toml_used_when_env_and_dsl_unset(self) -> None:
-        assert self._resolve(env=None, dsl=None, toml="stripe") == "stripe"
-
-    def test_all_unset_resolves_to_none(self) -> None:
-        assert self._resolve(env=None, dsl=None, toml=None) is None
+    @pytest.mark.parametrize(
+        "env,dsl,toml,expected",
+        [
+            ("paper", "stripe", None, "paper"),
+            ("paper", None, "linear-dark", "paper"),
+            ("paper", "stripe", "linear-dark", "paper"),
+            (None, "paper", "stripe", "paper"),
+            (None, None, "stripe", "stripe"),
+            (None, None, None, None),
+        ],
+        ids=[
+            "test_env_wins_over_dsl",
+            "test_env_wins_over_toml",
+            "test_env_wins_over_both",
+            "test_dsl_used_when_env_unset",
+            "test_toml_used_when_env_and_dsl_unset",
+            "test_all_unset_resolves_to_none",
+        ],
+    )
+    def test_theme_resolution(
+        self,
+        env: str | None,
+        dsl: str | None,
+        toml: str | None,
+        expected: str | None,
+    ) -> None:
+        assert self._resolve(env=env, dsl=dsl, toml=toml) == expected

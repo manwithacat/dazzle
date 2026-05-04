@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+import pytest
+
 from dazzle.services.agent_commands.loader import DEFINITIONS_DIR, load_all_commands, load_command
 from dazzle.services.agent_commands.models import (
     CommandDefinition,
@@ -253,51 +255,6 @@ def test_evaluate_maturity_all_met() -> None:
     assert reason is None
 
 
-def test_evaluate_maturity_entities_unmet() -> None:
-    gate = MaturityGate(min_entities=2)
-    ctx = _make_project_context(entity_count=1)
-    available, reason = evaluate_maturity(gate, ctx)
-    assert available is False
-    assert reason is not None
-    assert "entities" in reason
-
-
-def test_evaluate_maturity_surfaces_unmet() -> None:
-    gate = MaturityGate(min_surfaces=3)
-    ctx = _make_project_context(surface_count=1)
-    available, reason = evaluate_maturity(gate, ctx)
-    assert available is False
-    assert reason is not None
-    assert "surfaces" in reason
-
-
-def test_evaluate_maturity_spec_md_required() -> None:
-    gate = MaturityGate(requires_spec_md=True)
-    ctx = _make_project_context(has_spec_md=False)
-    available, reason = evaluate_maturity(gate, ctx)
-    assert available is False
-    assert reason is not None
-    assert "SPEC.md" in reason
-
-
-def test_evaluate_maturity_github_remote_required() -> None:
-    gate = MaturityGate(requires_github_remote=True)
-    ctx = _make_project_context(has_github_remote=False)
-    available, reason = evaluate_maturity(gate, ctx)
-    assert available is False
-    assert reason is not None
-    assert "GitHub" in reason
-
-
-def test_evaluate_maturity_validate_required() -> None:
-    gate = MaturityGate(requires=["validate"])
-    ctx = _make_project_context(validate_passes=False)
-    available, reason = evaluate_maturity(gate, ctx)
-    assert available is False
-    assert reason is not None
-    assert "validate" in reason.lower()
-
-
 def test_evaluate_maturity_empty_gate_always_available() -> None:
     gate = MaturityGate()
     ctx = _make_project_context(
@@ -312,6 +269,33 @@ def test_evaluate_maturity_empty_gate_always_available() -> None:
     available, reason = evaluate_maturity(gate, ctx)
     assert available is True
     assert reason is None
+
+
+@pytest.mark.parametrize(
+    "gate,ctx_override,reason_fragment",
+    [
+        (MaturityGate(min_entities=2), {"entity_count": 1}, "entities"),
+        (MaturityGate(min_surfaces=3), {"surface_count": 1}, "surfaces"),
+        (MaturityGate(requires_spec_md=True), {"has_spec_md": False}, "SPEC.md"),
+        (MaturityGate(requires_github_remote=True), {"has_github_remote": False}, "GitHub"),
+        (MaturityGate(requires=["validate"]), {"validate_passes": False}, "validate"),
+    ],
+    ids=[
+        "test_evaluate_maturity_entities_unmet",
+        "test_evaluate_maturity_surfaces_unmet",
+        "test_evaluate_maturity_spec_md_required",
+        "test_evaluate_maturity_github_remote_required",
+        "test_evaluate_maturity_validate_required",
+    ],
+)
+def test_evaluate_maturity_unmet(
+    gate: MaturityGate, ctx_override: dict, reason_fragment: str
+) -> None:
+    ctx = _make_project_context(**ctx_override)
+    available, reason = evaluate_maturity(gate, ctx)
+    assert available is False
+    assert reason is not None
+    assert reason_fragment in reason
 
 
 # ---------------------------------------------------------------------------

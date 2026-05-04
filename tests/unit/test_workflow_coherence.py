@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from dazzle.agent.core import Mission
 from dazzle.agent.missions.workflow_coherence import (
     _static_workflow_analysis,
@@ -127,74 +129,127 @@ def _make_appspec(
 
 
 class TestStaticWorkflowAnalysis:
-    def test_missing_human_task_surface(self) -> None:
-        appspec = _make_appspec(
-            surfaces=[_make_surface("task_list", "Task List")],
-            processes=[
-                _make_process(
-                    "approve",
-                    steps=[_make_human_task_step("review", "nonexistent_surface")],
-                ),
-            ],
-        )
+    @pytest.mark.parametrize(
+        "appspec_kwargs,expected_gap_type,present",
+        [
+            (
+                {
+                    "surfaces": [_make_surface("task_list", "Task List")],
+                    "processes": [
+                        _make_process(
+                            "approve",
+                            steps=[_make_human_task_step("review", "nonexistent_surface")],
+                        )
+                    ],
+                },
+                "missing_human_task_surface",
+                True,
+            ),
+            (
+                {
+                    "surfaces": [_make_surface("review_form", "Review Form")],
+                    "processes": [
+                        _make_process(
+                            "approve",
+                            steps=[_make_human_task_step("review", "review_form")],
+                        )
+                    ],
+                },
+                "missing_human_task_surface",
+                False,
+            ),
+            (
+                {
+                    "processes": [
+                        _make_process(
+                            "main_process",
+                            steps=[_make_subprocess_step("sub", "nonexistent_process")],
+                        )
+                    ]
+                },
+                "missing_subprocess",
+                True,
+            ),
+            (
+                {
+                    "processes": [
+                        _make_process(
+                            "main_process",
+                            steps=[_make_subprocess_step("sub", "child_process")],
+                        ),
+                        _make_process("child_process"),
+                    ]
+                },
+                "missing_subprocess",
+                False,
+            ),
+            (
+                {
+                    "entities": [_make_entity("Order", "Order")],
+                    "processes": [
+                        _make_process(
+                            "on_order_confirmed",
+                            trigger=_make_trigger("entity_status_transition", "Order"),
+                        )
+                    ],
+                },
+                "trigger_no_state_machine",
+                True,
+            ),
+            (
+                {
+                    "entities": [],
+                    "processes": [
+                        _make_process(
+                            "on_order_confirmed",
+                            trigger=_make_trigger("entity_status_transition", "NonExistent"),
+                        )
+                    ],
+                },
+                "trigger_no_state_machine",
+                True,
+            ),
+            (
+                {
+                    "stories": [_make_story("ST-001", "Create invoice")],
+                    "processes": [],
+                },
+                "story_no_process",
+                True,
+            ),
+            (
+                {
+                    "stories": [_make_story("ST-001", "Create invoice")],
+                    "processes": [_make_process("create_invoice", implements=["ST-001"])],
+                },
+                "story_no_process",
+                False,
+            ),
+        ],
+        ids=[
+            "test_missing_human_task_surface",
+            "test_human_task_surface_exists",
+            "test_missing_subprocess",
+            "test_subprocess_exists",
+            "test_trigger_entity_no_state_machine",
+            "test_trigger_entity_not_found",
+            "test_story_no_process",
+            "test_story_with_process",
+        ],
+    )
+    def test_gap_type_presence(
+        self,
+        appspec_kwargs: dict,
+        expected_gap_type: str,
+        present: bool,
+    ) -> None:
+        appspec = _make_appspec(**appspec_kwargs)
         report = _static_workflow_analysis(appspec)
         gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_human_task_surface" in gap_types
-
-    def test_human_task_surface_exists(self) -> None:
-        appspec = _make_appspec(
-            surfaces=[_make_surface("review_form", "Review Form")],
-            processes=[
-                _make_process(
-                    "approve",
-                    steps=[_make_human_task_step("review", "review_form")],
-                ),
-            ],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_human_task_surface" not in gap_types
-
-    def test_missing_subprocess(self) -> None:
-        appspec = _make_appspec(
-            processes=[
-                _make_process(
-                    "main_process",
-                    steps=[_make_subprocess_step("sub", "nonexistent_process")],
-                ),
-            ],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_subprocess" in gap_types
-
-    def test_subprocess_exists(self) -> None:
-        appspec = _make_appspec(
-            processes=[
-                _make_process(
-                    "main_process",
-                    steps=[_make_subprocess_step("sub", "child_process")],
-                ),
-                _make_process("child_process"),
-            ],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_subprocess" not in gap_types
-
-    def test_trigger_entity_no_state_machine(self) -> None:
-        appspec = _make_appspec(
-            entities=[_make_entity("Order", "Order")],
-            processes=[
-                _make_process(
-                    "on_order_confirmed",
-                    trigger=_make_trigger("entity_status_transition", "Order"),
-                ),
-            ],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "trigger_no_state_machine" in gap_types
+        if present:
+            assert expected_gap_type in gap_types
+        else:
+            assert expected_gap_type not in gap_types
 
     def test_trigger_entity_has_state_machine(self) -> None:
         sm = _make_state_machine(["pending", "confirmed"])
@@ -210,38 +265,6 @@ class TestStaticWorkflowAnalysis:
         report = _static_workflow_analysis(appspec)
         gap_types = [g.gap_type for g in report.gaps]
         assert "trigger_no_state_machine" not in gap_types
-
-    def test_trigger_entity_not_found(self) -> None:
-        appspec = _make_appspec(
-            entities=[],
-            processes=[
-                _make_process(
-                    "on_order_confirmed",
-                    trigger=_make_trigger("entity_status_transition", "NonExistent"),
-                ),
-            ],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "trigger_no_state_machine" in gap_types
-
-    def test_story_no_process(self) -> None:
-        appspec = _make_appspec(
-            stories=[_make_story("ST-001", "Create invoice")],
-            processes=[],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "story_no_process" in gap_types
-
-    def test_story_with_process(self) -> None:
-        appspec = _make_appspec(
-            stories=[_make_story("ST-001", "Create invoice")],
-            processes=[_make_process("create_invoice", implements=["ST-001"])],
-        )
-        report = _static_workflow_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "story_no_process" not in gap_types
 
     def test_empty_appspec(self) -> None:
         appspec = _make_appspec()

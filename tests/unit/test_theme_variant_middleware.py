@@ -8,6 +8,7 @@ Run standalone:
     pytest tests/unit/test_theme_variant_middleware.py -v
 """
 
+import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -77,33 +78,27 @@ def test_middleware_defaults_to_light_without_cookie() -> None:
     assert response.text == "theme=light"
 
 
-def test_middleware_reads_dark_cookie() -> None:
+@pytest.mark.parametrize(
+    "cookie_value,expected_theme",
+    [
+        ("dark", "dark"),
+        ("light", "light"),
+        ("<script>alert(1)</script>", "light"),
+        ("sepia", "light"),
+    ],
+    ids=[
+        "test_middleware_reads_dark_cookie",
+        "test_middleware_reads_light_cookie",
+        "test_middleware_rejects_malformed_cookie",
+        "test_middleware_rejects_unknown_variant",
+    ],
+)
+def test_middleware_cookie_resolution(cookie_value: str, expected_theme: str) -> None:
+    """Cookie values are validated against VALID_VARIANTS; unknown or
+    malformed values fall back to the default variant."""
     client = TestClient(_make_app())
-    response = client.get("/", cookies={COOKIE_NAME: "dark"})
-    assert response.text == "theme=dark"
-
-
-def test_middleware_reads_light_cookie() -> None:
-    client = TestClient(_make_app())
-    response = client.get("/", cookies={COOKIE_NAME: "light"})
-    assert response.text == "theme=light"
-
-
-def test_middleware_rejects_malformed_cookie() -> None:
-    """Unknown cookie values MUST fall back to the default — a
-    malformed or stale cookie can never inject arbitrary strings
-    into the rendered ``data-theme`` attribute."""
-    client = TestClient(_make_app())
-    response = client.get("/", cookies={COOKIE_NAME: "<script>alert(1)</script>"})
-    assert response.text == "theme=light"
-
-
-def test_middleware_rejects_unknown_variant() -> None:
-    """A legitimate-looking but unsupported variant (e.g. from a
-    future client-side bug) falls back to the default."""
-    client = TestClient(_make_app())
-    response = client.get("/", cookies={COOKIE_NAME: "sepia"})
-    assert response.text == "theme=light"
+    response = client.get("/", cookies={COOKIE_NAME: cookie_value})
+    assert response.text == f"theme={expected_theme}"
 
 
 def test_ctxvar_resets_between_requests() -> None:

@@ -5,6 +5,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 STATIC_DIR = (
     Path(__file__).resolve().parent.parent.parent / "src" / "dazzle_ui" / "runtime" / "static"
 )
@@ -131,12 +133,24 @@ class TestCssLoader:
         assert CSS_SOURCE_FILES == LAYERED_ORDER
         assert CSS_UNLAYERED_FILES == UNLAYERED_FILES
 
-    def test_output_contains_layer_declaration(self) -> None:
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "@layer reset, vendor, tokens, base, utilities, components, overrides;",
+            ".dz-button",
+            "sourceMappingURL=data:application/json;base64,",
+        ],
+        ids=[
+            "test_output_contains_layer_declaration",
+            "test_button_css_contains_dz_button_rule",
+            "test_output_contains_source_map",
+        ],
+    )
+    def test_bundled_css_contains(self, needle: str) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
 
         css = get_bundled_css()
-        # v0.62: layer order matches static/css/dazzle.css
-        assert "@layer reset, vendor, tokens, base, utilities, components, overrides;" in css
+        assert needle in css
 
     def test_output_wraps_each_layered_file_in_its_layer(self) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
@@ -166,14 +180,6 @@ class TestCssLoader:
         ):
             assert family in css, f"{family} missing from bundle"
 
-    def test_button_css_contains_dz_button_rule(self) -> None:
-        """End-to-end: the bundle the marketing site receives MUST
-        contain a `.dz-button` rule. Pre-#920 it shipped zero."""
-        from dazzle_ui.runtime.css_loader import get_bundled_css
-
-        css = get_bundled_css()
-        assert ".dz-button" in css
-
     def test_unlayered_files_not_in_layer(self) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
 
@@ -181,12 +187,6 @@ class TestCssLoader:
         assert "unlayered" in css
         for filename in UNLAYERED_FILES:
             assert filename in css
-
-    def test_output_contains_source_map(self) -> None:
-        from dazzle_ui.runtime.css_loader import get_bundled_css
-
-        css = get_bundled_css()
-        assert "sourceMappingURL=data:application/json;base64," in css
 
     def test_source_map_lists_all_sources(self) -> None:
         import base64
