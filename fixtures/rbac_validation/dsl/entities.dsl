@@ -34,7 +34,7 @@ entity Patient "Patient":
     list: role(receptionist) or role(nurse) or role(doctor) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     delete: role(receptionist) or role(nurse) or role(doctor) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -68,7 +68,7 @@ entity MedicalRecord "Medical Record":
     list: role(nurse) or role(doctor) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     read: role(receptionist) or role(pharmacist) or role(billing_clerk) or role(intern)
@@ -109,7 +109,7 @@ entity Prescription "Prescription":
     list: role(doctor) or role(pharmacist) or role(nurse) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     create: role(pharmacist) or role(intern)
@@ -145,7 +145,7 @@ entity Appointment "Appointment":
     list: role(receptionist) or role(nurse) or role(doctor) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     delete: role(receptionist) or role(nurse) or role(doctor) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -181,7 +181,7 @@ entity LabResult "Lab Result":
     list: role(lab_tech) or role(doctor) or role(nurse) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     create: role(doctor) or role(nurse) or role(receptionist) or role(pharmacist) or role(billing_clerk) or role(intern)
@@ -217,7 +217,7 @@ entity BillingRecord "Billing Record":
     list: role(billing_clerk) or role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     read: role(doctor) or role(nurse) or role(lab_tech) or role(intern)
@@ -254,7 +254,7 @@ entity Staff "Staff":
     list: authenticated
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     create: role(doctor) or role(nurse) or role(receptionist) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -287,7 +287,7 @@ entity AuditLog "Audit Log":
     list: role(admin)
   scope:
     list: all
-      for: *
+      as: *
 
   forbid:
     create: role(intern)

@@ -398,7 +398,7 @@ workspace complex_nested "Complex Nested":
       when: status = pending
       message: "Pending item"
 
-    for admin:
+    as admin:
       scope: all
       purpose: "Admin view"
       show: region_a, region_b

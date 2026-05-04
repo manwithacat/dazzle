@@ -704,7 +704,7 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
         # was leaking onto the entity's shared LIST/PUT endpoints, 403ing the
         # non-admin feedback-widget polls. Entity-level ``reported_by =
         # current_user.email`` scope now restricts non-admins to their own
-        # rows; admins keep full visibility via the ``all for: admin`` scope.
+        # rows; admins keep full visibility via the ``all as: admin`` scope.
         access=ir.SurfaceAccessSpec(require_auth=True),
         ux=ux,
     )
@@ -753,7 +753,7 @@ def _build_feedback_edit_surface() -> ir.SurfaceSpec:
         # 403ing the feedback widget's _markNotified PUT for non-admin
         # users. Entity-level ``reported_by = current_user.email`` scope
         # restricts non-admins to updating only their own rows; admins
-        # keep full UPDATE access via the ``all for: admin`` scope. The
+        # keep full UPDATE access via the ``all as: admin`` scope. The
         # edit-UI page itself is still at /app/feedbackreports/{id}/edit
         # and rendering is filtered by the same scope — non-admins see
         # only their own rows there too.

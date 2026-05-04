@@ -41,7 +41,7 @@ entity User "User":
 
   scope:
     list: all
-      for: admin, designer, reviewer
+      as: admin, designer, reviewer
 
 entity Brand "Brand":
   id: uuid pk
@@ -64,7 +64,7 @@ entity Brand "Brand":
 
   scope:
     list: all
-      for: admin, designer, reviewer
+      as: admin, designer, reviewer
 
 entity Asset "Design Asset":
   id: uuid pk
@@ -97,7 +97,7 @@ entity Asset "Design Asset":
 
   scope:
     list: all
-      for: admin, designer, reviewer
+      as: admin, designer, reviewer
 
 entity Campaign "Campaign":
   id: uuid pk
@@ -126,7 +126,7 @@ entity Campaign "Campaign":
 
   scope:
     list: all
-      for: admin, designer, reviewer
+      as: admin, designer, reviewer
 
 entity Feedback "Design Feedback":
   id: uuid pk
@@ -145,7 +145,7 @@ entity Feedback "Design Feedback":
 
   scope:
     list: all
-      for: admin, designer, reviewer
+      as: admin, designer, reviewer
 
 # ── Workspaces ───────────────────────────────────────────────────────
 

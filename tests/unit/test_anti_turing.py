@@ -116,14 +116,17 @@ entity Task:
         assert violations == [], f"Unexpected violations: {violations}"
 
     def test_valid_persona_block(self, validator: AntiTuringValidator) -> None:
-        """Persona blocks using 'for <identifier>:' syntax should pass."""
+        """Persona blocks using 'as <identifier>:' syntax should pass.
+
+        #998 — renamed from `for <identifier>:` to remove the overloaded
+        `for` keyword. Bare `for` is a banned-keyword violation again."""
         dsl = """
 surface dashboard:
   ux:
-    for ops_engineer:
+    as ops_engineer:
       scope: all
       purpose: "Full visibility"
-    for support_agent:
+    as support_agent:
       scope: assigned
 """
         violations = validator.validate(dsl)
@@ -324,3 +327,88 @@ entity Task:
         assert "violation" in formatted.lower()
         assert "Line" in formatted
         assert "if" in formatted.lower() or "then" in formatted.lower()
+
+
+# #998 — additions for the as/persona/scope rename + safety tightening.
+
+
+class TestAntiTuringCycle998:
+    """Regression coverage for the #998 carve-out cleanup.
+
+    Ensures the new shape of ALLOWED_PATTERNS / ALLOWED_FUNCTIONS still
+    rejects the things it was always meant to reject, and accepts the
+    legitimate DSL forms it was wrongly rejecting before."""
+
+    def setup_method(self) -> None:
+        from dazzle.core.anti_turing import AntiTuringValidator
+
+        self.v = AntiTuringValidator()
+
+    # ── allow ────────────────────────────────────────────────────────
+
+    def test_role_call_allowed(self) -> None:
+        # Used in every permit/scope rule.
+        assert not self.v.validate("  list: role(admin)\n")
+
+    def test_persona_call_allowed(self) -> None:
+        # Workspace access blocks.
+        assert not self.v.validate("  access: persona(engineer, manager)\n")
+
+    def test_via_entity_call_allowed(self) -> None:
+        # Junction-EXISTS scope predicate. Entity name is user-defined.
+        assert not self.v.validate(
+            "  list: via RealmGuardian(guardian = current_user, realm = realm)\n"
+        )
+
+    def test_then_block_header_allowed(self) -> None:
+        assert not self.v.validate("  then:\n    - outcome\n")
+
+    def test_match_block_header_allowed(self) -> None:
+        assert not self.v.validate("  match:\n    - pattern\n")
+
+    def test_on_continue_step_transition_allowed(self) -> None:
+        # `continue` is a banned keyword but a valid trigger name in
+        # `on <trigger> -> step <name>` declarations.
+        assert not self.v.validate("    on continue -> step profile\n")
+
+    def test_config_env_cron_allowed(self) -> None:
+        assert not self.v.validate('  url: config("URL")\n')
+        assert not self.v.validate('  key: env("KEY")\n')
+        assert not self.v.validate('  schedule: cron("0 * * * *")\n')
+
+    def test_regex_in_allowed(self) -> None:
+        assert not self.v.validate('  subject: regex("^TICKET-")\n')
+        assert not self.v.validate('  to_address: in("a@x", "b@x")\n')
+
+    def test_bucket_allowed(self) -> None:
+        assert not self.v.validate("  group_by: bucket(triggered_at, day)\n")
+
+    # ── reject ───────────────────────────────────────────────────────
+
+    def test_for_keyword_still_banned(self) -> None:
+        # The persona/scope `for` syntaxes were renamed to `as` — bare
+        # `for` is now a banned-keyword violation again, with no
+        # remaining carve-outs.
+        violations = self.v.validate("for x in items:\n")
+        assert any(v.message and "for" in v.message.lower() for v in violations)
+
+    def test_for_persona_no_longer_a_carve_out(self) -> None:
+        violations = self.v.validate("  for persona admin:\n")
+        assert violations, "old `for persona X:` should now fail"
+
+    def test_then_prefix_does_not_skip_banned_remainder(self) -> None:
+        # The cycle-998 prefix-only allowance: `then:` consumes only
+        # itself, the rest of the line is still scanned. Pre-fix, the
+        # whole line was whitelisted and `while` slipped through.
+        violations = self.v.validate("  then: while true do\n")
+        assert any(v.message and "while" in v.message.lower() for v in violations), (
+            "`while` after `then:` must still be flagged"
+        )
+
+    def test_unknown_function_still_banned(self) -> None:
+        violations = self.v.validate("  x: calculate(y)\n")
+        assert any(v.message and "calculate" in v.message for v in violations)
+
+    def test_javascript_still_banned(self) -> None:
+        violations = self.v.validate("  x: f => g\n")
+        assert violations  # arrow function pattern

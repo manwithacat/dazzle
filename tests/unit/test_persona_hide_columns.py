@@ -66,21 +66,21 @@ surface task_list "Tasks":
         return next(s for s in fragment.surfaces if s.name == "task_list")
 
     def test_persona_hide_single_field(self) -> None:
-        surface = self._parse_task_surface("    for member:\n      hide: assigned_to\n")
+        surface = self._parse_task_surface("    as member:\n      hide: assigned_to\n")
         assert surface.ux is not None
         variant = surface.ux.persona_variants[0]
         assert variant.persona == "member"
         assert variant.hide == ["assigned_to"]
 
     def test_persona_hide_multiple_fields(self) -> None:
-        surface = self._parse_task_surface("    for member:\n      hide: assigned_to, priority\n")
+        surface = self._parse_task_surface("    as member:\n      hide: assigned_to, priority\n")
         variant = surface.ux.persona_variants[0] if surface.ux else None
         assert variant is not None
         assert variant.hide == ["assigned_to", "priority"]
 
     def test_persona_hide_coexists_with_empty(self) -> None:
         surface = self._parse_task_surface(
-            '    for member:\n      empty: "No tasks assigned yet"\n      hide: assigned_to\n'
+            '    as member:\n      empty: "No tasks assigned yet"\n      hide: assigned_to\n'
         )
         variant = surface.ux.persona_variants[0] if surface.ux else None
         assert variant is not None

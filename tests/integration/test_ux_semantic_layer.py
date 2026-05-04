@@ -68,7 +68,7 @@ surface task_list "Task Queue":
             when: status = "assigned"
             message: "Task has been assigned"
 
-        for volunteer:
+        as volunteer:
             scope: assigned_to = current_user
             purpose: "View your assigned tasks"
             show: tree_id, location, task_type, scheduled_date
@@ -76,7 +76,7 @@ surface task_list "Task Queue":
             action_primary: task_edit
             read_only: false
 
-        for coordinator:
+        as coordinator:
             scope: all
             purpose: "Manage all tasks and assignments"
             show_aggregate: critical_count, pending_count

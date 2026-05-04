@@ -83,9 +83,9 @@ entity Device "Device":
     delete: role(engineer)
   scope:
     list: assigned_tester_id = current_user
-      for: tester
+      as: tester
     list: all
-      for: engineer, manager
+      as: engineer, manager
 
   index batch_number
   index status
@@ -121,7 +121,7 @@ entity Tester "Tester":
     delete: role(engineer)
   scope:
     list: all
-      for: engineer, manager, tester
+      as: engineer, manager, tester
 
   index email
   index location
@@ -174,11 +174,11 @@ entity IssueReport "Issue Report":
     delete: role(engineer)
   scope:
     list: reported_by_id = current_user
-      for: tester
+      as: tester
     update: reported_by_id = current_user
-      for: tester
+      as: tester
     list: all
-      for: engineer, manager
+      as: engineer, manager
 
   index device_id
   index severity, status
@@ -214,9 +214,9 @@ entity TestSession "Test Session":
     delete: role(engineer)
   scope:
     list: tester_id = current_user
-      for: tester
+      as: tester
     list: all
-      for: engineer, manager
+      as: engineer, manager
 
   index device_id
   index tester_id
@@ -256,7 +256,7 @@ entity FirmwareRelease "Firmware Release":
     delete: role(engineer)
   scope:
     list: all
-      for: engineer, manager, tester
+      as: engineer, manager, tester
 
   index status
   index version
@@ -300,9 +300,9 @@ entity Task "Task":
     delete: role(engineer)
   scope:
     list: assigned_to_id = current_user
-      for: tester
+      as: tester
     list: all
-      for: engineer, manager
+      as: engineer, manager
 
   index status
   index assigned_to_id
@@ -345,12 +345,12 @@ surface device_list "Device Dashboard":
       message: "Prototype device - handle with care"
       action: device_detail
 
-    for engineer:
+    as engineer:
       scope: all
       purpose: "Manage all devices across batches"
       action_primary: device_create
 
-    for tester:
+    as tester:
       scope: assigned_tester_id = current_user
       purpose: "Your assigned devices"
 
@@ -373,11 +373,11 @@ surface device_detail "Device Detail":
   ux:
     purpose: "View complete device history and reports"
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: device_edit
 
-    for tester:
+    as tester:
       scope: assigned_tester_id = current_user
       action_primary: issue_report_create
 
@@ -403,7 +403,7 @@ surface device_create "Register Device":
   ux:
     purpose: "Register a new device for field testing"
 
-    for engineer:
+    as engineer:
       defaults:
         status: prototype
 
@@ -428,7 +428,7 @@ surface device_edit "Edit Device":
   ux:
     purpose: "Update device information and status"
 
-    for engineer:
+    as engineer:
       scope: all
 
 # Surface: Tester Directory
@@ -456,7 +456,7 @@ surface tester_list "Tester Directory":
       message: "Inactive tester"
       action: tester_detail
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: tester_create
 
@@ -484,7 +484,7 @@ surface tester_detail "Tester Detail":
   ux:
     purpose: "View tester details and activity"
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: tester_edit
 
@@ -507,7 +507,7 @@ surface tester_create "Register Tester":
   ux:
     purpose: "Register a new field tester"
 
-    for engineer:
+    as engineer:
       defaults:
         active: true
 
@@ -530,7 +530,7 @@ surface tester_edit "Edit Tester":
   ux:
     purpose: "Update tester information"
 
-    for engineer:
+    as engineer:
       scope: all
 
 # Surface: Issue Report Board
@@ -563,12 +563,12 @@ surface issue_report_list "Issue Board":
       message: "High severity issue"
       action: issue_report_detail
 
-    for engineer:
+    as engineer:
       scope: all
       purpose: "Manage all field issues"
       action_primary: issue_report_create
 
-    for tester:
+    as tester:
       scope: reported_by_id = current_user
       purpose: "Track your reported issues"
       action_primary: issue_report_create
@@ -594,11 +594,11 @@ surface issue_report_detail "Issue Detail":
   ux:
     purpose: "View complete issue details and context"
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: issue_report_edit
 
-    for tester:
+    as tester:
       scope: reported_by_id = current_user
       action_primary: issue_report_edit
 
@@ -623,7 +623,7 @@ surface issue_report_create "Report Issue":
   ux:
     purpose: "Fast capture of field problems with evidence"
 
-    for tester:
+    as tester:
       defaults:
         reported_by_id: current_user
         severity: medium
@@ -649,10 +649,10 @@ surface issue_report_edit "Update Issue":
   ux:
     purpose: "Update issue status and details"
 
-    for engineer:
+    as engineer:
       scope: all
 
-    for tester:
+    as tester:
       scope: reported_by_id = current_user
 
 # Surface: Test Session List
@@ -675,11 +675,11 @@ surface test_session_list "Test Sessions":
     search: notes
     empty: "No test sessions logged yet."
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: test_session_create
 
-    for tester:
+    as tester:
       scope: tester_id = current_user
       action_primary: test_session_create
 
@@ -703,7 +703,7 @@ surface test_session_create "Log Test Session":
   ux:
     purpose: "Record field testing session details"
 
-    for tester:
+    as tester:
       defaults:
         tester_id: current_user
         environment: indoor
@@ -760,7 +760,7 @@ surface firmware_release_list "Firmware Releases":
       message: "Deprecated firmware - upgrade recommended"
       action: firmware_release_detail
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: firmware_release_create
 
@@ -779,7 +779,7 @@ surface firmware_release_detail "Firmware Detail":
   ux:
     purpose: "View firmware release details"
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: firmware_release_edit
 
@@ -802,7 +802,7 @@ surface firmware_release_create "Create Firmware Release":
   ux:
     purpose: "Create a new firmware release"
 
-    for engineer:
+    as engineer:
       defaults:
         status: draft
 
@@ -825,7 +825,7 @@ surface firmware_release_edit "Edit Firmware Release":
   ux:
     purpose: "Update firmware release"
 
-    for engineer:
+    as engineer:
       scope: all
 
 # Surface: Task List
@@ -846,7 +846,7 @@ surface task_list "Tasks":
     search: notes
     empty: "No tasks yet."
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: task_create
 
@@ -867,7 +867,7 @@ surface task_detail "Task Detail":
   ux:
     purpose: "View task details"
 
-    for engineer:
+    as engineer:
       scope: all
       action_primary: task_edit
 
@@ -884,7 +884,7 @@ surface task_create "Create Task":
   ux:
     purpose: "Create maintenance or debugging task"
 
-    for engineer:
+    as engineer:
       defaults:
         created_by_id: current_user
         status: open
@@ -903,7 +903,7 @@ surface task_edit "Edit Task":
   ux:
     purpose: "Update task status and assignment"
 
-    for engineer:
+    as engineer:
       scope: all
 
 # =============================================================================
@@ -1049,11 +1049,11 @@ workspace engineering_dashboard "Engineering Dashboard":
     empty: "No devices registered"
 
   ux:
-    for engineer:
+    as engineer:
       purpose: "Monitor field testing quality and issues"
       focus: critical_issues, metrics, firmware_releases, all_tasks
 
-    for manager:
+    as manager:
       purpose: "Track product quality and field performance"
       focus: metrics, critical_issues, all_testers
 
@@ -1104,7 +1104,7 @@ workspace tester_dashboard "Tester Dashboard":
     empty: "No tasks assigned to you"
 
   ux:
-    for tester:
+    as tester:
       purpose: "Your field testing activity"
       focus: my_devices, my_tasks, my_issues
 

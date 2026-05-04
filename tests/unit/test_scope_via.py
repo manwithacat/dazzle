@@ -103,7 +103,7 @@ entity Contact "Contact":
 
   scope:
     list: via AgentAssignment(agent = current_user.contact, contact = id)
-      for: agent
+      as: agent
 """
         fragment = _parse(dsl)
         contact = [e for e in fragment.entities if e.name == "Contact"][0]
@@ -134,7 +134,7 @@ entity Contact "Contact":
 
   scope:
     list: via AgentAssignment(agent = current_user.contact, contact = id, revoked_at = null)
-      for: agent
+      as: agent
 """
         fragment = _parse(dsl)
         contact = [e for e in fragment.entities if e.name == "Contact"][0]
@@ -161,7 +161,7 @@ entity Task "Task":
 
   scope:
     list: via TeamMembership(user = current_user, team = team, status != null)
-      for: member
+      as: member
 """
         fragment = _parse(dsl)
         task = [e for e in fragment.entities if e.name == "Task"][0]
@@ -180,7 +180,7 @@ entity Contact "Contact":
     list: role(agent)
   scope:
     list: via AgentAssignment agent = current_user
-      for: agent
+      as: agent
 """
         with pytest.raises(ParseError, match="Expected '\\(' after"):
             _parse(dsl)
@@ -196,7 +196,7 @@ entity Contact "Contact":
     list: role(agent)
   scope:
     list: via AgentAssignment(agent = current_user)
-      for: agent
+      as: agent
 """
         with pytest.raises(ParseError, match="at least one entity binding"):
             _parse(dsl)
@@ -212,7 +212,7 @@ entity Contact "Contact":
     list: role(agent)
   scope:
     list: via AgentAssignment(contact = id)
-      for: agent
+      as: agent
 """
         with pytest.raises(ParseError, match="at least one user binding"):
             _parse(dsl)
@@ -549,7 +549,7 @@ entity Contact "Contact":
 
   scope:
     list: via AgentAssignment(agent = current_user.contact, contact = id)
-      for: agent
+      as: agent
 """
         fragment = _parse(dsl)
         contact = [e for e in fragment.entities if e.name == "Contact"][0]
@@ -583,7 +583,7 @@ entity User "User":
 
   scope:
     list: not via BlockList(blocker = current_user, blocked = id)
-      for: member
+      as: member
 """
     fragment = _parse(dsl)
     user = [e for e in fragment.entities if e.name == "User"][0]
@@ -615,7 +615,7 @@ entity Document "Document":
 
   scope:
     list: not (status = archived)
-      for: editor
+      as: editor
 """
     fragment = _parse(dsl)
     doc = [e for e in fragment.entities if e.name == "Document"][0]

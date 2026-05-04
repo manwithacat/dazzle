@@ -286,11 +286,11 @@ scenario busy_term "Busy Term":
   description: "Mid-year state"
   seed_script: "scenarios/busy_term.json"
 
-  for persona teacher:
+  as persona teacher:
     start_route: "/classes"
     seed_script: "scenarios/teacher.json"
 
-  for persona student:
+  as persona student:
     start_route: "/assignments"
 """
         module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))

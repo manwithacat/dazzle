@@ -9,6 +9,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-05-04
+
+### Changed
+- **#998 — DSL grammar: `for` persona/scope syntaxes renamed to `as`.**
+  Three overlapping `for` syntaxes were collapsed onto a single
+  `as` introducer:
+
+  | Before | After |
+  |---|---|
+  | `for ops_engineer:` (persona block) | `as ops_engineer:` |
+  | `for persona admin:` (scenario block) | `as persona admin:` |
+  | `for: tester, manager` (scope clause) | `as: tester, manager` |
+
+  Motivation (your call-out): three subtly different `for` contexts
+  was descriptive smell, AND the anti-Turing linter had to defend
+  `for` with regex carve-outs that were fragile and had a known
+  whitelist-the-whole-line gap (`then: while true:` slipped through).
+  `as` is the canonical binding-style introducer used elsewhere
+  (`use X as Y`); reusing it removes the overload.
+
+  Migration: hard break, no shims (per ADR-0003). Parser now
+  expects `TokenType.AS` in scenario / surface / ux / scope-clause
+  positions. All 12 example + fixture apps migrated (143 sites).
+  All test fixtures with embedded DSL strings migrated. grammar.md
+  + testing.md + linker.py inline comments updated.
+
+### Fixed
+- **#998 — `dazzle lint --anti-turing` now passes on every example +
+  fixture app.** The gate was unusable pre-fix: 100+ false-positive
+  violations on every app's RBAC rules because `role()` and `for:`
+  were treated as banned keywords.
+
+  Concrete fixes (each one a real DSL primitive that needed to be
+  recognised, not a Turing-completeness leak):
+  - `role()`, `persona()` — RBAC primitives
+  - `bucket()` — time-bucketing aggregator (charts)
+  - `config()`, `env()`, `cron()` — declarative key→value lookups
+  - `regex()`, `in()` — declarative pattern primitives (messaging)
+  - `via Entity()` — junction-EXISTS scope predicate (special-cased
+    via lookbehind for `via\s+`)
+  - `then:`, `match:`, `on <trigger> ->` — block-header patterns
+  - **Tightened ALLOWED_PATTERNS to consume only the matched
+    prefix**, so `then: while true:` now correctly flags `while`
+    (pre-fix it whitelisted the whole line)
+  - Comments stripped before keyword scanning (`# for auditability`
+    no longer trips the `for` ban)
+  - Function-call regex tightened to `\b(\w+)\(` (no whitespace
+    between identifier and paren) so `- open (order: 0)` no longer
+    parses as a function call
+
+  `for` is now a banned keyword again with no carve-outs. The
+  contextual `for X:` exceptions are gone — they were the
+  whitelist-too-coarse hole.
+
+- **Fuzzer corpus loader** now skips `.dazzle/spec_snapshots/` and
+  `.improve-snapshots/` — they are auto-generated mirrors that lag
+  canonical sources and would otherwise contain stale syntax after
+  a grammar rename like #998.
+
+### Agent Guidance
+- Persona-scoping uses `as`. Three forms:
+  - `as <persona>:` — surface/ux persona block
+  - `as persona <id>:` — scenario persona block
+  - `as: <persona>[, ...]` — scope-rule persona-list clause
+- Adding a new declarative DSL function: add the bare name to
+  `ALLOWED_FUNCTIONS` in `src/dazzle/core/anti_turing.py`. Adding
+  a new block header that shares a name with a banned keyword: add
+  `^\s*<keyword>\s*:` to `ALLOWED_PATTERNS` — the matcher consumes
+  only the prefix, so anything after the colon is still scanned.
+- Don't introduce a `<verb>: <body>` syntax that re-uses a banned
+  keyword (`if`, `while`, `for`, etc.) without good reason — every
+  one becomes a regex carve-out the anti-Turing checker has to
+  defend. Prefer a fresh structural keyword (like `as`).
+
 ## [0.64.8] - 2026-05-04
 
 ### Added

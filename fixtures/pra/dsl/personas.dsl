@@ -171,15 +171,15 @@ scenario sample_data "Sample Data":
 scenario busy_workday "Busy Workday":
   description: "High-activity scenario with many pending items"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin/alerts"
     seed_script: "fixtures/busy_admin.json"
 
-  for persona sales_rep:
+  as persona sales_rep:
     start_route: "/sales/leads"
     seed_script: "fixtures/busy_sales.json"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/support/queue"
     seed_script: "fixtures/busy_support.json"
 
@@ -191,14 +191,14 @@ scenario onboarding_demo "Onboarding Demo":
   description: "Demo scenario for new user onboarding"
   seed_script: "fixtures/onboarding_base.json"
 
-  for persona novice_user:
+  as persona novice_user:
     start_route: "/getting-started"
     seed_script: "fixtures/onboarding_new_user.json"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin/users"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/support/new-users"
 
 # =============================================================================
@@ -240,14 +240,14 @@ scenario full_demo "Full Demo":
   description: "Complete demo with global seed and per-persona configuration"
   seed_script: "fixtures/full_demo_base.json"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin"
     seed_script: "fixtures/full_demo_admin.json"
 
-  for persona sales_rep:
+  as persona sales_rep:
     start_route: "/sales"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/support"
 
   demo:
@@ -280,24 +280,24 @@ scenario complex_demo "Complex Demo State":
   description: "Complex scenario demonstrating all features together"
   seed_script: "fixtures/complex_base.json"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin/dashboard"
     seed_script: "fixtures/complex_admin.json"
 
-  for persona sales_manager:
+  as persona sales_manager:
     start_route: "/sales/pipeline"
     seed_script: "fixtures/complex_sales_manager.json"
 
-  for persona sales_rep:
+  as persona sales_rep:
     start_route: "/sales/my-leads"
 
-  for persona support_manager:
+  as persona support_manager:
     start_route: "/support/metrics"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/support/queue"
 
-  for persona developer:
+  as persona developer:
     start_route: "/developer/api"
 
   demo:

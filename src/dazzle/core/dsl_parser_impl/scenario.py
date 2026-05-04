@@ -210,8 +210,11 @@ class ScenarioParserMixin:
                 seed_data_path = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
-            # for persona <name>:
-            elif self.match(TokenType.FOR):
+            # as persona <name>: — persona-scoped scenario entry. Renamed
+            # from `for persona ...:` to remove the overloaded `for`
+            # keyword; `as` is a binding-style introducer matching the
+            # other persona/scope contexts.
+            elif self.match(TokenType.AS):
                 entry = self._parse_persona_scenario_entry()
                 persona_entries.append(entry)
 
@@ -244,7 +247,7 @@ class ScenarioParserMixin:
               start_route: "/classes"
               seed_script: "scenarios/busy_term_teacher.json"
         """
-        self.expect(TokenType.FOR)
+        self.expect(TokenType.AS)
         self.expect(TokenType.PERSONA)
         persona_id = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)

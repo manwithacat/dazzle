@@ -111,6 +111,29 @@ class AntiTuringValidator:
             "length",
             "lower",
             "upper",
+            # RBAC primitives — used in permit/scope/state-machine
+            # transition guards. #998 — anti-turing was rejecting
+            # role() across every example app's RBAC rules.
+            "role",
+            # Workspace access-control declarations: `access: persona(a, b)`
+            # in app.dsl. #998.
+            "persona",
+            # Time-bucketing aggregator: `group_by: bucket(field, day|week|month)`.
+            # #998 — used in chart/report regions in ops_dashboard.
+            "bucket",
+            # Config / environment / schedule lookups — declarative
+            # key→value indirections used in webhook URLs (`config("KEY")`),
+            # API auth blocks (`env("KEY")`), and scheduled jobs
+            # (`cron("0 * * * *")`). #998.
+            "config",
+            "env",
+            "cron",
+            # Declarative pattern primitives — `regex("...")` for
+            # string-shape matching, `in("a", "b", ...)` for set
+            # membership. Both used in messaging routing rules.
+            # #998.
+            "regex",
+            "in",
         }
     )
 
@@ -171,22 +194,51 @@ class AntiTuringValidator:
         return self.validate(content, str(path))
 
     # DSL-specific patterns that look like banned keywords but are allowed
-    # "for <identifier>:" is persona block syntax, not a loop
+    # at the top level of a line (NOT mid-expression).
+    #
+    # #998 — the persona/scope `for` syntaxes were renamed to `as` so
+    # the anti-Turing carve-outs no longer have to defend `for`. The
+    # remaining exceptions are minimal: structured-grammar block headers
+    # that share a name with a banned keyword.
     ALLOWED_PATTERNS: list[str] = [
-        r"^\s*for\s+\w+\s*:",  # persona block: "for ops_engineer:"
+        # Story outcome block — `then:` is the structured-grammar
+        # header alongside `given:` / `when:`, not control flow.
+        # Ban on `then` mid-expression preserved by anchoring to
+        # start-of-line + colon-only termination.
+        r"^\s*then\s*:",
+        # Match block — declarative pattern-matching header used in
+        # process/messaging routing (pra fixture). Not control flow:
+        # the body lists patterns and outcomes structurally.
+        r"^\s*match\s*:",
+        # Step-trigger declaration: `on <trigger> -> step <name>`. The
+        # trigger name is user-defined and may collide with banned
+        # keywords (e.g. `on continue -> step profile` in pra). Consume
+        # the trigger word so the rest of the line still gets scanned.
+        # #998.
+        r"^\s*on\s+\w+\s*(?:->|→)",
     ]
 
     def _check_keywords(self, line: str, line_num: int) -> list[Violation]:
         """Check for banned keywords in a line."""
         violations: list[Violation] = []
 
-        # Extract the non-quoted parts of the line
-        non_quoted = self._remove_quoted_strings(line)
+        # Extract the non-quoted, non-comment parts of the line.
+        # #998 — comments must be stripped before keyword scanning,
+        # otherwise prose like `# for auditability` trips the
+        # banned-`for` check.
+        non_quoted = self._strip_comments(self._remove_quoted_strings(line))
 
-        # Check if line matches any allowed DSL patterns first
+        # Whitelist DSL block headers by *consuming the matched prefix*
+        # rather than skipping the entire line. #998 — the prior
+        # behaviour (return [] on any prefix match) meant a line like
+        # `then: while true:` would silently skip the `while` check.
+        # Now we only consume the matched header and continue scanning
+        # the rest for banned keywords.
         for allowed_pattern in self.ALLOWED_PATTERNS:
-            if re.match(allowed_pattern, non_quoted, re.IGNORECASE):
-                return []  # This line is valid DSL syntax
+            m = re.match(allowed_pattern, non_quoted, re.IGNORECASE)
+            if m:
+                non_quoted = " " * m.end() + non_quoted[m.end() :]
+                break
 
         # Check each word
         for match in re.finditer(r"\b(\w+)\b", non_quoted):
@@ -208,8 +260,8 @@ class AntiTuringValidator:
         """Check for banned patterns in a line."""
         violations: list[Violation] = []
 
-        # Remove quoted strings first
-        non_quoted = self._remove_quoted_strings(line)
+        # Remove quoted strings + comments first
+        non_quoted = self._strip_comments(self._remove_quoted_strings(line))
 
         for pattern, description in self.BANNED_PATTERNS:
             for match in re.finditer(pattern, non_quoted):
@@ -233,16 +285,25 @@ class AntiTuringValidator:
         """
         violations: list[Violation] = []
 
-        # Remove quoted strings
-        non_quoted = self._remove_quoted_strings(line)
+        # Remove quoted strings + comments
+        non_quoted = self._strip_comments(self._remove_quoted_strings(line))
 
-        # Pattern for function-like calls: word(something)
-        # Exclude type annotations which appear after ":"
-        # e.g., "title: str(200)" is allowed
-        # e.g., "calculate(x)" in an expression is not
-
-        # Find function calls that aren't type annotations
-        for match in re.finditer(r"\b(\w+)\s*\(\s*[^)]*\s*\)", non_quoted):
+        # Pattern for function-like calls: word(something) — no
+        # whitespace between identifier and `(`. Function calls in
+        # the DSL are always tight (e.g. `role(admin)`); whitespace
+        # before `(` is grammar like `- open (order: 0)` (list item
+        # + parenthesised key-value pair) and should NOT be parsed
+        # as a call. #998.
+        #
+        # `via <Entity>(...)` is the junction-EXISTS scope predicate
+        # — the entity name is user-defined (RealmGuardian, BlockList,
+        # etc.) so it can't be enumerated in ALLOWED_FUNCTIONS. Skip
+        # function-call checks when the identifier is preceded by
+        # `via ` (CLAUDE.md scope rules). #998.
+        for match in re.finditer(r"\b(\w+)\(\s*[^)]*\s*\)", non_quoted):
+            preceding = non_quoted[: match.start()]
+            if re.search(r"\bvia\s+$", preceding):
+                continue
             func_name = match.group(1).lower()
 
             # Skip if this looks like a type annotation
@@ -291,6 +352,15 @@ class AntiTuringValidator:
         # Remove single-quoted strings
         result = re.sub(r"'[^']*'", "''", result)
         return result
+
+    def _strip_comments(self, line: str) -> str:
+        """Truncate the line at the first `#` outside a string. Quoted
+        strings are already collapsed to empty by `_remove_quoted_strings`,
+        so any remaining `#` is a real comment marker. #998 — comments
+        were being scanned for banned keywords, so prose like
+        ``# for auditability`` produced false-positive violations."""
+        idx = line.find("#")
+        return line if idx < 0 else line[:idx]
 
     def format_violations(self, violations: list[Violation]) -> str:
         """Format violations as a human-readable string."""

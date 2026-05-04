@@ -48,7 +48,7 @@ entity User "Team Member":
 
   scope:
     list: all
-      for: admin, manager
+      as: admin, manager
 
   fitness:
     repr_fields: [name, email, role, department, is_active]
@@ -98,9 +98,9 @@ entity Task "Task":
 
   scope:
     list: assigned_to = current_user or created_by = current_user
-      for: member
+      as: member
     list: all
-      for: admin, manager
+      as: admin, manager
 
   fitness:
     repr_fields: [title, status, priority, assigned_to, due_date]
@@ -139,7 +139,7 @@ entity TaskComment "Task Comment":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
   fitness:
     repr_fields: [task, author, content]
@@ -176,25 +176,25 @@ persona member "Team Member":
 scenario empty "Empty State":
   description: "Fresh install with no data - test onboarding flows"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin"
 
-  for persona manager:
+  as persona manager:
     start_route: "/team"
 
-  for persona member:
+  as persona member:
     start_route: "/my-work"
 
 scenario busy_sprint "Active Sprint":
   description: "Mid-sprint with tasks in various states"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin"
 
-  for persona manager:
+  as persona manager:
     start_route: "/team"
 
-  for persona member:
+  as persona member:
     start_route: "/my-work"
 
   demo:
@@ -217,13 +217,13 @@ scenario busy_sprint "Active Sprint":
 scenario overdue_crisis "Overdue Tasks":
   description: "Several overdue tasks needing attention"
 
-  for persona admin:
+  as persona admin:
     start_route: "/admin"
 
-  for persona manager:
+  as persona manager:
     start_route: "/team"
 
-  for persona member:
+  as persona member:
     start_route: "/my-work"
 
 # =============================================================================
@@ -257,16 +257,16 @@ surface task_list "Task List":
       when: priority = urgent and status = todo
       message: "Urgent - needs immediate attention"
 
-    for admin:
+    as admin:
       scope: all
       purpose: "Manage all tasks across the team"
 
-    for manager:
+    as manager:
       scope: all
       purpose: "Review and assign team tasks"
       action_primary: task_create
 
-    for member:
+    as member:
       scope: assigned_to = current_user or created_by = current_user
       purpose: "View your assigned and created tasks"
 
@@ -360,13 +360,13 @@ surface task_create "Create Task":
   ux:
     purpose: "Create a new task"
 
-    for admin:
+    as admin:
       purpose: "Create and assign task to any team member"
 
-    for manager:
+    as manager:
       purpose: "Create task and assign to your team"
 
-    for member:
+    as member:
       purpose: "Create a task for yourself"
       hide: assigned_to
 
@@ -411,12 +411,12 @@ surface user_list "Team Members":
     search: name, email
     empty: "No team members yet. Add your first team member to get started."
 
-    for admin:
+    as admin:
       scope: all
       purpose: "Full team management"
       action_primary: user_create
 
-    for manager:
+    as manager:
       scope: all
       purpose: "View team members"
       read_only: true

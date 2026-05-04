@@ -121,9 +121,9 @@ entity Ticket "Support Ticket":
 
   scope:
     list: created_by = current_user
-      for: customer
+      as: customer
     list: all
-      for: agent, manager
+      as: agent, manager
 
   fitness:
     repr_fields: [title, status, priority, category, assigned_to]
@@ -155,7 +155,7 @@ entity Comment "Comment":
 
   scope:
     list: all
-      for: agent, manager, customer
+      as: agent, manager, customer
 
   fitness:
     repr_fields: [ticket, author, content, is_internal]
@@ -276,7 +276,7 @@ surface ticket_create "Create Ticket":
     field assigned_to "Assigned To"
 
   ux:
-    for customer:
+    as customer:
       hide: assigned_to
 
 surface ticket_edit "Edit Ticket":

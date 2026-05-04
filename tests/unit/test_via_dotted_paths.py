@@ -63,7 +63,7 @@ entity StudentProfile "SP":
   name: str(200)
   scope:
     read: via ClassEnrolment(student_profile = id, teaching_group.teacher.user = current_user)
-      for: teacher
+      as: teacher
 
 entity ClassEnrolment "CE":
   id: uuid pk
@@ -206,7 +206,7 @@ entity StudentProfile "SP":
   id: uuid pk
   scope:
     read: via ClassEnrolment(student_profile = id, teaching_group.nonexistent_fk.user = current_user)
-      for: teacher
+      as: teacher
 
 entity ClassEnrolment "CE":
   id: uuid pk

@@ -20,7 +20,7 @@ entity User "User":
 
   scope:
     list: all
-      for: oracle
+      as: oracle
 
 entity Realm "Realm":
   id: uuid pk
@@ -37,7 +37,7 @@ entity Realm "Realm":
 
   scope:
     list: all
-      for: oracle, sovereign, architect
+      as: oracle, sovereign, architect
 
 entity Shape "Shape":
   id: uuid pk
@@ -69,31 +69,31 @@ entity Shape "Shape":
   # Row-level filters: oracle sees all, others are realm/colour-scoped
   scope:
     list: all
-      for: oracle
+      as: oracle
     read: all
-      for: oracle
+      as: oracle
     create: all
-      for: oracle, sovereign
+      as: oracle, sovereign
     update: all
-      for: oracle
+      as: oracle
     delete: all
-      for: oracle
+      as: oracle
     list: realm = current_user.realm
-      for: sovereign, architect
+      as: sovereign, architect
     read: realm = current_user.realm
-      for: sovereign, architect
+      as: sovereign, architect
     update: realm = current_user.realm
-      for: sovereign
+      as: sovereign
     delete: realm = current_user.realm
-      for: sovereign
+      as: sovereign
     list: colour = current_user.colour
-      for: chromat
+      as: chromat
     read: colour = current_user.colour
-      for: chromat
+      as: chromat
     list: realm = current_user.realm or creator = current_user
-      for: forgemaster, witness
+      as: forgemaster, witness
     read: realm = current_user.realm or creator = current_user
-      for: forgemaster, witness
+      as: forgemaster, witness
 
 # --- Junction-Table Scope Example (#530) ---
 # Demonstrates via clause for access control through junction tables.
@@ -111,7 +111,7 @@ entity RealmGuardian "Realm Guardian":
 
   scope:
     list: all
-      for: oracle
+      as: oracle
 
 entity Artifact "Artifact":
   id: uuid pk
@@ -125,9 +125,9 @@ entity Artifact "Artifact":
 
   scope:
     list: all
-      for: oracle
+      as: oracle
     list: via RealmGuardian(guardian = current_user, realm = realm, revoked_at = null)
-      for: guardian
+      as: guardian
 
 entity Inscription "Inscription":
   id: uuid pk
@@ -142,6 +142,6 @@ entity Inscription "Inscription":
 
   scope:
     list: shape.realm = current_user.realm
-      for: *
+      as: *
     read: shape.realm = current_user.realm
-      for: *
+      as: *

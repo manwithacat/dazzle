@@ -1294,7 +1294,7 @@ surface task_list "Tasks":
       message: "Task due soon"
       action: task_detail
 
-    for manager:
+    as manager:
       scope: all
       show: title, status, assigned_to
       action_primary: task_detail

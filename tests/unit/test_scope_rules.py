@@ -145,7 +145,7 @@ entity School "School":
 
   scope:
     list: school = current_user.school
-      for: teacher, school_admin
+      as: teacher, school_admin
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -172,7 +172,7 @@ entity Report "Report":
 
   scope:
     list: all
-      for: admin
+      as: admin
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -197,7 +197,7 @@ entity Note "Note":
 
   scope:
     read: owner = current_user
-      for: *
+      as: *
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -219,7 +219,7 @@ entity Document "Document":
 
   scope:
     list: realm = current_user.realm
-      for: sovereign, architect, witness
+      as: sovereign, architect, witness
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -242,9 +242,9 @@ entity Item "Item":
 
   scope:
     list: school = current_user.school
-      for: teacher
+      as: teacher
     read: owner = current_user
-      for: *
+      as: *
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -266,7 +266,7 @@ entity Task "Task":
 
   scope:
     list: all
-      for: oracle
+      as: oracle
 """
         fragment = _parse(dsl)
         entity = fragment.entities[0]
@@ -498,7 +498,7 @@ entity School "School":
 
   scope:
     list: all
-      for: teacher
+      as: teacher
 """
         appspec = _build_appspec(dsl)
         assert appspec.fk_graph is not None
@@ -519,7 +519,7 @@ entity Report "Report":
 
   scope:
     list: all
-      for: admin
+      as: admin
 """
         appspec = _build_appspec(dsl)
         entity = appspec.get_entity("Report")
@@ -548,7 +548,7 @@ entity Student "Student":
 
   scope:
     list: school_id = current_user.school
-      for: teacher
+      as: teacher
 """
         appspec = _build_appspec(dsl)
         entity = appspec.get_entity("Student")
@@ -601,9 +601,9 @@ entity Note "Note":
 
   scope:
     list: owner_id = current_user.id
-      for: teacher
+      as: teacher
     read: all
-      for: admin
+      as: admin
 """
         appspec = _build_appspec(dsl)
         entity = appspec.get_entity("Note")

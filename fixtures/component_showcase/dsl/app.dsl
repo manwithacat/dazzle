@@ -47,7 +47,7 @@ entity Showcase "Component Showcase":
 
   scope:
     list: all
-      for: admin
+      as: admin
 
 entity User "User":
   id: uuid pk
@@ -65,7 +65,7 @@ entity User "User":
 
   scope:
     list: all
-      for: admin
+      as: admin
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 

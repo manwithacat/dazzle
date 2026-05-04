@@ -102,7 +102,7 @@ surface task_list "Tasks":
 - Negation: `not (status = archived)` — parenthesised negation
 - Boolean: `realm = current_user.realm or creator = current_user` — AND/OR compile to SQL
 
-Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
+Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and an `as:` clause naming the personas (renamed from `for:` in #998 to remove the overloaded `for` keyword from the grammar — `as` is the canonical persona/scope binding introducer).
 
 ## Autonomous Improvement Loop
 
@@ -269,7 +269,7 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
 - **No SQLite** — PostgreSQL only (ADR-0008)
 - **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
-- **No field conditions in `permit:`** — use `scope:` with `for:` (ADR-0010)
+- **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010; `as:` formerly `for:`, renamed in #998)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 - **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
 
@@ -306,4 +306,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.64.8 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.65.0 | **Python**: 3.12+ | **Status**: Production Ready

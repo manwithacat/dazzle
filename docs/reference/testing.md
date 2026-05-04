@@ -92,7 +92,7 @@ Named demo state that sets up context for testing or demonstration. Scenarios de
 scenario <name> "<Title>":
   description: "<what this scenario tests>"
 
-  for persona <persona_name>:
+  as persona <persona_name>:
     start_route: "<url>"
 
   [demo:]

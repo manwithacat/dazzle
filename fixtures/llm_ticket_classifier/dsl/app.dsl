@@ -250,19 +250,19 @@ persona supervisor "Support Supervisor":
 scenario empty "Empty State":
   description: "Fresh install with no tickets - test onboarding"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/tickets"
 
-  for persona supervisor:
+  as persona supervisor:
     start_route: "/dashboard"
 
 scenario active_tickets "Active Tickets":
   description: "Several tickets awaiting classification"
 
-  for persona support_agent:
+  as persona support_agent:
     start_route: "/tickets"
 
-  for persona supervisor:
+  as persona supervisor:
     start_route: "/dashboard"
 
   demo:

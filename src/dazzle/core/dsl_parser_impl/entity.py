@@ -1063,18 +1063,19 @@ class EntityParserMixin:
 
         self.skip_newlines()
 
-        # Parse for: clause (indented one level deeper)
+        # Parse `as:` clause (indented one level deeper). Renamed from
+        # `for:` to remove the overloaded `for` keyword — `as` is a
+        # consistent binding-introducer across persona/scope contexts.
         self.expect(TokenType.INDENT)
         self.skip_newlines()
 
-        # Expect 'for' keyword (it's a TokenType.FOR keyword)
-        for_token = self.current_token()
-        if not self.match(TokenType.FOR):
+        as_token = self.current_token()
+        if not self.match(TokenType.AS):
             raise make_parse_error(
-                f"Expected 'for:' clause in scope rule, got {for_token.type.value}",
+                f"Expected 'as:' clause in scope rule, got {as_token.type.value}",
                 self.file,
-                for_token.line,
-                for_token.column,
+                as_token.line,
+                as_token.column,
             )
         self.advance()
         self.expect(TokenType.COLON)

@@ -66,7 +66,7 @@ surface task_list "Tasks":
         """A `for <persona>: empty: "..."` block populates the variant."""
         surface = self._parse_task_surface(
             '    empty: "No tasks yet"\n'
-            "    for admin:\n"
+            "    as admin:\n"
             '      empty: "No tasks yet — create one to get started"\n'
         )
         assert surface.ux is not None
@@ -80,9 +80,9 @@ surface task_list "Tasks":
         """Multiple per-persona overrides all land on their variants."""
         surface = self._parse_task_surface(
             '    empty: "No tasks yet"\n'
-            "    for admin:\n"
+            "    as admin:\n"
             '      empty: "Admin: no tasks"\n'
-            "    for member:\n"
+            "    as member:\n"
             '      empty: "You have no assigned tasks"\n'
         )
         assert surface.ux is not None
@@ -96,7 +96,7 @@ surface task_list "Tasks":
         """`empty:` inside a variant does not conflict with purpose/hide."""
         surface = self._parse_task_surface(
             '    empty: "No tasks yet"\n'
-            "    for member:\n"
+            "    as member:\n"
             '      purpose: "See your assigned tasks"\n'
             "      hide: title\n"
             '      empty: "You have no assigned tasks"\n'
@@ -110,7 +110,7 @@ surface task_list "Tasks":
 
     def test_no_override_leaves_variant_empty_message_none(self) -> None:
         surface = self._parse_task_surface(
-            '    empty: "No tasks yet"\n    for admin:\n      purpose: "Admin view"\n'
+            '    empty: "No tasks yet"\n    as admin:\n      purpose: "Admin view"\n'
         )
         variant = next(
             v for v in (surface.ux.persona_variants if surface.ux else []) if v.persona == "admin"

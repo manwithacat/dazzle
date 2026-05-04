@@ -452,14 +452,14 @@ workspace enhanced_dashboard "Enhanced Dashboard":
       when: status = in_progress and priority = low
       message: "Low priority task still in progress"
 
-    for team_member:
+    as team_member:
       scope: assignee = current_user
       purpose: "View your assigned tasks"
       show: title, status, priority
       action_primary: task_edit
       read_only: false
 
-    for manager:
+    as manager:
       scope: all
       purpose: "View all team tasks"
       show: title, status, priority, assignee
@@ -530,14 +530,14 @@ workspace operations_center "Operations Center":
       message: "Error alert needs review"
       action: alert_handle
 
-    for ops_manager:
+    as ops_manager:
       scope: all
       purpose: "Full operational visibility"
       show: alerts, task_board, revenue_metrics, activity, order_funnel
       show_aggregate: alert_count, task_count, revenue_total
       focus: alerts, revenue_metrics
 
-    for support:
+    as support:
       scope: status in [new, acknowledged]
       purpose: "Handle incoming alerts"
       show: alerts, activity
@@ -545,7 +545,7 @@ workspace operations_center "Operations Center":
       action_primary: alert_handle
       focus: alerts
 
-    for admin:
+    as admin:
       scope: all
       purpose: "System administration view"
       show_aggregate: alert_count, user_count, system_health

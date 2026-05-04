@@ -59,7 +59,7 @@ entity System "System":
 
   scope:
     list: all
-      for: ops_engineer, admin
+      as: ops_engineer, admin
 
   fitness:
     repr_fields: [name, service_type, status, response_time_ms, error_rate]
@@ -92,7 +92,7 @@ entity Alert "Alert":
 
   scope:
     list: all
-      for: ops_engineer, admin
+      as: ops_engineer, admin
 
   fitness:
     repr_fields: [system, severity, message, acknowledged, triggered_at]
@@ -418,7 +418,7 @@ workspace command_center "Command Center":
         value: response_time_ms
 
   ux:
-    for ops_engineer:
+    as ops_engineer:
       scope: all
       purpose: "Full visibility into all systems and alerts"
 
@@ -513,7 +513,7 @@ workspace incident_review "Incident Review":
     revoke: integration_revoke
 
   ux:
-    for ops_engineer:
+    as ops_engineer:
       scope: all
       purpose: "Pair-strip review of pending incidents"
 

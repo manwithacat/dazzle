@@ -370,7 +370,7 @@ surface project_list "Projects":
     empty: "No projects found. Create a project to begin planning."
 
     # Persona variant for team members
-    for member:
+    as member:
       scope: all
       purpose: "View projects you're assigned to"
       show: name, status, project_manager
@@ -378,7 +378,7 @@ surface project_list "Projects":
       read_only: true
 
     # Persona variant for managers
-    for manager:
+    as manager:
       scope: all
       purpose: "Manage all department projects"
       show: name, code, status, budget, project_manager, tech_lead
@@ -386,7 +386,7 @@ surface project_list "Projects":
       action_primary: project_create
 
     # Persona variant for executives
-    for executive:
+    as executive:
       scope: all
       purpose: "Executive dashboard view"
       show: name, status, budget
@@ -416,7 +416,7 @@ surface task_kanban "Task Board":
     empty: "No tasks on the board. Create a task to get started."
 
     # Team member sees only their tasks
-    for team_member:
+    as team_member:
       scope: assignee = current_user
       purpose: "Your assigned tasks"
       show: title, status, priority, due_date
@@ -424,14 +424,14 @@ surface task_kanban "Task Board":
       action_primary: task_edit
 
     # Team lead sees team tasks
-    for team_lead:
+    as team_lead:
       scope: all
       purpose: "All team tasks"
       show: title, status, priority, assignee, due_date
       show_aggregate: urgent_count, blocked_count
 
     # Admin sees all tasks
-    for admin:
+    as admin:
       scope: all
       purpose: "All tasks across organization"
       show: title, status, priority, assignee, dev_project, due_date
@@ -467,21 +467,21 @@ surface ticket_create "New Support Ticket":
     purpose: "Create a new support ticket"
 
     # Support agent defaults
-    for support_agent:
+    as support_agent:
       purpose: "Create ticket on behalf of customer"
       defaults:
         status: new
         assignee: current_user
 
     # Customer defaults (read-only fields)
-    for customer:
+    as customer:
       purpose: "Submit a support request"
       hide: assignee, status
       defaults:
         status: new
 
     # Manager defaults
-    for support_manager:
+    as support_manager:
       purpose: "Create and assign tickets"
       defaults:
         status: new
@@ -510,19 +510,19 @@ surface analytics_dashboard "Analytics Dashboard":
     empty: "No data available for analytics yet."
 
     # Marketing focuses on different regions
-    for marketing:
+    as marketing:
       purpose: "Marketing performance metrics"
       focus: metrics
       show_aggregate: total
 
     # Sales focuses on revenue
-    for sales:
+    as sales:
       purpose: "Sales metrics and pipeline"
       focus: metrics, details
       show_aggregate: total
 
     # Executive sees high-level summary
-    for executive:
+    as executive:
       purpose: "Executive summary"
       focus: metrics
       show_aggregate: total
@@ -617,7 +617,7 @@ surface order_management "Order Management":
       when: status = shipped
       message: "Order shipped - confirm delivery"
 
-    for warehouse_staff:
+    as warehouse_staff:
       scope: status in [confirmed, draft]
       purpose: "Pick and pack orders"
       show: order_number, status, order_date
@@ -625,14 +625,14 @@ surface order_management "Order Management":
       defaults:
         status: confirmed
 
-    for customer_service:
+    as customer_service:
       scope: all
       purpose: "Handle customer inquiries about orders"
       show: order_number, status, order_date
       show_aggregate: pending_count, issues_count
       read_only: true
 
-    for admin:
+    as admin:
       scope: all
       purpose: "Full order management"
       show: order_number, status, order_date, created_at

@@ -141,8 +141,10 @@ class SurfaceParserMixin:
                     search_fields.append(self.expect_identifier_or_keyword().value)
                 self.skip_newlines()
 
-            # for persona_name: (persona variant at surface level)
-            elif self.match(TokenType.FOR):
+            # as <persona>: persona variant at surface level. Renamed
+            # from `for <persona>:` — `as` is the canonical persona
+            # binding introducer.
+            elif self.match(TokenType.AS):
                 variant = self.parse_persona_variant()
                 persona_variants.append(variant)
 

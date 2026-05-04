@@ -44,7 +44,7 @@ entity User "Team Member":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
 entity Project "Project":
   id: uuid pk
@@ -66,7 +66,7 @@ entity Project "Project":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
 entity Milestone "Milestone":
   id: uuid pk
@@ -92,7 +92,7 @@ entity Milestone "Milestone":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
 entity Task "Task":
   id: uuid pk
@@ -130,9 +130,9 @@ entity Task "Task":
 
   scope:
     list: all
-      for: admin, manager
+      as: admin, manager
     list: assigned_to = current_user
-      for: member
+      as: member
 
 entity Comment "Comment":
   id: uuid pk
@@ -150,7 +150,7 @@ entity Comment "Comment":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
 entity Attachment "Attachment":
   id: uuid pk
@@ -169,7 +169,7 @@ entity Attachment "Attachment":
 
   scope:
     list: all
-      for: admin, manager, member
+      as: admin, manager, member
 
 # ── Workspaces ───────────────────────────────────────────────────────
 

@@ -145,8 +145,9 @@ class UXParserMixin:
                 signal = self.parse_attention_signal()
                 attention_signals.append(signal)
 
-            # for persona_name:
-            elif self.match(TokenType.FOR):
+            # as <persona>: persona variant inside ux block. Renamed
+            # from `for <persona>:`.
+            elif self.match(TokenType.AS):
                 variant = self.parse_persona_variant()
                 persona_variants.append(variant)
 
@@ -453,7 +454,7 @@ class UXParserMixin:
               read_only: true|false
               empty: "..."   # cycle 240, closes EX-046
         """
-        self.expect(TokenType.FOR)
+        self.expect(TokenType.AS)
         persona = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)
         self.skip_newlines()
