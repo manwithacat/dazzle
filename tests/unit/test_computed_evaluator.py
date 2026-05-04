@@ -275,36 +275,59 @@ class TestDateFunctions:
             field=ComputedExprSpec(kind="field_ref", path=[field]),
         )
 
-    def test_days_until_future(self) -> None:
+    @pytest.mark.parametrize(
+        ("func", "field", "offset_days", "make_value", "expected"),
+        [
+            (
+                AggregateFunctionKind.DAYS_UNTIL,
+                "due_date",
+                10,
+                lambda d: d.isoformat(),
+                10,
+            ),
+            (
+                AggregateFunctionKind.DAYS_SINCE,
+                "created",
+                -7,
+                lambda d: d.isoformat(),
+                7,
+            ),
+            (
+                AggregateFunctionKind.DAYS_UNTIL,
+                "deadline",
+                5,
+                lambda d: f"{d.isoformat()}T12:00:00Z",
+                5,
+            ),
+            (
+                AggregateFunctionKind.DAYS_UNTIL,
+                "due",
+                3,
+                lambda d: d,
+                3,
+            ),
+        ],
+        ids=[
+            "test_days_until_future",
+            "test_days_since_past",
+            "test_days_until_with_datetime_string",
+            "test_days_until_with_date_object",
+        ],
+    )
+    def test_date_function(
+        self,
+        func: AggregateFunctionKind,
+        field: str,
+        offset_days: int,
+        make_value: object,
+        expected: int,
+    ) -> None:
         from datetime import date, timedelta
 
-        future = date.today() + timedelta(days=10)
-        expr = self._date_agg(AggregateFunctionKind.DAYS_UNTIL, "due_date")
-        result = evaluate_expression(expr, {"due_date": future.isoformat()})
-        assert result == 10
-
-    def test_days_since_past(self) -> None:
-        from datetime import date, timedelta
-
-        past = date.today() - timedelta(days=7)
-        expr = self._date_agg(AggregateFunctionKind.DAYS_SINCE, "created")
-        result = evaluate_expression(expr, {"created": past.isoformat()})
-        assert result == 7
-
-    def test_days_until_with_datetime_string(self) -> None:
-        from datetime import date, timedelta
-
-        future = date.today() + timedelta(days=5)
-        expr = self._date_agg(AggregateFunctionKind.DAYS_UNTIL, "deadline")
-        result = evaluate_expression(expr, {"deadline": f"{future.isoformat()}T12:00:00Z"})
-        assert result == 5
-
-    def test_days_until_with_date_object(self) -> None:
-        from datetime import date, timedelta
-
-        future = date.today() + timedelta(days=3)
-        expr = self._date_agg(AggregateFunctionKind.DAYS_UNTIL, "due")
-        assert evaluate_expression(expr, {"due": future}) == 3
+        target_date = date.today() + timedelta(days=offset_days)
+        expr = self._date_agg(func, field)
+        result = evaluate_expression(expr, {field: make_value(target_date)})
+        assert result == expected
 
     def test_days_with_none_value(self) -> None:
         expr = self._date_agg(AggregateFunctionKind.DAYS_UNTIL, "due")

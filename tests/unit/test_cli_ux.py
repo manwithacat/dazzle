@@ -1,7 +1,9 @@
 """Tests for the UX verification CLI command."""
 
+import inspect
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.ux import ux_app
@@ -25,38 +27,18 @@ class TestUxVerifyCLI:
 
 
 class TestVerifyContractsFlag:
-    def test_contracts_flag_accepted(self) -> None:
-        import inspect
-
+    @pytest.mark.parametrize(
+        "param_name",
+        ["contracts", "browser", "strict", "update_baseline"],
+        ids=[
+            "test_contracts_flag_accepted",
+            "test_browser_flag_accepted",
+            "test_strict_flag_accepted",
+            "test_update_baseline_flag_accepted",
+        ],
+    )
+    def test_flag_accepted(self, param_name: str) -> None:
         from dazzle.cli.ux import verify_command
 
-        sig = inspect.signature(verify_command)
-        param_names = list(sig.parameters.keys())
-        assert "contracts" in param_names
-
-    def test_browser_flag_accepted(self) -> None:
-        import inspect
-
-        from dazzle.cli.ux import verify_command
-
-        sig = inspect.signature(verify_command)
-        param_names = list(sig.parameters.keys())
-        assert "browser" in param_names
-
-    def test_strict_flag_accepted(self) -> None:
-        import inspect
-
-        from dazzle.cli.ux import verify_command
-
-        sig = inspect.signature(verify_command)
-        param_names = list(sig.parameters.keys())
-        assert "strict" in param_names
-
-    def test_update_baseline_flag_accepted(self) -> None:
-        import inspect
-
-        from dazzle.cli.ux import verify_command
-
-        sig = inspect.signature(verify_command)
-        param_names = list(sig.parameters.keys())
-        assert "update_baseline" in param_names
+        param_names = list(inspect.signature(verify_command).parameters.keys())
+        assert param_name in param_names

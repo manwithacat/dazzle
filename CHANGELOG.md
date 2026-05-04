@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.11] - 2026-05-04
+
+### Changed
+- **Distillation cycle 10** — sub-agent N completed processing 14 more
+  size-5 clusters. Touched files: test_storage_cycle4, test_workflow_coherence,
+  test_workspace_histogram, test_auth_password_reset, test_docker_generation,
+  test_experience_state, test_sibling_nav, test_surface_visible,
+  test_param_store, test_predicate_qualified_columns, test_theme_presets,
+  test_site_coherence, test_vendor_mock_fixtures. Suite total: 13,409 →
+  13,365 (44 fewer). Sub-agents Q/R still processing size-4 clusters.
+
 ## [0.66.10] - 2026-05-04
 
 ### Changed

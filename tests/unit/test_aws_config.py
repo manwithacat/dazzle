@@ -171,31 +171,50 @@ class TestGetAwsConfigCaching:
 class TestToBoto3Kwargs:
     """Test the kwargs dict generation for boto3 clients."""
 
-    def test_region_always_present(self) -> None:
-        cfg = AWSConfig(region="us-east-1")
-        kwargs = cfg.to_boto3_kwargs()
-        assert kwargs == {"region_name": "us-east-1"}
-
-    def test_includes_credentials_when_set(self) -> None:
-        cfg = AWSConfig(
-            region="eu-west-1",
-            access_key_id="AKID",
-            secret_access_key="SECRET",
-        )
-        kwargs = cfg.to_boto3_kwargs()
-        assert kwargs == {
-            "region_name": "eu-west-1",
-            "aws_access_key_id": "AKID",
-            "aws_secret_access_key": "SECRET",
-        }
-
-    def test_includes_endpoint_url_when_set(self) -> None:
-        cfg = AWSConfig(region="us-east-1", endpoint_url="http://localhost:4566")
-        kwargs = cfg.to_boto3_kwargs()
-        assert kwargs == {
-            "region_name": "us-east-1",
-            "endpoint_url": "http://localhost:4566",
-        }
+    @pytest.mark.parametrize(
+        ("config_kwargs", "expected"),
+        [
+            (
+                {"region": "us-east-1"},
+                {"region_name": "us-east-1"},
+            ),
+            (
+                {"region": "eu-west-1", "access_key_id": "AKID", "secret_access_key": "SECRET"},
+                {
+                    "region_name": "eu-west-1",
+                    "aws_access_key_id": "AKID",
+                    "aws_secret_access_key": "SECRET",
+                },
+            ),
+            (
+                {"region": "us-east-1", "endpoint_url": "http://localhost:4566"},
+                {"region_name": "us-east-1", "endpoint_url": "http://localhost:4566"},
+            ),
+            (
+                {
+                    "region": "ap-southeast-1",
+                    "access_key_id": "AKID",
+                    "secret_access_key": "SECRET",
+                    "endpoint_url": "http://localstack:4566",
+                },
+                {
+                    "region_name": "ap-southeast-1",
+                    "aws_access_key_id": "AKID",
+                    "aws_secret_access_key": "SECRET",
+                    "endpoint_url": "http://localstack:4566",
+                },
+            ),
+        ],
+        ids=[
+            "test_region_always_present",
+            "test_includes_credentials_when_set",
+            "test_includes_endpoint_url_when_set",
+            "test_all_fields_set",
+        ],
+    )
+    def test_to_boto3_kwargs(self, config_kwargs: dict, expected: dict) -> None:
+        """to_boto3_kwargs returns only the fields that are set."""
+        assert AWSConfig(**config_kwargs).to_boto3_kwargs() == expected
 
     def test_excludes_credentials_when_none(self) -> None:
         cfg = AWSConfig(region="us-east-1", access_key_id=None, secret_access_key=None)

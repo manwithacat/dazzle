@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle_ui.runtime.asset_fingerprint import (
     FINGERPRINT_RE,
     build_asset_manifest,
@@ -74,25 +76,32 @@ class TestBuildAssetManifest:
 
 
 class TestStaticUrlFilter:
-    def test_rewrites_known_path(self) -> None:
-        manifest = {"css/app.css": "css/app.a1b2c3d4.css"}
-        result = static_url_filter("css/app.css", manifest)
-        assert result == "/static/css/app.a1b2c3d4.css"
-
-    def test_strips_static_prefix(self) -> None:
-        manifest = {"css/app.css": "css/app.a1b2c3d4.css"}
-        result = static_url_filter("/static/css/app.css", manifest)
-        assert result == "/static/css/app.a1b2c3d4.css"
-
-    def test_fallback_for_unknown_path(self) -> None:
-        manifest = {}
-        result = static_url_filter("css/unknown.css", manifest)
-        assert result == "/static/css/unknown.css"
-
-    def test_fallback_preserves_absolute_path(self) -> None:
-        manifest = {}
-        result = static_url_filter("/static/css/unknown.css", manifest)
-        assert result == "/static/css/unknown.css"
+    @pytest.mark.parametrize(
+        ("request_url", "manifest", "expected"),
+        [
+            (
+                "css/app.css",
+                {"css/app.css": "css/app.a1b2c3d4.css"},
+                "/static/css/app.a1b2c3d4.css",
+            ),
+            (
+                "/static/css/app.css",
+                {"css/app.css": "css/app.a1b2c3d4.css"},
+                "/static/css/app.a1b2c3d4.css",
+            ),
+            ("css/unknown.css", {}, "/static/css/unknown.css"),
+            ("/static/css/unknown.css", {}, "/static/css/unknown.css"),
+        ],
+        ids=[
+            "test_rewrites_known_path",
+            "test_strips_static_prefix",
+            "test_fallback_for_unknown_path",
+            "test_fallback_preserves_absolute_path",
+        ],
+    )
+    def test_static_url_filter(self, request_url: str, manifest: dict, expected: str) -> None:
+        """static_url_filter rewrites known paths and falls back gracefully for unknowns."""
+        assert static_url_filter(request_url, manifest) == expected
 
 
 class TestTemplatesUseStaticUrl:

@@ -354,39 +354,52 @@ class TestPromoteSection:
 class TestEstimateTokens:
     """Test token cost estimation."""
 
-    def test_empty_references(self) -> None:
-        from dazzle.core.composition_references import estimate_reference_tokens
-
-        assert estimate_reference_tokens({}) == 0
-
-    def test_single_section(self) -> None:
+    @pytest.mark.parametrize(
+        ("refs_factory", "extra_kwargs", "expected"),
+        [
+            (lambda RI: {}, {}, 0),
+            (
+                lambda RI: {
+                    "hero": [
+                        RI("a.png", "good", "hero", [], "", ""),
+                        RI("b.png", "bad", "hero", [], "", ""),
+                    ]
+                },
+                {},
+                2 * 680,
+            ),
+            (
+                lambda RI: {
+                    "hero": [RI("a.png", "good", "hero", [], "", "")],
+                    "features": [
+                        RI("b.png", "good", "features", [], "", ""),
+                        RI("c.png", "bad", "features", [], "", ""),
+                    ],
+                },
+                {},
+                3 * 680,
+            ),
+            (
+                lambda RI: {"hero": [RI("a.png", "good", "hero", [], "", "")]},
+                {"tokens_per_image": 1000},
+                1000,
+            ),
+        ],
+        ids=[
+            "test_empty_references",
+            "test_single_section",
+            "test_multiple_sections",
+            "test_custom_tokens_per_image",
+        ],
+    )
+    def test_estimate_reference_tokens(
+        self, refs_factory: object, extra_kwargs: dict, expected: int
+    ) -> None:
+        """estimate_reference_tokens returns the expected token cost."""
         from dazzle.core.composition_references import ReferenceImage, estimate_reference_tokens
 
-        refs = {
-            "hero": [
-                ReferenceImage("a.png", "good", "hero", [], "", ""),
-                ReferenceImage("b.png", "bad", "hero", [], "", ""),
-            ]
-        }
-        assert estimate_reference_tokens(refs) == 2 * 680
-
-    def test_multiple_sections(self) -> None:
-        from dazzle.core.composition_references import ReferenceImage, estimate_reference_tokens
-
-        refs = {
-            "hero": [ReferenceImage("a.png", "good", "hero", [], "", "")],
-            "features": [
-                ReferenceImage("b.png", "good", "features", [], "", ""),
-                ReferenceImage("c.png", "bad", "features", [], "", ""),
-            ],
-        }
-        assert estimate_reference_tokens(refs) == 3 * 680
-
-    def test_custom_tokens_per_image(self) -> None:
-        from dazzle.core.composition_references import ReferenceImage, estimate_reference_tokens
-
-        refs = {"hero": [ReferenceImage("a.png", "good", "hero", [], "", "")]}
-        assert estimate_reference_tokens(refs, tokens_per_image=1000) == 1000
+        refs = refs_factory(ReferenceImage)
+        assert estimate_reference_tokens(refs, **extra_kwargs) == expected
 
 
 # ── Bootstrap Tests ──────────────────────────────────────────────────

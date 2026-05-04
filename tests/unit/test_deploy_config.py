@@ -3,6 +3,8 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from dazzle.deploy.config import (
     AWSRegion,
     ComputeConfig,
@@ -211,26 +213,24 @@ class TestComputeSize:
 class TestComputeConfig:
     """Tests for ComputeConfig cpu/memory properties."""
 
-    def test_small_size(self):
-        """Test small compute size."""
-        config = ComputeConfig(size=ComputeSize.SMALL)
-        assert config.cpu == 256
-        assert config.memory == 512
-
-    def test_medium_size(self):
-        """Test medium compute size."""
-        config = ComputeConfig(size=ComputeSize.MEDIUM)
-        assert config.cpu == 512
-        assert config.memory == 1024
-
-    def test_large_size(self):
-        """Test large compute size."""
-        config = ComputeConfig(size=ComputeSize.LARGE)
-        assert config.cpu == 1024
-        assert config.memory == 2048
-
-    def test_xlarge_size(self):
-        """Test xlarge compute size."""
-        config = ComputeConfig(size=ComputeSize.XLARGE)
-        assert config.cpu == 2048
-        assert config.memory == 4096
+    @pytest.mark.parametrize(
+        ("size", "expected_cpu", "expected_memory"),
+        [
+            (ComputeSize.SMALL, 256, 512),
+            (ComputeSize.MEDIUM, 512, 1024),
+            (ComputeSize.LARGE, 1024, 2048),
+            (ComputeSize.XLARGE, 2048, 4096),
+        ],
+        ids=[
+            "test_small_size",
+            "test_medium_size",
+            "test_large_size",
+            "test_xlarge_size",
+        ],
+    )
+    def test_compute_size_resources(
+        self, size: ComputeSize, expected_cpu: int, expected_memory: int
+    ) -> None:
+        config = ComputeConfig(size=size)
+        assert config.cpu == expected_cpu
+        assert config.memory == expected_memory

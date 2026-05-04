@@ -1,5 +1,7 @@
 """Tests for dazzle.docs_update.updater — pure markdown operations."""
 
+import pytest
+
 from dazzle.docs_update.updater import (
     build_changelog_entries,
     ensure_unreleased_section,
@@ -34,29 +36,38 @@ Content of section two.
 
 
 class TestParseSections:
-    def test_finds_all_sections(self) -> None:
-        sections = parse_sections(SAMPLE_MD)
-        headers = [s.header for s in sections]
-        assert headers == ["Title", "Section One", "Subsection", "Section Two"]
-
-    def test_section_levels(self) -> None:
-        sections = parse_sections(SAMPLE_MD)
-        levels = [s.level for s in sections]
-        assert levels == [1, 2, 3, 2]
-
     def test_section_content(self) -> None:
         sections = parse_sections(SAMPLE_MD)
         # Section One should have content including the blank line
         sec_one = sections[1]
         assert "Content of section one." in sec_one.content
 
-    def test_empty_content(self) -> None:
-        sections = parse_sections("")
-        assert sections == []
-
-    def test_no_headers(self) -> None:
-        sections = parse_sections("Just some text\nNo headers here.")
-        assert sections == []
+    @pytest.mark.parametrize(
+        ("md", "extract", "expected"),
+        [
+            (
+                SAMPLE_MD,
+                lambda secs: [s.header for s in secs],
+                ["Title", "Section One", "Subsection", "Section Two"],
+            ),
+            (
+                SAMPLE_MD,
+                lambda secs: [s.level for s in secs],
+                [1, 2, 3, 2],
+            ),
+            ("", lambda secs: secs, []),
+            ("Just some text\nNo headers here.", lambda secs: secs, []),
+        ],
+        ids=[
+            "test_finds_all_sections",
+            "test_section_levels",
+            "test_empty_content",
+            "test_no_headers",
+        ],
+    )
+    def test_parse_sections(self, md: str, extract: object, expected: object) -> None:
+        result = extract(parse_sections(md))
+        assert result == expected
 
 
 # ---------------------------------------------------------------------------

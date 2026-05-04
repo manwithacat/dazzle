@@ -61,22 +61,28 @@ class TestParseToAlgebra:
         assert pred.op is CompOp.GTE
         assert pred.other_field == "target_grade"
 
-    def test_unknown_rhs_identifier_treated_as_string_literal(self) -> None:
-        """When RHS isn't a known column, fall through to ColumnCheck
-        with a string literal (legacy `_parse_simple_where` behaviour)."""
-        pred = parse_aggregate_where("status = open", known_columns={"status"})
+    @pytest.mark.parametrize(
+        ("expr", "known_columns", "expected_literal"),
+        [
+            ("status = open", {"status"}, "open"),
+            ('status = "open"', {"status"}, "open"),
+            (r'name = "O\"Brien"', {"name"}, 'O"Brien'),
+            ("delta >= -10", {"delta"}, -10),
+        ],
+        ids=[
+            "test_unknown_rhs_identifier_treated_as_string_literal",
+            "test_quoted_string_literal",
+            "test_quoted_string_with_escaped_quote",
+            "test_negative_number",
+        ],
+    )
+    def test_column_check_literal_value(
+        self, expr: str, known_columns: set, expected_literal: object
+    ) -> None:
+        """Parser emits a ColumnCheck with the expected literal value."""
+        pred = parse_aggregate_where(expr, known_columns=known_columns)
         assert isinstance(pred, ColumnCheck)
-        assert pred.value == ValueRef(literal="open")
-
-    def test_quoted_string_literal(self) -> None:
-        pred = parse_aggregate_where('status = "open"', known_columns={"status"})
-        assert isinstance(pred, ColumnCheck)
-        assert pred.value == ValueRef(literal="open")
-
-    def test_quoted_string_with_escaped_quote(self) -> None:
-        pred = parse_aggregate_where(r'name = "O\"Brien"', known_columns={"name"})
-        assert isinstance(pred, ColumnCheck)
-        assert pred.value.literal == 'O"Brien'
+        assert pred.value.literal == expected_literal
 
     def test_int_literal(self) -> None:
         pred = parse_aggregate_where("score = 42", known_columns={"score"})
@@ -89,11 +95,6 @@ class TestParseToAlgebra:
         assert isinstance(pred, ColumnCheck)
         assert pred.value.literal == 0.7
         assert isinstance(pred.value.literal, float)
-
-    def test_negative_number(self) -> None:
-        pred = parse_aggregate_where("delta >= -10", known_columns={"delta"})
-        assert isinstance(pred, ColumnCheck)
-        assert pred.value.literal == -10
 
     def test_true_false_null(self) -> None:
         ptrue = parse_aggregate_where("flagged = true", known_columns={"flagged"})

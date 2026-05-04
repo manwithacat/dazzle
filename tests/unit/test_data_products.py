@@ -175,23 +175,25 @@ class TestCuratedTopicGenerator:
 class TestDataProductTransformer:
     """Tests for DataProductTransformer."""
 
-    def test_mask_email(self) -> None:
-        """Test email masking."""
+    @pytest.mark.parametrize(
+        ("method", "value", "expected"),
+        [
+            ("_mask_email", "john.doe@example.com", "j***@example.com"),
+            ("_mask_phone", "555-123-4567", "***-***-4567"),
+            ("_mask_card", "4111-1111-1111-1234", "****-****-****-1234"),
+            ("_minimise_value", 123.456789, 123.46),
+        ],
+        ids=[
+            "test_mask_email",
+            "test_mask_phone",
+            "test_mask_card",
+            "test_minimise_rounds_floats",
+        ],
+    )
+    def test_transformer_method(self, method: str, value: object, expected: object) -> None:
         transformer = DataProductTransformer()
-        result = transformer._mask_email("john.doe@example.com")
-        assert result == "j***@example.com"
-
-    def test_mask_phone(self) -> None:
-        """Test phone masking."""
-        transformer = DataProductTransformer()
-        result = transformer._mask_phone("555-123-4567")
-        assert result == "***-***-4567"
-
-    def test_mask_card(self) -> None:
-        """Test card number masking."""
-        transformer = DataProductTransformer()
-        result = transformer._mask_card("4111-1111-1111-1234")
-        assert result == "****-****-****-1234"
+        result = getattr(transformer, method)(value)
+        assert result == expected
 
     def test_pseudonymise_consistency(self) -> None:
         """Test that pseudonymisation is consistent."""
@@ -221,14 +223,6 @@ class TestDataProductTransformer:
 
         assert len(result) == 50
         assert result.endswith("...")
-
-    def test_minimise_rounds_floats(self) -> None:
-        """Test that minimise rounds floats."""
-        transformer = DataProductTransformer()
-
-        result = transformer._minimise_value(123.456789)
-
-        assert result == 123.46
 
     def test_transform_filters_denied_fields(self, sample_appspec: AppSpec) -> None:
         """Test that transform excludes denied fields."""

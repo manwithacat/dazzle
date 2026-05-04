@@ -186,26 +186,47 @@ class TestAA04EmptyPersonasClassifiedData:
 
 
 class TestAA05NonAdminDeleteWithoutForbid:
-    def test_flags_non_admin_delete(self, agent: AuthAuthorizationAgent) -> None:
-        perm = _permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["editor", "admin"])
-        entity = make_entity("Task", access=_access(permissions=[perm]))
+    @pytest.mark.parametrize(
+        ("permissions", "expected_count"),
+        [
+            (
+                [_permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["editor", "admin"])],
+                1,
+            ),
+            (
+                [
+                    _permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["editor"]),
+                    _permission(PermissionKind.DELETE, PolicyEffect.FORBID),
+                ],
+                0,
+            ),
+            (
+                [_permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["admin"])],
+                0,
+            ),
+            (
+                [],
+                0,
+            ),
+        ],
+        ids=[
+            "test_flags_non_admin_delete",
+            "test_passes_when_forbid_present",
+            "test_passes_admin_only",
+            "test_no_access",
+        ],
+    )
+    def test_non_admin_delete_without_forbid(
+        self,
+        agent: AuthAuthorizationAgent,
+        permissions: list,
+        expected_count: int,
+    ) -> None:
+        """non_admin_delete_without_forbid flags only when non-admin delete lacks a forbid."""
+        access = _access(permissions=permissions) if permissions else None
+        entity = make_entity("Task", access=access) if access is not None else make_entity("Task")
         findings = agent.non_admin_delete_without_forbid(make_appspec([entity]))
-        assert len(findings) == 1
-
-    def test_passes_when_forbid_present(self, agent: AuthAuthorizationAgent) -> None:
-        permit = _permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["editor"])
-        forbid = _permission(PermissionKind.DELETE, PolicyEffect.FORBID)
-        entity = make_entity("Task", access=_access(permissions=[permit, forbid]))
-        assert agent.non_admin_delete_without_forbid(make_appspec([entity])) == []
-
-    def test_passes_admin_only(self, agent: AuthAuthorizationAgent) -> None:
-        perm = _permission(PermissionKind.DELETE, PolicyEffect.PERMIT, ["admin"])
-        entity = make_entity("Task", access=_access(permissions=[perm]))
-        assert agent.non_admin_delete_without_forbid(make_appspec([entity])) == []
-
-    def test_no_access(self, agent: AuthAuthorizationAgent) -> None:
-        entity = make_entity("Task")
-        assert agent.non_admin_delete_without_forbid(make_appspec([entity])) == []
+        assert len(findings) == expected_count
 
 
 # =============================================================================
