@@ -69,6 +69,13 @@ def _registry_with_fake(
     return reg, fake
 
 
+def _registry_with_two() -> StorageRegistry:
+    reg = StorageRegistry()
+    for name in ("cohort_pdfs", "starter_packs"):
+        reg.register_provider(name, FakeStorageProvider(name=name))
+    return reg
+
+
 def _authed_client(app: FastAPI, user_id: str = "user-abc") -> TestClient:
     from unittest.mock import MagicMock
     from uuid import UUID
@@ -110,76 +117,67 @@ _AUTHED_UID = "12345678-1234-5678-1234-567812345678"
 
 
 class TestRouteRegistration:
-    def test_registers_one_route_per_referenced_storage(self) -> None:
-        reg, _ = _registry_with_fake()
-        _, paths = _wire_test_app(
-            """
-module test
-app A "A"
-
+    @pytest.mark.parametrize(
+        ("dsl_body", "registry_factory", "expected_paths"),
+        [
+            (
+                """
 entity Doc:
   id: uuid pk
   source_pdf: file storage=cohort_pdfs
 """,
-            registry=reg,
-        )
-        assert paths == ["/api/storage/cohort_pdfs/proxy"]
-
-    def test_no_route_when_no_storage_fields(self) -> None:
-        reg = StorageRegistry()
-        _, paths = _wire_test_app(
-            """
-module test
-app A "A"
-
+                lambda: _registry_with_fake()[0],
+                ["/api/storage/cohort_pdfs/proxy"],
+            ),
+            (
+                """
 entity Plain:
   id: uuid pk
   notes: str(200)
 """,
-            registry=reg,
-        )
-        assert paths == []
-
-    def test_dedupes_same_storage_referenced_by_multiple_fields(self) -> None:
-        """An entity with two file fields backed by the same storage
-        gets ONE proxy route — the proxy is per-storage, not per-field."""
-        reg, _ = _registry_with_fake()
-        _, paths = _wire_test_app(
-            """
-module test
-app A "A"
-
+                StorageRegistry,
+                [],
+            ),
+            (
+                """
 entity Doc:
   id: uuid pk
   source_pdf: file storage=cohort_pdfs
   thumbnail: file storage=cohort_pdfs
 """,
-            registry=reg,
-        )
-        assert paths == ["/api/storage/cohort_pdfs/proxy"]
-
-    def test_multi_storage_field_registers_each_storage(self) -> None:
-        """A field declared `storage=cohort_pdfs|starter_packs` (#941)
-        registers BOTH proxy routes — clients pick the right one based
-        on which prefix the s3_key matches."""
-        reg = StorageRegistry()
-        for name in ("cohort_pdfs", "starter_packs"):
-            reg.register_provider(name, FakeStorageProvider(name=name))
-        _, paths = _wire_test_app(
-            """
-module test
-app A "A"
-
+                lambda: _registry_with_fake()[0],
+                ["/api/storage/cohort_pdfs/proxy"],
+            ),
+            (
+                """
 entity Doc:
   id: uuid pk
   source_pdf: file storage=cohort_pdfs|starter_packs
 """,
+                lambda: _registry_with_two(),
+                [
+                    "/api/storage/cohort_pdfs/proxy",
+                    "/api/storage/starter_packs/proxy",
+                ],
+            ),
+        ],
+        ids=[
+            "test_registers_one_route_per_referenced_storage",
+            "test_no_route_when_no_storage_fields",
+            "test_dedupes_same_storage_referenced_by_multiple_fields",
+            "test_multi_storage_field_registers_each_storage",
+        ],
+    )
+    def test_registration(self, dsl_body: str, registry_factory, expected_paths: list[str]) -> None:
+        reg = registry_factory()
+        _, paths = _wire_test_app(
+            f"""
+module test
+app A "A"
+{dsl_body}""",
             registry=reg,
         )
-        assert sorted(paths) == [
-            "/api/storage/cohort_pdfs/proxy",
-            "/api/storage/starter_packs/proxy",
-        ]
+        assert sorted(paths) == sorted(expected_paths)
 
 
 # ---------------------------------------------------------------------------

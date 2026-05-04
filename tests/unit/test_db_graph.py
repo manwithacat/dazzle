@@ -1,18 +1,32 @@
 """Tests for dazzle.db.graph — entity dependency graph utilities."""
 
+import pytest
+
 from dazzle.db.graph import build_dependency_graph, get_ref_fields, leaves_first, parents_first
 
 
 class TestBuildDependencyGraph:
-    def test_empty_entities(self) -> None:
-        graph = build_dependency_graph([])
-        assert graph == {}
-
-    def test_no_refs(self, make_entity) -> None:
-        e1 = make_entity("User")
-        e2 = make_entity("Config")
-        graph = build_dependency_graph([e1, e2])
-        assert graph == {"User": set(), "Config": set()}
+    @pytest.mark.parametrize(
+        ("entity_specs", "expected"),
+        [
+            ([], {}),
+            ([("User", None), ("Config", None)], {"User": set(), "Config": set()}),
+            ([("Employee", {"manager": "Employee"})], {"Employee": set()}),
+            ([("Student", {"school": "School"})], {"Student": set()}),
+        ],
+        ids=[
+            "test_empty_entities",
+            "test_no_refs",
+            "test_self_ref_excluded",
+            "test_ref_to_external_entity_excluded",
+        ],
+    )
+    def test_dependency_graph(self, make_entity, entity_specs, expected) -> None:
+        entities = [
+            make_entity(name, refs) if refs else make_entity(name) for name, refs in entity_specs
+        ]
+        graph = build_dependency_graph(entities)
+        assert graph == expected
 
     def test_simple_ref(self, make_entity) -> None:
         school = make_entity("School")
@@ -20,17 +34,6 @@ class TestBuildDependencyGraph:
         graph = build_dependency_graph([school, student])
         assert graph["Student"] == {"School"}
         assert graph["School"] == set()
-
-    def test_self_ref_excluded(self, make_entity) -> None:
-        employee = make_entity("Employee", {"manager": "Employee"})
-        graph = build_dependency_graph([employee])
-        assert graph["Employee"] == set()
-
-    def test_ref_to_external_entity_excluded(self, make_entity) -> None:
-        """Refs to entities not in the list are excluded."""
-        student = make_entity("Student", {"school": "School"})
-        graph = build_dependency_graph([student])
-        assert graph["Student"] == set()
 
     def test_has_many_excluded(self, make_entity) -> None:
         """has_many fields should NOT appear in the dependency graph."""

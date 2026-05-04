@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, fields
 
+import pytest
+
 from dazzle.tenant.config_coercion import coerce_config
 from dazzle.tenant.registry import TenantRecord
 
@@ -42,37 +44,43 @@ class TestSchemaShape:
 
 
 class TestStrCoercion:
-    def test_string_passthrough(self) -> None:
-        assert coerce_config({"k": "abc"}, {"k": "str"}) == {"k": "abc"}
-
-    def test_int_coerced_to_str(self) -> None:
-        assert coerce_config({"k": 42}, {"k": "str"}) == {"k": "42"}
-
-    def test_missing_key_zero(self) -> None:
-        assert coerce_config({}, {"k": "str"}) == {"k": ""}
-
-    def test_locale_treated_as_str(self) -> None:
-        # `locale` is reserved for future BCP-47 normalisation; for
-        # cycle 7 it shares storage with str.
-        assert coerce_config({"l": "en-GB"}, {"l": "locale"}) == {"l": "en-GB"}
+    @pytest.mark.parametrize(
+        ("raw", "schema", "expected"),
+        [
+            ({"k": "abc"}, {"k": "str"}, {"k": "abc"}),
+            ({"k": 42}, {"k": "str"}, {"k": "42"}),
+            ({}, {"k": "str"}, {"k": ""}),
+            ({"l": "en-GB"}, {"l": "locale"}, {"l": "en-GB"}),
+        ],
+        ids=[
+            "test_string_passthrough",
+            "test_int_coerced_to_str",
+            "test_missing_key_zero",
+            "test_locale_treated_as_str",
+        ],
+    )
+    def test_str_coercion(self, raw: dict, schema: dict, expected: dict) -> None:
+        assert coerce_config(raw, schema) == expected
 
 
 class TestIntCoercion:
-    def test_int_passthrough(self) -> None:
-        assert coerce_config({"n": 100}, {"n": "int"}) == {"n": 100}
-
-    def test_string_int_coerced(self) -> None:
-        assert coerce_config({"n": "42"}, {"n": "int"}) == {"n": 42}
-
-    def test_invalid_int_falls_back_to_zero(self) -> None:
-        # Tolerant of bad data — admin UI surfaces validation, not the
-        # request path.
-        assert coerce_config({"n": "not-a-number"}, {"n": "int"}) == {"n": 0}
-
-    def test_bool_not_silently_coerced_to_int(self) -> None:
-        # `int(True)` is 1 in Python; guard against the typo'd schema
-        # case where a bool value lands in an int slot.
-        assert coerce_config({"n": True}, {"n": "int"}) == {"n": 0}
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ({"n": 100}, {"n": 100}),
+            ({"n": "42"}, {"n": 42}),
+            ({"n": "not-a-number"}, {"n": 0}),
+            ({"n": True}, {"n": 0}),
+        ],
+        ids=[
+            "test_int_passthrough",
+            "test_string_int_coerced",
+            "test_invalid_int_falls_back_to_zero",
+            "test_bool_not_silently_coerced_to_int",
+        ],
+    )
+    def test_int_coercion(self, raw: dict, expected: dict) -> None:
+        assert coerce_config(raw, {"n": "int"}) == expected
 
 
 class TestBoolCoercion:

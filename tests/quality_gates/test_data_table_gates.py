@@ -65,30 +65,26 @@ def browser_page(server):
 class TestDataTableUnitGates:
     """Unit-level gates: test the dzTable controller state machine."""
 
-    def test_gate1_sort_cycle(self, browser_page: Page) -> None:
-        """Sort tri-state: unsorted → asc → desc → unsorted."""
-        result = browser_page.evaluate("window.qualityGates.testSortCycle()")
-        assert result is True, "Sort cycle gate failed"
-
-    def test_gate2_column_resize(self, browser_page: Page) -> None:
-        """Column resize updates <col> style.width and persists state."""
-        result = browser_page.evaluate("window.qualityGates.testColumnResize()")
-        assert result is True, "Column resize gate failed"
-
-    def test_gate3_inline_edit_lifecycle(self, browser_page: Page) -> None:
-        """startEdit / cancelEdit state transitions and non-editable guard."""
-        result = browser_page.evaluate("window.qualityGates.testInlineEditLifecycle()")
-        assert result is True, "Inline edit lifecycle gate failed"
-
-    def test_gate4_selection_persistence(self, browser_page: Page) -> None:
-        """toggleRow / clearSelection keeps Set and bulkCount in sync."""
-        result = browser_page.evaluate("window.qualityGates.testSelectionPersistence()")
-        assert result is True, "Selection persistence gate failed"
-
-    def test_gate5_keyboard_nav(self, browser_page: Page) -> None:
-        """nextEditableCell returns correct coords and wraps at row end."""
-        result = browser_page.evaluate("window.qualityGates.testKeyboardNav()")
-        assert result is True, "Keyboard nav gate failed"
+    @pytest.mark.parametrize(
+        ("js_method", "label"),
+        [
+            ("testSortCycle", "Sort cycle"),
+            ("testColumnResize", "Column resize"),
+            ("testInlineEditLifecycle", "Inline edit lifecycle"),
+            ("testSelectionPersistence", "Selection persistence"),
+            ("testKeyboardNav", "Keyboard nav"),
+        ],
+        ids=[
+            "test_gate1_sort_cycle",
+            "test_gate2_column_resize",
+            "test_gate3_inline_edit_lifecycle",
+            "test_gate4_selection_persistence",
+            "test_gate5_keyboard_nav",
+        ],
+    )
+    def test_gate(self, browser_page: Page, js_method: str, label: str) -> None:
+        result = browser_page.evaluate(f"window.qualityGates.{js_method}()")
+        assert result is True, f"{label} gate failed"
 
 
 # ---------------------------------------------------------------------------

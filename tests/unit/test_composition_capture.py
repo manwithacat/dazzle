@@ -22,45 +22,48 @@ from dazzle.core.composition_capture import (
 class TestEstimateTokens:
     """Test Claude vision token cost estimation."""
 
-    def test_small_image(self) -> None:
-        # 800x300 → 800*300/750 = 320
-        assert estimate_tokens(800, 300) == 320
+    @pytest.mark.parametrize(
+        ("width", "height", "expected"),
+        [
+            (800, 300, 320),
+            (500, 300, 200),
+            (1, 1, 1),
+            (1568, 100, int(1568 * 100 / 750)),
+        ],
+        ids=[
+            "test_small_image",
+            "test_small_image_not_rescaled",
+            "test_minimum_one_token",
+            "test_exact_max_edge",
+        ],
+    )
+    def test_estimate_tokens_exact(self, width: int, height: int, expected: int) -> None:
+        assert estimate_tokens(width, height) == expected
 
-    def test_standard_section_crop(self) -> None:
-        # 1280x400 → 1280*400/750 ≈ 682
-        tokens = estimate_tokens(1280, 400)
-        assert 680 <= tokens <= 685
-
-    def test_full_page(self) -> None:
-        # 1280x4000 → rescaled to 1568/4000 * (1280x4000)
-        # After rescaling: 501x1568 → 501*1568/750 ≈ 1048
-        tokens = estimate_tokens(1280, 4000)
-        assert 1000 <= tokens <= 1100
-
-    def test_large_image_rescaled(self) -> None:
-        # 2000x2000 → rescaled to 1568x1568
-        # 1568*1568/750 ≈ 3278
-        tokens = estimate_tokens(2000, 2000)
-        assert 3200 <= tokens <= 3300
-
-    def test_small_image_not_rescaled(self) -> None:
-        # 500x300 → no rescaling, 500*300/750 = 200
-        assert estimate_tokens(500, 300) == 200
-
-    def test_minimum_one_token(self) -> None:
-        assert estimate_tokens(1, 1) == 1
-
-    def test_exact_max_edge(self) -> None:
-        # 1568x100 → exactly at limit, no rescaling
-        tokens = estimate_tokens(1568, 100)
-        assert tokens == int(1568 * 100 / 750)
-
-    def test_just_over_max_edge(self) -> None:
-        # 1569x100 → just over limit, gets rescaled
-        tokens = estimate_tokens(1569, 100)
-        # After rescale: 1568x99
-        expected = int(1568 * int(100 * 1568 / 1569) / 750)
-        assert abs(tokens - expected) <= 1
+    @pytest.mark.parametrize(
+        ("width", "height", "low", "high"),
+        [
+            (1280, 400, 680, 685),
+            (1280, 4000, 1000, 1100),
+            (2000, 2000, 3200, 3300),
+            # 1569x100 → rescaled to 1568x99 → tokens within 1 of expected
+            (
+                1569,
+                100,
+                int(1568 * int(100 * 1568 / 1569) / 750) - 1,
+                int(1568 * int(100 * 1568 / 1569) / 750) + 1,
+            ),
+        ],
+        ids=[
+            "test_standard_section_crop",
+            "test_full_page",
+            "test_large_image_rescaled",
+            "test_just_over_max_edge",
+        ],
+    )
+    def test_estimate_tokens_rescaled(self, width: int, height: int, low: int, high: int) -> None:
+        tokens = estimate_tokens(width, height)
+        assert low <= tokens <= high
 
 
 # ── Image Preprocessing Tests ────────────────────────────────────────

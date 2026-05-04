@@ -36,17 +36,23 @@ def _make_tiny_png(width: int = 2, height: int = 2, color: tuple[int, ...] = (25
 class TestSafeFilename:
     """Tests for _safe_filename()."""
 
-    def test_root_path(self) -> None:
-        assert _safe_filename("/", "mobile") == "root_mobile.png"
-
-    def test_simple_path(self) -> None:
-        assert _safe_filename("/dashboard", "desktop") == "dashboard_desktop.png"
-
-    def test_nested_path(self) -> None:
-        assert _safe_filename("/admin/users", "tablet") == "admin_users_tablet.png"
-
-    def test_trailing_slash(self) -> None:
-        assert _safe_filename("/dashboard/", "mobile") == "dashboard_mobile.png"
+    @pytest.mark.parametrize(
+        ("path", "viewport", "expected"),
+        [
+            ("/", "mobile", "root_mobile.png"),
+            ("/dashboard", "desktop", "dashboard_desktop.png"),
+            ("/admin/users", "tablet", "admin_users_tablet.png"),
+            ("/dashboard/", "mobile", "dashboard_mobile.png"),
+        ],
+        ids=[
+            "test_root_path",
+            "test_simple_path",
+            "test_nested_path",
+            "test_trailing_slash",
+        ],
+    )
+    def test_safe_filename(self, path: str, viewport: str, expected: str) -> None:
+        assert _safe_filename(path, viewport) == expected
 
 
 class TestGetBaselinePath:

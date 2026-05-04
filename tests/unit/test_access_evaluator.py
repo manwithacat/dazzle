@@ -204,94 +204,74 @@ class TestRoleChecks:
 class TestLogicalOperators:
     """Test AND/OR logical operators."""
 
-    def test_and_both_true(self, admin_context: AccessRuntimeContext):
-        """Test AND where both conditions are true."""
+    @pytest.mark.parametrize(
+        ("logical_op", "left_field", "left_value", "context_name", "record", "expected"),
+        [
+            (
+                AccessLogicalKind.AND,
+                "status",
+                "active",
+                "admin_context",
+                {"status": "active"},
+                True,
+            ),
+            (
+                AccessLogicalKind.AND,
+                "status",
+                "active",
+                "user_context",
+                {"status": "active"},
+                False,
+            ),
+            (
+                AccessLogicalKind.OR,
+                "owner_id",
+                "current_user",
+                "user_context",
+                {"owner_id": "user-456"},
+                True,
+            ),
+            (
+                AccessLogicalKind.OR,
+                "owner_id",
+                "current_user",
+                "user_context",
+                {"owner_id": "other-user"},
+                False,
+            ),
+        ],
+        ids=[
+            "test_and_both_true",
+            "test_and_one_false",
+            "test_or_one_true",
+            "test_or_both_false",
+        ],
+    )
+    def test_logical(
+        self,
+        request: pytest.FixtureRequest,
+        logical_op: AccessLogicalKind,
+        left_field: str,
+        left_value: str,
+        context_name: str,
+        record: dict,
+        expected: bool,
+    ):
+        ctx = request.getfixturevalue(context_name)
         left = AccessConditionSpec(
             kind="comparison",
-            field="status",
+            field=left_field,
             comparison_op=AccessComparisonKind.EQUALS,
-            value="active",
+            value=left_value,
         )
-        right = AccessConditionSpec(
-            kind="role_check",
-            role_name="admin",
-        )
+        right = AccessConditionSpec(kind="role_check", role_name="admin")
         condition = AccessConditionSpec(
             kind="logical",
-            logical_op=AccessLogicalKind.AND,
+            logical_op=logical_op,
             logical_left=left,
             logical_right=right,
         )
-
-        record = {"status": "active"}
-        assert evaluate_access_condition(condition, record, admin_context) is True
-
-    def test_and_one_false(self, user_context: AccessRuntimeContext):
-        """Test AND where one condition is false."""
-        left = AccessConditionSpec(
-            kind="comparison",
-            field="status",
-            comparison_op=AccessComparisonKind.EQUALS,
-            value="active",
-        )
-        right = AccessConditionSpec(
-            kind="role_check",
-            role_name="admin",
-        )
-        condition = AccessConditionSpec(
-            kind="logical",
-            logical_op=AccessLogicalKind.AND,
-            logical_left=left,
-            logical_right=right,
-        )
-
-        record = {"status": "active"}
-        # Status matches but user is not admin
-        assert evaluate_access_condition(condition, record, user_context) is False
-
-    def test_or_one_true(self, user_context: AccessRuntimeContext):
-        """Test OR where one condition is true."""
-        left = AccessConditionSpec(
-            kind="comparison",
-            field="owner_id",
-            comparison_op=AccessComparisonKind.EQUALS,
-            value="current_user",
-        )
-        right = AccessConditionSpec(
-            kind="role_check",
-            role_name="admin",
-        )
-        condition = AccessConditionSpec(
-            kind="logical",
-            logical_op=AccessLogicalKind.OR,
-            logical_left=left,
-            logical_right=right,
-        )
-
-        record = {"owner_id": "user-456"}  # Matches user context
-        assert evaluate_access_condition(condition, record, user_context) is True
-
-    def test_or_both_false(self, user_context: AccessRuntimeContext):
-        """Test OR where both conditions are false."""
-        left = AccessConditionSpec(
-            kind="comparison",
-            field="owner_id",
-            comparison_op=AccessComparisonKind.EQUALS,
-            value="current_user",
-        )
-        right = AccessConditionSpec(
-            kind="role_check",
-            role_name="admin",
-        )
-        condition = AccessConditionSpec(
-            kind="logical",
-            logical_op=AccessLogicalKind.OR,
-            logical_left=left,
-            logical_right=right,
-        )
-
-        record = {"owner_id": "other-user"}  # Doesn't match
-        assert evaluate_access_condition(condition, record, user_context) is False
+        assert evaluate_access_condition(condition, record, ctx) is expected
 
 
 # =============================================================================

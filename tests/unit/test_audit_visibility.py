@@ -171,17 +171,37 @@ class TestLoadHistory:
     def _viewable_spec(self) -> _AuditSpec:
         return _AuditSpec(entity="Manuscript", show_to=_ShowTo(personas=["teacher"]))
 
-    def test_none_spec_returns_empty(self):
+    @pytest.mark.parametrize(
+        ("svc_data", "use_spec", "expected_len"),
+        [
+            ([], False, 0),
+            ([], True, 0),
+            (
+                {"items": [_row("t1", "status", before="d", after="s")], "total": 1, "page": 1},
+                True,
+                1,
+            ),
+            (RuntimeError("DB down"), True, 0),
+        ],
+        ids=[
+            "test_none_spec_returns_empty",
+            "test_empty_rows_returns_empty",
+            "test_paged_response_shape_supported",
+            "test_service_exception_returns_empty",
+        ],
+    )
+    def test_load_history_cases(self, svc_data, use_spec: bool, expected_len: int):
+        spec = self._viewable_spec() if use_spec else None
         result = asyncio.run(
             load_history(
-                audit_service=_StubAuditService([]),
-                audit_spec=None,
+                audit_service=_StubAuditService(svc_data),
+                audit_spec=spec,
                 entity_type="Manuscript",
                 entity_id="abc",
                 viewer_personas=["teacher"],
             )
         )
-        assert result == []
+        assert len(result) == expected_len
 
     def test_rbac_denied_returns_empty(self):
         # Viewer doesn't have an allowed persona → return [] without
@@ -199,18 +219,6 @@ class TestLoadHistory:
         )
         assert result == []
         assert svc.calls == []  # No DB call when RBAC denies.
-
-    def test_empty_rows_returns_empty(self):
-        result = asyncio.run(
-            load_history(
-                audit_service=_StubAuditService([]),
-                audit_spec=self._viewable_spec(),
-                entity_type="Manuscript",
-                entity_id="abc",
-                viewer_personas=["teacher"],
-            )
-        )
-        assert result == []
 
     def test_decoded_and_grouped(self):
         rows = [
@@ -233,36 +241,6 @@ class TestLoadHistory:
         assert len(result[1].fields) == 1
         # Decoded values reach the HistoryEntry.
         assert result[0].fields[0].decoded_after == "submitted"
-
-    def test_paged_response_shape_supported(self):
-        # Service may return ``{"items": [...], "total": N, ...}``
-        # — the loader unwraps either shape.
-        rows = [_row("t1", "status", before="d", after="s")]
-        svc = _StubAuditService({"items": rows, "total": 1, "page": 1})
-        result = asyncio.run(
-            load_history(
-                audit_service=svc,
-                audit_spec=self._viewable_spec(),
-                entity_type="Manuscript",
-                entity_id="abc",
-                viewer_personas=["teacher"],
-            )
-        )
-        assert len(result) == 1
-
-    def test_service_exception_returns_empty(self):
-        # Audit fetch failures must not break the detail page.
-        svc = _StubAuditService(RuntimeError("DB down"))
-        result = asyncio.run(
-            load_history(
-                audit_service=svc,
-                audit_spec=self._viewable_spec(),
-                entity_type="Manuscript",
-                entity_id="abc",
-                viewer_personas=["teacher"],
-            )
-        )
-        assert result == []
 
     def test_filter_passed_to_service(self):
         svc = _StubAuditService([])

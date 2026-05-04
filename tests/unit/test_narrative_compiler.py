@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.agent.compiler import (
     NarrativeCompiler,
     Proposal,
@@ -46,21 +48,32 @@ def _obs(
 
 
 class TestGroupKey:
-    def test_uses_first_artefact(self) -> None:
-        obs = _obs(category="missing_crud", related_artefacts=["entity:Task"])
-        assert _group_key(obs) == "missing_crud:Task"
-
-    def test_strips_prefix(self) -> None:
-        obs = _obs(category="ux_issue", related_artefacts=["surface:task_list"])
-        assert _group_key(obs) == "ux_issue:task_list"
-
-    def test_falls_back_to_location(self) -> None:
-        obs = _obs(category="navigation_gap", location="/tasks/123?tab=details")
-        assert _group_key(obs) == "navigation_gap:tasks"
-
-    def test_general_fallback(self) -> None:
-        obs = _obs(category="gap", location="", related_artefacts=[])
-        assert _group_key(obs) == "gap:general"
+    @pytest.mark.parametrize(
+        ("kwargs", "expected"),
+        [
+            (
+                {"category": "missing_crud", "related_artefacts": ["entity:Task"]},
+                "missing_crud:Task",
+            ),
+            (
+                {"category": "ux_issue", "related_artefacts": ["surface:task_list"]},
+                "ux_issue:task_list",
+            ),
+            (
+                {"category": "navigation_gap", "location": "/tasks/123?tab=details"},
+                "navigation_gap:tasks",
+            ),
+            ({"category": "gap", "location": "", "related_artefacts": []}, "gap:general"),
+        ],
+        ids=[
+            "test_uses_first_artefact",
+            "test_strips_prefix",
+            "test_falls_back_to_location",
+            "test_general_fallback",
+        ],
+    )
+    def test_group_key(self, kwargs: dict, expected: str) -> None:
+        assert _group_key(_obs(**kwargs)) == expected
 
 
 class TestGroupObservations:

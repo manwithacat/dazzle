@@ -22,37 +22,39 @@ pytestmark = pytest.mark.postgres
 class TestTokenStoreInit:
     """Tests for initialization."""
 
-    def test_normalizes_heroku_postgres_url(self):
-        """Verify postgres:// is normalized to postgresql://."""
+    @pytest.mark.parametrize(
+        ("kwargs", "attr", "expected"),
+        [
+            (
+                {"database_url": "postgres://user:pass@host/db"},
+                "_database_url",
+                "postgresql://user:pass@host/db",
+            ),
+            (
+                {"database_url": "postgresql://user:pass@host/db"},
+                "_database_url",
+                "postgresql://user:pass@host/db",
+            ),
+            ({"database_url": "postgresql://localhost/test"}, "token_lifetime_days", 7),
+            (
+                {"database_url": "postgresql://localhost/test", "token_lifetime_days": 30},
+                "token_lifetime_days",
+                30,
+            ),
+        ],
+        ids=[
+            "test_normalizes_heroku_postgres_url",
+            "test_postgresql_url_unchanged",
+            "test_default_token_lifetime",
+            "test_custom_token_lifetime",
+        ],
+    )
+    def test_init(self, kwargs: dict, attr: str, expected) -> None:
         with patch("dazzle_back.runtime.token_store.TokenStore._init_db"):
             from dazzle_back.runtime.token_store import TokenStore
 
-            store = TokenStore(database_url="postgres://user:pass@host/db")
-            assert store._database_url == "postgresql://user:pass@host/db"
-
-    def test_postgresql_url_unchanged(self):
-        """Verify postgresql:// URLs are not modified."""
-        with patch("dazzle_back.runtime.token_store.TokenStore._init_db"):
-            from dazzle_back.runtime.token_store import TokenStore
-
-            store = TokenStore(database_url="postgresql://user:pass@host/db")
-            assert store._database_url == "postgresql://user:pass@host/db"
-
-    def test_default_token_lifetime(self):
-        """Verify default token lifetime is 7 days."""
-        with patch("dazzle_back.runtime.token_store.TokenStore._init_db"):
-            from dazzle_back.runtime.token_store import TokenStore
-
-            store = TokenStore(database_url="postgresql://localhost/test")
-            assert store.token_lifetime_days == 7
-
-    def test_custom_token_lifetime(self):
-        """Verify custom token lifetime is respected."""
-        with patch("dazzle_back.runtime.token_store.TokenStore._init_db"):
-            from dazzle_back.runtime.token_store import TokenStore
-
-            store = TokenStore(database_url="postgresql://localhost/test", token_lifetime_days=30)
-            assert store.token_lifetime_days == 30
+            store = TokenStore(**kwargs)
+            assert getattr(store, attr) == expected
 
 
 # =========================================================================

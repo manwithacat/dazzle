@@ -189,51 +189,56 @@ class TestCrossEntitySearchHandler:
 class TestBuildEntitySearchFieldsFallback:
     """build_entity_search_fields now pulls from IR searchable modifiers too."""
 
-    def test_surface_fields_take_precedence(self) -> None:
+    @staticmethod
+    def _surface(entity_ref: str, search_fields: list[str]):
         from types import SimpleNamespace
 
-        from dazzle_back.runtime.app_factory import build_entity_search_fields
+        return SimpleNamespace(entity_ref=entity_ref, search_fields=search_fields)
 
-        surface = SimpleNamespace(entity_ref="Work", search_fields=["title"])
-        entity = SimpleNamespace(
-            name="Work",
-            searchable_fields=[SimpleNamespace(name="description")],
+    @staticmethod
+    def _entity(name: str, fields: list[str]):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            name=name, searchable_fields=[SimpleNamespace(name=f) for f in fields]
         )
-        result = build_entity_search_fields(surfaces=[surface], entities=[entity])
-        assert result == {"Work": ["title"]}
 
-    def test_ir_fallback_when_no_surface_declaration(self) -> None:
-        from types import SimpleNamespace
-
+    @pytest.mark.parametrize(
+        ("call_kwargs", "expected"),
+        [
+            (
+                {
+                    "surfaces": [("Work", ["title"])],
+                    "entities": [("Work", ["description"])],
+                },
+                {"Work": ["title"]},
+            ),
+            (
+                {"surfaces": [], "entities": [("Work", ["title", "description"])]},
+                {"Work": ["title", "description"]},
+            ),
+            ({"surfaces": [], "entities": [("Work", [])]}, {}),
+            ({"surfaces": [("Work", ["title"])], "entities": None}, {"Work": ["title"]}),
+        ],
+        ids=[
+            "test_surface_fields_take_precedence",
+            "test_ir_fallback_when_no_surface_declaration",
+            "test_entity_without_searchable_fields_omitted",
+            "test_no_entities_arg_behaves_as_before",
+        ],
+    )
+    def test_build_entity_search_fields(
+        self, call_kwargs: dict, expected: dict[str, list[str]]
+    ) -> None:
         from dazzle_back.runtime.app_factory import build_entity_search_fields
 
-        entity = SimpleNamespace(
-            name="Work",
-            searchable_fields=[
-                SimpleNamespace(name="title"),
-                SimpleNamespace(name="description"),
-            ],
-        )
-        result = build_entity_search_fields(surfaces=[], entities=[entity])
-        assert result == {"Work": ["title", "description"]}
-
-    def test_entity_without_searchable_fields_omitted(self) -> None:
-        from types import SimpleNamespace
-
-        from dazzle_back.runtime.app_factory import build_entity_search_fields
-
-        entity = SimpleNamespace(name="Work", searchable_fields=[])
-        result = build_entity_search_fields(surfaces=[], entities=[entity])
-        assert result == {}
-
-    def test_no_entities_arg_behaves_as_before(self) -> None:
-        from types import SimpleNamespace
-
-        from dazzle_back.runtime.app_factory import build_entity_search_fields
-
-        surface = SimpleNamespace(entity_ref="Work", search_fields=["title"])
-        result = build_entity_search_fields(surfaces=[surface])
-        assert result == {"Work": ["title"]}
+        surfaces = [self._surface(*s) for s in call_kwargs["surfaces"]]
+        if call_kwargs["entities"] is None:
+            result = build_entity_search_fields(surfaces=surfaces)
+        else:
+            entities = [self._entity(*e) for e in call_kwargs["entities"]]
+            result = build_entity_search_fields(surfaces=surfaces, entities=entities)
+        assert result == expected
 
 
 if __name__ == "__main__":

@@ -68,49 +68,76 @@ class TestParseConstraintErrorPsycopg:
         exc.diag = diag  # type: ignore[attr-defined]
         return exc
 
-    def test_pg_unique_via_pgerror(self):
-        exc = self._make_pg_exc(
-            pgerror=(
-                'ERROR:  duplicate key value violates unique constraint "task_slug_key"\n'
-                "DETAIL:  Key (slug)=(my-slug) already exists.\n"
+    @pytest.mark.parametrize(
+        ("pgerror", "detail", "str_repr", "entity", "expected_ctype", "expected_field"),
+        [
+            (
+                (
+                    'ERROR:  duplicate key value violates unique constraint "task_slug_key"\n'
+                    "DETAIL:  Key (slug)=(my-slug) already exists.\n"
+                ),
+                "Key (slug)=(my-slug) already exists.",
+                "",
+                "Task",
+                "unique",
+                "slug",
             ),
-            detail="Key (slug)=(my-slug) already exists.",
-        )
-        ctype, field = _parse_constraint_error(exc, "Task")
-        assert ctype == "unique"
-        assert field == "slug"
-
-    def test_pg_fk_with_detail_extracts_field(self):
-        """FK error with DETAIL extracts field name and referenced table."""
-        exc = self._make_pg_exc(
-            pgerror=(
-                'ERROR:  insert or update on table "task" violates foreign key constraint '
-                '"task_assigned_to_fkey"\n'
-                "DETAIL:  Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
-                'is not present in table "User".\n'
+            (
+                (
+                    'ERROR:  insert or update on table "task" violates foreign key constraint '
+                    '"task_assigned_to_fkey"\n'
+                    "DETAIL:  Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
+                    'is not present in table "User".\n'
+                ),
+                (
+                    "Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
+                    'is not present in table "User".'
+                ),
+                "",
+                "Task",
+                "foreign_key",
+                "assigned_to",
             ),
-            detail=(
-                "Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
-                'is not present in table "User".'
+            (
+                None,
+                'Key (project_id)=(abc) is not present in table "Project".',
+                (
+                    'insert or update on table "task" violates foreign key constraint '
+                    '"task_project_id_fkey"'
+                ),
+                "Task",
+                "foreign_key",
+                "project_id",
             ),
-        )
-        ctype, field = _parse_constraint_error(exc, "Task")
-        assert ctype == "foreign_key"
-        assert field == "assigned_to"
-
-    def test_pg_fk_detail_only_on_diag(self):
-        """When pgerror is missing, fall back to str(exc) + diag.detail."""
-        exc = self._make_pg_exc(
-            pgerror=None,
-            detail='Key (project_id)=(abc) is not present in table "Project".',
-            str_repr=(
-                'insert or update on table "task" violates foreign key constraint '
-                '"task_project_id_fkey"'
+            (
+                None,
+                "Key (email)=(a@b.com) already exists.",
+                'duplicate key value violates unique constraint "user_email_key"',
+                "User",
+                "unique",
+                "email",
             ),
-        )
-        ctype, field = _parse_constraint_error(exc, "Task")
-        assert ctype == "foreign_key"
-        assert field == "project_id"
+        ],
+        ids=[
+            "test_pg_unique_via_pgerror",
+            "test_pg_fk_with_detail_extracts_field",
+            "test_pg_fk_detail_only_on_diag",
+            "test_pg_unique_detail_from_diag_only",
+        ],
+    )
+    def test_parse_pg_exception(
+        self,
+        pgerror: str | None,
+        detail: str | None,
+        str_repr: str,
+        entity: str,
+        expected_ctype: str,
+        expected_field: str | None,
+    ) -> None:
+        exc = self._make_pg_exc(pgerror=pgerror, detail=detail, str_repr=str_repr)
+        ctype, field = _parse_constraint_error(exc, entity)
+        assert ctype == expected_ctype
+        assert field == expected_field
 
     def test_pg_fk_no_detail_at_all(self):
         """FK error with no DETAIL still returns foreign_key with field=None."""
@@ -124,17 +151,6 @@ class TestParseConstraintErrorPsycopg:
         ctype, field = _parse_constraint_error(exc, "Task")
         assert ctype == "foreign_key"
         assert field is None
-
-    def test_pg_unique_detail_from_diag_only(self):
-        """Unique error where Key() is only in diag.detail, not in str(exc)."""
-        exc = self._make_pg_exc(
-            pgerror=None,
-            detail="Key (email)=(a@b.com) already exists.",
-            str_repr='duplicate key value violates unique constraint "user_email_key"',
-        )
-        ctype, field = _parse_constraint_error(exc, "User")
-        assert ctype == "unique"
-        assert field == "email"
 
 
 # ---------------------------------------------------------------------------

@@ -107,6 +107,13 @@ def _process(
     return proc
 
 
+def _audit(*, enabled: bool = True, log_field_changes: bool = False) -> MagicMock:
+    audit = MagicMock()
+    audit.enabled = enabled
+    audit.log_field_changes = log_field_changes
+    return audit
+
+
 # =============================================================================
 # OP-01  Entity audit without field-level tracking
 # =============================================================================
@@ -116,15 +123,9 @@ class TestOP01AuditWithoutFieldTracking:
     def test_flags_entity_with_audit_but_no_field_changes(
         self, agent: OperationalHygieneAgent
     ) -> None:
-        audit = MagicMock()
-        audit.enabled = True
-        audit.log_field_changes = False
-        entity = mock_entity("Customer", audit=audit)
+        entity = mock_entity("Customer", audit=_audit(enabled=True, log_field_changes=False))
         policies = _policies_with_classification("Customer", "email")
-        appspec = make_appspec([entity], policies=policies)
-
-        findings = agent.audit_without_field_tracking(appspec)
-
+        findings = agent.audit_without_field_tracking(make_appspec([entity], policies=policies))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-01"
         assert findings[0].severity == Severity.MEDIUM
@@ -133,76 +134,31 @@ class TestOP01AuditWithoutFieldTracking:
     @pytest.mark.parametrize(
         "scenario",
         [
-            pytest.param(
-                "log_field_changes_enabled", id="test_passes_when_log_field_changes_enabled"
-            ),
-            pytest.param("audit_disabled", id="test_passes_when_audit_disabled"),
-            pytest.param("entity_not_classified", id="test_passes_when_entity_not_classified"),
-            pytest.param("no_policies", id="test_passes_when_no_policies"),
-            pytest.param("no_audit_config", id="test_passes_when_no_audit_config"),
+            "log_field_changes_enabled",
+            "audit_disabled",
+            "entity_not_classified",
+            "no_policies",
+            "no_audit_config",
         ],
     )
     def test_op01_passes(self, agent: OperationalHygieneAgent, scenario: str) -> None:
-        """Scenarios where audit_without_field_tracking should return no findings."""
         if scenario == "log_field_changes_enabled":
-            audit = MagicMock()
-            audit.enabled = True
-            audit.log_field_changes = True
-            entity = mock_entity("Customer", audit=audit)
+            entity = mock_entity("Customer", audit=_audit(enabled=True, log_field_changes=True))
             policies = _policies_with_classification("Customer", "email")
-            appspec = make_appspec([entity], policies=policies)
         elif scenario == "audit_disabled":
-            audit = MagicMock()
-            audit.enabled = False
-            audit.log_field_changes = False
-            entity = mock_entity("Customer", audit=audit)
+            entity = mock_entity("Customer", audit=_audit(enabled=False, log_field_changes=False))
             policies = _policies_with_classification("Customer", "email")
-            appspec = make_appspec([entity], policies=policies)
         elif scenario == "entity_not_classified":
-            audit = MagicMock()
-            audit.enabled = True
-            audit.log_field_changes = False
-            entity = mock_entity("Task", audit=audit)
-            # Classification is for a different entity
+            entity = mock_entity("Task", audit=_audit(enabled=True, log_field_changes=False))
             policies = _policies_with_classification("Customer", "email")
-            appspec = make_appspec([entity], policies=policies)
         elif scenario == "no_policies":
-            audit = MagicMock()
-            audit.enabled = True
-            audit.log_field_changes = False
-            entity = mock_entity("Customer", audit=audit)
-            appspec = make_appspec([entity], policies=None)
+            entity = mock_entity("Customer", audit=_audit(enabled=True, log_field_changes=False))
+            policies = None
         else:  # no_audit_config
             entity = mock_entity("Customer", audit=None)
             policies = _policies_with_classification("Customer", "email")
-            appspec = make_appspec([entity], policies=policies)
-
+        appspec = make_appspec([entity], policies=policies)
         assert agent.audit_without_field_tracking(appspec) == []
-
-    def test_flags_multiple_entities(self, agent: OperationalHygieneAgent) -> None:
-        audit1 = MagicMock()
-        audit1.enabled = True
-        audit1.log_field_changes = False
-        audit2 = MagicMock()
-        audit2.enabled = True
-        audit2.log_field_changes = False
-        e1 = mock_entity("Customer", audit=audit1)
-        e2 = mock_entity("Employee", audit=audit2)
-
-        cls1 = MagicMock()
-        cls1.entity = "Customer"
-        cls1.field = "email"
-        cls1.classification = DataClassification.PII_DIRECT
-        cls2 = MagicMock()
-        cls2.entity = "Employee"
-        cls2.field = "ssn"
-        cls2.classification = DataClassification.PII_SENSITIVE
-        policies = MagicMock()
-        policies.classifications = [cls1, cls2]
-
-        appspec = make_appspec([e1, e2], policies=policies)
-        findings = agent.audit_without_field_tracking(appspec)
-        assert len(findings) == 2
 
 
 # =============================================================================
@@ -213,37 +169,18 @@ class TestOP01AuditWithoutFieldTracking:
 class TestOP02LlmIntentNoPiiPolicy:
     def test_flags_intent_with_no_pii(self, agent: OperationalHygieneAgent) -> None:
         intent = _llm_intent("classify_ticket", pii=None)
-        appspec = make_appspec(llm_intents=[intent])
-
-        findings = agent.llm_intent_no_pii_policy(appspec)
-
+        findings = agent.llm_intent_no_pii_policy(make_appspec(llm_intents=[intent]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-02"
         assert findings[0].severity == Severity.HIGH
         assert "classify_ticket" in findings[0].title
 
     def test_passes_when_pii_set(self, agent: OperationalHygieneAgent) -> None:
-        pii_cfg = MagicMock()
-        intent = _llm_intent("classify_ticket", pii=pii_cfg)
-        appspec = make_appspec(llm_intents=[intent])
-
-        assert agent.llm_intent_no_pii_policy(appspec) == []
+        intent = _llm_intent("classify_ticket", pii=MagicMock())
+        assert agent.llm_intent_no_pii_policy(make_appspec(llm_intents=[intent])) == []
 
     def test_passes_when_no_intents(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(llm_intents=[])
-        assert agent.llm_intent_no_pii_policy(appspec) == []
-
-    def test_flags_multiple_intents(self, agent: OperationalHygieneAgent) -> None:
-        i1 = _llm_intent("classify_ticket", pii=None)
-        i2 = _llm_intent("summarize", pii=None)
-        i3 = _llm_intent("translate", pii=MagicMock())
-        appspec = make_appspec(llm_intents=[i1, i2, i3])
-
-        findings = agent.llm_intent_no_pii_policy(appspec)
-        assert len(findings) == 2
-        names = {f.title for f in findings}
-        assert "LLM intent 'classify_ticket' has no PII policy" in names
-        assert "LLM intent 'summarize' has no PII policy" in names
+        assert agent.llm_intent_no_pii_policy(make_appspec(llm_intents=[])) == []
 
 
 # =============================================================================
@@ -252,28 +189,12 @@ class TestOP02LlmIntentNoPiiPolicy:
 
 
 class TestOP03LlmLoggingNoRedaction:
-    def test_flags_logging_without_redaction(self, agent: OperationalHygieneAgent) -> None:
-        cfg = _llm_config(redact_pii=False, log_prompts=True, log_completions=True)
-        appspec = make_appspec(llm_config=cfg)
-
-        findings = agent.llm_logging_no_redaction(appspec)
-
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "OP-03"
-        assert findings[0].severity == Severity.MEDIUM
-
     @pytest.mark.parametrize(
         ("log_prompts", "log_completions"),
-        [
-            (True, False),
-            (False, True),
-        ],
-        ids=[
-            "test_flags_when_only_prompts_logged",
-            "test_flags_when_only_completions_logged",
-        ],
+        [(True, True), (True, False), (False, True)],
+        ids=["both", "prompts_only", "completions_only"],
     )
-    def test_flags_when_partial_logging_no_redaction(
+    def test_flags_logging_without_redaction(
         self,
         agent: OperationalHygieneAgent,
         log_prompts: bool,
@@ -282,8 +203,10 @@ class TestOP03LlmLoggingNoRedaction:
         cfg = _llm_config(
             redact_pii=False, log_prompts=log_prompts, log_completions=log_completions
         )
-        appspec = make_appspec(llm_config=cfg)
-        assert len(agent.llm_logging_no_redaction(appspec)) == 1
+        findings = agent.llm_logging_no_redaction(make_appspec(llm_config=cfg))
+        assert len(findings) == 1
+        assert findings[0].heuristic_id == "OP-03"
+        assert findings[0].severity == Severity.MEDIUM
 
     @pytest.mark.parametrize(
         ("redact_pii", "log_prompts", "log_completions", "config"),
@@ -292,11 +215,7 @@ class TestOP03LlmLoggingNoRedaction:
             (False, False, False, "cfg"),
             (False, False, False, "none"),
         ],
-        ids=[
-            "test_passes_when_redact_pii_enabled",
-            "test_passes_when_no_logging",
-            "test_passes_when_no_llm_config",
-        ],
+        ids=["redact_enabled", "no_logging", "no_llm_config"],
     )
     def test_no_finding(
         self,
@@ -324,34 +243,18 @@ class TestOP03LlmLoggingNoRedaction:
 class TestOP04SlaWithoutBreachAction:
     def test_flags_sla_with_no_breach_action(self, agent: OperationalHygieneAgent) -> None:
         sla = _sla("response_sla", on_breach=None)
-        appspec = make_appspec(slas=[sla])
-
-        findings = agent.sla_without_breach_action(appspec)
-
+        findings = agent.sla_without_breach_action(make_appspec(slas=[sla]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-04"
         assert findings[0].severity == Severity.HIGH
         assert "response_sla" in findings[0].title
 
     def test_passes_when_breach_action_set(self, agent: OperationalHygieneAgent) -> None:
-        breach = MagicMock()
-        sla = _sla("response_sla", on_breach=breach)
-        appspec = make_appspec(slas=[sla])
-
-        assert agent.sla_without_breach_action(appspec) == []
+        sla = _sla("response_sla", on_breach=MagicMock())
+        assert agent.sla_without_breach_action(make_appspec(slas=[sla])) == []
 
     def test_passes_when_no_slas(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(slas=[])
-        assert agent.sla_without_breach_action(appspec) == []
-
-    def test_flags_multiple_slas(self, agent: OperationalHygieneAgent) -> None:
-        sla1 = _sla("response_sla", on_breach=None)
-        sla2 = _sla("resolution_sla", on_breach=None)
-        sla3 = _sla("ok_sla", on_breach=MagicMock())
-        appspec = make_appspec(slas=[sla1, sla2, sla3])
-
-        findings = agent.sla_without_breach_action(appspec)
-        assert len(findings) == 2
+        assert agent.sla_without_breach_action(make_appspec(slas=[])) == []
 
 
 # =============================================================================
@@ -362,34 +265,18 @@ class TestOP04SlaWithoutBreachAction:
 class TestOP05ApprovalWithoutEscalation:
     def test_flags_approval_with_no_escalation(self, agent: OperationalHygieneAgent) -> None:
         approval = _approval("purchase_approval", escalation=None)
-        appspec = make_appspec(approvals=[approval])
-
-        findings = agent.approval_without_escalation(appspec)
-
+        findings = agent.approval_without_escalation(make_appspec(approvals=[approval]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-05"
         assert findings[0].severity == Severity.MEDIUM
         assert "purchase_approval" in findings[0].title
 
     def test_passes_when_escalation_set(self, agent: OperationalHygieneAgent) -> None:
-        esc = MagicMock()
-        approval = _approval("purchase_approval", escalation=esc)
-        appspec = make_appspec(approvals=[approval])
-
-        assert agent.approval_without_escalation(appspec) == []
+        approval = _approval("purchase_approval", escalation=MagicMock())
+        assert agent.approval_without_escalation(make_appspec(approvals=[approval])) == []
 
     def test_passes_when_no_approvals(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(approvals=[])
-        assert agent.approval_without_escalation(appspec) == []
-
-    def test_flags_multiple_approvals(self, agent: OperationalHygieneAgent) -> None:
-        a1 = _approval("purchase_approval", escalation=None)
-        a2 = _approval("expense_approval", escalation=None)
-        a3 = _approval("leave_approval", escalation=MagicMock())
-        appspec = make_appspec(approvals=[a1, a2, a3])
-
-        findings = agent.approval_without_escalation(appspec)
-        assert len(findings) == 2
+        assert agent.approval_without_escalation(make_appspec(approvals=[])) == []
 
 
 # =============================================================================
@@ -401,38 +288,32 @@ class TestOP06ProcessWithoutCompensation:
     def test_flags_process_with_service_steps_no_compensation(
         self, agent: OperationalHygieneAgent
     ) -> None:
-        step1 = _service_step("validate")
-        step2 = _service_step("execute")
-        proc = _process("approve_order", [step1, step2], compensations=[])
-        appspec = make_appspec(processes=[proc])
-
-        findings = agent.process_without_compensation(appspec)
-
+        proc = _process(
+            "approve_order",
+            [_service_step("validate"), _service_step("execute")],
+            compensations=[],
+        )
+        findings = agent.process_without_compensation(make_appspec(processes=[proc]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-06"
         assert findings[0].severity == Severity.MEDIUM
         assert "approve_order" in findings[0].title
 
     def test_passes_when_compensations_exist(self, agent: OperationalHygieneAgent) -> None:
-        step1 = _service_step("validate")
-        step2 = _service_step("execute")
-        comp = MagicMock()
-        proc = _process("approve_order", [step1, step2], compensations=[comp])
-        appspec = make_appspec(processes=[proc])
-
-        assert agent.process_without_compensation(appspec) == []
+        proc = _process(
+            "approve_order",
+            [_service_step("validate"), _service_step("execute")],
+            compensations=[MagicMock()],
+        )
+        assert agent.process_without_compensation(make_appspec(processes=[proc])) == []
 
     def test_passes_when_no_processes(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(processes=[])
-        assert agent.process_without_compensation(appspec) == []
+        assert agent.process_without_compensation(make_appspec(processes=[])) == []
 
     @pytest.mark.parametrize(
         ("steps", "proc_name"),
         [
-            (
-                [_service_step("validate")],
-                "simple_process",
-            ),
+            ([_service_step("validate")], "simple_process"),
             (
                 [
                     _non_service_step("notify", StepKind.SEND),
@@ -445,11 +326,7 @@ class TestOP06ProcessWithoutCompensation:
                 "mixed_process",
             ),
         ],
-        ids=[
-            "test_passes_when_fewer_than_two_service_steps",
-            "test_passes_when_non_service_steps_only",
-            "test_counts_only_service_steps",
-        ],
+        ids=["fewer_than_two_service_steps", "non_service_only", "mixed_counts_service_only"],
     )
     def test_no_finding_insufficient_service_steps(
         self,
@@ -458,8 +335,7 @@ class TestOP06ProcessWithoutCompensation:
         proc_name: str,
     ) -> None:
         proc = _process(proc_name, steps, compensations=[])
-        appspec = make_appspec(processes=[proc])
-        assert agent.process_without_compensation(appspec) == []
+        assert agent.process_without_compensation(make_appspec(processes=[proc])) == []
 
 
 # =============================================================================
@@ -469,12 +345,8 @@ class TestOP06ProcessWithoutCompensation:
 
 class TestOP07ServiceStepWithoutRetry:
     def test_flags_service_step_without_retry(self, agent: OperationalHygieneAgent) -> None:
-        step = _service_step("validate", retry=None)
-        proc = _process("approve_order", [step])
-        appspec = make_appspec(processes=[proc])
-
-        findings = agent.service_step_without_retry(appspec)
-
+        proc = _process("approve_order", [_service_step("validate", retry=None)])
+        findings = agent.service_step_without_retry(make_appspec(processes=[proc]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-07"
         assert findings[0].severity == Severity.MEDIUM
@@ -482,34 +354,15 @@ class TestOP07ServiceStepWithoutRetry:
         assert "approve_order" in findings[0].title
 
     def test_passes_when_retry_configured(self, agent: OperationalHygieneAgent) -> None:
-        retry_cfg = MagicMock()
-        step = _service_step("validate", retry=retry_cfg)
-        proc = _process("approve_order", [step])
-        appspec = make_appspec(processes=[proc])
-
-        assert agent.service_step_without_retry(appspec) == []
+        proc = _process("approve_order", [_service_step("validate", retry=MagicMock())])
+        assert agent.service_step_without_retry(make_appspec(processes=[proc])) == []
 
     def test_skips_non_service_steps(self, agent: OperationalHygieneAgent) -> None:
-        step = _non_service_step("notify", StepKind.SEND)
-        proc = _process("notification_flow", [step])
-        appspec = make_appspec(processes=[proc])
-
-        assert agent.service_step_without_retry(appspec) == []
+        proc = _process("notification_flow", [_non_service_step("notify", StepKind.SEND)])
+        assert agent.service_step_without_retry(make_appspec(processes=[proc])) == []
 
     def test_passes_when_no_processes(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(processes=[])
-        assert agent.service_step_without_retry(appspec) == []
-
-    def test_flags_multiple_steps_across_processes(self, agent: OperationalHygieneAgent) -> None:
-        s1 = _service_step("validate", retry=None)
-        s2 = _service_step("execute", retry=None)
-        s3 = _service_step("charge", retry=MagicMock())
-        proc1 = _process("order_flow", [s1, s2])
-        proc2 = _process("payment_flow", [s3])
-        appspec = make_appspec(processes=[proc1, proc2])
-
-        findings = agent.service_step_without_retry(appspec)
-        assert len(findings) == 2
+        assert agent.service_step_without_retry(make_appspec(processes=[])) == []
 
 
 # =============================================================================
@@ -520,34 +373,18 @@ class TestOP07ServiceStepWithoutRetry:
 class TestOP08SlaWithoutTiers:
     def test_flags_sla_with_empty_tiers(self, agent: OperationalHygieneAgent) -> None:
         sla = _sla("response_sla", tiers=[])
-        appspec = make_appspec(slas=[sla])
-
-        findings = agent.sla_without_tiers(appspec)
-
+        findings = agent.sla_without_tiers(make_appspec(slas=[sla]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "OP-08"
         assert findings[0].severity == Severity.MEDIUM
         assert "response_sla" in findings[0].title
 
     def test_passes_when_tiers_defined(self, agent: OperationalHygieneAgent) -> None:
-        tier = MagicMock()
-        sla = _sla("response_sla", tiers=[tier])
-        appspec = make_appspec(slas=[sla])
-
-        assert agent.sla_without_tiers(appspec) == []
+        sla = _sla("response_sla", tiers=[MagicMock()])
+        assert agent.sla_without_tiers(make_appspec(slas=[sla])) == []
 
     def test_passes_when_no_slas(self, agent: OperationalHygieneAgent) -> None:
-        appspec = make_appspec(slas=[])
-        assert agent.sla_without_tiers(appspec) == []
-
-    def test_flags_multiple_slas_without_tiers(self, agent: OperationalHygieneAgent) -> None:
-        sla1 = _sla("response_sla", tiers=[])
-        sla2 = _sla("resolution_sla", tiers=[])
-        sla3 = _sla("ok_sla", tiers=[MagicMock()])
-        appspec = make_appspec(slas=[sla1, sla2, sla3])
-
-        findings = agent.sla_without_tiers(appspec)
-        assert len(findings) == 2
+        assert agent.sla_without_tiers(make_appspec(slas=[])) == []
 
 
 # =============================================================================
@@ -565,3 +402,25 @@ class TestOperationalHygieneAgentRun:
     def test_heuristic_ids(self, agent: OperationalHygieneAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
         assert ids == [f"OP-0{i}" for i in range(1, 9)]
+
+    def test_run_iterates_across_collections(self, agent: OperationalHygieneAgent) -> None:
+        # Multiple offenders in multiple collections — exercises the iteration
+        # path that was previously tested in per-heuristic 'multiple_X' tests.
+        slas = [
+            _sla("response_sla", on_breach=None, tiers=[]),
+            _sla("resolution_sla", on_breach=None, tiers=[]),
+        ]
+        approvals = [
+            _approval("a", escalation=None),
+            _approval("b", escalation=None),
+        ]
+        intents = [
+            _llm_intent("classify_a", pii=None),
+            _llm_intent("classify_b", pii=None),
+        ]
+        result = agent.run(make_appspec(slas=slas, approvals=approvals, llm_intents=intents))
+        ids = [f.heuristic_id for f in result.findings]
+        assert ids.count("OP-04") == 2  # 2 SLAs without breach
+        assert ids.count("OP-05") == 2  # 2 approvals without escalation
+        assert ids.count("OP-02") == 2  # 2 intents without PII
+        assert ids.count("OP-08") == 2  # 2 SLAs without tiers

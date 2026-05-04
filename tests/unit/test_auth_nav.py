@@ -133,38 +133,52 @@ class TestBuildSitePageContextAuth:
 class TestExtractNavItemsAuth:
     """_extract_nav_items prefers authenticated items when authenticated."""
 
-    def test_public_items_when_not_authenticated(self) -> None:
-        nav = {
-            "public": [{"label": "Home", "href": "/"}],
-            "authenticated": [{"label": "My Account", "href": "/account"}],
-        }
-        items = _extract_nav_items(nav, is_authenticated=False)
+    @pytest.mark.parametrize(
+        ("nav", "is_authenticated", "expected_label"),
+        [
+            (
+                {
+                    "public": [{"label": "Home", "href": "/"}],
+                    "authenticated": [{"label": "My Account", "href": "/account"}],
+                },
+                False,
+                "Home",
+            ),
+            (
+                {
+                    "public": [{"label": "Home", "href": "/"}],
+                    "authenticated": [{"label": "My Account", "href": "/account"}],
+                },
+                True,
+                "My Account",
+            ),
+            (
+                {
+                    "public": [{"label": "Home", "href": "/"}],
+                    "authenticated": [],
+                },
+                True,
+                "Home",
+            ),
+            (
+                {"public": [{"label": "Home", "href": "/"}]},
+                True,
+                "Home",
+            ),
+        ],
+        ids=[
+            "test_public_items_when_not_authenticated",
+            "test_authenticated_items_when_authenticated",
+            "test_falls_back_to_public_when_authenticated_empty",
+            "test_falls_back_to_public_when_authenticated_missing",
+        ],
+    )
+    def test_extract_nav_items(
+        self, nav: dict, is_authenticated: bool, expected_label: str
+    ) -> None:
+        items = _extract_nav_items(nav, is_authenticated=is_authenticated)
         assert len(items) == 1
-        assert items[0].label == "Home"
-
-    def test_authenticated_items_when_authenticated(self) -> None:
-        nav = {
-            "public": [{"label": "Home", "href": "/"}],
-            "authenticated": [{"label": "My Account", "href": "/account"}],
-        }
-        items = _extract_nav_items(nav, is_authenticated=True)
-        assert len(items) == 1
-        assert items[0].label == "My Account"
-
-    def test_falls_back_to_public_when_authenticated_empty(self) -> None:
-        nav = {
-            "public": [{"label": "Home", "href": "/"}],
-            "authenticated": [],
-        }
-        items = _extract_nav_items(nav, is_authenticated=True)
-        assert len(items) == 1
-        assert items[0].label == "Home"
-
-    def test_falls_back_to_public_when_authenticated_missing(self) -> None:
-        nav = {"public": [{"label": "Home", "href": "/"}]}
-        items = _extract_nav_items(nav, is_authenticated=True)
-        assert len(items) == 1
-        assert items[0].label == "Home"
+        assert items[0].label == expected_label
 
 
 # ---------------------------------------------------------------------------

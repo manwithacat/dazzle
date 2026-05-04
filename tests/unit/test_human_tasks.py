@@ -132,8 +132,22 @@ class TestTaskContext:
 
         assert "hour" in context.time_remaining
 
-    def test_time_remaining_overdue(self) -> None:
-        """Test time_remaining returns Overdue for past due date."""
+    @pytest.mark.parametrize(
+        ("due_offset", "attr", "expected"),
+        [
+            (timedelta(hours=-1), "time_remaining", "Overdue"),
+            (timedelta(hours=-1), "urgency", "critical"),
+            (timedelta(hours=12), "urgency", "high"),
+            (timedelta(days=7), "urgency", "low"),
+        ],
+        ids=[
+            "test_time_remaining_overdue",
+            "test_urgency_critical",
+            "test_urgency_high",
+            "test_urgency_low",
+        ],
+    )
+    def test_due_at_derived(self, due_offset: timedelta, attr: str, expected: str) -> None:
         from dazzle_ui.runtime.task_context import TaskContext
 
         context = TaskContext(
@@ -144,65 +158,10 @@ class TestTaskContext:
             surface_name="surface",
             entity_name="Entity",
             entity_id="e1",
-            due_at=datetime.now(UTC) - timedelta(hours=1),
+            due_at=datetime.now(UTC) + due_offset,
             outcomes=[],
         )
-
-        assert context.time_remaining == "Overdue"
-
-    def test_urgency_critical(self) -> None:
-        """Test urgency returns critical for overdue."""
-        from dazzle_ui.runtime.task_context import TaskContext
-
-        context = TaskContext(
-            task_id="task-1",
-            process_name="test",
-            process_run_id="run-1",
-            step_name="step",
-            surface_name="surface",
-            entity_name="Entity",
-            entity_id="e1",
-            due_at=datetime.now(UTC) - timedelta(hours=1),
-            outcomes=[],
-        )
-
-        assert context.urgency == "critical"
-
-    def test_urgency_high(self) -> None:
-        """Test urgency returns high for due within 24 hours."""
-        from dazzle_ui.runtime.task_context import TaskContext
-
-        context = TaskContext(
-            task_id="task-1",
-            process_name="test",
-            process_run_id="run-1",
-            step_name="step",
-            surface_name="surface",
-            entity_name="Entity",
-            entity_id="e1",
-            due_at=datetime.now(UTC) + timedelta(hours=12),
-            outcomes=[],
-        )
-
-        assert context.urgency == "high"
-
-    def test_urgency_low(self) -> None:
-        """Test urgency returns low for due in more than 3 days."""
-        from dazzle_ui.runtime.task_context import TaskContext
-
-        context = TaskContext(
-            task_id="task-1",
-            process_name="test",
-            process_run_id="run-1",
-            step_name="step",
-            surface_name="surface",
-            entity_name="Entity",
-            entity_id="e1",
-            due_at=datetime.now(UTC) + timedelta(days=7),
-            outcomes=[],
-        )
-
-        assert context.urgency == "low"
+        assert getattr(context, attr) == expected
 
     def test_to_dict(self) -> None:
         """Test TaskContext.to_dict() serialization."""

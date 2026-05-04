@@ -21,23 +21,42 @@ class TestBasicSanitize:
         assert "alert" not in result
         assert "<p>Hello</p>" in result
 
-    def test_strips_style_tags(self) -> None:
+    @pytest.mark.parametrize(
+        ("html", "absent", "present"),
+        [
+            (
+                "<p>Hello</p><style>body{display:none}</style>",
+                "<style>",
+                "<p>Hello</p>",
+            ),
+            (
+                '<iframe src="evil.com"></iframe><p>safe</p>',
+                "<iframe",
+                "<p>safe</p>",
+            ),
+            (
+                '<div onclick="alert(1)">content</div>',
+                "onclick",
+                "content",
+            ),
+            (
+                "<script><script>nested</script></script><p>ok</p>",
+                "nested",
+                "<p>ok</p>",
+            ),
+        ],
+        ids=[
+            "test_strips_style_tags",
+            "test_strips_iframe",
+            "test_strips_event_handlers",
+            "test_nested_script_in_dangerous_tag",
+        ],
+    )
+    def test_strips_dangerous(self, html: str, absent: str, present: str) -> None:
         proc = MarkdownProcessor()
-        result = proc._basic_sanitize("<p>Hello</p><style>body{display:none}</style>")
-        assert "<style>" not in result
-        assert "<p>Hello</p>" in result
-
-    def test_strips_iframe(self) -> None:
-        proc = MarkdownProcessor()
-        result = proc._basic_sanitize('<iframe src="evil.com"></iframe><p>safe</p>')
-        assert "<iframe" not in result
-        assert "<p>safe</p>" in result
-
-    def test_strips_event_handlers(self) -> None:
-        proc = MarkdownProcessor()
-        result = proc._basic_sanitize('<div onclick="alert(1)">content</div>')
-        assert "onclick" not in result
-        assert "content" in result
+        result = proc._basic_sanitize(html)
+        assert absent not in result
+        assert present in result
 
     def test_strips_javascript_urls(self) -> None:
         proc = MarkdownProcessor()
@@ -49,13 +68,6 @@ class TestBasicSanitize:
         result = proc._basic_sanitize('<a href="https://example.com" title="link">click</a>')
         assert 'href="https://example.com"' in result
         assert 'title="link"' in result
-
-    def test_nested_script_in_dangerous_tag(self) -> None:
-        proc = MarkdownProcessor()
-        html = "<script><script>nested</script></script><p>ok</p>"
-        result = proc._basic_sanitize(html)
-        assert "nested" not in result
-        assert "<p>ok</p>" in result
 
     def test_preserves_plain_text(self) -> None:
         proc = MarkdownProcessor()
@@ -79,11 +91,26 @@ class TestExtractText:
         assert "Hello" in result
         assert "world" in result
 
-    def test_removes_links_keeps_text(self) -> None:
+    @pytest.mark.parametrize(
+        ("source", "present", "absent"),
+        [
+            ("Visit [Google](https://google.com) now", "Google", "https://google.com"),
+            ("Before ```python\ncode()\n``` after", "Before", "```"),
+            ("Use `foo()` here", "Use", "`"),
+            ("Hello <strong>world</strong>", "Hello", "<strong>"),
+        ],
+        ids=[
+            "test_removes_links_keeps_text",
+            "test_removes_code_block_markers",
+            "test_removes_inline_code_markers",
+            "test_removes_html_tags",
+        ],
+    )
+    def test_extract_text_strips(self, source: str, present: str, absent: str) -> None:
         proc = MarkdownProcessor()
-        result = proc.extract_text("Visit [Google](https://google.com) now")
-        assert "Google" in result
-        assert "https://google.com" not in result
+        result = proc.extract_text(source)
+        assert present in result
+        assert absent not in result
 
     def test_removes_formatting(self) -> None:
         proc = MarkdownProcessor()
@@ -92,24 +119,6 @@ class TestExtractText:
         assert "italic" in result
         assert "*" not in result
         assert "_" not in result
-
-    def test_removes_code_block_markers(self) -> None:
-        proc = MarkdownProcessor()
-        result = proc.extract_text("Before ```python\ncode()\n``` after")
-        assert "```" not in result
-        assert "Before" in result
-
-    def test_removes_inline_code_markers(self) -> None:
-        proc = MarkdownProcessor()
-        result = proc.extract_text("Use `foo()` here")
-        assert "`" not in result
-        assert "Use" in result
-
-    def test_removes_html_tags(self) -> None:
-        proc = MarkdownProcessor()
-        result = proc.extract_text("Hello <strong>world</strong>")
-        assert "<strong>" not in result
-        assert "Hello" in result
 
     def test_normalizes_whitespace(self) -> None:
         proc = MarkdownProcessor()

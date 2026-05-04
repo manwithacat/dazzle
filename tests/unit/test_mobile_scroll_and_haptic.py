@@ -45,29 +45,25 @@ def base_html() -> str:
 
 
 class TestScrollContainmentCss:
-    def test_uses_webkit_overflow_scrolling_touch(self, scroll_css: str) -> None:
-        """iOS momentum scroll requires this property."""
-        assert "-webkit-overflow-scrolling: touch" in scroll_css
-
-    def test_uses_overscroll_behavior_contain(self, scroll_css: str) -> None:
-        """Prevents scroll-chain to the parent (modal-inside-page case)."""
-        assert "overscroll-behavior: contain" in scroll_css
-
-    def test_horizontal_overscroll_contain_for_tables(self, scroll_css: str) -> None:
-        """iOS swipe-from-left-edge fires browser-back on horizontal
-        scroll — `overscroll-behavior-x: contain` blocks it inside
-        tables/charts."""
-        assert "overscroll-behavior-x: contain" in scroll_css
-
-    def test_dz_scroll_utility_class_present(self, scroll_css: str) -> None:
-        """Adopters apply `.dz-scroll` to their own containers to opt
-        them into the touch-friendly defaults."""
-        assert ".dz-scroll" in scroll_css
-
-    def test_wraps_in_components_layer(self, scroll_css: str) -> None:
-        """Same `@layer components` wrapping as the rest of the
-        component CSS — preserves cascade ordering."""
-        assert "@layer components" in scroll_css
+    @pytest.mark.parametrize(
+        "needle",
+        [
+            "-webkit-overflow-scrolling: touch",
+            "overscroll-behavior: contain",
+            "overscroll-behavior-x: contain",
+            ".dz-scroll",
+            "@layer components",
+        ],
+        ids=[
+            "test_uses_webkit_overflow_scrolling_touch",
+            "test_uses_overscroll_behavior_contain",
+            "test_horizontal_overscroll_contain_for_tables",
+            "test_dz_scroll_utility_class_present",
+            "test_wraps_in_components_layer",
+        ],
+    )
+    def test_css_contains(self, scroll_css: str, needle: str) -> None:
+        assert needle in scroll_css
 
     @pytest.mark.parametrize(
         "selector",

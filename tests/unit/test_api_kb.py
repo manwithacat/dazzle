@@ -4,6 +4,8 @@ Unit tests for DAZZLE API Knowledgebase (api_kb).
 Tests the pack loader, search functionality, and DSL generation.
 """
 
+import pytest
+
 from dazzle.api_kb import (
     EnvVarSpec,
     list_packs,
@@ -16,41 +18,27 @@ from dazzle.api_kb.loader import generate_env_example
 class TestPackLoading:
     """Tests for loading API packs."""
 
-    def test_load_stripe_payments_pack(self):
-        """Test loading the Stripe payments pack."""
-        pack = load_pack("stripe_payments")
-
+    @pytest.mark.parametrize(
+        ("pack_name", "provider", "category"),
+        [
+            ("stripe_payments", "Stripe", "payments"),
+            ("hmrc_mtd_vat", "HMRC", "tax"),
+            ("companies_house_lookup", "Companies House", "business_data"),
+            ("xero_accounting", "Xero", "accounting"),
+        ],
+        ids=[
+            "test_load_stripe_payments_pack",
+            "test_load_hmrc_mtd_vat_pack",
+            "test_load_companies_house_pack",
+            "test_load_xero_accounting_pack",
+        ],
+    )
+    def test_load_pack(self, pack_name: str, provider: str, category: str):
+        pack = load_pack(pack_name)
         assert pack is not None
-        assert pack.name == "stripe_payments"
-        assert pack.provider == "Stripe"
-        assert pack.category == "payments"
-
-    def test_load_hmrc_mtd_vat_pack(self):
-        """Test loading the HMRC MTD VAT pack."""
-        pack = load_pack("hmrc_mtd_vat")
-
-        assert pack is not None
-        assert pack.name == "hmrc_mtd_vat"
-        assert pack.provider == "HMRC"
-        assert pack.category == "tax"
-
-    def test_load_companies_house_pack(self):
-        """Test loading the Companies House lookup pack."""
-        pack = load_pack("companies_house_lookup")
-
-        assert pack is not None
-        assert pack.name == "companies_house_lookup"
-        assert pack.provider == "Companies House"
-        assert pack.category == "business_data"
-
-    def test_load_xero_accounting_pack(self):
-        """Test loading the Xero accounting pack."""
-        pack = load_pack("xero_accounting")
-
-        assert pack is not None
-        assert pack.name == "xero_accounting"
-        assert pack.provider == "Xero"
-        assert pack.category == "accounting"
+        assert pack.name == pack_name
+        assert pack.provider == provider
+        assert pack.category == category
 
     def test_load_nonexistent_pack(self):
         """Test loading a pack that doesn't exist."""
@@ -88,26 +76,29 @@ class TestPackSearch:
         assert all(p.category == "tax" for p in packs)
         assert any(p.name == "hmrc_mtd_vat" for p in packs)
 
-    def test_search_by_category_accounting(self):
-        """Test searching packs by accounting category."""
-        packs = search_packs(category="accounting")
-
+    @pytest.mark.parametrize(
+        ("kwargs", "category", "provider"),
+        [
+            ({"category": "accounting"}, "accounting", None),
+            ({"provider": "Stripe"}, None, "Stripe"),
+            ({"provider": "HMRC"}, None, "HMRC"),
+            ({"category": "payments", "provider": "Stripe"}, "payments", "Stripe"),
+        ],
+        ids=[
+            "test_search_by_category_accounting",
+            "test_search_by_provider_stripe",
+            "test_search_by_provider_hmrc",
+            "test_search_combined_filters",
+        ],
+    )
+    def test_search_filters(self, kwargs: dict, category: str | None, provider: str | None):
+        packs = search_packs(**kwargs)
         assert len(packs) >= 1
-        assert all(p.category == "accounting" for p in packs)
-
-    def test_search_by_provider_stripe(self):
-        """Test searching packs by Stripe provider."""
-        packs = search_packs(provider="Stripe")
-
-        assert len(packs) >= 1
-        assert all(p.provider == "Stripe" for p in packs)
-
-    def test_search_by_provider_hmrc(self):
-        """Test searching packs by HMRC provider."""
-        packs = search_packs(provider="HMRC")
-
-        assert len(packs) >= 1
-        assert all(p.provider == "HMRC" for p in packs)
+        for p in packs:
+            if category is not None:
+                assert p.category == category
+            if provider is not None:
+                assert p.provider == provider
 
     def test_search_by_query(self):
         """Test searching packs by text query."""
@@ -128,13 +119,6 @@ class TestPackSearch:
         """Test search with no matching results."""
         packs = search_packs(category="nonexistent_category")
         assert len(packs) == 0
-
-    def test_search_combined_filters(self):
-        """Test search with multiple filters."""
-        packs = search_packs(category="payments", provider="Stripe")
-
-        assert len(packs) >= 1
-        assert all(p.category == "payments" and p.provider == "Stripe" for p in packs)
 
 
 class TestPackContents:

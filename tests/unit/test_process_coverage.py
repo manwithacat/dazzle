@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core.ir.process import ProcessTriggerKind, StepKind
 
 # ============================================================================
@@ -235,29 +237,30 @@ class TestUIOutcomeAutoSatisfaction:
 
 
 class TestCRUDInferenceViaStepName:
-    def test_step_name_create_infers(self) -> None:
-        """Step named 'create_record' should infer 'created' outcome."""
-        proc = _make_proc(steps=[_make_step(name="create_record", service=None, kind="service")])
-        result = _infer_structural_satisfaction("record is created", [proc])
-        assert result is True
+    @pytest.mark.parametrize(
+        ("step_name", "outcome", "expected"),
+        [
+            ("create_record", "record is created", True),
+            ("delete_item", "item is deleted", True),
+            ("update_status", "status is updated", True),
+            ("validate_input", "record is created", False),
+        ],
+        ids=[
+            "test_step_name_create_infers",
+            "test_step_name_delete_infers",
+            "test_step_name_update_infers",
+            "test_no_match_unrelated_step",
+        ],
+    )
+    def test_step_name_inference(self, step_name: str, outcome: str, expected: bool) -> None:
+        proc = _make_proc(steps=[_make_step(name=step_name, service=None, kind="service")])
+        assert _infer_structural_satisfaction(outcome, [proc]) is expected
 
     def test_step_name_save_infers_created(self) -> None:
         """Step named 'save_record' should infer 'saved'/'created' outcomes."""
         proc = _make_proc(steps=[_make_step(name="save_record", service=None, kind="service")])
         assert _infer_structural_satisfaction("record is saved", [proc]) is True
         assert _infer_structural_satisfaction("record is created", [proc]) is True
-
-    def test_step_name_delete_infers(self) -> None:
-        proc = _make_proc(steps=[_make_step(name="delete_item", service=None, kind="service")])
-        assert _infer_structural_satisfaction("item is deleted", [proc]) is True
-
-    def test_step_name_update_infers(self) -> None:
-        proc = _make_proc(steps=[_make_step(name="update_status", service=None, kind="service")])
-        assert _infer_structural_satisfaction("status is updated", [proc]) is True
-
-    def test_no_match_unrelated_step(self) -> None:
-        proc = _make_proc(steps=[_make_step(name="validate_input", service=None, kind="service")])
-        assert _infer_structural_satisfaction("record is created", [proc]) is False
 
 
 # ---------------------------------------------------------------------------

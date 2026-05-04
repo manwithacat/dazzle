@@ -265,34 +265,27 @@ class TestKeyboardShortcuts:
         page.wait_for_timeout(50)
         return str(page.url)
 
-    def test_escape_navigates_to_back(self, browser: Any, server: str) -> None:
+    @pytest.mark.parametrize(
+        ("key", "expected_hash"),
+        [
+            ("Escape", "#back"),
+            ("j", "#prev"),
+            ("k", "#next"),
+            ("ArrowLeft", "#prev"),
+            ("ArrowRight", "#next"),
+        ],
+        ids=[
+            "test_escape_navigates_to_back",
+            "test_j_key_navigates_to_prev",
+            "test_k_key_navigates_to_next",
+            "test_arrow_left_navigates_to_prev",
+            "test_arrow_right_navigates_to_next",
+        ],
+    )
+    def test_key_navigates(self, browser: Any, server: str, key: str, expected_hash: str) -> None:
         page = _new_page(browser, server)
-        url = self._press(page, "Escape")
-        assert url.endswith("#back")
-        page.close()
-
-    def test_j_key_navigates_to_prev(self, browser: Any, server: str) -> None:
-        page = _new_page(browser, server)
-        url = self._press(page, "j")
-        assert url.endswith("#prev")
-        page.close()
-
-    def test_k_key_navigates_to_next(self, browser: Any, server: str) -> None:
-        page = _new_page(browser, server)
-        url = self._press(page, "k")
-        assert url.endswith("#next")
-        page.close()
-
-    def test_arrow_left_navigates_to_prev(self, browser: Any, server: str) -> None:
-        page = _new_page(browser, server)
-        url = self._press(page, "ArrowLeft")
-        assert url.endswith("#prev")
-        page.close()
-
-    def test_arrow_right_navigates_to_next(self, browser: Any, server: str) -> None:
-        page = _new_page(browser, server)
-        url = self._press(page, "ArrowRight")
-        assert url.endswith("#next")
+        url = self._press(page, key)
+        assert url.endswith(expected_hash)
         page.close()
 
 

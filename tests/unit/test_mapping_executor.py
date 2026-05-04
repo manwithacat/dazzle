@@ -172,55 +172,43 @@ class TestRegistration:
 
 
 class TestUrlInterpolation:
-    def test_simple_interpolation(self) -> None:
-        mapping = _make_mapping(url_template="/company/{self.company_number}")
-        integration = _make_integration(mappings=[mapping])
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-
-        executor = MappingExecutor(appspec, bus)
-        url = executor._interpolate_url(
-            "https://api.example.com",
-            "/company/{self.company_number}",
-            {"company_number": "12345678"},
-        )
-        assert url == "https://api.example.com/company/12345678"
-
-    def test_multiple_placeholders(self) -> None:
+    @pytest.mark.parametrize(
+        ("template", "data", "expected"),
+        [
+            (
+                "/company/{self.company_number}",
+                {"company_number": "12345678"},
+                "https://api.example.com/company/12345678",
+            ),
+            (
+                "/org/{org_id}/user/{user_id}",
+                {"org_id": "org-1", "user_id": "user-2"},
+                "https://api.example.com/org/org-1/user/user-2",
+            ),
+            (
+                "/company/{self.missing_field}",
+                {"name": "Test"},
+                "https://api.example.com/company/",
+            ),
+            (
+                "/resources/search",
+                {"name": "Test"},
+                "https://api.example.com/resources/search",
+            ),
+        ],
+        ids=[
+            "test_simple_interpolation",
+            "test_multiple_placeholders",
+            "test_missing_field",
+            "test_no_placeholders",
+        ],
+    )
+    def test_interpolation(self, template: str, data: dict, expected: str) -> None:
         appspec = _make_appspec()
         bus = EntityEventBus()
         executor = MappingExecutor(appspec, bus)
-
-        url = executor._interpolate_url(
-            "https://api.example.com",
-            "/org/{org_id}/user/{user_id}",
-            {"org_id": "org-1", "user_id": "user-2"},
-        )
-        assert url == "https://api.example.com/org/org-1/user/user-2"
-
-    def test_missing_field(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        url = executor._interpolate_url(
-            "https://api.example.com",
-            "/company/{self.missing_field}",
-            {"name": "Test"},
-        )
-        assert url == "https://api.example.com/company/"
-
-    def test_no_placeholders(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        url = executor._interpolate_url(
-            "https://api.example.com",
-            "/resources/search",
-            {"name": "Test"},
-        )
-        assert url == "https://api.example.com/resources/search"
+        url = executor._interpolate_url("https://api.example.com", template, data)
+        assert url == expected
 
 
 # ---------------------------------------------------------------------------
@@ -388,38 +376,38 @@ class TestAuthResolution:
 
 
 class TestBaseUrlResolution:
-    def test_direct_base_url(self) -> None:
-        integration = _make_integration(base_url="https://api.example.com")
+    @pytest.mark.parametrize(
+        ("name", "url", "env", "expected"),
+        [
+            ("test_api", "https://api.example.com", None, "https://api.example.com"),
+            ("test_api", "https://api.example.com/", None, "https://api.example.com"),
+            (
+                "my_api",
+                None,
+                {"DAZZLE_API_MY_API_URL": "https://fallback.com"},
+                "https://fallback.com",
+            ),
+            ("unknown", None, None, ""),
+        ],
+        ids=[
+            "test_direct_base_url",
+            "test_trailing_slash_stripped",
+            "test_env_var_fallback",
+            "test_no_url_returns_empty",
+        ],
+    )
+    def test_resolve_base_url(
+        self, name: str, url: str | None, env: dict | None, expected: str
+    ) -> None:
+        integration = _make_integration(name=name, base_url=url)
         appspec = _make_appspec(integration)
         bus = EntityEventBus()
         executor = MappingExecutor(appspec, bus)
-
-        assert executor._resolve_base_url(integration) == "https://api.example.com"
-
-    def test_trailing_slash_stripped(self) -> None:
-        integration = _make_integration(base_url="https://api.example.com/")
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        assert executor._resolve_base_url(integration) == "https://api.example.com"
-
-    def test_env_var_fallback(self) -> None:
-        integration = _make_integration(name="my_api", base_url=None)
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        with patch.dict("os.environ", {"DAZZLE_API_MY_API_URL": "https://fallback.com"}):
-            assert executor._resolve_base_url(integration) == "https://fallback.com"
-
-    def test_no_url_returns_empty(self) -> None:
-        integration = _make_integration(name="unknown", base_url=None)
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        assert executor._resolve_base_url(integration) == ""
+        if env is not None:
+            with patch.dict("os.environ", env):
+                assert executor._resolve_base_url(integration) == expected
+        else:
+            assert executor._resolve_base_url(integration) == expected
 
 
 # ---------------------------------------------------------------------------

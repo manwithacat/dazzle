@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 JS_PATH = ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "js" / "dz-richtext.js"
 CSS_PATH = ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "css" / "components" / "richtext.css"
@@ -139,21 +141,23 @@ class TestLifecycle:
 
 
 class TestBundleWiring:
-    def test_js_listed_in_build_dist(self) -> None:
-        src = BUILD_DIST.read_text()
-        assert "dz-richtext.js" in src
-
-    def test_css_listed_in_build_dist(self) -> None:
-        src = BUILD_DIST.read_text()
-        assert "richtext.css" in src
-
-    def test_css_listed_in_css_loader(self) -> None:
-        src = CSS_LOADER.read_text()
-        assert "css/components/richtext.css" in src
-
-    def test_base_html_includes_script(self) -> None:
-        src = BASE_HTML.read_text()
-        assert "js/dz-richtext.js" in src
+    @pytest.mark.parametrize(
+        ("path", "needle"),
+        [
+            (BUILD_DIST, "dz-richtext.js"),
+            (BUILD_DIST, "richtext.css"),
+            (CSS_LOADER, "css/components/richtext.css"),
+            (BASE_HTML, "js/dz-richtext.js"),
+        ],
+        ids=[
+            "test_js_listed_in_build_dist",
+            "test_css_listed_in_build_dist",
+            "test_css_listed_in_css_loader",
+            "test_base_html_includes_script",
+        ],
+    )
+    def test_listing(self, path: Path, needle: str) -> None:
+        assert needle in path.read_text()
 
     def test_bundle_order_after_widget_registry(self) -> None:
         """dz-richtext.js calls bridge.registerWidget — must load AFTER

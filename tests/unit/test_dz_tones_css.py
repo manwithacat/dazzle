@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CSS_DIR = _REPO_ROOT / "src/dazzle_ui/runtime/static/css"
 _TPL_DIR = _REPO_ROOT / "src/dazzle_ui/templates"
@@ -194,26 +196,29 @@ class TestTemplatesStillEmitDataAttributes:
     that dz-tones.css matches on. Defensive guard against accidentally
     dropping the attribute alongside the dynamic class."""
 
-    def test_metrics_emits_data_dz_tone(self) -> None:
-        text = (_TPL_DIR / "workspace/regions/metrics.html").read_text()
-        assert 'data-dz-tone="' in text
-
-    def test_status_list_emits_data_dz_state(self) -> None:
-        text = (_TPL_DIR / "workspace/regions/status_list.html").read_text()
-        assert 'data-dz-state="' in text
-
-    def test_notice_band_emits_data_dz_notice_tone(self) -> None:
-        text = (_TPL_DIR / "workspace/_content.html").read_text()
-        assert "data-dz-notice-tone" in text
+    @pytest.mark.parametrize(
+        ("template", "needle"),
+        [
+            ("workspace/regions/metrics.html", 'data-dz-tone="'),
+            ("workspace/regions/status_list.html", 'data-dz-state="'),
+            ("workspace/_content.html", "data-dz-notice-tone"),
+            ("workspace/regions/metrics.html", "data-dz-delta-tone"),
+        ],
+        ids=[
+            "test_metrics_emits_data_dz_tone",
+            "test_status_list_emits_data_dz_state",
+            "test_notice_band_emits_data_dz_notice_tone",
+            "test_metrics_delta_emits_data_dz_delta_tone",
+        ],
+    )
+    def test_emits_data_attribute(self, template: str, needle: str) -> None:
+        text = (_TPL_DIR / template).read_text()
+        assert needle in text
 
     def test_action_grid_emits_data_dz_tone_attrs(self) -> None:
         text = (_TPL_DIR / "workspace/regions/action_grid.html").read_text()
         assert 'data-dz-tone="' in text
         assert 'data-dz-tone-badge="' in text
-
-    def test_metrics_delta_emits_data_dz_delta_tone(self) -> None:
-        text = (_TPL_DIR / "workspace/regions/metrics.html").read_text()
-        assert "data-dz-delta-tone" in text
 
 
 class TestActionGridAndDeltaCssRulesPresent:

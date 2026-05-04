@@ -591,57 +591,42 @@ class TestBaseExternalAdapter:
         assert response.status_code == 200
         assert response.data == {"result": "success"}
 
-    def test_process_response_401(self) -> None:
-        """Test processing 401 response raises AuthenticationError."""
+    @pytest.mark.parametrize(
+        ("status_code", "headers", "body", "exc_type", "attr", "expected"),
+        [
+            (401, {}, b'{"message": "Unauthorized"}', AuthenticationError, "status_code", 401),
+            (403, {}, b'{"message": "Forbidden"}', AuthenticationError, "status_code", 403),
+            (
+                429,
+                {"Retry-After": "60"},
+                b'{"message": "Rate limited"}',
+                RateLimitError,
+                "retry_after",
+                60.0,
+            ),
+            (500, {}, b'{"message": "Internal error"}', ApiError, "status_code", 500),
+        ],
+        ids=[
+            "test_process_response_401",
+            "test_process_response_403",
+            "test_process_response_429",
+            "test_process_response_500",
+        ],
+    )
+    def test_process_response_error(
+        self,
+        status_code: int,
+        headers: dict,
+        body: bytes,
+        exc_type: type,
+        attr: str,
+        expected,
+    ) -> None:
         config = AdapterConfig(base_url="https://api.example.com")
         adapter = MockAdapter(config)
-
-        with pytest.raises(AuthenticationError) as exc:
-            adapter._process_response(
-                status_code=401,
-                headers={},
-                body=b'{"message": "Unauthorized"}',
-            )
-        assert exc.value.status_code == 401
-
-    def test_process_response_403(self) -> None:
-        """Test processing 403 response raises AuthenticationError."""
-        config = AdapterConfig(base_url="https://api.example.com")
-        adapter = MockAdapter(config)
-
-        with pytest.raises(AuthenticationError) as exc:
-            adapter._process_response(
-                status_code=403,
-                headers={},
-                body=b'{"message": "Forbidden"}',
-            )
-        assert exc.value.status_code == 403
-
-    def test_process_response_429(self) -> None:
-        """Test processing 429 response raises RateLimitError."""
-        config = AdapterConfig(base_url="https://api.example.com")
-        adapter = MockAdapter(config)
-
-        with pytest.raises(RateLimitError) as exc:
-            adapter._process_response(
-                status_code=429,
-                headers={"Retry-After": "60"},
-                body=b'{"message": "Rate limited"}',
-            )
-        assert exc.value.retry_after == 60.0
-
-    def test_process_response_500(self) -> None:
-        """Test processing 500 response raises ApiError."""
-        config = AdapterConfig(base_url="https://api.example.com")
-        adapter = MockAdapter(config)
-
-        with pytest.raises(ApiError) as exc:
-            adapter._process_response(
-                status_code=500,
-                headers={},
-                body=b'{"message": "Internal error"}',
-            )
-        assert exc.value.status_code == 500
+        with pytest.raises(exc_type) as exc:
+            adapter._process_response(status_code=status_code, headers=headers, body=body)
+        assert getattr(exc.value, attr) == expected
 
     def test_process_response_invalid_json(self) -> None:
         """Test processing response with invalid JSON."""

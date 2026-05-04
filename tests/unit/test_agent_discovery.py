@@ -171,32 +171,33 @@ class TestAutoPrefix:
         assert result == "entity:Task"
         store.get_entity.assert_not_called()
 
-    def test_empty_string(self) -> None:
+    @pytest.mark.parametrize(
+        ("input_name", "matching_id", "expected"),
+        [
+            ("", None, ""),
+            ("Task", "entity:Task", "entity:Task"),
+            ("task_list", "surface:task_list", "surface:task_list"),
+            ("unknown_thing", None, "unknown_thing"),
+        ],
+        ids=[
+            "test_empty_string",
+            "test_resolves_entity",
+            "test_resolves_surface",
+            "test_no_match_returns_original",
+        ],
+    )
+    def test_auto_prefix_cases(
+        self, input_name: str, matching_id: str | None, expected: str
+    ) -> None:
         store = MagicMock()
-        result = _auto_prefix(store, "", ("entity:", "surface:"))
-        assert result == ""
-
-    def test_resolves_entity(self) -> None:
-        store = MagicMock()
-        store.get_entity.side_effect = lambda x: (
-            SimpleNamespace(id=x) if x == "entity:Task" else None
-        )
-        result = _auto_prefix(store, "Task", ("entity:", "surface:"))
-        assert result == "entity:Task"
-
-    def test_resolves_surface(self) -> None:
-        store = MagicMock()
-        store.get_entity.side_effect = lambda x: (
-            SimpleNamespace(id=x) if x == "surface:task_list" else None
-        )
-        result = _auto_prefix(store, "task_list", ("entity:", "surface:"))
-        assert result == "surface:task_list"
-
-    def test_no_match_returns_original(self) -> None:
-        store = MagicMock()
-        store.get_entity.return_value = None
-        result = _auto_prefix(store, "unknown_thing", ("entity:", "surface:"))
-        assert result == "unknown_thing"
+        if matching_id is None:
+            store.get_entity.return_value = None
+        else:
+            store.get_entity.side_effect = lambda x, _mid=matching_id: (
+                SimpleNamespace(id=x) if x == _mid else None
+            )
+        result = _auto_prefix(store, input_name, ("entity:", "surface:"))
+        assert result == expected
 
 
 # =============================================================================

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.17] - 2026-05-04
+
+### Changed
+- **Distillation cycle 15** — sentinel cross-file batch (highest-leverage
+  Pass-3 target) collapsed clusters across 33 files. Touched five sentinel
+  test_agent_* files (data_integrity, deployment_state,
+  integration_dependency, operational_hygiene, performance_resource), plus
+  quality_gates and unit tests for adapters, agent_discovery, api_kb,
+  audit_visibility, auth_nav, bar_chart_bucketed_aggregate,
+  composition_capture, constraint_errors, db_graph, dz_richtext,
+  dz_tones_css, file_max_size, human_tasks, mapping_executor,
+  mobile_scroll_and_haptic, narrative_compiler, otp_store, process_coverage,
+  richtext_processor, search_routes, tenant_config_coercion,
+  ux_contracts_persona_picker, viewport_screenshot. 941 tests pass across
+  modified files. Suite total: 13,090 → 12,926 (164 fewer this cycle).
+  Cumulative cycles 1-15: 14,295 → 12,926 (1,369 tests removed). Need 927
+  more reductions for the < 12,000 target.
+
 ## [0.66.16] - 2026-05-04
 
 ### Fixed

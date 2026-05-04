@@ -103,27 +103,17 @@ class TestID01ApiWithoutAuth:
         assert findings[0].severity == Severity.HIGH
         assert "stripe" in findings[0].title
 
-    def test_passes_with_api_key_auth(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("stripe", auth_kind=AuthKind.API_KEY_HEADER)
-        findings = agent.api_without_auth(make_appspec(apis=[api]))
-        assert findings == []
-
-    def test_passes_with_oauth2(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("github", auth_kind=AuthKind.OAUTH2_PKCE)
-        findings = agent.api_without_auth(make_appspec(apis=[api]))
-        assert findings == []
-
-    def test_flags_multiple_unauthenticated_apis(self, agent: IntegrationDependencyAgent) -> None:
-        apis = [
-            _api("stripe", auth_kind=AuthKind.NONE),
-            _api("github", auth_kind=AuthKind.NONE),
-        ]
-        findings = agent.api_without_auth(make_appspec(apis=apis))
-        assert len(findings) == 2
+    @pytest.mark.parametrize(
+        "auth_kind",
+        [AuthKind.API_KEY_HEADER, AuthKind.OAUTH2_PKCE],
+        ids=["api_key", "oauth2"],
+    )
+    def test_passes_with_auth(self, agent: IntegrationDependencyAgent, auth_kind: AuthKind) -> None:
+        api = _api("stripe", auth_kind=auth_kind)
+        assert agent.api_without_auth(make_appspec(apis=[api])) == []
 
     def test_no_apis(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.api_without_auth(make_appspec())
-        assert findings == []
+        assert agent.api_without_auth(make_appspec()) == []
 
 
 # =============================================================================
@@ -140,14 +130,6 @@ class TestID02IntegrationUnknownApi:
         assert findings[0].severity == Severity.HIGH
         assert "stripe" in findings[0].title
 
-    def test_passes_when_api_exists(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("stripe")
-        integration = _integration("stripe_sync", api_refs=["stripe"])
-        findings = agent.integration_unknown_api(
-            make_appspec(apis=[api], integrations=[integration])
-        )
-        assert findings == []
-
     def test_flags_only_missing_refs(self, agent: IntegrationDependencyAgent) -> None:
         api = _api("stripe")
         integration = _integration("multi_sync", api_refs=["stripe", "paypal"])
@@ -157,14 +139,19 @@ class TestID02IntegrationUnknownApi:
         assert len(findings) == 1
         assert "paypal" in findings[0].title
 
-    def test_no_integrations(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.integration_unknown_api(make_appspec())
-        assert findings == []
+    def test_passes_when_api_exists(self, agent: IntegrationDependencyAgent) -> None:
+        api = _api("stripe")
+        integration = _integration("stripe_sync", api_refs=["stripe"])
+        assert (
+            agent.integration_unknown_api(make_appspec(apis=[api], integrations=[integration]))
+            == []
+        )
 
-    def test_empty_api_refs(self, agent: IntegrationDependencyAgent) -> None:
-        integration = _integration("empty_sync", api_refs=[])
-        findings = agent.integration_unknown_api(make_appspec(integrations=[integration]))
-        assert findings == []
+    def test_no_integrations_or_empty_refs(self, agent: IntegrationDependencyAgent) -> None:
+        # Covers both: spec with no integrations + integration with empty api_refs.
+        assert agent.integration_unknown_api(make_appspec()) == []
+        empty = _integration("empty_sync", api_refs=[])
+        assert agent.integration_unknown_api(make_appspec(integrations=[empty])) == []
 
 
 # =============================================================================
@@ -181,14 +168,6 @@ class TestID03IntegrationUnknownForeignModel:
         assert findings[0].severity == Severity.HIGH
         assert "StripeCustomer" in findings[0].title
 
-    def test_passes_when_foreign_model_exists(self, agent: IntegrationDependencyAgent) -> None:
-        fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
-        integration = _integration("stripe_sync", foreign_model_refs=["StripeCustomer"])
-        findings = agent.integration_unknown_foreign_model(
-            make_appspec(foreign_models=[fm], integrations=[integration])
-        )
-        assert findings == []
-
     def test_flags_only_missing_refs(self, agent: IntegrationDependencyAgent) -> None:
         fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
         integration = _integration(
@@ -201,14 +180,20 @@ class TestID03IntegrationUnknownForeignModel:
         assert len(findings) == 1
         assert "PaypalAccount" in findings[0].title
 
-    def test_no_integrations(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.integration_unknown_foreign_model(make_appspec())
-        assert findings == []
+    def test_passes_when_foreign_model_exists(self, agent: IntegrationDependencyAgent) -> None:
+        fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
+        integration = _integration("stripe_sync", foreign_model_refs=["StripeCustomer"])
+        assert (
+            agent.integration_unknown_foreign_model(
+                make_appspec(foreign_models=[fm], integrations=[integration])
+            )
+            == []
+        )
 
-    def test_empty_foreign_model_refs(self, agent: IntegrationDependencyAgent) -> None:
-        integration = _integration("empty_sync", foreign_model_refs=[])
-        findings = agent.integration_unknown_foreign_model(make_appspec(integrations=[integration]))
-        assert findings == []
+    def test_no_integrations_or_empty_refs(self, agent: IntegrationDependencyAgent) -> None:
+        assert agent.integration_unknown_foreign_model(make_appspec()) == []
+        empty = _integration("empty_sync", foreign_model_refs=[])
+        assert agent.integration_unknown_foreign_model(make_appspec(integrations=[empty])) == []
 
 
 # =============================================================================
@@ -229,20 +214,10 @@ class TestID04WebhookWithoutRetry:
         retry = MagicMock()
         retry.max_attempts = 3
         webhook = _webhook("order_notify", retry=retry)
-        findings = agent.webhook_without_retry(make_appspec(webhooks=[webhook]))
-        assert findings == []
-
-    def test_flags_multiple_webhooks_without_retry(self, agent: IntegrationDependencyAgent) -> None:
-        webhooks = [
-            _webhook("hook_a", retry=None),
-            _webhook("hook_b", retry=None),
-        ]
-        findings = agent.webhook_without_retry(make_appspec(webhooks=webhooks))
-        assert len(findings) == 2
+        assert agent.webhook_without_retry(make_appspec(webhooks=[webhook])) == []
 
     def test_no_webhooks(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.webhook_without_retry(make_appspec())
-        assert findings == []
+        assert agent.webhook_without_retry(make_appspec()) == []
 
 
 # =============================================================================
@@ -268,20 +243,18 @@ class TestID05HardcodedWebhookUrl:
             None,
         ],
         ids=[
-            "test_passes_with_config_reference",
-            "test_passes_with_config_no_quotes",
-            "test_skips_empty_url",
-            "test_skips_none_url",
+            "config_quoted",
+            "config_unquoted",
+            "empty",
+            "none",
         ],
     )
     def test_no_finding_for_url(self, agent: IntegrationDependencyAgent, url: str | None) -> None:
         webhook = _webhook("order_notify", url=url)
-        findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
-        assert findings == []
+        assert agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook])) == []
 
     def test_no_webhooks(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.hardcoded_webhook_url(make_appspec())
-        assert findings == []
+        assert agent.hardcoded_webhook_url(make_appspec()) == []
 
 
 # =============================================================================
@@ -300,20 +273,10 @@ class TestID06ForeignModelNoKeys:
 
     def test_passes_with_key_fields(self, agent: IntegrationDependencyAgent) -> None:
         fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
-        findings = agent.foreign_model_no_keys(make_appspec(foreign_models=[fm]))
-        assert findings == []
-
-    def test_flags_multiple_keyless_models(self, agent: IntegrationDependencyAgent) -> None:
-        fms = [
-            _foreign_model("StripeCustomer", key_fields=[]),
-            _foreign_model("PaypalAccount", key_fields=[]),
-        ]
-        findings = agent.foreign_model_no_keys(make_appspec(foreign_models=fms))
-        assert len(findings) == 2
+        assert agent.foreign_model_no_keys(make_appspec(foreign_models=[fm])) == []
 
     def test_no_foreign_models(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.foreign_model_no_keys(make_appspec())
-        assert findings == []
+        assert agent.foreign_model_no_keys(make_appspec()) == []
 
 
 # =============================================================================
@@ -336,26 +299,13 @@ class TestID07SyncWithoutMatchRules:
         rule = MagicMock()
         sync = _sync("sync_customers", match_rules=[rule])
         integration = _integration("stripe_sync", syncs=[sync])
-        findings = agent.sync_without_match_rules(make_appspec(integrations=[integration]))
-        assert findings == []
+        assert agent.sync_without_match_rules(make_appspec(integrations=[integration])) == []
 
-    def test_flags_multiple_syncs_without_rules(self, agent: IntegrationDependencyAgent) -> None:
-        syncs = [
-            _sync("sync_a", match_rules=[]),
-            _sync("sync_b", match_rules=[]),
-        ]
-        integration = _integration("data_sync", syncs=syncs)
-        findings = agent.sync_without_match_rules(make_appspec(integrations=[integration]))
-        assert len(findings) == 2
-
-    def test_no_syncs(self, agent: IntegrationDependencyAgent) -> None:
-        integration = _integration("stripe_sync", syncs=[])
-        findings = agent.sync_without_match_rules(make_appspec(integrations=[integration]))
-        assert findings == []
-
-    def test_no_integrations(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.sync_without_match_rules(make_appspec())
-        assert findings == []
+    def test_no_syncs_or_integrations(self, agent: IntegrationDependencyAgent) -> None:
+        # Empty syncs in an integration + no integrations at all both produce no findings.
+        empty = _integration("stripe_sync", syncs=[])
+        assert agent.sync_without_match_rules(make_appspec(integrations=[empty])) == []
+        assert agent.sync_without_match_rules(make_appspec()) == []
 
 
 # =============================================================================
@@ -376,38 +326,21 @@ class TestID08IntegrationServiceNoGuarantees:
 
     def test_passes_with_guarantees(self, agent: IntegrationDependencyAgent) -> None:
         svc = _domain_service("sync_data", guarantees=["Idempotent", "Timeout: 30s"])
-        findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
-        assert findings == []
+        assert agent.integration_service_no_guarantees(make_appspec(domain_services=[svc])) == []
 
     @pytest.mark.parametrize(
         "kind",
-        [
-            DomainServiceKind.VALIDATION,
-            DomainServiceKind.DOMAIN_LOGIC,
-        ],
-        ids=[
-            "test_ignores_non_integration_kind",
-            "test_ignores_domain_logic_kind",
-        ],
+        [DomainServiceKind.VALIDATION, DomainServiceKind.DOMAIN_LOGIC],
+        ids=["validation", "domain_logic"],
     )
     def test_ignores_non_integration_kinds(
         self, agent: IntegrationDependencyAgent, kind: DomainServiceKind
     ) -> None:
         svc = _domain_service("svc", kind=kind, guarantees=[])
-        findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
-        assert findings == []
-
-    def test_flags_multiple_services(self, agent: IntegrationDependencyAgent) -> None:
-        svcs = [
-            _domain_service("sync_a", guarantees=[]),
-            _domain_service("sync_b", guarantees=[]),
-        ]
-        findings = agent.integration_service_no_guarantees(make_appspec(domain_services=svcs))
-        assert len(findings) == 2
+        assert agent.integration_service_no_guarantees(make_appspec(domain_services=[svc])) == []
 
     def test_no_domain_services(self, agent: IntegrationDependencyAgent) -> None:
-        findings = agent.integration_service_no_guarantees(make_appspec())
-        assert findings == []
+        assert agent.integration_service_no_guarantees(make_appspec()) == []
 
 
 # =============================================================================
@@ -416,17 +349,12 @@ class TestID08IntegrationServiceNoGuarantees:
 
 
 class TestIntegrationDependencyAgentRun:
-    def test_agent_id(self, agent: IntegrationDependencyAgent) -> None:
+    def test_metadata_and_clean_run(self, agent: IntegrationDependencyAgent) -> None:
+        # Combined: agent_id + heuristic count + ids + clean-spec produces no findings.
         assert agent.agent_id == AgentId.ID
-
-    def test_has_8_heuristics(self, agent: IntegrationDependencyAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
-
-    def test_heuristic_ids(self, agent: IntegrationDependencyAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"ID-0{i}" for i in range(1, 9)]
-
-    def test_clean_appspec_no_findings(self, agent: IntegrationDependencyAgent) -> None:
+        heuristics = agent.get_heuristics()
+        assert len(heuristics) == 8
+        assert [m.heuristic_id for m, _ in heuristics] == [f"ID-0{i}" for i in range(1, 9)]
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
         result = agent.run(make_appspec([entity]))
         assert result.errors == []
@@ -435,12 +363,17 @@ class TestIntegrationDependencyAgentRun:
     def test_run_collects_findings_from_multiple_heuristics(
         self, agent: IntegrationDependencyAgent
     ) -> None:
-        api = _api("stripe", auth_kind=AuthKind.NONE)
+        # Also exercises iteration: 2 unauth APIs + 1 webhook + 1 keyless FM
+        # produces findings from ID-01 (×2), ID-04, ID-06.
+        apis = [
+            _api("stripe", auth_kind=AuthKind.NONE),
+            _api("github", auth_kind=AuthKind.NONE),
+        ]
         webhook = _webhook("order_notify", retry=None)
         fm = _foreign_model("StripeCustomer", key_fields=[])
-        result = agent.run(make_appspec(apis=[api], webhooks=[webhook], foreign_models=[fm]))
+        result = agent.run(make_appspec(apis=apis, webhooks=[webhook], foreign_models=[fm]))
         assert result.errors == []
-        heuristic_ids = {f.heuristic_id for f in result.findings}
-        assert "ID-01" in heuristic_ids
+        heuristic_ids = [f.heuristic_id for f in result.findings]
+        assert heuristic_ids.count("ID-01") == 2  # iteration coverage
         assert "ID-04" in heuristic_ids
         assert "ID-06" in heuristic_ids

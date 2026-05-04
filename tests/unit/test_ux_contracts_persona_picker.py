@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import pytest
+
 from dazzle.cli.ux import _pick_workspace_check_persona
 
 
@@ -41,68 +43,70 @@ class _AppSpec:
     personas: list[_Persona]
 
 
-def test_explicit_access_block_wins() -> None:
-    """If the workspace has `access: persona(X)`, use X even when
-    another persona has default_workspace pointing there."""
-    spec = _AppSpec(
-        workspaces=[_Workspace(name="queue", access=_Access(allow_personas=["manager"]))],
-        personas=[
-            _Persona(id="admin"),
-            _Persona(id="manager"),
-            _Persona(id="agent", default_workspace="queue"),
-        ],
-    )
-    assert _pick_workspace_check_persona(spec, "queue") == "manager"
+_W_QUEUE_MANAGER = _Workspace(name="queue", access=_Access(allow_personas=["manager"]))
+_W_QUEUE_OPEN = _Workspace(name="queue", access=None)
+_W_ORPHAN = _Workspace(name="orphan", access=None)
+_W_QUEUE_EMPTY_ACCESS = _Workspace(name="queue", access=_Access(allow_personas=[]))
+_W_X = _Workspace(name="x", access=None)
 
 
-def test_default_workspace_reverse_lookup() -> None:
-    """No access block — use the persona whose default_workspace
-    points here. This closes the support_tickets false-positive
-    where admin was checked against agent-owned workspaces."""
-    spec = _AppSpec(
-        workspaces=[_Workspace(name="queue", access=None)],
-        personas=[
-            _Persona(id="admin", default_workspace="_platform_admin"),
-            _Persona(id="customer", default_workspace="my_tickets"),
-            _Persona(id="agent", default_workspace="queue"),
-            _Persona(id="manager", default_workspace="dashboard"),
-        ],
-    )
-    assert _pick_workspace_check_persona(spec, "queue") == "agent"
-
-
-def test_fallback_to_first_persona_when_nothing_matches() -> None:
-    """No access block, no default_workspace match — fall back to
-    the first declared persona (admin, by convention)."""
-    spec = _AppSpec(
-        workspaces=[_Workspace(name="orphan", access=None)],
-        personas=[
-            _Persona(id="admin"),
-            _Persona(id="customer", default_workspace="somewhere_else"),
-        ],
-    )
-    assert _pick_workspace_check_persona(spec, "orphan") == "admin"
-
-
-def test_empty_access_allow_personas_falls_through() -> None:
-    """An `access:` block with an empty allow_personas list is
-    equivalent to no access block — fall through to the
-    default_workspace reverse-lookup rather than picking a
-    non-existent persona."""
-    spec = _AppSpec(
-        workspaces=[_Workspace(name="queue", access=_Access(allow_personas=[]))],
-        personas=[
-            _Persona(id="admin"),
-            _Persona(id="agent", default_workspace="queue"),
-        ],
-    )
-    assert _pick_workspace_check_persona(spec, "queue") == "agent"
-
-
-def test_no_personas_at_all_defaults_to_admin_literal() -> None:
-    """Pathological case: a project with zero personas. Return the
-    literal 'admin' string so the downstream code has something to
-    try to authenticate with (will fail loudly rather than crash
-    on empty list access)."""
-    spec = _AppSpec(workspaces=[_Workspace(name="x", access=None)], personas=[])
-    assert _pick_workspace_check_persona(spec, "x") == "admin"
+@pytest.mark.parametrize(
+    ("workspaces", "personas", "target", "expected"),
+    [
+        (
+            [_W_QUEUE_MANAGER],
+            [
+                _Persona(id="admin"),
+                _Persona(id="manager"),
+                _Persona(id="agent", default_workspace="queue"),
+            ],
+            "queue",
+            "manager",
+        ),
+        (
+            [_W_QUEUE_OPEN],
+            [
+                _Persona(id="admin", default_workspace="_platform_admin"),
+                _Persona(id="customer", default_workspace="my_tickets"),
+                _Persona(id="agent", default_workspace="queue"),
+                _Persona(id="manager", default_workspace="dashboard"),
+            ],
+            "queue",
+            "agent",
+        ),
+        (
+            [_W_ORPHAN],
+            [
+                _Persona(id="admin"),
+                _Persona(id="customer", default_workspace="somewhere_else"),
+            ],
+            "orphan",
+            "admin",
+        ),
+        (
+            [_W_QUEUE_EMPTY_ACCESS],
+            [
+                _Persona(id="admin"),
+                _Persona(id="agent", default_workspace="queue"),
+            ],
+            "queue",
+            "agent",
+        ),
+        ([_W_X], [], "x", "admin"),
+    ],
+    ids=[
+        "test_explicit_access_block_wins",
+        "test_default_workspace_reverse_lookup",
+        "test_fallback_to_first_persona_when_nothing_matches",
+        "test_empty_access_allow_personas_falls_through",
+        "test_no_personas_at_all_defaults_to_admin_literal",
+    ],
+)
+def test_pick_workspace_check_persona(
+    workspaces: list[_Workspace],
+    personas: list[_Persona],
+    target: str,
+    expected: str,
+) -> None:
+    spec = _AppSpec(workspaces=workspaces, personas=personas)
+    assert _pick_workspace_check_persona(spec, target) == expected

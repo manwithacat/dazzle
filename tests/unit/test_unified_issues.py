@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 # Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
 # without the mcp package being installed.
 for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
@@ -15,37 +17,28 @@ for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp
 class TestUnifiedIssues:
     """Tests for the unified issues handler."""
 
-    def test_extract_issue_key_with_entity_and_field(self) -> None:
-        """Test extracting entity.field key from lint message."""
+    @pytest.mark.parametrize(
+        ("msg", "extractor"),
+        [
+            (
+                "Entity 'Order' field 'amount' should have currency specified",
+                lambda k: k == "Order.amount",
+            ),
+            ("Entity 'Customer' has no primary key defined", lambda k: k == "Customer"),
+            ("Missing required configuration", lambda k: k == "Missing required configuration"),
+            ("A" * 100, lambda k: len(k) == 80),
+        ],
+        ids=[
+            "test_extract_issue_key_with_entity_and_field",
+            "test_extract_issue_key_with_entity_only",
+            "test_extract_issue_key_fallback",
+            "test_extract_issue_key_truncates_long_messages",
+        ],
+    )
+    def test_extract_issue_key(self, msg: str, extractor) -> None:
         from dazzle.mcp.server.handlers.dsl import _extract_issue_key
 
-        msg = "Entity 'Order' field 'amount' should have currency specified"
-        key = _extract_issue_key(msg)
-        assert key == "Order.amount"
-
-    def test_extract_issue_key_with_entity_only(self) -> None:
-        """Test extracting entity key when no field is mentioned."""
-        from dazzle.mcp.server.handlers.dsl import _extract_issue_key
-
-        msg = "Entity 'Customer' has no primary key defined"
-        key = _extract_issue_key(msg)
-        assert key == "Customer"
-
-    def test_extract_issue_key_fallback(self) -> None:
-        """Test fallback to message when no entity pattern found."""
-        from dazzle.mcp.server.handlers.dsl import _extract_issue_key
-
-        msg = "Missing required configuration"
-        key = _extract_issue_key(msg)
-        assert key == msg
-
-    def test_extract_issue_key_truncates_long_messages(self) -> None:
-        """Test that long messages are truncated as keys."""
-        from dazzle.mcp.server.handlers.dsl import _extract_issue_key
-
-        msg = "A" * 100  # 100 character message
-        key = _extract_issue_key(msg)
-        assert len(key) == 80
+        assert extractor(_extract_issue_key(msg))
 
     def test_unified_issues_returns_valid_json(self) -> None:
         """Test that unified issues returns valid JSON structure."""

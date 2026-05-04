@@ -30,23 +30,7 @@ SPRING_LADDER = [
     "--ease-spring-4",
     "--ease-spring-5",
 ]
-
-
-@pytest.mark.parametrize("name", SPRING_LADDER)
-def test_spring_ladder_present(css: str, name: str) -> None:
-    """The full spring-1..5 ladder is required so components can pick the
-    smallest bounce that conveys the affordance (issue #960 layer 1)."""
-    assert f"{name}:" in css, f"missing token {name}"
-
-
 ELASTIC_LADDER = ["--ease-elastic-1", "--ease-elastic-2", "--ease-elastic-3"]
-
-
-@pytest.mark.parametrize("name", ELASTIC_LADDER)
-def test_elastic_ladder_present(css: str, name: str) -> None:
-    assert f"{name}:" in css, f"missing token {name}"
-
-
 ANIMATION_TOKENS = [
     "--animation-fade-in",
     "--animation-fade-out",
@@ -63,16 +47,6 @@ ANIMATION_TOKENS = [
     "--animation-shake-x",
     "--animation-pulse",
 ]
-
-
-@pytest.mark.parametrize("name", ANIMATION_TOKENS)
-def test_animation_token_present(css: str, name: str) -> None:
-    """Each named animation shorthand must declare a value the keyframe
-    block below resolves. Missing tokens silently fall back to no
-    animation in templates that consume them."""
-    assert f"{name}:" in css, f"missing token {name}"
-
-
 KEYFRAMES = [
     "dz-fade-in",
     "dz-fade-out",
@@ -91,12 +65,22 @@ KEYFRAMES = [
 ]
 
 
-@pytest.mark.parametrize("name", KEYFRAMES)
-def test_keyframe_definition_present(css: str, name: str) -> None:
-    """Every animation token references a `dz-` prefixed keyframe; the
-    keyframe block must define each one. The prefix avoids collisions
-    with project-defined keyframes in customer apps."""
-    assert f"@keyframes {name}" in css, f"missing keyframe {name}"
+@pytest.mark.parametrize(
+    ("needle", "kind"),
+    (
+        [(name, "token") for name in SPRING_LADDER]
+        + [(name, "token") for name in ELASTIC_LADDER]
+        + [(name, "token") for name in ANIMATION_TOKENS]
+        + [(name, "keyframe") for name in KEYFRAMES]
+    ),
+)
+def test_token_or_keyframe_present(css: str, needle: str, kind: str) -> None:
+    """Spring/elastic ladders, animation shorthands, and dz- keyframes must
+    all be present in tokens.css (issue #960 layer 1)."""
+    if kind == "keyframe":
+        assert f"@keyframes {needle}" in css, f"missing keyframe {needle}"
+    else:
+        assert f"{needle}:" in css, f"missing token {needle}"
 
 
 def test_animation_tokens_reference_existing_keyframes(css: str) -> None:

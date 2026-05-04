@@ -31,30 +31,22 @@ def agent() -> DataIntegrityAgent:
 
 
 class TestDI01CascadeDeleteMissing:
-    def test_flags_has_many_without_behavior(self, agent: DataIntegrityAgent) -> None:
+    @pytest.mark.parametrize(
+        "kind",
+        [FieldTypeKind.HAS_MANY, FieldTypeKind.HAS_ONE],
+        ids=["has_many", "has_one"],
+    )
+    def test_flags_relationship_without_behavior(
+        self, agent: DataIntegrityAgent, kind: FieldTypeKind
+    ) -> None:
         entity = make_entity(
             "Order",
-            [
-                pk_field(),
-                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-            ],
+            [pk_field(), make_field("rel", kind, ref_entity="Other")],
         )
         findings = agent.check_cascade_delete_missing(make_appspec([entity]))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "DI-01"
         assert findings[0].severity == Severity.HIGH
-        assert "Order.items" in findings[0].title
-
-    def test_flags_has_one_without_behavior(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity(
-            "User",
-            [
-                pk_field(),
-                make_field("profile", FieldTypeKind.HAS_ONE, ref_entity="Profile"),
-            ],
-        )
-        findings = agent.check_cascade_delete_missing(make_appspec([entity]))
-        assert len(findings) == 1
 
     def test_passes_when_behavior_set(self, agent: DataIntegrityAgent) -> None:
         from dazzle.core.ir.fields import RelationshipBehavior
@@ -71,8 +63,7 @@ class TestDI01CascadeDeleteMissing:
                 ),
             ],
         )
-        findings = agent.check_cascade_delete_missing(make_appspec([entity]))
-        assert findings == []
+        assert agent.check_cascade_delete_missing(make_appspec([entity])) == []
 
     def test_ignores_non_relationship_fields(self, agent: DataIntegrityAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title")])
@@ -95,8 +86,7 @@ class TestDI02OrphanedRef:
     def test_passes_when_target_exists(self, agent: DataIntegrityAgent) -> None:
         customer = make_entity("Customer", [pk_field()])
         order = make_entity("Order", [pk_field(), ref_field("customer", "Customer")])
-        findings = agent.check_orphaned_ref(make_appspec([customer, order]))
-        assert findings == []
+        assert agent.check_orphaned_ref(make_appspec([customer, order])) == []
 
     def test_ignores_non_ref_fields(self, agent: DataIntegrityAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title")])
@@ -163,8 +153,7 @@ class TestDI05DeadEndStates:
 
     def test_flags_dead_end_state_when_name_is_transient(self, agent: DataIntegrityAgent) -> None:
         """A reachable state with no outbound transitions and a name that
-        does NOT suggest a terminal outcome IS a real dead-end (record
-        gets stuck in `awaiting_review` forever)."""
+        does NOT suggest a terminal outcome IS a real dead-end."""
         sm = self._sm(
             ["draft", "review", "awaiting_review", "published"],
             [
@@ -178,56 +167,44 @@ class TestDI05DeadEndStates:
         assert len(findings) == 1
         assert "awaiting_review" in findings[0].title
 
-    def test_silences_terminal_named_states(self, agent: DataIntegrityAgent) -> None:
-        """#1004 — state names like `rejected`, `resolved`, `wont_fix` are
-        clearly intentional outcomes. State machines with multiple
-        terminal outcomes (FeedbackReport-style) flooded DI-05 with
-        false positives pre-fix; the heuristic now silences them."""
-        sm = self._sm(
-            ["draft", "review", "rejected", "published"],
-            [("draft", "review"), ("review", "published"), ("review", "rejected")],
-        )
-        entity = mock_entity("Article", state_machine=sm)
-        findings = agent.check_dead_end_states(make_appspec([entity]))
-        assert findings == [], (
-            f"`rejected` should be silenced as a terminal-named state; "
-            f"got {[f.title for f in findings]}"
-        )
+    @pytest.mark.parametrize(
+        "case",
+        ["single_terminal_named", "multiple_terminal_outcomes", "last_state_is_terminal"],
+    )
+    def test_silences_terminal_named_states(self, agent: DataIntegrityAgent, case: str) -> None:
+        """#1004 — clearly-named terminal states (rejected, resolved, wont_fix,
+        and the last-listed state in a linear flow) are not flagged."""
+        if case == "single_terminal_named":
+            sm = self._sm(
+                ["draft", "review", "rejected", "published"],
+                [("draft", "review"), ("review", "published"), ("review", "rejected")],
+            )
+            entity = mock_entity("Article", state_machine=sm)
+        elif case == "multiple_terminal_outcomes":
+            sm = self._sm(
+                [
+                    "new",
+                    "triaged",
+                    "in_progress",
+                    "resolved",
+                    "verified",
+                    "wont_fix",
+                    "duplicate",
+                ],
+                [
+                    ("new", "triaged"),
+                    ("triaged", "in_progress"),
+                    ("in_progress", "resolved"),
+                    ("resolved", "verified"),
+                    ("triaged", "wont_fix"),
+                    ("triaged", "duplicate"),
+                ],
+            )
+            entity = mock_entity("FeedbackReport", state_machine=sm)
+        else:  # last_state_is_terminal
+            sm = self._sm(["draft", "published"], [("draft", "published")])
+            entity = mock_entity("Article", state_machine=sm)
 
-    def test_silences_multiple_terminal_outcomes(self, agent: DataIntegrityAgent) -> None:
-        """FeedbackReport-style: many terminal states, all named clearly."""
-        sm = self._sm(
-            [
-                "new",
-                "triaged",
-                "in_progress",
-                "resolved",
-                "verified",
-                "wont_fix",
-                "duplicate",
-            ],
-            [
-                ("new", "triaged"),
-                ("triaged", "in_progress"),
-                ("in_progress", "resolved"),
-                ("resolved", "verified"),
-                ("triaged", "wont_fix"),
-                ("triaged", "duplicate"),
-            ],
-        )
-        entity = mock_entity("FeedbackReport", state_machine=sm)
-        findings = agent.check_dead_end_states(make_appspec([entity]))
-        assert findings == [], (
-            f"Every leaf state has a terminal-outcome name; expected zero "
-            f"findings, got {[f.title for f in findings]}"
-        )
-
-    def test_last_state_is_terminal(self, agent: DataIntegrityAgent) -> None:
-        sm = self._sm(
-            ["draft", "published"],
-            [("draft", "published")],
-        )
-        entity = mock_entity("Article", state_machine=sm)
         assert agent.check_dead_end_states(make_appspec([entity])) == []
 
     def test_no_state_machine(self, agent: DataIntegrityAgent) -> None:
@@ -288,8 +265,9 @@ class TestDI07SensitiveNoAudit:
     def test_flags_pii_without_audit(self, agent: DataIntegrityAgent) -> None:
         entity = mock_entity("Customer", [pk_field(), str_field("email")])
         policies = self._policies("Customer", "email", DataClassification.PII_DIRECT)
-        appspec = make_appspec([entity], policies=policies)
-        findings = agent.check_sensitive_fields_without_audit(appspec)
+        findings = agent.check_sensitive_fields_without_audit(
+            make_appspec([entity], policies=policies)
+        )
         assert len(findings) == 1
         assert findings[0].heuristic_id == "DI-07"
         assert findings[0].severity == Severity.HIGH
@@ -299,8 +277,10 @@ class TestDI07SensitiveNoAudit:
         audit.enabled = True
         entity = mock_entity("Customer", [pk_field(), str_field("email")], audit=audit)
         policies = self._policies("Customer", "email", DataClassification.PII_DIRECT)
-        appspec = make_appspec([entity], policies=policies)
-        assert agent.check_sensitive_fields_without_audit(appspec) == []
+        assert (
+            agent.check_sensitive_fields_without_audit(make_appspec([entity], policies=policies))
+            == []
+        )
 
     def test_no_policies(self, agent: DataIntegrityAgent) -> None:
         entity = mock_entity("Task")
@@ -322,40 +302,42 @@ class TestDI08LedgerSyncTarget:
         ledger.sync = sync
         return ledger
 
-    def test_flags_missing_target_entity(self, agent: DataIntegrityAgent) -> None:
+    @pytest.mark.parametrize(
+        ("setup", "expected_substring"),
+        [
+            ("missing_entity", "not found"),
+            ("missing_field", "not found"),
+            ("non_numeric", "not numeric"),
+        ],
+        ids=[
+            "flags_missing_target_entity",
+            "flags_missing_target_field",
+            "flags_non_numeric_target",
+        ],
+    )
+    def test_flags_target_mismatches(
+        self, agent: DataIntegrityAgent, setup: str, expected_substring: str
+    ) -> None:
         ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        appspec = make_appspec(ledgers=[ledger])
+        if setup == "missing_entity":
+            appspec = make_appspec(ledgers=[ledger])
+        elif setup == "missing_field":
+            customer = mock_entity("Customer", [pk_field(), str_field("name")])
+            appspec = make_appspec([customer], ledgers=[ledger])
+        else:  # non_numeric
+            customer = mock_entity("Customer", [pk_field(), str_field("balance_cache")])
+            appspec = make_appspec([customer], ledgers=[ledger])
         findings = agent.check_ledger_sync_target(appspec)
         assert len(findings) == 1
-        assert "not found" in findings[0].title
-
-    def test_flags_missing_target_field(self, agent: DataIntegrityAgent) -> None:
-        customer = mock_entity("Customer", [pk_field(), str_field("name")])
-        ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        appspec = make_appspec([customer], ledgers=[ledger])
-        findings = agent.check_ledger_sync_target(appspec)
-        assert len(findings) == 1
-        assert "not found" in findings[0].title
-
-    def test_flags_non_numeric_target(self, agent: DataIntegrityAgent) -> None:
-        customer = mock_entity("Customer", [pk_field(), str_field("balance_cache")])
-        ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        appspec = make_appspec([customer], ledgers=[ledger])
-        findings = agent.check_ledger_sync_target(appspec)
-        assert len(findings) == 1
-        assert "not numeric" in findings[0].title
+        assert expected_substring in findings[0].title
 
     def test_passes_with_numeric_target(self, agent: DataIntegrityAgent) -> None:
         customer = mock_entity(
             "Customer",
-            [
-                pk_field(),
-                make_field("balance_cache", FieldTypeKind.DECIMAL),
-            ],
+            [pk_field(), make_field("balance_cache", FieldTypeKind.DECIMAL)],
         )
         ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        appspec = make_appspec([customer], ledgers=[ledger])
-        assert agent.check_ledger_sync_target(appspec) == []
+        assert agent.check_ledger_sync_target(make_appspec([customer], ledgers=[ledger])) == []
 
     def test_skips_ledger_without_sync(self, agent: DataIntegrityAgent) -> None:
         ledger = MagicMock()

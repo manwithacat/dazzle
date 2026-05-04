@@ -136,23 +136,29 @@ class TestBucketKeyLabel:
         assert _bucket_key_label("9") == ("9", "9")
         assert _bucket_key_label(42) == ("42", "42")
 
-    def test_fk_dict_uses_id_for_key_and_display_for_label(self) -> None:
-        v = {"id": "uuid-1", "code": "AO1", "label": "Knowledge"}
-        # display_name → name → title → label → code probe order.
-        # `label` wins over `code` because it appears first in the probe list.
-        assert _bucket_key_label(v) == ("uuid-1", "Knowledge")
-
-    def test_fk_dict_falls_back_to_code_when_no_label(self) -> None:
-        v = {"id": "uuid-2", "code": "AO2"}
-        assert _bucket_key_label(v) == ("uuid-2", "AO2")
-
-    def test_fk_dict_uses_id_as_label_when_no_display_field(self) -> None:
-        v = {"id": "uuid-3", "irrelevant_field": "x"}
-        assert _bucket_key_label(v) == ("uuid-3", "uuid-3")
-
-    def test_fk_dict_prefers_display_name(self) -> None:
-        v = {"id": "uuid-4", "display_name": "Alice", "name": "alice123", "code": "A"}
-        assert _bucket_key_label(v) == ("uuid-4", "Alice")
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (
+                {"id": "uuid-1", "code": "AO1", "label": "Knowledge"},
+                ("uuid-1", "Knowledge"),
+            ),
+            ({"id": "uuid-2", "code": "AO2"}, ("uuid-2", "AO2")),
+            ({"id": "uuid-3", "irrelevant_field": "x"}, ("uuid-3", "uuid-3")),
+            (
+                {"id": "uuid-4", "display_name": "Alice", "name": "alice123", "code": "A"},
+                ("uuid-4", "Alice"),
+            ),
+        ],
+        ids=[
+            "test_fk_dict_uses_id_for_key_and_display_for_label",
+            "test_fk_dict_falls_back_to_code_when_no_label",
+            "test_fk_dict_uses_id_as_label_when_no_display_field",
+            "test_fk_dict_prefers_display_name",
+        ],
+    )
+    def test_fk_dict_label(self, value: dict, expected: tuple) -> None:
+        assert _bucket_key_label(value) == expected
 
 
 class TestBucketedAggregatesWithFK:

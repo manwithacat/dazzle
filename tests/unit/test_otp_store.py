@@ -516,26 +516,38 @@ class TestRecoveryCodeStoreVerifyCode:
 class TestRecoveryCodeStoreRemainingCount:
     """Tests for RecoveryCodeStore.remaining_count()."""
 
-    def test_returns_correct_count(self, recovery_store: RecoveryCodeStore, user_id: UUID) -> None:
-        codes = generate_recovery_codes(count=8)
+    @pytest.mark.parametrize(
+        ("count", "uses", "use_other_user", "expected"),
+        [
+            (8, 0, False, 8),
+            (8, 1, False, 7),
+            (0, 0, True, 0),
+            (3, 3, False, 0),
+        ],
+        ids=[
+            "test_returns_correct_count",
+            "test_decrements_after_use",
+            "test_zero_for_unknown_user",
+            "test_zero_after_all_used",
+        ],
+    )
+    def test_remaining_count(
+        self,
+        recovery_store: RecoveryCodeStore,
+        user_id: UUID,
+        count: int,
+        uses: int,
+        use_other_user: bool,
+        expected: int,
+    ) -> None:
+        if use_other_user:
+            assert recovery_store.remaining_count(uuid4()) == expected
+            return
+        codes = generate_recovery_codes(count=count)
         recovery_store.store_codes(user_id, codes)
-        assert recovery_store.remaining_count(user_id) == 8
-
-    def test_decrements_after_use(self, recovery_store: RecoveryCodeStore, user_id: UUID) -> None:
-        codes = generate_recovery_codes(count=8)
-        recovery_store.store_codes(user_id, codes)
-        recovery_store.verify_code(user_id, codes[0])
-        assert recovery_store.remaining_count(user_id) == 7
-
-    def test_zero_for_unknown_user(self, recovery_store: RecoveryCodeStore) -> None:
-        assert recovery_store.remaining_count(uuid4()) == 0
-
-    def test_zero_after_all_used(self, recovery_store: RecoveryCodeStore, user_id: UUID) -> None:
-        codes = generate_recovery_codes(count=3)
-        recovery_store.store_codes(user_id, codes)
-        for code in codes:
-            recovery_store.verify_code(user_id, code)
-        assert recovery_store.remaining_count(user_id) == 0
+        for i in range(uses):
+            recovery_store.verify_code(user_id, codes[i])
+        assert recovery_store.remaining_count(user_id) == expected
 
 
 class TestRecoveryCodeHashNormalization:
