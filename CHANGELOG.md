@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.9] - 2026-05-04
+
+### Fixed
+- **`dazzle conformance run` flooded with 131 PytestUnknownMarkWarnings.**
+  Caught by the QA-tools sweep. The auto-generated test files emit
+  per-CRUD-op (`@pytest.mark.crud`, `read`, `update`, `delete`,
+  `list`), per-surface-mode (`view`, `edit`), per-validation
+  (`required`, `format`, `valid`, `invalid`), per-tier (`tier2`,
+  `playwright`), per-entity (`task`, `user`, `device`, etc.) and
+  per-persona (`engineer`, `manager`, etc.) marks — but only the
+  framework-internal marks were registered in `pyproject.toml`.
+
+  Fix: register all 22 static categorical marks (CRUD/surface/
+  validation/tier — these are bounded and meaningful for
+  selection). Filter `PytestUnknownMarkWarning` for the dynamic
+  per-entity/per-persona marks, which are unbounded by definition.
+
+  Result: `dazzle conformance run` output is now clean (was 131
+  warnings per invocation).
+
+### Agent Guidance
+- When adding a new auto-generated mark in the `dazzle test
+  dsl-generate` / `tier2-generate` codepath: if it's a static
+  categorical (CRUD op, surface mode, validation kind, tier),
+  register it in `pyproject.toml [tool.pytest.ini_options].markers`.
+  Per-entity / per-persona marks are dynamic — leave them to the
+  `PytestUnknownMarkWarning` filter.
+
 ## [0.65.8] - 2026-05-04
 
 ### Fixed

@@ -1,30 +1,51 @@
 {
   "version": "2.0",
-  "dsl_hash": "f41b0b2890c9f039",
-  "generated_at": "2026-01-02T02:38:23.280508",
+  "dsl_hash": "532905f8a26cbe99",
+  "generated_at": "2026-05-04T15:27:55.972432",
   "project_name": "support_tickets",
   "coverage": {
     "entities": [
+      "AuditEntry",
       "Comment",
+      "DeployHistory",
+      "FeedbackReport",
+      "JobRun",
+      "SystemHealth",
+      "SystemMetric",
       "Ticket",
       "User"
     ],
-    "entities_total": 3,
+    "entities_total": 9,
     "state_machines": [
+      "FeedbackReport",
       "Ticket"
     ],
-    "state_machines_total": 1,
-    "personas": [],
-    "personas_total": 0,
+    "state_machines_total": 2,
+    "personas": [
+      "admin",
+      "agent",
+      "customer",
+      "manager"
+    ],
+    "personas_total": 4,
     "workspaces": [
+      "_platform_admin",
       "agent_dashboard",
+      "my_tickets",
       "ticket_queue"
     ],
-    "workspaces_total": 2,
+    "workspaces_total": 4,
     "events": [],
     "events_total": 0,
     "processes": [],
-    "processes_total": 0
+    "processes_total": 0,
+    "auth_personas": [
+      "admin",
+      "agent",
+      "customer",
+      "manager"
+    ],
+    "auth_personas_total": 4
   },
   "designs": [
     {
@@ -39,7 +60,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_7bbd0893@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid User"
@@ -68,7 +89,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280315"
+      "created_at": "2026-05-04T15:27:55.971868"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -82,7 +103,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_d783b4c9@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -116,7 +137,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280319"
+      "created_at": "2026-05-04T15:27:55.971883"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -156,7 +177,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280323"
+      "created_at": "2026-05-04T15:27:55.971887"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -170,7 +191,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_6dbdd391@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -179,7 +200,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_6dbdd391@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -208,7 +229,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280334"
+      "created_at": "2026-05-04T15:27:55.971899"
     },
     {
       "test_id": "CRUD_TICKET_CREATE",
@@ -222,11 +243,11 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_293573e0@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
-          "rationale": "Create parent User for ref field 'created_by'"
+          "rationale": "Create parent User"
         },
         {
           "action": "create",
@@ -234,6 +255,7 @@
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
             "created_by": "$ref:parent_user.id"
           },
           "rationale": "Create valid Support Ticket"
@@ -263,7 +285,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280349"
+      "created_at": "2026-05-04T15:27:55.971939"
     },
     {
       "test_id": "CRUD_TICKET_READ",
@@ -277,11 +299,11 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_293573e0@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
-          "rationale": "Create parent User for ref field 'created_by'"
+          "rationale": "Create parent User"
         },
         {
           "action": "create",
@@ -289,6 +311,7 @@
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
             "created_by": "$ref:parent_user.id"
           },
           "rationale": "Seed test data"
@@ -323,7 +346,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280351"
+      "created_at": "2026-05-04T15:27:55.971952"
     },
     {
       "test_id": "VAL_TICKET_REQUIRED",
@@ -363,7 +386,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280355"
+      "created_at": "2026-05-04T15:27:55.971956"
     },
     {
       "test_id": "VAL_TICKET_TICKET_NUMBER_UNIQUE",
@@ -375,10 +398,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_293573e0@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id"
           },
           "rationale": "Create first entity"
         },
@@ -387,7 +422,9 @@
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id"
           },
           "rationale": "Attempt duplicate ticket_number"
         },
@@ -404,7 +441,8 @@
         "Validate ticket_number uniqueness for Support Ticket succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -415,7 +453,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280367"
+      "created_at": "2026-05-04T15:27:55.971970"
     },
     {
       "test_id": "CRUD_COMMENT_CREATE",
@@ -427,23 +465,25 @@
       "steps": [
         {
           "action": "create",
-          "target": "entity:Ticket",
-          "data": {
-            "title": "Test title",
-            "description": "Test description for description"
-          },
-          "store_result": "parent_ticket",
-          "rationale": "Create parent Support Ticket for ref field 'ticket'"
-        },
-        {
-          "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_4156d5fa@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
-          "rationale": "Create parent User for ref field 'author'"
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket"
         },
         {
           "action": "create",
@@ -469,8 +509,8 @@
       ],
       "entities": [
         "Comment",
-        "Ticket",
-        "User"
+        "User",
+        "Ticket"
       ],
       "surfaces": [],
       "tags": [
@@ -481,7 +521,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280383"
+      "created_at": "2026-05-04T15:27:55.972007"
     },
     {
       "test_id": "CRUD_COMMENT_READ",
@@ -493,23 +533,25 @@
       "steps": [
         {
           "action": "create",
-          "target": "entity:Ticket",
-          "data": {
-            "title": "Test title",
-            "description": "Test description for description"
-          },
-          "store_result": "parent_ticket",
-          "rationale": "Create parent Support Ticket for ref field 'ticket'"
-        },
-        {
-          "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_3280@example.com",
+            "email": "test_4156d5fa@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
-          "rationale": "Create parent User for ref field 'author'"
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket"
         },
         {
           "action": "create",
@@ -540,8 +582,8 @@
       ],
       "entities": [
         "Comment",
-        "Ticket",
-        "User"
+        "User",
+        "Ticket"
       ],
       "surfaces": [],
       "tags": [
@@ -552,7 +594,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280385"
+      "created_at": "2026-05-04T15:27:55.972012"
     },
     {
       "test_id": "VAL_COMMENT_REQUIRED",
@@ -592,7 +634,390 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280387"
+      "created_at": "2026-05-04T15:27:55.972014"
+    },
+    {
+      "test_id": "CRUD_AUDITENTRY_READ",
+      "title": "Read Audit Entry list",
+      "description": "Test reading Audit Entry list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:AuditEntry",
+          "rationale": "Fetch Audit Entry list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Audit Entry list succeeds"
+      ],
+      "entities": [
+        "AuditEntry"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972021"
+    },
+    {
+      "test_id": "CRUD_JOBRUN_READ",
+      "title": "Read Job Run list",
+      "description": "Test reading Job Run list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:JobRun",
+          "rationale": "Fetch Job Run list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Job Run list succeeds"
+      ],
+      "entities": [
+        "JobRun"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972026"
+    },
+    {
+      "test_id": "CRUD_FEEDBACKREPORT_CREATE",
+      "title": "Create Feedback Report",
+      "description": "Test creating a new Feedback Report",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description"
+          },
+          "rationale": "Create valid Feedback Report"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Feedback Report succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972039"
+    },
+    {
+      "test_id": "CRUD_FEEDBACKREPORT_READ",
+      "title": "Read Feedback Report list",
+      "description": "Test reading Feedback Report list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:FeedbackReport",
+          "rationale": "Fetch Feedback Report list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Feedback Report list succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972046"
+    },
+    {
+      "test_id": "VAL_FEEDBACKREPORT_REQUIRED",
+      "title": "Validate required fields for Feedback Report",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Feedback Report succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972050"
+    },
+    {
+      "test_id": "VAL_FEEDBACKREPORT_IDEMPOTENCY_KEY_UNIQUE",
+      "title": "Validate idempotency_key uniqueness for Feedback Report",
+      "description": "Test that duplicate idempotency_key values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description"
+          },
+          "rationale": "Attempt duplicate idempotency_key"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate idempotency_key uniqueness for Feedback Report succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972060"
+    },
+    {
+      "test_id": "CRUD_SYSTEMHEALTH_READ",
+      "title": "Read System Health list",
+      "description": "Test reading System Health list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemHealth",
+          "rationale": "Fetch System Health list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Health list succeeds"
+      ],
+      "entities": [
+        "SystemHealth"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972065"
+    },
+    {
+      "test_id": "CRUD_SYSTEMMETRIC_READ",
+      "title": "Read System Metric list",
+      "description": "Test reading System Metric list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemMetric",
+          "rationale": "Fetch System Metric list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Metric list succeeds"
+      ],
+      "entities": [
+        "SystemMetric"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972069"
+    },
+    {
+      "test_id": "CRUD_DEPLOYHISTORY_READ",
+      "title": "Read Deploy History list",
+      "description": "Test reading Deploy History list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:DeployHistory",
+          "rationale": "Fetch Deploy History list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Deploy History list succeeds"
+      ],
+      "entities": [
+        "DeployHistory"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972073"
     },
     {
       "test_id": "SM_TICKET_OPEN_IN_PROGRESS",
@@ -604,10 +1029,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -634,7 +1071,8 @@
         "Support Ticket: open \u2192 in_progress succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -645,7 +1083,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280398"
+      "created_at": "2026-05-04T15:27:55.972104"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_RESOLVED",
@@ -657,10 +1095,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -687,7 +1137,8 @@
         "Support Ticket: in_progress \u2192 resolved succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -698,7 +1149,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280405"
+      "created_at": "2026-05-04T15:27:55.972107"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_OPEN",
@@ -710,10 +1161,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -740,7 +1203,8 @@
         "Support Ticket: in_progress \u2192 open succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -751,7 +1215,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280412"
+      "created_at": "2026-05-04T15:27:55.972110"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_CLOSED",
@@ -763,10 +1227,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "resolved"
           },
           "rationale": "Create entity in resolved state"
@@ -793,7 +1269,8 @@
         "Support Ticket: resolved \u2192 closed succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -804,7 +1281,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280418"
+      "created_at": "2026-05-04T15:27:55.972112"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_IN_PROGRESS",
@@ -816,10 +1293,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "resolved"
           },
           "rationale": "Create entity in resolved state"
@@ -846,7 +1335,8 @@
         "Support Ticket: resolved \u2192 in_progress succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -857,7 +1347,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280424"
+      "created_at": "2026-05-04T15:27:55.972115"
     },
     {
       "test_id": "SM_TICKET_CLOSED_OPEN",
@@ -869,10 +1359,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "closed"
           },
           "rationale": "Create entity in closed state"
@@ -899,7 +1401,8 @@
         "Support Ticket: closed \u2192 open succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -910,22 +1413,34 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280430"
+      "created_at": "2026-05-04T15:27:55.972165"
     },
     {
-      "test_id": "SM_TICKET_OPEN_RESOLVED_INVALID",
-      "title": "Support Ticket: open \u2192 resolved (invalid)",
-      "description": "Test that invalid transition from open to resolved is rejected",
+      "test_id": "SM_TICKET_OPEN_CLOSED_INVALID",
+      "title": "Support Ticket: open \u2192 closed (invalid)",
+      "description": "Test that invalid transition from open to closed is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -934,9 +1449,9 @@
           "action": "transition_expect_error",
           "target": "entity:Ticket",
           "data": {
-            "to_state": "resolved"
+            "to_state": "closed"
           },
-          "rationale": "Attempt invalid transition to resolved"
+          "rationale": "Attempt invalid transition to closed"
         },
         {
           "action": "assert_state",
@@ -949,10 +1464,11 @@
         }
       ],
       "expected_outcomes": [
-        "Support Ticket: open \u2192 resolved (invalid) succeeds"
+        "Support Ticket: open \u2192 closed (invalid) succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -963,7 +1479,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280439"
+      "created_at": "2026-05-04T15:27:55.972170"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_CLOSED_INVALID",
@@ -975,10 +1491,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -1005,7 +1533,8 @@
         "Support Ticket: in_progress \u2192 closed (invalid) succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -1016,7 +1545,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280447"
+      "created_at": "2026-05-04T15:27:55.972174"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_OPEN_INVALID",
@@ -1028,10 +1557,22 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "resolved"
           },
           "rationale": "Create entity in resolved state"
@@ -1058,7 +1599,8 @@
         "Support Ticket: resolved \u2192 open (invalid) succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -1069,22 +1611,34 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280453"
+      "created_at": "2026-05-04T15:27:55.972178"
     },
     {
-      "test_id": "SM_TICKET_CLOSED_RESOLVED_INVALID",
-      "title": "Support Ticket: closed \u2192 resolved (invalid)",
-      "description": "Test that invalid transition from closed to resolved is rejected",
+      "test_id": "SM_TICKET_CLOSED_IN_PROGRESS_INVALID",
+      "title": "Support Ticket: closed \u2192 in_progress (invalid)",
+      "description": "Test that invalid transition from closed to in_progress is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_8c975fac@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User"
+        },
+        {
+          "action": "create",
           "target": "entity:Ticket",
           "data": {
             "title": "Test title",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "created_by": "$ref:parent_user.id",
             "status": "closed"
           },
           "rationale": "Create entity in closed state"
@@ -1093,9 +1647,9 @@
           "action": "transition_expect_error",
           "target": "entity:Ticket",
           "data": {
-            "to_state": "resolved"
+            "to_state": "in_progress"
           },
-          "rationale": "Attempt invalid transition to resolved"
+          "rationale": "Attempt invalid transition to in_progress"
         },
         {
           "action": "assert_state",
@@ -1108,10 +1662,11 @@
         }
       ],
       "expected_outcomes": [
-        "Support Ticket: closed \u2192 resolved (invalid) succeeds"
+        "Support Ticket: closed \u2192 in_progress (invalid) succeeds"
       ],
       "entities": [
-        "Ticket"
+        "Ticket",
+        "User"
       ],
       "surfaces": [],
       "tags": [
@@ -1122,7 +1677,2513 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280460"
+      "created_at": "2026-05-04T15:27:55.972181"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_NEW_TRIAGED",
+      "title": "Feedback Report: new \u2192 triaged",
+      "description": "Test valid transition from new to triaged",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "new"
+          },
+          "rationale": "Create entity in new state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "triaged"
+          },
+          "rationale": "Transition to triaged"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "triaged"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: new \u2192 triaged succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972199"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_IN_PROGRESS",
+      "title": "Feedback Report: triaged \u2192 in_progress",
+      "description": "Test valid transition from triaged to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: triaged \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972201"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_WONT_FIX",
+      "title": "Feedback Report: triaged \u2192 wont_fix",
+      "description": "Test valid transition from triaged to wont_fix",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "wont_fix"
+          },
+          "rationale": "Transition to wont_fix"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "wont_fix"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: triaged \u2192 wont_fix succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972204"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_DUPLICATE",
+      "title": "Feedback Report: triaged \u2192 duplicate",
+      "description": "Test valid transition from triaged to duplicate",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "duplicate"
+          },
+          "rationale": "Transition to duplicate"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "duplicate"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: triaged \u2192 duplicate succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972206"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_RESOLVED",
+      "title": "Feedback Report: triaged \u2192 resolved",
+      "description": "Test valid transition from triaged to resolved",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "resolved"
+          },
+          "rationale": "Transition to resolved"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: triaged \u2192 resolved succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972208"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_RESOLVED",
+      "title": "Feedback Report: in_progress \u2192 resolved",
+      "description": "Test valid transition from in_progress to resolved",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "resolved"
+          },
+          "rationale": "Transition to resolved"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: in_progress \u2192 resolved succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972211"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_WONT_FIX",
+      "title": "Feedback Report: in_progress \u2192 wont_fix",
+      "description": "Test valid transition from in_progress to wont_fix",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "wont_fix"
+          },
+          "rationale": "Transition to wont_fix"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "wont_fix"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: in_progress \u2192 wont_fix succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972213"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_RESOLVED_VERIFIED",
+      "title": "Feedback Report: resolved \u2192 verified",
+      "description": "Test valid transition from resolved to verified",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "verified"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: resolved \u2192 verified succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972215"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_RESOLVED_IN_PROGRESS",
+      "title": "Feedback Report: resolved \u2192 in_progress",
+      "description": "Test valid transition from resolved to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: resolved \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972217"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_NEW_VERIFIED_INVALID",
+      "title": "Feedback Report: new \u2192 verified (invalid)",
+      "description": "Test that invalid transition from new to verified is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "new"
+          },
+          "rationale": "Create entity in new state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Attempt invalid transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "new"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: new \u2192 verified (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972222"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_NEW_INVALID",
+      "title": "Feedback Report: triaged \u2192 new (invalid)",
+      "description": "Test that invalid transition from triaged to new is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "new"
+          },
+          "rationale": "Attempt invalid transition to new"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "triaged"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: triaged \u2192 new (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972226"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_TRIAGED_INVALID",
+      "title": "Feedback Report: in_progress \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from in_progress to triaged is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "triaged"
+          },
+          "rationale": "Attempt invalid transition to triaged"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: in_progress \u2192 triaged (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972229"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_RESOLVED_TRIAGED_INVALID",
+      "title": "Feedback Report: resolved \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from resolved to triaged is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "triaged"
+          },
+          "rationale": "Attempt invalid transition to triaged"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: resolved \u2192 triaged (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972233"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_VERIFIED_DUPLICATE_INVALID",
+      "title": "Feedback Report: verified \u2192 duplicate (invalid)",
+      "description": "Test that invalid transition from verified to duplicate is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "verified"
+          },
+          "rationale": "Create entity in verified state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "duplicate"
+          },
+          "rationale": "Attempt invalid transition to duplicate"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "verified"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: verified \u2192 duplicate (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972236"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_WONT_FIX_DUPLICATE_INVALID",
+      "title": "Feedback Report: wont_fix \u2192 duplicate (invalid)",
+      "description": "Test that invalid transition from wont_fix to duplicate is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "wont_fix"
+          },
+          "rationale": "Create entity in wont_fix state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "duplicate"
+          },
+          "rationale": "Attempt invalid transition to duplicate"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "wont_fix"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: wont_fix \u2192 duplicate (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972239"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_DUPLICATE_VERIFIED_INVALID",
+      "title": "Feedback Report: duplicate \u2192 verified (invalid)",
+      "description": "Test that invalid transition from duplicate to verified is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "bug",
+            "description": "Test description for description",
+            "status": "duplicate"
+          },
+          "rationale": "Create entity in duplicate state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Attempt invalid transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "duplicate"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: duplicate \u2192 verified (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972243"
+    },
+    {
+      "test_id": "ACL_ADMIN_ACCESS",
+      "title": "Administrator can authenticate",
+      "description": "Test that Administrator persona can authenticate",
+      "trigger": "authentication",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "admin",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972247"
+    },
+    {
+      "test_id": "ACL_CUSTOMER_ACCESS",
+      "title": "Customer can authenticate",
+      "description": "Test that Customer persona can authenticate",
+      "trigger": "authentication",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "customer",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Customer can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972249"
+    },
+    {
+      "test_id": "GOAL_CUSTOMER_SUBMIT_NEW_TICKETS_E",
+      "title": "Customer: Submit new tickets easily",
+      "description": "Test that Customer can achieve goal: Submit new tickets easily",
+      "trigger": "user_action",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Submit new tickets easily",
+          "rationale": "Work towards goal: Submit new tickets easily"
+        }
+      ],
+      "expected_outcomes": [
+        "Customer: Submit new tickets easily succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972292"
+    },
+    {
+      "test_id": "GOAL_CUSTOMER_TRACK_TICKET_STATUS_",
+      "title": "Customer: Track ticket status and updates",
+      "description": "Test that Customer can achieve goal: Track ticket status and updates",
+      "trigger": "user_action",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Track ticket status and updates",
+          "rationale": "Work towards goal: Track ticket status and updates"
+        }
+      ],
+      "expected_outcomes": [
+        "Customer: Track ticket status and updates succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972297"
+    },
+    {
+      "test_id": "GOAL_CUSTOMER_RECEIVE_TIMELY_RESPO",
+      "title": "Customer: Receive timely responses from support",
+      "description": "Test that Customer can achieve goal: Receive timely responses from support",
+      "trigger": "user_action",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Receive timely responses from support",
+          "rationale": "Work towards goal: Receive timely responses from support"
+        }
+      ],
+      "expected_outcomes": [
+        "Customer: Receive timely responses from support succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972301"
+    },
+    {
+      "test_id": "ACL_AGENT_ACCESS",
+      "title": "Support Agent can authenticate",
+      "description": "Test that Support Agent persona can authenticate",
+      "trigger": "authentication",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "agent",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972303"
+    },
+    {
+      "test_id": "GOAL_AGENT_PROCESS_TICKETS_EFFI",
+      "title": "Support Agent: Process tickets efficiently",
+      "description": "Test that Support Agent can achieve goal: Process tickets efficiently",
+      "trigger": "user_action",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Process tickets efficiently",
+          "rationale": "Work towards goal: Process tickets efficiently"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: Process tickets efficiently succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972306"
+    },
+    {
+      "test_id": "GOAL_AGENT_MAINTAIN_SLA_COMPLIA",
+      "title": "Support Agent: Maintain SLA compliance",
+      "description": "Test that Support Agent can achieve goal: Maintain SLA compliance",
+      "trigger": "user_action",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Maintain SLA compliance",
+          "rationale": "Work towards goal: Maintain SLA compliance"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: Maintain SLA compliance succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972309"
+    },
+    {
+      "test_id": "GOAL_AGENT_ESCALATE_COMPLEX_ISS",
+      "title": "Support Agent: Escalate complex issues to managers",
+      "description": "Test that Support Agent can achieve goal: Escalate complex issues to managers",
+      "trigger": "user_action",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Escalate complex issues to managers",
+          "rationale": "Work towards goal: Escalate complex issues to managers"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: Escalate complex issues to managers succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972312"
+    },
+    {
+      "test_id": "ACL_MANAGER_ACCESS",
+      "title": "Support Manager can authenticate",
+      "description": "Test that Support Manager persona can authenticate",
+      "trigger": "authentication",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "manager",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Manager can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972314"
+    },
+    {
+      "test_id": "GOAL_MANAGER_MONITOR_TEAM_METRICS",
+      "title": "Support Manager: Monitor team metrics and performance",
+      "description": "Test that Support Manager can achieve goal: Monitor team metrics and performance",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Monitor team metrics and performance",
+          "rationale": "Work towards goal: Monitor team metrics and performance"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Manager: Monitor team metrics and performance succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972317"
+    },
+    {
+      "test_id": "GOAL_MANAGER_IDENTIFY_BOTTLENECKS",
+      "title": "Support Manager: Identify bottlenecks in ticket flow",
+      "description": "Test that Support Manager can achieve goal: Identify bottlenecks in ticket flow",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Identify bottlenecks in ticket flow",
+          "rationale": "Work towards goal: Identify bottlenecks in ticket flow"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Manager: Identify bottlenecks in ticket flow succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972320"
+    },
+    {
+      "test_id": "GOAL_MANAGER_ENSURE_QUALITY_AND_C",
+      "title": "Support Manager: Ensure quality and customer satisfaction",
+      "description": "Test that Support Manager can achieve goal: Ensure quality and customer satisfaction",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Ensure quality and customer satisfaction",
+          "rationale": "Work towards goal: Ensure quality and customer satisfaction"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Manager: Ensure quality and customer satisfaction succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972323"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_ADMIN",
+      "title": "Login as Administrator with valid credentials",
+      "description": "Test that Administrator can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Administrator with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972326"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_ADMIN",
+      "title": "Reject invalid password for Administrator",
+      "description": "Test that Administrator cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Administrator with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972328"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_ADMIN",
+      "title": "Administrator redirects to /app after login",
+      "description": "Test that Administrator is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972330"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_ADMIN",
+      "title": "Authenticated request succeeds for Administrator",
+      "description": "Test that requests with a valid session cookie succeed for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972332"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
+      "title": "Expired session rejected for Administrator",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972334"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_ADMIN",
+      "title": "Logout clears session for Administrator",
+      "description": "Test that logout invalidates the session for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972337"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_CUSTOMER",
+      "title": "Login as Customer with valid credentials",
+      "description": "Test that Customer can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Customer"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Customer with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972340"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_CUSTOMER",
+      "title": "Reject invalid password for Customer",
+      "description": "Test that Customer cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Customer with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Customer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972342"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_CUSTOMER",
+      "title": "Customer redirects to /app after login",
+      "description": "Test that Customer is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Customer"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Customer redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972343"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_CUSTOMER",
+      "title": "Authenticated request succeeds for Customer",
+      "description": "Test that requests with a valid session cookie succeed for Customer",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Customer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972345"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_CUSTOMER",
+      "title": "Expired session rejected for Customer",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Customer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972347"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_CUSTOMER",
+      "title": "Logout clears session for Customer",
+      "description": "Test that logout invalidates the session for Customer",
+      "trigger": "api_call",
+      "persona": "customer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as Customer"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Customer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972350"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_AGENT",
+      "title": "Login as Support Agent with valid credentials",
+      "description": "Test that Support Agent can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Support Agent"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Support Agent with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972352"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_AGENT",
+      "title": "Reject invalid password for Support Agent",
+      "description": "Test that Support Agent cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Support Agent with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Support Agent succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972354"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_AGENT",
+      "title": "Support Agent redirects to /app after login",
+      "description": "Test that Support Agent is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Support Agent"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972356"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_AGENT",
+      "title": "Authenticated request succeeds for Support Agent",
+      "description": "Test that requests with a valid session cookie succeed for Support Agent",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Support Agent succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972357"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_AGENT",
+      "title": "Expired session rejected for Support Agent",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Support Agent succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972359"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_AGENT",
+      "title": "Logout clears session for Support Agent",
+      "description": "Test that logout invalidates the session for Support Agent",
+      "trigger": "api_call",
+      "persona": "agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Support Agent succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972361"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_MANAGER",
+      "title": "Login as Support Manager with valid credentials",
+      "description": "Test that Support Manager can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Support Manager"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Support Manager with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972363"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_MANAGER",
+      "title": "Reject invalid password for Support Manager",
+      "description": "Test that Support Manager cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Support Manager with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Support Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972365"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_MANAGER",
+      "title": "Support Manager redirects to /app after login",
+      "description": "Test that Support Manager is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Support Manager"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Manager redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972367"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_MANAGER",
+      "title": "Authenticated request succeeds for Support Manager",
+      "description": "Test that requests with a valid session cookie succeed for Support Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Support Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972369"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_MANAGER",
+      "title": "Expired session rejected for Support Manager",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Support Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972371"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_MANAGER",
+      "title": "Logout clears session for Support Manager",
+      "description": "Test that logout invalidates the session for Support Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Support Manager"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Support Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972373"
     },
     {
       "test_id": "WS_TICKET_QUEUE_NAV",
@@ -1136,7 +4197,7 @@
           "action": "navigate_to",
           "target": "workspace:ticket_queue",
           "data": {
-            "route": "/ticket-queue"
+            "route": "/app/workspaces/ticket_queue"
           },
           "rationale": "Navigate to Ticket Queue workspace"
         },
@@ -1171,7 +4232,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280465"
+      "created_at": "2026-05-04T15:27:55.972377"
     },
     {
       "test_id": "WS_TICKET_QUEUE_ROUTE",
@@ -1185,7 +4246,7 @@
           "action": "check_route",
           "target": "workspace:ticket_queue",
           "data": {
-            "route": "/ticket-queue"
+            "route": "/app/workspaces/ticket_queue"
           },
           "rationale": "Verify route for Ticket Queue is defined"
         }
@@ -1203,7 +4264,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280468"
+      "created_at": "2026-05-04T15:27:55.972379"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_NAV",
@@ -1217,7 +4278,7 @@
           "action": "navigate_to",
           "target": "workspace:agent_dashboard",
           "data": {
-            "route": "/agent-dashboard"
+            "route": "/app/workspaces/agent_dashboard"
           },
           "rationale": "Navigate to Agent Dashboard workspace"
         },
@@ -1252,7 +4313,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280471"
+      "created_at": "2026-05-04T15:27:55.972383"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_ROUTE",
@@ -1266,7 +4327,7 @@
           "action": "check_route",
           "target": "workspace:agent_dashboard",
           "data": {
-            "route": "/agent-dashboard"
+            "route": "/app/workspaces/agent_dashboard"
           },
           "rationale": "Verify route for Agent Dashboard is defined"
         }
@@ -1284,7 +4345,179 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:23.280473"
+      "created_at": "2026-05-04T15:27:55.972384"
+    },
+    {
+      "test_id": "WS_MY_TICKETS_NAV",
+      "title": "Navigate to My Tickets",
+      "description": "Verify My Tickets workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:my_tickets",
+          "data": {
+            "route": "/app/workspaces/my_tickets"
+          },
+          "rationale": "Navigate to My Tickets workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='my_tickets']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to My Tickets succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972387"
+    },
+    {
+      "test_id": "WS_MY_TICKETS_ROUTE",
+      "title": "Workspace My Tickets route exists",
+      "description": "Verify My Tickets workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:my_tickets",
+          "data": {
+            "route": "/app/workspaces/my_tickets"
+          },
+          "rationale": "Verify route for My Tickets is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace My Tickets route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972389"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_NAV",
+      "title": "Navigate to Platform Admin",
+      "description": "Verify Platform Admin workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Navigate to Platform Admin workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='_platform_admin']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Platform Admin succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972392"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_ROUTE",
+      "title": "Workspace Platform Admin route exists",
+      "description": "Verify Platform Admin workspace route is configured",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Verify route for Platform Admin is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Platform Admin route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:27:55.972394"
     }
   ]
 }

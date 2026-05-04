@@ -1,18 +1,21 @@
 {
   "version": "2.0",
-  "dsl_hash": "61a41149c592b5d2",
-  "generated_at": "2026-01-02T02:38:39.588978",
+  "dsl_hash": "a36853b4e7e97278",
+  "generated_at": "2026-05-04T15:29:29.364519",
   "project_name": "fieldtest_hub",
   "coverage": {
     "entities": [
+      "DeployHistory",
       "Device",
       "FirmwareRelease",
       "IssueReport",
+      "SystemHealth",
+      "SystemMetric",
       "Task",
       "TestSession",
       "Tester"
     ],
-    "entities_total": 6,
+    "entities_total": 9,
     "state_machines": [
       "Device",
       "FirmwareRelease",
@@ -21,20 +24,29 @@
     ],
     "state_machines_total": 4,
     "personas": [
+      "admin",
       "engineer",
       "manager",
       "tester"
     ],
-    "personas_total": 3,
+    "personas_total": 4,
     "workspaces": [
+      "_platform_admin",
       "engineering_dashboard",
       "tester_dashboard"
     ],
-    "workspaces_total": 2,
+    "workspaces_total": 3,
     "events": [],
     "events_total": 0,
     "processes": [],
-    "processes_total": 0
+    "processes_total": 0,
+    "auth_personas": [
+      "admin",
+      "engineer",
+      "manager",
+      "tester"
+    ],
+    "auth_personas_total": 4
   },
   "designs": [
     {
@@ -52,7 +64,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588"
+            "serial_number": "SN69363_2d650a69"
           },
           "rationale": "Create valid Device"
         },
@@ -80,7 +92,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588391"
+      "created_at": "2026-05-04T15:29:29.363831"
     },
     {
       "test_id": "CRUD_DEVICE_READ",
@@ -97,7 +109,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588"
+            "serial_number": "SN69363_0da2b49b"
           },
           "rationale": "Seed test data"
         },
@@ -130,7 +142,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588396"
+      "created_at": "2026-05-04T15:29:29.363849"
     },
     {
       "test_id": "VAL_DEVICE_REQUIRED",
@@ -170,7 +182,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588400"
+      "created_at": "2026-05-04T15:29:29.363854"
     },
     {
       "test_id": "VAL_DEVICE_SERIAL_NUMBER_UNIQUE",
@@ -187,7 +199,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588"
+            "serial_number": "SN69363_b8807f50"
           },
           "rationale": "Create first entity"
         },
@@ -198,7 +210,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588"
+            "serial_number": "SN69363_b8807f50"
           },
           "rationale": "Attempt duplicate serial_number"
         },
@@ -226,7 +238,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588415"
+      "created_at": "2026-05-04T15:29:29.363867"
     },
     {
       "test_id": "CRUD_TESTER_CREATE",
@@ -241,7 +253,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_19588@example.com",
+            "email": "test_2293ea0e@example.com",
             "location": "Test location"
           },
           "rationale": "Create valid Tester"
@@ -270,7 +282,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588425"
+      "created_at": "2026-05-04T15:29:29.363884"
     },
     {
       "test_id": "CRUD_TESTER_READ",
@@ -285,7 +297,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_19588@example.com",
+            "email": "test_29e92f4f@example.com",
             "location": "Test location"
           },
           "rationale": "Seed test data"
@@ -319,7 +331,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588427"
+      "created_at": "2026-05-04T15:29:29.363893"
     },
     {
       "test_id": "VAL_TESTER_REQUIRED",
@@ -359,7 +371,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588430"
+      "created_at": "2026-05-04T15:29:29.363897"
     },
     {
       "test_id": "VAL_TESTER_EMAIL_UNIQUE",
@@ -374,7 +386,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_19588@example.com",
+            "email": "test_999d52dc@example.com",
             "location": "Test location"
           },
           "rationale": "Create first entity"
@@ -384,7 +396,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_19588@example.com",
+            "email": "test_999d52dc@example.com",
             "location": "Test location"
           },
           "rationale": "Attempt duplicate email"
@@ -413,7 +425,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588441"
+      "created_at": "2026-05-04T15:29:29.363907"
     },
     {
       "test_id": "CRUD_ISSUEREPORT_CREATE",
@@ -425,11 +437,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69363_6e8c0299"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_72adc25e@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "b887feef-6486-43c9-879e-cd2ffca0f51d",
-            "reported_by_id": "f1667bde-d990-4e28-9714-432535126660",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id"
           },
           "rationale": "Create valid Issue Report"
         },
@@ -446,7 +482,9 @@
         "Create Issue Report succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -457,7 +495,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588490"
+      "created_at": "2026-05-04T15:29:29.363956"
     },
     {
       "test_id": "CRUD_ISSUEREPORT_READ",
@@ -469,11 +507,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69363_6e8c0299"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_72adc25e@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "b887feef-6486-43c9-879e-cd2ffca0f51d",
-            "reported_by_id": "f1667bde-d990-4e28-9714-432535126660",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id"
           },
           "rationale": "Seed test data"
         },
@@ -495,7 +557,9 @@
         "Read Issue Report list succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -506,7 +570,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588492"
+      "created_at": "2026-05-04T15:29:29.363968"
     },
     {
       "test_id": "VAL_ISSUEREPORT_REQUIRED",
@@ -546,7 +610,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588495"
+      "created_at": "2026-05-04T15:29:29.363972"
     },
     {
       "test_id": "CRUD_TESTSESSION_CREATE",
@@ -558,10 +622,33 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69363_807e848f"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_355853d9@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:TestSession",
           "data": {
-            "device_id": "4008e5ff-082b-4afd-8b28-9e484293ef97",
-            "tester_id": "a2c4fb31-c18f-40b6-a3c6-915deec96049"
+            "device_id": "$ref:parent_device.id",
+            "tester_id": "$ref:parent_tester.id"
           },
           "rationale": "Create valid Test Session"
         },
@@ -578,7 +665,9 @@
         "Create Test Session succeeds"
       ],
       "entities": [
-        "TestSession"
+        "TestSession",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -589,7 +678,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588509"
+      "created_at": "2026-05-04T15:29:29.364002"
     },
     {
       "test_id": "CRUD_TESTSESSION_READ",
@@ -601,10 +690,33 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69363_807e848f"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_355853d9@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:TestSession",
           "data": {
-            "device_id": "4008e5ff-082b-4afd-8b28-9e484293ef97",
-            "tester_id": "a2c4fb31-c18f-40b6-a3c6-915deec96049"
+            "device_id": "$ref:parent_device.id",
+            "tester_id": "$ref:parent_tester.id"
           },
           "rationale": "Seed test data"
         },
@@ -626,7 +738,9 @@
         "Read Test Session list succeeds"
       ],
       "entities": [
-        "TestSession"
+        "TestSession",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -637,7 +751,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588511"
+      "created_at": "2026-05-04T15:29:29.364007"
     },
     {
       "test_id": "VAL_TESTSESSION_REQUIRED",
@@ -677,7 +791,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588514"
+      "created_at": "2026-05-04T15:29:29.364010"
     },
     {
       "test_id": "CRUD_FIRMWARERELEASE_CREATE",
@@ -691,8 +805,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588521"
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364023",
+            "release_notes": "Test description for release_notes"
           },
           "rationale": "Create valid Firmware Release"
         },
@@ -720,7 +835,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588523"
+      "created_at": "2026-05-04T15:29:29.364030"
     },
     {
       "test_id": "CRUD_FIRMWARERELEASE_READ",
@@ -734,8 +849,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588521"
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364036",
+            "release_notes": "Test description for release_notes"
           },
           "rationale": "Seed test data"
         },
@@ -768,7 +884,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588525"
+      "created_at": "2026-05-04T15:29:29.364042"
     },
     {
       "test_id": "VAL_FIRMWARERELEASE_REQUIRED",
@@ -808,7 +924,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588528"
+      "created_at": "2026-05-04T15:29:29.364045"
     },
     {
       "test_id": "VAL_FIRMWARERELEASE_VERSION_UNIQUE",
@@ -822,8 +938,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588533"
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364059",
+            "release_notes": "Test description for release_notes"
           },
           "rationale": "Create first entity"
         },
@@ -831,8 +948,9 @@
           "action": "create_expect_error",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588537"
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364059",
+            "release_notes": "Test description for release_notes"
           },
           "rationale": "Attempt duplicate version"
         },
@@ -860,7 +978,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588539"
+      "created_at": "2026-05-04T15:29:29.364067"
     },
     {
       "test_id": "CRUD_TASK_CREATE",
@@ -872,9 +990,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_e43366ec@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "a139dd65-4c45-4a6e-aeb2-53880cc9c299"
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id"
           },
           "rationale": "Create valid Task"
         },
@@ -891,7 +1021,8 @@
         "Create Task succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -902,7 +1033,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588547"
+      "created_at": "2026-05-04T15:29:29.364092"
     },
     {
       "test_id": "CRUD_TASK_READ",
@@ -914,9 +1045,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_e43366ec@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "a139dd65-4c45-4a6e-aeb2-53880cc9c299"
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id"
           },
           "rationale": "Seed test data"
         },
@@ -938,7 +1081,8 @@
         "Read Task list succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -949,7 +1093,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588550"
+      "created_at": "2026-05-04T15:29:29.364099"
     },
     {
       "test_id": "VAL_TASK_REQUIRED",
@@ -989,7 +1133,127 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588552"
+      "created_at": "2026-05-04T15:29:29.364101"
+    },
+    {
+      "test_id": "CRUD_SYSTEMHEALTH_READ",
+      "title": "Read System Health list",
+      "description": "Test reading System Health list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemHealth",
+          "rationale": "Fetch System Health list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Health list succeeds"
+      ],
+      "entities": [
+        "SystemHealth"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364107"
+    },
+    {
+      "test_id": "CRUD_SYSTEMMETRIC_READ",
+      "title": "Read System Metric list",
+      "description": "Test reading System Metric list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemMetric",
+          "rationale": "Fetch System Metric list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Metric list succeeds"
+      ],
+      "entities": [
+        "SystemMetric"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364112"
+    },
+    {
+      "test_id": "CRUD_DEPLOYHISTORY_READ",
+      "title": "Read Deploy History list",
+      "description": "Test reading Deploy History list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:DeployHistory",
+          "rationale": "Fetch Deploy History list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Deploy History list succeeds"
+      ],
+      "entities": [
+        "DeployHistory"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364116"
     },
     {
       "test_id": "SM_DEVICE_PROTOTYPE_ACTIVE",
@@ -1006,7 +1270,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "prototype"
           },
           "rationale": "Create entity in prototype state"
@@ -1044,7 +1308,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588567"
+      "created_at": "2026-05-04T15:29:29.364132"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_RECALLED",
@@ -1061,7 +1325,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1099,7 +1363,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588575"
+      "created_at": "2026-05-04T15:29:29.364135"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_RETIRED",
@@ -1116,7 +1380,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1154,7 +1418,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588584"
+      "created_at": "2026-05-04T15:29:29.364138"
     },
     {
       "test_id": "SM_DEVICE_RECALLED_ACTIVE",
@@ -1171,7 +1435,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "recalled"
           },
           "rationale": "Create entity in recalled state"
@@ -1209,7 +1473,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588591"
+      "created_at": "2026-05-04T15:29:29.364140"
     },
     {
       "test_id": "SM_DEVICE_RETIRED_PROTOTYPE",
@@ -1226,7 +1490,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "retired"
           },
           "rationale": "Create entity in retired state"
@@ -1264,7 +1528,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588598"
+      "created_at": "2026-05-04T15:29:29.364143"
     },
     {
       "test_id": "SM_DEVICE_PROTOTYPE_RECALLED_INVALID",
@@ -1281,7 +1545,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "prototype"
           },
           "rationale": "Create entity in prototype state"
@@ -1319,7 +1583,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588612"
+      "created_at": "2026-05-04T15:29:29.364148"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_PROTOTYPE_INVALID",
@@ -1336,7 +1600,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1374,7 +1638,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588621"
+      "created_at": "2026-05-04T15:29:29.364152"
     },
     {
       "test_id": "SM_DEVICE_RECALLED_PROTOTYPE_INVALID",
@@ -1391,7 +1655,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "recalled"
           },
           "rationale": "Create entity in recalled state"
@@ -1429,7 +1693,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588630"
+      "created_at": "2026-05-04T15:29:29.364155"
     },
     {
       "test_id": "SM_DEVICE_RETIRED_RECALLED_INVALID",
@@ -1446,7 +1710,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN19588",
+            "serial_number": "SN69364_02704ec0",
             "status": "retired"
           },
           "rationale": "Create entity in retired state"
@@ -1484,7 +1748,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588638"
+      "created_at": "2026-05-04T15:29:29.364158"
     },
     {
       "test_id": "SM_ISSUEREPORT_OPEN_TRIAGED",
@@ -1496,11 +1760,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "5a56c6b4-f083-4280-b687-06fdf3211ff8",
-            "reported_by_id": "cb7e721c-c6a3-4722-a41b-bf4d80076c4b",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -1527,7 +1815,9 @@
         "Issue Report: open \u2192 triaged succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1538,7 +1828,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588653"
+      "created_at": "2026-05-04T15:29:29.364198"
     },
     {
       "test_id": "SM_ISSUEREPORT_TRIAGED_IN_PROGRESS",
@@ -1550,11 +1840,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "df2d3fef-d267-48a5-ae55-e3cd2444dc27",
-            "reported_by_id": "d89a2549-5ad8-4ac9-af42-c1ee7ed6c065",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "triaged"
           },
           "rationale": "Create entity in triaged state"
@@ -1581,7 +1895,9 @@
         "Issue Report: triaged \u2192 in_progress succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1592,7 +1908,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588665"
+      "created_at": "2026-05-04T15:29:29.364200"
     },
     {
       "test_id": "SM_ISSUEREPORT_IN_PROGRESS_FIXED",
@@ -1604,11 +1920,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "11497fd7-08d9-4430-8bf6-a89a6b89ee53",
-            "reported_by_id": "80d11db5-68f1-4737-9326-bfda2ad4008b",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -1635,7 +1975,9 @@
         "Issue Report: in_progress \u2192 fixed succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1646,7 +1988,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588677"
+      "created_at": "2026-05-04T15:29:29.364203"
     },
     {
       "test_id": "SM_ISSUEREPORT_FIXED_VERIFIED",
@@ -1658,11 +2000,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "6ee3c619-9839-4e6f-8765-ace02dbd879e",
-            "reported_by_id": "77b1a3c0-ef56-4e0e-8b7e-93e452e84c00",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "fixed"
           },
           "rationale": "Create entity in fixed state"
@@ -1689,7 +2055,9 @@
         "Issue Report: fixed \u2192 verified succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1700,7 +2068,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588688"
+      "created_at": "2026-05-04T15:29:29.364205"
     },
     {
       "test_id": "SM_ISSUEREPORT_FIXED_IN_PROGRESS",
@@ -1712,11 +2080,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "e11ac040-1e98-45df-b43a-80efdadc562a",
-            "reported_by_id": "aebb9fc4-172e-4819-892d-f43bee0de03c",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "fixed"
           },
           "rationale": "Create entity in fixed state"
@@ -1743,7 +2135,9 @@
         "Issue Report: fixed \u2192 in_progress succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1754,7 +2148,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588699"
+      "created_at": "2026-05-04T15:29:29.364207"
     },
     {
       "test_id": "SM_ISSUEREPORT_VERIFIED_CLOSED",
@@ -1766,11 +2160,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "8d6096e0-a96a-4f0e-89b5-5d92031ae1be",
-            "reported_by_id": "233efb89-80b6-43bb-a182-1169c0cd5889",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "verified"
           },
           "rationale": "Create entity in verified state"
@@ -1797,7 +2215,9 @@
         "Issue Report: verified \u2192 closed succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1808,7 +2228,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588711"
+      "created_at": "2026-05-04T15:29:29.364209"
     },
     {
       "test_id": "SM_ISSUEREPORT_CLOSED_OPEN",
@@ -1820,11 +2240,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "94f825e9-5dd3-4267-a6c5-d575e12151b6",
-            "reported_by_id": "44088c8e-8bfb-4a26-873c-63015a27038c",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "closed"
           },
           "rationale": "Create entity in closed state"
@@ -1851,7 +2295,9 @@
         "Issue Report: closed \u2192 open succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1862,23 +2308,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588722"
+      "created_at": "2026-05-04T15:29:29.364212"
     },
     {
-      "test_id": "SM_ISSUEREPORT_OPEN_IN_PROGRESS_INVALID",
-      "title": "Issue Report: open \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from open to in_progress is rejected",
+      "test_id": "SM_ISSUEREPORT_OPEN_VERIFIED_INVALID",
+      "title": "Issue Report: open \u2192 verified (invalid)",
+      "description": "Test that invalid transition from open to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "33b8f14e-ff50-4904-b1d5-59e5fb948e8c",
-            "reported_by_id": "eb4da07f-027a-40de-991c-8016172d76a4",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -1887,9 +2357,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "verified"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to verified"
         },
         {
           "action": "assert_state",
@@ -1902,10 +2372,12 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: open \u2192 in_progress (invalid) succeeds"
+        "Issue Report: open \u2192 verified (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1916,7 +2388,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588735"
+      "created_at": "2026-05-04T15:29:29.364216"
     },
     {
       "test_id": "SM_ISSUEREPORT_TRIAGED_VERIFIED_INVALID",
@@ -1928,11 +2400,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "a194c299-96eb-4b5e-aa29-2bddedc8a3b4",
-            "reported_by_id": "c3e88ca9-a024-420a-bf7f-80b2974ef20b",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "triaged"
           },
           "rationale": "Create entity in triaged state"
@@ -1959,7 +2455,9 @@
         "Issue Report: triaged \u2192 verified (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -1970,7 +2468,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588748"
+      "created_at": "2026-05-04T15:29:29.364219"
     },
     {
       "test_id": "SM_ISSUEREPORT_IN_PROGRESS_VERIFIED_INVALID",
@@ -1982,11 +2480,35 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "f1c9e80f-865e-4069-8fff-0d936d80cf66",
-            "reported_by_id": "f2a1d027-e55d-404a-8e5c-3588a278f6f5",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2013,7 +2535,9 @@
         "Issue Report: in_progress \u2192 verified (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2024,23 +2548,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588760"
+      "created_at": "2026-05-04T15:29:29.364222"
     },
     {
-      "test_id": "SM_ISSUEREPORT_FIXED_CLOSED_INVALID",
-      "title": "Issue Report: fixed \u2192 closed (invalid)",
-      "description": "Test that invalid transition from fixed to closed is rejected",
+      "test_id": "SM_ISSUEREPORT_FIXED_TRIAGED_INVALID",
+      "title": "Issue Report: fixed \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from fixed to triaged is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "a7c353aa-ec93-446b-bc32-a59f2ddd3e24",
-            "reported_by_id": "bf506a26-209a-4a34-b18c-d6586ebffb04",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "fixed"
           },
           "rationale": "Create entity in fixed state"
@@ -2049,9 +2597,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "closed"
+            "to_state": "triaged"
           },
-          "rationale": "Attempt invalid transition to closed"
+          "rationale": "Attempt invalid transition to triaged"
         },
         {
           "action": "assert_state",
@@ -2064,10 +2612,12 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: fixed \u2192 closed (invalid) succeeds"
+        "Issue Report: fixed \u2192 triaged (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2078,23 +2628,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588772"
+      "created_at": "2026-05-04T15:29:29.364225"
     },
     {
-      "test_id": "SM_ISSUEREPORT_VERIFIED_IN_PROGRESS_INVALID",
-      "title": "Issue Report: verified \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from verified to in_progress is rejected",
+      "test_id": "SM_ISSUEREPORT_VERIFIED_TRIAGED_INVALID",
+      "title": "Issue Report: verified \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from verified to triaged is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "76ec8e87-da94-465d-ba1a-1b9654c03cdf",
-            "reported_by_id": "029f415d-da0a-434f-b9ae-ef2ac4ab2356",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "verified"
           },
           "rationale": "Create entity in verified state"
@@ -2103,9 +2677,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "triaged"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to triaged"
         },
         {
           "action": "assert_state",
@@ -2118,10 +2692,12 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: verified \u2192 in_progress (invalid) succeeds"
+        "Issue Report: verified \u2192 triaged (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2132,23 +2708,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588785"
+      "created_at": "2026-05-04T15:29:29.364228"
     },
     {
-      "test_id": "SM_ISSUEREPORT_CLOSED_IN_PROGRESS_INVALID",
-      "title": "Issue Report: closed \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from closed to in_progress is rejected",
+      "test_id": "SM_ISSUEREPORT_CLOSED_VERIFIED_INVALID",
+      "title": "Issue Report: closed \u2192 verified (invalid)",
+      "description": "Test that invalid transition from closed to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN69364_4f1495e7"
+          },
+          "store_result": "parent_device",
+          "rationale": "Create parent Device"
+        },
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_fb1ab816@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "5ac07e5f-8e8a-426a-b1bc-84e556685f8b",
-            "reported_by_id": "c59fa7b4-20f2-4ac9-ad4d-98421cadccfc",
             "description": "Test description for description",
+            "resolution": "Test description for resolution",
+            "device_id": "$ref:parent_device.id",
+            "reported_by_id": "$ref:parent_tester.id",
             "status": "closed"
           },
           "rationale": "Create entity in closed state"
@@ -2157,9 +2757,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "verified"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to verified"
         },
         {
           "action": "assert_state",
@@ -2172,10 +2772,12 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: closed \u2192 in_progress (invalid) succeeds"
+        "Issue Report: closed \u2192 verified (invalid) succeeds"
       ],
       "entities": [
-        "IssueReport"
+        "IssueReport",
+        "Device",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2186,7 +2788,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588797"
+      "created_at": "2026-05-04T15:29:29.364231"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DRAFT_RELEASED",
@@ -2200,8 +2802,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588804",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "draft"
           },
           "rationale": "Create entity in draft state"
@@ -2239,7 +2842,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588813"
+      "created_at": "2026-05-04T15:29:29.364249"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_RELEASED_DEPRECATED",
@@ -2253,8 +2856,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588819",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "released"
           },
           "rationale": "Create entity in released state"
@@ -2292,7 +2896,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588821"
+      "created_at": "2026-05-04T15:29:29.364252"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DEPRECATED_DRAFT",
@@ -2306,8 +2910,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588832",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "deprecated"
           },
           "rationale": "Create entity in deprecated state"
@@ -2345,7 +2950,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588834"
+      "created_at": "2026-05-04T15:29:29.364254"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DRAFT_DEPRECATED_INVALID",
@@ -2359,8 +2964,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588839",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "draft"
           },
           "rationale": "Create entity in draft state"
@@ -2398,7 +3004,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588841"
+      "created_at": "2026-05-04T15:29:29.364258"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_RELEASED_DRAFT_INVALID",
@@ -2412,8 +3018,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588846",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "released"
           },
           "rationale": "Create entity in released state"
@@ -2451,7 +3058,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588848"
+      "created_at": "2026-05-04T15:29:29.364260"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DEPRECATED_RELEASED_INVALID",
@@ -2465,8 +3072,9 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.19588",
-            "release_date": "2026-01-02T02:38:39.588852",
+            "version": "1.0.69364",
+            "release_date": "2026-05-04T15:29:29.364242",
+            "release_notes": "Test description for release_notes",
             "status": "deprecated"
           },
           "rationale": "Create entity in deprecated state"
@@ -2504,7 +3112,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588854"
+      "created_at": "2026-05-04T15:29:29.364263"
     },
     {
       "test_id": "SM_TASK_OPEN_IN_PROGRESS",
@@ -2516,9 +3124,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "f7aba854-d72c-4b51-92b4-34849d309c86",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -2545,7 +3165,8 @@
         "Task: open \u2192 in_progress succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2556,7 +3177,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588863"
+      "created_at": "2026-05-04T15:29:29.364290"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_COMPLETED",
@@ -2568,9 +3189,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "934ae626-03df-45a5-b626-ffa80b03bf71",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2597,7 +3230,8 @@
         "Task: in_progress \u2192 completed succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2608,7 +3242,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588870"
+      "created_at": "2026-05-04T15:29:29.364293"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_OPEN",
@@ -2620,9 +3254,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "26e2520f-dfef-488a-9885-158c7174f2ca",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2649,7 +3295,8 @@
         "Task: in_progress \u2192 open succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2660,7 +3307,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588877"
+      "created_at": "2026-05-04T15:29:29.364295"
     },
     {
       "test_id": "SM_TASK_COMPLETED_OPEN",
@@ -2672,9 +3319,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "84d16880-ccf5-4df2-b304-33032030a163",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "completed"
           },
           "rationale": "Create entity in completed state"
@@ -2701,7 +3360,8 @@
         "Task: completed \u2192 open succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2712,7 +3372,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588884"
+      "created_at": "2026-05-04T15:29:29.364298"
     },
     {
       "test_id": "SM_TASK_*_CANCELLED",
@@ -2724,9 +3384,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "38e916d7-8c1b-4633-bc0c-f64e4ebb635f",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "*"
           },
           "rationale": "Create entity in * state"
@@ -2753,7 +3425,8 @@
         "Task: * \u2192 cancelled succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2764,7 +3437,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588891"
+      "created_at": "2026-05-04T15:29:29.364300"
     },
     {
       "test_id": "SM_TASK_OPEN_COMPLETED_INVALID",
@@ -2776,9 +3449,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "3ae1bfd7-4d25-434c-ab04-da08211c2a39",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -2805,7 +3490,8 @@
         "Task: open \u2192 completed (invalid) succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2816,7 +3502,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588900"
+      "created_at": "2026-05-04T15:29:29.364304"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_CANCELLED_INVALID",
@@ -2828,9 +3514,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "2297f686-ee17-48f1-8a79-f12072af0c99",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2857,7 +3555,8 @@
         "Task: in_progress \u2192 cancelled (invalid) succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2868,7 +3567,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588907"
+      "created_at": "2026-05-04T15:29:29.364306"
     },
     {
       "test_id": "SM_TASK_COMPLETED_IN_PROGRESS_INVALID",
@@ -2880,9 +3579,21 @@
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "6364e4bc-aad4-4715-8d8a-05b487538bcb",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "completed"
           },
           "rationale": "Create entity in completed state"
@@ -2909,7 +3620,8 @@
         "Task: completed \u2192 in_progress (invalid) succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2920,21 +3632,33 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588915"
+      "created_at": "2026-05-04T15:29:29.364353"
     },
     {
-      "test_id": "SM_TASK_CANCELLED_IN_PROGRESS_INVALID",
-      "title": "Task: cancelled \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from cancelled to in_progress is rejected",
+      "test_id": "SM_TASK_CANCELLED_COMPLETED_INVALID",
+      "title": "Task: cancelled \u2192 completed (invalid)",
+      "description": "Test that invalid transition from cancelled to completed is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
       "steps": [
         {
           "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_ebf81ee1@example.com",
+            "location": "Test location"
+          },
+          "store_result": "parent_tester",
+          "rationale": "Create parent Tester"
+        },
+        {
+          "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "600f75cb-829a-43df-b18f-bb09a7565a50",
+            "created_by_id": "$ref:parent_tester.id",
+            "assigned_to_id": "$ref:parent_tester.id",
             "status": "cancelled"
           },
           "rationale": "Create entity in cancelled state"
@@ -2943,9 +3667,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "completed"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to completed"
         },
         {
           "action": "assert_state",
@@ -2958,10 +3682,11 @@
         }
       ],
       "expected_outcomes": [
-        "Task: cancelled \u2192 in_progress (invalid) succeeds"
+        "Task: cancelled \u2192 completed (invalid) succeeds"
       ],
       "entities": [
-        "Task"
+        "Task",
+        "Tester"
       ],
       "surfaces": [],
       "tags": [
@@ -2972,7 +3697,41 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588924"
+      "created_at": "2026-05-04T15:29:29.364356"
+    },
+    {
+      "test_id": "ACL_ADMIN_ACCESS",
+      "title": "Administrator can authenticate",
+      "description": "Test that Administrator persona can authenticate",
+      "trigger": "authentication",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "admin",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364360"
     },
     {
       "test_id": "ACL_ENGINEER_ACCESS",
@@ -3006,7 +3765,109 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588927"
+      "created_at": "2026-05-04T15:29:29.364363"
+    },
+    {
+      "test_id": "GOAL_ENGINEER_MONITOR_ALL_DEVICES_",
+      "title": "Engineer: Monitor all devices and issues",
+      "description": "Test that Engineer can achieve goal: Monitor all devices and issues",
+      "trigger": "user_action",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Monitor all devices and issues",
+          "rationale": "Work towards goal: Monitor all devices and issues"
+        }
+      ],
+      "expected_outcomes": [
+        "Engineer: Monitor all devices and issues succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364404"
+    },
+    {
+      "test_id": "GOAL_ENGINEER_MANAGE_FIRMWARE_RELE",
+      "title": "Engineer: Manage firmware releases",
+      "description": "Test that Engineer can achieve goal: Manage firmware releases",
+      "trigger": "user_action",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Manage firmware releases",
+          "rationale": "Work towards goal: Manage firmware releases"
+        }
+      ],
+      "expected_outcomes": [
+        "Engineer: Manage firmware releases succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364408"
+    },
+    {
+      "test_id": "GOAL_ENGINEER_COORDINATE_TESTERS",
+      "title": "Engineer: Coordinate testers",
+      "description": "Test that Engineer can achieve goal: Coordinate testers",
+      "trigger": "user_action",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Coordinate testers",
+          "rationale": "Work towards goal: Coordinate testers"
+        }
+      ],
+      "expected_outcomes": [
+        "Engineer: Coordinate testers succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364411"
     },
     {
       "test_id": "ACL_TESTER_ACCESS",
@@ -3040,7 +3901,109 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588931"
+      "created_at": "2026-05-04T15:29:29.364414"
+    },
+    {
+      "test_id": "GOAL_TESTER_REPORT_ISSUES_FROM_T",
+      "title": "Field Tester: Report issues from the field",
+      "description": "Test that Field Tester can achieve goal: Report issues from the field",
+      "trigger": "user_action",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Report issues from the field",
+          "rationale": "Work towards goal: Report issues from the field"
+        }
+      ],
+      "expected_outcomes": [
+        "Field Tester: Report issues from the field succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364417"
+    },
+    {
+      "test_id": "GOAL_TESTER_LOG_TEST_SESSIONS",
+      "title": "Field Tester: Log test sessions",
+      "description": "Test that Field Tester can achieve goal: Log test sessions",
+      "trigger": "user_action",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Log test sessions",
+          "rationale": "Work towards goal: Log test sessions"
+        }
+      ],
+      "expected_outcomes": [
+        "Field Tester: Log test sessions succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364420"
+    },
+    {
+      "test_id": "GOAL_TESTER_TRACK_ASSIGNED_DEVIC",
+      "title": "Field Tester: Track assigned devices",
+      "description": "Test that Field Tester can achieve goal: Track assigned devices",
+      "trigger": "user_action",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Track assigned devices",
+          "rationale": "Work towards goal: Track assigned devices"
+        }
+      ],
+      "expected_outcomes": [
+        "Field Tester: Track assigned devices succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364423"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -3074,21 +4037,1310 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588933"
+      "created_at": "2026-05-04T15:29:29.364424"
+    },
+    {
+      "test_id": "GOAL_MANAGER_TRACK_OVERALL_PRODUC",
+      "title": "Manager: Track overall product quality",
+      "description": "Test that Manager can achieve goal: Track overall product quality",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Track overall product quality",
+          "rationale": "Work towards goal: Track overall product quality"
+        }
+      ],
+      "expected_outcomes": [
+        "Manager: Track overall product quality succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364427"
+    },
+    {
+      "test_id": "GOAL_MANAGER_MONITOR_CRITICAL_ISS",
+      "title": "Manager: Monitor critical issues",
+      "description": "Test that Manager can achieve goal: Monitor critical issues",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Monitor critical issues",
+          "rationale": "Work towards goal: Monitor critical issues"
+        }
+      ],
+      "expected_outcomes": [
+        "Manager: Monitor critical issues succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364430"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_ADMIN",
+      "title": "Login as Administrator with valid credentials",
+      "description": "Test that Administrator can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Administrator with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364433"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_ADMIN",
+      "title": "Reject invalid password for Administrator",
+      "description": "Test that Administrator cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Administrator with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364436"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_ADMIN",
+      "title": "Administrator redirects to /app after login",
+      "description": "Test that Administrator is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364438"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_ADMIN",
+      "title": "Authenticated request succeeds for Administrator",
+      "description": "Test that requests with a valid session cookie succeed for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364440"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
+      "title": "Expired session rejected for Administrator",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364442"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_ADMIN",
+      "title": "Logout clears session for Administrator",
+      "description": "Test that logout invalidates the session for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364444"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_ENGINEER",
+      "title": "Login as Engineer with valid credentials",
+      "description": "Test that Engineer can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Engineer"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Engineer with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364447"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_ENGINEER",
+      "title": "Reject invalid password for Engineer",
+      "description": "Test that Engineer cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Engineer with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364449"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_ENGINEER",
+      "title": "Engineer redirects to /app after login",
+      "description": "Test that Engineer is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Engineer"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Engineer redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364451"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_ENGINEER",
+      "title": "Authenticated request succeeds for Engineer",
+      "description": "Test that requests with a valid session cookie succeed for Engineer",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364453"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_ENGINEER",
+      "title": "Expired session rejected for Engineer",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364455"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_ENGINEER",
+      "title": "Logout clears session for Engineer",
+      "description": "Test that logout invalidates the session for Engineer",
+      "trigger": "api_call",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364457"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_TESTER",
+      "title": "Login as Field Tester with valid credentials",
+      "description": "Test that Field Tester can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Field Tester"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Field Tester with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364459"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_TESTER",
+      "title": "Reject invalid password for Field Tester",
+      "description": "Test that Field Tester cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Field Tester with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Field Tester succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364461"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_TESTER",
+      "title": "Field Tester redirects to /app after login",
+      "description": "Test that Field Tester is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Field Tester"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Field Tester redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364463"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_TESTER",
+      "title": "Authenticated request succeeds for Field Tester",
+      "description": "Test that requests with a valid session cookie succeed for Field Tester",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Field Tester succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364465"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_TESTER",
+      "title": "Expired session rejected for Field Tester",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Field Tester succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364467"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_TESTER",
+      "title": "Logout clears session for Field Tester",
+      "description": "Test that logout invalidates the session for Field Tester",
+      "trigger": "api_call",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Field Tester succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364469"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_MANAGER",
+      "title": "Login as Manager with valid credentials",
+      "description": "Test that Manager can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Manager"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Manager with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364471"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_MANAGER",
+      "title": "Reject invalid password for Manager",
+      "description": "Test that Manager cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Manager with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364473"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_MANAGER",
+      "title": "Manager redirects to /app after login",
+      "description": "Test that Manager is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Manager"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Manager redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364475"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_MANAGER",
+      "title": "Authenticated request succeeds for Manager",
+      "description": "Test that requests with a valid session cookie succeed for Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364477"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_MANAGER",
+      "title": "Expired session rejected for Manager",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364478"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_MANAGER",
+      "title": "Logout clears session for Manager",
+      "description": "Test that logout invalidates the session for Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364481"
     },
     {
       "test_id": "WS_ENGINEERING_DASHBOARD_NAV",
       "title": "Navigate to Engineering Dashboard",
       "description": "Verify Engineering Dashboard workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "engineer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as engineer"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:engineering_dashboard",
           "data": {
-            "route": "/engineering-dashboard"
+            "route": "/app/workspaces/engineering_dashboard"
           },
           "rationale": "Navigate to Engineering Dashboard workspace"
         },
@@ -3123,21 +5375,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588937"
+      "created_at": "2026-05-04T15:29:29.364485"
     },
     {
       "test_id": "WS_ENGINEERING_DASHBOARD_ROUTE",
       "title": "Workspace Engineering Dashboard route exists",
       "description": "Verify Engineering Dashboard workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "engineer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as engineer"
+        },
         {
           "action": "check_route",
           "target": "workspace:engineering_dashboard",
           "data": {
-            "route": "/engineering-dashboard"
+            "route": "/app/workspaces/engineering_dashboard"
           },
           "rationale": "Verify route for Engineering Dashboard is defined"
         }
@@ -3155,21 +5412,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588939"
+      "created_at": "2026-05-04T15:29:29.364487"
     },
     {
       "test_id": "WS_TESTER_DASHBOARD_NAV",
       "title": "Navigate to Tester Dashboard",
       "description": "Verify Tester Dashboard workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "tester",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as tester"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:tester_dashboard",
           "data": {
-            "route": "/tester-dashboard"
+            "route": "/app/workspaces/tester_dashboard"
           },
           "rationale": "Navigate to Tester Dashboard workspace"
         },
@@ -3204,21 +5466,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588944"
+      "created_at": "2026-05-04T15:29:29.364491"
     },
     {
       "test_id": "WS_TESTER_DASHBOARD_ROUTE",
       "title": "Workspace Tester Dashboard route exists",
       "description": "Verify Tester Dashboard workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "tester",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as tester"
+        },
         {
           "action": "check_route",
           "target": "workspace:tester_dashboard",
           "data": {
-            "route": "/tester-dashboard"
+            "route": "/app/workspaces/tester_dashboard"
           },
           "rationale": "Verify route for Tester Dashboard is defined"
         }
@@ -3236,7 +5503,98 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:39.588946"
+      "created_at": "2026-05-04T15:29:29.364493"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_NAV",
+      "title": "Navigate to Platform Admin",
+      "description": "Verify Platform Admin workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Navigate to Platform Admin workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='_platform_admin']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Platform Admin succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364497"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_ROUTE",
+      "title": "Workspace Platform Admin route exists",
+      "description": "Verify Platform Admin workspace route is configured",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Verify route for Platform Admin is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Platform Admin route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:29.364499"
     }
   ]
 }

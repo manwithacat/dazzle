@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.65.8"
+version = "0.65.9"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -263,6 +263,34 @@ markers = [
     "corpus: Parser corpus golden snapshot tests",
     "tigerbeetle: TigerBeetle integration tests (requires running TigerBeetle)",
     "postgres: Tests requiring a live PostgreSQL connection (TEST_DATABASE_URL)",
+    # Auto-generated test markers — emitted by `dazzle test dsl-generate`
+    # and `dazzle test tier2-generate` per CRUD operation, surface mode,
+    # tier, and validation kind. Per-entity / per-persona marks are also
+    # emitted dynamically (one per entity name / persona id) and can't
+    # be enumerated here — they're ignored via the filterwarnings rule
+    # on `PytestUnknownMarkWarning` below.
+    "create: Auto-generated marker for create-operation tests",
+    "read: Auto-generated marker for read-operation tests",
+    "update: Auto-generated marker for update-operation tests",
+    "delete: Auto-generated marker for delete-operation tests",
+    "list: Auto-generated marker for list-surface tests",
+    "view: Auto-generated marker for view-surface tests",
+    "edit: Auto-generated marker for edit-surface tests",
+    "crud: Auto-generated marker for combined CRUD test groups",
+    "tier2: Auto-generated Tier 2 (Playwright) test marker",
+    "playwright: Tests that drive a real browser via Playwright",
+    "navigation: Auto-generated marker for navigation-flow tests",
+    "transition: Auto-generated marker for state-machine transition tests",
+    "transitions: Plural variant of `transition` from older generator",
+    "invalid_transition: Auto-generated marker for state-transition negative tests",
+    "valid: Auto-generated marker for happy-path validation tests",
+    "invalid: Auto-generated marker for negative-validation tests",
+    "validation: Auto-generated marker for validation-rule tests",
+    "format: Auto-generated marker for field-format validation tests",
+    "required: Auto-generated marker for required-field validation tests",
+    "reference: Auto-generated marker for FK-reference validation tests",
+    "denied: Auto-generated marker for access-denied tests",
+    "high_priority: Auto-generated marker for high-priority test groups",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -271,6 +299,14 @@ filterwarnings = [
     # that coincidentally shadows a deprecated BaseModel.construct method.
     # See src/dazzle/testing/ux/reconciler.py docstring.
     "ignore:Field name \"construct\" in \"DSLLever\" shadows an attribute in parent \"BaseModel\":UserWarning",
+    # Auto-generated tests (`dazzle test dsl-generate`, `tier2-generate`)
+    # emit per-entity / per-persona marks (`@pytest.mark.task`,
+    # `@pytest.mark.engineer`, etc.) that can't be enumerated in the
+    # static `markers` list above. Suppressing the unknown-mark warning
+    # keeps `dazzle conformance run` output clean — the static
+    # categorical marks (CRUD, surface mode, validation kind) ARE
+    # registered above for completion.
+    "ignore::pytest.PytestUnknownMarkWarning",
 ]
 # Coverage is opt-in for faster local runs. Use: pytest --cov=src/dazzle --cov-report=term-missing
 # Fast local run: pytest -m "not slow and not e2e"

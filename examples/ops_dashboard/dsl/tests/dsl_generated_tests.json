@@ -1,30 +1,42 @@
 {
   "version": "2.0",
-  "dsl_hash": "14cedbddb9afc2f9",
-  "generated_at": "2026-01-02T02:38:40.176499",
+  "dsl_hash": "e0503cd2bb15166d",
+  "generated_at": "2026-05-04T15:29:01.721420",
   "project_name": "ops_dashboard",
   "coverage": {
     "entities": [
       "Alert",
-      "System"
+      "DeployHistory",
+      "Integration",
+      "System",
+      "SystemHealth",
+      "SystemMetric"
     ],
-    "entities_total": 2,
+    "entities_total": 6,
     "state_machines": [
       "System"
     ],
     "state_machines_total": 1,
     "personas": [
+      "admin",
       "ops_engineer"
     ],
-    "personas_total": 1,
+    "personas_total": 2,
     "workspaces": [
-      "command_center"
+      "_platform_admin",
+      "command_center",
+      "incident_review"
     ],
-    "workspaces_total": 1,
+    "workspaces_total": 3,
     "events": [],
     "events_total": 0,
     "processes": [],
-    "processes_total": 0
+    "processes_total": 0,
+    "auth_personas": [
+      "admin",
+      "ops_engineer"
+    ],
+    "auth_personas_total": 2
   },
   "designs": [
     {
@@ -67,7 +79,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176341"
+      "created_at": "2026-05-04T15:29:01.721164"
     },
     {
       "test_id": "CRUD_SYSTEM_READ",
@@ -114,7 +126,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176345"
+      "created_at": "2026-05-04T15:29:01.721174"
     },
     {
       "test_id": "VAL_SYSTEM_REQUIRED",
@@ -154,7 +166,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176349"
+      "created_at": "2026-05-04T15:29:01.721178"
     },
     {
       "test_id": "CRUD_ALERT_CREATE",
@@ -171,7 +183,7 @@
             "name": "Test name"
           },
           "store_result": "parent_system",
-          "rationale": "Create parent System for ref field 'system'"
+          "rationale": "Create parent System"
         },
         {
           "action": "create",
@@ -207,7 +219,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176367"
+      "created_at": "2026-05-04T15:29:01.721205"
     },
     {
       "test_id": "CRUD_ALERT_READ",
@@ -224,7 +236,7 @@
             "name": "Test name"
           },
           "store_result": "parent_system",
-          "rationale": "Create parent System for ref field 'system'"
+          "rationale": "Create parent System"
         },
         {
           "action": "create",
@@ -265,7 +277,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176370"
+      "created_at": "2026-05-04T15:29:01.721211"
     },
     {
       "test_id": "VAL_ALERT_REQUIRED",
@@ -305,7 +317,167 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176373"
+      "created_at": "2026-05-04T15:29:01.721214"
+    },
+    {
+      "test_id": "CRUD_INTEGRATION_READ",
+      "title": "Read Integration list",
+      "description": "Test reading Integration list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:Integration",
+          "rationale": "Fetch Integration list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Integration list succeeds"
+      ],
+      "entities": [
+        "Integration"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721222"
+    },
+    {
+      "test_id": "CRUD_SYSTEMHEALTH_READ",
+      "title": "Read System Health list",
+      "description": "Test reading System Health list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemHealth",
+          "rationale": "Fetch System Health list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Health list succeeds"
+      ],
+      "entities": [
+        "SystemHealth"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721226"
+    },
+    {
+      "test_id": "CRUD_SYSTEMMETRIC_READ",
+      "title": "Read System Metric list",
+      "description": "Test reading System Metric list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SystemMetric",
+          "rationale": "Fetch System Metric list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System Metric list succeeds"
+      ],
+      "entities": [
+        "SystemMetric"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721234"
+    },
+    {
+      "test_id": "CRUD_DEPLOYHISTORY_READ",
+      "title": "Read Deploy History list",
+      "description": "Test reading Deploy History list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:DeployHistory",
+          "rationale": "Fetch Deploy History list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Deploy History list succeeds"
+      ],
+      "entities": [
+        "DeployHistory"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721238"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_DEGRADED",
@@ -357,7 +529,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176382"
+      "created_at": "2026-05-04T15:29:01.721249"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_CRITICAL",
@@ -409,7 +581,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176388"
+      "created_at": "2026-05-04T15:29:01.721252"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_HEALTHY",
@@ -461,7 +633,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176394"
+      "created_at": "2026-05-04T15:29:01.721255"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_CRITICAL",
@@ -513,7 +685,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176398"
+      "created_at": "2026-05-04T15:29:01.721257"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_DEGRADED",
@@ -565,7 +737,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176403"
+      "created_at": "2026-05-04T15:29:01.721259"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_OFFLINE",
@@ -617,7 +789,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176408"
+      "created_at": "2026-05-04T15:29:01.721262"
     },
     {
       "test_id": "SM_SYSTEM_OFFLINE_HEALTHY",
@@ -669,7 +841,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176413"
+      "created_at": "2026-05-04T15:29:01.721264"
     },
     {
       "test_id": "SM_SYSTEM_*_OFFLINE",
@@ -721,7 +893,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176418"
+      "created_at": "2026-05-04T15:29:01.721267"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_OFFLINE_INVALID",
@@ -773,7 +945,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176426"
+      "created_at": "2026-05-04T15:29:01.721272"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_OFFLINE_INVALID",
@@ -825,7 +997,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176432"
+      "created_at": "2026-05-04T15:29:01.721276"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_HEALTHY_INVALID",
@@ -877,12 +1049,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176438"
+      "created_at": "2026-05-04T15:29:01.721279"
     },
     {
-      "test_id": "SM_SYSTEM_OFFLINE_CRITICAL_INVALID",
-      "title": "System: offline \u2192 critical (invalid)",
-      "description": "Test that invalid transition from offline to critical is rejected",
+      "test_id": "SM_SYSTEM_OFFLINE_DEGRADED_INVALID",
+      "title": "System: offline \u2192 degraded (invalid)",
+      "description": "Test that invalid transition from offline to degraded is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -900,9 +1072,9 @@
           "action": "transition_expect_error",
           "target": "entity:System",
           "data": {
-            "to_state": "critical"
+            "to_state": "degraded"
           },
-          "rationale": "Attempt invalid transition to critical"
+          "rationale": "Attempt invalid transition to degraded"
         },
         {
           "action": "assert_state",
@@ -915,7 +1087,7 @@
         }
       ],
       "expected_outcomes": [
-        "System: offline \u2192 critical (invalid) succeeds"
+        "System: offline \u2192 degraded (invalid) succeeds"
       ],
       "entities": [
         "System"
@@ -929,7 +1101,41 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176444"
+      "created_at": "2026-05-04T15:29:01.721283"
+    },
+    {
+      "test_id": "ACL_ADMIN_ACCESS",
+      "title": "Administrator can authenticate",
+      "description": "Test that Administrator persona can authenticate",
+      "trigger": "authentication",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "admin",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721287"
     },
     {
       "test_id": "ACL_OPS_ENGINEER_ACCESS",
@@ -963,21 +1169,702 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176448"
+      "created_at": "2026-05-04T15:29:01.721290"
+    },
+    {
+      "test_id": "GOAL_OPS_ENGINEER_MONITOR_SYSTEM_HEALT",
+      "title": "Operations Engineer: Monitor system health in real-time",
+      "description": "Test that Operations Engineer can achieve goal: Monitor system health in real-time",
+      "trigger": "user_action",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Monitor system health in real-time",
+          "rationale": "Work towards goal: Monitor system health in real-time"
+        }
+      ],
+      "expected_outcomes": [
+        "Operations Engineer: Monitor system health in real-time succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721341"
+    },
+    {
+      "test_id": "GOAL_OPS_ENGINEER_RESPOND_QUICKLY_TO_A",
+      "title": "Operations Engineer: Respond quickly to alerts",
+      "description": "Test that Operations Engineer can achieve goal: Respond quickly to alerts",
+      "trigger": "user_action",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Respond quickly to alerts",
+          "rationale": "Work towards goal: Respond quickly to alerts"
+        }
+      ],
+      "expected_outcomes": [
+        "Operations Engineer: Respond quickly to alerts succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721345"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_ADMIN",
+      "title": "Login as Administrator with valid credentials",
+      "description": "Test that Administrator can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Administrator with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721350"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_ADMIN",
+      "title": "Reject invalid password for Administrator",
+      "description": "Test that Administrator cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Administrator with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721352"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_ADMIN",
+      "title": "Administrator redirects to /app after login",
+      "description": "Test that Administrator is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721354"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_ADMIN",
+      "title": "Authenticated request succeeds for Administrator",
+      "description": "Test that requests with a valid session cookie succeed for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721356"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
+      "title": "Expired session rejected for Administrator",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721358"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_ADMIN",
+      "title": "Logout clears session for Administrator",
+      "description": "Test that logout invalidates the session for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721361"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_OPS_ENGINEER",
+      "title": "Login as Operations Engineer with valid credentials",
+      "description": "Test that Operations Engineer can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Operations Engineer"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Operations Engineer with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721364"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_OPS_ENGINEER",
+      "title": "Reject invalid password for Operations Engineer",
+      "description": "Test that Operations Engineer cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Operations Engineer with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Operations Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721366"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_OPS_ENGINEER",
+      "title": "Operations Engineer redirects to /app after login",
+      "description": "Test that Operations Engineer is directed to /app after successful login",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Operations Engineer"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/app"
+          },
+          "rationale": "Verify redirect to /app"
+        }
+      ],
+      "expected_outcomes": [
+        "Operations Engineer redirects to /app after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721368"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_OPS_ENGINEER",
+      "title": "Authenticated request succeeds for Operations Engineer",
+      "description": "Test that requests with a valid session cookie succeed for Operations Engineer",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /app with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Operations Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721370"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_OPS_ENGINEER",
+      "title": "Expired session rejected for Operations Engineer",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/app",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Operations Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721371"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_OPS_ENGINEER",
+      "title": "Logout clears session for Operations Engineer",
+      "description": "Test that logout invalidates the session for Operations Engineer",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/app",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Operations Engineer succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721374"
     },
     {
       "test_id": "WS_COMMAND_CENTER_NAV",
       "title": "Navigate to Command Center",
       "description": "Verify Command Center workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "ops_engineer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as ops_engineer"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:command_center",
           "data": {
-            "route": "/command-center"
+            "route": "/app/workspaces/command_center"
           },
           "rationale": "Navigate to Command Center workspace"
         },
@@ -1012,21 +1899,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176452"
+      "created_at": "2026-05-04T15:29:01.721378"
     },
     {
       "test_id": "WS_COMMAND_CENTER_ROUTE",
       "title": "Workspace Command Center route exists",
       "description": "Verify Command Center workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "ops_engineer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as ops_engineer"
+        },
         {
           "action": "check_route",
           "target": "workspace:command_center",
           "data": {
-            "route": "/command-center"
+            "route": "/app/workspaces/command_center"
           },
           "rationale": "Verify route for Command Center is defined"
         }
@@ -1044,7 +1936,189 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-01-02T02:38:40.176455"
+      "created_at": "2026-05-04T15:29:01.721384"
+    },
+    {
+      "test_id": "WS_INCIDENT_REVIEW_NAV",
+      "title": "Navigate to Incident Review",
+      "description": "Verify Incident Review workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as ops_engineer"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:incident_review",
+          "data": {
+            "route": "/app/workspaces/incident_review"
+          },
+          "rationale": "Navigate to Incident Review workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='incident_review']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Incident Review succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721388"
+    },
+    {
+      "test_id": "WS_INCIDENT_REVIEW_ROUTE",
+      "title": "Workspace Incident Review route exists",
+      "description": "Verify Incident Review workspace route is configured",
+      "trigger": "api_call",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as ops_engineer"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:incident_review",
+          "data": {
+            "route": "/app/workspaces/incident_review"
+          },
+          "rationale": "Verify route for Incident Review is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Incident Review route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721393"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_NAV",
+      "title": "Navigate to Platform Admin",
+      "description": "Verify Platform Admin workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Navigate to Platform Admin workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='_platform_admin']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Platform Admin succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721396"
+    },
+    {
+      "test_id": "WS__PLATFORM_ADMIN_ROUTE",
+      "title": "Workspace Platform Admin route exists",
+      "description": "Verify Platform Admin workspace route is configured",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:_platform_admin",
+          "data": {
+            "route": "/app/workspaces/_platform_admin"
+          },
+          "rationale": "Verify route for Platform Admin is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Platform Admin route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-05-04T15:29:01.721398"
     }
   ]
 }
