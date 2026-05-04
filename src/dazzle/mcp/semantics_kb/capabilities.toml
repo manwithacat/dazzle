@@ -4,7 +4,7 @@ version = "0.51.9"
 
 [concepts.widget_rich_text]
 category = "Widget"
-definition = "Rich text editing via Quill v2 for formatted content"
+definition = "Rich text editing via dz-richtext (Dazzle-native, closed-schema HTML editor) for formatted content"
 syntax = 'field description "Description" widget=rich_text'
 applies_to = "text fields on create/edit surfaces"
 demonstrated_in = ["component_showcase", "project_tracker", "design_studio"]

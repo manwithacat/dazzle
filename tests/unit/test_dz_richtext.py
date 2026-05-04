@@ -1,4 +1,4 @@
-"""Source-regression tests for dz-richtext.js (#977 cycles 1–3).
+"""Source-regression tests for dz-richtext.js (#977 cycles 1–4).
 
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md
 
@@ -32,9 +32,11 @@ class TestSourceContract:
         assert JS_PATH.exists()
         assert CSS_PATH.exists()
 
-    def test_registers_as_richtext_native(self) -> None:
+    def test_registers_as_richtext(self) -> None:
+        """Cycle 4 flipped the bridge name from 'richtext-native' to
+        'richtext' (Quill removed)."""
         src = JS_PATH.read_text()
-        assert 'bridge.registerWidget("richtext-native"' in src
+        assert 'bridge.registerWidget("richtext"' in src
 
     def test_commands_contains_underline_per_spec_decision(self) -> None:
         """§13 decision 1: <u> stays in cycle 1."""
@@ -466,3 +468,127 @@ class TestCycle3SafeHrefInPaste:
     def test_a_href_validated_in_sanitise_tree(self) -> None:
         src = JS_PATH.read_text()
         assert "if (!SAFE_HREF.test(href))" in src
+
+
+# ───────────────────────────── cycle 4 ────────────────────────────────
+
+
+class TestCycle4BridgeFlip:
+    """Bridge name moved from "richtext-native" to "richtext"; Quill gone."""
+
+    def test_registered_as_richtext_not_richtext_native(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'bridge.registerWidget("richtext"' in src
+        # The string "richtext-native" may appear in module-doc comments
+        # narrating the cycle 4 flip — only the registration call matters.
+        assert 'registerWidget("richtext-native"' not in src
+
+    def test_quill_bridge_removed_from_widget_registry(self) -> None:
+        registry = (
+            ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "js" / "dz-widget-registry.js"
+        ).read_text()
+        assert "Quill" not in registry or "Quill removed" in registry
+        assert "new Quill(" not in registry
+        assert 'bridge.registerWidget("richtext"' not in registry
+
+    def test_quill_vendor_files_absent(self) -> None:
+        vendor = ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "vendor"
+        assert not (vendor / "quill.min.js").exists()
+        assert not (vendor / "quill.snow.css").exists()
+
+    def test_quill_conditional_removed_from_base_html(self) -> None:
+        base = (ROOT / "src" / "dazzle_ui" / "templates" / "base.html").read_text()
+        assert 'if "quill"' not in base
+        assert "vendor/quill" not in base
+
+    def test_asset_manifest_drops_rich_text_mapping(self) -> None:
+        am = (ROOT / "src" / "dazzle_back" / "runtime" / "asset_manifest.py").read_text()
+        assert '"rich_text": "quill"' not in am
+        assert '"rich_text":' not in am
+
+
+class TestCycle4UndoRedo:
+    def test_undo_redo_handlers_registered(self) -> None:
+        src = JS_PATH.read_text()
+        assert "function undo()" in src
+        assert "function redo()" in src
+
+    def test_undo_stack_capped(self) -> None:
+        """Bounded stack — prevents unbounded memory growth."""
+        src = JS_PATH.read_text()
+        assert "UNDO_LIMIT" in src
+        assert "undoStack.shift()" in src
+
+    def test_redo_stack_cleared_on_new_edit(self) -> None:
+        """Standard redo semantics: any new edit invalidates the redo stack."""
+        src = JS_PATH.read_text()
+        assert "redoStack.length = 0" in src
+
+    def test_keyboard_handlers_for_undo_redo(self) -> None:
+        src = JS_PATH.read_text()
+        # Mod+Z = undo
+        assert 'k === "z" && !e.shiftKey' in src
+        # Mod+Shift+Z OR Mod+Y = redo (Windows convention)
+        assert 'k === "z" && e.shiftKey' in src or 'k === "y"' in src
+
+    def test_history_replay_uses_safe_path(self) -> None:
+        """Undo replays through replaceEditorContents (DOMParser-routed),
+        not through a raw HTML write."""
+        src = JS_PATH.read_text()
+        assert "function applyHistory" in src
+        assert "replaceEditorContents(editor, html)" in src
+
+
+class TestCycle4LengthCap:
+    def test_max_length_default(self) -> None:
+        src = JS_PATH.read_text()
+        # Default cap matches IR (50000).
+        assert "50000" in src
+
+    def test_max_length_overridable(self) -> None:
+        src = JS_PATH.read_text()
+        assert "options.maxLength" in src
+
+    def test_warning_at_90_percent(self) -> None:
+        """Polite live-region warning when approaching the cap."""
+        src = JS_PATH.read_text()
+        assert "0.9 * maxLength" in src
+        assert "approaching length limit" in src
+
+
+class TestCycle4IRAllowlist:
+    def test_ir_module_exists(self) -> None:
+        from dazzle.core.ir import richtext as rt
+
+        assert rt.RICH_TEXT_ALLOWED_TAGS
+        assert rt.RICH_TEXT_ALLOWED_ATTRS == {"a": frozenset({"href"})}
+
+    def test_ir_excludes_h1(self) -> None:
+        """#983 separation: h1 belongs to the surface, never the editor."""
+        from dazzle.core.ir.richtext import RICH_TEXT_ALLOWED_TAGS
+
+        assert "h1" not in RICH_TEXT_ALLOWED_TAGS
+
+    def test_safe_href_helper(self) -> None:
+        from dazzle.core.ir.richtext import is_safe_href
+
+        assert is_safe_href("https://x")
+        assert is_safe_href("mailto:a@b")
+        assert is_safe_href("/path")
+        assert not is_safe_href("javascript:alert(1)")
+        assert not is_safe_href("data:text/html,x")
+        assert not is_safe_href("")
+
+
+class TestCycle4ServerField:
+    def test_clean_rich_text_importable(self) -> None:
+        from dazzle_back.runtime.richtext_field import clean_rich_text
+
+        assert callable(clean_rich_text)
+
+    def test_clean_rich_text_uses_ir_constants(self) -> None:
+        """Field validator must source the allowlist from the IR."""
+        src = (ROOT / "src" / "dazzle_back" / "runtime" / "richtext_field.py").read_text()
+        assert "from dazzle.core.ir.richtext import" in src
+        assert "RICH_TEXT_ALLOWED_TAGS" in src
+        assert "RICH_TEXT_ALLOWED_ATTRS" in src

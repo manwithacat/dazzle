@@ -23,7 +23,7 @@ LAYERED_ORDER: tuple[tuple[str, str], ...] = (
     ("reset", "css/reset.css"),
     ("vendor", "vendor/tom-select.css"),
     ("vendor", "vendor/flatpickr.css"),
-    ("vendor", "vendor/quill.snow.css"),
+    # vendor/quill.snow.css removed in #977 cycle 4 — replaced by dz-richtext.
     # vendor/pickr.css removed in #976 — colour widget uses native input.
     ("tokens", "css/tokens.css"),
     ("tokens", "css/design-system.css"),

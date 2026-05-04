@@ -23,8 +23,9 @@ class _HasFields(Protocol):
 # Maps (widget, optional type constraint) → vendor asset key.
 # `widget=color` deliberately absent (#976): native `<input type="color">`
 # replaced the Pickr wrapper, so no vendor asset is required.
+# `widget=rich_text` deliberately absent (#977 cycle 4): dz-richtext.js
+# (bundled with the core JS) replaces Quill — no vendor asset required.
 _WIDGET_ASSET_MAP: dict[str, str | tuple[str, set[str]]] = {
-    "rich_text": "quill",
     "combobox": "tom-select",
     "multi_select": "tom-select",
     "tags": "tom-select",
@@ -37,7 +38,7 @@ _WIDGET_ASSET_MAP: dict[str, str | tuple[str, set[str]]] = {
 def collect_required_assets(surface: _HasFields) -> set[str]:
     """Derive the set of vendor JS asset keys required by a surface's fields.
 
-    Returns a set of strings like ``{"quill", "tom-select", "flatpickr"}``.
+    Returns a set of strings like ``{"tom-select", "flatpickr"}``.
     These keys correspond to conditional blocks in ``base.html``.
     """
     assets: set[str] = set()

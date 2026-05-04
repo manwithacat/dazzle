@@ -29,9 +29,8 @@ class TestVendoredFiles:
             "vendor/tom-select.css",
             "vendor/flatpickr.min.js",
             "vendor/flatpickr.css",
-            "vendor/quill.min.js",
-            "vendor/quill.snow.css",
             # Pickr removed in #976 — see test_pickr_vendor_files_absent.
+            # Quill removed in #977 cycle 4 — see test_quill_vendor_files_absent.
         ],
     )
     def test_vendor_file_exists(self, filename):
@@ -49,6 +48,19 @@ class TestVendoredFiles:
                 "with the new rationale."
             )
 
+    def test_quill_vendor_files_absent(self):
+        """Drift gate (#977 cycle 4): re-introducing Quill requires explicit
+        work — `widget=rich_text` switched to dz-richtext (Dazzle-native)."""
+        for path in (
+            STATIC_DIR / "vendor" / "quill.min.js",
+            STATIC_DIR / "vendor" / "quill.snow.css",
+        ):
+            assert not path.exists(), (
+                f"{path.name} re-appeared in vendor/. Quill was dropped in "
+                "#977 cycle 4 — `widget=rich_text` uses the Dazzle-native "
+                "dz-richtext editor (bundled, no vendor dependency)."
+            )
+
 
 # ── Widget registry ──────────────────────────────────────────────────────
 
@@ -62,16 +74,23 @@ class TestWidgetRegistry:
         content = (STATIC_DIR / "js" / "dz-widget-registry.js").read_text()
         # `colorpicker` deliberately absent (#976): native <input type="color">
         # replaced the Pickr-backed widget; no bridge entry is needed.
+        # `richtext` deliberately absent here (#977 cycle 4): registered by
+        # dz-richtext.js — see TestRichTextRegistration below.
         for widget_type in [
             "combobox",
             "multiselect",
             "tags",
             "datepicker",
             "daterange",
-            "richtext",
             "range-tooltip",
         ]:
             assert f'"{widget_type}"' in content, f"Widget type {widget_type} not registered"
+
+    def test_richtext_registered_in_dz_richtext_js(self):
+        """#977 cycle 4: richtext lives in dz-richtext.js, not in
+        dz-widget-registry.js. Both must be loaded for the bridge to fire."""
+        content = (STATIC_DIR / "js" / "dz-richtext.js").read_text()
+        assert 'bridge.registerWidget("richtext"' in content
 
     def test_colorpicker_widget_not_registered(self):
         """Drift gate (#976): re-introducing a `colorpicker` widget needs an
@@ -104,7 +123,9 @@ class TestWidgetCSS:
         # Pickr (.pcr-app / .pickr) overrides removed in #976 — the colour
         # widget uses a native <input type="color"> styled via .dz-form-color-*
         # in components/form.css instead.
-        assert ".ql-container" in content or ".ql-toolbar" in content, "Missing Quill overrides"
+        # Quill overrides removed in #977 cycle 4 — dz-richtext styles
+        # live in components/richtext.css (handled by a separate gate
+        # in test_dz_richtext.py::TestStylesheet).
 
 
 class TestComboboxFkRemoteLoad:

@@ -24,9 +24,12 @@ class TestCollectRequiredAssets:
         surface = _FakeSurface([_FakeField("str"), _FakeField("int")])
         assert collect_required_assets(surface) == set()
 
-    def test_rich_text_requires_quill(self):
+    def test_rich_text_requires_no_vendor_asset(self):
+        """`widget=rich_text` is now dz-richtext (Dazzle-native, bundled
+        with the core JS) per #977 cycle 4. Drift gate: ensure
+        re-introducing a Quill-style dependency requires explicit work."""
         surface = _FakeSurface([_FakeField("text", widget="rich_text")])
-        assert collect_required_assets(surface) == {"quill"}
+        assert collect_required_assets(surface) == set()
 
     def test_combobox_requires_tom_select(self):
         surface = _FakeSurface([_FakeField("ref", widget="combobox")])
@@ -62,6 +65,8 @@ class TestCollectRequiredAssets:
     def test_multiple_widgets_collect_all(self):
         # `widget=color` deliberately included to confirm it adds nothing
         # to the required-asset set after the #976 native-input migration.
+        # `widget=rich_text` likewise after #977 cycle 4 (dz-richtext is
+        # bundled with the core JS, no vendor asset).
         surface = _FakeSurface(
             [
                 _FakeField("text", widget="rich_text"),
@@ -71,7 +76,6 @@ class TestCollectRequiredAssets:
             ]
         )
         assert collect_required_assets(surface) == {
-            "quill",
             "tom-select",
             "flatpickr",
         }

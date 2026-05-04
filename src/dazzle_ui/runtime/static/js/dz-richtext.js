@@ -9,11 +9,10 @@
  * Cycle 3: paste sanitisation pipeline — DOMParser walk, tag-synonym
  *          rewrites (b→strong, i→em, font→text), structural normalisation
  *          (lift orphan li, collapse p-in-li), inline-style flood scrub.
- * Cycles 4–5: undo/redo + server allowlist parity, DSL knobs.
- *
- * Coexists with the Quill bridge (registered as "richtext"); this
- * editor is registered as "richtext-native" until cycle 4 flips the
- * macro and the Quill bridge is deleted.
+ * Cycle 4: undo/redo stack, soft length cap with aria-live warning,
+ *          server allowlist parity (IR + bleach). Bridge flipped from
+ *          "richtext-native" to "richtext"; Quill removed.
+ * Cycle 5: DSL knobs (rich_text_toolbar, rich_text_max_length).
  *
  * Security model: client-side schema enforcement is a UX layer. The
  * security boundary is `RichTextField` on the server (bleach with the
@@ -699,7 +698,7 @@
     return null;
   }
 
-  bridge.registerWidget("richtext-native", {
+  bridge.registerWidget("richtext", {
     mount: function (host, options) {
       var editor = host.querySelector("[data-dz-editor]");
       var hidden =
@@ -739,9 +738,69 @@
         });
       }
 
-      function commit() {
+      // Cycle 4: undo/redo. Each entry is the serialised HTML at the
+      // moment of commit. Replaying walks the editor back through
+      // replaceEditorContents (DOMParser-routed, schema-safe).
+      var UNDO_LIMIT = 100;
+      var undoStack = [];
+      var redoStack = [];
+      var lastSnapshot = null;
+
+      function snapshot() {
+        var html = emit(editor);
+        if (html === lastSnapshot) return;
+        if (lastSnapshot !== null) {
+          undoStack.push(lastSnapshot);
+          if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+          redoStack.length = 0;
+        }
+        lastSnapshot = html;
+      }
+
+      function applyHistory(html) {
+        replaceEditorContents(editor, html);
         if (hidden) hidden.value = emit(editor);
         updateToolbarState(toolbar, editor);
+      }
+
+      function undo() {
+        if (!undoStack.length) return false;
+        redoStack.push(lastSnapshot);
+        lastSnapshot = undoStack.pop();
+        applyHistory(lastSnapshot);
+        announce(host, "undo");
+        return true;
+      }
+
+      function redo() {
+        if (!redoStack.length) return false;
+        undoStack.push(lastSnapshot);
+        lastSnapshot = redoStack.pop();
+        applyHistory(lastSnapshot);
+        announce(host, "redo");
+        return true;
+      }
+
+      // Cycle 4: soft length cap. Server enforces absolutely; client
+      // surfaces a polite warning at 90% via the announcer.
+      var maxLength =
+        (options &&
+          typeof options.maxLength === "number" &&
+          options.maxLength) ||
+        50000;
+      var warnedAt90 = false;
+
+      function commit() {
+        if (hidden) hidden.value = emit(editor);
+        var len = (hidden && hidden.value.length) || 0;
+        if (len > 0.9 * maxLength && !warnedAt90) {
+          warnedAt90 = true;
+          announce(host, "approaching length limit");
+        } else if (len <= 0.9 * maxLength) {
+          warnedAt90 = false;
+        }
+        updateToolbarState(toolbar, editor);
+        snapshot();
       }
 
       function runCommand(name) {
@@ -773,6 +832,23 @@
       });
 
       on(editor, "keydown", function (e) {
+        // Cycle 4: explicit undo/redo handlers. We don't trust the
+        // browser's contenteditable undo across our schema-rewriting
+        // commands, and we want shift+z = redo to be standard
+        // regardless of platform.
+        if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+          var k = e.key.toLowerCase();
+          if (k === "z" && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+            return;
+          }
+          if ((k === "z" && e.shiftKey) || k === "y") {
+            e.preventDefault();
+            redo();
+            return;
+          }
+        }
         var match = matchKeyEvent(e);
         if (!match) return;
         e.preventDefault();

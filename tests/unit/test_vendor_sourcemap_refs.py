@@ -26,8 +26,7 @@ VENDOR_DIR = (
 _FILES_WITHOUT_SHIPPED_MAPS = [
     "tom-select.min.js",
     "tom-select.css",
-    "quill.min.js",
-    "quill.snow.css",
+    # quill.min.js / quill.snow.css removed in #977 cycle 4.
     "pickr.min.js",
 ]
 

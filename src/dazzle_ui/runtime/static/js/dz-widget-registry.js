@@ -5,8 +5,10 @@
  * Each registration maps a data-dz-widget type to a { mount, unmount } pair.
  * The bridge calls mount() on htmx:afterSettle and unmount() on htmx:beforeSwap.
  *
- * Widget types: combobox, multiselect, tags, datepicker, daterange, richtext
- * (Note: colorpicker dropped in #976 — `widget=color` uses native input)
+ * Widget types: combobox, multiselect, tags, datepicker, daterange,
+ * range-tooltip. (Note: colorpicker dropped in #976 — `widget=color`
+ * uses native input. richtext moved to dz-richtext.js in #977 cycle 4
+ * — Dazzle-native editor, no vendor dependency.)
  */
 (function () {
   var bridge = window.dz && window.dz.bridge;
@@ -158,45 +160,9 @@
   // bare native input wired up via Alpine's `x-model`. The widget
   // registry entry that lived here was 30+ lines of Pickr glue.
 
-  // ── Quill (rich text editor) ────────────────────────────────────────
-
-  bridge.registerWidget("richtext", {
-    mount: function (el, options) {
-      if (typeof Quill === "undefined") return null;
-      var editorDiv = el.querySelector("[data-dz-editor]") || el;
-      var hiddenInput =
-        el.querySelector("input[type=hidden]") || el.querySelector("textarea");
-      var defaults = {
-        theme: "snow",
-        placeholder: options.placeholder || "Write something...",
-        modules: {
-          toolbar: options.toolbar || [
-            [{ header: [1, 2, 3, false] }],
-            ["bold", "italic", "underline", "strike"],
-            [{ list: "ordered" }, { list: "bullet" }],
-            ["link", "blockquote", "code-block"],
-            ["clean"],
-          ],
-        },
-      };
-      var quill = new Quill(editorDiv, Object.assign(defaults, options));
-      // Sync content to hidden input on change.
-      // quill.root.innerHTML is Quill-managed markup, not raw user input — safe to read.
-      if (hiddenInput) {
-        if (hiddenInput.value) {
-          // nosemgrep: innerHTML-set — restoring persisted Quill markup into Quill's own root
-          quill.root.innerHTML = hiddenInput.value;
-        }
-        quill.on("text-change", function () {
-          hiddenInput.value = quill.root.innerHTML;
-        });
-      }
-      return quill;
-    },
-    unmount: function (_el, _instance) {
-      // Quill does not have a destroy method — it is cleaned up when the DOM is removed
-    },
-  });
+  // ── Rich text editor (#977 cycle 4) ─────────────────────────────────
+  // The "richtext" bridge is now registered by dz-richtext.js
+  // (Dazzle-native, no vendor dependency). Quill removed in cycle 4.
 
   // ── Range slider with value tooltip ─────────────────────────────────
 

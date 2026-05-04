@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.3] - 2026-05-04
+
+### Added
+- **#977 cycle 4 — dz-richtext: undo/redo, server-side `RichTextField`,
+  IR allowlist with client-server parity gate, length cap. Quill
+  removed.** The value-delivery cycle: ~236 KB of vendor assets
+  reclaimed; the editor pipeline goes end-to-end through Dazzle code.
+  - **Undo/redo stack** — bounded snapshot stack (cap 100), Cmd+Z /
+    Cmd+Shift+Z / Cmd+Y. Replay routes through `replaceEditorContents`
+    → DOMParser, never a raw HTML write. Mutating commands push a
+    snapshot; new edits invalidate the redo stack (standard semantics).
+  - **Soft length cap** — default 50000 chars (post-sanitisation),
+    `options.maxLength` overrides per-mount. Polite live-region
+    warning at 90% capacity. Server enforces absolutely.
+  - **IR allowlist** — `src/dazzle/core/ir/richtext.py` is now the
+    single source of truth: `RICH_TEXT_ALLOWED_TAGS`,
+    `RICH_TEXT_ALLOWED_ATTRS`, `RICH_TEXT_PROTOCOL_PATTERN`,
+    `RICH_TEXT_MAX_LENGTH_DEFAULT`, `is_safe_href()`. Drift gated
+    by `tests/unit/test_richtext_allowlist_parity.py` — JS regex
+    literal extracted via grep + compared string-equal to the IR
+    pattern; INLINE_ALLOW / BLOCK_ALLOW pulled into Python sets and
+    asserted equal to the IR frozensets.
+  - **Server-side `RichTextField`** — `clean_rich_text(raw, max_length=)`
+    in `src/dazzle_back/runtime/richtext_field.py`. Uses `bleach`
+    (added as a runtime dep, ≥ 6.0) with the IR allowlist; href
+    re-validated through `is_safe_href` in the attribute callback;
+    raises `ValueError` on length overflow. Handles every paste-XSS
+    fixture in the regression suite.
+
+### Removed
+- **Quill (~236 KB).** `vendor/quill.min.js` + `vendor/quill.snow.css`
+  deleted. Bridge in `dz-widget-registry.js` removed.
+  `dz-widgets.css` Quill theme overrides deleted. `base.html`
+  conditional removed. `_WIDGET_ASSET_MAP` no longer maps `rich_text`
+  to anything (the editor is bundled with the core JS). Drift gates
+  (`test_quill_vendor_files_absent`, `test_richtext_registered_in_dz_richtext_js`)
+  prevent reintroduction.
+
+### Changed
+- **`widget=rich_text` bridge name unchanged (`"richtext"`)** — the
+  template contract (`data-dz-widget="richtext"` in
+  `form_field.html`) is preserved; the *implementation* behind that
+  name is now dz-richtext (Dazzle-native) instead of Quill. Existing
+  app DSL needs no changes.
+- **`bleach>=6.0`** is a new runtime dep (was previously a transitive
+  test-only).
+
+### Agent Guidance
+- The IR allowlist `src/dazzle/core/ir/richtext.py` is the single
+  source of truth. Adding a tag means: (1) add it to the IR
+  set, (2) add it to dz-richtext.js INLINE_ALLOW / BLOCK_ALLOW,
+  (3) add an emit-pass test, (4) the parity gate auto-checks the
+  rest. Same for attributes and the SAFE_HREF pattern.
+- `RichTextField`'s `clean_rich_text` is the security boundary — it
+  must run on every persisted rich-text value. Don't bypass with raw
+  bleach.clean elsewhere; reuse this function so the IR allowlist
+  stays the single source.
+
 ## [0.64.2] - 2026-05-04
 
 ### Added

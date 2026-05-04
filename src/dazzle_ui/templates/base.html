@@ -269,10 +269,8 @@
      The conditional asset block + `pickr` key in asset_manifest.py are gone.
      Adopters who need swatches/alpha can register a custom widget; the
      default ships zero KB for `widget=color`. #}
-  {% if "quill" in required_assets %}
-  <link rel="stylesheet" href="{{ 'vendor/quill.snow.css' | static_url }}">
-  <script defer src="{{ 'vendor/quill.min.js' | static_url }}"></script>
-  {% endif %}
+  {# #977 cycle 4: rich-text editor moved to dz-richtext.js (bundled
+     unconditionally with the core JS). No vendor library required. #}
   {% endif %}
 
   {% block scripts_extra %}{% endblock %}

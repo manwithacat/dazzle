@@ -29,9 +29,9 @@ TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/dazzle_ui/templates"
 # attribution purposes (no bridge handler), so the check needs a
 # specific allowlist rather than matching the attribute as a whole.
 #
-# Update this set when ``dz-widget-registry.js`` registers a new
-# vendor-mounting handler. Pure-Alpine markers (no
-# ``registerWidget(...)`` call) stay out of the set.
+# Update this set when a new vendor-mounting handler is registered
+# (currently in dz-widget-registry.js or dz-richtext.js). Pure-Alpine
+# markers (no ``registerWidget(...)`` call) stay out of the set.
 _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
     {
         "combobox",
@@ -42,9 +42,16 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         # `colorpicker` removed in #976 — `widget=color` uses native
         # <input type="color"> with an Alpine x-data scope of its own
         # (the dual-lifecycle gate this set drives doesn't apply).
+        # `richtext` registered in dz-richtext.js (split out in #977
+        # cycle 4); the contract test below scans both files.
         "richtext",
         "range-tooltip",
     }
+)
+
+_BRIDGE_REGISTRY_PATHS = (
+    "src/dazzle_ui/runtime/static/js/dz-widget-registry.js",
+    "src/dazzle_ui/runtime/static/js/dz-richtext.js",
 )
 
 # An "element opening tag" is `<` ... `>` with no nested `<` or `>`.
@@ -100,26 +107,26 @@ def test_no_widget_and_x_data_on_same_element() -> None:
 
 
 def test_bridge_kind_allowlist_matches_registry_handlers() -> None:
-    """The allowlist above must mirror the kinds
-    ``dz-widget-registry.js`` actually registers — otherwise a future
-    handler addition silently bypasses the contract. Pinning the
-    intersection here makes the failure obvious instead of latent."""
-    registry_path = (
-        Path(__file__).resolve().parents[2]
-        / "src/dazzle_ui/runtime/static/js/dz-widget-registry.js"
-    )
-    source = registry_path.read_text(encoding="utf-8")
+    """The allowlist above must mirror the kinds the JS bundle
+    actually registers — otherwise a future handler addition silently
+    bypasses the contract. Pinning the intersection here makes the
+    failure obvious instead of latent. Scans every file in
+    ``_BRIDGE_REGISTRY_PATHS`` so widgets split into their own
+    modules (e.g. dz-richtext.js since #977 cycle 4) stay covered."""
     register_call_re = re.compile(r"""bridge\.registerWidget\s*\(\s*['"]([^'"]+)['"]""")
-    registered = set(register_call_re.findall(source))
+    root = Path(__file__).resolve().parents[2]
+    registered: set[str] = set()
+    for rel in _BRIDGE_REGISTRY_PATHS:
+        registered |= set(register_call_re.findall((root / rel).read_text(encoding="utf-8")))
     missing = registered - _BRIDGE_MOUNTED_WIDGET_KINDS
     extra = _BRIDGE_MOUNTED_WIDGET_KINDS - registered
     assert not missing, (
-        f"dz-widget-registry.js registers {sorted(missing)} but the "
-        "contract test's _BRIDGE_MOUNTED_WIDGET_KINDS doesn't. Add "
-        "them so the dual-lifecycle check covers the new handler."
+        f"Bridge registers {sorted(missing)} but the contract test's "
+        "_BRIDGE_MOUNTED_WIDGET_KINDS doesn't. Add them so the "
+        "dual-lifecycle check covers the new handler."
     )
     assert not extra, (
         f"_BRIDGE_MOUNTED_WIDGET_KINDS lists {sorted(extra)} that "
-        "dz-widget-registry.js no longer registers. Drop them so the "
-        "allowlist tracks reality."
+        "no JS module registers. Drop them so the allowlist tracks "
+        "reality, or add the registering module to _BRIDGE_REGISTRY_PATHS."
     )

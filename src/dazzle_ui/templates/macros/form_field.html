@@ -259,7 +259,7 @@
   {% endif %}
 
   {% elif field.widget == "rich_text" %}
-  {# UX-025: richtext widget — Quill editor wrapper #}
+  {# UX-025 / #977 cycle 4: richtext widget — dz-richtext (Dazzle-native). #}
   <label for="field-{{ field.name }}" class="dz-form-label">
     {{ field.label }}
     {% if field.required %}
