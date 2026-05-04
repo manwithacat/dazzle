@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.2] - 2026-05-04
+
+### Note
+- v0.66.1 was tagged on the wrong commit (the audit-reports commit) due
+  to a workflow ordering mistake; the actual TestJinjaFilters collapse
+  shipped here as 0.66.2. v0.66.1 contained no functional change vs
+  v0.66.0 — file 0.66.1 release if you see it on PyPI as obsolete.
+
 ## [0.66.1] - 2026-05-04
 
 ### Changed
