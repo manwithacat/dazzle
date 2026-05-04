@@ -24,10 +24,25 @@ from dazzle.core.dsl_parser_impl import parse_dsl
 
 
 class TestDslThemeField:
-    def test_theme_parses_to_app_config(self) -> None:
-        src = """module t
+    @pytest.mark.parametrize(
+        ("theme_line", "expected_theme"),
+        [
+            ("theme: paper", "paper"),
+            ('theme: "linear-dark"', "linear-dark"),
+            ("theme: linear-dark", "linear-dark"),
+            ("theme: my-corp-brand", "my-corp-brand"),
+        ],
+        ids=[
+            "test_theme_parses_to_app_config",
+            "test_theme_can_be_quoted_string",
+            "test_theme_unquoted_hyphenated_name_rejoins",
+            "test_theme_unquoted_multi_hyphen_rejoins",
+        ],
+    )
+    def test_theme_field(self, theme_line: str, expected_theme: str) -> None:
+        src = f"""module t
 app t "Test":
-  theme: paper
+  {theme_line}
 
 entity Foo:
   id: uuid pk
@@ -35,46 +50,7 @@ entity Foo:
 """
         _, _, _, app_config, _, _ = parse_dsl(src, Path("test.dsl"))
         assert app_config is not None
-        assert app_config.theme == "paper"
-
-    def test_theme_can_be_quoted_string(self) -> None:
-        src = """module t
-app t "Test":
-  theme: "linear-dark"
-
-entity Foo:
-  id: uuid pk
-"""
-        _, _, _, app_config, _, _ = parse_dsl(src, Path("test.dsl"))
-        assert app_config is not None
-        assert app_config.theme == "linear-dark"
-
-    def test_theme_unquoted_hyphenated_name_rejoins(self) -> None:
-        """Theme names commonly contain hyphens (linear-dark, my-brand).
-        The lexer splits them as IDENT-MINUS-IDENT — the parser must
-        rejoin so authors don't have to quote every theme name."""
-        src = """module t
-app t "Test":
-  theme: linear-dark
-
-entity Foo:
-  id: uuid pk
-"""
-        _, _, _, app_config, _, _ = parse_dsl(src, Path("test.dsl"))
-        assert app_config is not None
-        assert app_config.theme == "linear-dark"
-
-    def test_theme_unquoted_multi_hyphen_rejoins(self) -> None:
-        src = """module t
-app t "Test":
-  theme: my-corp-brand
-
-entity Foo:
-  id: uuid pk
-"""
-        _, _, _, app_config, _, _ = parse_dsl(src, Path("test.dsl"))
-        assert app_config is not None
-        assert app_config.theme == "my-corp-brand"
+        assert app_config.theme == expected_theme
 
     def test_theme_optional_default_none(self) -> None:
         """An app block without `theme:` produces app_config.theme = None

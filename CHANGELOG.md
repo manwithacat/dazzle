@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.12] - 2026-05-04
+
+### Changed
+- **Distillation cycle 11** — Batch R completed: 20 size-4 clusters
+  collapsed to `@pytest.mark.parametrize` form across:
+  test_stories_handlers, test_user_profile (×2 classes), test_fidelity_handlers,
+  test_spec_analyze_handlers, test_access_runtime_admin_personas,
+  test_analytics_disable_modes, test_auth_action_handlers, test_browser_gate,
+  test_bulk_routes, test_cli_ux, test_deploy_config, test_dsl_app_theme_field,
+  test_data_products, test_computed_evaluator, test_docs_update_updater,
+  test_dashboard_builder_triggers, test_frontend_spec_export,
+  test_file_upload_form, test_exception_handlers. 428 tests pass across
+  modified files. Suite total: 13,365 → 13,317 (48 fewer). Cumulative
+  cycles 1-11: 14,295 → 13,317 (978 tests removed). Need 1,317 more
+  reductions to reach < 12,000 target.
+
 ## [0.66.11] - 2026-05-04
 
 ### Changed

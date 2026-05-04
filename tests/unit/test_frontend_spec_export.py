@@ -180,17 +180,23 @@ class TestFieldTypeMap:
 
 
 class TestPluralize:
-    def test_simple(self) -> None:
-        assert to_api_plural("task") == "tasks"
-
-    def test_ending_s(self) -> None:
-        assert to_api_plural("status") == "statuses"
-
-    def test_ending_y(self) -> None:
-        assert to_api_plural("category") == "categories"
-
-    def test_ending_ay(self) -> None:
-        assert to_api_plural("day") == "days"
+    @pytest.mark.parametrize(
+        ("word", "expected"),
+        [
+            ("task", "tasks"),
+            ("status", "statuses"),
+            ("category", "categories"),
+            ("day", "days"),
+        ],
+        ids=[
+            "test_simple",
+            "test_ending_s",
+            "test_ending_y",
+            "test_ending_ay",
+        ],
+    )
+    def test_pluralize(self, word: str, expected: str) -> None:
+        assert to_api_plural(word) == expected
 
 
 class TestTypescriptInterfaces:

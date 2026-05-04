@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 JS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
@@ -69,23 +71,23 @@ class TestNoReactiveCardsArray:
         assert "cards: []" not in source
         assert "cards: [" not in source
 
-    def test_no_catalog_reactive_field(self) -> None:
-        source = _load_js()
-        # Catalog is now a `data-card-catalog` JSON blob on the picker;
-        # the JS reads it on demand via `_catalog()`. The reactive
-        # field is gone.
-        assert "catalog: []" not in source
-
-    def test_no_workspace_name_reactive_field(self) -> None:
-        source = _load_js()
-        # workspaceName comes from `data-workspace-name` on the root.
-        assert 'workspaceName: ""' not in source
-
-    def test_no_fold_count_reactive_field(self) -> None:
-        source = _load_js()
-        # foldCount is gone. The eager-vs-lazy split is decided at
-        # template render time and baked into each card's hx-trigger.
-        assert "foldCount: 0," not in source
+    @pytest.mark.parametrize(
+        "absent_token",
+        [
+            "catalog: []",
+            'workspaceName: ""',
+            "foldCount: 0,",
+            "dragTransform(cardId)",
+        ],
+        ids=[
+            "test_no_catalog_reactive_field",
+            "test_no_workspace_name_reactive_field",
+            "test_no_fold_count_reactive_field",
+            "test_no_drag_transform_reactive_helper",
+        ],
+    )
+    def test_reactive_field_absent(self, absent_token: str) -> None:
+        assert absent_token not in _load_js()
 
     def test_no_hydrate_from_layout_method(self) -> None:
         source = _load_js()
@@ -101,13 +103,6 @@ class TestNoReactiveCardsArray:
         # The eager/lazy split is decided server-side now.
         assert "cardHxTrigger" not in source
         assert "isEagerCard" not in source
-
-    def test_no_drag_transform_reactive_helper(self) -> None:
-        source = _load_js()
-        # Pre-#948 dragTransform(cardId) returned a CSS string consumed
-        # by `:style="..."`. Post-#948 we apply transforms via
-        # _applyDragTransform() directly to the dragged element.
-        assert "dragTransform(cardId)" not in source
 
 
 class TestDomDirectHelpers:

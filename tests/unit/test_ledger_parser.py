@@ -490,21 +490,26 @@ transaction Tx "Tx":
   idempotency_key: evt.id
 """
 
-    def test_priority_critical(self) -> None:
-        fragment = _parse(self._tx_with_priority("critical"))
-        assert fragment.transactions[0].priority == TransactionPriority.CRITICAL
-
-    def test_priority_high(self) -> None:
-        fragment = _parse(self._tx_with_priority("high"))
-        assert fragment.transactions[0].priority == TransactionPriority.HIGH
-
-    def test_priority_normal(self) -> None:
-        fragment = _parse(self._tx_with_priority("normal"))
-        assert fragment.transactions[0].priority == TransactionPriority.NORMAL
-
-    def test_priority_low(self) -> None:
-        fragment = _parse(self._tx_with_priority("low"))
-        assert fragment.transactions[0].priority == TransactionPriority.LOW
+    @pytest.mark.parametrize(
+        ("priority_str", "expected_priority"),
+        [
+            ("critical", TransactionPriority.CRITICAL),
+            ("high", TransactionPriority.HIGH),
+            ("normal", TransactionPriority.NORMAL),
+            ("low", TransactionPriority.LOW),
+        ],
+        ids=[
+            "test_priority_critical",
+            "test_priority_high",
+            "test_priority_normal",
+            "test_priority_low",
+        ],
+    )
+    def test_priority_levels(
+        self, priority_str: str, expected_priority: TransactionPriority
+    ) -> None:
+        fragment = _parse(self._tx_with_priority(priority_str))
+        assert fragment.transactions[0].priority == expected_priority
 
 
 class TestTransactionTimeout:

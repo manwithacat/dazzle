@@ -22,29 +22,27 @@ from dazzle_ui.runtime.template_renderer import _basename_or_url_filter
 class TestFieldTypeToFormType:
     """Tests for _field_type_to_form_type with file fields."""
 
-    def test_file_field_maps_to_file(self) -> None:
-        spec = FieldSpec(
-            name="document",
-            type=FieldType(kind=FieldTypeKind.FILE),
-        )
-        assert _field_type_to_form_type(spec) == "file"
-
-    def test_other_fields_unchanged(self) -> None:
-        spec = FieldSpec(
-            name="name",
-            type=FieldType(kind=FieldTypeKind.STR),
-        )
-        assert _field_type_to_form_type(spec) == "text"
-
-    def test_bool_field(self) -> None:
-        spec = FieldSpec(
-            name="active",
-            type=FieldType(kind=FieldTypeKind.BOOL),
-        )
-        assert _field_type_to_form_type(spec) == "checkbox"
-
-    def test_none_field(self) -> None:
-        assert _field_type_to_form_type(None) == "text"
+    @pytest.mark.parametrize(
+        ("field_kind", "expected"),
+        [
+            (FieldTypeKind.FILE, "file"),
+            (FieldTypeKind.STR, "text"),
+            (FieldTypeKind.BOOL, "checkbox"),
+            (None, "text"),
+        ],
+        ids=[
+            "test_file_field_maps_to_file",
+            "test_other_fields_unchanged",
+            "test_bool_field",
+            "test_none_field",
+        ],
+    )
+    def test_field_type_to_form_type(self, field_kind: FieldTypeKind | None, expected: str) -> None:
+        if field_kind is None:
+            spec = None
+        else:
+            spec = FieldSpec(name="f", type=FieldType(kind=field_kind))
+        assert _field_type_to_form_type(spec) == expected
 
 
 class TestFileAcceptAttr:

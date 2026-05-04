@@ -283,25 +283,20 @@ class TestParserArithmetic:
 class TestParserComparison:
     """Parser handles comparison operators."""
 
-    def test_equality(self) -> None:
-        expr = parse_expr('status == "active"')
+    @pytest.mark.parametrize(
+        ("source", "expected_op"),
+        [
+            ('status == "active"', BinaryOp.EQ),
+            ("x != 0", BinaryOp.NE),
+            ("age < 18", BinaryOp.LT),
+            ("score >= 90", BinaryOp.GE),
+        ],
+        ids=["test_equality", "test_inequality", "test_less_than", "test_greater_equal"],
+    )
+    def test_comparison_operator(self, source: str, expected_op: BinaryOp) -> None:
+        expr = parse_expr(source)
         assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.EQ
-
-    def test_inequality(self) -> None:
-        expr = parse_expr("x != 0")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.NE
-
-    def test_less_than(self) -> None:
-        expr = parse_expr("age < 18")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.LT
-
-    def test_greater_equal(self) -> None:
-        expr = parse_expr("score >= 90")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.GE
+        assert expr.op == expected_op
 
     def test_is_null(self) -> None:
         expr = parse_expr("name is null")

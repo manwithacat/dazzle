@@ -2,31 +2,28 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 runner = CliRunner()
 
 
 class TestParseTtl:
-    def test_minutes(self):
+    @pytest.mark.parametrize(
+        ("ttl_str", "expected_seconds"),
+        [
+            ("5m", 300),
+            ("1h", 3600),
+            ("30s", 30),
+            ("120", 120),
+        ],
+        ids=["test_minutes", "test_hours", "test_seconds", "test_bare_number"],
+    )
+    def test_parse_ttl(self, ttl_str: str, expected_seconds: int) -> None:
+        """_parse_ttl converts time strings to seconds."""
         from dazzle.cli.auth import _parse_ttl
 
-        assert _parse_ttl("5m") == 300
-
-    def test_hours(self):
-        from dazzle.cli.auth import _parse_ttl
-
-        assert _parse_ttl("1h") == 3600
-
-    def test_seconds(self):
-        from dazzle.cli.auth import _parse_ttl
-
-        assert _parse_ttl("30s") == 30
-
-    def test_bare_number(self):
-        from dazzle.cli.auth import _parse_ttl
-
-        assert _parse_ttl("120") == 120
+        assert _parse_ttl(ttl_str) == expected_seconds
 
 
 class TestImpersonateCommand:

@@ -4,6 +4,8 @@ Unit tests for infrastructure versioning utilities.
 
 from pathlib import Path
 
+import pytest
+
 
 class TestStackVersion:
     """Test StackVersion dataclass."""
@@ -120,37 +122,27 @@ class TestInfraVersion:
 class TestVersionDiff:
     """Test VersionDiff dataclass."""
 
-    def test_has_changes_with_additions(self) -> None:
-        """Should detect changes when stacks added."""
+    @pytest.mark.parametrize(
+        ("diff_kwargs", "expected"),
+        [
+            ({"added": ["Network"]}, True),
+            ({"modified": ["Data"]}, True),
+            ({"removed": ["Compute"]}, True),
+            ({"unchanged": ["Network", "Data"]}, False),
+        ],
+        ids=[
+            "test_has_changes_with_additions",
+            "test_has_changes_with_modifications",
+            "test_has_changes_with_removals",
+            "test_no_changes",
+        ],
+    )
+    def test_has_changes(self, diff_kwargs: dict, expected: bool) -> None:
+        """has_changes() returns True when any stacks were added, modified, or removed."""
         from dazzle.deploy.versioning import VersionDiff
 
-        diff = VersionDiff(added=["Network"])
-
-        assert diff.has_changes() is True
-
-    def test_has_changes_with_modifications(self) -> None:
-        """Should detect changes when stacks modified."""
-        from dazzle.deploy.versioning import VersionDiff
-
-        diff = VersionDiff(modified=["Data"])
-
-        assert diff.has_changes() is True
-
-    def test_has_changes_with_removals(self) -> None:
-        """Should detect changes when stacks removed."""
-        from dazzle.deploy.versioning import VersionDiff
-
-        diff = VersionDiff(removed=["Compute"])
-
-        assert diff.has_changes() is True
-
-    def test_no_changes(self) -> None:
-        """Should not detect changes when nothing changed."""
-        from dazzle.deploy.versioning import VersionDiff
-
-        diff = VersionDiff(unchanged=["Network", "Data"])
-
-        assert diff.has_changes() is False
+        diff = VersionDiff(**diff_kwargs)
+        assert diff.has_changes() is expected
 
     def test_summary_no_changes(self) -> None:
         """Summary should indicate no changes."""

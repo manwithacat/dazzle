@@ -117,17 +117,18 @@ class TestSuggestFix:
 class TestViewportPrefixMapping:
     """Tests for VIEWPORT_TO_TAILWIND_PREFIX."""
 
-    def test_mobile_has_no_prefix(self) -> None:
-        assert VIEWPORT_TO_TAILWIND_PREFIX["mobile"] == ""
-
-    def test_tablet_prefix(self) -> None:
-        assert VIEWPORT_TO_TAILWIND_PREFIX["tablet"] == "sm:"
-
-    def test_desktop_prefix(self) -> None:
-        assert VIEWPORT_TO_TAILWIND_PREFIX["desktop"] == "lg:"
-
-    def test_wide_prefix(self) -> None:
-        assert VIEWPORT_TO_TAILWIND_PREFIX["wide"] == "xl:"
+    @pytest.mark.parametrize(
+        ("viewport_key", "expected_prefix"),
+        [("mobile", ""), ("tablet", "sm:"), ("desktop", "lg:"), ("wide", "xl:")],
+        ids=[
+            "test_mobile_has_no_prefix",
+            "test_tablet_prefix",
+            "test_desktop_prefix",
+            "test_wide_prefix",
+        ],
+    )
+    def test_viewport_prefix_mapping(self, viewport_key: str, expected_prefix: str) -> None:
+        assert VIEWPORT_TO_TAILWIND_PREFIX[viewport_key] == expected_prefix
 
 
 class TestSuggestFixesForReport:

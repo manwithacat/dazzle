@@ -190,20 +190,37 @@ class TestLevenshtein:
 class TestCompute404Suggestions:
     """_compute_404_suggestions powers the friendly 404 (#811)."""
 
-    def test_plural_flip_suggests_singular(self) -> None:
+    @pytest.mark.parametrize(
+        ("path", "entity_slugs", "expected"),
+        [
+            (
+                "/app/tickets",
+                ["ticket", "contact"],
+                [{"url": "/app/ticket", "label": "Ticket"}],
+            ),
+            # "hors" is 4 edits from "cow" → beyond fuzzy threshold
+            ("/app/horses", ["cow"], []),
+            ("/app/xyzabc", ["task", "contact"], []),
+            (
+                "/app/tickets/",
+                ["ticket"],
+                [{"url": "/app/ticket", "label": "Ticket"}],
+            ),
+        ],
+        ids=[
+            "test_plural_flip_suggests_singular",
+            "test_plural_flip_noop_when_singular_unknown",
+            "test_unrelated_path_returns_empty",
+            "test_trailing_slash_is_normalised",
+        ],
+    )
+    def test_suggestion_output(self, path: str, entity_slugs: list, expected: list) -> None:
         from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
 
-        out = _compute_404_suggestions(
-            "/app/tickets", entity_slugs=["ticket", "contact"], workspace_slugs=[]
+        assert (
+            _compute_404_suggestions(path, entity_slugs=entity_slugs, workspace_slugs=[])
+            == expected
         )
-        assert out == [{"url": "/app/ticket", "label": "Ticket"}]
-
-    def test_plural_flip_noop_when_singular_unknown(self) -> None:
-        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
-
-        out = _compute_404_suggestions("/app/horses", entity_slugs=["cow"], workspace_slugs=[])
-        # "hors" is 4 edits from "cow" → beyond fuzzy threshold
-        assert out == []
 
     def test_dashboard_alias_redirects_to_app_root(self) -> None:
         from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
@@ -233,16 +250,6 @@ class TestCompute404Suggestions:
         )
         assert any(s["url"] == "/app/workspaces/command_center" for s in out)
 
-    def test_unrelated_path_returns_empty(self) -> None:
-        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
-
-        assert (
-            _compute_404_suggestions(
-                "/app/xyzabc", entity_slugs=["task", "contact"], workspace_slugs=[]
-            )
-            == []
-        )
-
     def test_results_are_capped_at_three(self) -> None:
         from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
 
@@ -253,12 +260,6 @@ class TestCompute404Suggestions:
             workspace_slugs=[],
         )
         assert len(out) <= 3
-
-    def test_trailing_slash_is_normalised(self) -> None:
-        from dazzle_back.runtime.exception_handlers import _compute_404_suggestions
-
-        out = _compute_404_suggestions("/app/tickets/", entity_slugs=["ticket"], workspace_slugs=[])
-        assert out == [{"url": "/app/ticket", "label": "Ticket"}]
 
 
 class TestErrorHandlerDispatch:
