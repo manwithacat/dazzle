@@ -70,25 +70,26 @@ For each unique bug:
 
 ### Step 4: File new issues
 
-For each unfiled HIGH or MEDIUM bug:
+For each unfiled HIGH or MEDIUM bug, **write the body to a file first**, then pass it via `--body-file`. Inline heredocs mangle markdown — single-quoted ones preserve backslashes (so `\`backticks\`` show literally), double-quoted ones interpret them. Caught the hard way on #1000 (had to be re-edited).
 
 ```bash
-gh issue create --title "<terse signature>" --label "needs-triage" --body "$(cat <<'EOF'
+cat > /tmp/fuzz-issue-body.md <<'EOF'
 Fuzz sweep (vX.Y.Z) found <symptom> in <apps affected>:
 
-<verbatim error output, indented as a code block>
+<verbatim error output as a fenced code block — bare backticks, no escapes>
 
 **Repro:**
-\`\`\`bash
-cd <one of the affected apps>
+```bash
+cd <affected app>
 timeout 8 dazzle serve --local 2>&1 | grep <signature>
-\`\`\`
+```
 
-**Likely root cause:** <best hypothesis from the symptom>
+**Likely root cause:** <best hypothesis>
 
 **Suggested fix path:** <one option>
 EOF
-)"
+
+gh issue create --title "<terse signature>" --label "needs-triage" --body-file /tmp/fuzz-issue-body.md
 ```
 
 LOW bugs (single-app cosmetic warnings) — list them in the summary but don't auto-file. The user can promote them if they want.
@@ -139,7 +140,46 @@ These warnings are informational and should NEVER be filed as issues by this com
 
 If a fuzz agent reports any of the above as a "bug", silently demote to "soft" and don't file.
 
-## When to run
+## Interactive (runtime) fuzz — complement to the static sweep above
+
+The static sweep above is fast and good at the boot-stderr signature class. It cannot exercise JavaScript components — race conditions in dz-richtext, htmx swap timing, paste edge cases, contenteditable selection bugs.
+
+For that, use the headless-Playwright runner at `src/dazzle/testing/fuzz_runtime/runner.py`. Per app it:
+
+1. Boots the app with `--test-mode` (auto-publishes a test secret in `.dazzle/runtime.json`).
+2. Authenticates as admin via `/__test__/authenticate`.
+3. Drives each supported widget through a battery of known-tricky interactions (selection, paste from corpus, undo/redo, lifecycle remount).
+4. Reports console errors, page errors, schema/structure assertions.
+
+Coverage matrix today:
+
+| Widget | Battery |
+|---|---|
+| dz-richtext | type → hidden sync, Ctrl+B (incl. block-vs-inline nesting check #1000), paste javascript:/`<script>`/h1/h4/Word styles, htmx-style remount lifecycle |
+| (more to come — combobox, picker, optimistic-UI form mid-mutation) | |
+
+**Run it directly:**
+
+```bash
+python3 -c "
+from pathlib import Path
+from dazzle.testing.fuzz_runtime import run_app_fuzz
+report = run_app_fuzz(Path('/Volumes/SSD/Dazzle/fixtures/component_showcase'))
+print(f'{report.project}: {report.passed}/{report.total}')
+for c in report.failures:
+    print(f'  FAIL  {c.name} — {c.detail[:120]}')
+"
+```
+
+**When to run interactive fuzz:**
+
+- After shipping a JS-touching primitive (any new `widget=`, Alpine directive, htmx-bridge change).
+- After a refactor of `dz-richtext.js`, `dz-alpine.js`, or `dz-widget-registry.js`.
+- When something feels off but the static sweep is clean.
+
+**Pattern the spike taught us** (see #1000): static tests prove the SHAPE of the JS is right (no `execCommand`, has `aria-pressed`, registers under `richtext`). They prove zero about its BEHAVIOUR. Real edge cases — like `<strong>` wrapping a block element when the selection spans a whole `<p>` — only surface in a real browser doing real interactions.
+
+## When to run (static sweep)
 
 - After shipping a non-trivial framework primitive (a new `widget=`, fragment, channel, scope-pattern, etc.) — verify it doesn't break existing apps.
 - Before a 0.X → 0.(X+1) minor bump — sanity-check the upcoming release.

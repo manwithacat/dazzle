@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.3] - 2026-05-04
+
+### Added
+- **`src/dazzle/testing/fuzz_runtime/`** — headless-Playwright
+  interactive fuzz runner. Complements the static `/fuzz` slash
+  command (which scrapes boot stderr) with real browser interactions
+  against bootable apps, targeting JavaScript components the static
+  sweep cannot exercise.
+
+  Cycle 1 covers dz-richtext: type→hidden sync, Ctrl+B inline-toggle
+  (incl. the #1000 block-vs-inline nesting regression check), paste
+  sanitisation (javascript:, `<script>`, h1/h4 normalisation, Word
+  style/class flood), htmx-style remount lifecycle.
+
+  Found #1000 on the first run — `<strong><p>...</p></strong>`
+  (block element wrapped in inline tag) when the Ctrl+B selection
+  spans a whole block. The cycle-1 source-grep tests proved the JS
+  shape but not its behaviour.
+
+  Public surface: `from dazzle.testing.fuzz_runtime import
+  run_app_fuzz, FuzzReport`. Runner boots the project under
+  `--test-mode`, authenticates as admin via
+  `/__test__/authenticate`, drives the rich-text widget battery,
+  reports console/page errors + check pass/fail.
+
+  `.claude/commands/fuzz.md` now documents this as the runtime
+  complement to the static sweep, with run instructions.
+
+### Agent Guidance
+- **GitHub issue bodies — use `--body-file`, not heredoc.**
+  Single-quoted heredocs preserve backslashes literally
+  (`\` shows as `\``); double-quoted ones interpret them and break
+  in different ways. Both mangle markdown. Write the body to
+  `/tmp/<title>.md` and pass via `--body-file <path>`. #1000 had
+  to be re-edited after this exact bug.
+- **Static fuzz proves shape, runtime fuzz proves behaviour.**
+  After any change to a `dz-*.js` runtime file, run the runtime
+  fuzz against `fixtures/component_showcase` (or the most
+  widget-rich app the change affects). Source-grep tests are
+  necessary but never sufficient — they pin the contract, they
+  don't exercise it.
+
 ## [0.65.2] - 2026-05-04
 
 ### Fixed
