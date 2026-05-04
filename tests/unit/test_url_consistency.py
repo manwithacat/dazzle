@@ -383,6 +383,7 @@ class TestSurfaceContextPrefix:
 pytest.importorskip("fastapi")
 
 from dazzle_back.runtime.route_generator import (  # noqa: E402
+    HandlerConfig,
     _extract_result_id,
     _htmx_current_url,
     _htmx_parent_url,
@@ -482,8 +483,10 @@ class TestCreateHandlerRedirect:
         handler = create_create_handler(
             service,
             TaskCreate,
-            entity_name="Task",
             entity_slug="task",
+            config=HandlerConfig(
+                entity_name="Task",
+            ),
         )
 
         request = MagicMock()
@@ -507,8 +510,10 @@ class TestCreateHandlerRedirect:
         handler = create_create_handler(
             service,
             TaskCreate,
-            entity_name="Task",
-            # no entity_slug — backward compat
+            # no entity_slug — backward compat,
+            config=HandlerConfig(
+                entity_name="Task",
+            ),
         )
 
         request = MagicMock()

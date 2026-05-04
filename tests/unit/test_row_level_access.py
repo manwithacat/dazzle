@@ -14,6 +14,7 @@ pytest.importorskip("fastapi")
 from pydantic import BaseModel
 
 from dazzle_back.runtime.route_generator import (
+    HandlerConfig,
     create_create_handler,
     create_delete_handler,
     create_read_handler,
@@ -156,9 +157,11 @@ class TestReadHandlerCedar:
 
         handler = create_read_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request()
@@ -181,9 +184,11 @@ class TestReadHandlerCedar:
 
         handler = create_read_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request()
@@ -209,9 +214,11 @@ class TestCreateHandlerCedar:
         handler = create_create_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="POST")
@@ -231,9 +238,11 @@ class TestCreateHandlerCedar:
         handler = create_create_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="POST")
@@ -259,9 +268,11 @@ class TestCreateHandlerCedar:
         handler = create_create_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="POST")
@@ -288,9 +299,11 @@ class TestCreateHandlerCedar:
         handler = create_create_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="POST")
@@ -319,9 +332,11 @@ class TestUpdateHandlerCedar:
         handler = create_update_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="PUT")
@@ -344,9 +359,11 @@ class TestUpdateHandlerCedar:
         handler = create_update_handler(
             service,
             TaskUpdate,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="PUT")
@@ -374,9 +391,11 @@ class TestDeleteHandlerCedar:
 
         handler = create_delete_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="DELETE")
@@ -399,9 +418,11 @@ class TestDeleteHandlerCedar:
 
         handler = create_delete_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="DELETE")
@@ -421,9 +442,11 @@ class TestDeleteHandlerCedar:
 
         handler = create_delete_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="DELETE")
@@ -457,9 +480,11 @@ class TestForbidInHandlers:
 
         handler = create_delete_handler(
             service,
-            cedar_access_spec=spec,
-            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-            entity_name="Task",
+            config=HandlerConfig(
+                cedar_access_spec=spec,
+                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                entity_name="Task",
+            ),
         )
 
         request = _make_request(method="DELETE")

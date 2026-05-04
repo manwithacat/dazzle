@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from dazzle_back.runtime.route_generator import (  # noqa: E402
+    HandlerConfig,
     create_create_handler,
     create_delete_handler,
     create_list_handler,
@@ -153,8 +154,10 @@ class TestCrudHandlerAuth:
         """Read handler should succeed when auth context is authenticated."""
         handler = create_read_handler(
             service=mock_service,
-            auth_dep=auth_dep,
-            require_auth_by_default=True,
+            config=HandlerConfig(
+                auth_dep=auth_dep,
+                require_auth_by_default=True,
+            ),
         )
         result = await handler(
             id=uuid4(), request=_make_request(), auth_context=authenticated_context
@@ -183,8 +186,10 @@ class TestCrudHandlerAuth:
         handler = create_create_handler(
             service=mock_service,
             input_schema=FakeInput,
-            auth_dep=auth_dep,
-            require_auth_by_default=True,
+            config=HandlerConfig(
+                auth_dep=auth_dep,
+                require_auth_by_default=True,
+            ),
         )
         request = _make_request({"session_id": "valid"})
         request.headers = {"content-type": "application/json"}
@@ -202,8 +207,10 @@ class TestCrudHandlerAuth:
         mock_service.execute = AsyncMock(return_value=True)
         handler = create_delete_handler(
             service=mock_service,
-            auth_dep=auth_dep,
-            require_auth_by_default=True,
+            config=HandlerConfig(
+                auth_dep=auth_dep,
+                require_auth_by_default=True,
+            ),
         )
         result = await handler(
             id=uuid4(), request=_make_request(), auth_context=authenticated_context
@@ -271,8 +278,10 @@ class TestDependsIntegration:
 
         handler = create_read_handler(
             service=service,
-            auth_dep=strict_auth_dep,
-            require_auth_by_default=True,
+            config=HandlerConfig(
+                auth_dep=strict_auth_dep,
+                require_auth_by_default=True,
+            ),
         )
 
         app = FastAPI()

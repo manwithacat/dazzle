@@ -7,6 +7,7 @@ This module creates FastAPI routers and routes from backend specifications.
 import logging
 from collections.abc import Callable
 from contextlib import suppress
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -45,6 +46,47 @@ logger = logging.getLogger(__name__)
 # Expose APIRouter name for return-type annotations (the real class is
 # imported as _APIRouter to allow a None fallback when FastAPI is absent).
 APIRouter = _APIRouter
+
+
+# ---------------------------------------------------------------------------
+# HandlerConfig — stable contract for CRUD factory authorization context (#1011)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class HandlerConfig:
+    """Auth + authz + audit context shared across CRUD route handlers.
+
+    Bundles the six concerns every CRUD route handler factory needs in
+    a typed, frozen contract. Replaces the per-factory parameter sprawl
+    that drifted across read/create/update/delete signatures (~68 edits
+    to this tuple in the 3 months before the refactor; #1011).
+
+    The five auth/authz/identity fields are stable across verbs in a
+    single dispatch (sourced from ``self.auth_dep``, ``self.optional_auth_dep``,
+    etc. on the route generator). ``audit_logger`` varies per verb —
+    construct a base config once per dispatch, then derive per-verb
+    instances with ``dataclasses.replace(base, audit_logger=...)``.
+
+    Convergence note: this matches the route-level concerns Django REST
+    (ViewSet attributes), Rails (before_action chain), Spring
+    (@PreAuthorize), and WordPress (permission_callback) all converge
+    on. Naming is local; the shape is universal. Future cross-cutting
+    concerns (rate-limit key, idempotency token, throttle policy)
+    extend this dataclass rather than the per-factory signatures.
+
+    Target end-state (deferred): grow this into a richer ``EndpointSpec``
+    that also bundles ``service``, ``select_fields``, ``auto_include``,
+    etc. — the full DRF-ViewSet shape. For now, ``HandlerConfig`` covers
+    the five cross-cutting concerns that recur across factories.
+    """
+
+    auth_dep: Callable[..., Any] | None = None
+    optional_auth_dep: Callable[..., Any] | None = None
+    require_auth_by_default: bool = False
+    entity_name: str = "Item"
+    cedar_access_spec: "EntityAccessSpec | None" = None
+    audit_logger: "AuditLogger | None" = None
 
 
 def _set_handler_annotations(fn: Any, *, with_id: bool = False, with_auth: bool = False) -> None:
@@ -1944,15 +1986,21 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
 def create_read_handler(
     service: "BaseService[Any]",
     _response_schema: type[BaseModel] | None = None,
-    auth_dep: Callable[..., Any] | None = None,
-    require_auth_by_default: bool = False,
-    entity_name: str = "Item",
-    audit_logger: "AuditLogger | None" = None,
-    cedar_access_spec: "EntityAccessSpec | None" = None,
-    optional_auth_dep: Callable[..., Any] | None = None,
+    *,
+    config: HandlerConfig | None = None,
     auto_include: list[str] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for read operations with optional Cedar-style access control."""
+    """Create a handler for read operations with optional Cedar-style access control.
+
+    See :class:`HandlerConfig` for the auth/authz/audit contract (#1011).
+    """
+    config = config or HandlerConfig()
+    auth_dep = config.auth_dep
+    optional_auth_dep = config.optional_auth_dep
+    require_auth_by_default = config.require_auth_by_default
+    entity_name = config.entity_name
+    audit_logger = config.audit_logger
+    cedar_access_spec = config.cedar_access_spec
 
     async def _core(
         id: UUID,
@@ -2183,18 +2231,16 @@ def create_create_handler(
     service: "BaseService[Any]",
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
-    auth_dep: Callable[..., Any] | None = None,
-    require_auth_by_default: bool = False,
-    entity_name: str = "Item",
+    *,
+    config: HandlerConfig | None = None,
     entity_slug: str = "",
-    audit_logger: "AuditLogger | None" = None,
-    cedar_access_spec: "EntityAccessSpec | None" = None,
-    optional_auth_dep: Callable[..., Any] | None = None,
     user_ref_fields: list[str] | None = None,
     persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
     storage_bindings: dict[str, tuple[str, ...]] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
+
+    See :class:`HandlerConfig` for the auth/authz/audit contract (#1011).
 
     Args:
         user_ref_fields: Names of fields on this entity that are ``ref User``
@@ -2209,6 +2255,13 @@ def create_create_handler(
             field that targets a persona-backed entity. Cycle 249
             (closes EX-049). See ``resolve_backed_entity_refs``.
     """
+    config = config or HandlerConfig()
+    auth_dep = config.auth_dep
+    optional_auth_dep = config.optional_auth_dep
+    require_auth_by_default = config.require_auth_by_default
+    entity_name = config.entity_name
+    audit_logger = config.audit_logger
+    cedar_access_spec = config.cedar_access_spec
 
     def _build_redirect_url(result: Any) -> str | None:
         if not entity_slug:
@@ -2312,16 +2365,22 @@ def create_update_handler(
     service: "BaseService[Any]",
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
-    auth_dep: Callable[..., Any] | None = None,
-    require_auth_by_default: bool = False,
-    entity_name: str = "Item",
-    audit_logger: "AuditLogger | None" = None,
-    cedar_access_spec: "EntityAccessSpec | None" = None,
-    optional_auth_dep: Callable[..., Any] | None = None,
+    *,
+    config: HandlerConfig | None = None,
     include_field_changes: bool = False,
     storage_bindings: dict[str, tuple[str, ...]] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for update operations with optional Cedar-style access control."""
+    """Create a handler for update operations with optional Cedar-style access control.
+
+    See :class:`HandlerConfig` for the auth/authz/audit contract (#1011).
+    """
+    config = config or HandlerConfig()
+    auth_dep = config.auth_dep
+    optional_auth_dep = config.optional_auth_dep
+    require_auth_by_default = config.require_auth_by_default
+    entity_name = config.entity_name
+    audit_logger = config.audit_logger
+    cedar_access_spec = config.cedar_access_spec
 
     async def _core(
         id: UUID,
@@ -2391,15 +2450,21 @@ def create_update_handler(
 
 def create_delete_handler(
     service: "BaseService[Any]",
-    auth_dep: Callable[..., Any] | None = None,
-    require_auth_by_default: bool = False,
-    entity_name: str = "Item",
-    audit_logger: "AuditLogger | None" = None,
-    cedar_access_spec: "EntityAccessSpec | None" = None,
-    optional_auth_dep: Callable[..., Any] | None = None,
+    *,
+    config: HandlerConfig | None = None,
     include_field_changes: bool = False,
 ) -> Callable[..., Any]:
-    """Create a handler for delete operations with optional Cedar-style access control."""
+    """Create a handler for delete operations with optional Cedar-style access control.
+
+    See :class:`HandlerConfig` for the auth/authz/audit contract (#1011).
+    """
+    config = config or HandlerConfig()
+    auth_dep = config.auth_dep
+    optional_auth_dep = config.optional_auth_dep
+    require_auth_by_default = config.require_auth_by_default
+    entity_name = config.entity_name
+    audit_logger = config.audit_logger
+    cedar_access_spec = config.cedar_access_spec
 
     async def _core(
         id: UUID,
@@ -3072,6 +3137,17 @@ class RouteGenerator:
                 return None
             return _audit
 
+        # Base HandlerConfig shared across CRUD verbs in this dispatch.
+        # audit_logger is overridden per-verb via dataclasses.replace
+        # since each operation gates audit independently (#1011).
+        _base_config = HandlerConfig(
+            auth_dep=self.auth_dep,
+            optional_auth_dep=self.optional_auth_dep,
+            require_auth_by_default=self.require_auth_by_default,
+            entity_name=entity_name or "Item",
+            cedar_access_spec=_cedar_spec,
+        )
+
         # POST -> CREATE
         if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
             create_schema = entity_schemas.get("create", model)
@@ -3104,13 +3180,8 @@ class RouteGenerator:
                     service,
                     create_schema,
                     model,
-                    auth_dep=self.auth_dep,
-                    require_auth_by_default=self.require_auth_by_default,
-                    entity_name=entity_name or "Item",
+                    config=replace(_base_config, audit_logger=_audit_for("create")),
                     entity_slug=_entity_slug,
-                    audit_logger=_audit_for("create"),
-                    cedar_access_spec=_cedar_spec,
-                    optional_auth_dep=self.optional_auth_dep,
                     user_ref_fields=_user_ref_fields or None,
                     persona_ref_map=_persona_ref_map,
                     storage_bindings=self.entity_storage_bindings.get(entity_name or "") or None,
@@ -3127,12 +3198,7 @@ class RouteGenerator:
             handler = create_read_handler(
                 service,
                 model,
-                auth_dep=self.auth_dep,
-                require_auth_by_default=self.require_auth_by_default,
-                entity_name=entity_name or "Item",
-                audit_logger=_audit_for("read"),
-                cedar_access_spec=_cedar_spec,
-                optional_auth_dep=self.optional_auth_dep,
+                config=replace(_base_config, audit_logger=_audit_for("read")),
                 auto_include=includes,
             )
             self._add_route(endpoint, handler, response_model=None)
@@ -3262,12 +3328,7 @@ class RouteGenerator:
                     service,
                     update_schema,
                     model,
-                    auth_dep=self.auth_dep,
-                    require_auth_by_default=self.require_auth_by_default,
-                    entity_name=entity_name or "Item",
-                    audit_logger=_audit_for("update"),
-                    cedar_access_spec=_cedar_spec,
-                    optional_auth_dep=self.optional_auth_dep,
+                    config=replace(_base_config, audit_logger=_audit_for("update")),
                     include_field_changes=_include_fc,
                     storage_bindings=self.entity_storage_bindings.get(entity_name or "") or None,
                 )
@@ -3279,12 +3340,7 @@ class RouteGenerator:
         elif endpoint.method == HttpMethod.DELETE or operation_kind == OperationKind.DELETE:
             handler = create_delete_handler(
                 service,
-                auth_dep=self.auth_dep,
-                require_auth_by_default=self.require_auth_by_default,
-                entity_name=entity_name or "Item",
-                audit_logger=_audit_for("delete"),
-                cedar_access_spec=_cedar_spec,
-                optional_auth_dep=self.optional_auth_dep,
+                config=replace(_base_config, audit_logger=_audit_for("delete")),
                 include_field_changes=_include_fc,
             )
             self._add_route(endpoint, handler, response_model=None)

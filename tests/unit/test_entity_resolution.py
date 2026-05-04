@@ -23,15 +23,17 @@ class TestReadHandlerAutoInclude:
     """create_read_handler() passes auto_include to service.execute()."""
 
     async def test_noauth_handler_passes_include(self) -> None:
-        from dazzle_back.runtime.route_generator import create_read_handler
+        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123", "title": "Test"})
 
         handler = create_read_handler(
             service,
-            entity_name="Task",
             auto_include=["assigned_to", "company"],
+            config=HandlerConfig(
+                entity_name="Task",
+            ),
         )
 
         request = MagicMock()
@@ -41,12 +43,17 @@ class TestReadHandlerAutoInclude:
         assert call_kwargs["include"] == ["assigned_to", "company"]
 
     async def test_noauth_handler_none_include(self) -> None:
-        from dazzle_back.runtime.route_generator import create_read_handler
+        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123"})
 
-        handler = create_read_handler(service, entity_name="Task")
+        handler = create_read_handler(
+            service,
+            config=HandlerConfig(
+                entity_name="Task",
+            ),
+        )
 
         request = MagicMock()
         await handler(id=uuid4(), request=request)
@@ -54,7 +61,7 @@ class TestReadHandlerAutoInclude:
         assert call_kwargs["include"] is None
 
     def test_auth_handler_passes_include(self) -> None:
-        from dazzle_back.runtime.route_generator import create_read_handler
+        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123"})
@@ -62,10 +69,12 @@ class TestReadHandlerAutoInclude:
         auth_dep = MagicMock()
         handler = create_read_handler(
             service,
-            entity_name="Task",
-            auth_dep=auth_dep,
-            require_auth_by_default=True,
             auto_include=["company"],
+            config=HandlerConfig(
+                entity_name="Task",
+                auth_dep=auth_dep,
+                require_auth_by_default=True,
+            ),
         )
         # The handler is _read_auth which takes auth_context
         assert handler is not None

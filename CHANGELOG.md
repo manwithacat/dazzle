@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.18] - 2026-05-04
+
+### Added
+- **`HandlerConfig` dataclass** in `src/dazzle_back/runtime/route_generator.py`
+  (#1011) — frozen dataclass bundling the six auth/authz/audit fields shared
+  across CRUD handler factories: `auth_dep`, `optional_auth_dep`,
+  `require_auth_by_default`, `entity_name`, `cedar_access_spec`,
+  `audit_logger`. Replaces the per-factory parameter sprawl that drifted
+  across read/create/update/delete signatures (~68 edits to this tuple in
+  the 3 months before the refactor).
+
+### Changed
+- **CRUD handler factories take `config: HandlerConfig`** instead of 6
+  positional/keyword params. Migrated: `create_read_handler`,
+  `create_create_handler`, `create_update_handler`, `create_delete_handler`.
+  Call sites in `RouteGenerator.generate_route` build a single
+  `_base_config` and use `dataclasses.replace(_base_config,
+  audit_logger=_audit_for("<verb>"))` per verb. Test call sites updated
+  in `test_row_level_access.py`, `test_session_cookie_auth.py`,
+  `test_url_consistency.py`, `test_entity_resolution.py`.
+- **`create_list_handler` and `create_custom_handler` deferred** — list has
+  htmx_* extras with a richer signature; custom is a different shape. They
+  can join the pattern in a follow-up cycle.
+- **Convergence note in HandlerConfig docstring** — the shape matches what
+  Django REST's ViewSet attributes, Rails' before_action chain, Spring's
+  `@PreAuthorize`, and WordPress's `permission_callback` all converge on.
+  Future cross-cutting concerns (rate-limit key, idempotency token,
+  throttle policy) extend this dataclass; the goal is a richer
+  `EndpointSpec` that bundles the full per-route shape (Target 2 in the
+  refactor design).
+
+### Agent Guidance
+- New CRUD-style route handler factories should take `config: HandlerConfig`
+  rather than re-introducing the 6-param tuple. When adding a new
+  cross-cutting route concern (rate limit, throttle key, etc.), add a
+  field to `HandlerConfig` rather than expanding per-factory signatures.
+- The dataclass is the **stable contract** for handler-factory authorization
+  context — the per-factory signature is allowed to differ on
+  resource-specific params (`auto_include`, `input_schema`,
+  `storage_bindings`), but the auth/authz/audit fields belong in
+  `HandlerConfig`.
+
 ## [0.65.17] - 2026-05-04
 
 ### Fixed
