@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.8] - 2026-05-04
+
+### Added
+- **`/fuzz` slash command** — cross-app integration fuzz sweep
+  extracted from the v0.64.5–v0.64.7 manual sweep. Dispatches one
+  parallel subagent per example + fixture; each scrapes boot stderr
+  for known-bug signatures (`registered twice`, `not a text-shaped`,
+  `Traceback`, `ImportError`, `jinja2.exceptions`, etc.) plus
+  validate/lint errors; aggregates findings; files new GitHub
+  issues; hands off to `/issues`.
+
+  Soft-finding allowlist is baked in so capability suggestions
+  ('no command palette fragment', 'no fitness.repr_fields',
+  'permit but no scope' on shape fixtures, etc.) never get
+  promoted to issues. Pattern documented at
+  `.claude/commands/fuzz.md`; CLAUDE.md gained a one-paragraph
+  section pointing at it alongside `/improve`.
+
+  Loopable: `/loop /fuzz`. Pair with `/loop /issues` to get an
+  autonomous file→fix→ship loop.
+
+### Agent Guidance
+- For framework-wide regression-hunting that `dazzle validate`
+  misses, prefer `/fuzz` over re-rolling parallel inspection
+  agents by hand. The boot-stderr scrape is the high-yield
+  signal (it caught 3 real bugs in the inaugural run); the
+  validate-exit-code check is best-effort.
+
 ## [0.64.7] - 2026-05-04
 
 ### Added

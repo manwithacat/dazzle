@@ -130,6 +130,15 @@ Dazzle has a single agent-first entrypoint for autonomous investigation, improve
 
 **Files:** driver at `.claude/commands/improve.md`; lanes at `.claude/commands/improve/lanes/*.md`; sub-strategies at `.claude/commands/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`.
 
+### Cross-app fuzz sweep — `/fuzz`
+
+Complementary to `/improve`. Catches integration regressions that `dazzle validate` doesn't see — duplicate route registration, FTS-shape mismatches, template-undefined-var errors, etc. — by scraping **boot stderr** of every example + fixture in parallel. Files real bugs as GitHub issues and hands off to `/issues`.
+
+- `/fuzz` — one full sweep, file new issues, stop
+- `/loop /fuzz` — self-paced sweep loop (auto-files + delegates fixing to a paired `/loop /issues` if you run both)
+
+**Files:** `.claude/commands/fuzz.md`. Pattern was extracted from the v0.64.5–v0.64.7 sweep (3 real bugs caught, 2 false positives correctly demoted) — see that section's CHANGELOG for the canonical example.
+
 Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.claude/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
 
 ## Extending
@@ -297,4 +306,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.64.7 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.64.8 | **Python**: 3.12+ | **Status**: Production Ready
