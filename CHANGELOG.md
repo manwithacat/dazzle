@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.1] - 2026-05-04
+
+### Added
+- **#977 cycle 2 — dz-richtext: blocks, lists, links, inline code,
+  clear-format, full keyboard shortcuts.** Spec
+  `dev_docs/2026-05-04-dz-richtext-spec.md`. Builds on cycle 1's
+  inline-toggle infrastructure with three new handler families:
+  - `setBlock(tag)` — converts the block containing the selection
+    to h2/h3/blockquote/p; LI handling escapes the list cleanly.
+  - `toggleList(tag)` — wraps the current block in ul/ol; toggling
+    twice escapes back to a paragraph; cross-toggling swaps list
+    type without losing content.
+  - `toggleLink()` — prompts for href, validates against the
+    `^(https?:|mailto:|/)` allowlist, wraps the selection. Already
+    inside a link → unwrap. The prompt is injectable via
+    `options.linkPrompt` so tests don't need `window.prompt`.
+  - Inline code via the existing `toggleInline` path.
+  - `clearFormat()` — strips every inline wrapper across the
+    selection while preserving block structure.
+  - Modifier-aware shortcut dispatch (`matchKeyEvent`) so
+    Mod+Shift+8 (ul) / Mod+Shift+7 (ol) / Mod+Alt+2 (h2) /
+    Mod+Alt+3 (h3) / Mod+Shift+Q (blockquote) / Mod+K (link) /
+    Mod+E (code) / Mod+\\ (clear) don't collide with Mod+B/I/U.
+  - Toolbar separator support via `"|"` placeholder in the command
+    list.
+  - Schema expanded: inline allowlist STRONG/EM/U/S/CODE/A/BR;
+    block allowlist P/H2/H3/UL/OL/LI/BLOCKQUOTE/PRE; ATTR_ALLOW
+    permits only `href` on `<a>`, validated against the protocol
+    regex on emit.
+  - CSS: heading styles consume the `--dz-heading-app-section-title`
+    / `--dz-heading-app-subsection-title` tokens shipped in #983;
+    blockquote, code, link, separator styled.
+  - +21 source-regression tests (45 total).
+
+### Agent Guidance
+- Cycle 2 keyboard shortcuts use modifier flags. When adding a new
+  command, set `key` to the bare letter and add `shift: true` /
+  `alt: true` if needed — the dispatcher in `matchKeyEvent` checks
+  both flags strictly. Don't reuse a (key, shift, alt) triple
+  across commands; the first match wins.
+
 ## [0.64.0] - 2026-05-04
 
 ### Added

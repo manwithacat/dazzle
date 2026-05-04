@@ -1,11 +1,13 @@
 /**
- * dz-richtext.js — Dazzle-native rich-text editor (#977 cycle 1).
+ * dz-richtext.js — Dazzle-native rich-text editor (#977 cycles 1–2).
  *
  * Spec: dev_docs/2026-05-04-dz-richtext-spec.md
  *
- * Cycle 1 scope: bold, italic, underline, emit pass, a11y baseline.
- * Cycles 2–5 add lists/headings/links, paste sanitisation, undo/redo,
- * server allowlist parity, DSL knobs.
+ * Cycle 1: bold/italic/underline + emit pass + a11y baseline.
+ * Cycle 2: lists (ul/ol), headings (h2/h3), blockquote, inline code,
+ *          link prompt, clear-format, full keyboard shortcuts.
+ * Cycles 3–5: paste sanitisation, undo/redo + server allowlist parity,
+ *             DSL knobs.
  *
  * Coexists with the Quill bridge (registered as "richtext"); this
  * editor is registered as "richtext-native" until cycle 4 flips the
@@ -20,20 +22,52 @@
   var bridge = window.dz && window.dz.bridge;
   if (!bridge) return;
 
+  // type: "inline" | "block" | "list" | "link" | "clear"
+  // key:  letter pressed with Mod (Ctrl/Cmd). Combined with shift/alt
+  //       via the modifier flags, so e.g. h2 = Mod+Alt+2.
   var COMMANDS = {
     bold: { tag: "strong", type: "inline", key: "b" },
     italic: { tag: "em", type: "inline", key: "i" },
     underline: { tag: "u", type: "inline", key: "u" },
+    code: { tag: "code", type: "inline", key: "e" },
+    h2: { tag: "h2", type: "block", key: "2", alt: true },
+    h3: { tag: "h3", type: "block", key: "3", alt: true },
+    blockquote: { tag: "blockquote", type: "block", key: "q", shift: true },
+    paragraph: { tag: "p", type: "block", key: "0", alt: true },
+    ul: { tag: "ul", type: "list", key: "8", shift: true },
+    ol: { tag: "ol", type: "list", key: "7", shift: true },
+    link: { type: "link", key: "k" },
+    clear: { type: "clear", key: "\\" },
   };
 
-  // Closed inline-tag allowlist used by cycle 1's emit pass.
-  // Cycle 3 expands this and moves the source of truth into the IR.
-  var INLINE_ALLOW = { STRONG: 1, EM: 1, U: 1, BR: 1 };
-  var BLOCK_ALLOW = { P: 1 };
+  var INLINE_ALLOW = { STRONG: 1, EM: 1, U: 1, S: 1, CODE: 1, A: 1, BR: 1 };
+  var BLOCK_ALLOW = {
+    P: 1,
+    H2: 1,
+    H3: 1,
+    UL: 1,
+    OL: 1,
+    LI: 1,
+    BLOCKQUOTE: 1,
+    PRE: 1,
+  };
+  var BLOCK_TAGS = { P: 1, H2: 1, H3: 1, BLOCKQUOTE: 1, PRE: 1, LI: 1 };
+  var ATTR_ALLOW = { A: { href: 1 } };
+  var SAFE_HREF = /^(https?:|mailto:|\/)/i;
+
+  var ZWSP = "\u200B";
 
   function isInside(node, tagName) {
     while (node && node !== document.body) {
       if (node.nodeType === 1 && node.tagName === tagName) return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function closestBlock(node, editor) {
+    while (node && node !== editor) {
+      if (node.nodeType === 1 && BLOCK_TAGS[node.tagName]) return node;
       node = node.parentNode;
     }
     return null;
@@ -72,9 +106,6 @@
     parent.removeChild(el);
   }
 
-  // Toggle an inline tag across the current range. Selection-collapsed
-  // case: insert an empty wrapper at the caret so further typing is
-  // formatted (matches the contract every editor uses).
   function toggleInline(editor, tagName) {
     var sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return false;
@@ -89,7 +120,7 @@
         if (existing) unwrap(existing);
       } else {
         var wrap = document.createElement(tagName);
-        wrap.appendChild(document.createTextNode("\u200B")); // ZWSP caret-anchor
+        wrap.appendChild(document.createTextNode(ZWSP));
         range.insertNode(wrap);
         var inner = document.createRange();
         inner.setStart(wrap.firstChild, 1);
@@ -127,9 +158,149 @@
     return true;
   }
 
-  // Walk an arbitrary HTML fragment, emit only allowlisted nodes,
-  // strip every attribute. Used both for sanitising persisted values
-  // on mount and for the emit pass on every commit.
+  // Replace the block containing the selection with a new block of
+  // `tagName`. If the block already has that tag, revert to <p>.
+  function setBlock(editor, tagName) {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return false;
+
+    var block = closestBlock(range.startContainer, editor);
+    if (!block) return false;
+
+    // Inside a list-item: treat the LI itself as the block to swap.
+    // For simplicity, escape the list when toggling to a non-list block.
+    if (block.tagName === "LI") {
+      var li = block;
+      var list = li.parentNode;
+      var newBlock = document.createElement(
+        li.tagName === tagName ? "p" : tagName,
+      );
+      while (li.firstChild) newBlock.appendChild(li.firstChild);
+      list.parentNode.insertBefore(newBlock, list.nextSibling);
+      li.parentNode.removeChild(li);
+      if (!list.firstChild) list.parentNode.removeChild(list);
+      restoreSelectionInside(newBlock);
+      return true;
+    }
+
+    var target = block.tagName === tagName ? "p" : tagName;
+    var replacement = document.createElement(target);
+    while (block.firstChild) replacement.appendChild(block.firstChild);
+    block.parentNode.replaceChild(replacement, block);
+    restoreSelectionInside(replacement);
+    return true;
+  }
+
+  function restoreSelectionInside(node) {
+    var sel = window.getSelection();
+    var r = document.createRange();
+    r.selectNodeContents(node);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  // Toggle a list of `tagName` (UL or OL) around the block containing
+  // the selection. If already in a list of that type, escape it (back
+  // to <p>). If in the other list type, swap.
+  function toggleList(editor, tagName) {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return false;
+
+    var block = closestBlock(range.startContainer, editor);
+    if (!block) return false;
+
+    if (block.tagName === "LI") {
+      var list = block.parentNode;
+      if (list.tagName === tagName) {
+        var p = document.createElement("p");
+        while (block.firstChild) p.appendChild(block.firstChild);
+        list.parentNode.insertBefore(p, list.nextSibling);
+        block.parentNode.removeChild(block);
+        if (!list.firstChild) list.parentNode.removeChild(list);
+        restoreSelectionInside(p);
+      } else {
+        var newList = document.createElement(tagName);
+        var moved = block.cloneNode(true);
+        newList.appendChild(moved);
+        list.parentNode.insertBefore(newList, list.nextSibling);
+        block.parentNode.removeChild(block);
+        if (!list.firstChild) list.parentNode.removeChild(list);
+        restoreSelectionInside(moved);
+      }
+      return true;
+    }
+
+    var listEl = document.createElement(tagName);
+    var newLi = document.createElement("li");
+    while (block.firstChild) newLi.appendChild(block.firstChild);
+    listEl.appendChild(newLi);
+    block.parentNode.replaceChild(listEl, block);
+    restoreSelectionInside(newLi);
+    return true;
+  }
+
+  // Toggle a link around the current selection. If already inside a
+  // link, unwrap it. Otherwise prompt for href and wrap the selection.
+  function toggleLink(editor, promptFn) {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return false;
+
+    var existing = isInside(range.startContainer, "A");
+    if (existing) {
+      unwrap(existing);
+      return true;
+    }
+    if (range.collapsed) return false;
+
+    var url = (promptFn || window.prompt).call(null, "Link URL", "https://");
+    if (!url || !SAFE_HREF.test(url)) return false;
+
+    var a = document.createElement("a");
+    a.setAttribute("href", url);
+    try {
+      a.appendChild(range.extractContents());
+      range.insertNode(a);
+      sel.removeAllRanges();
+      var r2 = document.createRange();
+      r2.selectNodeContents(a);
+      sel.addRange(r2);
+    } catch (_) {
+      return false;
+    }
+    return true;
+  }
+
+  // Strip every inline-formatting wrapper across the selection. Block
+  // tags (h2, ul, etc.) are preserved — use setBlock("p") to flatten.
+  function clearFormat(editor) {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return false;
+    if (range.collapsed) return false;
+
+    var nodes = [];
+    var w = document.createTreeWalker(editor, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: function (n) {
+        return INLINE_ALLOW[n.tagName] &&
+          n.tagName !== "BR" &&
+          range.intersectsNode(n)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_SKIP;
+      },
+    });
+    while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.reverse().forEach(unwrap);
+    return true;
+  }
+
   function sanitiseTree(rootClone) {
     (function walk(node) {
       var children = Array.prototype.slice.call(node.childNodes);
@@ -141,8 +312,19 @@
         }
         var tag = child.tagName;
         if (INLINE_ALLOW[tag] || BLOCK_ALLOW[tag]) {
-          while (child.attributes.length) {
-            child.removeAttribute(child.attributes[0].name);
+          var allowAttrs = ATTR_ALLOW[tag] || {};
+          var attrNames = Array.prototype.map.call(
+            child.attributes,
+            function (a) {
+              return a.name;
+            },
+          );
+          attrNames.forEach(function (name) {
+            if (!allowAttrs[name]) child.removeAttribute(name);
+          });
+          if (tag === "A") {
+            var href = child.getAttribute("href") || "";
+            if (!SAFE_HREF.test(href)) child.removeAttribute("href");
           }
           walk(child);
         } else {
@@ -169,10 +351,6 @@
       .trim();
   }
 
-  // Replace the editor's contents from a (possibly untrusted) HTML
-  // string. Parsed via DOMParser into a detached document — scripts
-  // do not execute — then sanitised through the closed allowlist
-  // before being adopted into the live tree.
   function replaceEditorContents(editor, html) {
     while (editor.firstChild) editor.removeChild(editor.firstChild);
     if (!html || !html.trim()) {
@@ -206,12 +384,35 @@
     if (live) live.textContent = text;
   }
 
+  function commandIsActive(editor, name) {
+    var cmd = COMMANDS[name];
+    if (!cmd) return false;
+    if (cmd.type === "inline") return selectionHas(editor, cmd.tag);
+    if (cmd.type === "block") {
+      var sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+      var block = closestBlock(sel.getRangeAt(0).startContainer, editor);
+      return !!(block && block.tagName === cmd.tag);
+    }
+    if (cmd.type === "list") {
+      var s = window.getSelection();
+      if (!s || s.rangeCount === 0) return false;
+      var b = closestBlock(s.getRangeAt(0).startContainer, editor);
+      return !!(b && b.tagName === "LI" && b.parentNode.tagName === cmd.tag);
+    }
+    if (cmd.type === "link") {
+      var sl = window.getSelection();
+      if (!sl || sl.rangeCount === 0) return false;
+      return !!isInside(sl.getRangeAt(0).startContainer, "A");
+    }
+    return false;
+  }
+
   function updateToolbarState(toolbar, editor) {
     var buttons = toolbar.querySelectorAll("button[data-cmd]");
     buttons.forEach(function (btn) {
-      var cmd = COMMANDS[btn.getAttribute("data-cmd")];
-      if (!cmd) return;
-      var on = selectionHas(editor, cmd.tag);
+      var name = btn.getAttribute("data-cmd");
+      var on = commandIsActive(editor, name);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
       btn.classList.toggle("is-active", on);
     });
@@ -246,6 +447,33 @@
     };
   }
 
+  function buttonLabel(name) {
+    return (
+      {
+        bold: "B",
+        italic: "I",
+        underline: "U",
+        code: "</>",
+        h2: "H2",
+        h3: "H3",
+        blockquote: "❝",
+        paragraph: "¶",
+        ul: "•",
+        ol: "1.",
+        link: "🔗",
+        clear: "✕",
+      }[name] || name
+    );
+  }
+
+  function shortcutLabel(cmd) {
+    var parts = ["Control"];
+    if (cmd.shift) parts.push("Shift");
+    if (cmd.alt) parts.push("Alt");
+    parts.push(cmd.key.toUpperCase());
+    return parts.join("+");
+  }
+
   function buildToolbar(host, commandList) {
     var existing = host.querySelector("[data-dz-richtext-toolbar]");
     if (existing) return existing;
@@ -255,16 +483,24 @@
     toolbar.setAttribute("aria-label", "Formatting");
     toolbar.setAttribute("data-dz-richtext-toolbar", "");
     commandList.forEach(function (name) {
+      if (name === "|") {
+        var sep = document.createElement("span");
+        sep.className = "dz-richtext-toolbar-sep";
+        sep.setAttribute("role", "separator");
+        sep.setAttribute("aria-hidden", "true");
+        toolbar.appendChild(sep);
+        return;
+      }
       var cmd = COMMANDS[name];
       if (!cmd) return;
       var btn = document.createElement("button");
       btn.type = "button";
       btn.setAttribute("data-cmd", name);
       btn.setAttribute("aria-pressed", "false");
-      btn.setAttribute("aria-keyshortcuts", "Control+" + cmd.key.toUpperCase());
-      btn.setAttribute("title", name + " (Ctrl+" + cmd.key.toUpperCase() + ")");
-      btn.textContent =
-        name === "underline" ? "U" : name === "italic" ? "I" : "B";
+      var sc = shortcutLabel(cmd);
+      btn.setAttribute("aria-keyshortcuts", sc);
+      btn.setAttribute("title", name + " (" + sc + ")");
+      btn.textContent = buttonLabel(name);
       if (name === "italic") btn.style.fontStyle = "italic";
       if (name === "bold") btn.style.fontWeight = "700";
       if (name === "underline") btn.style.textDecoration = "underline";
@@ -282,6 +518,20 @@
     live.setAttribute("aria-live", "polite");
     live.setAttribute("data-dz-announce", "");
     host.appendChild(live);
+  }
+
+  function matchKeyEvent(e) {
+    if (!(e.ctrlKey || e.metaKey)) return null;
+    var k = e.key.toLowerCase();
+    var names = Object.keys(COMMANDS);
+    for (var i = 0; i < names.length; i++) {
+      var c = COMMANDS[names[i]];
+      if (c.key !== k) continue;
+      if (!!c.shift !== !!e.shiftKey) continue;
+      if (!!c.alt !== !!e.altKey) continue;
+      return names[i];
+    }
+    return null;
   }
 
   bridge.registerWidget("richtext-native", {
@@ -303,6 +553,15 @@
         "bold",
         "italic",
         "underline",
+        "|",
+        "h2",
+        "h3",
+        "|",
+        "ul",
+        "ol",
+        "|",
+        "link",
+        "clear",
       ];
       var toolbar = buildToolbar(host, commandList);
       ensureAnnouncer(host);
@@ -324,20 +583,22 @@
         var cmd = COMMANDS[name];
         if (!cmd) return;
         editor.focus();
-        if (cmd.type === "inline") {
-          if (toggleInline(editor, cmd.tag)) {
-            commit();
-            announce(
-              host,
-              name + " " + (selectionHas(editor, cmd.tag) ? "on" : "off"),
-            );
-          }
-        }
+        var changed = false;
+        if (cmd.type === "inline") changed = toggleInline(editor, cmd.tag);
+        else if (cmd.type === "block") changed = setBlock(editor, cmd.tag);
+        else if (cmd.type === "list") changed = toggleList(editor, cmd.tag);
+        else if (cmd.type === "link")
+          changed = toggleLink(editor, options && options.linkPrompt);
+        else if (cmd.type === "clear") changed = clearFormat(editor);
+        if (!changed) return;
+        commit();
+        announce(
+          host,
+          name + " " + (commandIsActive(editor, name) ? "applied" : "removed"),
+        );
       }
 
       on(toolbar, "mousedown", function (e) {
-        // Prevent toolbar from stealing selection — the historical
-        // contenteditable failure mode.
         if (e.target.closest("button[data-cmd]")) e.preventDefault();
       });
       on(toolbar, "click", function (e) {
@@ -347,11 +608,7 @@
       });
 
       on(editor, "keydown", function (e) {
-        if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
-        var k = e.key.toLowerCase();
-        var match = Object.keys(COMMANDS).find(function (name) {
-          return COMMANDS[name].key === k;
-        });
+        var match = matchKeyEvent(e);
         if (!match) return;
         e.preventDefault();
         runCommand(match);
@@ -394,14 +651,16 @@
     },
   });
 
-  // Test/inspection hook (cycle 1 only — cycles 2+ replace with a
-  // proper public API). Lets unit tests drive the editor without
-  // re-implementing the bridge.
   window.dzRichText = {
     _emit: emit,
     _toggleInline: toggleInline,
+    _setBlock: setBlock,
+    _toggleList: toggleList,
+    _toggleLink: toggleLink,
+    _clearFormat: clearFormat,
     _selectionHas: selectionHas,
     _replaceEditorContents: replaceEditorContents,
+    _matchKeyEvent: matchKeyEvent,
     COMMANDS: COMMANDS,
   };
 })();

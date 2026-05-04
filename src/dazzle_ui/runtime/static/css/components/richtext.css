@@ -74,3 +74,51 @@
 .dz-form-richtext [data-dz-editor] strong { font-weight: 700; }
 .dz-form-richtext [data-dz-editor] em { font-style: italic; }
 .dz-form-richtext [data-dz-editor] u { text-decoration: underline; }
+.dz-form-richtext [data-dz-editor] s { text-decoration: line-through; }
+
+/* Cycle 2: blocks + lists + links + inline code. */
+.dz-form-richtext [data-dz-editor] h2 {
+  font-size: var(--dz-heading-app-section-title, var(--text-base));
+  font-weight: 700;
+  margin: var(--dz-space-3, 0.75rem) 0 var(--dz-space-2, 0.5rem) 0;
+  line-height: 1.25;
+}
+.dz-form-richtext [data-dz-editor] h3 {
+  font-size: var(--dz-heading-app-subsection-title, var(--text-sm));
+  font-weight: 600;
+  margin: var(--dz-space-2, 0.5rem) 0;
+  line-height: 1.3;
+}
+.dz-form-richtext [data-dz-editor] ul,
+.dz-form-richtext [data-dz-editor] ol {
+  margin: 0 0 var(--dz-space-2, 0.5rem) 0;
+  padding-left: 1.5rem;
+}
+.dz-form-richtext [data-dz-editor] li {
+  margin: 0;
+}
+.dz-form-richtext [data-dz-editor] blockquote {
+  margin: var(--dz-space-2, 0.5rem) 0;
+  padding-left: var(--dz-space-3, 0.75rem);
+  border-left: 3px solid var(--dz-color-border, #e5e7eb);
+  color: var(--dz-color-text-subtle, #6b7280);
+}
+.dz-form-richtext [data-dz-editor] code {
+  font-family: var(--dz-font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.9em;
+  background: var(--dz-color-surface-subtle, #f3f4f6);
+  padding: 0.1em 0.3em;
+  border-radius: var(--dz-radius-xs, 0.125rem);
+}
+.dz-form-richtext [data-dz-editor] a {
+  color: var(--dz-color-primary, #3b82f6);
+  text-decoration: underline;
+}
+
+.dz-form-richtext .dz-richtext-toolbar-sep {
+  display: inline-block;
+  width: 1px;
+  align-self: stretch;
+  background: var(--dz-color-border, #e5e7eb);
+  margin: 0 var(--dz-space-1, 0.25rem);
+}

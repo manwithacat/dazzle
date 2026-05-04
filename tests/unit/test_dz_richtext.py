@@ -1,4 +1,4 @@
-"""Source-regression tests for dz-richtext.js (#977 cycle 1).
+"""Source-regression tests for dz-richtext.js (#977 cycles 1–2).
 
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md
 
@@ -180,3 +180,161 @@ class TestStylesheet:
         """WCAG 2.4.7 — visible focus on the editor."""
         css = CSS_PATH.read_text()
         assert ":focus-visible" in css or ":focus-within" in css
+
+
+# ───────────────────────────── cycle 2 ────────────────────────────────
+
+
+class TestCycle2Commands:
+    """Lists, headings, blockquote, inline code, link, clear-format."""
+
+    def test_block_commands_registered(self) -> None:
+        src = JS_PATH.read_text()
+        for cmd, tag in [
+            ("h2", '"h2"'),
+            ("h3", '"h3"'),
+            ("blockquote", '"blockquote"'),
+            ("paragraph", '"p"'),
+        ]:
+            assert cmd + ":" in src
+            assert tag in src
+
+    def test_list_commands_registered(self) -> None:
+        src = JS_PATH.read_text()
+        assert "ul:" in src and '"ul"' in src
+        assert "ol:" in src and '"ol"' in src
+        assert 'type: "list"' in src
+
+    def test_link_command_registered(self) -> None:
+        src = JS_PATH.read_text()
+        assert "link:" in src
+        assert 'type: "link"' in src
+
+    def test_inline_code_registered(self) -> None:
+        src = JS_PATH.read_text()
+        assert "code:" in src and '"code"' in src
+
+    def test_clear_format_registered(self) -> None:
+        src = JS_PATH.read_text()
+        assert "clear:" in src and 'type: "clear"' in src
+
+
+class TestCycle2Schema:
+    """Allowlist expansion for cycle 2 tags."""
+
+    def test_inline_allow_expanded(self) -> None:
+        """Cycle 2 inline allowlist: STRONG/EM/U/S/CODE/A/BR."""
+        src = JS_PATH.read_text()
+        for tag in ["STRONG:", "EM:", "U:", "S:", "CODE:", "A:", "BR:"]:
+            assert tag in src
+
+    def test_block_allow_expanded(self) -> None:
+        """Cycle 2 block allowlist: P/H2/H3/UL/OL/LI/BLOCKQUOTE/PRE."""
+        src = JS_PATH.read_text()
+        for tag in ["P:", "H2:", "H3:", "UL:", "OL:", "LI:", "BLOCKQUOTE:", "PRE:"]:
+            assert tag in src
+
+    def test_href_attribute_allowlisted_only_on_a(self) -> None:
+        """ATTR_ALLOW maps tag → allowed attrs. Only A→href in cycle 2."""
+        src = JS_PATH.read_text()
+        assert "ATTR_ALLOW" in src
+        assert "A: { href: 1 }" in src
+
+    def test_safe_href_protocol_regex(self) -> None:
+        """Links must be http(s):, mailto:, or path-relative."""
+        src = JS_PATH.read_text()
+        assert "SAFE_HREF" in src
+        assert "/^(https?:|mailto:|" in src
+
+    def test_javascript_protocol_blocked_on_emit(self) -> None:
+        """sanitiseTree strips href if it doesn't match SAFE_HREF."""
+        src = JS_PATH.read_text()
+        assert "if (!SAFE_HREF.test(href))" in src
+        assert 'child.removeAttribute("href")' in src
+
+
+class TestCycle2KeyboardShortcuts:
+    def test_modifier_aware_dispatch(self) -> None:
+        """matchKeyEvent matches by key + shift/alt flags so e.g. Mod+Shift+8
+        (ul) and Mod+Shift+7 (ol) don't collide with Mod+B."""
+        src = JS_PATH.read_text()
+        assert "matchKeyEvent" in src
+        assert "!!c.shift !== !!e.shiftKey" in src
+        assert "!!c.alt !== !!e.altKey" in src
+
+    def test_h2_shortcut_uses_alt(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'h2: { tag: "h2", type: "block", key: "2", alt: true }' in src
+
+    def test_blockquote_shortcut_uses_shift(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'key: "q", shift: true' in src
+
+    def test_link_shortcut_mod_k(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'link: { type: "link", key: "k" }' in src
+
+
+class TestCycle2Toolbar:
+    def test_separator_supported(self) -> None:
+        """Toolbar accepts '|' to insert a visual separator."""
+        src = JS_PATH.read_text()
+        assert 'name === "|"' in src
+        assert "dz-richtext-toolbar-sep" in src
+        assert 'role", "separator"' in src
+
+    def test_default_toolbar_includes_cycle2_buttons(self) -> None:
+        src = JS_PATH.read_text()
+        # Default toolbar list at mount.
+        for name in [
+            '"bold"',
+            '"italic"',
+            '"underline"',
+            '"h2"',
+            '"h3"',
+            '"ul"',
+            '"ol"',
+            '"link"',
+            '"clear"',
+        ]:
+            assert name in src
+
+
+class TestCycle2Stylesheet:
+    def test_block_styles_present(self) -> None:
+        css = CSS_PATH.read_text()
+        for sel in [
+            "[data-dz-editor] h2",
+            "[data-dz-editor] h3",
+            "[data-dz-editor] ul",
+            "[data-dz-editor] ol",
+            "[data-dz-editor] li",
+            "[data-dz-editor] blockquote",
+            "[data-dz-editor] code",
+            "[data-dz-editor] a",
+        ]:
+            assert sel in css
+
+    def test_separator_style_present(self) -> None:
+        css = CSS_PATH.read_text()
+        assert ".dz-richtext-toolbar-sep" in css
+
+    def test_h2_uses_heading_token_983(self) -> None:
+        """Reuses the heading scale tokens shipped in #983."""
+        css = CSS_PATH.read_text()
+        assert "--dz-heading-app-section-title" in css
+
+
+class TestCycle2Lifecycle:
+    def test_run_command_dispatches_all_types(self) -> None:
+        src = JS_PATH.read_text()
+        assert 'cmd.type === "inline"' in src
+        assert 'cmd.type === "block"' in src
+        assert 'cmd.type === "list"' in src
+        assert 'cmd.type === "link"' in src
+        assert 'cmd.type === "clear"' in src
+
+    def test_link_prompt_injectable(self) -> None:
+        """Tests can pass options.linkPrompt to avoid window.prompt."""
+        src = JS_PATH.read_text()
+        assert "options && options.linkPrompt" in src or "options.linkPrompt" in src
