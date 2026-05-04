@@ -454,35 +454,35 @@ class TestProgressCoercion:
         assert _coerce_pipeline_progress("74") == (74, False)
         assert _coerce_pipeline_progress(74.6) == (75, False)  # rounds
 
-    def test_zero_and_hundred_boundaries(self) -> None:
+    @pytest.mark.parametrize(
+        "inputs,expected",
+        [
+            ([0, 100], [(0, False), (100, False)]),
+            ([120, "150"], [(100, True), (100, True)]),
+            ([None, ""], [(None, False), (None, False)]),
+            (["not a number"], [(None, False)]),
+        ],
+        ids=[
+            "test_zero_and_hundred_boundaries",
+            "test_overshoot_clamps_to_100",
+            "test_none_and_empty_return_none",
+            "test_unparseable_returns_none",
+        ],
+    )
+    def test_coercion_outputs(self, inputs: list, expected: list) -> None:
         from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
 
-        assert _coerce_pipeline_progress(0) == (0, False)
-        assert _coerce_pipeline_progress(100) == (100, False)
-
-    def test_overshoot_clamps_to_100(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
-
-        assert _coerce_pipeline_progress(120) == (100, True)
-        assert _coerce_pipeline_progress("150") == (100, True)
+        for inp, exp in zip(inputs, expected, strict=True):
+            assert _coerce_pipeline_progress(inp) == exp
 
     def test_negative_clamps_to_0_no_overshoot(self) -> None:
         from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
 
         assert _coerce_pipeline_progress(-5) == (0, False)
 
-    def test_none_and_empty_return_none(self) -> None:
+    def test_unparseable_object_returns_none(self) -> None:
         from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
 
-        assert _coerce_pipeline_progress(None) == (None, False)
-        assert _coerce_pipeline_progress("") == (None, False)
-
-    def test_unparseable_returns_none(self) -> None:
-        """Garbage strings (e.g. "foo") become None — caller renders no
-        bar instead of bombing on a ValueError."""
-        from dazzle_back.runtime.workspace_rendering import _coerce_pipeline_progress
-
-        assert _coerce_pipeline_progress("not a number") == (None, False)
         assert _coerce_pipeline_progress(object()) == (None, False)
 
 

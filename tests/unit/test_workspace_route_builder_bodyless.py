@@ -18,6 +18,8 @@ config (entries / stages / cards / confirmations etc.).
 
 from __future__ import annotations
 
+import pytest
+
 
 def _build_app_and_init_routes(dsl_src: str, tmp_path):
     """Helper: parse DSL via the standard parse_modules pipeline,
@@ -59,8 +61,11 @@ class TestSourcelessRoutesRegistered:
     """Each of the four bodyless display modes must get a route at
     /api/workspaces/<ws>/regions/<region> even with no source."""
 
-    def test_action_grid_sourceless(self, tmp_path) -> None:
-        src = """module t
+    @pytest.mark.parametrize(
+        "src,expected_path",
+        [
+            (
+                """module t
 app t "Test"
 workspace dash "Dash":
   cta:
@@ -68,16 +73,11 @@ workspace dash "Dash":
     actions:
       - label: "Do thing"
         action: thing_create
-"""
-        app = _build_app_and_init_routes(src, tmp_path)
-        paths = _route_paths(app)
-        assert "/api/workspaces/dash/regions/cta" in paths, (
-            "action_grid sourceless region missing route — #907 regression. "
-            f"Routes: {[p for p in paths if 'workspaces' in p]}"
-        )
-
-    def test_pipeline_steps_sourceless(self, tmp_path) -> None:
-        src = """module t
+""",
+                "/api/workspaces/dash/regions/cta",
+            ),
+            (
+                """module t
 app t "Test"
 workspace dash "Dash":
   ingestion:
@@ -85,16 +85,11 @@ workspace dash "Dash":
     stages:
       - label: "Scanned"
         value: "Daily 02:00 UTC"
-"""
-        app = _build_app_and_init_routes(src, tmp_path)
-        paths = _route_paths(app)
-        assert "/api/workspaces/dash/regions/ingestion" in paths, (
-            "pipeline_steps sourceless region missing route — #907 regression"
-        )
-
-    def test_status_list_sourceless(self, tmp_path) -> None:
-        """The originally-reported case from #907."""
-        src = """module t
+""",
+                "/api/workspaces/dash/regions/ingestion",
+            ),
+            (
+                """module t
 app t "Test"
 workspace dash "Dash":
   legal_basis_gates:
@@ -104,15 +99,11 @@ workspace dash "Dash":
         caption: "Oakwood Academy / DPA v1.4"
         icon: "file-check"
         state: positive
-"""
-        app = _build_app_and_init_routes(src, tmp_path)
-        paths = _route_paths(app)
-        assert "/api/workspaces/dash/regions/legal_basis_gates" in paths, (
-            "status_list sourceless region missing route — original #907 case"
-        )
-
-    def test_confirm_action_panel_sourceless(self, tmp_path) -> None:
-        src = """module t
+""",
+                "/api/workspaces/dash/regions/legal_basis_gates",
+            ),
+            (
+                """module t
 app t "Test"
 workspace dash "Dash":
   authorise:
@@ -120,12 +111,21 @@ workspace dash "Dash":
     confirmations:
       - title: "I agree"
     primary_action: do_thing
-"""
+""",
+                "/api/workspaces/dash/regions/authorise",
+            ),
+        ],
+        ids=[
+            "test_action_grid_sourceless",
+            "test_pipeline_steps_sourceless",
+            "test_status_list_sourceless",
+            "test_confirm_action_panel_sourceless",
+        ],
+    )
+    def test_sourceless_route_registered(self, tmp_path, src: str, expected_path: str) -> None:
         app = _build_app_and_init_routes(src, tmp_path)
         paths = _route_paths(app)
-        assert "/api/workspaces/dash/regions/authorise" in paths, (
-            "confirm_action_panel sourceless region missing route — #907 regression"
-        )
+        assert expected_path in paths
 
 
 # ───────────────────────── existing behaviour preserved ──────────────────────────

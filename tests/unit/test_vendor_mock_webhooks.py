@@ -302,20 +302,21 @@ class TestSyncDelivery:
 
 
 class TestDeepMerge:
-    def test_simple_merge(self) -> None:
-        result = _deep_merge({"a": 1, "b": 2}, {"b": 3, "c": 4})
-        assert result == {"a": 1, "b": 3, "c": 4}
-
-    def test_nested_merge(self) -> None:
-        result = _deep_merge(
-            {"a": {"x": 1, "y": 2}},
-            {"a": {"y": 3, "z": 4}},
-        )
-        assert result == {"a": {"x": 1, "y": 3, "z": 4}}
-
-    def test_list_replaced(self) -> None:
-        result = _deep_merge({"a": [1, 2]}, {"a": [3, 4, 5]})
-        assert result == {"a": [3, 4, 5]}
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            ({"a": 1, "b": 2}, {"b": 3, "c": 4}, {"a": 1, "b": 3, "c": 4}),
+            ({"a": {"x": 1, "y": 2}}, {"a": {"y": 3, "z": 4}}, {"a": {"x": 1, "y": 3, "z": 4}}),
+            ({"a": [1, 2]}, {"a": [3, 4, 5]}, {"a": [3, 4, 5]}),
+        ],
+        ids=[
+            "test_simple_merge",
+            "test_nested_merge",
+            "test_list_replaced",
+        ],
+    )
+    def test_merge_outputs(self, base: dict, override: dict, expected: dict) -> None:
+        assert _deep_merge(base, override) == expected
 
     def test_deep_copy(self) -> None:
         """Merge returns a new dict, doesn't mutate inputs."""

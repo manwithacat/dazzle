@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.20] - 2026-05-04
+
+### Changed
+- **Distillation cycle 18** — Batch Z final tail collapsed
+  test_workspace_pipeline_steps. 40 tests pass. Suite total: 12,815 →
+  12,806 (9 fewer). Cumulative cycles 1-18: 14,295 → 12,806 (1,489 tests
+  removed). Rate has decelerated as easy size-4/5 clusters approach
+  exhaustion. Need 807 more for < 12,000 target.
+
 ## [0.66.19] - 2026-05-04
 
 ### Changed
