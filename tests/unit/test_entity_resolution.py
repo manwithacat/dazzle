@@ -12,6 +12,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
+
 from dazzle.core.ir.fields import FieldTypeKind
 
 # ---------------------------------------------------------------------------
@@ -279,42 +281,46 @@ class TestDetailViewRefRendering:
         assert "Smith Consulting" in html
         assert "abc" not in html  # Should not show UUID
 
-    def test_ref_object_shows_title_fallback(self) -> None:
-        html = self._render_detail(
-            fields=[{"name": "project", "type": "ref", "label": "Project"}],
-            item={"project": {"id": "xyz", "title": "Website Redesign"}},
-        )
-        assert "Website Redesign" in html
-
-    def test_ref_object_shows_email_fallback(self) -> None:
-        html = self._render_detail(
-            fields=[{"name": "owner", "type": "ref", "label": "Owner"}],
-            item={"owner": {"id": "u1", "email": "jane@example.com"}},
-        )
-        assert "jane@example.com" in html
-
-    def test_ref_raw_uuid_shows_uuid(self) -> None:
-        """When ref is not resolved (raw UUID), show the UUID."""
-        html = self._render_detail(
-            fields=[{"name": "assigned_to", "type": "ref", "label": "Assigned To"}],
-            item={"assigned_to": "f97394eb-dc07-4a1b-8b89-12345678abcd"},
-        )
-        assert "f97394eb" in html
-
-    def test_ref_none_shows_dash(self) -> None:
-        html = self._render_detail(
-            fields=[{"name": "reviewer", "type": "ref", "label": "Reviewer"}],
-            item={"reviewer": None},
-        )
-        # Should show dash for empty ref
-        assert "\u2014" in html  # em-dash
-
-    def test_non_ref_field_unaffected(self) -> None:
-        html = self._render_detail(
-            fields=[{"name": "title", "type": "text", "label": "Title"}],
-            item={"title": "Important Task"},
-        )
-        assert "Important Task" in html
+    @pytest.mark.parametrize(
+        "fields,item,expected",
+        [
+            (
+                [{"name": "project", "type": "ref", "label": "Project"}],
+                {"project": {"id": "xyz", "title": "Website Redesign"}},
+                "Website Redesign",
+            ),
+            (
+                [{"name": "owner", "type": "ref", "label": "Owner"}],
+                {"owner": {"id": "u1", "email": "jane@example.com"}},
+                "jane@example.com",
+            ),
+            (
+                [{"name": "assigned_to", "type": "ref", "label": "Assigned To"}],
+                {"assigned_to": "f97394eb-dc07-4a1b-8b89-12345678abcd"},
+                "f97394eb",
+            ),
+            (
+                [{"name": "reviewer", "type": "ref", "label": "Reviewer"}],
+                {"reviewer": None},
+                "\u2014",
+            ),
+            (
+                [{"name": "title", "type": "text", "label": "Title"}],
+                {"title": "Important Task"},
+                "Important Task",
+            ),
+        ],
+        ids=[
+            "test_ref_object_shows_title_fallback",
+            "test_ref_object_shows_email_fallback",
+            "test_ref_raw_uuid_shows_uuid",
+            "test_ref_none_shows_dash",
+            "test_non_ref_field_unaffected",
+        ],
+    )
+    def test_ref_rendering(self, fields: list, item: dict, expected: str) -> None:
+        html = self._render_detail(fields=fields, item=item)
+        assert expected in html
 
 
 # ---------------------------------------------------------------------------

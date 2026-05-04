@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
@@ -54,35 +55,38 @@ def _surface_with_bulk(
 
 
 class TestCreateBulkRoutes:
-    def test_no_surfaces_returns_none(self) -> None:
+    @pytest.mark.parametrize(
+        ("surfaces", "repositories"),
+        [
+            ([], {}),
+            (
+                [
+                    SimpleNamespace(
+                        entity_ref="Task", mode="list", ux=SimpleNamespace(bulk_actions=[])
+                    )
+                ],
+                {"Task": _Repo([])},
+            ),
+            (
+                [_surface_with_bulk(mode="edit")],
+                {"InsertionPoint": _Repo([])},
+            ),
+            (
+                [_surface_with_bulk()],
+                {},
+            ),
+        ],
+        ids=[
+            "test_no_surfaces_returns_none",
+            "test_no_bulk_actions_returns_none",
+            "test_non_list_surfaces_ignored",
+            "test_missing_repository_skips_entity",
+        ],
+    )
+    def test_returns_none(self, surfaces: list, repositories: dict) -> None:
         from dazzle_back.runtime.bulk_routes import create_bulk_routes
 
-        assert create_bulk_routes(surfaces=[], repositories={}) is None
-
-    def test_no_bulk_actions_returns_none(self) -> None:
-        from dazzle_back.runtime.bulk_routes import create_bulk_routes
-
-        plain = SimpleNamespace(entity_ref="Task", mode="list", ux=SimpleNamespace(bulk_actions=[]))
-        result = create_bulk_routes(surfaces=[plain], repositories={"Task": _Repo([])})
-        assert result is None
-
-    def test_non_list_surfaces_ignored(self) -> None:
-        from dazzle_back.runtime.bulk_routes import create_bulk_routes
-
-        edit_surface = _surface_with_bulk(mode="edit")
-        assert (
-            create_bulk_routes(
-                surfaces=[edit_surface],
-                repositories={"InsertionPoint": _Repo([])},
-            )
-            is None
-        )
-
-    def test_missing_repository_skips_entity(self) -> None:
-        from dazzle_back.runtime.bulk_routes import create_bulk_routes
-
-        # Repo map omits the entity, so the router has nothing to mount.
-        assert create_bulk_routes(surfaces=[_surface_with_bulk()], repositories={}) is None
+        assert create_bulk_routes(surfaces=surfaces, repositories=repositories) is None
 
 
 class TestBulkEndpointHandler:

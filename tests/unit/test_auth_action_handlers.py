@@ -362,62 +362,40 @@ class TestAssertRedirectUrlAction:
 
 
 class TestAssertUnauthenticatedAction:
-    def test_401_matches(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=401)
-        context = {"last_response": resp}
+    _STEP = {
+        "action": "assert_unauthenticated",
+        "target": "last_response",
+        "data": {"expect": [401, 302]},
+    }
 
-        result = runner.execute_step(
-            {
-                "action": "assert_unauthenticated",
-                "target": "last_response",
-                "data": {"expect": [401, 302]},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.PASSED
-
-    def test_302_matches(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=302)
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_unauthenticated",
-                "target": "last_response",
-                "data": {"expect": [401, 302]},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.PASSED
-
-    def test_200_fails(self, runner: TestRunner) -> None:
-        resp = _make_response(status_code=200)
-        context = {"last_response": resp}
-
-        result = runner.execute_step(
-            {
-                "action": "assert_unauthenticated",
-                "target": "last_response",
-                "data": {"expect": [401, 302]},
-            },
-            design={},
-            context=context,
-        )
-        assert result.result == TestResult.FAILED
-
-    def test_no_previous_response(self, runner: TestRunner) -> None:
-        result = runner.execute_step(
-            {
-                "action": "assert_unauthenticated",
-                "target": "last_response",
-                "data": {"expect": [401, 302]},
-            },
-            design={},
-            context={},
-        )
-        assert result.result == TestResult.FAILED
+    @pytest.mark.parametrize(
+        ("status_code", "has_response", "expected_result"),
+        [
+            (401, True, TestResult.PASSED),
+            (302, True, TestResult.PASSED),
+            (200, True, TestResult.FAILED),
+            (None, False, TestResult.FAILED),
+        ],
+        ids=[
+            "test_401_matches",
+            "test_302_matches",
+            "test_200_fails",
+            "test_no_previous_response",
+        ],
+    )
+    def test_unauthenticated_assertion(
+        self,
+        runner: TestRunner,
+        status_code: int | None,
+        has_response: bool,
+        expected_result: TestResult,
+    ) -> None:
+        if has_response:
+            context = {"last_response": _make_response(status_code=status_code)}
+        else:
+            context = {}
+        result = runner.execute_step(self._STEP, design={}, context=context)
+        assert result.result == expected_result
 
 
 class TestUnknownActionWarning:

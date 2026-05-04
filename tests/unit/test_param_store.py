@@ -25,10 +25,27 @@ def _spec(
 
 
 class TestValidateParamValue:
-    def test_int_passes(self) -> None:
+    @pytest.mark.parametrize(
+        "param_type,value",
+        [
+            ("int", 42),
+            ("float", 3),
+            ("float", 3.14),
+            ("str", "hello"),
+            ("int", 10),
+        ],
+        ids=[
+            "test_int_passes",
+            "test_float_accepts_int",
+            "test_float_accepts_float",
+            "test_str_passes",
+            "test_valid_returns_empty",
+        ],
+    )
+    def test_valid_value_returns_no_errors(self, param_type: str, value) -> None:
         from dazzle_back.runtime.param_store import validate_param_value
 
-        assert validate_param_value(_spec(param_type="int"), 42) == []
+        assert validate_param_value(_spec(param_type=param_type), value) == []
 
     def test_int_rejects_bool(self) -> None:
         from dazzle_back.runtime.param_store import validate_param_value
@@ -42,16 +59,6 @@ class TestValidateParamValue:
         errors = validate_param_value(_spec(param_type="int"), "hello")
         assert errors
 
-    def test_float_accepts_int(self) -> None:
-        from dazzle_back.runtime.param_store import validate_param_value
-
-        assert validate_param_value(_spec(param_type="float"), 3) == []
-
-    def test_float_accepts_float(self) -> None:
-        from dazzle_back.runtime.param_store import validate_param_value
-
-        assert validate_param_value(_spec(param_type="float"), 3.14) == []
-
     def test_bool_passes(self) -> None:
         from dazzle_back.runtime.param_store import validate_param_value
 
@@ -63,11 +70,6 @@ class TestValidateParamValue:
 
         errors = validate_param_value(_spec(param_type="bool"), 0)
         assert errors
-
-    def test_str_passes(self) -> None:
-        from dazzle_back.runtime.param_store import validate_param_value
-
-        assert validate_param_value(_spec(param_type="str"), "hello") == []
 
     def test_list_float_type(self) -> None:
         from dazzle_back.runtime.param_store import validate_param_value

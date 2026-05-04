@@ -109,20 +109,25 @@ def _ids(*labels: str) -> dict[str, UUID]:
 
 
 class TestParseSort:
-    def test_bare_field_is_ascending(self) -> None:
-        assert _parse_sort("id") == ("id", False)
-
-    def test_minus_prefix_is_descending(self) -> None:
-        assert _parse_sort("-created_at") == ("created_at", True)
-
-    def test_plus_prefix_is_ascending(self) -> None:
-        assert _parse_sort("+id") == ("id", False)
-
-    def test_empty_defaults_to_id_ascending(self) -> None:
-        assert _parse_sort("") == ("id", False)
-
-    def test_whitespace_stripped(self) -> None:
-        assert _parse_sort("- created_at ") == ("created_at", True)
+    @pytest.mark.parametrize(
+        "sort_str,expected",
+        [
+            ("id", ("id", False)),
+            ("-created_at", ("created_at", True)),
+            ("+id", ("id", False)),
+            ("", ("id", False)),
+            ("- created_at ", ("created_at", True)),
+        ],
+        ids=[
+            "test_bare_field_is_ascending",
+            "test_minus_prefix_is_descending",
+            "test_plus_prefix_is_ascending",
+            "test_empty_defaults_to_id_ascending",
+            "test_whitespace_stripped",
+        ],
+    )
+    def test_parse_sort(self, sort_str: str, expected: tuple) -> None:
+        assert _parse_sort(sort_str) == expected
 
 
 # ---------------------------------------------------------------------------

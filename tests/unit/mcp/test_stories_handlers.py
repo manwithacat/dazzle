@@ -380,37 +380,24 @@ class TestSerializeSurfaceDetail:
 class TestExtractEntityFromCondition:
     """Tests for entity extraction from conditions."""
 
-    def test_finds_entity_in_scope(self) -> None:
-        """Test finding entity mentioned in condition."""
-        condition = "Task.status is 'pending'"
-        scope = ["Task", "User"]
-
+    @pytest.mark.parametrize(
+        ("condition", "scope", "expected"),
+        [
+            ("Task.status is 'pending'", ["Task", "User"], "Task"),
+            ("Order.total is greater than 100", [], "Order"),
+            ("something happens", ["Customer", "Order"], "Customer"),
+            ("some generic condition", [], "entity"),
+        ],
+        ids=[
+            "test_finds_entity_in_scope",
+            "test_uses_dot_notation",
+            "test_defaults_to_first_scope",
+            "test_empty_scope",
+        ],
+    )
+    def test_extract_entity(self, condition: str, scope: list, expected: str) -> None:
         result = _extract_entity_from_condition(condition, scope)
-        assert result == "Task"
-
-    def test_uses_dot_notation(self) -> None:
-        """Test extracting from Entity.field pattern."""
-        condition = "Order.total is greater than 100"
-        scope = []
-
-        result = _extract_entity_from_condition(condition, scope)
-        assert result == "Order"
-
-    def test_defaults_to_first_scope(self) -> None:
-        """Test defaulting to first entity in scope."""
-        condition = "something happens"
-        scope = ["Customer", "Order"]
-
-        result = _extract_entity_from_condition(condition, scope)
-        assert result == "Customer"
-
-    def test_empty_scope(self) -> None:
-        """Test with empty scope and no pattern."""
-        condition = "some generic condition"
-        scope = []
-
-        result = _extract_entity_from_condition(condition, scope)
-        assert result == "entity"
+        assert result == expected
 
 
 class TestExtractTargetFromCondition:

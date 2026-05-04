@@ -4,6 +4,8 @@ Unit tests for action purity (v0.5.0 feature).
 Tests ActionPurity enum and purity-based action classification.
 """
 
+import pytest
+
 from dazzle_ui.specs.actions import (
     ActionPurity,
     ActionSpec,
@@ -84,48 +86,37 @@ class TestExplicitPurity:
 class TestInferredPurity:
     """Tests for automatic purity inference when purity is None."""
 
-    def test_inferred_pure_no_effect(self):
-        """Test action inferred as pure (no effect)."""
-        action = ActionSpec(
-            name="selectItem",
-            # purity is None (default)
-            transitions=[
-                TransitionSpec(
-                    target_state="selectedId",
-                    update=PatchSpec(op=PatchOp.SET, path="selectedId", value="123"),
-                )
-            ],
-        )
+    @pytest.mark.parametrize(
+        ("action", "expected_pure"),
+        [
+            (
+                ActionSpec(
+                    name="selectItem",
+                    transitions=[
+                        TransitionSpec(
+                            target_state="selectedId",
+                            update=PatchSpec(op=PatchOp.SET, path="selectedId", value="123"),
+                        )
+                    ],
+                ),
+                True,
+            ),
+            (ActionSpec(name="noop"), True),
+            (ActionSpec(name="loadUsers", effect=FetchEffect(backend_service="list_users")), False),
+            (ActionSpec(name="goToDetails", effect=NavigateEffect(route="/details/:id")), False),
+        ],
+        ids=[
+            "test_inferred_pure_no_effect",
+            "test_inferred_pure_empty_action",
+            "test_inferred_impure_fetch_effect",
+            "test_inferred_impure_navigate_effect",
+        ],
+    )
+    def test_inferred_purity(self, action: ActionSpec, expected_pure: bool) -> None:
+        """Purity is inferred as pure when no effect is present, impure otherwise."""
         assert action.purity is None
-        assert action.is_pure is True
-        assert action.is_impure is False
-
-    def test_inferred_pure_empty_action(self):
-        """Test action inferred as pure (no transitions, no effect)."""
-        action = ActionSpec(name="noop")
-        assert action.purity is None
-        assert action.is_pure is True
-        assert action.is_impure is False
-
-    def test_inferred_impure_fetch_effect(self):
-        """Test action inferred as impure with fetch effect."""
-        action = ActionSpec(
-            name="loadUsers",
-            effect=FetchEffect(backend_service="list_users"),
-        )
-        assert action.purity is None
-        assert action.is_pure is False
-        assert action.is_impure is True
-
-    def test_inferred_impure_navigate_effect(self):
-        """Test action inferred as impure with navigate effect."""
-        action = ActionSpec(
-            name="goToDetails",
-            effect=NavigateEffect(route="/details/:id"),
-        )
-        assert action.purity is None
-        assert action.is_pure is False
-        assert action.is_impure is True
+        assert action.is_pure is expected_pure
+        assert action.is_impure is not expected_pure
 
     def test_inferred_impure_with_transitions(self):
         """Test action inferred as impure even with transitions."""

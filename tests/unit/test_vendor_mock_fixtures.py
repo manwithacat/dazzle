@@ -142,33 +142,36 @@ class TestRequestRecorder:
         with pytest.raises(AssertionError, match="Expected no POST"):
             recorder.assert_not_called(method="POST", path="/resources/applicants")
 
-    def test_assert_body_contains_key(self) -> None:
-        log = self._make_log()
-        # Make the POST the last request
-        recorder = RequestRecorder([log[0]])
-        recorder.assert_body_contains("type")
+    @pytest.mark.parametrize(
+        "log_slice,args,raises,match",
+        [
+            ("single_post", ("type",), None, None),
+            ("single_post", ("type", "individual"), None, None),
+            ("single_post", ("type", "corporate"), AssertionError, "Expected body"),
+            ("single_post", ("missing",), AssertionError, "Key 'missing' not found"),
+            ("empty", ("key",), AssertionError, "No requests recorded"),
+        ],
+        ids=[
+            "test_assert_body_contains_key",
+            "test_assert_body_contains_key_value",
+            "test_assert_body_contains_wrong_value",
+            "test_assert_body_contains_missing_key",
+            "test_assert_body_contains_no_requests",
+        ],
+    )
+    def test_assert_body_contains(
+        self, log_slice: str, args: tuple, raises: type | None, match: str | None
+    ) -> None:
+        if log_slice == "empty":
+            recorder = RequestRecorder([])
+        else:
+            recorder = RequestRecorder([self._make_log()[0]])
 
-    def test_assert_body_contains_key_value(self) -> None:
-        log = self._make_log()
-        recorder = RequestRecorder([log[0]])
-        recorder.assert_body_contains("type", "individual")
-
-    def test_assert_body_contains_wrong_value(self) -> None:
-        log = self._make_log()
-        recorder = RequestRecorder([log[0]])
-        with pytest.raises(AssertionError, match="Expected body"):
-            recorder.assert_body_contains("type", "corporate")
-
-    def test_assert_body_contains_missing_key(self) -> None:
-        log = self._make_log()
-        recorder = RequestRecorder([log[0]])
-        with pytest.raises(AssertionError, match="Key 'missing' not found"):
-            recorder.assert_body_contains("missing")
-
-    def test_assert_body_contains_no_requests(self) -> None:
-        recorder = RequestRecorder([])
-        with pytest.raises(AssertionError, match="No requests recorded"):
-            recorder.assert_body_contains("key")
+        if raises:
+            with pytest.raises(raises, match=match):
+                recorder.assert_body_contains(*args)
+        else:
+            recorder.assert_body_contains(*args)
 
     def test_clear(self) -> None:
         recorder = RequestRecorder(self._make_log())

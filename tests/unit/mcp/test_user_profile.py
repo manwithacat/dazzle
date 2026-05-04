@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from dazzle.mcp.user_profile import (
     UserProfile,
     _derive_framing,
@@ -60,15 +62,52 @@ class TestUserProfileModel:
 class TestToolInvocationAnalysis:
     """Tool usage signals shift profile dimensions correctly."""
 
-    def test_backend_tools_increase_technical_depth(self) -> None:
+    @pytest.mark.parametrize(
+        ("invocations", "attr", "threshold"),
+        [
+            (
+                [
+                    {"tool_name": "dsl", "operation": "validate"},
+                    {"tool_name": "dsl", "operation": "lint"},
+                    {"tool_name": "graph", "operation": "query"},
+                ],
+                "technical_depth",
+                0.5,
+            ),
+            (
+                [
+                    {"tool_name": "sitespec", "operation": "coherence"},
+                    {"tool_name": "sitespec", "operation": "scaffold"},
+                    {"tool_name": "dsl", "operation": "export_frontend_spec"},
+                ],
+                "ux_focus",
+                0.5,
+            ),
+            (
+                [{"tool_name": "dsl", "operation": "validate"}] * 20,
+                "confidence",
+                0.6,
+            ),
+            (
+                [
+                    {"tool_name": "story", "operation": "propose"},
+                    {"tool_name": "process", "operation": "propose"},
+                ],
+                "domain_clarity",
+                0.5,
+            ),
+        ],
+        ids=[
+            "test_backend_tools_increase_technical_depth",
+            "test_sitespec_increases_ux_focus",
+            "test_confidence_grows_with_interactions",
+            "test_story_propose_increases_domain_clarity",
+        ],
+    )
+    def test_dimension_increases(self, invocations: list, attr: str, threshold: float) -> None:
         p = UserProfile()
-        invocations = [
-            {"tool_name": "dsl", "operation": "validate"},
-            {"tool_name": "dsl", "operation": "lint"},
-            {"tool_name": "graph", "operation": "query"},
-        ]
         analyze_tool_invocations(invocations, p)
-        assert p.technical_depth > 0.5
+        assert getattr(p, attr) > threshold
 
     def test_bootstrap_decreases_technical_depth(self) -> None:
         p = UserProfile()
@@ -79,22 +118,6 @@ class TestToolInvocationAnalysis:
         ]
         analyze_tool_invocations(invocations, p)
         assert p.technical_depth < 0.5
-
-    def test_sitespec_increases_ux_focus(self) -> None:
-        p = UserProfile()
-        invocations = [
-            {"tool_name": "sitespec", "operation": "coherence"},
-            {"tool_name": "sitespec", "operation": "scaffold"},
-            {"tool_name": "dsl", "operation": "export_frontend_spec"},
-        ]
-        analyze_tool_invocations(invocations, p)
-        assert p.ux_focus > 0.5
-
-    def test_confidence_grows_with_interactions(self) -> None:
-        p = UserProfile()
-        invocations = [{"tool_name": "dsl", "operation": "validate"}] * 20
-        analyze_tool_invocations(invocations, p)
-        assert p.confidence > 0.6  # ~0.63 at 20 interactions
 
     def test_scores_clamped_0_1(self) -> None:
         p = UserProfile(technical_depth=0.98)
@@ -117,15 +140,6 @@ class TestToolInvocationAnalysis:
         analyze_tool_invocations(invocations, p)
         assert p.tool_affinities["dsl:validate"] == 2
         assert p.tool_affinities["graph:query"] == 1
-
-    def test_story_propose_increases_domain_clarity(self) -> None:
-        p = UserProfile()
-        invocations = [
-            {"tool_name": "story", "operation": "propose"},
-            {"tool_name": "process", "operation": "propose"},
-        ]
-        analyze_tool_invocations(invocations, p)
-        assert p.domain_clarity > 0.5
 
 
 # =============================================================================
@@ -176,21 +190,28 @@ class TestVocabularyAnalysis:
 class TestDeriveFraming:
     """Preferred framing derived from dimension scores."""
 
-    def test_ux_patterns(self) -> None:
-        p = UserProfile(technical_depth=0.3, domain_clarity=0.3, ux_focus=0.7)
-        assert _derive_framing(p) == "ux_patterns"
-
-    def test_system_architecture(self) -> None:
-        p = UserProfile(technical_depth=0.8, domain_clarity=0.4, ux_focus=0.4)
-        assert _derive_framing(p) == "system_architecture"
-
-    def test_business_outcomes(self) -> None:
-        p = UserProfile(technical_depth=0.3, domain_clarity=0.7, ux_focus=0.4)
-        assert _derive_framing(p) == "business_outcomes"
-
-    def test_balanced(self) -> None:
-        p = UserProfile(technical_depth=0.5, domain_clarity=0.5, ux_focus=0.5)
-        assert _derive_framing(p) == "balanced"
+    @pytest.mark.parametrize(
+        ("technical_depth", "domain_clarity", "ux_focus", "expected"),
+        [
+            (0.3, 0.3, 0.7, "ux_patterns"),
+            (0.8, 0.4, 0.4, "system_architecture"),
+            (0.3, 0.7, 0.4, "business_outcomes"),
+            (0.5, 0.5, 0.5, "balanced"),
+        ],
+        ids=[
+            "test_ux_patterns",
+            "test_system_architecture",
+            "test_business_outcomes",
+            "test_balanced",
+        ],
+    )
+    def test_derive_framing(
+        self, technical_depth: float, domain_clarity: float, ux_focus: float, expected: str
+    ) -> None:
+        p = UserProfile(
+            technical_depth=technical_depth, domain_clarity=domain_clarity, ux_focus=ux_focus
+        )
+        assert _derive_framing(p) == expected
 
 
 # =============================================================================

@@ -106,25 +106,26 @@ class TestWantsPartial:
 class TestWantsFragment:
     """Property logic for wants_fragment (navigation targeting #main-content)."""
 
-    def test_targeting_main_content(self) -> None:
-        d = HtmxDetails(is_htmx=True, target="main-content")
-        assert d.wants_fragment is True
-
-    def test_targeting_body(self) -> None:
-        d = HtmxDetails(is_htmx=True, target="body")
-        assert d.wants_fragment is False
-
-    def test_targeting_main_content_with_history_restore(self) -> None:
-        d = HtmxDetails(is_htmx=True, target="main-content", is_history_restore=True)
-        assert d.wants_fragment is False
-
-    def test_non_htmx_with_main_content_target(self) -> None:
-        d = HtmxDetails(is_htmx=False, target="main-content")
-        assert d.wants_fragment is False
-
-    def test_no_target(self) -> None:
-        d = HtmxDetails(is_htmx=True, target="")
-        assert d.wants_fragment is False
+    @pytest.mark.parametrize(
+        "kwargs,expected",
+        [
+            ({"is_htmx": True, "target": "main-content"}, True),
+            ({"is_htmx": True, "target": "body"}, False),
+            ({"is_htmx": True, "target": "main-content", "is_history_restore": True}, False),
+            ({"is_htmx": False, "target": "main-content"}, False),
+            ({"is_htmx": True, "target": ""}, False),
+        ],
+        ids=[
+            "test_targeting_main_content",
+            "test_targeting_body",
+            "test_targeting_main_content_with_history_restore",
+            "test_non_htmx_with_main_content_target",
+            "test_no_target",
+        ],
+    )
+    def test_wants_fragment(self, kwargs: dict, expected: bool) -> None:
+        d = HtmxDetails(**kwargs)
+        assert d.wants_fragment is expected
 
 
 class TestWantsDrawer:

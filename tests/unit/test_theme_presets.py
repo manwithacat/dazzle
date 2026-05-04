@@ -32,40 +32,29 @@ class TestThemePresets:
         assert "startup" in presets
         assert "docs" in presets
 
-    def test_get_theme_preset_saas_default(self):
-        """Test getting saas-default preset."""
-        theme = get_theme_preset("saas-default")
+    @pytest.mark.parametrize(
+        "preset_name,expected_singleton",
+        [
+            ("saas-default", SAAS_DEFAULT_THEME),
+            ("minimal", MINIMAL_THEME),
+            ("corporate", CORPORATE_THEME),
+            ("startup", STARTUP_THEME),
+            ("docs", DOCS_THEME),
+        ],
+        ids=[
+            "test_get_theme_preset_saas_default",
+            "test_get_theme_preset_minimal",
+            "test_get_theme_preset_corporate",
+            "test_get_theme_preset_startup",
+            "test_get_theme_preset_docs",
+        ],
+    )
+    def test_get_theme_preset(self, preset_name: str, expected_singleton) -> None:
+        """Getting a known preset returns the canonical singleton with matching name."""
+        theme = get_theme_preset(preset_name)
         assert theme is not None
-        assert theme.name == "saas-default"
-        assert theme is SAAS_DEFAULT_THEME
-
-    def test_get_theme_preset_minimal(self):
-        """Test getting minimal preset."""
-        theme = get_theme_preset("minimal")
-        assert theme is not None
-        assert theme.name == "minimal"
-        assert theme is MINIMAL_THEME
-
-    def test_get_theme_preset_corporate(self):
-        """Test getting corporate preset."""
-        theme = get_theme_preset("corporate")
-        assert theme is not None
-        assert theme.name == "corporate"
-        assert theme is CORPORATE_THEME
-
-    def test_get_theme_preset_startup(self):
-        """Test getting startup preset."""
-        theme = get_theme_preset("startup")
-        assert theme is not None
-        assert theme.name == "startup"
-        assert theme is STARTUP_THEME
-
-    def test_get_theme_preset_docs(self):
-        """Test getting docs preset."""
-        theme = get_theme_preset("docs")
-        assert theme is not None
-        assert theme.name == "docs"
-        assert theme is DOCS_THEME
+        assert theme.name == preset_name
+        assert theme is expected_singleton
 
     def test_get_theme_preset_unknown(self):
         """Test getting unknown preset returns None."""

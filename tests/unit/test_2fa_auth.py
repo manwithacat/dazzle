@@ -150,25 +150,27 @@ class TestUserRecord2FA:
         defaults.update(overrides)
         return UserRecord(**defaults)
 
-    def test_two_factor_enabled_when_totp_enabled(self) -> None:
-        """two_factor_enabled returns True when totp_enabled is True."""
-        user = self._make_user(totp_enabled=True, email_otp_enabled=False)
-        assert user.two_factor_enabled is True
-
-    def test_two_factor_enabled_when_email_otp_enabled(self) -> None:
-        """two_factor_enabled returns True when email_otp_enabled is True."""
-        user = self._make_user(totp_enabled=False, email_otp_enabled=True)
-        assert user.two_factor_enabled is True
-
-    def test_two_factor_enabled_when_both_enabled(self) -> None:
-        """two_factor_enabled returns True when both methods are enabled."""
-        user = self._make_user(totp_enabled=True, email_otp_enabled=True)
-        assert user.two_factor_enabled is True
-
-    def test_two_factor_disabled_when_neither_enabled(self) -> None:
-        """two_factor_enabled returns False when no 2FA method is active."""
-        user = self._make_user(totp_enabled=False, email_otp_enabled=False)
-        assert user.two_factor_enabled is False
+    @pytest.mark.parametrize(
+        ("totp_enabled", "email_otp_enabled", "expected"),
+        [
+            (True, False, True),
+            (False, True, True),
+            (True, True, True),
+            (False, False, False),
+        ],
+        ids=[
+            "test_two_factor_enabled_when_totp_enabled",
+            "test_two_factor_enabled_when_email_otp_enabled",
+            "test_two_factor_enabled_when_both_enabled",
+            "test_two_factor_disabled_when_neither_enabled",
+        ],
+    )
+    def test_two_factor_enabled(
+        self, totp_enabled: bool, email_otp_enabled: bool, expected: bool
+    ) -> None:
+        """two_factor_enabled reflects whether at least one 2FA method is active."""
+        user = self._make_user(totp_enabled=totp_enabled, email_otp_enabled=email_otp_enabled)
+        assert user.two_factor_enabled is expected
 
     def test_new_2fa_fields_default_values(self) -> None:
         """New 2FA fields default to None/False."""

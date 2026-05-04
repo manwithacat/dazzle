@@ -293,21 +293,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_api_surface_drift.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_dsl_constructs_snapshot_is_deterministic",
-      "test_ir_types_snapshot_is_deterministic",
-      "test_mcp_tools_snapshot_is_deterministic",
-      "test_public_helpers_snapshot_is_deterministic",
-      "test_runtime_urls_snapshot_is_deterministic",
-      "test_runtime_urls_no_trailing_whitespace"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_composition_audit.py",
     "class": "TestScoring",
     "assertion_shape": "('eq',)",
@@ -578,36 +563,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_storage_cycle4.py",
-    "class": "TestVerifyRejects",
-    "assertion_shape": "('eq', 'in')",
-    "size": 6,
-    "members": [
-      "test_non_string_value_400",
-      "test_missing_registry_500",
-      "test_unregistered_storage_503",
-      "test_other_users_prefix_403",
-      "test_object_does_not_exist_400",
-      "test_provider_head_object_raises_503"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_theme_variant_middleware.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_default_variant_is_light",
-      "test_valid_variants_are_light_and_dark",
-      "test_middleware_reads_dark_cookie",
-      "test_middleware_reads_light_cookie",
-      "test_middleware_rejects_malformed_cookie",
-      "test_middleware_rejects_unknown_variant"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_triples.py",
     "class": "TestGetPermittedPersonas",
     "assertion_shape": "('eq',)",
@@ -770,20 +725,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_agent_command_models.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'is', 'isnot')",
-    "size": 5,
-    "members": [
-      "test_evaluate_maturity_entities_unmet",
-      "test_evaluate_maturity_surfaces_unmet",
-      "test_evaluate_maturity_spec_md_required",
-      "test_evaluate_maturity_github_remote_required",
-      "test_evaluate_maturity_validate_required"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_analytics_provider_rendering.py",
     "class": "TestResolveActiveProviders",
     "assertion_shape": "('eq',)",
@@ -808,34 +749,6 @@
       "test_enabled_false_lock_returns_true",
       "test_no_redis_url_get_returns_none",
       "test_available_false_when_disabled"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_api_surface_drift.py",
-    "class": "(module)",
-    "assertion_shape": "('call_exists',)",
-    "size": 5,
-    "members": [
-      "test_dsl_constructs_baseline_exists",
-      "test_ir_types_baseline_exists",
-      "test_mcp_tools_baseline_exists",
-      "test_public_helpers_baseline_exists",
-      "test_runtime_urls_baseline_exists"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_api_surface_drift.py",
-    "class": "(module)",
-    "assertion_shape": "('not',)",
-    "size": 5,
-    "members": [
-      "test_dsl_constructs_match_baseline",
-      "test_ir_types_match_baseline",
-      "test_mcp_tools_match_baseline",
-      "test_public_helpers_match_baseline",
-      "test_runtime_urls_match_baseline"
     ],
     "recommendation": "parametrise"
   },
@@ -910,34 +823,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_cli.py",
-    "class": "TestCommandsCommand",
-    "assertion_shape": "('eq', 'in')",
-    "size": 5,
-    "members": [
-      "test_commands_lists_output",
-      "test_commands_json_output",
-      "test_commands_json_entries_have_description",
-      "test_commands_category_filter_runtime",
-      "test_commands_category_filter_case_insensitive"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_cli_env.py",
-    "class": "TestCliEnv",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_get_active_env_default_empty",
-      "test_set_and_get_active_env",
-      "test_resolve_env_cli_flag_wins",
-      "test_resolve_env_dazzle_env_fallback",
-      "test_resolve_env_nothing_set"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_component_rules.py",
     "class": "(module)",
     "assertion_shape": "('notin',)",
@@ -948,34 +833,6 @@
       "test_toggle_group_not_triggered_for_non_status_enum",
       "test_toggle_group_not_triggered_for_list_display",
       "test_toggle_group_not_triggered_when_entity_has_no_enum_status"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_composite_guards.py",
-    "class": "TestAllTrueGuard",
-    "assertion_shape": "('is',)",
-    "size": 5,
-    "members": [
-      "test_all_true_passes_when_all_fields_true",
-      "test_all_true_fails_when_one_field_false",
-      "test_all_true_fails_when_field_missing",
-      "test_all_true_fails_when_all_false",
-      "test_all_true_with_empty_args"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestBoolCompositeSimplifiation",
-    "assertion_shape": "('call_isinstance',)",
-    "size": 5,
-    "members": [
-      "test_and_contradiction_absorption",
-      "test_or_tautology_absorption",
-      "test_or_contradiction_identity",
-      "test_not_tautology_contradiction",
-      "test_not_contradiction_tautology"
     ],
     "recommendation": "parametrise"
   },
@@ -994,20 +851,6 @@
     "recommendation": "parametrise"
   },
   {
-    "file": "tests/unit/test_css_delivery.py",
-    "class": "TestCssLoader",
-    "assertion_shape": "('in',)",
-    "size": 5,
-    "members": [
-      "test_output_contains_layer_declaration",
-      "test_output_wraps_each_layered_file_in_its_layer",
-      "test_output_includes_every_component_family",
-      "test_button_css_contains_dz_button_rule",
-      "test_output_contains_source_map"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
     "file": "tests/unit/test_deploy_commands.py",
     "class": "TestGenerateProductionDockerfile",
     "assertion_shape": "('in',)",
@@ -1018,20 +861,6 @@
       "test_cmd_is_dazzle_serve_production",
       "test_exposes_port_8000",
       "test_copies_requirements"
-    ],
-    "recommendation": "parametrise"
-  },
-  {
-    "file": "tests/unit/test_docker_generation.py",
-    "class": "TestGenerateDevCompose",
-    "assertion_shape": "('in', 'in')",
-    "size": 5,
-    "members": [
-      "test_contains_postgres_service",
-      "test_contains_redis_service",
-      "test_default_ports",
-      "test_custom_ports",
-      "test_healthchecks_present"
     ],
     "recommendation": "parametrise"
   },
@@ -3300,6 +3129,19 @@
       "test_compare_versions_no_changes",
       "test_compare_versions_with_modifications",
       "test_compare_versions_with_additions_and_removals"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
+    "file": "tests/unit/test_docker_generation.py",
+    "class": "TestGenerateDevCompose",
+    "assertion_shape": "('in', 'in')",
+    "size": 4,
+    "members": [
+      "test_contains_postgres_service",
+      "test_contains_redis_service",
+      "test_default_ports",
+      "test_custom_ports"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
@@ -6729,6 +6571,18 @@
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },
   {
+    "file": "tests/unit/test_cli.py",
+    "class": "TestCommandsCommand",
+    "assertion_shape": "('eq', 'in')",
+    "size": 3,
+    "members": [
+      "test_commands_lists_output",
+      "test_commands_json_output",
+      "test_commands_json_entries_have_description"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
     "file": "tests/unit/test_cli_auth.py",
     "class": "TestListSessions",
     "assertion_shape": "('eq', 'in')",
@@ -6749,6 +6603,18 @@
       "test_missing_env_file_returns_empty",
       "test_skips_comments_and_blank_lines",
       "test_skips_malformed_lines"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)"
+  },
+  {
+    "file": "tests/unit/test_cli_env.py",
+    "class": "TestCliEnv",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_get_active_env_default_empty",
+      "test_set_and_get_active_env",
+      "test_resolve_env_nothing_set"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)"
   },

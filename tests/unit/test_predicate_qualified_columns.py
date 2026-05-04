@@ -31,6 +31,8 @@ e.g. tests) don't 500.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
@@ -202,81 +204,71 @@ class TestRelationNameResolvesToFkColumn:
     resolve to the existing column rather than emit `"X"."school"`
     and 500 with `column "school" does not exist`."""
 
-    def test_user_attr_check_resolves_relation_to_fk_id(self) -> None:
-        """`school = current_user.school` on an entity whose `school`
-        is a ref field (column = `school_id`) should compile to
-        `"X"."school_id" = %s`, not `"X"."school" = %s`."""
-        # Entity has `school` as a ref field — the actual column is `school_id`
-        graph = _make_fk_graph_with_entity(
-            "StudentProfile",
-            [
-                ("id", "uuid", None),
-                ("school_id", "ref", "School"),  # FK column
-                # no scalar `school` column
-            ],
-        )
-        # DSL author wrote `school = current_user.school` — predicate's
-        # field is "school" (the relation name)
-        predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")
-        sql, _ = compile_predicate(predicate, "StudentProfile", graph)
-        assert sql == '"StudentProfile"."school_id" = %s', (
-            "Relation name `school` must resolve to FK column `school_id` — "
-            'otherwise Postgres errors `column "school" does not exist` '
-            "and the region returns 500 (#910)."
-        )
-
-    def test_column_check_resolves_relation_to_fk_id(self) -> None:
-        graph = _make_fk_graph_with_entity(
-            "Order",
-            [
-                ("id", "uuid", None),
-                ("status_id", "ref", "OrderStatus"),
-            ],
-        )
-        predicate = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        sql, _ = compile_predicate(predicate, "Order", graph)
-        assert sql == '"Order"."status_id" = %s'
-
-    def test_field_exists_as_is_keeps_bare_name(self) -> None:
-        """When the field exists as-is on the entity, no _id rewrite —
-        we don't want to clobber legitimate scalar columns."""
-        graph = _make_fk_graph_with_entity(
-            "Order",
-            [
-                ("id", "uuid", None),
-                ("status", "str", None),  # scalar `status` exists as-is
-            ],
-        )
-        predicate = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        sql, _ = compile_predicate(predicate, "Order", graph)
-        assert sql == '"Order"."status" = %s'
-
-    def test_neither_form_exists_falls_back_to_bare_ref(self) -> None:
-        """When neither `field` nor `field_id` exists on the entity,
-        fall through with the bare name. Lets SQL surface a genuine
-        schema error rather than fabricating a column name."""
-        graph = _make_fk_graph_with_entity(
-            "Order",
-            [
-                ("id", "uuid", None),
-                # nothing else — `status` and `status_id` both absent
-            ],
-        )
-        predicate = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active"))
-        sql, _ = compile_predicate(predicate, "Order", graph)
-        # Still qualified with table — no fallback to unqualified —
-        # but field name passes through as-is
-        assert sql == '"Order"."status" = %s'
-
-    def test_no_fk_graph_disables_resolution(self) -> None:
-        """Callers without an FK graph (rare — direct unit test usage)
-        get the original `<entity>.<field>` qualification with no
-        relation-name resolution."""
-        predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")
-        # Pass an empty graph — no entities registered, nothing exists
-        sql, _ = compile_predicate(predicate, "StudentProfile", FKGraph())
-        # Falls through with bare field name — same shape as before #910
-        assert sql == '"StudentProfile"."school" = %s'
+    @pytest.mark.parametrize(
+        "entity_name,fields,predicate_fn,expected_sql",
+        [
+            (
+                "StudentProfile",
+                [("id", "uuid", None), ("school_id", "ref", "School")],
+                lambda: UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school"),
+                '"StudentProfile"."school_id" = %s',
+            ),
+            (
+                "Order",
+                [("id", "uuid", None), ("status_id", "ref", "OrderStatus")],
+                lambda: ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                '"Order"."status_id" = %s',
+            ),
+            (
+                "Order",
+                [("id", "uuid", None), ("status", "str", None)],
+                lambda: ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                '"Order"."status" = %s',
+            ),
+            (
+                "Order",
+                [("id", "uuid", None)],
+                lambda: ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="active")),
+                '"Order"."status" = %s',
+            ),
+            (
+                "StudentProfile",
+                [],  # empty → use FKGraph() directly below
+                None,  # sentinel: use UserAttrCheck with empty FKGraph
+                '"StudentProfile"."school" = %s',
+            ),
+            (
+                "StudentProfile",
+                [
+                    ("id", "uuid", None),
+                    ("tutor_id", "ref", "User"),
+                    ("class_teacher_id", "ref", "User"),
+                ],
+                lambda: ColumnRefCheck(field="tutor", op=CompOp.EQ, other_field="class_teacher"),
+                '"StudentProfile"."tutor_id" = "StudentProfile"."class_teacher_id"',
+            ),
+        ],
+        ids=[
+            "test_user_attr_check_resolves_relation_to_fk_id",
+            "test_column_check_resolves_relation_to_fk_id",
+            "test_field_exists_as_is_keeps_bare_name",
+            "test_neither_form_exists_falls_back_to_bare_ref",
+            "test_no_fk_graph_disables_resolution",
+            "test_column_ref_check_resolves_both_sides",
+        ],
+    )
+    def test_fk_column_resolution(
+        self, entity_name: str, fields: list, predicate_fn, expected_sql: str
+    ) -> None:
+        if predicate_fn is None:
+            # Empty-graph sentinel — no entities registered
+            graph = FKGraph()
+            predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")
+        else:
+            graph = _make_fk_graph_with_entity(entity_name, fields)
+            predicate = predicate_fn()
+        sql, _ = compile_predicate(predicate, entity_name, graph)
+        assert sql == expected_sql
 
     def test_bool_composite_threads_fk_graph_to_leaves(self) -> None:
         """The fk_graph plumbing must reach every leaf inside an AND/OR
@@ -303,18 +295,3 @@ class TestRelationNameResolvesToFkColumn:
         assert '"StudentProfile"."status"' in sql
         # No bare unqualified `school` snuck in
         assert '"StudentProfile"."school" =' not in sql
-
-    def test_column_ref_check_resolves_both_sides(self) -> None:
-        """Same-row column-vs-column comparisons need the heuristic
-        applied to both sides."""
-        graph = _make_fk_graph_with_entity(
-            "StudentProfile",
-            [
-                ("id", "uuid", None),
-                ("tutor_id", "ref", "User"),
-                ("class_teacher_id", "ref", "User"),
-            ],
-        )
-        predicate = ColumnRefCheck(field="tutor", op=CompOp.EQ, other_field="class_teacher")
-        sql, _ = compile_predicate(predicate, "StudentProfile", graph)
-        assert sql == '"StudentProfile"."tutor_id" = "StudentProfile"."class_teacher_id"'

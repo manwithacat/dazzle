@@ -9,6 +9,7 @@ Covers:
 from pathlib import Path
 from typing import Any
 
+import pytest
 from pydantic import BaseModel
 
 
@@ -33,45 +34,39 @@ class TestHookDiscovery:
         assert result[0].entity_filter == "Task"
         assert callable(result[0].function)
 
-    def test_ignores_files_without_declaration(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "filename,content",
+        [
+            (
+                "helper.py",
+                "def utility(): pass\n",
+            ),
+            (
+                "__init__.py",
+                "# dazzle:service-hook entity.pre_create\ndef hook(entity_name, data): return data\n",
+            ),
+            (
+                "bad.py",
+                "# dazzle:service-hook entity.invalid_point\ndef hook(): pass\n",
+            ),
+            (
+                "no_func.py",
+                "# dazzle:service-hook entity.pre_create\ndef not_hook(): pass\n",
+            ),
+        ],
+        ids=[
+            "test_ignores_files_without_declaration",
+            "test_ignores_underscore_files",
+            "test_warns_on_invalid_hook_point",
+            "test_warns_on_missing_hook_function",
+        ],
+    )
+    def test_discover_returns_empty(self, tmp_path: Path, filename: str, content: str) -> None:
         from dazzle_back.runtime.hook_registry import discover_hooks
 
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
-        (hooks_dir / "helper.py").write_text("def utility(): pass\n")
-        result = discover_hooks(hooks_dir)
-        assert result == []
-
-    def test_ignores_underscore_files(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.hook_registry import discover_hooks
-
-        hooks_dir = tmp_path / "hooks"
-        hooks_dir.mkdir()
-        (hooks_dir / "__init__.py").write_text(
-            "# dazzle:service-hook entity.pre_create\ndef hook(entity_name, data): return data\n"
-        )
-        result = discover_hooks(hooks_dir)
-        assert result == []
-
-    def test_warns_on_invalid_hook_point(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.hook_registry import discover_hooks
-
-        hooks_dir = tmp_path / "hooks"
-        hooks_dir.mkdir()
-        (hooks_dir / "bad.py").write_text(
-            "# dazzle:service-hook entity.invalid_point\ndef hook(): pass\n"
-        )
-        result = discover_hooks(hooks_dir)
-        assert result == []
-
-    def test_warns_on_missing_hook_function(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.hook_registry import discover_hooks
-
-        hooks_dir = tmp_path / "hooks"
-        hooks_dir.mkdir()
-        (hooks_dir / "no_func.py").write_text(
-            "# dazzle:service-hook entity.pre_create\ndef not_hook(): pass\n"
-        )
+        (hooks_dir / filename).write_text(content)
         result = discover_hooks(hooks_dir)
         assert result == []
 

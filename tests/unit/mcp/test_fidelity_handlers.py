@@ -241,50 +241,28 @@ class TestBuildNextSteps:
         assert len(steps) > 0
         assert any("good" in s.lower() or "story" in s.lower() for s in steps)
 
-    def test_missing_field_gaps(self) -> None:
-        """Test next steps when missing fields."""
+    @pytest.mark.parametrize(
+        ("gap_counts", "story_coverage", "expected_phrase"),
+        [
+            ({"missing_field": 3}, 0.5, "missing fields"),
+            ({"incorrect_input_type": 2}, 0.5, "input types"),
+            ({"missing_design_tokens": 1}, 0.5, "design tokens"),
+            ({}, 0.3, "story"),
+        ],
+        ids=[
+            "test_missing_field_gaps",
+            "test_incorrect_input_type_gaps",
+            "test_missing_design_tokens",
+            "test_low_story_coverage",
+        ],
+    )
+    def test_gap_type_generates_step(
+        self, gap_counts: dict, story_coverage: float, expected_phrase: str
+    ) -> None:
         mock_report = SimpleNamespace(
-            overall=0.7,
-            gap_counts={"missing_field": 3},
-            story_coverage=0.5,
+            overall=0.7 if story_coverage == 0.5 else 0.8,
+            gap_counts=gap_counts,
+            story_coverage=story_coverage,
         )
-
         steps = _build_next_steps(mock_report)
-
-        assert any("missing fields" in s.lower() for s in steps)
-
-    def test_incorrect_input_type_gaps(self) -> None:
-        """Test next steps when input types are incorrect."""
-        mock_report = SimpleNamespace(
-            overall=0.7,
-            gap_counts={"incorrect_input_type": 2},
-            story_coverage=0.5,
-        )
-
-        steps = _build_next_steps(mock_report)
-
-        assert any("input types" in s.lower() for s in steps)
-
-    def test_missing_design_tokens(self) -> None:
-        """Test next steps when design tokens are missing."""
-        mock_report = SimpleNamespace(
-            overall=0.7,
-            gap_counts={"missing_design_tokens": 1},
-            story_coverage=0.5,
-        )
-
-        steps = _build_next_steps(mock_report)
-
-        assert any("design tokens" in s.lower() for s in steps)
-
-    def test_low_story_coverage(self) -> None:
-        """Test next steps when story coverage is low."""
-        mock_report = SimpleNamespace(
-            overall=0.8,
-            gap_counts={},
-            story_coverage=0.3,
-        )
-
-        steps = _build_next_steps(mock_report)
-
-        assert any("story" in s.lower() for s in steps)
+        assert any(expected_phrase in s.lower() for s in steps)

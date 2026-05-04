@@ -83,23 +83,23 @@ class TestResolveActiveProvidersIntegration:
         assert len(active) == 1
         assert active[0]["name"] == "gtm"
 
-    def test_providers_suppressed_in_dev(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "dev")
+    @pytest.mark.parametrize(
+        ("env_vars", "expected_count"),
+        [
+            ({"DAZZLE_ENV": "dev"}, 0),
+            ({"DAZZLE_MODE": "trial"}, 0),
+            ({"DAZZLE_MODE": "qa"}, 0),
+            ({"DAZZLE_ENV": "dev", "DAZZLE_ANALYTICS_FORCE": "1"}, 1),
+        ],
+        ids=[
+            "test_providers_suppressed_in_dev",
+            "test_providers_suppressed_in_trial",
+            "test_providers_suppressed_in_qa",
+            "test_force_reenables_in_dev",
+        ],
+    )
+    def test_provider_suppression(self, monkeypatch, env_vars: dict, expected_count: int) -> None:
+        for key, val in env_vars.items():
+            monkeypatch.setenv(key, val)
         active = resolve_active_providers(_spec_with_gtm(), self._granted_state())
-        assert active == []
-
-    def test_providers_suppressed_in_trial(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_MODE", "trial")
-        active = resolve_active_providers(_spec_with_gtm(), self._granted_state())
-        assert active == []
-
-    def test_providers_suppressed_in_qa(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_MODE", "qa")
-        active = resolve_active_providers(_spec_with_gtm(), self._granted_state())
-        assert active == []
-
-    def test_force_reenables_in_dev(self, monkeypatch):
-        monkeypatch.setenv("DAZZLE_ENV", "dev")
-        monkeypatch.setenv("DAZZLE_ANALYTICS_FORCE", "1")
-        active = resolve_active_providers(_spec_with_gtm(), self._granted_state())
-        assert len(active) == 1
+        assert len(active) == expected_count

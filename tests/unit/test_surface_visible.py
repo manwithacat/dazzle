@@ -7,6 +7,8 @@ determine visibility at runtime.
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
 
@@ -147,48 +149,51 @@ surface employee_detail "Employee Detail":
 class TestVisibleConditionEvaluation:
     """ConditionExpr role checks are evaluated correctly for visibility."""
 
-    def test_role_match_visible(self):
+    @pytest.mark.parametrize(
+        "cond_dict,ctx,expected",
+        [
+            (
+                ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")).model_dump(),
+                {"user_roles": ["admin"]},
+                True,
+            ),
+            (
+                ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")).model_dump(),
+                {"user_roles": ["agent"]},
+                False,
+            ),
+            (
+                ir.ConditionExpr(
+                    left=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")),
+                    operator=ir.LogicalOperator.OR,
+                    right=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="manager")),
+                ).model_dump(),
+                {"user_roles": ["manager"]},
+                True,
+            ),
+            (
+                ir.ConditionExpr(
+                    left=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")),
+                    operator=ir.LogicalOperator.OR,
+                    right=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="manager")),
+                ).model_dump(),
+                {"user_roles": ["agent"]},
+                False,
+            ),
+            ({}, {"user_roles": []}, True),
+        ],
+        ids=[
+            "test_role_match_visible",
+            "test_role_no_match_hidden",
+            "test_compound_or_partial_match",
+            "test_compound_or_no_match",
+            "test_no_visible_condition_defaults_visible",
+        ],
+    )
+    def test_evaluate_visible_condition(self, cond_dict: dict, ctx: dict, expected: bool) -> None:
         from dazzle_back.runtime.condition_evaluator import evaluate_condition
 
-        cond = ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin"))
-        ctx = {"user_roles": ["admin"]}
-        assert evaluate_condition(cond.model_dump(), {}, ctx) is True
-
-    def test_role_no_match_hidden(self):
-        from dazzle_back.runtime.condition_evaluator import evaluate_condition
-
-        cond = ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin"))
-        ctx = {"user_roles": ["agent"]}
-        assert evaluate_condition(cond.model_dump(), {}, ctx) is False
-
-    def test_compound_or_partial_match(self):
-        from dazzle_back.runtime.condition_evaluator import evaluate_condition
-
-        cond = ir.ConditionExpr(
-            left=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")),
-            operator=ir.LogicalOperator.OR,
-            right=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="manager")),
-        )
-        ctx = {"user_roles": ["manager"]}
-        assert evaluate_condition(cond.model_dump(), {}, ctx) is True
-
-    def test_compound_or_no_match(self):
-        from dazzle_back.runtime.condition_evaluator import evaluate_condition
-
-        cond = ir.ConditionExpr(
-            left=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="admin")),
-            operator=ir.LogicalOperator.OR,
-            right=ir.ConditionExpr(role_check=ir.RoleCheck(role_name="manager")),
-        )
-        ctx = {"user_roles": ["agent"]}
-        assert evaluate_condition(cond.model_dump(), {}, ctx) is False
-
-    def test_no_visible_condition_defaults_visible(self):
-        """When visible is None, the field should remain visible."""
-        from dazzle_back.runtime.condition_evaluator import evaluate_condition
-
-        # Empty condition evaluates to True
-        assert evaluate_condition({}, {}, {"user_roles": []}) is True
+        assert evaluate_condition(cond_dict, {}, ctx) is expected
 
 
 # ---------------------------------------------------------------------------

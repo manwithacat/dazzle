@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
+
 from dazzle.core.access import AccessRuntimeContext
 
 
@@ -25,38 +27,35 @@ class TestRolesAndBypassDefaults:
         assert ctx.tenant_admin_personas == frozenset()
         assert ctx.bypasses_tenant_filter is False
 
-    def test_explicit_empty_no_bypass(self) -> None:
+    @pytest.mark.parametrize(
+        ("roles", "tenant_admin_personas", "is_superuser", "expected"),
+        [
+            (["super_admin"], [], False, False),
+            (["support"], ["super_admin", "support"], False, True),
+            (["teacher"], ["super_admin", "support"], False, False),
+            ([], [], True, True),
+        ],
+        ids=[
+            "test_explicit_empty_no_bypass",
+            "test_persona_match_triggers_bypass",
+            "test_persona_mismatch_no_bypass",
+            "test_superuser_always_bypasses",
+        ],
+    )
+    def test_bypasses_tenant_filter(
+        self,
+        roles: list,
+        tenant_admin_personas: list,
+        is_superuser: bool,
+        expected: bool,
+    ) -> None:
         ctx = AccessRuntimeContext(
             user_id=str(uuid4()),
-            roles=["super_admin"],  # Has the role…
-            tenant_admin_personas=[],  # …but tenancy hasn't whitelisted it.
+            roles=roles,
+            tenant_admin_personas=tenant_admin_personas,
+            is_superuser=is_superuser,
         )
-        assert ctx.bypasses_tenant_filter is False
-
-    def test_persona_match_triggers_bypass(self) -> None:
-        ctx = AccessRuntimeContext(
-            user_id=str(uuid4()),
-            roles=["support"],
-            tenant_admin_personas=["super_admin", "support"],
-        )
-        assert ctx.bypasses_tenant_filter is True
-
-    def test_persona_mismatch_no_bypass(self) -> None:
-        ctx = AccessRuntimeContext(
-            user_id=str(uuid4()),
-            roles=["teacher"],
-            tenant_admin_personas=["super_admin", "support"],
-        )
-        assert ctx.bypasses_tenant_filter is False
-
-    def test_superuser_always_bypasses(self) -> None:
-        ctx = AccessRuntimeContext(
-            user_id=str(uuid4()),
-            roles=[],
-            is_superuser=True,
-            tenant_admin_personas=[],
-        )
-        assert ctx.bypasses_tenant_filter is True
+        assert ctx.bypasses_tenant_filter is expected
 
 
 class TestBackwardCompat:

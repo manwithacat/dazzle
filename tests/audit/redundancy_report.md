@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 934
-- **Tests inside those clusters**: 3,423
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,489 tests** (≈ 17.4% of the suite)
+- **Clusters of ≥3**: 925
+- **Tests inside those clusters**: 3,370
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,445 tests** (≈ 17.1% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 5 |
-| 5-9 | 134 |
-| 3-4 | 795 |
+| 5-9 | 122 |
+| 3-4 | 798 |
 
 ## Top 30 largest clusters
 
@@ -40,7 +40,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_validator.py` | `TestValidateEntities` | 7 | test_duplicate_field_names, test_decimal_scale_greater_than_precision, test_string_very_large_max_length_warning… |
 | `tests/integration/test_template_pages.py` | `TestDazzleAttributes` | 6 | test_list_page_has_dazzle_view, test_list_page_has_dazzle_table, test_list_page_has_dazzle_view_on_root… |
 | `tests/quality_gates/test_dashboard_gates.py` | `TestDashboardQualityGates` | 6 | test_gate1_drag_threshold, test_gate2_drag_uses_transform, test_gate3_save_lifecycle… |
-| `tests/unit/test_api_surface_drift.py` | `(module)` | 6 | test_dsl_constructs_snapshot_is_deterministic, test_ir_types_snapshot_is_deterministic, test_mcp_tools_snapshot_is_deterministic… |
 | `tests/unit/test_composition_audit.py` | `TestScoring` | 6 | test_no_violations_scores_100, test_one_high_deducts_15, test_one_medium_deducts_5… |
 | `tests/unit/test_content_negotiation.py` | `TestIsHtmxRequest` | 6 | test_htmx_header, test_accept_text_html_is_not_htmx, test_browser_accept_is_not_htmx… |
 | `tests/unit/test_expression_lang.py` | `TestTokenizer` | 6 | test_integer, test_float, test_string_double_quotes… |
@@ -53,6 +52,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_null_event_bus.py` | `(module)` | 6 | test_null_bus_replay_yields_nothing, test_null_bus_list_topics, test_null_bus_list_consumer_groups… |
 | `tests/unit/test_parser.py` | `TestBusinessPriority` | 6 | test_surface_priority_critical, test_surface_priority_low, test_surface_priority_defaults_to_medium… |
 | `tests/unit/test_persona_journey.py` | `TestExperienceReachability` | 6 | test_reachable_experience_no_gap, test_experience_for_other_persona_ignored, test_access_spec_allows_persona_no_gap… |
+| `tests/unit/test_predicate_builder.py` | `(module)` | 6 | test_simple_field_equals_literal, test_field_equals_current_user, test_field_equals_current_user_dot_attr… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -66,8 +66,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_composition_audit.py` | 25 |
 | `tests/unit/test_fidelity_scorer.py` | 22 |
 | `tests/unit/test_parser.py` | 21 |
-| `tests/unit/test_docker_generation.py` | 20 |
 | `tests/unit/sentinel/test_agent_deployment_state.py` | 20 |
+| `tests/unit/test_docker_generation.py` | 19 |
 
 ## How to act on this
 

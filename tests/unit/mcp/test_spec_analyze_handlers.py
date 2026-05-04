@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 _CONFTEST_PATH = str(Path(__file__).parent / "conftest.py")
 
 
@@ -83,50 +85,50 @@ class TestHandleSpecAnalyze:
         data = json.loads(result)
         assert "entities" in data or "error" not in data
 
-    def test_identify_lifecycles_dispatch(self) -> None:
-        """Test dispatch to identify_lifecycles."""
-        result = handle_spec_analyze(
-            {
-                "operation": "identify_lifecycles",
-                "spec_text": "Orders go from pending to shipped.",
-                "entities": ["Order"],
-            }
-        )
+    @pytest.mark.parametrize(
+        ("params", "expected_key"),
+        [
+            (
+                {
+                    "operation": "identify_lifecycles",
+                    "spec_text": "Orders go from pending to shipped.",
+                    "entities": ["Order"],
+                },
+                "lifecycles",
+            ),
+            (
+                {
+                    "operation": "extract_personas",
+                    "spec_text": "Admins can manage users. Customers can place orders.",
+                },
+                "personas",
+            ),
+            (
+                {
+                    "operation": "surface_rules",
+                    "spec_text": "Users must verify email before ordering.",
+                },
+                "business_rules",
+            ),
+            (
+                {
+                    "operation": "generate_questions",
+                    "spec_text": "The app should handle payments.",
+                },
+                "questions",
+            ),
+        ],
+        ids=[
+            "test_identify_lifecycles_dispatch",
+            "test_extract_personas_dispatch",
+            "test_surface_rules_dispatch",
+            "test_generate_questions_dispatch",
+        ],
+    )
+    def test_operation_dispatch(self, params: dict, expected_key: str) -> None:
+        result = handle_spec_analyze(params)
         data = json.loads(result)
-        assert "lifecycles" in data
-
-    def test_extract_personas_dispatch(self) -> None:
-        """Test dispatch to extract_personas."""
-        result = handle_spec_analyze(
-            {
-                "operation": "extract_personas",
-                "spec_text": "Admins can manage users. Customers can place orders.",
-            }
-        )
-        data = json.loads(result)
-        assert "personas" in data
-
-    def test_surface_rules_dispatch(self) -> None:
-        """Test dispatch to surface_rules."""
-        result = handle_spec_analyze(
-            {
-                "operation": "surface_rules",
-                "spec_text": "Users must verify email before ordering.",
-            }
-        )
-        data = json.loads(result)
-        assert "business_rules" in data
-
-    def test_generate_questions_dispatch(self) -> None:
-        """Test dispatch to generate_questions."""
-        result = handle_spec_analyze(
-            {
-                "operation": "generate_questions",
-                "spec_text": "The app should handle payments.",
-            }
-        )
-        data = json.loads(result)
-        assert "questions" in data
+        assert expected_key in data
 
     def test_refine_spec_dispatch(self) -> None:
         """Test dispatch to refine_spec."""

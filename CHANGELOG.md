@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.10] - 2026-05-04
+
+### Changed
+- **Distillation cycle 9** — sub-agent P completed batch processing more
+  size-5/6 clusters across ~15 files. Suite total: 13,491 → 13,409 (82 fewer).
+  Sub-agents Q/R still processing size-4 clusters in background.
+
 ## [0.66.9] - 2026-05-04
 
 ### Changed

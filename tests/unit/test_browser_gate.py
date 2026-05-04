@@ -56,22 +56,9 @@ class TestBrowserGateConfig:
         assert gate.headless is True
         assert gate.active_count == 0
 
-    def test_explicit_max(self):
-        gate = BrowserGate(max_concurrent=5)
-        assert gate.max_concurrent == 5
-
     def test_explicit_headless_false(self):
         gate = BrowserGate(headless=False)
         assert gate.headless is False
-
-    def test_min_clamp(self):
-        gate = BrowserGate(max_concurrent=0)
-        assert gate.max_concurrent == 1
-
-    def test_env_var_max_browsers(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("DAZZLE_MAX_BROWSERS", "4")
-        gate = BrowserGate()
-        assert gate.max_concurrent == 4
 
     def test_env_var_headless_false(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv("DAZZLE_BROWSER_HEADLESS", "0")
@@ -83,10 +70,32 @@ class TestBrowserGateConfig:
         gate = BrowserGate()
         assert gate.headless is False
 
-    def test_explicit_overrides_env(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("DAZZLE_MAX_BROWSERS", "8")
-        gate = BrowserGate(max_concurrent=3)
-        assert gate.max_concurrent == 3
+    @pytest.mark.parametrize(
+        ("ctor_kwargs", "env_vars", "expected_max"),
+        [
+            ({"max_concurrent": 5}, {}, 5),
+            ({"max_concurrent": 0}, {}, 1),
+            ({}, {"DAZZLE_MAX_BROWSERS": "4"}, 4),
+            ({"max_concurrent": 3}, {"DAZZLE_MAX_BROWSERS": "8"}, 3),
+        ],
+        ids=[
+            "test_explicit_max",
+            "test_min_clamp",
+            "test_env_var_max_browsers",
+            "test_explicit_overrides_env",
+        ],
+    )
+    def test_max_concurrent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        ctor_kwargs: dict,
+        env_vars: dict,
+        expected_max: int,
+    ) -> None:
+        for key, val in env_vars.items():
+            monkeypatch.setenv(key, val)
+        gate = BrowserGate(**ctor_kwargs)
+        assert gate.max_concurrent == expected_max
 
 
 # ── Singleton ────────────────────────────────────────────────────────

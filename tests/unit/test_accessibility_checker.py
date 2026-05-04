@@ -1,5 +1,7 @@
 """Unit tests for accessibility checking module."""
 
+import pytest
+
 from dazzle.core.ir import A11yRule
 from dazzle_e2e.accessibility import (
     A11yCheckResult,
@@ -18,60 +20,32 @@ from dazzle_e2e.accessibility import (
 class TestAxeViolation:
     """Tests for AxeViolation dataclass."""
 
-    def test_wcag_level_a(self):
-        """Detect WCAG Level A."""
+    @pytest.mark.parametrize(
+        ("tags", "expected_level"),
+        [
+            (["cat.name-role-value", "wcag2a", "wcag412", "section508"], "A"),
+            (["cat.color", "wcag2aa", "wcag143"], "AA"),
+            (["cat.color", "wcag2aaa", "wcag146"], "AAA"),
+            (["wcag21aa"], "AA"),
+        ],
+        ids=[
+            "test_wcag_level_a",
+            "test_wcag_level_aa",
+            "test_wcag_level_aaa",
+            "test_wcag21_tags",
+        ],
+    )
+    def test_wcag_level_detected(self, tags: list[str], expected_level: str) -> None:
+        """wcag_level is derived from the WCAG tag present in the violation's tags."""
         violation = AxeViolation(
-            id="link-name",
+            id="some-rule",
             impact="serious",
-            description="Links must have discernible text",
-            help="Links must have discernible text",
-            help_url="https://dequeuniversity.com/rules/axe/4.8/link-name",
-            tags=["cat.name-role-value", "wcag2a", "wcag412", "section508"],
+            description="Test violation",
+            help="Test violation help",
+            help_url="https://dequeuniversity.com/rules/axe/4.8/some-rule",
+            tags=tags,
         )
-
-        assert violation.wcag_level == "A"
-        assert violation.is_wcag
-
-    def test_wcag_level_aa(self):
-        """Detect WCAG Level AA."""
-        violation = AxeViolation(
-            id="color-contrast",
-            impact="serious",
-            description="Elements must meet minimum color contrast ratio",
-            help="Elements must meet minimum color contrast ratio",
-            help_url="https://dequeuniversity.com/rules/axe/4.8/color-contrast",
-            tags=["cat.color", "wcag2aa", "wcag143"],
-        )
-
-        assert violation.wcag_level == "AA"
-        assert violation.is_wcag
-
-    def test_wcag_level_aaa(self):
-        """Detect WCAG Level AAA."""
-        violation = AxeViolation(
-            id="color-contrast-enhanced",
-            impact="serious",
-            description="Elements must meet enhanced color contrast ratio",
-            help="Elements must meet enhanced color contrast ratio",
-            help_url="https://dequeuniversity.com/rules/axe/4.8/color-contrast-enhanced",
-            tags=["cat.color", "wcag2aaa", "wcag146"],
-        )
-
-        assert violation.wcag_level == "AAA"
-        assert violation.is_wcag
-
-    def test_wcag21_tags(self):
-        """Handle WCAG 2.1 specific tags."""
-        violation = AxeViolation(
-            id="target-size",
-            impact="minor",
-            description="Touch target size",
-            help="Touch targets must be large enough",
-            help_url="https://dequeuniversity.com/rules/axe/4.8/target-size",
-            tags=["wcag21aa"],
-        )
-
-        assert violation.wcag_level == "AA"
+        assert violation.wcag_level == expected_level
         assert violation.is_wcag
 
     def test_non_wcag_violation(self):

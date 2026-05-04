@@ -12,25 +12,26 @@ from dazzle.cli.deploy import (
 class TestGenerateProductionDockerfile:
     """Tests for Dockerfile generation."""
 
-    def test_uses_python_312_slim(self) -> None:
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            "FROM python:3.12-slim",
+            "HEALTHCHECK",
+            'dazzle", "serve", "--production"',
+            "EXPOSE 8000",
+            "COPY requirements.txt",
+        ],
+        ids=[
+            "test_uses_python_312_slim",
+            "test_includes_healthcheck",
+            "test_cmd_is_dazzle_serve_production",
+            "test_exposes_port_8000",
+            "test_copies_requirements",
+        ],
+    )
+    def test_dockerfile_contains(self, expected: str) -> None:
         result = generate_production_dockerfile()
-        assert "FROM python:3.12-slim" in result
-
-    def test_includes_healthcheck(self) -> None:
-        result = generate_production_dockerfile()
-        assert "HEALTHCHECK" in result
-
-    def test_cmd_is_dazzle_serve_production(self) -> None:
-        result = generate_production_dockerfile()
-        assert 'dazzle", "serve", "--production"' in result
-
-    def test_exposes_port_8000(self) -> None:
-        result = generate_production_dockerfile()
-        assert "EXPOSE 8000" in result
-
-    def test_copies_requirements(self) -> None:
-        result = generate_production_dockerfile()
-        assert "COPY requirements.txt" in result
+        assert expected in result
 
 
 class TestGenerateHerokuFiles:

@@ -3,6 +3,8 @@
 import time
 from unittest.mock import patch
 
+import pytest
+
 from dazzle_ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
@@ -10,6 +12,20 @@ from dazzle_ui.runtime.experience_state import (
     sign_state,
     verify_state,
 )
+
+
+def _tamper_payload(raw: str) -> str:
+    """Replace the last 3 chars of the payload portion with 'xyz'."""
+    parts = raw.split(".")
+    parts[0] = parts[0][:-3] + "xyz"
+    return ".".join(parts)
+
+
+def _tamper_signature(raw: str) -> str:
+    """Overwrite the signature portion with repeated 'a'."""
+    parts = raw.split(".")
+    parts[1] = "a" * len(parts[1])
+    return ".".join(parts)
 
 
 class TestCookieName:
@@ -53,32 +69,31 @@ class TestSignVerifyRoundTrip:
 
 
 class TestTamperDetection:
-    def test_tampered_payload(self) -> None:
-        state = ExperienceState(step="step_1")
-        raw = sign_state(state)
-        # Modify the payload portion
-        parts = raw.split(".")
-        parts[0] = parts[0][:-3] + "xyz"
-        tampered = ".".join(parts)
-        assert verify_state(tampered) is None
-
-    def test_tampered_signature(self) -> None:
-        state = ExperienceState(step="step_1")
-        raw = sign_state(state)
-        # Modify the signature
-        parts = raw.split(".")
-        parts[1] = "a" * len(parts[1])
-        tampered = ".".join(parts)
-        assert verify_state(tampered) is None
-
-    def test_empty_string(self) -> None:
-        assert verify_state("") is None
-
-    def test_no_separator(self) -> None:
-        assert verify_state("nodothere") is None
-
-    def test_garbage_input(self) -> None:
-        assert verify_state("not.valid.base64.data") is None
+    @pytest.mark.parametrize(
+        "make_input,expected",
+        [
+            (
+                lambda: _tamper_payload(sign_state(ExperienceState(step="step_1"))),
+                None,
+            ),
+            (
+                lambda: _tamper_signature(sign_state(ExperienceState(step="step_1"))),
+                None,
+            ),
+            (lambda: "", None),
+            (lambda: "nodothere", None),
+            (lambda: "not.valid.base64.data", None),
+        ],
+        ids=[
+            "test_tampered_payload",
+            "test_tampered_signature",
+            "test_empty_string",
+            "test_no_separator",
+            "test_garbage_input",
+        ],
+    )
+    def test_verify_state_rejects(self, make_input, expected) -> None:
+        assert verify_state(make_input()) is expected
 
 
 class TestExpiry:

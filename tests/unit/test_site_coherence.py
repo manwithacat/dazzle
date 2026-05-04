@@ -1,5 +1,7 @@
 """Tests for site coherence validation."""
 
+import pytest
+
 from dazzle.core.site_coherence import (
     CoherenceReport,
     Severity,
@@ -11,25 +13,25 @@ from dazzle.core.site_coherence import (
 class TestPlaceholderDetection:
     """Tests for placeholder text detection."""
 
-    def test_detects_lorem_ipsum(self) -> None:
-        matches = detect_placeholders("Lorem ipsum dolor sit amet")
-        assert len(matches) > 0
-
-    def test_detects_your_tagline_here(self) -> None:
-        matches = detect_placeholders("Your Tagline Here")
-        assert len(matches) > 0
-
-    def test_detects_todo(self) -> None:
-        matches = detect_placeholders("TODO: Add real content")
-        assert len(matches) > 0
-
-    def test_detects_example_domain(self) -> None:
-        matches = detect_placeholders("Visit us at example.com")
-        assert len(matches) > 0
-
-    def test_detects_generic_features(self) -> None:
-        matches = detect_placeholders("Feature 1, Feature 2, Feature 3")
-        assert len(matches) > 0
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Lorem ipsum dolor sit amet",
+            "Your Tagline Here",
+            "TODO: Add real content",
+            "Visit us at example.com",
+            "Feature 1, Feature 2, Feature 3",
+        ],
+        ids=[
+            "test_detects_lorem_ipsum",
+            "test_detects_your_tagline_here",
+            "test_detects_todo",
+            "test_detects_example_domain",
+            "test_detects_generic_features",
+        ],
+    )
+    def test_detects_placeholder(self, text: str) -> None:
+        assert len(detect_placeholders(text)) > 0
 
     def test_ignores_real_content(self) -> None:
         matches = detect_placeholders(
