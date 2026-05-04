@@ -20,19 +20,29 @@ from dazzle.core.ir.fields import FieldTypeKind
 
 
 class TestReadHandlerAutoInclude:
-    """create_read_handler() passes auto_include to service.execute()."""
+    """create_read_handler(
+        RouteSpec(
+            handler=HandlerConfig(),
+        ),
+    ) passes auto_include to service.execute()."""
 
     async def test_noauth_handler_passes_include(self) -> None:
-        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
+        from dazzle_back.runtime.route_generator import (
+            HandlerConfig,
+            RouteSpec,
+            create_read_handler,
+        )
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123", "title": "Test"})
 
         handler = create_read_handler(
-            service,
-            auto_include=["assigned_to", "company"],
-            config=HandlerConfig(
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    entity_name="Task",
+                ),
+                service=service,
+                auto_include=["assigned_to", "company"],
             ),
         )
 
@@ -43,15 +53,21 @@ class TestReadHandlerAutoInclude:
         assert call_kwargs["include"] == ["assigned_to", "company"]
 
     async def test_noauth_handler_none_include(self) -> None:
-        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
+        from dazzle_back.runtime.route_generator import (
+            HandlerConfig,
+            RouteSpec,
+            create_read_handler,
+        )
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123"})
 
         handler = create_read_handler(
-            service,
-            config=HandlerConfig(
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -61,19 +77,25 @@ class TestReadHandlerAutoInclude:
         assert call_kwargs["include"] is None
 
     def test_auth_handler_passes_include(self) -> None:
-        from dazzle_back.runtime.route_generator import HandlerConfig, create_read_handler
+        from dazzle_back.runtime.route_generator import (
+            HandlerConfig,
+            RouteSpec,
+            create_read_handler,
+        )
 
         service = MagicMock()
         service.execute = AsyncMock(return_value={"id": "123"})
 
         auth_dep = MagicMock()
         handler = create_read_handler(
-            service,
-            auto_include=["company"],
-            config=HandlerConfig(
-                entity_name="Task",
-                auth_dep=auth_dep,
-                require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    entity_name="Task",
+                    auth_dep=auth_dep,
+                    require_auth_by_default=True,
+                ),
+                service=service,
+                auto_include=["company"],
             ),
         )
         # The handler is _read_auth which takes auth_context

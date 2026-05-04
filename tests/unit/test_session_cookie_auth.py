@@ -20,6 +20,7 @@ from pydantic import BaseModel  # noqa: E402
 
 from dazzle_back.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
+    RouteSpec,
     create_create_handler,
     create_delete_handler,
     create_list_handler,
@@ -103,9 +104,13 @@ class TestCrudHandlerAuth:
     ):
         """List handler should succeed when auth context is authenticated."""
         handler = create_list_handler(
-            service=mock_service,
-            optional_auth_dep=optional_auth_dep,
-            require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    optional_auth_dep=optional_auth_dep,
+                    require_auth_by_default=True,
+                ),
+                service=mock_service,
+            ),
         )
         request = _make_request({"session_id": "valid"})
         # Bypass Depends() — pass auth_context directly (standard FastAPI unit test practice)
@@ -127,9 +132,13 @@ class TestCrudHandlerAuth:
     ):
         """List handler should reject when auth context is unauthenticated."""
         handler = create_list_handler(
-            service=mock_service,
-            optional_auth_dep=optional_auth_dep_unauth,
-            require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    optional_auth_dep=optional_auth_dep_unauth,
+                    require_auth_by_default=True,
+                ),
+                service=mock_service,
+            ),
         )
         request = _make_request()
 
@@ -153,10 +162,12 @@ class TestCrudHandlerAuth:
     ):
         """Read handler should succeed when auth context is authenticated."""
         handler = create_read_handler(
-            service=mock_service,
-            config=HandlerConfig(
-                auth_dep=auth_dep,
-                require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    auth_dep=auth_dep,
+                    require_auth_by_default=True,
+                ),
+                service=mock_service,
             ),
         )
         result = await handler(
@@ -167,7 +178,12 @@ class TestCrudHandlerAuth:
     @pytest.mark.asyncio
     async def test_read_handler_no_auth_required(self, mock_service):
         """Read handler with no auth dep should work without auth_context param."""
-        handler = create_read_handler(service=mock_service)
+        handler = create_read_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=mock_service,
+            ),
+        )
         result = await handler(id=uuid4(), request=_make_request())
         assert result is not None
 
@@ -184,11 +200,13 @@ class TestCrudHandlerAuth:
 
         mock_service.execute = AsyncMock(return_value={"id": str(uuid4()), "title": "Test"})
         handler = create_create_handler(
-            service=mock_service,
-            input_schema=FakeInput,
-            config=HandlerConfig(
-                auth_dep=auth_dep,
-                require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    auth_dep=auth_dep,
+                    require_auth_by_default=True,
+                ),
+                input_schema=FakeInput,
+                service=mock_service,
             ),
         )
         request = _make_request({"session_id": "valid"})
@@ -206,10 +224,12 @@ class TestCrudHandlerAuth:
         """Delete handler should succeed when auth context is authenticated."""
         mock_service.execute = AsyncMock(return_value=True)
         handler = create_delete_handler(
-            service=mock_service,
-            config=HandlerConfig(
-                auth_dep=auth_dep,
-                require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    auth_dep=auth_dep,
+                    require_auth_by_default=True,
+                ),
+                service=mock_service,
             ),
         )
         result = await handler(
@@ -222,7 +242,7 @@ class TestCrudHandlerAuth:
     @pytest.mark.asyncio
     async def test_list_handler_no_auth(self, mock_service):
         """List handler with no auth dep should work without auth_context param."""
-        handler = create_list_handler(service=mock_service)
+        handler = create_list_handler(RouteSpec(handler=HandlerConfig(), service=mock_service))
         request = _make_request()
         result = await handler(
             request=request,
@@ -254,9 +274,13 @@ class TestDependsIntegration:
         )
 
         handler = create_list_handler(
-            service=service,
-            optional_auth_dep=fake_optional_auth,
-            require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    optional_auth_dep=fake_optional_auth,
+                    require_auth_by_default=True,
+                ),
+                service=service,
+            ),
         )
 
         app = FastAPI()
@@ -277,10 +301,12 @@ class TestDependsIntegration:
         service.execute = AsyncMock(return_value={"id": "1"})
 
         handler = create_read_handler(
-            service=service,
-            config=HandlerConfig(
-                auth_dep=strict_auth_dep,
-                require_auth_by_default=True,
+            RouteSpec(
+                handler=HandlerConfig(
+                    auth_dep=strict_auth_dep,
+                    require_auth_by_default=True,
+                ),
+                service=service,
             ),
         )
 

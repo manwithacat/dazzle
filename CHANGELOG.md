@@ -9,6 +9,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-05-04
+
+This is a minor bump because the route-handler factory contracts changed
+shape. Project-side code that constructed handlers manually needs the
+update; framework-internal generated code is migrated.
+
+### Added
+- **`RouteSpec` dataclass** in `src/dazzle_back/runtime/route_generator.py`
+  (#1011 closeout — Target 2). Per-route bundle wrapping `HandlerConfig`
+  + `service` + cross-verb resource fields (`input_schema`,
+  `response_schema`, `auto_include`, `storage_bindings`,
+  `include_field_changes`). Distinct from
+  `dazzle_back.specs.endpoint.EndpointSpec` (the static URL/method
+  spec); `RouteSpec` is the runtime handler bundle one layer below.
+  Documented as the convergence point matching DRF ViewSet
+  attributes / Rails before_action / Spring `@PreAuthorize` /
+  WordPress `permission_callback`.
+
+### Changed (BREAKING — direct factory consumers)
+- **All five CRUD factory signatures changed.** Previously took
+  `service` plus 6+ kwargs; now take a single `spec: RouteSpec`
+  (positional). Verb-specific kwargs remain on the factories that
+  need them (e.g. `entity_slug`, `user_ref_fields` on create;
+  `htmx_columns`, `search_fields` on list).
+
+  | Factory | Before | After |
+  |---|---|---|
+  | `create_read_handler` | `(service, response_schema, *, config, auto_include)` | `(spec)` |
+  | `create_create_handler` | `(service, input_schema, response_schema, *, config, entity_slug, ...)` | `(spec, *, entity_slug, user_ref_fields, persona_ref_map)` |
+  | `create_update_handler` | `(service, input_schema, response_schema, *, config, ...)` | `(spec)` |
+  | `create_delete_handler` | `(service, *, config, include_field_changes)` | `(spec)` |
+  | `create_list_handler` | `(service, response_schema, ..., 20+ kwargs)` | `(spec, *, htmx_columns, search_fields, ..., 14 list-specific kwargs)` |
+
+- Call sites in `RouteGenerator.generate_route` build a single
+  `_base_config` (HandlerConfig) once per dispatch, then construct one
+  `RouteSpec` per verb with `dataclasses.replace(_base_config,
+  audit_logger=_audit_for("<verb>"))`.
+- Test call sites updated in `test_row_level_access.py`,
+  `test_session_cookie_auth.py`, `test_url_consistency.py`,
+  `test_entity_resolution.py`, `test_view_projection.py`,
+  `test_workspace_routes.py`, `test_datatable_handler.py`.
+
+### Agent Guidance
+- New CRUD-style factories take `spec: RouteSpec` as their first
+  positional arg. The `RouteSpec` carries the auth/authz/audit
+  bundle plus shared resource fields. Verb-specific kwargs are
+  factory-local — bundle them into `RouteSpec` only when they
+  generalise across **at least two** CRUD verbs.
+- When a new cross-cutting concern lands (rate-limit, throttle,
+  idempotency token), add a field to `HandlerConfig` if it's
+  auth/authz/audit-shaped, or to `RouteSpec` if it's
+  resource/schema/selection-shaped. Don't expand per-factory
+  signatures.
+- The naming convention: `EndpointSpec` (existing in
+  `dazzle_back.specs.endpoint`) is the *static* URL/method/service
+  declaration. `RouteSpec` (new in `runtime.route_generator`) is the
+  *runtime* handler bundle that knows how to actually construct the
+  FastAPI handler. Don't confuse them.
+
 ## [0.65.19] - 2026-05-04
 
 ### Fixed

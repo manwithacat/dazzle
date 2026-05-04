@@ -4629,7 +4629,11 @@ class TestHtmxColumnInjection:
     @pytest.mark.asyncio
     async def test_htmx_columns_set_on_request_state(self) -> None:
         """When htmx_columns is provided, it's set on request.state."""
-        from dazzle_back.runtime.route_generator import create_list_handler
+        from dazzle_back.runtime.route_generator import (
+            HandlerConfig,
+            RouteSpec,
+            create_list_handler,
+        )
 
         columns = [{"key": "name", "label": "Name", "type": "text"}]
 
@@ -4638,7 +4642,10 @@ class TestHtmxColumnInjection:
 
         service = SimpleNamespace(execute=mock_service_execute)
         handler = create_list_handler(
-            service,
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
             htmx_columns=columns,
             htmx_detail_url="/app/tasks/{id}",
             htmx_entity_name="Task",
@@ -4659,13 +4666,22 @@ class TestHtmxColumnInjection:
     @pytest.mark.asyncio
     async def test_htmx_columns_default_empty_when_not_provided(self) -> None:
         """When htmx_columns is not provided, htmx_columns is not set on state."""
-        from dazzle_back.runtime.route_generator import create_list_handler
+        from dazzle_back.runtime.route_generator import (
+            HandlerConfig,
+            RouteSpec,
+            create_list_handler,
+        )
 
         async def mock_service_execute(**kwargs: Any) -> dict[str, Any]:
             return {"items": [], "total": 0}
 
         service = SimpleNamespace(execute=mock_service_execute)
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = SimpleNamespace(
             state=SimpleNamespace(),

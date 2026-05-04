@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from dazzle_back.runtime.route_generator import (
     HandlerConfig,
+    RouteSpec,
     create_create_handler,
     create_delete_handler,
     create_read_handler,
@@ -156,11 +157,13 @@ class TestReadHandlerCedar:
         )
 
         handler = create_read_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -183,11 +186,13 @@ class TestReadHandlerCedar:
         )
 
         handler = create_read_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -212,12 +217,14 @@ class TestCreateHandlerCedar:
         )
 
         handler = create_create_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -236,12 +243,14 @@ class TestCreateHandlerCedar:
         )
 
         handler = create_create_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -266,12 +275,14 @@ class TestCreateHandlerCedar:
         spec = EntityAccessSpec(permissions=[_permit_rule(AccessOperationKind.CREATE, compound)])
 
         handler = create_create_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -297,12 +308,14 @@ class TestCreateHandlerCedar:
         spec = EntityAccessSpec(permissions=[_permit_rule(AccessOperationKind.CREATE, compound)])
 
         handler = create_create_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -330,12 +343,14 @@ class TestUpdateHandlerCedar:
         )
 
         handler = create_update_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -357,12 +372,14 @@ class TestUpdateHandlerCedar:
         )
 
         handler = create_update_handler(
-            service,
-            TaskUpdate,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+                input_schema=TaskUpdate,
             ),
         )
 
@@ -390,11 +407,13 @@ class TestDeleteHandlerCedar:
         )
 
         handler = create_delete_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -417,11 +436,13 @@ class TestDeleteHandlerCedar:
         )
 
         handler = create_delete_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -441,11 +462,13 @@ class TestDeleteHandlerCedar:
         )
 
         handler = create_delete_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 
@@ -479,11 +502,13 @@ class TestForbidInHandlers:
         )
 
         handler = create_delete_handler(
-            service,
-            config=HandlerConfig(
-                cedar_access_spec=spec,
-                optional_auth_dep=_make_optional_auth_dep(auth_ctx),
-                entity_name="Task",
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
             ),
         )
 

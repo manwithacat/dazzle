@@ -48,7 +48,11 @@ def _make_service(items: list[dict[str, Any]] | None = None) -> AsyncMock:
 
 pytest.importorskip("fastapi", reason="FastAPI required for handler tests")
 
-from dazzle_back.runtime.route_generator import create_list_handler  # noqa: E402
+from dazzle_back.runtime.route_generator import (  # noqa: E402
+    HandlerConfig,
+    RouteSpec,
+    create_list_handler,
+)
 
 # ---------------------------------------------------------------------------
 # Tests
@@ -61,7 +65,12 @@ class TestListHandlerSort:
     @pytest.mark.asyncio
     async def test_handler_passes_sort_to_service(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(request=request, page=1, page_size=20, sort="title", dir="desc", search=None)
@@ -73,7 +82,12 @@ class TestListHandlerSort:
     @pytest.mark.asyncio
     async def test_handler_sort_asc(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(request=request, page=1, page_size=20, sort="name", dir="asc", search=None)
@@ -84,7 +98,12 @@ class TestListHandlerSort:
     @pytest.mark.asyncio
     async def test_handler_no_sort(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
@@ -99,7 +118,12 @@ class TestListHandlerFilter:
     @pytest.mark.asyncio
     async def test_handler_extracts_filter_params(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request(
             query_params={"filter[status]": "active", "filter[priority]": "high"}
@@ -115,7 +139,12 @@ class TestListHandlerFilter:
     @pytest.mark.asyncio
     async def test_handler_ignores_empty_filter(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request(query_params={"filter[status]": ""})
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
@@ -131,7 +160,12 @@ class TestListHandlerSearch:
     @pytest.mark.asyncio
     async def test_handler_passes_search_to_service(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(
@@ -144,7 +178,12 @@ class TestListHandlerSearch:
     @pytest.mark.asyncio
     async def test_handler_no_search(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(
@@ -161,7 +200,12 @@ class TestListHandlerBackwardCompat:
     @pytest.mark.asyncio
     async def test_handler_backward_compat(self) -> None:
         service = _make_service()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = _make_request()
         await handler(

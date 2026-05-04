@@ -262,13 +262,20 @@ class TestListHandlerProjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
         service = MockService()
         handler = create_list_handler(
-            service,
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
             select_fields=["id", "name", "status"],
         )
 
@@ -303,12 +310,21 @@ class TestListHandlerProjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
         service = MockService()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = MockRequest()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
@@ -347,14 +363,21 @@ class TestAutoInclude:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
         service = MockService()
         handler = create_list_handler(
-            service,
-            auto_include=["assigned_to", "completed_by", "created_by"],
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+                auto_include=["assigned_to", "completed_by", "created_by"],
+            ),
         )
 
         request = MockRequest()
@@ -389,12 +412,21 @@ class TestAutoInclude:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
         service = MockService()
-        handler = create_list_handler(service)
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
 
         request = MockRequest()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
@@ -439,11 +471,21 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
-        handler = create_list_handler(MockService(), display_field="component_name")
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=MockService(),
+            ),
+            display_field="component_name",
+        )
         result = await handler(
             request=MockRequest(),
             page=1,
@@ -481,11 +523,20 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
-        handler = create_list_handler(MockService())
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=MockService(),
+            ),
+        )
         result = await handler(
             request=MockRequest(),
             page=1,
@@ -529,11 +580,21 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
-        handler = create_list_handler(MockService(), display_field="component_name")
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=MockService(),
+            ),
+            display_field="component_name",
+        )
         result = await handler(
             request=MockRequest(),
             page=1,
@@ -570,12 +631,19 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle_back.runtime.route_generator import create_list_handler
+            from dazzle_back.runtime.route_generator import (
+                HandlerConfig,
+                RouteSpec,
+                create_list_handler,
+            )
         except ImportError:
             pytest.skip("FastAPI not available")
 
         handler = create_list_handler(
-            MockService(),
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=MockService(),
+            ),
             display_field="component_name",
             json_projection=["id", "component_name"],
         )
