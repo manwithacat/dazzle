@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.22] - 2026-05-04
+
+### Changed
+- **Distillation cycle 20** — Batch AA continued on test_events,
+  test_rbac_enforcement, test_template_rendering, test_validator.
+  236 tests pass. Suite total: 12,767 → 12,745 (22 fewer this cycle).
+  Cumulative cycles 1-20: 14,295 → 12,745 (1,550 tests removed).
+  Need 745 more for < 12,000.
+
 ## [0.66.21] - 2026-05-04
 
 ### Changed

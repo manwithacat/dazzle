@@ -560,32 +560,39 @@ class TestJinjaFilters:
         tmpl = env.from_string(template)
         assert tmpl.render(val=value) == expected
 
-    def test_dateformat_filter_date(self, env) -> None:
-        tmpl = env.from_string("{{ val|dateformat }}")
-        d = date(2025, 3, 15)
-        result = tmpl.render(val=d)
-        assert "15" in result
-        assert "Mar" in result
-        assert "2025" in result
+    def test_dateformat_filter_date_types(self, env) -> None:
+        """dateformat handles date objects and ISO strings.
 
-    def test_dateformat_filter_iso_string(self, env) -> None:
+        Combined: dateformat_filter_date, dateformat_filter_iso_string.
+        """
         tmpl = env.from_string("{{ val|dateformat }}")
-        result = tmpl.render(val="2025-06-01T10:00:00")
-        assert "01" in result
-        assert "Jun" in result
 
-    def test_bool_icon_true(self, env) -> None:
+        # date object
+        d_result = tmpl.render(val=date(2025, 3, 15))
+        assert "15" in d_result
+        assert "Mar" in d_result
+        assert "2025" in d_result
+
+        # ISO string
+        iso_result = tmpl.render(val="2025-06-01T10:00:00")
+        assert "01" in iso_result
+        assert "Jun" in iso_result
+
+    def test_bool_icon(self, env) -> None:
+        """bool_icon filter renders true and false with distinct color/glyph.
+
+        Combined: bool_icon_true, bool_icon_false.
+        """
         # Use |safe since bool_icon returns raw HTML (autoescaped by Jinja2)
         tmpl = env.from_string("{{ val|bool_icon|safe }}")
-        result = tmpl.render(val=True)
-        assert "text-[hsl(var(--success))]" in result
-        assert "✓" in result or "&#10003;" in result
-
-    def test_bool_icon_false(self, env) -> None:
-        tmpl = env.from_string("{{ val|bool_icon|safe }}")
-        result = tmpl.render(val=False)
-        assert "text-[hsl(var(--muted-foreground)/0.3)]" in result
-        assert "✗" in result or "&#10005;" in result
+        # true case
+        result_true = tmpl.render(val=True)
+        assert "text-[hsl(var(--success))]" in result_true
+        assert "✓" in result_true or "&#10003;" in result_true
+        # false case
+        result_false = tmpl.render(val=False)
+        assert "text-[hsl(var(--muted-foreground)/0.3)]" in result_false
+        assert "✗" in result_false or "&#10005;" in result_false
 
     def test_truncate_text(self, env) -> None:
         """Length-truncation behaviour with the tail ellipsis."""
@@ -832,29 +839,26 @@ class TestJinjaFilters:
         tmpl = env.from_string("{{ val|timeago }}")
         assert tmpl.render(val=value) == expected
 
-    def test_timeago_future(self, env) -> None:
-        """Future datetimes return 'just now' (no negative durations)."""
-        tmpl = env.from_string("{{ val|timeago }}")
-        assert tmpl.render(val=datetime.now() + timedelta(hours=1)) == "just now"
+    def test_timeago_input_types(self, env) -> None:
+        """timeago handles future datetimes, Z-suffix ISO, and tz-aware datetimes.
 
-    def test_timeago_iso_string_with_z_suffix(self, env) -> None:
-        """`Z` is the canonical UTC suffix in ISO 8601 — fromisoformat used
-        to reject it on Python <3.11; we now normalise before parsing."""
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val="2026-04-22T10:00:00Z")
-        # Result depends on test clock; just confirm parsing succeeded
-        # (passthrough would mean parse failed).
-        assert result != "2026-04-22T10:00:00Z"
-
-    def test_timeago_tz_aware_datetime_does_not_raise(self, env) -> None:
-        """tz-aware values from Postgres TIMESTAMP WITH TIME ZONE columns
-        used to crash with `can't subtract offset-naive and offset-aware
-        datetimes` because `datetime.now()` was naive (#852)."""
+        Combined: timeago_future, timeago_iso_string_with_z_suffix,
+        timeago_tz_aware_datetime_does_not_raise.
+        """
         from datetime import UTC
 
         tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now(tz=UTC) - timedelta(hours=2))
-        assert "hour" in result
+
+        # Future → "just now" (no negative durations)
+        assert tmpl.render(val=datetime.now() + timedelta(hours=1)) == "just now"
+
+        # Z-suffix ISO 8601 parses (was rejected pre-Python 3.11)
+        z_result = tmpl.render(val="2026-04-22T10:00:00Z")
+        assert z_result != "2026-04-22T10:00:00Z"  # parsed (passthrough would echo)
+
+        # tz-aware datetime does not raise (#852)
+        tz_result = tmpl.render(val=datetime.now(tz=UTC) - timedelta(hours=2))
+        assert "hour" in tz_result
 
     # Plural buckets: the substring assertion confirms the right unit fires.
     @pytest.mark.parametrize(
@@ -874,24 +878,22 @@ class TestJinjaFilters:
         result = tmpl.render(val=datetime.now() - delta)
         assert unit_substring in result
 
-    def test_timeago_date_object(self, env) -> None:
-        """date (not datetime) inputs are accepted — used by audit fields."""
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=date.today() - timedelta(days=3))
-        assert "day" in result
+    def test_timeago_naive_input_variants(self, env) -> None:
+        """timeago accepts date objects, ISO 8601 strings, and naive datetimes.
 
-    def test_timeago_iso_string(self, env) -> None:
-        """ISO 8601 strings parse via fromisoformat."""
+        Combined: timeago_date_object, timeago_iso_string, timeago_naive_datetime_treated_as_local.
+        """
         tmpl = env.from_string("{{ val|timeago }}")
+
+        # date (not datetime) — used by audit fields
+        assert "day" in tmpl.render(val=date.today() - timedelta(days=3))
+
+        # ISO 8601 string parsed via fromisoformat
         past = datetime.now() - timedelta(hours=2)
         assert "hour" in tmpl.render(val=past.isoformat())
 
-    def test_timeago_naive_datetime_treated_as_local(self, env) -> None:
-        """Naive datetimes are treated as local time (the convention every
-        existing call site uses — `datetime.now() - delta`)."""
-        tmpl = env.from_string("{{ val|timeago }}")
-        result = tmpl.render(val=datetime.now() - timedelta(minutes=5))
-        assert "minute" in result
+        # Naive datetime treated as local time
+        assert "minute" in tmpl.render(val=datetime.now() - timedelta(minutes=5))
 
     # Singular bucket: exact-string match pins the "1 X ago" formatter
     # (no leading "About"; no plural "s"; no "ago" elision).
@@ -938,11 +940,13 @@ class TestJinjaFilters:
 
     # --- Jinja globals ---
 
-    def test_dazzle_version_global(self, env) -> None:
+    def test_jinja_globals(self, env) -> None:
+        """Jinja globals: _dazzle_version (non-empty) and _use_cdn (False).
+
+        Combined: dazzle_version_global, use_cdn_global.
+        """
         assert "_dazzle_version" in env.globals
         assert env.globals["_dazzle_version"]  # non-empty
-
-    def test_use_cdn_global(self, env) -> None:
         assert "_use_cdn" in env.globals
         assert env.globals["_use_cdn"] is False
 
@@ -1003,46 +1007,46 @@ class TestDesignTokens:
 class TestMockData:
     """Tests for generate_mock_records."""
 
-    def test_generates_correct_count(self) -> None:
+    def test_generates_records_with_correct_field_types(self) -> None:
+        """Mock records: count, all fields present, uuid/bool/enum/date/money types.
+
+        Combined: generates_correct_count, all_fields_present, uuid_pk_is_string,
+        bool_field_is_bool, enum_values_from_spec, date_field_is_iso_string,
+        money_field_expanded.
+        """
+        # Count
         records = generate_mock_records(_task_entity(), count=7)
         assert len(records) == 7
 
-    def test_all_fields_present(self) -> None:
-        records = generate_mock_records(_task_entity(), count=1)
-        record = records[0]
+        # All fields present (single record + 10 for enum sweep)
+        single = generate_mock_records(_task_entity(), count=1)[0]
         for field in _task_entity().fields:
             if field.type and field.type.kind == FieldTypeKind.MONEY:
                 # Money fields expand to _minor + _currency
-                assert f"{field.name}_minor" in record, f"Missing field: {field.name}_minor"
-                assert f"{field.name}_currency" in record, f"Missing field: {field.name}_currency"
+                assert f"{field.name}_minor" in single, f"Missing field: {field.name}_minor"
+                assert f"{field.name}_currency" in single, f"Missing field: {field.name}_currency"
             else:
-                assert field.name in record, f"Missing field: {field.name}"
+                assert field.name in single, f"Missing field: {field.name}"
 
-    def test_uuid_pk_is_string(self) -> None:
-        records = generate_mock_records(_task_entity(), count=1)
-        assert isinstance(records[0]["id"], str)
-        assert len(records[0]["id"]) == 36  # UUID format
+        # UUID pk is 36-char string
+        assert isinstance(single["id"], str)
+        assert len(single["id"]) == 36
 
-    def test_bool_field_is_bool(self) -> None:
-        records = generate_mock_records(_task_entity(), count=1)
-        assert isinstance(records[0]["completed"], bool)
+        # Bool field is bool
+        assert isinstance(single["completed"], bool)
 
-    def test_enum_values_from_spec(self) -> None:
-        records = generate_mock_records(_task_entity(), count=10)
+        # Enum values respect spec — sample 10 records
+        ten = generate_mock_records(_task_entity(), count=10)
         valid = {"low", "medium", "high"}
-        for r in records:
+        for r in ten:
             assert r["priority"] in valid
 
-    def test_date_field_is_iso_string(self) -> None:
-        records = generate_mock_records(_task_entity(), count=1)
-        due = records[0]["due_date"]
-        # Should parse as a date
-        date.fromisoformat(due)
+        # Date field is ISO string
+        date.fromisoformat(single["due_date"])
 
-    def test_money_field_expanded(self) -> None:
-        records = generate_mock_records(_task_entity(), count=1)
-        assert isinstance(records[0]["amount_minor"], int)
-        assert records[0]["amount_currency"] == "GBP"
+        # Money field expanded
+        assert isinstance(single["amount_minor"], int)
+        assert single["amount_currency"] == "GBP"
 
 
 # ===================================================================
@@ -1066,26 +1070,29 @@ class TestCompileAppSpec:
             ],
         )
 
-    def test_produces_route_map(self) -> None:
-        contexts = compile_appspec_to_templates(self._make_appspec())
-        assert isinstance(contexts, dict)
-        assert len(contexts) >= 3  # list, create, view + maybe root
+    def test_compile_appspec_to_templates(self) -> None:
+        """compile_appspec_to_templates produces route map with list/create/root + app_name.
 
-    def test_root_route_assigned(self) -> None:
+        Combined: produces_route_map, root_route_assigned, list_route, create_route,
+        app_name_injected.
+        """
         contexts = compile_appspec_to_templates(self._make_appspec())
+
+        # produces a route-map dict with at least list/create/view (+ maybe root)
+        assert isinstance(contexts, dict)
+        assert len(contexts) >= 3
+
+        # Root route assigned
         assert "/" in contexts
 
-    def test_list_route(self) -> None:
-        contexts = compile_appspec_to_templates(self._make_appspec())
+        # List route — has table
         assert "/task" in contexts
         assert contexts["/task"].table is not None
 
-    def test_create_route(self) -> None:
-        contexts = compile_appspec_to_templates(self._make_appspec())
+        # Create route — has form
         assert "/task/create" in contexts
         assert contexts["/task/create"].form is not None
 
-    def test_app_name_injected(self) -> None:
-        contexts = compile_appspec_to_templates(self._make_appspec())
+        # App name injected on every context
         for ctx in contexts.values():
             assert ctx.app_name == "Test App"

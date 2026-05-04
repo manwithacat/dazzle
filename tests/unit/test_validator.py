@@ -537,47 +537,43 @@ class TestValidateServices:
         errors, warnings = validate_services(appspec)
         assert len(errors) == 0
 
-    def test_service_no_spec(self) -> None:
-        """Test detection of service without spec."""
-        api = ir.APISpec(
+    def test_service_warnings(self) -> None:
+        """Service validation: no-spec error, invalid-url warning, oauth2-no-scopes warning.
+
+        Combined: service_no_spec, service_invalid_url_warning, oauth2_without_scopes_warning.
+        """
+        # No-spec → error
+        api1 = ir.APISpec(
             name="github",
             title="GitHub API",
             spec_url=None,
             spec_inline=None,
             auth_profile=ir.AuthProfile(kind=ir.AuthKind.API_KEY_HEADER),
         )
-        appspec = make_appspec(apis=[api])
-        errors, warnings = validate_services(appspec)
+        errors, _ = validate_services(make_appspec(apis=[api1]))
         assert any("no spec" in e for e in errors)
 
-    def test_service_invalid_url_warning(self) -> None:
-        """Test warning for invalid spec URL."""
-        api = ir.APISpec(
+        # Invalid URL → warning
+        api2 = ir.APISpec(
             name="github",
             title="GitHub API",
             spec_url="not-a-valid-url",
             spec_inline=None,
             auth_profile=ir.AuthProfile(kind=ir.AuthKind.API_KEY_HEADER),
         )
-        appspec = make_appspec(apis=[api])
-        errors, warnings = validate_services(appspec)
+        _, warnings = validate_services(make_appspec(apis=[api2]))
         assert any("invalid" in w.lower() for w in warnings)
 
-    def test_oauth2_without_scopes_warning(self) -> None:
-        """Test warning for OAuth2 without scopes."""
-        api = ir.APISpec(
+        # OAuth2 without scopes → warning
+        api3 = ir.APISpec(
             name="github",
             title="GitHub API",
             spec_url="https://api.github.com/openapi.yaml",
             spec_inline=None,
-            auth_profile=ir.AuthProfile(
-                kind=ir.AuthKind.OAUTH2_PKCE,
-                options={},
-            ),
+            auth_profile=ir.AuthProfile(kind=ir.AuthKind.OAUTH2_PKCE, options={}),
         )
-        appspec = make_appspec(apis=[api])
-        errors, warnings = validate_services(appspec)
-        assert any("scopes" in w for w in warnings)
+        _, warnings3 = validate_services(make_appspec(apis=[api3]))
+        assert any("scopes" in w for w in warnings3)
 
 
 # =============================================================================

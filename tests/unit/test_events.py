@@ -100,8 +100,11 @@ class TestEventEnvelope:
         assert envelope.correlation_id == correlation_id
         assert envelope.causation_id == causation_id
 
-    def test_topic_property(self) -> None:
-        """Test topic extraction from event type."""
+    def test_event_type_extraction_properties(self) -> None:
+        """Topic, action, and entity_name extracted from event_type.
+
+        Combined: topic_property, action_property, entity_name_property.
+        """
         envelope = EventEnvelope.create(
             event_type="app.Order.created",
             key="order-123",
@@ -109,25 +112,7 @@ class TestEventEnvelope:
         )
 
         assert envelope.topic == "app.Order"
-
-    def test_action_property(self) -> None:
-        """Test action extraction from event type."""
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-        )
-
         assert envelope.action == "created"
-
-    def test_entity_name_property(self) -> None:
-        """Test entity name extraction from event type."""
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-        )
-
         assert envelope.entity_name == "Order"
 
     def test_to_dict_and_from_dict(self) -> None:

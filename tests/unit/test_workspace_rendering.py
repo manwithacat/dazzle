@@ -349,44 +349,62 @@ class TestRefColumnHiding:
         ref_col = next(c for c in cols if c["key"] == "order")
         assert ref_col["type"] == "ref"
 
-    def test_uuid_field_hidden(self) -> None:
-        fields = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("external_id", FieldTypeKind.UUID),
-        ]
-        entity = _make_entity("Order", fields)
-        cols = self._build_columns(entity)
+    def test_hidden_field_kinds(self) -> None:
+        """Hidden columns: uuid, has_many, id, _id-suffix-as-str.
+
+        Combined: uuid_field_hidden, has_many_field_hidden, id_field_hidden,
+        fk_suffix_field_hidden.
+        """
+        # uuid hidden
+        cols = self._build_columns(
+            _make_entity(
+                "Order",
+                [
+                    _make_field("title", FieldTypeKind.STR),
+                    _make_field("external_id", FieldTypeKind.UUID),
+                ],
+            )
+        )
         keys = [c["key"] for c in cols]
         assert "external_id" not in keys
 
-    def test_has_many_field_hidden(self) -> None:
-        fields = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-        ]
-        entity = _make_entity("Order", fields)
-        cols = self._build_columns(entity)
+        # has_many hidden
+        cols = self._build_columns(
+            _make_entity(
+                "Order",
+                [
+                    _make_field("title", FieldTypeKind.STR),
+                    _make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+                ],
+            )
+        )
         keys = [c["key"] for c in cols]
         assert "items" not in keys
 
-    def test_id_field_hidden(self) -> None:
-        fields = [
-            _make_field("id", FieldTypeKind.UUID),
-            _make_field("title", FieldTypeKind.STR),
-        ]
-        entity = _make_entity("Order", fields)
-        cols = self._build_columns(entity)
+        # id field hidden, other fields visible
+        cols = self._build_columns(
+            _make_entity(
+                "Order",
+                [
+                    _make_field("id", FieldTypeKind.UUID),
+                    _make_field("title", FieldTypeKind.STR),
+                ],
+            )
+        )
         keys = [c["key"] for c in cols]
         assert "id" not in keys
         assert "title" in keys
 
-    def test_fk_suffix_field_hidden(self) -> None:
-        fields = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("customer_id", FieldTypeKind.STR),
-        ]
-        entity = _make_entity("Order", fields)
-        cols = self._build_columns(entity)
+        # fk_suffix string field hidden
+        cols = self._build_columns(
+            _make_entity(
+                "Order",
+                [
+                    _make_field("title", FieldTypeKind.STR),
+                    _make_field("customer_id", FieldTypeKind.STR),
+                ],
+            )
+        )
         keys = [c["key"] for c in cols]
         assert "customer_id" not in keys
 

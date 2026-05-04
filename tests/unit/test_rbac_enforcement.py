@@ -985,62 +985,42 @@ class TestResolveUserAttribute:
     """Tests for _resolve_user_attribute — the helper that resolves
     ``current_user.<attr>`` dotted paths to a concrete filter value."""
 
-    def test_resolves_builtin_field(self) -> None:
-        """A built-in UserRecord field (e.g. email) is resolved directly."""
+    def test_resolve_user_attribute_variants(self) -> None:
+        """All variants of _resolve_user_attribute resolution.
+
+        Combined: resolves_builtin_field, resolves_from_preferences,
+        resolves_id_variant_from_preferences, returns_deny_sentinel_when_attribute_missing,
+        returns_deny_sentinel_when_auth_context_is_none.
+        """
         from unittest.mock import MagicMock
 
         from dazzle_back.runtime.route_generator import _resolve_user_attribute
 
-        auth_ctx = MagicMock()
-        auth_ctx.user.email = "alice@school.edu"
-        auth_ctx.preferences = {}
+        # Built-in UserRecord field resolved directly
+        ctx_builtin = MagicMock()
+        ctx_builtin.user.email = "alice@school.edu"
+        ctx_builtin.preferences = {}
+        assert _resolve_user_attribute("email", ctx_builtin) == "alice@school.edu"
 
-        assert _resolve_user_attribute("email", auth_ctx) == "alice@school.edu"
+        # Domain-specific attribute from preferences
+        ctx_pref = MagicMock()
+        ctx_pref.preferences = {"school": "school-uuid-42"}
+        type(ctx_pref.user).school = property(lambda self: None)
+        assert _resolve_user_attribute("school", ctx_pref) == "school-uuid-42"
 
-    def test_resolves_from_preferences(self) -> None:
-        """Domain-specific attribute stored in preferences is resolved."""
-        from unittest.mock import MagicMock
+        # _id variant from preferences when bare key absent
+        ctx_id_variant = MagicMock()
+        ctx_id_variant.preferences = {"school_id": "school-uuid-99"}
+        type(ctx_id_variant.user).school = property(lambda self: None)
+        assert _resolve_user_attribute("school", ctx_id_variant) == "school-uuid-99"
 
-        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+        # Missing attribute → deny sentinel
+        ctx_missing = MagicMock()
+        ctx_missing.preferences = {}
+        type(ctx_missing.user).school = property(lambda self: None)
+        assert _resolve_user_attribute("school", ctx_missing) == "__RBAC_DENY__"
 
-        auth_ctx = MagicMock()
-        auth_ctx.preferences = {"school": "school-uuid-42"}
-        # Ensure the user attribute returns None so resolution falls through to prefs
-        type(auth_ctx.user).school = property(lambda self: None)
-
-        result = _resolve_user_attribute("school", auth_ctx)
-        assert result == "school-uuid-42"
-
-    def test_resolves_id_variant_from_preferences(self) -> None:
-        """Preferences key ``school_id`` is returned when ``school`` is absent."""
-        from unittest.mock import MagicMock
-
-        from dazzle_back.runtime.route_generator import _resolve_user_attribute
-
-        auth_ctx = MagicMock()
-        auth_ctx.preferences = {"school_id": "school-uuid-99"}
-        type(auth_ctx.user).school = property(lambda self: None)
-
-        result = _resolve_user_attribute("school", auth_ctx)
-        assert result == "school-uuid-99"
-
-    def test_returns_deny_sentinel_when_attribute_missing(self) -> None:
-        """Missing attribute returns __RBAC_DENY__ to block all rows."""
-        from unittest.mock import MagicMock
-
-        from dazzle_back.runtime.route_generator import _resolve_user_attribute
-
-        auth_ctx = MagicMock()
-        auth_ctx.preferences = {}
-        type(auth_ctx.user).school = property(lambda self: None)
-
-        result = _resolve_user_attribute("school", auth_ctx)
-        assert result == "__RBAC_DENY__"
-
-    def test_returns_deny_sentinel_when_auth_context_is_none(self) -> None:
-        """None auth_context returns __RBAC_DENY__."""
-        from dazzle_back.runtime.route_generator import _resolve_user_attribute
-
+        # None auth_context → deny sentinel
         assert _resolve_user_attribute("school", None) == "__RBAC_DENY__"
 
 
@@ -1199,8 +1179,12 @@ class TestScopeEnforcement:
 
         assert result == {"school": "school-42"}
 
-    def test_resolve_scope_filters_all(self) -> None:
-        """scope: all (condition=None) returns empty dict — no row filter."""
+    def test_resolve_scope_filters_no_condition_variants(self) -> None:
+        """No-condition scope rules: all (matched persona), no_match, wildcard, empty.
+
+        Combined: scope_filters_all, scope_filters_no_match, scope_filters_wildcard,
+        scope_filters_empty_scopes_passes_through (#607).
+        """
         from dazzle_back.runtime.route_generator import _resolve_scope_filters
         from dazzle_back.specs.auth import (
             AccessOperationKind,
@@ -1208,30 +1192,18 @@ class TestScopeEnforcement:
             ScopeRuleSpec,
         )
 
-        cedar_spec = EntityAccessSpec(
+        # scope: all (condition=None) → empty dict (no row filter)
+        spec_all = EntityAccessSpec(
             scopes=[
                 ScopeRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=None,
-                    personas=["admin"],
+                    operation=AccessOperationKind.LIST, condition=None, personas=["admin"]
                 )
             ]
         )
+        assert _resolve_scope_filters(spec_all, "list", {"admin"}, "user-1") == {}
 
-        result = _resolve_scope_filters(cedar_spec, "list", {"admin"}, "user-1")
-
-        assert result == {}
-
-    def test_resolve_scope_filters_no_match(self) -> None:
-        """No matching scope rule returns None (default-deny)."""
-        from dazzle_back.runtime.route_generator import _resolve_scope_filters
-        from dazzle_back.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            ScopeRuleSpec,
-        )
-
-        cedar_spec = EntityAccessSpec(
+        # No matching role → None (default-deny)
+        spec_teacher_only = EntityAccessSpec(
             scopes=[
                 ScopeRuleSpec(
                     operation=AccessOperationKind.LIST,
@@ -1240,45 +1212,20 @@ class TestScopeEnforcement:
                 )
             ]
         )
+        assert _resolve_scope_filters(spec_teacher_only, "list", {"student"}, "user-1") is None
 
-        # student has no matching scope rule
-        result = _resolve_scope_filters(cedar_spec, "list", {"student"}, "user-1")
-
-        assert result is None
-
-    def test_resolve_scope_filters_wildcard(self) -> None:
-        """personas=['*'] matches any role."""
-        from dazzle_back.runtime.route_generator import _resolve_scope_filters
-        from dazzle_back.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            ScopeRuleSpec,
-        )
-
-        cedar_spec = EntityAccessSpec(
+        # personas=['*'] matches any role
+        spec_wildcard = EntityAccessSpec(
             scopes=[
-                ScopeRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=None,
-                    personas=["*"],
-                )
+                ScopeRuleSpec(operation=AccessOperationKind.LIST, condition=None, personas=["*"])
             ]
         )
+        assert _resolve_scope_filters(spec_wildcard, "list", {"any_random_role"}, "user-1") == {}
 
-        result = _resolve_scope_filters(cedar_spec, "list", {"any_random_role"}, "user-1")
-
-        assert result == {}
-
-    def test_resolve_scope_filters_empty_scopes_passes_through(self) -> None:
-        """Empty scopes list returns {} (pass-through, no row filter) (#607)."""
-        from dazzle_back.runtime.route_generator import _resolve_scope_filters
-        from dazzle_back.specs.auth import EntityAccessSpec
-
-        cedar_spec = EntityAccessSpec(scopes=[])
-
-        result = _resolve_scope_filters(cedar_spec, "list", {"admin"}, "user-1")
-
-        assert result == {}  # No row filter — permit gate already controls access
+        # Empty scopes list → pass-through (permit gate already controls)
+        assert (
+            _resolve_scope_filters(EntityAccessSpec(scopes=[]), "list", {"admin"}, "user-1") == {}
+        )
 
     @pytest.mark.asyncio
     async def test_list_handler_returns_empty_when_no_scope_matches(self) -> None:
