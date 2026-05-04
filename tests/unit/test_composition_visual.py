@@ -274,28 +274,29 @@ class TestParseFindings:
 class TestScoring:
     """Test visual finding scoring."""
 
-    def test_no_findings_perfect_score(self) -> None:
-        assert _score_findings([]) == 100
-
-    def test_high_severity_deduction(self) -> None:
-        findings = [VisualFinding("hero", "content", "content", "high", "Missing", "", "")]
-        assert _score_findings(findings) == 80  # 100 - 20
-
-    def test_medium_severity_deduction(self) -> None:
-        findings = [VisualFinding("hero", "color", "color", "medium", "Wrong color", "", "")]
-        assert _score_findings(findings) == 92  # 100 - 8
-
-    def test_low_severity_deduction(self) -> None:
-        findings = [VisualFinding("hero", "layout", "layout", "low", "Minor", "", "")]
-        assert _score_findings(findings) == 97  # 100 - 3
-
-    def test_multiple_findings_cumulative(self) -> None:
+    @pytest.mark.parametrize(
+        "severities, expected_score",
+        [
+            ([], 100),  # no findings → perfect score
+            (["high"], 80),  # 100 - 20
+            (["medium"], 92),  # 100 - 8
+            (["low"], 97),  # 100 - 3
+            (["high", "medium", "low"], 69),  # 100 - 20 - 8 - 3
+        ],
+        ids=[
+            "no_findings_perfect_score",
+            "high_severity_deduction",
+            "medium_severity_deduction",
+            "low_severity_deduction",
+            "multiple_findings_cumulative",
+        ],
+    )
+    def test_score_findings(self, severities: list[str], expected_score: int) -> None:
         findings = [
-            VisualFinding("hero", "d", "c", "high", "a", "", ""),
-            VisualFinding("hero", "d", "c", "medium", "b", "", ""),
-            VisualFinding("hero", "d", "c", "low", "c", "", ""),
+            VisualFinding("hero", "d", "c", sev, f"finding_{i}", "", "")
+            for i, sev in enumerate(severities)
         ]
-        assert _score_findings(findings) == 69  # 100 - 20 - 8 - 3
+        assert _score_findings(findings) == expected_score
 
     def test_score_floor_at_zero(self) -> None:
         findings = [VisualFinding("s", "d", "c", "high", str(i), "", "") for i in range(10)]

@@ -40,28 +40,44 @@ class TestCleanBody:
 
 
 class TestResolveSince:
+    @pytest.mark.parametrize(
+        "gh_return, expected_date",
+        [
+            (json.dumps([{"publishedAt": "2026-02-01T00:00:00Z"}]), "2026-02-01"),
+            ("[]", None),  # None signals "compute 30-days-ago at test time"
+        ],
+        ids=[
+            "none_uses_latest_release",
+            "none_fallback_no_releases",
+        ],
+    )
     @patch("dazzle.docs_update.scanner._run_gh")
-    def test_none_uses_latest_release(self, mock_gh: MagicMock) -> None:
-        mock_gh.return_value = json.dumps([{"publishedAt": "2026-02-01T00:00:00Z"}])
+    def test_none_since(
+        self, mock_gh: MagicMock, gh_return: str, expected_date: str | None
+    ) -> None:
+        mock_gh.return_value = gh_return
         result = resolve_since(None, "owner/repo")
-        assert result == "2026-02-01"
+        if expected_date is not None:
+            assert result == expected_date
+        else:
+            # Fallback: 30 days ago
+            fallback = (datetime.now(tz=UTC) - timedelta(days=30)).strftime("%Y-%m-%d")
+            assert result == fallback
 
-    @patch("dazzle.docs_update.scanner._run_gh")
-    def test_none_fallback_no_releases(self, mock_gh: MagicMock) -> None:
-        mock_gh.return_value = "[]"
-        result = resolve_since(None, "owner/repo")
-        # Should fall back to 30 days ago
-        expected = (datetime.now(tz=UTC) - timedelta(days=30)).strftime("%Y-%m-%d")
-        assert result == expected
-
-    def test_relative_days(self) -> None:
-        result = resolve_since("14 days", "owner/repo")
-        expected = (datetime.now(tz=UTC) - timedelta(days=14)).strftime("%Y-%m-%d")
-        assert result == expected
-
-    def test_relative_day_singular(self) -> None:
-        result = resolve_since("1 day", "owner/repo")
-        expected = (datetime.now(tz=UTC) - timedelta(days=1)).strftime("%Y-%m-%d")
+    @pytest.mark.parametrize(
+        "since_str, days",
+        [
+            ("14 days", 14),
+            ("1 day", 1),
+        ],
+        ids=[
+            "relative_days",
+            "relative_day_singular",
+        ],
+    )
+    def test_relative_days(self, since_str: str, days: int) -> None:
+        result = resolve_since(since_str, "owner/repo")
+        expected = (datetime.now(tz=UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
         assert result == expected
 
     def test_date_string_passthrough(self) -> None:

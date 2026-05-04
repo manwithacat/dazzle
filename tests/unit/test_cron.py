@@ -170,23 +170,25 @@ class TestDueJobs:
     def test_empty_jobs_returns_empty(self):
         assert due_jobs([], now=_at(), last_fired_minute={}) == []
 
-    def test_matching_job_due(self):
+    @pytest.mark.parametrize(
+        ("now_kwargs", "expected"),
+        [
+            ({"hour": 1, "minute": 0}, ["daily_summary"]),
+            ({"hour": 2, "minute": 0}, []),
+        ],
+        ids=[
+            "test_matching_job_due",
+            "test_non_matching_job_skipped",
+        ],
+    )
+    def test_single_job_match(self, now_kwargs, expected):
         c = parse_cron("0 1 * * *")
         result = due_jobs(
             [("daily_summary", c)],
-            now=_at(hour=1, minute=0),
+            now=_at(**now_kwargs),
             last_fired_minute={},
         )
-        assert result == ["daily_summary"]
-
-    def test_non_matching_job_skipped(self):
-        c = parse_cron("0 1 * * *")
-        result = due_jobs(
-            [("daily_summary", c)],
-            now=_at(hour=2, minute=0),
-            last_fired_minute={},
-        )
-        assert result == []
+        assert result == expected
 
     def test_already_fired_this_minute_dedupes(self):
         c = parse_cron("0 1 * * *")

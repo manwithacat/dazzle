@@ -34,14 +34,36 @@ from dazzle_back.runtime.audit_emitter import build_audit_callbacks, compute_dif
 
 
 class TestComputeDiff:
-    def test_unchanged_field_skipped_on_update(self):
+    @pytest.mark.parametrize(
+        "old_data, new_data, track, operation, expected_rows",
+        [
+            # unchanged field skipped on update
+            ({"status": "draft"}, {"status": "draft"}, ["status"], "update", 0),
+            # untracked changed field produces no rows
+            (
+                {"status": "draft", "title": "Old"},
+                {"status": "draft", "title": "New"},
+                ["status"],
+                "update",
+                0,
+            ),
+            # both sides None emits nothing
+            (None, None, ["status"], "update", 0),
+        ],
+        ids=[
+            "unchanged_field_skipped_on_update",
+            "only_tracked_fields_emitted",
+            "both_sides_none_emits_nothing",
+        ],
+    )
+    def test_no_rows_emitted(self, old_data, new_data, track, operation, expected_rows):
         rows = compute_diff(
             entity_type="Manuscript",
             entity_id="abc",
-            old_data={"status": "draft"},
-            new_data={"status": "draft"},
-            track=["status"],
-            operation="update",
+            old_data=old_data,
+            new_data=new_data,
+            track=track,
+            operation=operation,
         )
         assert rows == []
 
@@ -64,18 +86,6 @@ class TestComputeDiff:
         assert row["before_value"] == json.dumps("draft")
         assert row["after_value"] == json.dumps("submitted")
         assert row["by_user_id"] == "user-1"
-
-    def test_only_tracked_fields_emitted(self):
-        # `title` changed but isn't in the track list — no row.
-        rows = compute_diff(
-            entity_type="Manuscript",
-            entity_id="abc",
-            old_data={"status": "draft", "title": "Old"},
-            new_data={"status": "draft", "title": "New"},
-            track=["status"],
-            operation="update",
-        )
-        assert rows == []
 
     def test_empty_track_means_all_fields(self):
         rows = compute_diff(
@@ -145,17 +155,6 @@ class TestComputeDiff:
         # not isoformat — round-trip is the contract, exact format is
         # an implementation detail.
         assert json.loads(rows[0]["after_value"]) == str(when)
-
-    def test_both_sides_none_emits_nothing(self):
-        rows = compute_diff(
-            entity_type="Manuscript",
-            entity_id="abc",
-            old_data=None,
-            new_data=None,
-            track=["status"],
-            operation="update",
-        )
-        assert rows == []
 
     def test_missing_field_treated_as_none(self):
         # Tracked field absent from old_data — the diff must still

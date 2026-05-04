@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.7] - 2026-05-04
+
+### Changed
+- **Distillation cycle 6** — collapsed ~30 more hotspot clusters via
+  3 parallel sub-agents (batches E/G/H, ~25 files) plus direct edits
+  on test_storage_cycle1, test_pulse_scoring, test_scope_fidelity,
+  test_audit_visibility, test_workspace_rendering,
+  test_audit_history_routes, test_locale_middleware,
+  test_set_factory_env, test_safe_casts, test_input_sanitization.
+  Suite total: 13,833 → 13,657 (176 fewer test functions).
+
 ## [0.66.6] - 2026-05-04
 
 ### Changed

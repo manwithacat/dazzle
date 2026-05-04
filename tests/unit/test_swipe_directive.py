@@ -21,78 +21,61 @@ def js() -> str:
     return DZ_ALPINE_JS.read_text()
 
 
-def test_directive_registered(js: str) -> None:
-    """Alpine.directive('swipe', ...) must be present so x-swipe in
-    templates resolves to the handler."""
-    assert 'Alpine.directive("swipe"' in js
-
-
-def test_touch_only_via_pointer_coarse(js: str) -> None:
-    """Desktop mouse drag is ambiguous with text selection — directive
-    no-ops on mouse-primary inputs (same gate as pull-to-refresh)."""
-    # The swipe directive lives below the pull-to-refresh one; both
-    # use the same matchMedia check. Verify at least one usage.
-    assert "(pointer: coarse)" in js
-
-
-def test_dispatches_swipe_left_and_right_events(js: str) -> None:
-    """The dispatch contract is `swipe-left` / `swipe-right`
-    CustomEvents — chosen so adopters can wire both directions to
-    independent actions."""
-    assert '"swipe-left"' in js
-    assert '"swipe-right"' in js
-    # The dispatch uses `dx < 0` to pick left vs right; pin the
-    # ternary shape so a refactor can't silently flip directions.
-    assert 'dx < 0 ? "swipe-left" : "swipe-right"' in js
-
-
-def test_event_carries_dx_dy_duration_detail(js: str) -> None:
-    """Handlers may want velocity / direction info — `detail` must
-    carry dx, dy, durationMs so adopters can do velocity-aware
-    decisions (e.g. snap-back vs commit threshold)."""
-    assert "dx: dx" in js
-    assert "dy: dy" in js
-    assert "durationMs: dt" in js
-
-
-def test_horizontal_threshold_constant(js: str) -> None:
-    """Pin the 60px horizontal threshold — sub-threshold motion is
-    a tap or a small adjustment, not a swipe."""
-    assert "threshold = 60" in js
-
-
-def test_max_vertical_drift_filter(js: str) -> None:
-    """Vertical motion > 40px means the user is scrolling, not
-    swiping. Skipping this check would make every list-scroll
-    trigger spurious swipe events."""
-    assert "maxVertical = 40" in js
-    assert "Math.abs(dy) > maxVertical" in js
-
-
-def test_max_duration_filter(js: str) -> None:
-    """Slow drag (>500ms) is a long-press / drag-to-reorder, not a
-    swipe. The duration cap keeps the gesture vocabulary clean."""
-    assert "maxDurationMs = 500" in js
-    assert "dt > maxDurationMs" in js
-
-
-def test_single_finger_only(js: str) -> None:
-    """Multi-touch pinch / two-finger swipe is the browser's
-    navigation gesture — directive must skip when more than one
-    finger is on the screen."""
-    assert "e.touches.length !== 1" in js
-
-
-def test_passive_listeners(js: str) -> None:
-    """Touch listeners must be `passive: true` so the browser doesn't
-    block native scroll on JS execution."""
-    assert "{ passive: true }" in js
-
-
-def test_handles_touchcancel(js: str) -> None:
-    """A touchcancel (e.g. system gesture interruption) must reset
-    `active` so a stale state doesn't leak into the next gesture."""
-    assert "touchcancel" in js
+@pytest.mark.parametrize(
+    "needle",
+    [
+        # Alpine.directive('swipe', ...) must be present so x-swipe resolves to the handler.
+        'Alpine.directive("swipe"',
+        # Desktop mouse drag is ambiguous — no-op on mouse-primary inputs.
+        "(pointer: coarse)",
+        # Dispatch contract: swipe-left / swipe-right CustomEvents.
+        '"swipe-left"',
+        '"swipe-right"',
+        # Ternary shape pins direction logic so a refactor can't silently flip directions.
+        'dx < 0 ? "swipe-left" : "swipe-right"',
+        # detail carries dx, dy, durationMs for velocity-aware handlers.
+        "dx: dx",
+        "dy: dy",
+        "durationMs: dt",
+        # 60px horizontal threshold — sub-threshold motion is a tap, not a swipe.
+        "threshold = 60",
+        # Vertical motion > 40px means scrolling, not swiping.
+        "maxVertical = 40",
+        "Math.abs(dy) > maxVertical",
+        # Slow drag (>500ms) is a long-press / drag-to-reorder, not a swipe.
+        "maxDurationMs = 500",
+        "dt > maxDurationMs",
+        # Multi-touch: skip when more than one finger is on screen.
+        "e.touches.length !== 1",
+        # Touch listeners must be passive: true so the browser doesn't block native scroll.
+        "{ passive: true }",
+        # touchcancel must reset active so stale state doesn't leak into the next gesture.
+        "touchcancel",
+        # Public-API list at the top of dz-alpine.js.
+        "x-swipe",
+    ],
+    ids=[
+        "test_directive_registered",
+        "test_touch_only_via_pointer_coarse",
+        "test_dispatches_swipe_left_event",
+        "test_dispatches_swipe_right_event",
+        "test_dispatches_swipe_direction_ternary",
+        "test_event_carries_dx_detail",
+        "test_event_carries_dy_detail",
+        "test_event_carries_duration_detail",
+        "test_horizontal_threshold_constant",
+        "test_max_vertical_drift_filter_constant",
+        "test_max_vertical_drift_filter_check",
+        "test_max_duration_filter_constant",
+        "test_max_duration_filter_check",
+        "test_single_finger_only",
+        "test_passive_listeners",
+        "test_handles_touchcancel",
+        "test_directive_listed_in_module_header",
+    ],
+)
+def test_js_contains(js: str, needle: str) -> None:
+    assert needle in js
 
 
 def test_event_bubbles(js: str) -> None:
@@ -104,12 +87,6 @@ def test_event_bubbles(js: str) -> None:
     swipe_idx = js.find('"swipe-left"')
     bubbles_idx = js.find("bubbles: true", swipe_idx)
     assert bubbles_idx > swipe_idx, "swipe dispatch should set bubbles:true"
-
-
-def test_directive_listed_in_module_header(js: str) -> None:
-    """Public-API list at the top of dz-alpine.js — new directive
-    needs the entry."""
-    assert "x-swipe" in js
 
 
 def test_directive_present_in_dist_bundle() -> None:

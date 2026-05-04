@@ -42,6 +42,30 @@ def test_slice_all(sample_auditspec):
     assert len(result["controls"]) == 3
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "expected_count", "expected_id"),
+    [
+        ({"status_filter": ["gap"]}, 1, "C-3"),
+        ({"extract": ["permit"]}, 1, "C-1"),
+        ({"tier_filter": [3]}, 1, "C-3"),
+        ({"controls": ["NONEXISTENT"]}, 0, None),
+    ],
+    ids=[
+        "test_slice_by_status",
+        "test_slice_by_extract",
+        "test_slice_by_tier",
+        "test_empty_filter",
+    ],
+)
+def test_single_filter(sample_auditspec, kwargs, expected_count, expected_id):
+    result = slice_auditspec(sample_auditspec, **kwargs)
+    assert len(result["controls"]) == expected_count
+    if expected_id is not None:
+        assert result["controls"][0]["id"] == expected_id
+    else:
+        assert result["summary"]["total_controls"] == 0
+
+
 def test_slice_by_ids(sample_auditspec):
     result = slice_auditspec(sample_auditspec, controls=["C-1", "C-3"])
     assert len(result["controls"]) == 2
@@ -50,36 +74,12 @@ def test_slice_by_ids(sample_auditspec):
     assert "C-3" in ids
 
 
-def test_slice_by_status(sample_auditspec):
-    result = slice_auditspec(sample_auditspec, status_filter=["gap"])
-    assert len(result["controls"]) == 1
-    assert result["controls"][0]["id"] == "C-3"
-
-
-def test_slice_by_extract(sample_auditspec):
-    result = slice_auditspec(sample_auditspec, extract=["permit"])
-    assert len(result["controls"]) == 1
-    assert result["controls"][0]["id"] == "C-1"
-
-
-def test_slice_by_tier(sample_auditspec):
-    result = slice_auditspec(sample_auditspec, tier_filter=[3])
-    assert len(result["controls"]) == 1
-    assert result["controls"][0]["id"] == "C-3"
-
-
 def test_summary_recalculated(sample_auditspec):
     result = slice_auditspec(sample_auditspec, status_filter=["gap", "partial"])
     assert result["summary"]["total_controls"] == 2
     assert result["summary"]["partial"] == 1
     assert result["summary"]["gaps"] == 1
     assert result["summary"]["evidenced"] == 0
-
-
-def test_empty_filter(sample_auditspec):
-    result = slice_auditspec(sample_auditspec, controls=["NONEXISTENT"])
-    assert len(result["controls"]) == 0
-    assert result["summary"]["total_controls"] == 0
 
 
 def test_combined_status_and_tier(sample_auditspec):

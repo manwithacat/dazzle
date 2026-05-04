@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle_back.runtime.job_queue import InMemoryJobQueue
 from dazzle_back.runtime.job_triggers import (
     build_trigger_callbacks,
@@ -139,64 +141,64 @@ class TestShouldFireFieldChanged:
 
 
 class TestShouldFireWhenCondition:
-    def test_is_set_true_when_value_truthy(self):
-        t = _Trigger(entity="M", event="created", when_condition="source_pdf is_set")
+    @pytest.mark.parametrize(
+        "when_condition,event_kind,old_data,new_data,expected",
+        [
+            (
+                "source_pdf is_set",
+                "created",
+                None,
+                {"source_pdf": "abc.pdf"},
+                True,
+            ),
+            (
+                "source_pdf is_set",
+                "created",
+                None,
+                {"source_pdf": None},
+                False,
+            ),
+            (
+                # Empty string is falsy — same semantics as None for this
+                # primitive (callers wanting "non-null but empty allowed"
+                # need cycle-7's expression eval).
+                "source_pdf is_set",
+                "created",
+                None,
+                {"source_pdf": ""},
+                False,
+            ),
+            (
+                "approved_at is_null",
+                "updated",
+                {"approved_at": "2026-01-01"},
+                {"approved_at": None},
+                True,
+            ),
+            ("garbage", "created", None, {"x": 1}, False),
+            ("x lt 5", "created", None, {"x": 1}, False),
+        ],
+        ids=[
+            "test_is_set_true_when_value_truthy",
+            "test_is_set_false_when_value_none",
+            "test_is_set_false_when_value_empty_string",
+            "test_is_null_true_when_value_none",
+            "test_unparseable_condition_fail_closed",
+            "test_unknown_operator_fail_closed",
+        ],
+    )
+    def test_when_condition(
+        self,
+        when_condition: str,
+        event_kind: str,
+        old_data,
+        new_data: dict,
+        expected: bool,
+    ):
+        t = _Trigger(entity="M", event=event_kind, when_condition=when_condition)
         assert (
-            should_fire(
-                t,
-                event_kind="created",
-                old_data=None,
-                new_data={"source_pdf": "abc.pdf"},
-            )
-            is True
+            should_fire(t, event_kind=event_kind, old_data=old_data, new_data=new_data) is expected
         )
-
-    def test_is_set_false_when_value_none(self):
-        t = _Trigger(entity="M", event="created", when_condition="source_pdf is_set")
-        assert (
-            should_fire(
-                t,
-                event_kind="created",
-                old_data=None,
-                new_data={"source_pdf": None},
-            )
-            is False
-        )
-
-    def test_is_set_false_when_value_empty_string(self):
-        # Empty string is falsy — same semantics as None for this
-        # primitive (callers wanting "non-null but empty allowed"
-        # need cycle-7's expression eval).
-        t = _Trigger(entity="M", event="created", when_condition="source_pdf is_set")
-        assert (
-            should_fire(
-                t,
-                event_kind="created",
-                old_data=None,
-                new_data={"source_pdf": ""},
-            )
-            is False
-        )
-
-    def test_is_null_true_when_value_none(self):
-        t = _Trigger(entity="M", event="updated", when_condition="approved_at is_null")
-        assert (
-            should_fire(
-                t,
-                event_kind="updated",
-                old_data={"approved_at": "2026-01-01"},
-                new_data={"approved_at": None},
-            )
-            is True
-        )
-
-    def test_unparseable_condition_fail_closed(self):
-        t = _Trigger(entity="M", event="created", when_condition="garbage")
-        assert should_fire(t, event_kind="created", old_data=None, new_data={"x": 1}) is False
-
-    def test_unknown_operator_fail_closed(self):
-        t = _Trigger(entity="M", event="created", when_condition="x lt 5")
-        assert should_fire(t, event_kind="created", old_data=None, new_data={"x": 1}) is False
 
 
 # ---------------------------------------------------------------------------

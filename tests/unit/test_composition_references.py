@@ -247,38 +247,31 @@ class TestSaveManifest:
 class TestShouldPromote:
     """Test auto-promotion threshold logic."""
 
-    def test_both_above_threshold(self) -> None:
+    @pytest.mark.parametrize(
+        "dom_score, visual_score, kwargs, expected",
+        [
+            (96, 91, {}, True),
+            (90, 95, {}, False),
+            (96, 85, {}, False),
+            (100, None, {}, False),
+            (80, 80, {"dom_threshold": 80, "visual_threshold": 80}, True),
+            (95, 90, {}, True),
+        ],
+        ids=[
+            "both_above_threshold",
+            "dom_below_threshold",
+            "visual_below_threshold",
+            "visual_none",
+            "custom_thresholds",
+            "exact_threshold",
+        ],
+    )
+    def test_should_promote(
+        self, dom_score: int, visual_score: int | None, kwargs: dict, expected: bool
+    ) -> None:
         from dazzle.core.composition_references import should_promote
 
-        assert should_promote(dom_score=96, visual_score=91) is True
-
-    def test_dom_below_threshold(self) -> None:
-        from dazzle.core.composition_references import should_promote
-
-        assert should_promote(dom_score=90, visual_score=95) is False
-
-    def test_visual_below_threshold(self) -> None:
-        from dazzle.core.composition_references import should_promote
-
-        assert should_promote(dom_score=96, visual_score=85) is False
-
-    def test_visual_none(self) -> None:
-        from dazzle.core.composition_references import should_promote
-
-        assert should_promote(dom_score=100, visual_score=None) is False
-
-    def test_custom_thresholds(self) -> None:
-        from dazzle.core.composition_references import should_promote
-
-        assert (
-            should_promote(dom_score=80, visual_score=80, dom_threshold=80, visual_threshold=80)
-            is True
-        )
-
-    def test_exact_threshold(self) -> None:
-        from dazzle.core.composition_references import should_promote
-
-        assert should_promote(dom_score=95, visual_score=90) is True
+        assert should_promote(dom_score=dom_score, visual_score=visual_score, **kwargs) is expected
 
 
 class TestPromoteSection:

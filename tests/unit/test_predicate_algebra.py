@@ -5,6 +5,8 @@ Covers construction of all 7 predicate node types and BoolComposite
 simplification rules.
 """
 
+import pytest
+
 from dazzle.core.ir.predicates import (
     BoolComposite,
     BoolOp,
@@ -148,33 +150,51 @@ class TestSimplification:
             value=ValueRef(literal="active"),
         )
 
-    def test_and_with_tautology_returns_x(self) -> None:
+    @pytest.mark.parametrize(
+        "op,rhs_factory,expected_type,expect_x",
+        [
+            (BoolOp.AND, Tautology, None, True),
+            (BoolOp.OR, Tautology, Tautology, False),
+            (BoolOp.AND, Contradiction, Contradiction, False),
+            (BoolOp.OR, Contradiction, None, True),
+        ],
+        ids=[
+            "test_and_with_tautology_returns_x",
+            "test_or_with_tautology_returns_tautology",
+            "test_and_with_contradiction_returns_contradiction",
+            "test_or_with_contradiction_returns_x",
+        ],
+    )
+    def test_simplify_x_with_identity(
+        self,
+        op: BoolOp,
+        rhs_factory,
+        expected_type,
+        expect_x: bool,
+    ) -> None:
+        """AND/OR of a predicate with Tautology or Contradiction simplifies correctly."""
         x = self._col()
-        result = BoolComposite.make(BoolOp.AND, [x, Tautology()])
-        assert result == x
+        result = BoolComposite.make(op, [x, rhs_factory()])
+        if expect_x:
+            assert result == x
+        else:
+            assert isinstance(result, expected_type)
 
-    def test_or_with_tautology_returns_tautology(self) -> None:
-        x = self._col()
-        result = BoolComposite.make(BoolOp.OR, [x, Tautology()])
-        assert isinstance(result, Tautology)
-
-    def test_and_with_contradiction_returns_contradiction(self) -> None:
-        x = self._col()
-        result = BoolComposite.make(BoolOp.AND, [x, Contradiction()])
-        assert isinstance(result, Contradiction)
-
-    def test_or_with_contradiction_returns_x(self) -> None:
-        x = self._col()
-        result = BoolComposite.make(BoolOp.OR, [x, Contradiction()])
-        assert result == x
-
-    def test_not_tautology_returns_contradiction(self) -> None:
-        result = BoolComposite.make(BoolOp.NOT, [Tautology()])
-        assert isinstance(result, Contradiction)
-
-    def test_not_contradiction_returns_tautology(self) -> None:
-        result = BoolComposite.make(BoolOp.NOT, [Contradiction()])
-        assert isinstance(result, Tautology)
+    @pytest.mark.parametrize(
+        "operand_factory,expected_type",
+        [
+            (Tautology, Contradiction),
+            (Contradiction, Tautology),
+        ],
+        ids=[
+            "test_not_tautology_returns_contradiction",
+            "test_not_contradiction_returns_tautology",
+        ],
+    )
+    def test_not_identity(self, operand_factory, expected_type) -> None:
+        """NOT of a Tautology/Contradiction flips to the other."""
+        result = BoolComposite.make(BoolOp.NOT, [operand_factory()])
+        assert isinstance(result, expected_type)
 
     def test_double_negation_elimination(self) -> None:
         x = self._col()

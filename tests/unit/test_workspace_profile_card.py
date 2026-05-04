@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import DisplayMode, ProfileCardStatSpec
 from dazzle.core.ir.module import ModuleFragment
@@ -142,54 +144,49 @@ workspace dash "Dash":
 
 
 class TestInterpolateCardTemplate:
-    def test_simple_field(self) -> None:
+    @pytest.mark.parametrize(
+        "template, item, expected",
+        [
+            # test_simple_field
+            ("Hello, {{ name }}!", {"name": "Priya"}, "Hello, Priya!"),
+            # test_dotted_path
+            (
+                "Tutor: {{ tutor.full_name }}",
+                {"tutor": {"full_name": "Mr Khan"}},
+                "Tutor: Mr Khan",
+            ),
+            # test_multiple_fields
+            ("{{ year }} · UPN {{ upn }}", {"year": "Y10", "upn": "ABC123"}, "Y10 · UPN ABC123"),
+            # test_missing_field_renders_empty
+            ("Status: {{ missing }}", {"name": "X"}, "Status: "),
+            # test_missing_dotted_path_renders_empty
+            ("Tutor: {{ tutor.full_name }}", {"tutor": None}, "Tutor: "),
+            # test_fk_dict_resolves_via_display — single-segment FK dict falls back to __display__
+            (
+                "Tutor: {{ tutor }}",
+                {"tutor": {"id": "u-1", "__display__": "Mr Khan"}},
+                "Tutor: Mr Khan",
+            ),
+            # test_empty_template_returns_empty
+            ("", {"a": 1}, ""),
+            # test_no_placeholders_passes_through
+            ("Static text", {"a": 1}, "Static text"),
+        ],
+        ids=[
+            "test_simple_field",
+            "test_dotted_path",
+            "test_multiple_fields",
+            "test_missing_field_renders_empty",
+            "test_missing_dotted_path_renders_empty",
+            "test_fk_dict_resolves_via_display",
+            "test_empty_template_returns_empty",
+            "test_no_placeholders_passes_through",
+        ],
+    )
+    def test_interpolate(self, template: str, item: dict, expected: str) -> None:
         from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
 
-        item = {"name": "Priya"}
-        assert _interpolate_card_template("Hello, {{ name }}!", item) == "Hello, Priya!"
-
-    def test_dotted_path(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        item = {"tutor": {"full_name": "Mr Khan"}}
-        assert _interpolate_card_template("Tutor: {{ tutor.full_name }}", item) == "Tutor: Mr Khan"
-
-    def test_multiple_fields(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        item = {"year": "Y10", "upn": "ABC123"}
-        assert _interpolate_card_template("{{ year }} · UPN {{ upn }}", item) == "Y10 · UPN ABC123"
-
-    def test_missing_field_renders_empty(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        item = {"name": "X"}
-        assert _interpolate_card_template("Status: {{ missing }}", item) == "Status: "
-
-    def test_missing_dotted_path_renders_empty(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        item = {"tutor": None}
-        assert _interpolate_card_template("Tutor: {{ tutor.full_name }}", item) == "Tutor: "
-
-    def test_fk_dict_resolves_via_display(self) -> None:
-        """When a single-segment path lands on an FK dict, fall back
-        to the heatmap/box_plot resolution chain (`__display__` →
-        `name` → `title` → ...)."""
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        item = {"tutor": {"id": "u-1", "__display__": "Mr Khan"}}
-        assert _interpolate_card_template("Tutor: {{ tutor }}", item) == "Tutor: Mr Khan"
-
-    def test_empty_template_returns_empty(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        assert _interpolate_card_template("", {"a": 1}) == ""
-
-    def test_no_placeholders_passes_through(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _interpolate_card_template
-
-        assert _interpolate_card_template("Static text", {"a": 1}) == "Static text"
+        assert _interpolate_card_template(template, item) == expected
 
     def test_unsafe_expression_left_as_literal(self) -> None:
         """Expressions / filters / function calls aren't supported —

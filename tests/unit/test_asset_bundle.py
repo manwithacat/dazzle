@@ -39,33 +39,35 @@ class TestShouldBundleAssets:
         if self._snapshot_env is not None:
             os.environ["DAZZLE_ENV"] = self._snapshot_env
 
-    def test_default_mode_default_env_returns_false(self) -> None:
+    @pytest.mark.parametrize(
+        "args, kwargs, expected",
+        [
+            # No mode passed, no env set, no override → individual scripts.
+            ([], {}, False),
+            (["auto"], {"env": "production"}, True),
+            # Staging is treated as production-equivalent for the bundle decision.
+            (["auto"], {"env": "staging"}, True),
+            (["auto"], {"env": "development"}, False),
+            (["auto"], {"env": ""}, False),
+            # `dazzle serve --bundle` forces a one-off perf test over "never".
+            (["never"], {"env": "production", "cli_override": "bundle"}, True),
+            # `dazzle serve --no-bundle` for ad-hoc live-reload debugging in production.
+            (["always"], {"env": "production", "cli_override": "no-bundle"}, False),
+        ],
+        ids=[
+            "test_default_mode_default_env_returns_false",
+            "test_auto_in_production_env_returns_true",
+            "test_auto_in_staging_env_returns_true",
+            "test_auto_in_dev_env_returns_false",
+            "test_auto_with_no_env_returns_false",
+            "test_cli_bundle_override_wins_over_never",
+            "test_cli_no_bundle_override_wins_over_always",
+        ],
+    )
+    def test_should_bundle_assets(self, args: list, kwargs: dict, expected: bool) -> None:
         from dazzle_ui.runtime.asset_bundle import should_bundle_assets
 
-        # No mode passed, no env set, no override → individual scripts.
-        assert should_bundle_assets() is False
-
-    def test_auto_in_production_env_returns_true(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        assert should_bundle_assets("auto", env="production") is True
-
-    def test_auto_in_staging_env_returns_true(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        # Staging is treated as production-equivalent for the bundle
-        # decision (real users hit this; want fast loads).
-        assert should_bundle_assets("auto", env="staging") is True
-
-    def test_auto_in_dev_env_returns_false(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        assert should_bundle_assets("auto", env="development") is False
-
-    def test_auto_with_no_env_returns_false(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        assert should_bundle_assets("auto", env="") is False
+        assert should_bundle_assets(*args, **kwargs) is expected
 
     def test_always_returns_true_regardless_of_env(self) -> None:
         from dazzle_ui.runtime.asset_bundle import should_bundle_assets
@@ -80,20 +82,6 @@ class TestShouldBundleAssets:
         assert should_bundle_assets("never", env="production") is False
         assert should_bundle_assets("never", env="staging") is False
         assert should_bundle_assets("never", env="") is False
-
-    def test_cli_bundle_override_wins_over_never(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        # Project says "never bundle" — but `dazzle serve --bundle`
-        # forces a one-off perf test.
-        assert should_bundle_assets("never", env="production", cli_override="bundle") is True
-
-    def test_cli_no_bundle_override_wins_over_always(self) -> None:
-        from dazzle_ui.runtime.asset_bundle import should_bundle_assets
-
-        # Project says "always bundle" — but `dazzle serve --no-bundle`
-        # for ad-hoc live-reload debugging in production.
-        assert should_bundle_assets("always", env="production", cli_override="no-bundle") is False
 
     def test_resolver_reads_dazzle_env_when_env_arg_omitted(self) -> None:
         from dazzle_ui.runtime.asset_bundle import should_bundle_assets

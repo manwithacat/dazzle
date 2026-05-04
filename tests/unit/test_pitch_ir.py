@@ -153,37 +153,34 @@ class TestExtraSlide:
 
 
 class TestSpeakerNotes:
-    def test_company_speaker_notes(self):
-        c = CompanySpec(name="Test", speaker_notes="Welcome everyone")
-        assert c.speaker_notes == "Welcome everyone"
-
-    def test_problem_speaker_notes(self):
-        p = ProblemSpec(headline="Big problem", speaker_notes="Key talking point")
-        assert p.speaker_notes == "Key talking point"
-
-    def test_solution_speaker_notes(self):
-        s = SolutionSpec(headline="Fix", speaker_notes="Demo this")
-        assert s.speaker_notes == "Demo this"
-
-    def test_market_speaker_notes(self):
-        m = MarketSpec(speaker_notes="Cite sources")
-        assert m.speaker_notes == "Cite sources"
-
-    def test_business_model_speaker_notes(self):
-        bm = BusinessModelSpec(speaker_notes="Focus on Pro tier")
-        assert bm.speaker_notes == "Focus on Pro tier"
-
-    def test_financials_speaker_notes(self):
-        f = FinancialsSpec(speaker_notes="Conservative estimates")
-        assert f.speaker_notes == "Conservative estimates"
-
-    def test_team_speaker_notes(self):
-        t = TeamSpec(speaker_notes="Highlight experience")
-        assert t.speaker_notes == "Highlight experience"
-
-    def test_milestones_speaker_notes(self):
-        m = MilestonesSpec(speaker_notes="On track")
-        assert m.speaker_notes == "On track"
+    @pytest.mark.parametrize(
+        "obj, expected_notes",
+        [
+            (CompanySpec(name="Test", speaker_notes="Welcome everyone"), "Welcome everyone"),
+            (
+                ProblemSpec(headline="Big problem", speaker_notes="Key talking point"),
+                "Key talking point",
+            ),
+            (SolutionSpec(headline="Fix", speaker_notes="Demo this"), "Demo this"),
+            (MarketSpec(speaker_notes="Cite sources"), "Cite sources"),
+            (BusinessModelSpec(speaker_notes="Focus on Pro tier"), "Focus on Pro tier"),
+            (FinancialsSpec(speaker_notes="Conservative estimates"), "Conservative estimates"),
+            (TeamSpec(speaker_notes="Highlight experience"), "Highlight experience"),
+            (MilestonesSpec(speaker_notes="On track"), "On track"),
+        ],
+        ids=[
+            "test_company_speaker_notes",
+            "test_problem_speaker_notes",
+            "test_solution_speaker_notes",
+            "test_market_speaker_notes",
+            "test_business_model_speaker_notes",
+            "test_financials_speaker_notes",
+            "test_team_speaker_notes",
+            "test_milestones_speaker_notes",
+        ],
+    )
+    def test_speaker_notes(self, obj: object, expected_notes: str) -> None:
+        assert obj.speaker_notes == expected_notes  # type: ignore[union-attr]
 
 
 class TestPitchSpecNewFields:

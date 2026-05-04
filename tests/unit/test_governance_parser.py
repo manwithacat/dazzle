@@ -21,6 +21,8 @@ Notes on parser behaviour verified by these tests:
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 
 
@@ -443,117 +445,69 @@ class TestInterfacesParser:
     need a specific non-REST format cannot rely on the `format:` directive.
     """
 
-    def test_single_api_name(self) -> None:
-        """A minimal api block captures the API name."""
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    auth: oauth2
-"""
-        )
-        fragment = _parse(dsl)
+    @pytest.mark.parametrize(
+        ("dsl_body", "attr", "expected"),
+        [
+            (
+                "interfaces:\n  api orders_api:\n    auth: oauth2\n",
+                "name",
+                "orders_api",
+            ),
+            (
+                "interfaces:\n  api orders_api:\n    format: rest\n",
+                "format",
+                "rest",  # resolved below to InterfaceFormat.REST
+            ),
+            (
+                "interfaces:\n  api orders_api:\n    auth: oauth2\n",
+                "auth",
+                "oauth2",  # resolved below to InterfaceAuthMethod.OAUTH2
+            ),
+            (
+                "interfaces:\n  api internal_api:\n    auth: jwt\n",
+                "auth",
+                "jwt",  # resolved below to InterfaceAuthMethod.JWT
+            ),
+            (
+                'interfaces:\n  api orders_api:\n    base_path: "/api/v1/orders"\n',
+                "base_path",
+                "/api/v1/orders",
+            ),
+            (
+                "interfaces:\n  api orders_api:\n    rate_limit: high\n",
+                "rate_limit",
+                "high",
+            ),
+            (
+                "interfaces:\n  api orders_api:\n    version: v2\n",
+                "version",
+                "v2",
+            ),
+        ],
+        ids=[
+            "test_single_api_name",
+            "test_api_format_defaults_to_rest",
+            "test_api_auth_oauth2",
+            "test_api_auth_jwt",
+            "test_api_base_path_quoted",
+            "test_api_rate_limit_identifier",
+            "test_api_version",
+        ],
+    )
+    def test_single_api_field(self, dsl_body: str, attr: str, expected: str) -> None:
+        """A minimal api block with one field captures the correct value."""
+        from dazzle.core.ir.governance import InterfaceAuthMethod, InterfaceFormat
 
+        _enum_map = {
+            "rest": InterfaceFormat.REST,
+            "oauth2": InterfaceAuthMethod.OAUTH2,
+            "jwt": InterfaceAuthMethod.JWT,
+        }
+        resolved = _enum_map.get(expected, expected)
+
+        fragment = _parse(_HEADER + dsl_body)
         assert fragment.interfaces is not None
-        assert len(fragment.interfaces.apis) == 1
-        assert fragment.interfaces.apis[0].name == "orders_api"
-
-    def test_api_format_defaults_to_rest(self) -> None:
-        """Interface format defaults to InterfaceFormat.REST (format: key is a keyword token and is silently skipped)."""
-        from dazzle.core.ir.governance import InterfaceFormat
-
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    format: rest
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].format == InterfaceFormat.REST
-
-    def test_api_auth_oauth2(self) -> None:
-        """auth: oauth2 maps to InterfaceAuthMethod.OAUTH2."""
-        from dazzle.core.ir.governance import InterfaceAuthMethod
-
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    auth: oauth2
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].auth == InterfaceAuthMethod.OAUTH2
-
-    def test_api_auth_jwt(self) -> None:
-        """auth: jwt maps to InterfaceAuthMethod.JWT."""
-        from dazzle.core.ir.governance import InterfaceAuthMethod
-
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api internal_api:
-    auth: jwt
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].auth == InterfaceAuthMethod.JWT
-
-    def test_api_base_path_quoted(self) -> None:
-        """base_path accepts a quoted string value containing slashes."""
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    base_path: "/api/v1/orders"
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].base_path == "/api/v1/orders"
-
-    def test_api_rate_limit_identifier(self) -> None:
-        """rate_limit accepts an identifier-only value (numbers cause a parse error)."""
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    rate_limit: high
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].rate_limit == "high"
-
-    def test_api_version(self) -> None:
-        """version value is captured correctly."""
-        dsl = (
-            _HEADER
-            + """\
-interfaces:
-  api orders_api:
-    version: v2
-"""
-        )
-        fragment = _parse(dsl)
-
-        assert fragment.interfaces is not None
-        assert fragment.interfaces.apis[0].version == "v2"
+        assert getattr(fragment.interfaces.apis[0], attr) == resolved
 
     def test_api_all_identifier_fields(self) -> None:
         """An api block with auth, rate_limit, version, and base_path (quoted) parses fully."""

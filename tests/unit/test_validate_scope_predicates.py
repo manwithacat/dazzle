@@ -5,6 +5,8 @@ Tests that validate_scope_predicates catches invalid field references,
 broken FK paths, and non-existent entities in compiled scope predicates.
 """
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir.fk_graph import FKGraph
 from dazzle.core.ir.predicates import (
@@ -74,160 +76,149 @@ def _build_appspec(
 # =============================================================================
 
 
+def _appspec_tautology() -> ir.AppSpec:
+    entity = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field()],
+        access=ir.AccessSpec(scopes=[_make_scope_rule(Tautology())]),
+    )
+    return _build_appspec([entity])
+
+
+def _appspec_column_check() -> ir.AppSpec:
+    entity = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field(), _str_field("owner_id")],
+        access=ir.AccessSpec(
+            scopes=[
+                _make_scope_rule(
+                    ColumnCheck(field="owner_id", op=CompOp.EQ, value=ValueRef(current_user=True))
+                )
+            ]
+        ),
+    )
+    return _build_appspec([entity])
+
+
+def _appspec_user_attr_check() -> ir.AppSpec:
+    entity = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field(), _str_field("org_id")],
+        access=ir.AccessSpec(
+            scopes=[
+                _make_scope_rule(UserAttrCheck(field="org_id", op=CompOp.EQ, user_attr="org_id"))
+            ]
+        ),
+    )
+    return _build_appspec([entity])
+
+
+def _appspec_path_check_valid() -> ir.AppSpec:
+    department = ir.EntitySpec(name="Department", fields=[_id_field(), _str_field("org_id")])
+    task = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field(), _ref_field("department", "Department")],
+        access=ir.AccessSpec(
+            scopes=[
+                _make_scope_rule(
+                    PathCheck(
+                        path=["department", "org_id"],
+                        op=CompOp.EQ,
+                        value=ValueRef(user_attr="org_id"),
+                    )
+                )
+            ]
+        ),
+    )
+    return _build_appspec([department, task])
+
+
+def _appspec_exists_check_valid() -> ir.AppSpec:
+    membership = ir.EntitySpec(
+        name="TeamMembership",
+        fields=[_id_field(), _ref_field("user", "User"), _ref_field("team", "Team")],
+    )
+    user = ir.EntitySpec(name="User", fields=[_id_field()])
+    team = ir.EntitySpec(name="Team", fields=[_id_field()])
+    task = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field(), _ref_field("team", "Team")],
+        access=ir.AccessSpec(
+            scopes=[
+                _make_scope_rule(
+                    ExistsCheck(
+                        target_entity="TeamMembership",
+                        bindings=[
+                            ExistsBinding(junction_field="user", target="current_user"),
+                            ExistsBinding(junction_field="team", target="id"),
+                        ],
+                    )
+                )
+            ]
+        ),
+    )
+    return _build_appspec([membership, user, team, task])
+
+
+def _appspec_bool_composite_valid() -> ir.AppSpec:
+    entity = ir.EntitySpec(
+        name="Task",
+        fields=[_id_field(), _str_field("owner_id"), _str_field("org_id")],
+        access=ir.AccessSpec(
+            scopes=[
+                _make_scope_rule(
+                    BoolComposite(
+                        op=BoolOp.OR,
+                        children=[
+                            ColumnCheck(
+                                field="owner_id", op=CompOp.EQ, value=ValueRef(current_user=True)
+                            ),
+                            UserAttrCheck(field="org_id", op=CompOp.EQ, user_attr="org_id"),
+                        ],
+                    )
+                )
+            ]
+        ),
+    )
+    return _build_appspec([entity])
+
+
+def _appspec_no_scopes() -> ir.AppSpec:
+    return _build_appspec([ir.EntitySpec(name="Task", fields=[_id_field()])])
+
+
+def _appspec_no_fk_graph() -> ir.AppSpec:
+    entity = ir.EntitySpec(name="Task", fields=[_id_field()])
+    return ir.AppSpec(name="Test", domain=ir.DomainSpec(entities=[entity]), fk_graph=None)
+
+
 class TestValidPredicates:
     """Ensure valid scope predicates produce no errors."""
 
-    def test_tautology_produces_no_errors(self) -> None:
-        entity = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field()],
-            access=ir.AccessSpec(
-                scopes=[_make_scope_rule(Tautology())],
-            ),
-        )
-        appspec = _build_appspec([entity])
-        errors, warnings = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_column_check_valid_field(self) -> None:
-        entity = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field(), _str_field("owner_id")],
-            access=ir.AccessSpec(
-                scopes=[
-                    _make_scope_rule(
-                        ColumnCheck(
-                            field="owner_id",
-                            op=CompOp.EQ,
-                            value=ValueRef(current_user=True),
-                        )
-                    )
-                ],
-            ),
-        )
-        appspec = _build_appspec([entity])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_user_attr_check_valid_field(self) -> None:
-        entity = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field(), _str_field("org_id")],
-            access=ir.AccessSpec(
-                scopes=[
-                    _make_scope_rule(
-                        UserAttrCheck(
-                            field="org_id",
-                            op=CompOp.EQ,
-                            user_attr="org_id",
-                        )
-                    )
-                ],
-            ),
-        )
-        appspec = _build_appspec([entity])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_path_check_valid_fk_path(self) -> None:
-        department = ir.EntitySpec(
-            name="Department",
-            fields=[_id_field(), _str_field("org_id")],
-        )
-        task = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field(), _ref_field("department", "Department")],
-            access=ir.AccessSpec(
-                scopes=[
-                    _make_scope_rule(
-                        PathCheck(
-                            path=["department", "org_id"],
-                            op=CompOp.EQ,
-                            value=ValueRef(user_attr="org_id"),
-                        )
-                    )
-                ],
-            ),
-        )
-        appspec = _build_appspec([department, task])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_exists_check_valid_entity(self) -> None:
-        membership = ir.EntitySpec(
-            name="TeamMembership",
-            fields=[
-                _id_field(),
-                _ref_field("user", "User"),
-                _ref_field("team", "Team"),
-            ],
-        )
-        user = ir.EntitySpec(name="User", fields=[_id_field()])
-        team = ir.EntitySpec(name="Team", fields=[_id_field()])
-        task = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field(), _ref_field("team", "Team")],
-            access=ir.AccessSpec(
-                scopes=[
-                    _make_scope_rule(
-                        ExistsCheck(
-                            target_entity="TeamMembership",
-                            bindings=[
-                                ExistsBinding(junction_field="user", target="current_user"),
-                                ExistsBinding(junction_field="team", target="id"),
-                            ],
-                        )
-                    )
-                ],
-            ),
-        )
-        appspec = _build_appspec([membership, user, team, task])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_bool_composite_valid(self) -> None:
-        entity = ir.EntitySpec(
-            name="Task",
-            fields=[_id_field(), _str_field("owner_id"), _str_field("org_id")],
-            access=ir.AccessSpec(
-                scopes=[
-                    _make_scope_rule(
-                        BoolComposite(
-                            op=BoolOp.OR,
-                            children=[
-                                ColumnCheck(
-                                    field="owner_id",
-                                    op=CompOp.EQ,
-                                    value=ValueRef(current_user=True),
-                                ),
-                                UserAttrCheck(
-                                    field="org_id",
-                                    op=CompOp.EQ,
-                                    user_attr="org_id",
-                                ),
-                            ],
-                        )
-                    )
-                ],
-            ),
-        )
-        appspec = _build_appspec([entity])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_no_scopes_produces_no_errors(self) -> None:
-        entity = ir.EntitySpec(name="Task", fields=[_id_field()])
-        appspec = _build_appspec([entity])
-        errors, _ = validate_scope_predicates(appspec)
-        assert errors == []
-
-    def test_no_fk_graph_produces_no_errors(self) -> None:
-        entity = ir.EntitySpec(name="Task", fields=[_id_field()])
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-            fk_graph=None,
-        )
+    @pytest.mark.parametrize(
+        "appspec",
+        [
+            _appspec_tautology(),
+            _appspec_column_check(),
+            _appspec_user_attr_check(),
+            _appspec_path_check_valid(),
+            _appspec_exists_check_valid(),
+            _appspec_bool_composite_valid(),
+            _appspec_no_scopes(),
+            _appspec_no_fk_graph(),
+        ],
+        ids=[
+            "test_tautology_produces_no_errors",
+            "test_column_check_valid_field",
+            "test_user_attr_check_valid_field",
+            "test_path_check_valid_fk_path",
+            "test_exists_check_valid_entity",
+            "test_bool_composite_valid",
+            "test_no_scopes_produces_no_errors",
+            "test_no_fk_graph_produces_no_errors",
+        ],
+    )
+    def test_valid_predicate_produces_no_errors(self, appspec: ir.AppSpec) -> None:
         errors, _ = validate_scope_predicates(appspec)
         assert errors == []
 

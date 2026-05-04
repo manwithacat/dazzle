@@ -8,6 +8,8 @@ Covers:
 
 from pathlib import Path
 
+import pytest
+
 
 class TestDiscoverRouteOverrides:
     """discover_route_overrides() parses declaration headers."""
@@ -205,26 +207,32 @@ class TestLoadExtensionRouters:
 
         assert load_extension_routers(tmp_path, ["nonexistent_pkg_xyz.mod:router"]) == []
 
-    def test_skips_missing_attribute(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("pkg_name", "routes_content"),
+        [
+            (
+                "ext_pkg_missing_attr",
+                "from fastapi import APIRouter\nother = APIRouter()\n",
+            ),
+            (
+                "ext_pkg_wrong_type",
+                "router = 'not an APIRouter'\n",
+            ),
+        ],
+        ids=[
+            "test_skips_missing_attribute",
+            "test_skips_non_router_attribute",
+        ],
+    )
+    def test_skips_bad_attribute(self, tmp_path: Path, pkg_name: str, routes_content: str) -> None:
         from dazzle_back.runtime.route_overrides import load_extension_routers
 
-        pkg = tmp_path / "ext_pkg_missing_attr"
+        pkg = tmp_path / pkg_name
         pkg.mkdir()
         (pkg / "__init__.py").write_text("")
-        (pkg / "routes.py").write_text("from fastapi import APIRouter\nother = APIRouter()\n")
+        (pkg / "routes.py").write_text(routes_content)
 
-        routers = load_extension_routers(tmp_path, ["ext_pkg_missing_attr.routes:router"])
-        assert routers == []
-
-    def test_skips_non_router_attribute(self, tmp_path: Path) -> None:
-        from dazzle_back.runtime.route_overrides import load_extension_routers
-
-        pkg = tmp_path / "ext_pkg_wrong_type"
-        pkg.mkdir()
-        (pkg / "__init__.py").write_text("")
-        (pkg / "routes.py").write_text("router = 'not an APIRouter'\n")
-
-        routers = load_extension_routers(tmp_path, ["ext_pkg_wrong_type.routes:router"])
+        routers = load_extension_routers(tmp_path, [f"{pkg_name}.routes:router"])
         assert routers == []
 
     def test_loads_multiple_routers(self, tmp_path: Path) -> None:

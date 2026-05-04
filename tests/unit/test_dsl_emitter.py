@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dazzle.agent.compiler import Proposal
 from dazzle.agent.emitter import (
     DslEmitter,
@@ -120,29 +122,21 @@ class TestPrimaryEntity:
 
 
 class TestInferMissingAction:
-    def test_delete(self) -> None:
-        p = _proposal(title="No delete for Task")
-        assert _infer_missing_action(p) == "delete"
-
-    def test_create(self) -> None:
-        p = _proposal(title="Cannot create new Task", narrative="No create form")
-        assert _infer_missing_action(p) == "create"
-
-    def test_edit(self) -> None:
-        p = _proposal(title="Cannot edit Task", narrative="No edit form")
-        assert _infer_missing_action(p) == "edit"
-
-    def test_list(self) -> None:
-        p = _proposal(title="No list view to browse tasks", narrative="Cannot browse")
-        assert _infer_missing_action(p) == "list"
-
-    def test_view(self) -> None:
-        p = _proposal(title="No detail view for Task", narrative="Cannot see details")
-        assert _infer_missing_action(p) == "view"
-
-    def test_generic(self) -> None:
-        p = _proposal(title="Task CRUD missing", narrative="")
-        assert _infer_missing_action(p) == "CRUD"
+    @pytest.mark.parametrize(
+        "title,narrative,expected",
+        [
+            ("No delete for Task", "Missing delete operation", "delete"),
+            ("Cannot create new Task", "No create form", "create"),
+            ("Cannot edit Task", "No edit form", "edit"),
+            ("No list view to browse tasks", "Cannot browse", "list"),
+            ("No detail view for Task", "Cannot see details", "view"),
+            ("Task CRUD missing", "", "CRUD"),
+        ],
+        ids=["delete", "create", "edit", "list", "view", "generic"],
+    )
+    def test_infer_missing_action(self, title: str, narrative: str, expected: str) -> None:
+        p = _proposal(title=title, narrative=narrative)
+        assert _infer_missing_action(p) == expected
 
 
 class TestUniqueName:

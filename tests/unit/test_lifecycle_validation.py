@@ -110,111 +110,115 @@ class TestValidateLifecycles:
         assert errors == []
         assert warnings == []
 
-    def test_status_field_must_exist_on_entity(self) -> None:
-        entity = _make_entity(
-            fields=[_id_field(), _str_field("title")],
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[LifecycleStateSpec(name="open", order=0)],
+    @pytest.mark.parametrize(
+        ("entity_kwargs", "error_predicate"),
+        [
+            (
+                {
+                    "fields": [_id_field(), _str_field("title")],
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[LifecycleStateSpec(name="open", order=0)],
+                    ),
+                },
+                lambda errors: any("status_field" in e and "status" in e for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("status_field" in e and "status" in e for e in errors)
-
-    def test_status_field_must_be_enum(self) -> None:
-        entity = _make_entity(
-            fields=[_id_field(), _str_field("status")],
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[LifecycleStateSpec(name="open", order=0)],
+            (
+                {
+                    "fields": [_id_field(), _str_field("status")],
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[LifecycleStateSpec(name="open", order=0)],
+                    ),
+                },
+                lambda errors: any("enum" in e.lower() for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("enum" in e.lower() for e in errors)
-
-    def test_state_names_must_match_enum_values(self) -> None:
-        entity = _make_entity(
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[
-                    LifecycleStateSpec(name="open", order=0),
-                    LifecycleStateSpec(name="bogus", order=1),
-                ],
+            (
+                {
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[
+                            LifecycleStateSpec(name="open", order=0),
+                            LifecycleStateSpec(name="bogus", order=1),
+                        ],
+                    ),
+                },
+                lambda errors: any("bogus" in e for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("bogus" in e for e in errors)
-
-    def test_duplicate_order_values_are_rejected(self) -> None:
-        entity = _make_entity(
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[
-                    LifecycleStateSpec(name="open", order=0),
-                    LifecycleStateSpec(name="in_progress", order=0),
-                ],
+            (
+                {
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[
+                            LifecycleStateSpec(name="open", order=0),
+                            LifecycleStateSpec(name="in_progress", order=0),
+                        ],
+                    ),
+                },
+                lambda errors: any("order" in e.lower() for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("order" in e.lower() for e in errors)
-
-    def test_transition_from_state_must_be_declared(self) -> None:
-        entity = _make_entity(
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[
-                    LifecycleStateSpec(name="open", order=0),
-                    LifecycleStateSpec(name="closed", order=1),
-                ],
-                transitions=[
-                    LifecycleTransitionSpec(
-                        from_state="nowhere",
-                        to_state="closed",
-                    )
-                ],
+            (
+                {
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[
+                            LifecycleStateSpec(name="open", order=0),
+                            LifecycleStateSpec(name="closed", order=1),
+                        ],
+                        transitions=[
+                            LifecycleTransitionSpec(from_state="nowhere", to_state="closed")
+                        ],
+                    ),
+                },
+                lambda errors: any("nowhere" in e for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("nowhere" in e for e in errors)
-
-    def test_transition_to_state_must_be_declared(self) -> None:
-        entity = _make_entity(
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[
-                    LifecycleStateSpec(name="open", order=0),
-                    LifecycleStateSpec(name="closed", order=1),
-                ],
-                transitions=[
-                    LifecycleTransitionSpec(
-                        from_state="open",
-                        to_state="nowhere",
-                    )
-                ],
+            (
+                {
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[
+                            LifecycleStateSpec(name="open", order=0),
+                            LifecycleStateSpec(name="closed", order=1),
+                        ],
+                        transitions=[
+                            LifecycleTransitionSpec(from_state="open", to_state="nowhere")
+                        ],
+                    ),
+                },
+                lambda errors: any("nowhere" in e for e in errors),
             ),
-        )
-        errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("nowhere" in e for e in errors)
-
-    def test_empty_evidence_string_is_rejected(self) -> None:
-        entity = _make_entity(
-            lifecycle=LifecycleSpec(
-                status_field="status",
-                states=[
-                    LifecycleStateSpec(name="open", order=0),
-                    LifecycleStateSpec(name="closed", order=1),
-                ],
-                transitions=[
-                    LifecycleTransitionSpec(
-                        from_state="open",
-                        to_state="closed",
-                        evidence="   ",
-                    )
-                ],
+            (
+                {
+                    "lifecycle": LifecycleSpec(
+                        status_field="status",
+                        states=[
+                            LifecycleStateSpec(name="open", order=0),
+                            LifecycleStateSpec(name="closed", order=1),
+                        ],
+                        transitions=[
+                            LifecycleTransitionSpec(
+                                from_state="open", to_state="closed", evidence="   "
+                            )
+                        ],
+                    ),
+                },
+                lambda errors: any("evidence" in e.lower() for e in errors),
             ),
-        )
+        ],
+        ids=[
+            "test_status_field_must_exist_on_entity",
+            "test_status_field_must_be_enum",
+            "test_state_names_must_match_enum_values",
+            "test_duplicate_order_values_are_rejected",
+            "test_transition_from_state_must_be_declared",
+            "test_transition_to_state_must_be_declared",
+            "test_empty_evidence_string_is_rejected",
+        ],
+    )
+    def test_invalid_lifecycle_produces_error(self, entity_kwargs, error_predicate) -> None:
+        entity = _make_entity(**entity_kwargs)
         errors, _ = validate_lifecycles(_make_appspec([entity]))
-        assert any("evidence" in e.lower() for e in errors)
+        assert error_predicate(errors)
 
     def test_none_evidence_is_allowed(self) -> None:
         entity = _make_entity(

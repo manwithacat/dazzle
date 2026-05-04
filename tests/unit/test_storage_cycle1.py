@@ -129,25 +129,36 @@ class TestStorageConfigParsing:
 
 
 class TestEnvVarInterpolation:
-    def test_extract_refs_in_order(self) -> None:
-        assert extract_env_var_refs("${A}/${B}/static/${C}") == ["A", "B", "C"]
-
-    def test_extract_dedupes(self) -> None:
-        assert extract_env_var_refs("${A}/${A}/${B}") == ["A", "B"]
-
-    def test_extract_none_safe(self) -> None:
-        assert extract_env_var_refs(None) == []
+    @pytest.mark.parametrize(
+        ("input_str", "expected"),
+        [
+            ("${A}/${B}/static/${C}", ["A", "B", "C"]),  # extract_in_order
+            ("${A}/${A}/${B}", ["A", "B"]),  # dedupes
+            (None, []),  # none_safe
+        ],
+        ids=["extract_refs_in_order", "extract_dedupes", "extract_none_safe"],
+    )
+    def test_extract(self, input_str, expected) -> None:
+        assert extract_env_var_refs(input_str) == expected
 
     def test_interpolate_substitutes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("S3_BUCKET", "my-bucket")
         monkeypatch.setenv("AWS_REGION", "eu-west-2")
         assert interpolate_env_vars("s3://${S3_BUCKET}/${AWS_REGION}") == "s3://my-bucket/eu-west-2"
 
-    def test_interpolate_passes_through_literals(self) -> None:
-        assert interpolate_env_vars("plain-string") == "plain-string"
-
-    def test_interpolate_none(self) -> None:
-        assert interpolate_env_vars(None) is None
+    @pytest.mark.parametrize(
+        ("input_val", "expected"),
+        [
+            ("plain-string", "plain-string"),
+            (None, None),
+            # lowercase ${var} intentionally not recognised — env vars are
+            # uppercase by convention; passes through unchanged
+            ("${var_name}", "${var_name}"),
+        ],
+        ids=["passes_through_literals", "none_returns_none", "lowercase_not_recognised"],
+    )
+    def test_interpolate_no_substitution(self, input_val, expected) -> None:
+        assert interpolate_env_vars(input_val) == expected
 
     def test_missing_var_raises_loud(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DEFINITELY_NOT_SET_XYZ", raising=False)
@@ -155,14 +166,6 @@ class TestEnvVarInterpolation:
             interpolate_env_vars("${DEFINITELY_NOT_SET_XYZ}", context="[storage.x] bucket")
         assert excinfo.value.var_name == "DEFINITELY_NOT_SET_XYZ"
         assert "[storage.x] bucket" in str(excinfo.value)
-
-    def test_lowercase_var_not_recognised(self) -> None:
-        """`${var}` (lowercase) is intentionally rejected — env vars
-        are uppercase by convention; lowercase is almost certainly a
-        typo for a literal value."""
-        # The pattern only matches uppercase, so this passes through
-        # unchanged rather than silently injecting empty string.
-        assert interpolate_env_vars("${var_name}") == "${var_name}"
 
 
 # ---------------------------------------------------------------------------

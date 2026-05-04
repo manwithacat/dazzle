@@ -6,6 +6,8 @@ against in-memory AppSpec objects with various access configurations.
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core.ir.conditions import (
     Comparison,
     ComparisonOperator,
@@ -185,35 +187,65 @@ class TestPersonasOverlap:
 
 
 class TestEvaluateRules:
-    def test_no_access_returns_default_deny(self) -> None:
-        entity = _entity("Task")
-        assert _evaluate_rules(entity, "admin", PermissionKind.READ) == "default-deny"
-
-    def test_permit_returns_allow(self) -> None:
-        entity = _entity("Task", permissions=[_permit(PermissionKind.READ)])
-        assert _evaluate_rules(entity, "admin", PermissionKind.READ) == "allow"
-
-    def test_forbid_returns_deny(self) -> None:
-        entity = _entity("Task", permissions=[_forbid(PermissionKind.DELETE)])
-        assert _evaluate_rules(entity, "admin", PermissionKind.DELETE) == "deny"
-
-    def test_forbid_overrides_permit(self) -> None:
-        entity = _entity(
-            "Task",
-            permissions=[
-                _permit(PermissionKind.DELETE),
-                _forbid(PermissionKind.DELETE, personas=["intern"]),
-            ],
-        )
-        assert _evaluate_rules(entity, "intern", PermissionKind.DELETE) == "deny"
-
-    def test_no_matching_rule_returns_default_deny(self) -> None:
-        entity = _entity("Task", permissions=[_permit(PermissionKind.READ, personas=["admin"])])
-        assert _evaluate_rules(entity, "viewer", PermissionKind.READ) == "default-deny"
-
-    def test_different_operation_not_matched(self) -> None:
-        entity = _entity("Task", permissions=[_permit(PermissionKind.CREATE)])
-        assert _evaluate_rules(entity, "admin", PermissionKind.DELETE) == "default-deny"
+    @pytest.mark.parametrize(
+        "entity, persona, op, expected",
+        [
+            (
+                _entity("Task"),
+                "admin",
+                PermissionKind.READ,
+                "default-deny",
+            ),  # test_no_access_returns_default_deny
+            (
+                _entity("Task", permissions=[_permit(PermissionKind.READ)]),
+                "admin",
+                PermissionKind.READ,
+                "allow",
+            ),  # test_permit_returns_allow
+            (
+                _entity("Task", permissions=[_forbid(PermissionKind.DELETE)]),
+                "admin",
+                PermissionKind.DELETE,
+                "deny",
+            ),  # test_forbid_returns_deny
+            (
+                _entity(
+                    "Task",
+                    permissions=[
+                        _permit(PermissionKind.DELETE),
+                        _forbid(PermissionKind.DELETE, personas=["intern"]),
+                    ],
+                ),
+                "intern",
+                PermissionKind.DELETE,
+                "deny",
+            ),  # test_forbid_overrides_permit
+            (
+                _entity("Task", permissions=[_permit(PermissionKind.READ, personas=["admin"])]),
+                "viewer",
+                PermissionKind.READ,
+                "default-deny",
+            ),  # test_no_matching_rule_returns_default_deny
+            (
+                _entity("Task", permissions=[_permit(PermissionKind.CREATE)]),
+                "admin",
+                PermissionKind.DELETE,
+                "default-deny",
+            ),  # test_different_operation_not_matched
+        ],
+        ids=[
+            "test_no_access_returns_default_deny",
+            "test_permit_returns_allow",
+            "test_forbid_returns_deny",
+            "test_forbid_overrides_permit",
+            "test_no_matching_rule_returns_default_deny",
+            "test_different_operation_not_matched",
+        ],
+    )
+    def test_evaluate_rules(
+        self, entity: object, persona: str, op: PermissionKind, expected: str
+    ) -> None:
+        assert _evaluate_rules(entity, persona, op) == expected
 
 
 # =============================================================================
@@ -458,37 +490,48 @@ class TestSimulate:
 
 
 class TestEvaluateCondition:
-    def test_none_condition_returns_true(self) -> None:
-        assert _evaluate_condition(None, "admin") is True
-
-    def test_role_check_matches(self) -> None:
-        cond = _role_condition("admin")
-        assert _evaluate_condition(cond, "admin") is True
-
-    def test_role_check_no_match(self) -> None:
-        cond = _role_condition("admin")
-        assert _evaluate_condition(cond, "viewer") is False
-
-    def test_or_one_matches(self) -> None:
-        cond = _or_condition(_role_condition("admin"), _role_condition("manager"))
-        assert _evaluate_condition(cond, "manager") is True
-
-    def test_or_neither_matches(self) -> None:
-        cond = _or_condition(_role_condition("admin"), _role_condition("manager"))
-        assert _evaluate_condition(cond, "viewer") is False
-
-    def test_and_both_match(self) -> None:
-        # Same persona satisfies both — only possible if both role names equal persona
-        cond = _and_condition(_role_condition("admin"), _role_condition("admin"))
-        assert _evaluate_condition(cond, "admin") is True
-
-    def test_and_one_fails(self) -> None:
-        cond = _and_condition(_role_condition("admin"), _role_condition("manager"))
-        assert _evaluate_condition(cond, "admin") is False
-
-    def test_comparison_returns_none(self) -> None:
-        cond = _field_comparison_condition()
-        assert _evaluate_condition(cond, "admin") is None
+    @pytest.mark.parametrize(
+        "cond, persona, expected",
+        [
+            (None, "admin", True),  # test_none_condition_returns_true
+            (_role_condition("admin"), "admin", True),  # test_role_check_matches
+            (_role_condition("admin"), "viewer", False),  # test_role_check_no_match
+            (
+                _or_condition(_role_condition("admin"), _role_condition("manager")),
+                "manager",
+                True,
+            ),  # test_or_one_matches
+            (
+                _or_condition(_role_condition("admin"), _role_condition("manager")),
+                "viewer",
+                False,
+            ),  # test_or_neither_matches
+            (
+                # Same persona satisfies both — only possible if both role names equal persona
+                _and_condition(_role_condition("admin"), _role_condition("admin")),
+                "admin",
+                True,
+            ),  # test_and_both_match
+            (
+                _and_condition(_role_condition("admin"), _role_condition("manager")),
+                "admin",
+                False,
+            ),  # test_and_one_fails
+            (_field_comparison_condition(), "admin", None),  # test_comparison_returns_none
+        ],
+        ids=[
+            "test_none_condition_returns_true",
+            "test_role_check_matches",
+            "test_role_check_no_match",
+            "test_or_one_matches",
+            "test_or_neither_matches",
+            "test_and_both_match",
+            "test_and_one_fails",
+            "test_comparison_returns_none",
+        ],
+    )
+    def test_evaluate_condition(self, cond: object, persona: str, expected: bool | None) -> None:
+        assert _evaluate_condition(cond, persona) is expected
 
     def test_mixed_role_and_comparison(self) -> None:
         # role(admin) AND owner_id = current_user → indeterminate when role matches

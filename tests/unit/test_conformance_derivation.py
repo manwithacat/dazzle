@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 
 class TestConformanceModels:
     def test_scope_outcome_values(self) -> None:
@@ -150,99 +152,95 @@ class TestDerivationEngine:
         assert unmatched.expected_status == 200
         assert unmatched.scope_type == ScopeOutcome.UNPROTECTED
 
-    def test_permit_deny(self) -> None:
-        """viewer has list permit but not create → create returns 403 ACCESS_DENIED."""
+    @pytest.mark.parametrize(
+        "permissions, scopes, lookup_key, expected_status, expected_scope_type, expected_rows",
+        [
+            # viewer has list permit but not create → create returns 403 ACCESS_DENIED
+            (
+                [_permit("list", ["viewer"])],
+                [],
+                ("viewer", "create", None),
+                403,
+                "ACCESS_DENIED",
+                None,
+            ),
+            # admin has list permit + scope all → scope_type=ALL, expected_rows=-1
+            (
+                [_permit("list", ["admin"])],
+                [_scope("list", ["admin"], condition=None)],
+                ("admin", "list", None),
+                200,
+                "ALL",
+                -1,
+            ),
+            # viewer has list permit + scope with condition → FILTERED, expected_rows=-2
+            (
+                [_permit("list", ["viewer"])],
+                [_scope("list", ["viewer"], condition="owner = current_user")],
+                ("viewer", "list", None),
+                200,
+                "FILTERED",
+                -2,
+            ),
+            # viewer has permit but no scope rule → SCOPE_EXCLUDED, expected_rows=0
+            (
+                [_permit("list", ["viewer"])],
+                [],
+                ("viewer", "list", None),
+                200,
+                "SCOPE_EXCLUDED",
+                0,
+            ),
+            # forbid + permit for same persona/op → 403 FORBIDDEN (forbid wins)
+            (
+                [_permit("list", ["viewer"]), _forbid("list", ["viewer"])],
+                [],
+                ("viewer", "list", None),
+                403,
+                "FORBIDDEN",
+                None,
+            ),
+            # unmatched_role always gets 403 on a protected entity
+            (
+                [_permit("list", ["admin"])],
+                [],
+                ("unmatched_role", "list", None),
+                403,
+                "ACCESS_DENIED",
+                None,
+            ),
+        ],
+        ids=[
+            "permit_deny",
+            "scope_all",
+            "scope_filtered",
+            "scope_excluded_default_deny",
+            "forbid_overrides_permit",
+            "unmatched_role_denied",
+        ],
+    )
+    def test_single_case_outcome(
+        self,
+        permissions,
+        scopes,
+        lookup_key,
+        expected_status,
+        expected_scope_type,
+        expected_rows,
+    ) -> None:
         from dazzle.conformance.derivation import derive_conformance_cases
         from dazzle.conformance.models import ScopeOutcome
 
-        entity = _make_entity(
-            "Task",
-            permissions=[_permit("list", ["viewer"])],
-        )
+        entity = _make_entity("Task", permissions=permissions, scopes=scopes)
         appspec = _make_appspec([entity])
         cases = derive_conformance_cases(appspec, auth_enabled=True)
 
         idx = _index(cases)
-        create_case = idx[("viewer", "create", None)]
-        assert create_case.expected_status == 403
-        assert create_case.scope_type == ScopeOutcome.ACCESS_DENIED
-
-    def test_scope_all(self) -> None:
-        """admin has list permit + scope all → scope_type=ALL, expected_rows=-1."""
-        from dazzle.conformance.derivation import derive_conformance_cases
-        from dazzle.conformance.models import ScopeOutcome
-
-        entity = _make_entity(
-            "Task",
-            permissions=[_permit("list", ["admin"])],
-            scopes=[_scope("list", ["admin"], condition=None)],
-        )
-        appspec = _make_appspec([entity])
-        cases = derive_conformance_cases(appspec, auth_enabled=True)
-
-        idx = _index(cases)
-        c = idx[("admin", "list", None)]
-        assert c.expected_status == 200
-        assert c.scope_type == ScopeOutcome.ALL
-        assert c.expected_rows == -1
-
-    def test_scope_filtered(self) -> None:
-        """viewer has list permit + scope with condition → FILTERED, expected_rows=-2."""
-        from dazzle.conformance.derivation import derive_conformance_cases
-        from dazzle.conformance.models import ScopeOutcome
-
-        entity = _make_entity(
-            "Task",
-            permissions=[_permit("list", ["viewer"])],
-            scopes=[_scope("list", ["viewer"], condition="owner = current_user")],
-        )
-        appspec = _make_appspec([entity])
-        cases = derive_conformance_cases(appspec, auth_enabled=True)
-
-        idx = _index(cases)
-        c = idx[("viewer", "list", None)]
-        assert c.expected_status == 200
-        assert c.scope_type == ScopeOutcome.FILTERED
-        assert c.expected_rows == -2
-
-    def test_scope_excluded_default_deny(self) -> None:
-        """viewer has permit but no scope rule → SCOPE_EXCLUDED, expected_rows=0."""
-        from dazzle.conformance.derivation import derive_conformance_cases
-        from dazzle.conformance.models import ScopeOutcome
-
-        entity = _make_entity(
-            "Task",
-            permissions=[_permit("list", ["viewer"])],
-            scopes=[],  # no scope rule for viewer
-        )
-        appspec = _make_appspec([entity])
-        cases = derive_conformance_cases(appspec, auth_enabled=True)
-
-        idx = _index(cases)
-        c = idx[("viewer", "list", None)]
-        assert c.expected_status == 200
-        assert c.scope_type == ScopeOutcome.SCOPE_EXCLUDED
-        assert c.expected_rows == 0
-
-    def test_forbid_overrides_permit(self) -> None:
-        """forbid + permit for same persona/op → 403 FORBIDDEN (forbid wins)."""
-        from dazzle.conformance.derivation import derive_conformance_cases
-        from dazzle.conformance.models import ScopeOutcome
-
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                _permit("list", ["viewer"]),
-                _forbid("list", ["viewer"]),
-            ],
-        )
-        appspec = _make_appspec([entity])
-        cases = derive_conformance_cases(appspec, auth_enabled=True)
-
-        idx = _index(cases)
-        c = idx[("viewer", "list", None)]
-        assert c.expected_status == 403
-        assert c.scope_type == ScopeOutcome.FORBIDDEN
+        c = idx[lookup_key]
+        assert c.expected_status == expected_status
+        assert c.scope_type == getattr(ScopeOutcome, expected_scope_type)
+        if expected_rows is not None:
+            assert c.expected_rows == expected_rows
 
     def test_wildcard_scope(self) -> None:
         """scope for: * → applies to all permitted personas."""
@@ -263,23 +261,6 @@ class TestDerivationEngine:
         idx = _index(cases)
         assert idx[("admin", "list", None)].scope_type == ScopeOutcome.ALL
         assert idx[("viewer", "list", None)].scope_type == ScopeOutcome.ALL
-
-    def test_unmatched_role_denied(self) -> None:
-        """unmatched_role always gets 403 on a protected entity."""
-        from dazzle.conformance.derivation import derive_conformance_cases
-        from dazzle.conformance.models import ScopeOutcome
-
-        entity = _make_entity(
-            "Task",
-            permissions=[_permit("list", ["admin"])],
-        )
-        appspec = _make_appspec([entity])
-        cases = derive_conformance_cases(appspec, auth_enabled=True)
-
-        idx = _index(cases)
-        c = idx[("unmatched_role", "list", None)]
-        assert c.expected_status == 403
-        assert c.scope_type == ScopeOutcome.ACCESS_DENIED
 
     def test_read_generates_two_cases(self) -> None:
         """READ produces own-row (200) and other-row (404) for scoped persona."""

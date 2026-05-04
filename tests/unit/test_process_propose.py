@@ -9,6 +9,8 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core.ir.stories import StorySpec, StoryTrigger
 
 # ============================================================================
@@ -204,14 +206,6 @@ class TestCrudDetection:
         )
         assert _is_crud_story(story) is True
 
-    def test_status_changed_is_not_crud(self):
-        story = _make_story(
-            trigger=StoryTrigger.STATUS_CHANGED,
-            scope=["Task"],
-            then=["Task becomes completed"],
-        )
-        assert _is_crud_story(story) is False
-
     def test_crud_with_unless_is_not_crud(self):
         from dazzle.core.ir.stories import StoryException
 
@@ -223,28 +217,23 @@ class TestCrudDetection:
         )
         assert _is_crud_story(story) is False
 
-    def test_multi_entity_scope_is_not_crud(self):
-        story = _make_story(
-            trigger=StoryTrigger.FORM_SUBMITTED,
-            scope=["Task", "Project"],
-            then=["Task is saved"],
-        )
-        assert _is_crud_story(story) is False
-
-    def test_non_crud_outcome_is_not_crud(self):
-        story = _make_story(
-            trigger=StoryTrigger.FORM_SUBMITTED,
-            scope=["Task"],
-            then=["Email notification is sent to manager"],
-        )
-        assert _is_crud_story(story) is False
-
-    def test_cron_trigger_is_not_crud(self):
-        story = _make_story(
-            trigger=StoryTrigger.CRON_DAILY,
-            scope=["Report"],
-            then=["Report is created"],
-        )
+    @pytest.mark.parametrize(
+        "trigger,scope,then",
+        [
+            (StoryTrigger.STATUS_CHANGED, ["Task"], ["Task becomes completed"]),
+            (StoryTrigger.FORM_SUBMITTED, ["Task", "Project"], ["Task is saved"]),
+            (StoryTrigger.FORM_SUBMITTED, ["Task"], ["Email notification is sent to manager"]),
+            (StoryTrigger.CRON_DAILY, ["Report"], ["Report is created"]),
+        ],
+        ids=[
+            "test_status_changed_is_not_crud",
+            "test_multi_entity_scope_is_not_crud",
+            "test_non_crud_outcome_is_not_crud",
+            "test_cron_trigger_is_not_crud",
+        ],
+    )
+    def test_is_not_crud(self, trigger: StoryTrigger, scope: list, then: list):
+        story = _make_story(trigger=trigger, scope=scope, then=then)
         assert _is_crud_story(story) is False
 
 

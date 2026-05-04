@@ -21,39 +21,43 @@ def js() -> str:
     return DZ_ALPINE_JS.read_text()
 
 
-def test_directive_registered(js: str) -> None:
-    """Alpine.directive('pull-to-refresh', ...) call must be present
-    so x-pull-to-refresh in templates resolves to the handler."""
-    assert 'Alpine.directive("pull-to-refresh"' in js
-
-
-def test_touch_only_via_pointer_coarse(js: str) -> None:
-    """Desktop mouse drag would hijack scroll. The directive must
-    no-op when `pointer: coarse` doesn't match — same gating as
-    touch-targets.css."""
-    assert "(pointer: coarse)" in js
-
-
-def test_dispatches_refresh_custom_event(js: str) -> None:
-    """The dispatch contract is `refresh` CustomEvent so adopters
-    can wire `hx-trigger=\"refresh\"` and have htmx pick it up.
-    `bubbles: true` so a parent's listener can also catch it."""
-    assert 'CustomEvent("refresh"' in js
-    assert "bubbles: true" in js
-
-
-def test_threshold_constant_present(js: str) -> None:
-    """80px threshold is documented + tunable. If a refactor drops
-    the named threshold the snap-back / dispatch decision boundary
-    becomes magic. Pin the value."""
-    assert "threshold = 80" in js
-
-
-def test_only_triggers_when_scrollTop_zero(js: str) -> None:
-    """Pull-to-refresh must NOT engage mid-scroll — otherwise the
-    user trying to scroll up gets a refresh instead. The directive
-    only captures touchstart when the container is at the top."""
-    assert "el.scrollTop > 0" in js
+@pytest.mark.parametrize(
+    "needle",
+    [
+        # Alpine.directive('pull-to-refresh', ...) call must be present
+        # so x-pull-to-refresh in templates resolves to the handler.
+        'Alpine.directive("pull-to-refresh"',
+        # Desktop mouse drag would hijack scroll — no-op when pointer: coarse doesn't match.
+        "(pointer: coarse)",
+        # Dispatch contract: refresh CustomEvent so adopters can wire hx-trigger="refresh".
+        'CustomEvent("refresh"',
+        # bubbles: true so a parent's listener can also catch it.
+        "bubbles: true",
+        # 80px threshold is documented + tunable; pin the value.
+        "threshold = 80",
+        # Pull-to-refresh must NOT engage mid-scroll.
+        "el.scrollTop > 0",
+        # Touch listeners must be passive: true so the browser doesn't block native scroll.
+        "{ passive: true }",
+        # A touchcancel must reset state the same way touchend does.
+        "touchcancel",
+        # Public-API list at the top of dz-alpine.js.
+        "x-pull-to-refresh",
+    ],
+    ids=[
+        "test_directive_registered",
+        "test_touch_only_via_pointer_coarse",
+        "test_dispatches_refresh_custom_event_event",
+        "test_dispatches_refresh_custom_event_bubbles",
+        "test_threshold_constant_present",
+        "test_only_triggers_when_scrollTop_zero",
+        "test_passive_listeners",
+        "test_handles_touchcancel_alongside_touchend",
+        "test_directive_listed_in_module_header",
+    ],
+)
+def test_js_contains(js: str, needle: str) -> None:
+    assert needle in js
 
 
 def test_reduced_motion_skips_transform_keeps_dispatch(js: str) -> None:
@@ -69,26 +73,6 @@ def test_reduced_motion_skips_transform_keeps_dispatch(js: str) -> None:
     assert snap_back_idx > dispatch_idx, (
         "refresh dispatch must precede the reduced-motion snap-back guard"
     )
-
-
-def test_passive_listeners(js: str) -> None:
-    """Touch listeners must be `passive: true` so the browser doesn't
-    block native scroll on JS execution. Especially important for
-    touchmove which fires often."""
-    assert "{ passive: true }" in js
-
-
-def test_handles_touchcancel_alongside_touchend(js: str) -> None:
-    """A touchcancel (e.g. notification interrupting the gesture)
-    must reset state the same way touchend does — otherwise a
-    subsequent touchstart finds `pulling=true` from a stale gesture."""
-    assert "touchcancel" in js
-
-
-def test_directive_listed_in_module_header(js: str) -> None:
-    """Public-API list at the top of dz-alpine.js. New directive
-    needs the entry so future readers can find it."""
-    assert "x-pull-to-refresh" in js
 
 
 def test_directive_present_in_dist_bundle() -> None:

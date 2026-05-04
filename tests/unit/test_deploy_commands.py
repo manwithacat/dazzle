@@ -1,5 +1,7 @@
 """Tests for dazzle deploy dockerfile|heroku|compose commands."""
 
+import pytest
+
 from dazzle.cli.deploy import (
     generate_compose_yaml,
     generate_heroku_files,
@@ -54,31 +56,27 @@ class TestGenerateHerokuFiles:
 class TestGenerateComposeYaml:
     """Tests for docker-compose.yml generation."""
 
-    def test_has_app_service(self) -> None:
+    @pytest.mark.parametrize(
+        "expected_substring",
+        [
+            "app:",
+            "postgres:",
+            "redis:",
+            "depends_on:",
+            "pg_isready",
+            "pgdata:",
+            '"3000:8000"',
+        ],
+        ids=[
+            "has_app_service",
+            "has_postgres_service",
+            "has_redis_service",
+            "app_depends_on_postgres",
+            "postgres_has_healthcheck",
+            "has_pgdata_volume",
+            "app_port_maps_3000_to_8000",
+        ],
+    )
+    def test_compose_yaml_contains(self, expected_substring: str) -> None:
         result = generate_compose_yaml()
-        assert "app:" in result
-
-    def test_has_postgres_service(self) -> None:
-        result = generate_compose_yaml()
-        assert "postgres:" in result
-
-    def test_has_redis_service(self) -> None:
-        result = generate_compose_yaml()
-        assert "redis:" in result
-
-    def test_app_depends_on_postgres(self) -> None:
-        result = generate_compose_yaml()
-        assert "depends_on:" in result
-        assert "postgres:" in result
-
-    def test_postgres_has_healthcheck(self) -> None:
-        result = generate_compose_yaml()
-        assert "pg_isready" in result
-
-    def test_has_pgdata_volume(self) -> None:
-        result = generate_compose_yaml()
-        assert "pgdata:" in result
-
-    def test_app_port_maps_3000_to_8000(self) -> None:
-        result = generate_compose_yaml()
-        assert '"3000:8000"' in result
+        assert expected_substring in result

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.analytics import _match_pii_hint, analytics_app
@@ -29,52 +30,62 @@ paths = ["./dsl"]
 class TestPIINameHint:
     """Heuristic name-matcher unit tests — isolated from IR and CLI."""
 
-    def test_email_contact(self) -> None:
-        assert _match_pii_hint("email") == "contact"
-        assert _match_pii_hint("user_email") == "contact"
-
-    def test_phone_contact(self) -> None:
-        assert _match_pii_hint("phone") == "contact"
-        assert _match_pii_hint("mobile_phone") == "contact"
-
-    def test_ip_address_location_not_contact(self) -> None:
-        """ip_address must match `location` before `address→contact`."""
-        assert _match_pii_hint("ip_address") == "location"
-        assert _match_pii_hint("client_ip_address") == "location"
-
-    def test_address_still_contact(self) -> None:
-        assert _match_pii_hint("address") == "contact"
-        assert _match_pii_hint("home_address") == "contact"
-
-    def test_dob_identity(self) -> None:
-        assert _match_pii_hint("dob") == "identity"
-        assert _match_pii_hint("date_of_birth") == "identity"
-
-    def test_ssn_identity(self) -> None:
-        assert _match_pii_hint("ssn") == "identity"
-
-    def test_first_name_identity(self) -> None:
-        assert _match_pii_hint("first_name") == "identity"
-
-    def test_financial(self) -> None:
-        assert _match_pii_hint("bank_account") == "financial"
-        assert _match_pii_hint("iban") == "financial"
-        assert _match_pii_hint("salary") == "financial"
-
-    def test_biometric(self) -> None:
-        assert _match_pii_hint("fingerprint_hash") == "biometric"
-
-    def test_health(self) -> None:
-        assert _match_pii_hint("medical_record") == "health"
-
-    def test_case_insensitive(self) -> None:
-        assert _match_pii_hint("EMAIL") == "contact"
-        assert _match_pii_hint("DATE_OF_BIRTH") == "identity"
-
-    def test_no_match(self) -> None:
-        assert _match_pii_hint("title") is None
-        assert _match_pii_hint("status") is None
-        assert _match_pii_hint("created_at") is None
+    @pytest.mark.parametrize(
+        "field_name, expected_category",
+        [
+            ("email", "contact"),
+            ("user_email", "contact"),
+            ("phone", "contact"),
+            ("mobile_phone", "contact"),
+            # ip_address must match `location` before `address→contact`
+            ("ip_address", "location"),
+            ("client_ip_address", "location"),
+            ("address", "contact"),
+            ("home_address", "contact"),
+            ("dob", "identity"),
+            ("date_of_birth", "identity"),
+            ("ssn", "identity"),
+            ("first_name", "identity"),
+            ("bank_account", "financial"),
+            ("iban", "financial"),
+            ("salary", "financial"),
+            ("fingerprint_hash", "biometric"),
+            ("medical_record", "health"),
+            # case-insensitive
+            ("EMAIL", "contact"),
+            ("DATE_OF_BIRTH", "identity"),
+            # no match
+            ("title", None),
+            ("status", None),
+            ("created_at", None),
+        ],
+        ids=[
+            "email_contact",
+            "user_email_contact",
+            "phone_contact",
+            "mobile_phone_contact",
+            "ip_address_location",
+            "client_ip_address_location",
+            "address_contact",
+            "home_address_contact",
+            "dob_identity",
+            "date_of_birth_identity",
+            "ssn_identity",
+            "first_name_identity",
+            "bank_account_financial",
+            "iban_financial",
+            "salary_financial",
+            "fingerprint_hash_biometric",
+            "medical_record_health",
+            "EMAIL_case_insensitive",
+            "DATE_OF_BIRTH_case_insensitive",
+            "title_no_match",
+            "status_no_match",
+            "created_at_no_match",
+        ],
+    )
+    def test_pii_name_hint(self, field_name: str, expected_category: str | None) -> None:
+        assert _match_pii_hint(field_name) == expected_category
 
 
 class TestAuditCommand:

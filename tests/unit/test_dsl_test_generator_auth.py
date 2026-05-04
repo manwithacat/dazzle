@@ -1,5 +1,7 @@
 """Tests for auth lifecycle test generation (issue #245)."""
 
+import pytest
+
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
@@ -102,47 +104,31 @@ class TestAuthLifecycleGeneration:
         auth_tests = [d for d in suite.designs if "auth" in d.get("tags", [])]
         assert len(auth_tests) == 12
 
-    def test_login_valid_test_id(self):
+    @pytest.mark.parametrize(
+        "expected_id",
+        [
+            "AUTH_LOGIN_VALID_TEACHER",
+            "AUTH_LOGIN_INVALID_TEACHER",
+            "AUTH_REDIRECT_TEACHER",
+            "AUTH_SESSION_VALID_TEACHER",
+            "AUTH_SESSION_EXPIRED_TEACHER",
+            "AUTH_LOGOUT_TEACHER",
+        ],
+        ids=[
+            "test_login_valid_test_id",
+            "test_login_invalid_test_id",
+            "test_redirect_test_id",
+            "test_session_valid_test_id",
+            "test_session_expired_test_id",
+            "test_logout_test_id",
+        ],
+    )
+    def test_auth_test_id_present(self, expected_id: str):
         appspec = _make_appspec(personas=[TEACHER])
         gen = DSLTestGenerator(appspec)
         suite = gen.generate_all()
         ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_LOGIN_VALID_TEACHER" in ids
-
-    def test_login_invalid_test_id(self):
-        appspec = _make_appspec(personas=[TEACHER])
-        gen = DSLTestGenerator(appspec)
-        suite = gen.generate_all()
-        ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_LOGIN_INVALID_TEACHER" in ids
-
-    def test_redirect_test_id(self):
-        appspec = _make_appspec(personas=[TEACHER])
-        gen = DSLTestGenerator(appspec)
-        suite = gen.generate_all()
-        ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_REDIRECT_TEACHER" in ids
-
-    def test_session_valid_test_id(self):
-        appspec = _make_appspec(personas=[TEACHER])
-        gen = DSLTestGenerator(appspec)
-        suite = gen.generate_all()
-        ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_SESSION_VALID_TEACHER" in ids
-
-    def test_session_expired_test_id(self):
-        appspec = _make_appspec(personas=[TEACHER])
-        gen = DSLTestGenerator(appspec)
-        suite = gen.generate_all()
-        ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_SESSION_EXPIRED_TEACHER" in ids
-
-    def test_logout_test_id(self):
-        appspec = _make_appspec(personas=[TEACHER])
-        gen = DSLTestGenerator(appspec)
-        suite = gen.generate_all()
-        ids = {d["test_id"] for d in suite.designs}
-        assert "AUTH_LOGOUT_TEACHER" in ids
+        assert expected_id in ids
 
 
 class TestAuthRedirectRoute:

@@ -52,40 +52,44 @@ from dazzle.mcp.server.handlers.process.scope_fidelity import (  # noqa: E402
 
 
 class TestPascalToSnake:
-    def test_simple(self) -> None:
-        assert _pascal_to_snake("Task") == "task"
-
-    def test_multi_word(self) -> None:
-        assert _pascal_to_snake("ComplianceDeadline") == "compliance_deadline"
-
-    def test_already_lower(self) -> None:
-        assert _pascal_to_snake("order") == "order"
-
-    def test_acronym(self) -> None:
-        assert _pascal_to_snake("VATReturn") == "v_a_t_return"
+    @pytest.mark.parametrize(
+        ("input_name", "expected"),
+        [
+            ("Task", "task"),
+            ("ComplianceDeadline", "compliance_deadline"),
+            ("order", "order"),  # already lower
+            ("VATReturn", "v_a_t_return"),  # acronym splits
+        ],
+        ids=["simple", "multi_word", "already_lower", "acronym"],
+    )
+    def test_convert(self, input_name, expected) -> None:
+        assert _pascal_to_snake(input_name) == expected
 
 
 class TestEntityMatchesTokens:
-    def test_exact_match(self) -> None:
-        assert _entity_matches_tokens("Task", {"Task", "Order"})
-
-    def test_case_insensitive(self) -> None:
-        assert _entity_matches_tokens("Task", {"task"})
-
-    def test_service_prefix(self) -> None:
-        assert _entity_matches_tokens("Task", {"Task.create", "Order.list"})
-
-    def test_step_name_contains(self) -> None:
-        assert _entity_matches_tokens("Task", {"load_task_context"})
-
-    def test_snake_case_match(self) -> None:
-        assert _entity_matches_tokens("ComplianceDeadline", {"check_compliance_deadline"})
-
-    def test_no_match(self) -> None:
-        assert not _entity_matches_tokens("Invoice", {"Task.create", "Order.list"})
-
-    def test_substring_in_service(self) -> None:
-        assert _entity_matches_tokens("VAT", {"process_vat_return"})
+    @pytest.mark.parametrize(
+        ("entity", "tokens", "expected"),
+        [
+            ("Task", {"Task", "Order"}, True),  # exact_match
+            ("Task", {"task"}, True),  # case_insensitive
+            ("Task", {"Task.create", "Order.list"}, True),  # service_prefix
+            ("Task", {"load_task_context"}, True),  # step_name_contains
+            ("ComplianceDeadline", {"check_compliance_deadline"}, True),  # snake_case_match
+            ("Invoice", {"Task.create", "Order.list"}, False),  # no_match
+            ("VAT", {"process_vat_return"}, True),  # substring_in_service
+        ],
+        ids=[
+            "exact_match",
+            "case_insensitive",
+            "service_prefix",
+            "step_name_contains",
+            "snake_case_match",
+            "no_match",
+            "substring_in_service",
+        ],
+    )
+    def test_match(self, entity, tokens, expected) -> None:
+        assert _entity_matches_tokens(entity, tokens) is expected
 
 
 class TestCollectProcessEntityTokens:

@@ -5,6 +5,8 @@ Tests that FILE field types are correctly mapped to form types,
 field elements, and template filters.
 """
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir import EntitySpec, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec, FieldType
@@ -176,26 +178,26 @@ class TestFileCaptureAttribute:
 class TestBasenameOrUrlFilter:
     """Tests for the basename_or_url Jinja2 filter."""
 
-    def test_url_extracts_filename(self) -> None:
-        assert _basename_or_url_filter("/files/abc/photo.jpg") == "photo.jpg"
-
-    def test_url_with_query_string(self) -> None:
-        assert _basename_or_url_filter("/files/abc/doc.pdf?v=2") == "doc.pdf"
-
-    def test_full_url(self) -> None:
-        assert _basename_or_url_filter("https://example.com/uploads/file.txt") == "file.txt"
-
-    def test_plain_filename(self) -> None:
-        assert _basename_or_url_filter("report.xlsx") == "report.xlsx"
-
-    def test_none_value(self) -> None:
-        assert _basename_or_url_filter(None) == ""
-
-    def test_empty_string(self) -> None:
-        assert _basename_or_url_filter("") == ""
-
-    def test_trailing_slash(self) -> None:
-        # Edge case: URL ending in /
-        result = _basename_or_url_filter("/files/uploads/")
-        # Should return the full URL since basename is empty
-        assert result == "/files/uploads/"
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("/files/abc/photo.jpg", "photo.jpg"),
+            ("/files/abc/doc.pdf?v=2", "doc.pdf"),
+            ("https://example.com/uploads/file.txt", "file.txt"),
+            ("report.xlsx", "report.xlsx"),
+            (None, ""),
+            ("", ""),
+            ("/files/uploads/", "/files/uploads/"),
+        ],
+        ids=[
+            "test_url_extracts_filename",
+            "test_url_with_query_string",
+            "test_full_url",
+            "test_plain_filename",
+            "test_none_value",
+            "test_empty_string",
+            "test_trailing_slash",
+        ],
+    )
+    def test_basename_or_url_filter(self, value, expected) -> None:
+        assert _basename_or_url_filter(value) == expected

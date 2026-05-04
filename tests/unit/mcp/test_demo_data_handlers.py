@@ -210,55 +210,45 @@ class TestInferDomainSuffix:
 class TestInferFieldStrategy:
     """Tests for _infer_field_strategy helper."""
 
-    def test_id_field(self) -> None:
-        """Test ID field strategy inference."""
-        strategy, params = _infer_field_strategy("id", "uuid", "User")
-        assert strategy == "uuid_generate"
-
-    def test_foreign_key_field(self) -> None:
-        """Test foreign key field strategy inference."""
-        # Note: user_id with uuid type matches uuid_generate first
-        # Foreign key is only inferred for non-uuid types
-        strategy, params = _infer_field_strategy("user_id", "int", "Task")
-        assert strategy == "foreign_key"
-        assert params["target_entity"] == "User"
-
-    def test_name_field(self) -> None:
-        """Test name field strategy inference."""
-        strategy, params = _infer_field_strategy("full_name", "str", "User")
-        assert strategy == "person_name"
-
-    def test_email_field(self) -> None:
-        """Test email field strategy inference."""
-        strategy, params = _infer_field_strategy("email", "str", "User")
-        assert strategy == "email_from_name"
-
-    def test_boolean_field(self) -> None:
-        """Test boolean field strategy inference."""
-        strategy, params = _infer_field_strategy("is_active", "bool", "User")
-        assert strategy == "boolean_weighted"
-
-    def test_date_field(self) -> None:
-        """Test date field strategy inference."""
-        strategy, params = _infer_field_strategy("created_at", "datetime", "Task")
-        assert strategy == "date_relative"
-
-    def test_amount_field(self) -> None:
-        """Test currency amount field strategy inference."""
-        strategy, params = _infer_field_strategy("price", "decimal", "Product")
-        assert strategy == "currency_amount"
-
-    def test_description_field(self) -> None:
-        """Test description field strategy inference."""
-        strategy, params = _infer_field_strategy("description", "text", "Task")
-        assert strategy == "free_text_lorem"
-        assert params["min_words"] == 5
-
-    def test_title_field(self) -> None:
-        """Test title field strategy inference."""
-        strategy, params = _infer_field_strategy("title", "str", "Task")
-        assert strategy == "free_text_lorem"
-        assert params["min_words"] == 3
+    @pytest.mark.parametrize(
+        "field_name, field_type, entity_name, expected_strategy, expected_params",
+        [
+            ("id", "uuid", "User", "uuid_generate", {}),
+            # Note: user_id with uuid type matches uuid_generate first;
+            # foreign_key is only inferred for non-uuid types.
+            ("user_id", "int", "Task", "foreign_key", {"target_entity": "User"}),
+            ("full_name", "str", "User", "person_name", {}),
+            ("email", "str", "User", "email_from_name", {}),
+            ("is_active", "bool", "User", "boolean_weighted", {}),
+            ("created_at", "datetime", "Task", "date_relative", {}),
+            ("price", "decimal", "Product", "currency_amount", {}),
+            ("description", "text", "Task", "free_text_lorem", {"min_words": 5}),
+            ("title", "str", "Task", "free_text_lorem", {"min_words": 3}),
+        ],
+        ids=[
+            "id_field",
+            "foreign_key_field",
+            "name_field",
+            "email_field",
+            "boolean_field",
+            "date_field",
+            "amount_field",
+            "description_field",
+            "title_field",
+        ],
+    )
+    def test_infer_field_strategy(
+        self,
+        field_name: str,
+        field_type: str,
+        entity_name: str,
+        expected_strategy: str,
+        expected_params: dict,
+    ) -> None:
+        strategy, params = _infer_field_strategy(field_name, field_type, entity_name)
+        assert strategy == expected_strategy
+        for key, val in expected_params.items():
+            assert params[key] == val
 
 
 # =============================================================================

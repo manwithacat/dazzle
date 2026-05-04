@@ -17,7 +17,7 @@ from dazzle_back.runtime.totp import (
 # RFC 6238 test key: ASCII "12345678901234567890" (20 bytes)
 # base32("12345678901234567890") = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
 # ---------------------------------------------------------------------------
-RFC_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+RFC_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"  # nosemgrep: generic.secrets.security.detected-generic-secret.detected-generic-secret
 
 
 # ===================================================================
@@ -167,42 +167,36 @@ class TestVerifyTotp:
 
     FIXED_TS = 1234567890.0
 
-    def test_valid_code_returns_true(self) -> None:
-        code = generate_totp(RFC_SECRET, timestamp=self.FIXED_TS)
-        assert verify_totp(RFC_SECRET, code, timestamp=self.FIXED_TS) is True
-
-    def test_wrong_code_returns_false(self) -> None:
-        assert verify_totp(RFC_SECRET, "000000", timestamp=self.FIXED_TS) is False
-
-    def test_completely_invalid_code_returns_false(self) -> None:
-        assert verify_totp(RFC_SECRET, "999999", timestamp=self.FIXED_TS) is False
-
-    def test_adjacent_past_step_within_window(self) -> None:
-        # Generate code for one step before current
-        past_ts = self.FIXED_TS - 30  # previous 30-second step
-        code = generate_totp(RFC_SECRET, timestamp=past_ts)
-        # With default window=1, the previous step's code should be accepted
-        assert verify_totp(RFC_SECRET, code, window=1, timestamp=self.FIXED_TS) is True
-
-    def test_adjacent_future_step_within_window(self) -> None:
-        # Generate code for one step after current
-        future_ts = self.FIXED_TS + 30  # next 30-second step
-        code = generate_totp(RFC_SECRET, timestamp=future_ts)
-        # With default window=1, the next step's code should be accepted
-        assert verify_totp(RFC_SECRET, code, window=1, timestamp=self.FIXED_TS) is True
-
-    def test_code_outside_window_returns_false(self) -> None:
-        # Generate code for 2 steps in the future
-        far_future_ts = self.FIXED_TS + 60  # 2 steps ahead
-        code = generate_totp(RFC_SECRET, timestamp=far_future_ts)
-        # With window=1, 2 steps away should be rejected
-        assert verify_totp(RFC_SECRET, code, window=1, timestamp=self.FIXED_TS) is False
-
-    def test_code_outside_window_past(self) -> None:
-        # Generate code for 2 steps in the past
-        far_past_ts = self.FIXED_TS - 60  # 2 steps behind
-        code = generate_totp(RFC_SECRET, timestamp=far_past_ts)
-        assert verify_totp(RFC_SECRET, code, window=1, timestamp=self.FIXED_TS) is False
+    @pytest.mark.parametrize(
+        ("code_ts_offset", "verify_kwargs", "expected"),
+        [
+            (0.0, {}, True),
+            (None, {"code": "000000"}, False),
+            (None, {"code": "999999"}, False),
+            (-30.0, {"window": 1}, True),
+            (30.0, {"window": 1}, True),
+            (60.0, {"window": 1}, False),
+            (-60.0, {"window": 1}, False),
+        ],
+        ids=[
+            "test_valid_code_returns_true",
+            "test_wrong_code_returns_false",
+            "test_completely_invalid_code_returns_false",
+            "test_adjacent_past_step_within_window",
+            "test_adjacent_future_step_within_window",
+            "test_code_outside_window_returns_false",
+            "test_code_outside_window_past",
+        ],
+    )
+    def test_verify_totp(self, code_ts_offset, verify_kwargs, expected) -> None:
+        if "code" in verify_kwargs:
+            # Fixed invalid code supplied directly — no generation needed.
+            code = verify_kwargs.pop("code")
+        else:
+            code_ts = self.FIXED_TS + (code_ts_offset or 0.0)
+            code = generate_totp(RFC_SECRET, timestamp=code_ts)
+        result = verify_totp(RFC_SECRET, code, timestamp=self.FIXED_TS, **verify_kwargs)
+        assert result is expected
 
     def test_window_zero_exact_match_only(self) -> None:
         code = generate_totp(RFC_SECRET, timestamp=self.FIXED_TS)

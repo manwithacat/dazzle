@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from dazzle.agent.core import Mission
 from dazzle.agent.missions.entity_completeness import (
     _static_entity_analysis,
@@ -133,52 +135,48 @@ class TestStaticEntityAnalysis:
         no_surface_gaps = [g for g in report.gaps if g.gap_type == "no_surface"]
         assert all(g.severity == "critical" for g in no_surface_gaps)
 
-    def test_missing_list_surface(self) -> None:
+    @pytest.mark.parametrize(
+        "surfaces,expected_gap",
+        [
+            (
+                [_make_surface("task_create", "Create Task", "create", "Task")],
+                "missing_list",
+            ),
+            (
+                [_make_surface("task_list", "Task List", "list", "Task")],
+                "missing_create",
+            ),
+            (
+                [
+                    _make_surface("task_list", "Task List", "list", "Task"),
+                    _make_surface("task_create", "Create Task", "create", "Task"),
+                ],
+                "missing_edit",
+            ),
+            (
+                [
+                    _make_surface("task_list", "Task List", "list", "Task"),
+                    _make_surface("task_create", "Create Task", "create", "Task"),
+                    _make_surface("task_edit", "Edit Task", "edit", "Task"),
+                ],
+                "missing_view",
+            ),
+        ],
+        ids=[
+            "test_missing_list_surface",
+            "test_missing_create_surface",
+            "test_missing_edit_surface",
+            "test_missing_view_surface",
+        ],
+    )
+    def test_missing_crud_surface(self, surfaces: list, expected_gap: str) -> None:
         appspec = _make_appspec(
             entities=[_make_entity("Task", "Task")],
-            surfaces=[
-                _make_surface("task_create", "Create Task", "create", "Task"),
-            ],
+            surfaces=surfaces,
         )
         report = _static_entity_analysis(appspec)
         gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_list" in gap_types
-
-    def test_missing_create_surface(self) -> None:
-        appspec = _make_appspec(
-            entities=[_make_entity("Task", "Task")],
-            surfaces=[
-                _make_surface("task_list", "Task List", "list", "Task"),
-            ],
-        )
-        report = _static_entity_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_create" in gap_types
-
-    def test_missing_edit_surface(self) -> None:
-        appspec = _make_appspec(
-            entities=[_make_entity("Task", "Task")],
-            surfaces=[
-                _make_surface("task_list", "Task List", "list", "Task"),
-                _make_surface("task_create", "Create Task", "create", "Task"),
-            ],
-        )
-        report = _static_entity_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_edit" in gap_types
-
-    def test_missing_view_surface(self) -> None:
-        appspec = _make_appspec(
-            entities=[_make_entity("Task", "Task")],
-            surfaces=[
-                _make_surface("task_list", "Task List", "list", "Task"),
-                _make_surface("task_create", "Create Task", "create", "Task"),
-                _make_surface("task_edit", "Edit Task", "edit", "Task"),
-            ],
-        )
-        report = _static_entity_analysis(appspec)
-        gap_types = [g.gap_type for g in report.gaps]
-        assert "missing_view" in gap_types
+        assert expected_gap in gap_types
 
     def test_complete_entity_has_no_crud_gaps(self) -> None:
         appspec = _make_appspec(

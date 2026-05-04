@@ -17,6 +17,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "css_clip_check.py"
 _spec = importlib.util.spec_from_file_location("css_clip_check", SCRIPT_PATH)
 assert _spec is not None and _spec.loader is not None
@@ -250,86 +252,43 @@ class TestSkipRulesWithoutEnoughInfo:
 
 
 class TestPaddingShorthand:
-    def test_one_value(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "padding_decl, expected_top, expected_bottom",
+        [
+            ("padding: 4px;", 4.0, 4.0),
+            ("padding: 4px 8px;", 4.0, 4.0),
+            ("padding: 4px 8px 6px;", 4.0, 6.0),
+            ("padding: 4px 8px 6px 10px;", 4.0, 6.0),
+            # padding-block takes precedence — newer logical-property spec
+            ("padding: 0;\n              padding-block: 4px;", 4.0, 4.0),
+            # padding-top/bottom longhand overrides shorthand
+            (
+                "padding: 12px;\n              padding-top: 2px;\n              padding-bottom: 6px;",
+                2.0,
+                6.0,
+            ),
+        ],
+        ids=[
+            "one_value",
+            "two_values",
+            "three_values",
+            "four_values",
+            "padding_block_overrides_shorthand",
+            "padding_top_bottom_overrides_shorthand",
+        ],
+    )
+    def test_padding_shorthand_parsing(
+        self, tmp_path: Path, padding_decl: str, expected_top: float, expected_bottom: float
+    ) -> None:
         findings = _scan(
-            """
-            .x { height: 24px; padding: 4px; font-size: 14px; line-height: 1.5; }
+            f"""
+            .x {{ height: 24px; {padding_decl} font-size: 14px; line-height: 1.5; }}
             """,
             tmp_path,
         )
         assert len(findings) == 1
-        assert findings[0].padding_top_px == 4.0
-        assert findings[0].padding_bottom_px == 4.0
-
-    def test_two_values(self, tmp_path: Path) -> None:
-        findings = _scan(
-            """
-            .x { height: 24px; padding: 4px 8px; font-size: 14px; line-height: 1.5; }
-            """,
-            tmp_path,
-        )
-        assert len(findings) == 1
-        assert findings[0].padding_top_px == 4.0
-        assert findings[0].padding_bottom_px == 4.0
-
-    def test_three_values(self, tmp_path: Path) -> None:
-        findings = _scan(
-            """
-            .x { height: 24px; padding: 4px 8px 6px; font-size: 14px; line-height: 1.5; }
-            """,
-            tmp_path,
-        )
-        assert len(findings) == 1
-        assert findings[0].padding_top_px == 4.0
-        assert findings[0].padding_bottom_px == 6.0
-
-    def test_four_values(self, tmp_path: Path) -> None:
-        findings = _scan(
-            """
-            .x { height: 24px; padding: 4px 8px 6px 10px; font-size: 14px; line-height: 1.5; }
-            """,
-            tmp_path,
-        )
-        assert len(findings) == 1
-        assert findings[0].padding_top_px == 4.0
-        assert findings[0].padding_bottom_px == 6.0
-
-    def test_padding_block_overrides_shorthand(self, tmp_path: Path) -> None:
-        """``padding-block`` takes precedence — newer logical-property
-        spec, common in the Dazzle bundle."""
-        findings = _scan(
-            """
-            .x {
-              height: 24px;
-              padding: 0;
-              padding-block: 4px;
-              font-size: 14px;
-              line-height: 1.5;
-            }
-            """,
-            tmp_path,
-        )
-        assert len(findings) == 1
-        assert findings[0].padding_top_px == 4.0
-        assert findings[0].padding_bottom_px == 4.0
-
-    def test_padding_top_bottom_overrides_shorthand(self, tmp_path: Path) -> None:
-        findings = _scan(
-            """
-            .x {
-              height: 24px;
-              padding: 12px;
-              padding-top: 2px;
-              padding-bottom: 6px;
-              font-size: 14px;
-              line-height: 1.5;
-            }
-            """,
-            tmp_path,
-        )
-        assert len(findings) == 1
-        assert findings[0].padding_top_px == 2.0
-        assert findings[0].padding_bottom_px == 6.0
+        assert findings[0].padding_top_px == expected_top
+        assert findings[0].padding_bottom_px == expected_bottom
 
 
 class TestLineHeightForms:
