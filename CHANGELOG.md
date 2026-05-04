@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.13] - 2026-05-04
+
+### Fixed
+- **Bare `except Exception: pass` in fuzz runner** — chaos-monkey work
+  in v0.65.11 introduced 3 patterns that violated the
+  `tests/unit/test_no_bare_except_pass.py` policy gate. Replaced with
+  `contextlib.suppress(Exception)` (the inner runtime-json read) and
+  `except Exception as exc: logger.debug(...)` (the htmx-click and
+  openapi-route-walk paths). CI was red on `main` from v0.65.11 →
+  v0.65.12 because the pre-ship cycle ran drift gates but not policy
+  gates.
+
+### Changed
+- **`/ship` skill now runs policy gates** alongside drift gates pre-ship
+  (`test_no_*.py`, `test_docs_drift.py`, `test_forbidden_detail.py`).
+  Catches CI-class violations that ruff/mypy don't see — bare excepts,
+  vendored-lib residuals, abandoned shims, doc/code drift. ~4s. New
+  `test_no_*.py` files should be appended to the skill's gate list.
+
+### Agent Guidance
+- When you add a `try/except Exception` block, never end with `pass`.
+  Use `contextlib.suppress(Exception)` if the suppression is intentional
+  and the body is small, or `except Exception as exc: logger.debug(...)`
+  if you want a recoverable trace. The bare form is banned by
+  `tests/unit/test_no_bare_except_pass.py` and CI will reject it.
+- Pre-ship: drift gates AND policy gates both run. The expanded list
+  is in `.claude/commands/ship.md`. Skipping policy gates for speed
+  is the failure mode that produced this release.
+
 ## [0.65.12] - 2026-05-04
 
 ### Added

@@ -33,7 +33,21 @@ Commit all current changes and push to the remote. Follow these steps exactly:
   ```
 
   If any drift gate fails, **fix the regression** (or regenerate the baseline + add a CHANGELOG entry for API-surface drift). Never bypass.
-- If lint, type, or drift errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
+- **Run policy gates** — fast (~4s, no DB), catches CI-class violations that ruff/mypy don't see (bare excepts, vendored-lib residuals, abandoned shims, etc.). These are the `test_no_*.py` and a handful of similar invariant tests:
+
+  ```bash
+  pytest tests/unit/test_no_bare_except_pass.py \
+         tests/unit/test_no_daisyui_residuals.py \
+         tests/unit/test_no_shims.py \
+         tests/unit/test_no_stale_quill_refs.py \
+         tests/unit/test_docs_drift.py \
+         tests/unit/test_forbidden_detail.py \
+         -q
+  ```
+
+  Pre-ship gap that motivated this list (v0.65.11 → v0.65.12): the chaos-monkey work added 3 `except Exception: pass` patterns to `src/dazzle/testing/fuzz_runtime/runner.py`; the pre-ship cycle ran only drift gates and missed `test_no_bare_except_pass.py`. Any new `test_no_*.py` file should be appended here.
+
+- If lint, type, drift, or policy errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
 
 ## 2. Commit
 

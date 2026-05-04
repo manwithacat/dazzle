@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import logging
 import subprocess
 import time
 from collections.abc import Iterator
@@ -10,6 +12,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -76,14 +80,12 @@ def _booted_app(project_root: Path) -> Iterator[tuple[str, str]]:
     try:
         while time.time() < deadline:
             if runtime_path.exists():
-                try:
+                with contextlib.suppress(Exception):
                     rt = json.loads(runtime_path.read_text())
                     secret = rt.get("test_secret", "")
                     base = rt.get("ui_url", "")
                     if secret and base:
                         break
-                except Exception:
-                    pass
             time.sleep(0.2)
         if not secret or not base:
             raise RuntimeError("test_secret / ui_url not published in runtime.json")
@@ -493,8 +495,11 @@ def fuzz_htmx_interactions(page: Any, base: str, paths: list[str]) -> list[FuzzC
                 el.click(timeout=1500, no_wait_after=True)
                 page.wait_for_timeout(250)  # let htmx settle
                 clicked += 1
-            except Exception:
-                pass  # individual click failure is recorded via console listener
+            except Exception as exc:  # noqa: BLE001
+                # Individual click failures are expected and tracked via the
+                # console listener — debug-level logging keeps the production
+                # ban on bare `except: pass` happy without spamming logs.
+                logger.debug("fuzz htmx click failed on %s: %s", path, exc)
         checks.append(
             FuzzCheck(
                 name=f"htmx interactions on {path}",
@@ -532,8 +537,11 @@ def _probe_app_paths(base: str) -> tuple[list[str], list[str], list[str]]:
             else:
                 list_paths.append(path)
             all_paths.append(path)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # OpenAPI-route-walk failures are non-fatal — fall back to the
+        # static seed paths the caller passed in. Log at debug so the
+        # cause is recoverable without breaking the bare-except gate.
+        logger.debug("openapi route walk failed: %s", exc)
     return all_paths, create_paths, list_paths
 
 
