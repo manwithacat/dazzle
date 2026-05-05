@@ -17,26 +17,27 @@ from dazzle.core.ir import (
 class TestLayoutSignal:
     """Tests for LayoutSignal model."""
 
-    def test_attention_signal_creation(self):
-        """Test creating a basic attention signal."""
-        signal = LayoutSignal(
+    def test_layout_signal_combined(self):
+        """Combined: basic creation (defaults), all fields, weight validation
+        (0.0-1.0), urgency/interaction_frequency/density_preference/mode
+        validations, immutability."""
+        # Basic creation + defaults
+        s = LayoutSignal(
             id="task_count",
             kind=AttentionSignalKind.KPI,
             label="Active Tasks",
             source="Task",
         )
+        assert s.id == "task_count"
+        assert s.kind == AttentionSignalKind.KPI
+        assert s.label == "Active Tasks"
+        assert s.source == "Task"
+        assert s.attention_weight == 0.5
+        assert s.urgency == "medium"
+        assert s.interaction_frequency == "occasional"
 
-        assert signal.id == "task_count"
-        assert signal.kind == AttentionSignalKind.KPI
-        assert signal.label == "Active Tasks"
-        assert signal.source == "Task"
-        assert signal.attention_weight == 0.5  # default
-        assert signal.urgency == "medium"  # default
-        assert signal.interaction_frequency == "occasional"  # default
-
-    def test_attention_signal_with_all_fields(self):
-        """Test creating signal with all fields specified."""
-        signal = LayoutSignal(
+        # All fields
+        s2 = LayoutSignal(
             id="urgent_alerts",
             kind=AttentionSignalKind.ALERT_FEED,
             label="Urgent Alerts",
@@ -48,177 +49,82 @@ class TestLayoutSignal:
             mode="act",
             constraints={"max_items": 10},
         )
+        assert s2.attention_weight == 0.9
+        assert s2.urgency == "high"
+        assert s2.interaction_frequency == "frequent"
+        assert s2.density_preference == "compact"
+        assert s2.mode == "act"
+        assert s2.constraints == {"max_items": 10}
 
-        assert signal.attention_weight == 0.9
-        assert signal.urgency == "high"
-        assert signal.interaction_frequency == "frequent"
-        assert signal.density_preference == "compact"
-        assert signal.mode == "act"
-        assert signal.constraints == {"max_items": 10}
+        base_kwargs = {
+            "id": "t",
+            "kind": AttentionSignalKind.KPI,
+            "label": "Test",
+            "source": "Entity",
+        }
 
-    def test_attention_weight_validation(self):
-        """Test attention weight must be 0.0-1.0."""
-        # Valid weights
-        LayoutSignal(
-            id="test1",
-            kind=AttentionSignalKind.KPI,
-            label="Test",
-            source="Entity",
-            attention_weight=0.0,
-        )
-        LayoutSignal(
-            id="test2",
-            kind=AttentionSignalKind.KPI,
-            label="Test",
-            source="Entity",
-            attention_weight=1.0,
-        )
-
-        # Invalid weights
+        # Attention weight bounds
+        LayoutSignal(**base_kwargs, attention_weight=0.0)
+        LayoutSignal(**base_kwargs, attention_weight=1.0)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                attention_weight=-0.1,
-            )
-
+            LayoutSignal(**base_kwargs, attention_weight=-0.1)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                attention_weight=1.1,
-            )
+            LayoutSignal(**base_kwargs, attention_weight=1.1)
 
-    def test_urgency_validation(self):
-        """Test urgency must be low/medium/high."""
-        # Valid urgencies
-        for urgency in ("low", "medium", "high"):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                urgency=urgency,
-            )
-
-        # Invalid urgency
+        # Urgency
+        for u in ("low", "medium", "high"):
+            LayoutSignal(**base_kwargs, urgency=u)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                urgency="critical",
-            )
+            LayoutSignal(**base_kwargs, urgency="critical")
 
-    def test_interaction_frequency_validation(self):
-        """Test interaction frequency must be rare/occasional/frequent."""
-        # Valid frequencies
-        for freq in ("rare", "occasional", "frequent"):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                interaction_frequency=freq,
-            )
-
-        # Invalid frequency
+        # Interaction frequency
+        for f in ("rare", "occasional", "frequent"):
+            LayoutSignal(**base_kwargs, interaction_frequency=f)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                interaction_frequency="never",
-            )
+            LayoutSignal(**base_kwargs, interaction_frequency="never")
 
-    def test_density_preference_validation(self):
-        """Test density preference must be compact/comfortable/spacious."""
-        # Valid preferences
-        for pref in ("compact", "comfortable", "spacious"):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                density_preference=pref,
-            )
-
-        # Invalid preference
+        # Density preference
+        for d in ("compact", "comfortable", "spacious"):
+            LayoutSignal(**base_kwargs, density_preference=d)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                density_preference="dense",
-            )
+            LayoutSignal(**base_kwargs, density_preference="dense")
 
-    def test_mode_validation(self):
-        """Test mode must be read/act/configure."""
-        # Valid modes
-        for mode in ("read", "act", "configure"):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                mode=mode,
-            )
-
-        # Invalid mode
+        # Mode
+        for m in ("read", "act", "configure"):
+            LayoutSignal(**base_kwargs, mode=m)
         with pytest.raises(ValidationError):
-            LayoutSignal(
-                id="test",
-                kind=AttentionSignalKind.KPI,
-                label="Test",
-                source="Entity",
-                mode="edit",
-            )
+            LayoutSignal(**base_kwargs, mode="edit")
 
-    def test_immutability(self):
-        """Test that AttentionSignal is immutable."""
-        signal = LayoutSignal(
-            id="test", kind=AttentionSignalKind.KPI, label="Test", source="Entity"
-        )
-
+        # Immutability
+        immut = LayoutSignal(**base_kwargs)
         with pytest.raises((ValidationError, AttributeError)):
-            signal.attention_weight = 0.8
+            immut.attention_weight = 0.8
 
 
 class TestWorkspaceLayout:
     """Tests for WorkspaceLayout model."""
 
-    def test_workspace_layout_creation(self):
-        """Test creating a basic workspace layout."""
-        workspace = WorkspaceLayout(id="dashboard", label="Main Dashboard")
+    def test_workspace_layout_combined(self):
+        """Combined: creation defaults, with-signals, attention_budget bounds,
+        time_horizon validation, immutability."""
+        # Defaults
+        w = WorkspaceLayout(id="dashboard", label="Main Dashboard")
+        assert w.id == "dashboard"
+        assert w.label == "Main Dashboard"
+        assert w.persona_targets == []
+        assert w.attention_budget == 1.0
+        assert w.time_horizon == "daily"
+        assert w.stage is None
+        assert w.attention_signals == []
 
-        assert workspace.id == "dashboard"
-        assert workspace.label == "Main Dashboard"
-        assert workspace.persona_targets == []
-        assert workspace.attention_budget == 1.0  # default
-        assert workspace.time_horizon == "daily"  # default
-        assert workspace.stage is None
-        assert workspace.attention_signals == []
-
-    def test_workspace_layout_with_signals(self):
-        """Test workspace with attention signals."""
+        # With signals
         signals = [
             LayoutSignal(id="kpi1", kind=AttentionSignalKind.KPI, label="KPI 1", source="Entity1"),
             LayoutSignal(
-                id="table1",
-                kind=AttentionSignalKind.TABLE,
-                label="Table 1",
-                source="Entity2",
+                id="table1", kind=AttentionSignalKind.TABLE, label="Table 1", source="Entity2"
             ),
         ]
-
-        workspace = WorkspaceLayout(
+        w2 = WorkspaceLayout(
             id="dashboard",
             label="Dashboard",
             persona_targets=["admin", "manager"],
@@ -227,61 +133,49 @@ class TestWorkspaceLayout:
             stage="monitor_wall",
             attention_signals=signals,
         )
+        assert w2.persona_targets == ["admin", "manager"]
+        assert w2.attention_budget == 1.2
+        assert w2.time_horizon == "realtime"
+        assert w2.stage == "monitor_wall"
+        assert len(w2.attention_signals) == 2
 
-        assert workspace.persona_targets == ["admin", "manager"]
-        assert workspace.attention_budget == 1.2
-        assert workspace.time_horizon == "realtime"
-        assert workspace.stage == "monitor_wall"
-        assert len(workspace.attention_signals) == 2
-
-    def test_attention_budget_validation(self):
-        """Test attention budget must be 0.0-1.5."""
-        # Valid budgets
-        WorkspaceLayout(id="test", label="Test", attention_budget=0.0)
-        WorkspaceLayout(id="test", label="Test", attention_budget=1.5)
-
-        # Invalid budgets
+        # Attention budget bounds
+        WorkspaceLayout(id="t", label="T", attention_budget=0.0)
+        WorkspaceLayout(id="t", label="T", attention_budget=1.5)
         with pytest.raises(ValidationError):
-            WorkspaceLayout(id="test", label="Test", attention_budget=-0.1)
-
+            WorkspaceLayout(id="t", label="T", attention_budget=-0.1)
         with pytest.raises(ValidationError):
-            WorkspaceLayout(id="test", label="Test", attention_budget=1.6)
+            WorkspaceLayout(id="t", label="T", attention_budget=1.6)
 
-    def test_time_horizon_validation(self):
-        """Test time horizon must be realtime/daily/archival."""
-        # Valid horizons
-        for horizon in ("realtime", "daily", "archival"):
-            WorkspaceLayout(id="test", label="Test", time_horizon=horizon)
-
-        # Invalid horizon
+        # Time horizon
+        for h in ("realtime", "daily", "archival"):
+            WorkspaceLayout(id="t", label="T", time_horizon=h)
         with pytest.raises(ValidationError):
-            WorkspaceLayout(id="test", label="Test", time_horizon="monthly")
+            WorkspaceLayout(id="t", label="T", time_horizon="monthly")
 
-    def test_immutability(self):
-        """Test that WorkspaceLayout is immutable."""
-        workspace = WorkspaceLayout(id="test", label="Test")
-
+        # Immutability
+        immut = WorkspaceLayout(id="t", label="T")
         with pytest.raises((ValidationError, AttributeError)):
-            workspace.attention_budget = 1.5
+            immut.attention_budget = 1.5
 
 
 class TestPersonaLayout:
     """Tests for PersonaLayout model."""
 
-    def test_persona_layout_creation(self):
-        """Test creating a basic persona layout."""
-        persona = PersonaLayout(id="admin", label="Administrator")
+    def test_persona_layout_combined(self):
+        """Combined: creation defaults, all fields, proficiency_level
+        validation, session_style validation, immutability."""
+        # Defaults
+        p = PersonaLayout(id="admin", label="Administrator")
+        assert p.id == "admin"
+        assert p.label == "Administrator"
+        assert p.goals == []
+        assert p.proficiency_level == "intermediate"
+        assert p.session_style == "deep_work"
+        assert p.attention_biases == {}
 
-        assert persona.id == "admin"
-        assert persona.label == "Administrator"
-        assert persona.goals == []
-        assert persona.proficiency_level == "intermediate"  # default
-        assert persona.session_style == "deep_work"  # default
-        assert persona.attention_biases == {}
-
-    def test_persona_layout_with_all_fields(self):
-        """Test persona with all fields specified."""
-        persona = PersonaLayout(
+        # All fields
+        p2 = PersonaLayout(
             id="power_user",
             label="Power User",
             goals=["monitor_metrics", "quick_actions"],
@@ -289,57 +183,46 @@ class TestPersonaLayout:
             session_style="glance",
             attention_biases={"kpi": 1.5, "table": 0.8},
         )
+        assert p2.goals == ["monitor_metrics", "quick_actions"]
+        assert p2.proficiency_level == "expert"
+        assert p2.session_style == "glance"
+        assert p2.attention_biases == {"kpi": 1.5, "table": 0.8}
 
-        assert persona.goals == ["monitor_metrics", "quick_actions"]
-        assert persona.proficiency_level == "expert"
-        assert persona.session_style == "glance"
-        assert persona.attention_biases == {"kpi": 1.5, "table": 0.8}
-
-    def test_proficiency_level_validation(self):
-        """Test proficiency level must be novice/intermediate/expert."""
-        # Valid levels
+        # Proficiency level
         for level in ("novice", "intermediate", "expert"):
-            PersonaLayout(id="test", label="Test", proficiency_level=level)
-
-        # Invalid level
+            PersonaLayout(id="t", label="T", proficiency_level=level)
         with pytest.raises(ValidationError):
-            PersonaLayout(id="test", label="Test", proficiency_level="advanced")
+            PersonaLayout(id="t", label="T", proficiency_level="advanced")
 
-    def test_session_style_validation(self):
-        """Test session style must be glance/deep_work."""
-        # Valid styles
+        # Session style
         for style in ("glance", "deep_work"):
-            PersonaLayout(id="test", label="Test", session_style=style)
-
-        # Invalid style
+            PersonaLayout(id="t", label="T", session_style=style)
         with pytest.raises(ValidationError):
-            PersonaLayout(id="test", label="Test", session_style="focused")
+            PersonaLayout(id="t", label="T", session_style="focused")
 
-    def test_immutability(self):
-        """Test that PersonaLayout is immutable."""
-        persona = PersonaLayout(id="test", label="Test")
-
+        # Immutability
+        immut = PersonaLayout(id="t", label="T")
         with pytest.raises((ValidationError, AttributeError)):
-            persona.proficiency_level = "expert"
+            immut.proficiency_level = "expert"
 
 
 class TestLayoutSurface:
     """Tests for LayoutSurface model."""
 
-    def test_layout_surface_creation(self):
-        """Test creating a basic layout surface."""
-        surface = LayoutSurface(id="primary", stage=LayoutArchetype.SCANNER_TABLE)
+    def test_layout_surface_combined(self):
+        """Combined: creation defaults, with-signals, capacity validation,
+        priority validation, immutability."""
+        # Defaults
+        s = LayoutSurface(id="primary", stage=LayoutArchetype.SCANNER_TABLE)
+        assert s.id == "primary"
+        assert s.stage == LayoutArchetype.SCANNER_TABLE
+        assert s.capacity == 1.0
+        assert s.priority == 1
+        assert s.assigned_signals == []
+        assert s.constraints == {}
 
-        assert surface.id == "primary"
-        assert surface.stage == LayoutArchetype.SCANNER_TABLE
-        assert surface.capacity == 1.0  # default
-        assert surface.priority == 1  # default
-        assert surface.assigned_signals == []
-        assert surface.constraints == {}
-
-    def test_layout_surface_with_signals(self):
-        """Test surface with assigned signals."""
-        surface = LayoutSurface(
+        # With signals
+        s2 = LayoutSurface(
             id="sidebar",
             stage=LayoutArchetype.MONITOR_WALL,
             capacity=0.5,
@@ -347,71 +230,54 @@ class TestLayoutSurface:
             assigned_signals=["signal1", "signal2"],
             constraints={"max_width": 300},
         )
+        assert s2.capacity == 0.5
+        assert s2.priority == 2
+        assert s2.assigned_signals == ["signal1", "signal2"]
+        assert s2.constraints == {"max_width": 300}
 
-        assert surface.capacity == 0.5
-        assert surface.priority == 2
-        assert surface.assigned_signals == ["signal1", "signal2"]
-        assert surface.constraints == {"max_width": 300}
-
-    def test_capacity_validation(self):
-        """Test capacity must be >= 0.0."""
-        # Valid capacities
-        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
-        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
-
-        # Invalid capacity
+        # Capacity bounds
+        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
+        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
         with pytest.raises(ValidationError):
-            LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
+            LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
 
-    def test_priority_validation(self):
-        """Test priority must be >= 1."""
-        # Valid priorities
-        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=1)
-        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=10)
-
-        # Invalid priority
+        # Priority bounds
+        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=1)
+        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=10)
         with pytest.raises(ValidationError):
-            LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=0)
+            LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=0)
 
-    def test_immutability(self):
-        """Test that LayoutSurface is immutable."""
-        surface = LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC)
-
+        # Immutability
+        immut = LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC)
         with pytest.raises((ValidationError, AttributeError)):
-            surface.capacity = 2.0
+            immut.capacity = 2.0
 
 
 class TestLayoutPlan:
     """Tests for LayoutPlan model."""
 
-    def test_layout_plan_creation(self):
-        """Test creating a basic layout plan."""
-        plan = LayoutPlan(workspace_id="dashboard", stage=LayoutArchetype.MONITOR_WALL)
+    def test_layout_plan_combined(self):
+        """Combined: creation defaults, all-fields with surfaces, immutability."""
+        # Defaults
+        p = LayoutPlan(workspace_id="dashboard", stage=LayoutArchetype.MONITOR_WALL)
+        assert p.workspace_id == "dashboard"
+        assert p.persona_id is None
+        assert p.stage == LayoutArchetype.MONITOR_WALL
+        assert p.surfaces == []
+        assert p.over_budget_signals == []
+        assert p.warnings == []
+        assert p.metadata == {}
 
-        assert plan.workspace_id == "dashboard"
-        assert plan.persona_id is None
-        assert plan.stage == LayoutArchetype.MONITOR_WALL
-        assert plan.surfaces == []
-        assert plan.over_budget_signals == []
-        assert plan.warnings == []
-        assert plan.metadata == {}
-
-    def test_layout_plan_with_all_fields(self):
-        """Test plan with all fields specified."""
+        # All fields
         surfaces = [
             LayoutSurface(
-                id="primary",
-                stage=LayoutArchetype.MONITOR_WALL,
-                assigned_signals=["signal1"],
+                id="primary", stage=LayoutArchetype.MONITOR_WALL, assigned_signals=["signal1"]
             ),
             LayoutSurface(
-                id="sidebar",
-                stage=LayoutArchetype.MONITOR_WALL,
-                assigned_signals=["signal2"],
+                id="sidebar", stage=LayoutArchetype.MONITOR_WALL, assigned_signals=["signal2"]
             ),
         ]
-
-        plan = LayoutPlan(
+        p2 = LayoutPlan(
             workspace_id="dashboard",
             persona_id="admin",
             stage=LayoutArchetype.MONITOR_WALL,
@@ -420,26 +286,23 @@ class TestLayoutPlan:
             warnings=["Attention budget exceeded by 0.2"],
             metadata={"selection_score": 0.85},
         )
+        assert p2.persona_id == "admin"
+        assert len(p2.surfaces) == 2
+        assert p2.over_budget_signals == ["signal3"]
+        assert len(p2.warnings) == 1
+        assert p2.metadata["selection_score"] == 0.85
 
-        assert plan.persona_id == "admin"
-        assert len(plan.surfaces) == 2
-        assert plan.over_budget_signals == ["signal3"]
-        assert len(plan.warnings) == 1
-        assert plan.metadata["selection_score"] == 0.85
-
-    def test_immutability(self):
-        """Test that LayoutPlan is immutable."""
-        plan = LayoutPlan(workspace_id="test", stage=LayoutArchetype.FOCUS_METRIC)
-
+        # Immutability
+        immut = LayoutPlan(workspace_id="t", stage=LayoutArchetype.FOCUS_METRIC)
         with pytest.raises((ValidationError, AttributeError)):
-            plan.stage = LayoutArchetype.SCANNER_TABLE
+            immut.stage = LayoutArchetype.SCANNER_TABLE
 
 
 class TestLayoutArchetype:
     """Tests for LayoutArchetype enum."""
 
-    def test_all_archetypes_defined(self):
-        """Test that all expected archetypes are defined."""
+    def test_archetype_combined(self):
+        """Combined: all archetypes defined + individual values."""
         expected = {
             "focus_metric",
             "scanner_table",
@@ -447,11 +310,7 @@ class TestLayoutArchetype:
             "monitor_wall",
             "command_center",
         }
-        actual = {a.value for a in LayoutArchetype}
-        assert actual == expected
-
-    def test_archetype_values(self):
-        """Test individual archetype values."""
+        assert {a.value for a in LayoutArchetype} == expected
         assert LayoutArchetype.FOCUS_METRIC.value == "focus_metric"
         assert LayoutArchetype.SCANNER_TABLE.value == "scanner_table"
         assert LayoutArchetype.DUAL_PANE_FLOW.value == "dual_pane_flow"
@@ -462,8 +321,8 @@ class TestLayoutArchetype:
 class TestAttentionSignalKind:
     """Tests for LayoutSignalKind enum."""
 
-    def test_all_signal_kinds_defined(self):
-        """Test that all expected signal kinds are defined."""
+    def test_signal_kind_combined(self):
+        """Combined: all expected kinds defined + individual kind values."""
         expected = {
             "kpi",
             "alert_feed",
@@ -476,11 +335,7 @@ class TestAttentionSignalKind:
             "search",
             "filter",
         }
-        actual = {k.value for k in AttentionSignalKind}
-        assert actual == expected
-
-    def test_signal_kind_values(self):
-        """Test individual signal kind values."""
+        assert {k.value for k in AttentionSignalKind} == expected
         assert AttentionSignalKind.KPI.value == "kpi"
         assert AttentionSignalKind.TABLE.value == "table"
         assert AttentionSignalKind.FORM.value == "form"

@@ -235,50 +235,48 @@ class TestRecovery:
 
 
 class TestEntryFactories:
-    def test_make_tool_start_entry(self):
-        from dazzle.mcp.server.activity_log import make_tool_start_entry
+    def test_entry_factories_combined(self):
+        """Combined: tool_start, tool_end success+failure, progress
+        (with current/total), log (no current), error."""
+        from dazzle.mcp.server.activity_log import (
+            make_error_entry,
+            make_progress_entry,
+            make_tool_end_entry,
+            make_tool_start_entry,
+        )
 
-        entry = make_tool_start_entry("pipeline", "run")
-        assert entry["type"] == "tool_start"
-        assert entry["tool"] == "pipeline"
-        assert entry["operation"] == "run"
+        # tool_start
+        s = make_tool_start_entry("pipeline", "run")
+        assert s["type"] == "tool_start"
+        assert s["tool"] == "pipeline"
+        assert s["operation"] == "run"
 
-    def test_make_tool_end_entry_success(self):
-        from dazzle.mcp.server.activity_log import make_tool_end_entry
+        # tool_end success (rounded duration)
+        ok = make_tool_end_entry("dsl", "validate", success=True, duration_ms=123.456)
+        assert ok["type"] == "tool_end"
+        assert ok["success"] is True
+        assert ok["duration_ms"] == 123.5
 
-        entry = make_tool_end_entry("dsl", "validate", success=True, duration_ms=123.456)
-        assert entry["type"] == "tool_end"
-        assert entry["success"] is True
-        assert entry["duration_ms"] == 123.5  # rounded
+        # tool_end failure
+        fail = make_tool_end_entry("dsl", "validate", success=False, error="boom")
+        assert fail["success"] is False
+        assert fail["error"] == "boom"
 
-    def test_make_tool_end_entry_failure(self):
-        from dazzle.mcp.server.activity_log import make_tool_end_entry
+        # progress
+        p = make_progress_entry("pipeline", "Running step 3", current=3, total=10)
+        assert p["type"] == "progress"
+        assert p["current"] == 3
+        assert p["total"] == 10
 
-        entry = make_tool_end_entry("dsl", "validate", success=False, error="boom")
-        assert entry["success"] is False
-        assert entry["error"] == "boom"
+        # log (progress without current/total)
+        log_entry = make_progress_entry("dsl", "Parsing modules")
+        assert log_entry["type"] == "log"
+        assert "current" not in log_entry
 
-    def test_make_progress_entry(self):
-        from dazzle.mcp.server.activity_log import make_progress_entry
-
-        entry = make_progress_entry("pipeline", "Running step 3", current=3, total=10)
-        assert entry["type"] == "progress"
-        assert entry["current"] == 3
-        assert entry["total"] == 10
-
-    def test_make_log_entry(self):
-        from dazzle.mcp.server.activity_log import make_progress_entry
-
-        entry = make_progress_entry("dsl", "Parsing modules")
-        assert entry["type"] == "log"
-        assert "current" not in entry
-
-    def test_make_error_entry(self):
-        from dazzle.mcp.server.activity_log import make_error_entry
-
-        entry = make_error_entry("pipeline", "Step failed", operation="run")
-        assert entry["type"] == "error"
-        assert entry["level"] == "error"
+        # error
+        err = make_error_entry("pipeline", "Step failed", operation="run")
+        assert err["type"] == "error"
+        assert err["level"] == "error"
 
 
 # ── Formatting ──────────────────────────────────────────────────────────────

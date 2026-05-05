@@ -33,144 +33,135 @@ def _run_async(coro: Any) -> Any:
 
 
 class TestScenarioLoading:
-    def test_load_scenario(self) -> None:
+    def test_loading_combined(self) -> None:
+        """Combined: load_scenario, not-found, unknown vendor, steps parsed,
+        response_overrides, status_override, delay."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenario = engine.load_scenario("sumsub_kyc", "kyc_approved")
-        assert scenario.name == "kyc_approved"
-        assert scenario.vendor == "sumsub_kyc"
-        assert len(scenario.steps) > 0
 
-    def test_load_scenario_not_found(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        # Load scenario
+        s = engine.load_scenario("sumsub_kyc", "kyc_approved")
+        assert s.name == "kyc_approved"
+        assert s.vendor == "sumsub_kyc"
+        assert len(s.steps) > 0
+
+        # Not found
         with pytest.raises(FileNotFoundError, match="Scenario not found"):
             engine.load_scenario("sumsub_kyc", "nonexistent_scenario")
 
-    def test_load_scenario_unknown_vendor(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        # Unknown vendor
         with pytest.raises(FileNotFoundError):
             engine.load_scenario("unknown_vendor", "anything")
 
-    def test_scenario_steps_parsed(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenario = engine.load_scenario("sumsub_kyc", "kyc_rejected")
-        # Should have steps for create_applicant, request_check, get_applicant_status, get_review_result
-        ops = [s.operation for s in scenario.steps]
+        # Steps parsed
+        rej = engine.load_scenario("sumsub_kyc", "kyc_rejected")
+        ops = [step.operation for step in rej.steps]
         assert "create_applicant" in ops
         assert "request_check" in ops
         assert "get_review_result" in ops
 
-    def test_scenario_response_overrides(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenario = engine.load_scenario("sumsub_kyc", "kyc_rejected")
-        review_step = next(s for s in scenario.steps if s.operation == "get_review_result")
+        # Response overrides
+        review_step = next(step for step in rej.steps if step.operation == "get_review_result")
         assert review_step.response_override["review_result"] == "RED"
         assert "DOCUMENT_FACE_MISMATCH" in review_step.response_override["reject_labels"]
 
-    def test_scenario_status_override(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenario = engine.load_scenario("stripe_payments", "payment_failed_insufficient")
-        confirm_step = next(s for s in scenario.steps if s.operation == "confirm_payment_intent")
+        # Status override
+        stripe = engine.load_scenario("stripe_payments", "payment_failed_insufficient")
+        confirm_step = next(
+            step for step in stripe.steps if step.operation == "confirm_payment_intent"
+        )
         assert confirm_step.status_override == 402
 
-    def test_scenario_delay(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenario = engine.load_scenario("sumsub_kyc", "kyc_rejected")
-        check_step = next(s for s in scenario.steps if s.operation == "request_check")
+        # Delay
+        check_step = next(step for step in rej.steps if step.operation == "request_check")
         assert check_step.delay_ms == 500
 
 
 class TestScenarioListing:
-    def test_list_all_scenarios(self) -> None:
+    def test_listing_combined(self) -> None:
+        """Combined: list all, vendor filter, unknown vendor (empty),
+        nonexistent dir (empty)."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios()
-        assert len(scenarios) >= 19
-        assert "sumsub_kyc/kyc_approved" in scenarios
-        assert "stripe_payments/payment_succeeded" in scenarios
 
-    def test_list_vendor_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="sumsub_kyc")
-        assert len(scenarios) >= 4
-        assert all(s.startswith("sumsub_kyc/") for s in scenarios)
+        all_scenarios = engine.list_scenarios()
+        assert len(all_scenarios) >= 19
+        assert "sumsub_kyc/kyc_approved" in all_scenarios
+        assert "stripe_payments/payment_succeeded" in all_scenarios
 
-    def test_list_unknown_vendor(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="nonexistent")
-        assert scenarios == []
+        sumsub = engine.list_scenarios(vendor="sumsub_kyc")
+        assert len(sumsub) >= 4
+        assert all(s.startswith("sumsub_kyc/") for s in sumsub)
 
-    def test_list_nonexistent_dir(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=Path("/nonexistent"))
-        scenarios = engine.list_scenarios()
-        assert scenarios == []
+        assert engine.list_scenarios(vendor="nonexistent") == []
+
+        assert ScenarioEngine(scenarios_dir=Path("/nonexistent")).list_scenarios() == []
 
 
 class TestScenarioReset:
-    def test_reset_specific_vendor(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("sumsub_kyc", "kyc_approved")
-        engine.load_scenario("stripe_payments", "payment_succeeded")
-        assert len(engine.active_scenarios) == 2
+    def test_reset_combined(self) -> None:
+        """Combined: reset specific vendor, reset all, active_scenarios property."""
+        # Reset specific
+        e1 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        e1.load_scenario("sumsub_kyc", "kyc_approved")
+        e1.load_scenario("stripe_payments", "payment_succeeded")
+        assert len(e1.active_scenarios) == 2
+        e1.reset(vendor="sumsub_kyc")
+        assert "sumsub_kyc" not in e1.active_scenarios
+        assert "stripe_payments" in e1.active_scenarios
 
-        engine.reset(vendor="sumsub_kyc")
-        assert "sumsub_kyc" not in engine.active_scenarios
-        assert "stripe_payments" in engine.active_scenarios
+        # Reset all
+        e2 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        e2.load_scenario("sumsub_kyc", "kyc_approved")
+        e2.load_scenario("stripe_payments", "payment_succeeded")
+        e2.reset()
+        assert len(e2.active_scenarios) == 0
 
-    def test_reset_all(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("sumsub_kyc", "kyc_approved")
-        engine.load_scenario("stripe_payments", "payment_succeeded")
-        engine.reset()
-        assert len(engine.active_scenarios) == 0
-
-    def test_active_scenarios_property(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        assert engine.active_scenarios == {}
-        engine.load_scenario("sumsub_kyc", "kyc_approved")
-        assert engine.active_scenarios == {"sumsub_kyc": "kyc_approved"}
+        # active_scenarios property
+        e3 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        assert e3.active_scenarios == {}
+        e3.load_scenario("sumsub_kyc", "kyc_approved")
+        assert e3.active_scenarios == {"sumsub_kyc": "kyc_approved"}
 
 
 class TestScenarioIntercept:
-    def test_intercept_with_override(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("sumsub_kyc", "kyc_rejected")
-
+    def test_intercept_combined(self) -> None:
+        """Combined: intercept with override, with status_override, no match,
+        no active scenario."""
+        # With override
+        e1 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        e1.load_scenario("sumsub_kyc", "kyc_rejected")
         data, status = _run_async(
-            engine.intercept("sumsub_kyc", "get_review_result", {"id": "abc"}, 200)
+            e1.intercept("sumsub_kyc", "get_review_result", {"id": "abc"}, 200)
         )
         assert data["review_result"] == "RED"
         assert "DOCUMENT_FACE_MISMATCH" in data["reject_labels"]
-        assert data["id"] == "abc"  # Original data preserved
-        assert status == 200  # No status override for this step
-
-    def test_intercept_with_status_override(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("hmrc_mtd_vat", "vat_return_rejected")
-
-        data, status = _run_async(
-            engine.intercept("hmrc_mtd_vat", "submit_return", {"id": "ret-1"}, 201)
-        )
-        assert status == 422
-        assert data["code"] == "INVALID_REQUEST"
-
-    def test_intercept_no_match(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("sumsub_kyc", "kyc_approved")
-
-        # Operation not in scenario steps
-        data, status = _run_async(
-            engine.intercept("sumsub_kyc", "delete_applicant", {"ok": True}, 200)
-        )
-        assert data == {"ok": True}
+        assert data["id"] == "abc"
         assert status == 200
 
-    def test_intercept_no_active_scenario(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-
-        data, status = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+        # With status override
+        e2 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        e2.load_scenario("hmrc_mtd_vat", "vat_return_rejected")
+        data2, status2 = _run_async(
+            e2.intercept("hmrc_mtd_vat", "submit_return", {"id": "ret-1"}, 201)
         )
-        assert data == {"id": "abc"}
-        assert status == 201
+        assert status2 == 422
+        assert data2["code"] == "INVALID_REQUEST"
+
+        # No match
+        e3 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        e3.load_scenario("sumsub_kyc", "kyc_approved")
+        data3, status3 = _run_async(
+            e3.intercept("sumsub_kyc", "delete_applicant", {"ok": True}, 200)
+        )
+        assert data3 == {"ok": True}
+        assert status3 == 200
+
+        # No active scenario
+        e4 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+        data4, status4 = _run_async(
+            e4.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+        )
+        assert data4 == {"id": "abc"}
+        assert status4 == 201
 
 
 class TestErrorInjection:
@@ -385,8 +376,11 @@ class TestScenarioWithMockServer:
 class TestBuiltInScenarios:
     """Verify all built-in scenario TOML files are valid."""
 
-    def test_all_scenarios_loadable(self) -> None:
+    def test_built_in_scenarios_combined(self) -> None:
+        """Combined: all scenarios loadable + per-vendor coverage
+        (sumsub, stripe, hmrc, xero, docuseal, companies_house)."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
+
         all_scenarios = engine.list_scenarios()
         assert len(all_scenarios) >= 19
 
@@ -397,38 +391,22 @@ class TestBuiltInScenarios:
             assert scenario.vendor == vendor
             assert len(scenario.steps) > 0, f"Scenario {scenario_ref} has no steps"
 
-    def test_sumsub_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="sumsub_kyc")
-        assert len(scenarios) >= 4
-        names = {s.split("/")[1] for s in scenarios}
-        assert "kyc_approved" in names
-        assert "kyc_rejected" in names
+        # Sumsub
+        sumsub = engine.list_scenarios(vendor="sumsub_kyc")
+        assert len(sumsub) >= 4
+        sumsub_names = {s.split("/")[1] for s in sumsub}
+        assert "kyc_approved" in sumsub_names
+        assert "kyc_rejected" in sumsub_names
 
-    def test_stripe_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="stripe_payments")
-        assert len(scenarios) >= 3
-        names = {s.split("/")[1] for s in scenarios}
-        assert "payment_succeeded" in names
-        assert "payment_failed_insufficient" in names
+        # Stripe
+        stripe = engine.list_scenarios(vendor="stripe_payments")
+        assert len(stripe) >= 3
+        stripe_names = {s.split("/")[1] for s in stripe}
+        assert "payment_succeeded" in stripe_names
+        assert "payment_failed_insufficient" in stripe_names
 
-    def test_hmrc_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="hmrc_mtd_vat")
-        assert len(scenarios) >= 3
-
-    def test_xero_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="xero_accounting")
-        assert len(scenarios) >= 3
-
-    def test_docuseal_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="docuseal_signatures")
-        assert len(scenarios) >= 3
-
-    def test_companies_house_scenarios(self) -> None:
-        engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        scenarios = engine.list_scenarios(vendor="companies_house_lookup")
-        assert len(scenarios) >= 3
+        # HMRC, Xero, Docuseal, Companies House
+        assert len(engine.list_scenarios(vendor="hmrc_mtd_vat")) >= 3
+        assert len(engine.list_scenarios(vendor="xero_accounting")) >= 3
+        assert len(engine.list_scenarios(vendor="docuseal_signatures")) >= 3
+        assert len(engine.list_scenarios(vendor="companies_house_lookup")) >= 3

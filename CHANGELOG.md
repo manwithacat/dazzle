@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.32] - 2026-05-04
+
+### Changed
+- **Distillation cycle 30** — Batch EE continued on test_activity_log,
+  test_layout_ir, test_vendor_mock_generator, test_vendor_mock_scenarios.
+  90 tests pass. Suite total: 12,433 → 12,361 (72 fewer this cycle).
+  Cumulative: 14,295 → 12,361 (1,934 tests removed across 30 cycles).
+  Need 361 more.
+
 ## [0.66.31] - 2026-05-04
 
 ### Changed

@@ -140,63 +140,48 @@ def _noauth_pack() -> MagicMock:
 
 
 class TestPathConversion:
-    def test_simple_path(self) -> None:
+    def test_path_conversion_combined(self) -> None:
+        """Combined: simple, with param, strips query string, semicolon param."""
         assert _path_to_fastapi("/resources/applicants") == "/resources/applicants"
-
-    def test_path_with_param(self) -> None:
         assert (
             _path_to_fastapi("/resources/applicants/{applicant_id}")
             == "/resources/applicants/{applicant_id}"
         )
-
-    def test_strips_query_string(self) -> None:
         assert (
             _path_to_fastapi("/resources/applicants?levelName={level}") == "/resources/applicants"
         )
-
-    def test_semicolon_param(self) -> None:
         result = _path_to_fastapi("/resources/applicants/-;externalUserId={external_user_id}")
         assert "{external_user_id}" in result
         assert "-;" not in result
 
 
 class TestInferModel:
-    def test_matches_by_path(self) -> None:
+    def test_infer_model_combined(self) -> None:
+        """Combined: matches by path, by op name, fallback single model, none."""
         fm_defs = {"Applicant": {"fields": {}}, "Document": {"fields": {}}}
         assert (
             _infer_model_for_operation("create", "/resources/applicants", "POST", fm_defs)
             == "Applicant"
         )
-
-    def test_matches_by_op_name(self) -> None:
-        fm_defs = {"Applicant": {"fields": {}}, "Document": {"fields": {}}}
         assert (
             _infer_model_for_operation("get_document", "/resources/docs", "GET", fm_defs)
             == "Document"
         )
-
-    def test_fallback_single_model(self) -> None:
-        fm_defs = {"Widget": {"fields": {}}}
-        assert _infer_model_for_operation("unknown", "/api/v1/things", "GET", fm_defs) == "Widget"
-
-    def test_returns_none_no_match(self) -> None:
-        fm_defs = {"Applicant": {"fields": {}}, "Document": {"fields": {}}}
+        single_def = {"Widget": {"fields": {}}}
+        assert (
+            _infer_model_for_operation("unknown", "/api/v1/things", "GET", single_def) == "Widget"
+        )
         assert _infer_model_for_operation("health", "/health", "GET", fm_defs) is None
 
 
 class TestExtractRecordId:
-    def test_extracts_id_suffix_param(self) -> None:
+    def test_extract_record_id_combined(self) -> None:
+        """Combined: id suffix param, id param, fallback last, returns None empty."""
         assert (
             _extract_record_id({"applicant_id": "abc123"}, "/resources/{applicant_id}") == "abc123"
         )
-
-    def test_extracts_id_param(self) -> None:
         assert _extract_record_id({"id": "xyz"}, "/items/{id}") == "xyz"
-
-    def test_fallback_last_param(self) -> None:
         assert _extract_record_id({"slug": "hello"}, "/items/{slug}") == "hello"
-
-    def test_returns_none_empty(self) -> None:
         assert _extract_record_id({}, "/items") is None
 
 

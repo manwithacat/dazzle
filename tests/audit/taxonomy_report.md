@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (12,433 test functions)
+# Test Suite Taxonomy — Pass 1 (12,361 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,8 +6,8 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 10,506 | 84.5% | 0 |
-| smoke | 1,277 | 10.3% | 519 |
+| contract | 10,447 | 84.5% | 0 |
+| smoke | 1,264 | 10.2% | 511 |
 | parametric_cluster | 422 | 3.4% | 422 |
 | regression_pin | 156 | 1.3% | 156 |
 | implementation_mirror | 54 | 0.4% | 0 |
@@ -16,9 +16,9 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 ## Action thresholds
 
-- **Definitely keep**: 11,096 (contract + regression_pin + parametric + snapshot)
+- **Definitely keep**: 11,037 (contract + regression_pin + parametric + snapshot)
 - **Review for collapse/rewrite**: 60 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,277
+- **Smoke tests** (canary; keep but never as sole coverage): 1,264
 
 ## Top 10 implementation-mirror files
 
@@ -38,13 +38,13 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 - `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_invariant_evaluator.py` — 18 smoke tests
 - `tests/unit/test_access_control.py` — 17 smoke tests
-- `tests/unit/test_layout_ir.py` — 16 smoke tests
 - `tests/unit/test_composition_audit.py` — 14 smoke tests
 - `tests/unit/test_grant_store.py` — 13 smoke tests
 - `tests/unit/test_job_queue.py` — 13 smoke tests
 - `tests/unit/test_notification_providers_ses_sendgrid.py` — 13 smoke tests
 - `tests/e2e/test_fieldtest_hub_screenshots.py` — 11 smoke tests
 - `tests/unit/fitness/investigator/test_proposal.py` — 11 smoke tests
+- `tests/unit/test_app_theme_registry.py` — 11 smoke tests
 
 ## Notes on the classifier
 
