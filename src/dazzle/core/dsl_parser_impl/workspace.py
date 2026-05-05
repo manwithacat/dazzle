@@ -1370,6 +1370,7 @@ class WorkspaceParserMixin:
         profile_stats: list[ir.ProfileCardStatSpec] = []  # profile_card stats (#892)
         facts: list[str] = []  # profile_card key-facts list (#892)
         pipeline_stages: list[ir.PipelineStageSpec] = []  # pipeline_steps (#890)
+        render: str | None = None  # Plan 2: opt-in renderer name (typed-fragment integration)
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1440,6 +1441,14 @@ class WorkspaceParserMixin:
                 self.expect(TokenType.COLON)
                 display_token = self.expect_identifier_or_keyword()
                 display = ir.DisplayMode(display_token.value)
+                self.skip_newlines()
+
+            # Plan 2: render: <renderer-name> — opt into a non-default renderer at region level
+            elif self.match(TokenType.RENDER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                render_token = self.expect_identifier_or_keyword()
+                render = render_token.value
                 self.skip_newlines()
 
             # action: surface_name
@@ -2093,4 +2102,5 @@ class WorkspaceParserMixin:
             revoke=revoke,
             primary_action=primary_action,
             secondary_action=secondary_action,
+            render=render,
         )

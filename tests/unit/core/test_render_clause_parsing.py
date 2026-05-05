@@ -60,3 +60,27 @@ surface task_list "Tasks":
 """
     _, _, _, _, _, fragment = parse_dsl(src, Path("test.dsl"))
     assert fragment.surfaces[0].render is None
+
+
+def test_workspace_region_parser_accepts_render_clause() -> None:
+    src = """
+module test
+app sample "Demo"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+workspace ops "Ops":
+  tasks:
+    source: Task
+    render: fragment
+"""
+    _, _, _, _, _, fragment = parse_dsl(src, Path("test.dsl"))
+    assert len(fragment.workspaces) == 1
+    region = fragment.workspaces[0].regions[0]
+    assert region.render == "fragment"
