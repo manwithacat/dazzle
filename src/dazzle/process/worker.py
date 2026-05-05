@@ -78,10 +78,16 @@ async def main() -> None:
 
     logger.info("Found %s DSL files", len(dsl_files))
 
+    from dazzle_back.runtime.renderers.init import default_renderer_names
+
     modules = parse_modules(dsl_files)
     # build_appspec wants the module name from manifest (e.g.
     # "myapp.core"), NOT the filesystem path — see #886.
-    app_spec = build_appspec(modules, manifest.project_root)
+    app_spec = build_appspec(
+        modules,
+        manifest.project_root,
+        known_renderers=default_renderer_names(),
+    )
 
     # Get process specs
     processes = app_spec.processes if hasattr(app_spec, "processes") else []

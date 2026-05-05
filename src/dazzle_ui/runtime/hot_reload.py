@@ -441,8 +441,15 @@ def create_reload_callback(
             dsl_files = discover_dsl_files(project_root, manifest)
             modules = parse_modules(dsl_files)
 
-            # Link modules
-            app_spec = build_appspec(modules, manifest.project_root)
+            # Link modules. Pass `known_renderers=` so hot-reload catches
+            # `render: <unknown>` clauses in the same way the boot path does.
+            from dazzle_back.runtime.renderers.init import default_renderer_names
+
+            app_spec = build_appspec(
+                modules,
+                manifest.project_root,
+                known_renderers=default_renderer_names(),
+            )
 
             # Validate - lint_appspec returns (errors, warnings, relevance) tuple
             errors, warnings, _relevance = lint_appspec(app_spec)

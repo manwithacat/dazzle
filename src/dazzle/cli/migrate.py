@@ -240,10 +240,16 @@ def deploy_command(
     # Validate DSL
     console.print("Validating DSL...")
     try:
+        from dazzle_back.runtime.renderers.init import default_renderer_names
+
         modules = parse_modules(dsl_files)
         # build_appspec wants the module name (e.g. "myapp.core") not
         # the filesystem path — see #886.
-        build_appspec(modules, manifest.project_root)
+        build_appspec(
+            modules,
+            manifest.project_root,
+            known_renderers=default_renderer_names(),
+        )
     except Exception as e:
         console.print(f"[red]DSL validation failed: {e}[/red]")
         raise typer.Exit(1)

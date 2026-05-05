@@ -825,11 +825,20 @@ def create_app_factory(
     # Process workflow support (can be disabled via env var)
     enable_processes = os.environ.get("DAZZLE_ENABLE_PROCESSES", "true").lower() == "true"
 
-    # Parse DSL and build spec
+    # Parse DSL and build spec. Pass `known_renderers=` so the linker
+    # rejects `render: <unknown>` clauses against the same default set
+    # the runtime registry will install moments later — see
+    # `dazzle_back.runtime.renderers.init.default_renderer_names`.
+    from dazzle_back.runtime.renderers.init import default_renderer_names
+
     try:
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
+        appspec = build_appspec(
+            modules,
+            manifest.project_root,
+            known_renderers=default_renderer_names(),
+        )
     except (ParseError, DazzleError) as e:
         raise RuntimeError(f"Failed to parse DSL: {e}")
 
