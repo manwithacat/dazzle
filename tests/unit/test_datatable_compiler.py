@@ -237,46 +237,35 @@ class TestTableContextFromUX:
         assert ctx.table is not None
         assert ctx.table.table_id == "dt-task_list"
 
-    def test_search_first_sets_flag(self) -> None:
-        ux = ir.UXSpec(search_first=True, search=["title"])
-        surface = _list_surface(ux=ux)
+    def test_search_first_flag_message_and_default(self) -> None:
+        """search_first=True sets flag + provides search-aware empty msg; custom empty_message wins; default search=False."""
         entity = _task_entity()
 
-        ctx = compile_surface_to_context(surface, entity)
-
+        # search_first=True sets flag and gives search-aware default empty message
+        ctx = compile_surface_to_context(
+            _list_surface(ux=ir.UXSpec(search_first=True, search=["title"])), entity
+        )
         assert ctx.table is not None
         assert ctx.table.search_first is True
-
-    def test_search_first_default_empty_message(self) -> None:
-        ux = ir.UXSpec(search_first=True, search=["title"])
-        surface = _list_surface(ux=ux)
-        entity = _task_entity()
-
-        ctx = compile_surface_to_context(surface, entity)
-
-        assert ctx.table is not None
         assert (
             "search" in ctx.table.empty_message.lower()
             or "filter" in ctx.table.empty_message.lower()
         )
 
-    def test_search_first_custom_empty_message(self) -> None:
-        ux = ir.UXSpec(search_first=True, search=["title"], empty_message="Search for employees.")
-        surface = _list_surface(ux=ux)
-        entity = _task_entity()
-
-        ctx = compile_surface_to_context(surface, entity)
-
+        # Custom empty_message wins over search-aware default
+        ctx = compile_surface_to_context(
+            _list_surface(
+                ux=ir.UXSpec(
+                    search_first=True, search=["title"], empty_message="Search for employees."
+                )
+            ),
+            entity,
+        )
         assert ctx.table is not None
         assert ctx.table.empty_message == "Search for employees."
 
-    def test_search_first_false_by_default(self) -> None:
-        ux = ir.UXSpec(search=["title"])
-        surface = _list_surface(ux=ux)
-        entity = _task_entity()
-
-        ctx = compile_surface_to_context(surface, entity)
-
+        # Without search_first: flag default False
+        ctx = compile_surface_to_context(_list_surface(ux=ir.UXSpec(search=["title"])), entity)
         assert ctx.table is not None
         assert ctx.table.search_first is False
 

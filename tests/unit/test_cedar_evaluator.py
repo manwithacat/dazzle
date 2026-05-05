@@ -99,19 +99,18 @@ def _status_check(status: str) -> AccessConditionSpec:
 
 
 class TestAccessDecision:
-    def test_bool_true(self) -> None:
-        d = AccessDecision(allowed=True, matched_policy="test", effect="permit")
-        assert bool(d) is True
-        assert d.allowed is True
+    def test_bool_repr_and_allowed(self) -> None:
+        """AccessDecision __bool__ tracks .allowed; repr includes matched_policy."""
+        d_true = AccessDecision(allowed=True, matched_policy="test", effect="permit")
+        assert bool(d_true) is True
+        assert d_true.allowed is True
 
-    def test_bool_false(self) -> None:
-        d = AccessDecision(allowed=False, matched_policy="denied", effect="forbid")
-        assert bool(d) is False
-        assert d.allowed is False
+        d_false = AccessDecision(allowed=False, matched_policy="denied", effect="forbid")
+        assert bool(d_false) is False
+        assert d_false.allowed is False
 
-    def test_repr(self) -> None:
-        d = AccessDecision(allowed=True, matched_policy="superuser_bypass")
-        assert "superuser_bypass" in repr(d)
+        d_repr = AccessDecision(allowed=True, matched_policy="superuser_bypass")
+        assert "superuser_bypass" in repr(d_repr)
 
 
 # =============================================================================
@@ -325,26 +324,21 @@ class TestPersonaScoping:
 
 
 class TestSuperuserBypass:
-    def test_superuser_bypasses_forbid(self) -> None:
-        spec = EntityAccessSpec(
-            permissions=[
-                _forbid_rule(AccessOperationKind.DELETE),
-            ]
-        )
+    def test_superuser_bypasses_forbid_and_default_deny(self) -> None:
+        """Superuser bypass beats explicit FORBID and default-deny alike."""
+        # Bypass FORBID rule
+        spec_forbid = EntityAccessSpec(permissions=[_forbid_rule(AccessOperationKind.DELETE)])
         ctx = _ctx(is_superuser=True)
-        decision = evaluate_permission(spec, AccessOperationKind.DELETE, {}, ctx)
+        decision = evaluate_permission(spec_forbid, AccessOperationKind.DELETE, {}, ctx)
         assert decision.allowed
         assert decision.matched_policy == "superuser_bypass"
 
-    def test_superuser_bypasses_default_deny(self) -> None:
-        spec = EntityAccessSpec(
-            permissions=[
-                _permit_rule(AccessOperationKind.CREATE, _role_check("admin")),
-            ]
+        # Bypass default-deny (no matching rule for DELETE)
+        spec_default = EntityAccessSpec(
+            permissions=[_permit_rule(AccessOperationKind.CREATE, _role_check("admin"))]
         )
         ctx = _ctx(is_superuser=True, roles=[])
-        decision = evaluate_permission(spec, AccessOperationKind.DELETE, {}, ctx)
-        assert decision.allowed
+        assert evaluate_permission(spec_default, AccessOperationKind.DELETE, {}, ctx).allowed
 
 
 # =============================================================================

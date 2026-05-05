@@ -119,21 +119,17 @@ def make_violation(
 class TestWCAGCriteria:
     """Tests for WCAG criteria definitions."""
 
-    def test_level_a_criteria_exist(self):
-        """Level A criteria should be defined."""
+    def test_levels_present_and_required_fields(self):
+        """A/AA criteria each have ≥10 entries with key sample IDs; every criterion has required fields."""
+        all_ids = list(WCAG_CRITERIA.keys())
         level_a = [c for c, info in WCAG_CRITERIA.items() if info["level"] == "A"]
-        assert len(level_a) >= 10
-        assert "1.1.1" in [c for c, info in WCAG_CRITERIA.items()]
-        assert "2.4.4" in [c for c, info in WCAG_CRITERIA.items()]
-
-    def test_level_aa_criteria_exist(self):
-        """Level AA criteria should be defined."""
         level_aa = [c for c, info in WCAG_CRITERIA.items() if info["level"] == "AA"]
+        assert len(level_a) >= 10
         assert len(level_aa) >= 10
-        assert "1.4.3" in [c for c, info in WCAG_CRITERIA.items()]
+        assert "1.1.1" in all_ids
+        assert "2.4.4" in all_ids
+        assert "1.4.3" in all_ids
 
-    def test_criteria_have_required_fields(self):
-        """Each criterion should have required fields."""
         for criterion, info in WCAG_CRITERIA.items():
             assert "name" in info, f"{criterion} missing name"
             assert "level" in info, f"{criterion} missing level"
@@ -143,20 +139,11 @@ class TestWCAGCriteria:
 class TestAxeToWCAGMapping:
     """Tests for axe rule to WCAG mapping."""
 
-    def test_common_rules_mapped(self):
-        """Common axe rules should be mapped to WCAG."""
-        assert "color-contrast" in AXE_TO_WCAG
-        assert "label" in AXE_TO_WCAG
-        assert "button-name" in AXE_TO_WCAG
-        assert "link-name" in AXE_TO_WCAG
-        assert "image-alt" in AXE_TO_WCAG
-
-    def test_color_contrast_mapping(self):
-        """color-contrast should map to 1.4.3."""
+    def test_common_rules_and_specific_mappings(self):
+        """Common axe rule keys exist and map to expected WCAG criteria (color-contrast→1.4.3, label→1.3.1/3.3.2)."""
+        for rule in ("color-contrast", "label", "button-name", "link-name", "image-alt"):
+            assert rule in AXE_TO_WCAG
         assert "1.4.3" in AXE_TO_WCAG["color-contrast"]
-
-    def test_label_mapping(self):
-        """label should map to 1.3.1 and 3.3.2."""
         assert "1.3.1" in AXE_TO_WCAG["label"]
         assert "3.3.2" in AXE_TO_WCAG["label"]
 

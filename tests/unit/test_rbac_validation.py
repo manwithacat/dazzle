@@ -200,14 +200,10 @@ class TestPolicyCompleteness:
 class TestConflictDetection:
     """NIST 4.3 — Detect contradictory permit/forbid rules; verify Cedar resolution."""
 
-    def test_conflicts_detected(self, appspec) -> None:
-        """Some entities intentionally have permit/forbid overlap."""
+    def test_conflicts_detected_and_resolve_forbid_wins(self, appspec) -> None:
+        """At least one permit/forbid conflict exists and every conflict resolves to 'FORBID wins'."""
         result = _find_conflicts(appspec, None)
         assert result["conflict_count"] > 0, "Expected at least one permit/forbid conflict"
-
-    def test_all_conflicts_resolve_forbid_wins(self, appspec) -> None:
-        """Every detected conflict should resolve as 'FORBID wins'."""
-        result = _find_conflicts(appspec, None)
         for conflict in result["conflicts"]:
             assert conflict["resolution"] == "FORBID wins (Cedar semantics)", (
                 f"Unexpected resolution for {conflict['entity']}.{conflict['operation']}"
@@ -247,15 +243,11 @@ class TestSeparationOfDuty:
                 f"SoD violation: {persona} can both create AND update Prescription"
             )
 
-    def test_doctor_cannot_update_prescription(self, entity_map) -> None:
-        """Doctor can create but FORBID overrides update permit."""
+    def test_doctor_create_only_pharmacist_update_only_prescription(self, entity_map) -> None:
+        """Doctor creates but cannot update; pharmacist updates but cannot create."""
         rx = entity_map["Prescription"]
         assert _evaluate_role_aware(rx, "doctor", PermissionKind.CREATE) == "allow"
         assert _evaluate_role_aware(rx, "doctor", PermissionKind.UPDATE) == "deny"
-
-    def test_pharmacist_cannot_create_prescription(self, entity_map) -> None:
-        """Pharmacist can update but FORBID overrides create permit."""
-        rx = entity_map["Prescription"]
         assert _evaluate_role_aware(rx, "pharmacist", PermissionKind.CREATE) == "deny"
         assert _evaluate_role_aware(rx, "pharmacist", PermissionKind.UPDATE) == "allow"
 

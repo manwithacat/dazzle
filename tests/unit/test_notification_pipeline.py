@@ -199,17 +199,18 @@ def _make_process_subsystem(
 class TestWireSendHandlerToChannels:
     """Tests for ProcessSubsystem._wire_send_handler_to_channels."""
 
-    def test_no_channel_manager_skips(self) -> None:
+    def test_skip_branches_no_chmgr_no_adapter_no_method(self) -> None:
+        """No channel_mgr OR no process_adapter OR adapter w/o set_send_handler ⇒ silently skip."""
+        # No channel manager
         subsystem, ctx = _make_process_subsystem(channel_mgr=None)
         subsystem._wire_send_handler_to_channels(ctx)
-        # Should not raise
 
-    def test_no_process_adapter_skips(self) -> None:
+        # No process adapter
         subsystem, ctx = _make_process_subsystem(channel_mgr=MagicMock(), process_adapter=None)
         subsystem._wire_send_handler_to_channels(ctx)
 
-    def test_adapter_without_set_send_handler_skips(self) -> None:
-        adapter = MagicMock(spec=[])  # No attributes
+        # Adapter without set_send_handler attribute
+        adapter = MagicMock(spec=[])
         subsystem, ctx = _make_process_subsystem(channel_mgr=MagicMock(), process_adapter=adapter)
         subsystem._wire_send_handler_to_channels(ctx)
 
@@ -276,20 +277,18 @@ def _make_channels_subsystem_ctx(
 class TestWireEntityEventsToChannels:
     """Tests for ChannelsSubsystem._wire_entity_events_to_channels."""
 
-    def test_no_channel_manager_skips(self) -> None:
+    def test_skip_branches_no_chmgr_or_no_services(self) -> None:
+        """No channel_mgr OR no services dict ⇒ silently skip wiring."""
         from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
+        # No channel manager
         ctx = _make_channels_subsystem_ctx(channel_mgr=None)
-        subsystem = ChannelsSubsystem()
-        subsystem._wire_entity_events_to_channels(ctx)
+        ChannelsSubsystem()._wire_entity_events_to_channels(ctx)
 
-    def test_no_services_skips(self) -> None:
-        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
-
+        # No services
         ctx = _make_channels_subsystem_ctx(channel_mgr=MagicMock())
         ctx.services = None  # type: ignore[assignment]
-        subsystem = ChannelsSubsystem()
-        subsystem._wire_entity_events_to_channels(ctx)
+        ChannelsSubsystem()._wire_entity_events_to_channels(ctx)
 
     def test_no_triggers_skips(self) -> None:
         from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem

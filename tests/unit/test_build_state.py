@@ -184,31 +184,20 @@ class TestBuildState:
 class TestFileHashing:
     """Test file hashing functions."""
 
-    def test_compute_file_hash(self, tmp_path: Path) -> None:
-        """Test computing hash of a file."""
+    def test_compute_file_hash_stable_and_content_sensitive(self, tmp_path: Path) -> None:
+        """Hash is 64-char SHA256 hex, stable across calls, and differs for different content."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world")
-
         hash_result = compute_file_hash(test_file)
-
-        # SHA256 of "hello world"
         assert isinstance(hash_result, str)
-        assert len(hash_result) == 64  # SHA256 hex string length
-        # Same content should produce same hash
+        assert len(hash_result) == 64
         assert hash_result == compute_file_hash(test_file)
 
-    def test_compute_file_hash_different_content(self, tmp_path: Path) -> None:
-        """Test that different content produces different hashes."""
         file1 = tmp_path / "file1.txt"
         file1.write_text("content one")
-
         file2 = tmp_path / "file2.txt"
         file2.write_text("content two")
-
-        hash1 = compute_file_hash(file1)
-        hash2 = compute_file_hash(file2)
-
-        assert hash1 != hash2
+        assert compute_file_hash(file1) != compute_file_hash(file2)
 
     def test_compute_file_hash_nonexistent(self, tmp_path: Path) -> None:
         """Test hashing nonexistent file raises error."""
@@ -247,44 +236,31 @@ class TestFileHashing:
 class TestAppSpecSnapshot:
     """Test AppSpec snapshot generation."""
 
-    def test_simplify_appspec_basic(self, simple_appspec: AppSpec) -> None:
-        """Test generating a simplified AppSpec snapshot."""
+    def test_simplify_appspec_basic_app_entity_and_field_details(
+        self, simple_appspec: AppSpec
+    ) -> None:
+        """Snapshot contains top-level keys, app metadata, entities with fields, and field details."""
         snapshot = simplify_appspec(simple_appspec)
 
+        # Top-level structure
         assert isinstance(snapshot, dict)
-        assert "app" in snapshot
-        assert "entities" in snapshot
-        assert "surfaces" in snapshot
-        assert "apis" in snapshot
-        assert "experiences" in snapshot
+        for key in ("app", "entities", "surfaces", "apis", "experiences"):
+            assert key in snapshot
 
-    def test_simplify_appspec_app_info(self, simple_appspec: AppSpec) -> None:
-        """Test app info in snapshot."""
-        snapshot = simplify_appspec(simple_appspec)
-
+        # App info
         assert snapshot["app"]["name"] == "Test App"
         assert snapshot["app"]["title"] == "A test application"
         assert snapshot["app"]["version"] == "1.0.0"
 
-    def test_simplify_appspec_entities(self, simple_appspec: AppSpec) -> None:
-        """Test entity info in snapshot."""
-        snapshot = simplify_appspec(simple_appspec)
-
+        # Entity info
         assert "Task" in snapshot["entities"]
         task = snapshot["entities"]["Task"]
         assert task["title"] == "A task item"
         assert "fields" in task
-        assert "id" in task["fields"]
-        assert "title" in task["fields"]
-        assert "completed" in task["fields"]
+        for field_name in ("id", "title", "completed"):
+            assert field_name in task["fields"]
 
-    def test_simplify_appspec_field_details(self, simple_appspec: AppSpec) -> None:
-        """Test field details in snapshot."""
-        snapshot = simplify_appspec(simple_appspec)
-
-        task = snapshot["entities"]["Task"]
-
-        # Check title field
+        # Field details
         title_field = task["fields"]["title"]
         assert title_field["required"] is True
         assert isinstance(title_field["type"], str)

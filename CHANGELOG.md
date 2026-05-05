@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.36] - 2026-05-04
+
+### Changed
+- **Distillation cycle 34 (FF tail final)** — Batch FF tail collapsed
+  test_build_state, test_cedar_evaluator, test_datatable_compiler,
+  test_messaging_parser, test_notification_pipeline, test_rbac_validation,
+  test_storage_cycle3. 142 tests pass. Suite total: 12,295 → 12,265 (30
+  fewer). Cumulative: 14,295 → 12,265 (2,030 tests removed across 34
+  cycles, ~14.2% reduction).
+
 ## [0.66.35] - 2026-05-04
 
 ### Changed

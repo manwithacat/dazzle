@@ -450,33 +450,23 @@ class TestStorageDefsPropagation:
     `DazzleBackendApp`, so `_wire_storage_routes()` raised at startup
     even though the TOML was right."""
 
-    def test_server_config_carries_storage_defs(self) -> None:
+    def test_server_config_and_build_server_config_storage_defs(self) -> None:
+        """ServerConfig carries storage_defs (or empty by default); build_server_config threads them through (or empty)."""
+        from dazzle.core import ir
+        from dazzle_back.runtime.app_factory import build_server_config
         from dazzle_back.runtime.server import ServerConfig
 
-        cfg = ServerConfig(storage_defs={"cohort_pdfs": _config("cohort_pdfs")})
-        assert "cohort_pdfs" in cfg.storage_defs
-
-    def test_server_config_default_storage_defs_is_empty(self) -> None:
-        from dazzle_back.runtime.server import ServerConfig
-
+        # ServerConfig with explicit storage_defs
+        defs = {"cohort_pdfs": _config("cohort_pdfs")}
+        assert "cohort_pdfs" in ServerConfig(storage_defs=defs).storage_defs
+        # Default ServerConfig
         assert ServerConfig().storage_defs == {}
 
-    def test_build_server_config_threads_storage_defs(self) -> None:
-        from dazzle.core import ir
-        from dazzle_back.runtime.app_factory import build_server_config
-
+        # build_server_config explicit
         spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
-        defs = {"cohort_pdfs": _config("cohort_pdfs")}
-        cfg = build_server_config(spec, storage_defs=defs)
-        assert cfg.storage_defs == defs
-
-    def test_build_server_config_default_storage_defs(self) -> None:
-        from dazzle.core import ir
-        from dazzle_back.runtime.app_factory import build_server_config
-
-        spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
-        cfg = build_server_config(spec)
-        assert cfg.storage_defs == {}
+        assert build_server_config(spec, storage_defs=defs).storage_defs == defs
+        # build_server_config default
+        assert build_server_config(spec).storage_defs == {}
 
     def test_dazzle_backend_app_reads_storage_defs_from_config(self) -> None:
         """The load-bearing path: caller passes storage_defs via

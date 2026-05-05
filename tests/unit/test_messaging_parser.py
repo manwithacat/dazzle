@@ -454,9 +454,9 @@ channel events:
 class TestAssetParsing:
     """Tests for asset construct parsing."""
 
-    def test_basic_asset(self):
-        """Test parsing a basic asset."""
-        dsl = """
+    def test_file_and_image_assets(self):
+        """Both file and image asset kinds parse correctly with kind/path fields."""
+        dsl_file = """
 module test
 app test "Test"
 
@@ -464,17 +464,14 @@ asset terms_of_service:
   kind: file
   path: "legal/terms.pdf"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
+        _, _, _, _, _, fragment = parse_dsl(dsl_file, Path("test.dsl"))
         assert len(fragment.assets) == 1
         asset = fragment.assets[0]
         assert asset.name == "terms_of_service"
         assert asset.kind.value == "file"
         assert asset.path == "legal/terms.pdf"
 
-    def test_image_asset(self):
-        """Test parsing an image asset."""
-        dsl = """
+        dsl_image = """
 module test
 app test "Test"
 
@@ -482,10 +479,8 @@ asset company_logo:
   kind: image
   path: "branding/logo.png"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        asset = fragment.assets[0]
-        assert asset.kind.value == "image"
+        _, _, _, _, _, fragment = parse_dsl(dsl_image, Path("test.dsl"))
+        assert fragment.assets[0].kind.value == "image"
 
 
 class TestDocumentParsing:

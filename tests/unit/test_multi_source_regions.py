@@ -50,12 +50,10 @@ def _parse(dsl: str):
 
 
 class TestDisplayModeEnum:
-    def test_tabbed_list_exists(self) -> None:
+    def test_tabbed_list_value_and_from_string(self) -> None:
+        """DisplayMode.TABBED_LIST has value 'tabbed_list' and constructs from the string."""
         assert DisplayMode.TABBED_LIST == "tabbed_list"
-
-    def test_tabbed_list_from_string(self) -> None:
-        mode = DisplayMode("tabbed_list")
-        assert mode == DisplayMode.TABBED_LIST
+        assert DisplayMode("tabbed_list") == DisplayMode.TABBED_LIST
 
 
 class TestWorkspaceRegionIR:
@@ -392,23 +390,8 @@ class TestBuildWorkspaceContext:
 class TestPerSourceTabTemplate:
     """Verify per-source tab endpoints use tab_data.html to avoid infinite HTMX loop (#328)."""
 
-    def test_tab_data_template_no_load_trigger(self) -> None:
-        """The tab_data.html template must not contain hx-trigger='load' to prevent infinite polling."""
-        template_path = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "dazzle_ui"
-            / "templates"
-            / "workspace"
-            / "regions"
-            / "tab_data.html"
-        )
-        content = template_path.read_text()
-        assert 'hx-trigger="load"' not in content
-        assert "hx-trigger='load'" not in content
-
-    def test_tab_data_template_exists(self) -> None:
-        """tab_data.html template must exist for per-source tab endpoints."""
+    def test_tab_data_template_exists_and_no_load_trigger(self) -> None:
+        """tab_data.html exists and has no hx-trigger='load' to prevent infinite HTMX polling (#328)."""
         template_path = (
             Path(__file__).resolve().parents[2]
             / "src"
@@ -419,6 +402,9 @@ class TestPerSourceTabTemplate:
             / "tab_data.html"
         )
         assert template_path.exists()
+        content = template_path.read_text()
+        assert 'hx-trigger="load"' not in content
+        assert "hx-trigger='load'" not in content
 
     def test_per_source_region_ctx_uses_tab_data_template(self) -> None:
         """Per-source RegionContext should use tab_data.html, not tabbed_list.html."""
@@ -457,7 +443,8 @@ class TestPerSourceTabTemplate:
 
 
 class TestSourceTabContext:
-    def test_model_fields(self) -> None:
+    def test_model_fields_and_default_empty_filter(self) -> None:
+        """All SourceTabContext fields round-trip; filter_expr defaults to empty string."""
         tab = SourceTabContext(
             entity_name="Task",
             label="Tasks",
@@ -469,6 +456,4 @@ class TestSourceTabContext:
         assert tab.endpoint == "/api/workspaces/dash/regions/queue/Task"
         assert tab.action_url == "/app/task/{id}"
 
-    def test_default_filter_empty(self) -> None:
-        tab = SourceTabContext(entity_name="Task")
-        assert tab.filter_expr == ""
+        assert SourceTabContext(entity_name="Task").filter_expr == ""
