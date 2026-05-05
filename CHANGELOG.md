@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.33] - 2026-05-04
+
+### Changed
+- **Distillation cycle 31** — Batch FF partial collapsed
+  test_archetype_expander, test_celery_builtin_ops, test_copy_parser,
+  test_workspace_layout_prefs. 104 tests pass. Suite total: 12,361 →
+  12,327 (34 fewer this cycle). Cumulative: 14,295 → 12,327 (1,968 tests
+  removed across 31 cycles). Need 327 more.
+
 ## [0.66.32] - 2026-05-04
 
 ### Changed

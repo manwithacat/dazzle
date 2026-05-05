@@ -30,10 +30,10 @@ def create_mock_spec(name: str = "test-app"):
 class TestCDKGeneratorResult:
     """Tests for CDKGeneratorResult."""
 
-    def test_default_state(self):
-        """Test default result state."""
+    def test_default_state_and_mutators(self):
+        """Default state plus add_file/add_stack/add_error/add_artifact behaviour."""
         result = CDKGeneratorResult()
-
+        # Default state
         assert result.success is True
         assert result.files_created == []
         assert result.stack_names == []
@@ -41,60 +41,37 @@ class TestCDKGeneratorResult:
         assert result.warnings == []
         assert result.artifacts == {}
 
-    def test_add_file(self):
-        """Test adding files."""
-        result = CDKGeneratorResult()
+        # add_file
         result.add_file(Path("/test/stack.py"))
-
         assert len(result.files_created) == 1
         assert result.files_created[0] == Path("/test/stack.py")
 
-    def test_add_stack(self):
-        """Test adding stack names."""
-        result = CDKGeneratorResult()
+        # add_stack
         result.add_stack("Network")
-
         assert "Network" in result.stack_names
 
-    def test_add_error(self):
-        """Test adding errors affects success."""
-        result = CDKGeneratorResult()
-        result.add_error("Failed to generate")
+        # add_artifact
+        result.add_artifact("vpc_ref", "network_stack.vpc")
+        assert result.artifacts["vpc_ref"] == "network_stack.vpc"
 
+        # add_error flips success
+        result.add_error("Failed to generate")
         assert result.success is False
         assert "Failed to generate" in result.errors
-
-    def test_add_artifact(self):
-        """Test adding artifacts."""
-        result = CDKGeneratorResult()
-        result.add_artifact("vpc_ref", "network_stack.vpc")
-
-        assert result.artifacts["vpc_ref"] == "network_stack.vpc"
 
 
 class TestNetworkStackGenerator:
     """Tests for NetworkStackGenerator."""
 
-    def test_stack_name(self):
-        """Test stack name property."""
+    def test_stack_name_and_always_generates(self):
+        """Network stack has correct name and always generates."""
         spec = create_mock_spec()
         aws_reqs = AWSRequirements()
         config = DeploymentConfig()
 
         with TemporaryDirectory() as tmpdir:
             generator = NetworkStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
             assert generator.stack_name == "Network"
-
-    def test_should_generate_always_true(self):
-        """Test network stack is always generated."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = NetworkStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
             assert generator.should_generate() is True
 
     def test_generate_creates_file(self):
@@ -138,49 +115,36 @@ class TestNetworkStackGenerator:
 class TestDataStackGenerator:
     """Tests for DataStackGenerator."""
 
-    def test_stack_name(self):
-        """Test stack name property."""
+    def test_stack_name_and_should_generate_branches(self):
+        """Data stack name plus should_generate=True for needs_rds/needs_s3 and False otherwise."""
         spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
         config = DeploymentConfig()
 
         with TemporaryDirectory() as tmpdir:
-            generator = DataStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
+            generator = DataStackGenerator(spec, AWSRequirements(), config, Path(tmpdir))
             assert generator.stack_name == "Data"
 
-    def test_should_generate_with_rds(self):
-        """Test should_generate returns true when RDS needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_rds=True)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = DataStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is True
-
-    def test_should_generate_with_s3(self):
-        """Test should_generate returns true when S3 needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_s3=True)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = DataStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is True
-
-    def test_should_not_generate_when_not_needed(self):
-        """Test should_generate returns false when data not needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_rds=False, needs_s3=False)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = DataStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is False
+            assert (
+                DataStackGenerator(
+                    spec, AWSRequirements(needs_rds=True), config, Path(tmpdir)
+                ).should_generate()
+                is True
+            )
+            assert (
+                DataStackGenerator(
+                    spec, AWSRequirements(needs_s3=True), config, Path(tmpdir)
+                ).should_generate()
+                is True
+            )
+            assert (
+                DataStackGenerator(
+                    spec,
+                    AWSRequirements(needs_rds=False, needs_s3=False),
+                    config,
+                    Path(tmpdir),
+                ).should_generate()
+                is False
+            )
 
     def test_skip_generation_when_not_needed(self):
         """Test generation is skipped when not needed."""

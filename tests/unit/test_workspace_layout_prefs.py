@@ -11,46 +11,22 @@ def _skip_if_missing() -> None:
 class TestColSpanDefaults:
     """Each stage assigns correct default col_span values."""
 
-    def test_focus_metric_first_region_full_width(self) -> None:
+    def test_stage_col_span_defaults(self) -> None:
+        """Cover focus_metric, dual_pane_flow, scanner_table, monitor_wall, command_center, no-stage."""
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
-        ws = _make_workspace("focus_metric", region_count=3)
-        ctx = build_workspace_context(ws)
-        assert ctx.regions[0].col_span == 12
-        assert ctx.regions[1].col_span == 6
-        assert ctx.regions[2].col_span == 6
-
-    def test_dual_pane_flow_all_half(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = _make_workspace("dual_pane_flow", region_count=2)
-        ctx = build_workspace_context(ws)
-        assert ctx.regions[0].col_span == 6
-        assert ctx.regions[1].col_span == 6
-
-    def test_scanner_table_all_full(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = _make_workspace("scanner_table", region_count=2)
-        ctx = build_workspace_context(ws)
-        assert ctx.regions[0].col_span == 12
-        assert ctx.regions[1].col_span == 12
-
-    def test_monitor_wall_all_half(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = _make_workspace("monitor_wall", region_count=4)
-        ctx = build_workspace_context(ws)
-        for r in ctx.regions:
-            assert r.col_span == 6
-
-    def test_command_center_cycle(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = _make_workspace("command_center", region_count=6)
-        ctx = build_workspace_context(ws)
-        spans = [r.col_span for r in ctx.regions]
-        assert spans == [12, 6, 6, 4, 4, 4]
+        cases = [
+            ("focus_metric", 3, [12, 6, 6]),
+            ("dual_pane_flow", 2, [6, 6]),
+            ("scanner_table", 2, [12, 12]),
+            ("monitor_wall", 4, [6, 6, 6, 6]),
+            ("command_center", 6, [12, 6, 6, 4, 4, 4]),
+            ("", 2, [12, 12]),
+        ]
+        for stage, region_count, expected in cases:
+            ws = _make_workspace(stage, region_count=region_count)
+            ctx = build_workspace_context(ws)
+            assert [r.col_span for r in ctx.regions] == expected, (stage, expected)
 
     def test_kanban_always_full_width(self) -> None:
         """Kanban regions should be col_span=12 regardless of stage defaults."""
@@ -61,14 +37,6 @@ class TestColSpanDefaults:
         ws.regions[3].display = "KANBAN"
         ctx = build_workspace_context(ws)
         assert ctx.regions[3].col_span == 12
-
-    def test_no_stage_defaults_to_12(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-        ws = _make_workspace("", region_count=2)
-        ctx = build_workspace_context(ws)
-        for r in ctx.regions:
-            assert r.col_span == 12
 
 
 class TestApplyLayoutPreferences:
@@ -299,7 +267,8 @@ class TestLayoutV2:
 class TestCatalogBuilder:
     """build_catalog returns available regions for widget picker."""
 
-    def test_returns_all_regions(self) -> None:
+    def test_catalog_returns_regions_with_full_metadata(self) -> None:
+        """Catalog returns all regions with name, title, display, and entity fields populated."""
         from dazzle_ui.runtime.workspace_renderer import build_catalog, build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=3)
@@ -308,13 +277,6 @@ class TestCatalogBuilder:
         assert len(catalog) == 3
         assert catalog[0]["name"] == "region_0"
         assert catalog[0]["title"] == "Region 0"
-
-    def test_includes_display_and_entity(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_catalog, build_workspace_context
-
-        ws = _make_workspace("scanner_table", region_count=1)
-        ctx = build_workspace_context(ws)
-        catalog = build_catalog(ctx)
         assert catalog[0]["display"] == "LIST"
         assert catalog[0]["entity"] == "Entity0"
 
@@ -337,41 +299,31 @@ class TestV1ToV2Migration:
         assert cards[1]["col_span"] == 4
         assert cards[1]["row_order"] == 1
 
-    def test_hidden_cards_dropped(self) -> None:
+    def test_hidden_ghost_dropped_and_new_dsl_appended(self) -> None:
+        """v1→v2 drops hidden+ghost regions and appends DSL-only regions; ids are unique."""
         from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
 
+        # hidden cards dropped
         v1 = {"order": ["a", "b", "c"], "hidden": ["b"], "widths": {}}
         result = migrate_v1_to_v2(v1, ["a", "b", "c"])
-        regions = [c["region"] for c in result["cards"]]
-        assert "b" not in regions
-        assert regions == ["a", "c"]
+        assert [c["region"] for c in result["cards"]] == ["a", "c"]
 
-    def test_ghost_regions_dropped(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
-
+        # ghost regions dropped (regions in order but not in DSL list)
         v1 = {"order": ["a", "ghost", "b"], "hidden": [], "widths": {}}
         result = migrate_v1_to_v2(v1, ["a", "b"])
-        regions = [c["region"] for c in result["cards"]]
-        assert regions == ["a", "b"]
+        assert [c["region"] for c in result["cards"]] == ["a", "b"]
 
-    def test_unique_id_assignment(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+        # new DSL regions appended
+        v1 = {"order": ["a"], "hidden": [], "widths": {}}
+        result = migrate_v1_to_v2(v1, ["a", "b"])
+        assert [c["region"] for c in result["cards"]] == ["a", "b"]
 
+        # unique id assignment
         v1 = {"order": ["x", "y", "z"], "hidden": [], "widths": {}}
         result = migrate_v1_to_v2(v1, ["x", "y", "z"])
         ids = [c["id"] for c in result["cards"]]
         assert ids == ["migrated-0", "migrated-1", "migrated-2"]
-        # All unique
         assert len(set(ids)) == 3
-
-    def test_new_dsl_regions_appended(self) -> None:
-        """Regions in DSL but not in v1 order are appended."""
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
-
-        v1 = {"order": ["a"], "hidden": [], "widths": {}}
-        result = migrate_v1_to_v2(v1, ["a", "b"])
-        regions = [c["region"] for c in result["cards"]]
-        assert regions == ["a", "b"]
 
 
 class TestDashboardRoundTrip:

@@ -121,8 +121,8 @@ entity Task "Task":
 class TestSettingsArchetype:
     """Test settings semantic archetype expansion."""
 
-    def test_settings_is_singleton(self):
-        """Settings entity gets is_singleton=True."""
+    def test_settings_singleton_and_admin_access(self):
+        """Settings entity gets is_singleton=True and admin-only access by default."""
         dsl = """
 module test
 app Test "Test"
@@ -137,26 +137,8 @@ entity AppSettings "Settings":
 
         settings = expanded[0]
         assert settings.is_singleton is True
-
-    def test_settings_gets_admin_access(self):
-        """Settings entity without access gets admin-only access."""
-        dsl = """
-module test
-app Test "Test"
-
-entity AppSettings "Settings":
-    archetype: settings
-    id: uuid pk
-    timezone: timezone = "UTC"
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        settings = expanded[0]
         assert settings.access is not None
-        # Should have visibility rules requiring admin
         assert len(settings.access.visibility) > 0
-        # Should have permission rules for all operations
         assert len(settings.access.permissions) == 3
 
 
@@ -467,8 +449,8 @@ entity AppSettings "Settings":
 class TestUserArchetype:
     """Test user semantic archetype expansion (v0.10.4)."""
 
-    def test_user_gets_auth_fields(self):
-        """User entity gets auth fields injected."""
+    def test_user_gets_auth_fields_and_admin_access(self):
+        """User entity gets injected auth fields and admin-only access rules."""
         dsl = """
 module test
 app Test "Test"
@@ -485,14 +467,22 @@ entity User "User":
         user = expanded[0]
         field_names = [f.name for f in user.fields]
 
-        # Check injected auth fields
-        assert "password_hash" in field_names
-        assert "email_verified" in field_names
-        assert "is_active" in field_names
-        assert "auth_provider" in field_names
-        assert "auth_provider_id" in field_names
-        assert "last_login" in field_names
-        assert "created_at" in field_names
+        # Injected auth fields
+        for name in (
+            "password_hash",
+            "email_verified",
+            "is_active",
+            "auth_provider",
+            "auth_provider_id",
+            "last_login",
+            "created_at",
+        ):
+            assert name in field_names
+
+        # Admin-only access
+        assert user.access is not None
+        assert len(user.access.visibility) > 0
+        assert len(user.access.permissions) == 3
 
     def test_user_existing_fields_not_overwritten(self):
         """User entity's existing fields are not overwritten."""
@@ -515,26 +505,6 @@ entity User "User":
         is_active_fields = [f for f in user.fields if f.name == "is_active"]
         assert len(is_active_fields) == 1
         assert is_active_fields[0].default is False
-
-    def test_user_gets_admin_access(self):
-        """User entity gets admin-only access rules."""
-        dsl = """
-module test
-app Test "Test"
-
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        user = expanded[0]
-        assert user.access is not None
-        assert len(user.access.visibility) > 0
-        assert len(user.access.permissions) == 3
 
     def test_user_not_tenant_scoped(self):
         """User entity does not get tenant FK injected."""
@@ -565,35 +535,8 @@ entity User "User":
 class TestUserMembershipArchetype:
     """Test user_membership semantic archetype expansion (v0.10.4)."""
 
-    def test_membership_gets_user_ref(self):
-        """User membership entity gets user ref injected."""
-        dsl = """
-module test
-app Test "Test"
-
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
-
-entity UserMembership "User Membership":
-    archetype: user_membership
-    id: uuid pk
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        membership = next(e for e in expanded if e.name == "UserMembership")
-        field_names = [f.name for f in membership.fields]
-
-        assert "user" in field_names
-        user_field = next(f for f in membership.fields if f.name == "user")
-        assert user_field.type.kind == ir.FieldTypeKind.REF
-        assert user_field.type.ref_entity == "User"
-
-    def test_membership_gets_tenant_ref(self):
-        """User membership entity gets tenant ref injected."""
+    def test_membership_injects_refs_personas_and_metadata(self):
+        """Membership gets user ref, tenant ref, personas JSON, and invitation metadata fields."""
         dsl = """
 module test
 app Test "Test"
@@ -617,72 +560,32 @@ entity UserMembership "User Membership":
         expanded = expand_archetypes(list(module.fragment.entities), symbols)
 
         membership = next(e for e in expanded if e.name == "UserMembership")
-        field_names = [f.name for f in membership.fields]
+        fields_by_name = {f.name: f for f in membership.fields}
 
-        assert "company" in field_names
-        company_field = next(f for f in membership.fields if f.name == "company")
-        assert company_field.type.kind == ir.FieldTypeKind.REF
-        assert company_field.type.ref_entity == "Company"
+        # user ref
+        assert "user" in fields_by_name
+        assert fields_by_name["user"].type.kind == ir.FieldTypeKind.REF
+        assert fields_by_name["user"].type.ref_entity == "User"
 
-    def test_membership_gets_personas_field(self):
-        """User membership entity gets personas JSON field injected."""
-        dsl = """
-module test
-app Test "Test"
+        # tenant ref
+        assert "company" in fields_by_name
+        assert fields_by_name["company"].type.kind == ir.FieldTypeKind.REF
+        assert fields_by_name["company"].type.ref_entity == "Company"
 
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
+        # personas JSON field
+        assert "personas" in fields_by_name
+        assert fields_by_name["personas"].type.kind == ir.FieldTypeKind.JSON
 
-entity UserMembership "User Membership":
-    archetype: user_membership
-    id: uuid pk
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        membership = next(e for e in expanded if e.name == "UserMembership")
-        field_names = [f.name for f in membership.fields]
-
-        assert "personas" in field_names
-        personas_field = next(f for f in membership.fields if f.name == "personas")
-        assert personas_field.type.kind == ir.FieldTypeKind.JSON
-
-    def test_membership_gets_metadata_fields(self):
-        """User membership entity gets invitation metadata fields."""
-        dsl = """
-module test
-app Test "Test"
-
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
-
-entity UserMembership "User Membership":
-    archetype: user_membership
-    id: uuid pk
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        membership = next(e for e in expanded if e.name == "UserMembership")
-        field_names = [f.name for f in membership.fields]
-
-        assert "is_primary" in field_names
-        assert "invited_by" in field_names
-        assert "invited_at" in field_names
-        assert "accepted_at" in field_names
+        # invitation metadata fields
+        for name in ("is_primary", "invited_by", "invited_at", "accepted_at"):
+            assert name in fields_by_name
 
 
 class TestUserManagementSurfaces:
     """Test auto-surface generation for user archetypes (v0.10.4)."""
 
-    def test_user_crud_surfaces_generated(self):
-        """User entity gets full CRUD surfaces generated."""
+    def test_user_crud_surfaces_generated_admin_only(self):
+        """User entity gets full CRUD surfaces, all admin-only."""
         from dazzle.core.archetype_expander import generate_archetype_surfaces
 
         dsl = """
@@ -701,30 +604,10 @@ entity User "User":
         surfaces = generate_archetype_surfaces(expanded, [])
 
         surface_names = {s.name for s in surfaces}
-        assert "user_list" in surface_names
-        assert "user_detail" in surface_names
-        assert "user_create" in surface_names
-        assert "user_edit" in surface_names
+        for expected in ("user_list", "user_detail", "user_create", "user_edit"):
+            assert expected in surface_names
 
-    def test_user_surfaces_are_admin_only(self):
-        """User management surfaces have admin-only access."""
-        from dazzle.core.archetype_expander import generate_archetype_surfaces
-
-        dsl = """
-module test
-app Test "Test"
-
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-
-        surfaces = generate_archetype_surfaces(expanded, [])
-
+        # All surfaces are admin-only
         for surface in surfaces:
             assert surface.access is not None
             assert surface.access.require_auth is True
@@ -764,8 +647,8 @@ entity UserMembership "User Membership":
 class TestAuthTokenSensitiveModifier:
     """Tests for #577 — auth token fields must have SENSITIVE modifier."""
 
-    def test_email_verify_token_is_sensitive(self):
-        """email_verify_token should have both OPTIONAL and SENSITIVE modifiers."""
+    def test_auth_tokens_are_sensitive_and_optional(self):
+        """email_verify_token and password_reset_token should both have SENSITIVE + OPTIONAL modifiers."""
         dsl = """
 module test
 app Test "Test"
@@ -779,25 +662,7 @@ entity User "User":
         module, symbols = _create_test_module(dsl)
         expanded = expand_archetypes(list(module.fragment.entities), symbols)
         user = next(e for e in expanded if e.name == "User")
-        token_field = next(f for f in user.fields if f.name == "email_verify_token")
-        assert ir.FieldModifier.SENSITIVE in token_field.modifiers
-        assert ir.FieldModifier.OPTIONAL in token_field.modifiers
-
-    def test_password_reset_token_is_sensitive(self):
-        """password_reset_token should have both OPTIONAL and SENSITIVE modifiers."""
-        dsl = """
-module test
-app Test "Test"
-
-entity User "User":
-    archetype: user
-    id: uuid pk
-    email: email required unique
-    name: str(200) required
-"""
-        module, symbols = _create_test_module(dsl)
-        expanded = expand_archetypes(list(module.fragment.entities), symbols)
-        user = next(e for e in expanded if e.name == "User")
-        token_field = next(f for f in user.fields if f.name == "password_reset_token")
-        assert ir.FieldModifier.SENSITIVE in token_field.modifiers
-        assert ir.FieldModifier.OPTIONAL in token_field.modifiers
+        for token_name in ("email_verify_token", "password_reset_token"):
+            token_field = next(f for f in user.fields if f.name == token_name)
+            assert ir.FieldModifier.SENSITIVE in token_field.modifiers, token_name
+            assert ir.FieldModifier.OPTIONAL in token_field.modifiers, token_name

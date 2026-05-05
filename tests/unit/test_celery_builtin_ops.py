@@ -500,33 +500,33 @@ class TestForeachStep:
         assert "item" not in run.context
         assert "item_index" not in run.context
 
-    def test_foreach_empty_source(self):
+    def test_foreach_no_items_returns_zero(self):
+        """Foreach yields processed=0 for both empty source list and missing source key."""
         from dazzle.core.process.celery_tasks import _execute_foreach_step
 
+        sub = {"name": "sub", "kind": "service", "service": "X.y"}
+
+        # Empty source list
         store = MagicMock()
         run = _make_run(context={"query_results": []})
-        step = {
-            "name": "iterate",
-            "foreach_source": "query_results",
-            "foreach_steps": [{"name": "sub", "kind": "service", "service": "X.y"}],
-        }
-
-        result = _execute_foreach_step(store, run, {}, step)
+        result = _execute_foreach_step(
+            store,
+            run,
+            {},
+            {"name": "iterate", "foreach_source": "query_results", "foreach_steps": [sub]},
+        )
         assert result["output"]["processed"] == 0
 
-    def test_foreach_missing_source_key(self):
-        from dazzle.core.process.celery_tasks import _execute_foreach_step
-
-        store = MagicMock()
-        run = _make_run()
-        step = {
-            "name": "iterate",
-            "foreach_source": "nonexistent",
-            "foreach_steps": [{"name": "sub", "kind": "service", "service": "X.y"}],
-        }
-
-        result = _execute_foreach_step(store, run, {}, step)
-        assert result["output"]["processed"] == 0
+        # Missing source key
+        store2 = MagicMock()
+        run2 = _make_run()
+        result2 = _execute_foreach_step(
+            store2,
+            run2,
+            {},
+            {"name": "iterate", "foreach_source": "nonexistent", "foreach_steps": [sub]},
+        )
+        assert result2["output"]["processed"] == 0
 
     def test_foreach_with_builtin_create(self):
         """Foreach with Entity.create sub-steps creates entities for each item."""
@@ -580,25 +580,24 @@ class TestForeachStep:
 
 
 class TestStepDispatch:
-    def test_dispatch_query_step(self):
+    def test_dispatch_routes_to_query_and_foreach(self):
+        """_execute_step dispatches kind=query and kind=foreach to their handlers."""
         from dazzle.core.process.celery_tasks import _execute_step
 
+        # Query step with missing meta returns {}
         store = MagicMock()
-        store.get_entity_meta.return_value = None  # Will return {} due to missing meta
+        store.get_entity_meta.return_value = None
         run = _make_run()
+        assert (
+            _execute_step(store, run, {}, {"name": "q", "kind": "query", "query_entity": "X"}) == {}
+        )
 
-        result = _execute_step(store, run, {}, {"name": "q", "kind": "query", "query_entity": "X"})
-        assert result == {}
-
-    def test_dispatch_foreach_step(self):
-        from dazzle.core.process.celery_tasks import _execute_step
-
-        store = MagicMock()
-        run = _make_run(context={"src": []})
-
+        # Foreach step with empty source returns processed=0
+        store2 = MagicMock()
+        run2 = _make_run(context={"src": []})
         result = _execute_step(
-            store,
-            run,
+            store2,
+            run2,
             {},
             {"name": "f", "kind": "foreach", "foreach_source": "src", "foreach_steps": []},
         )
@@ -612,16 +611,16 @@ class TestStepDispatch:
 
 class TestProcessManagerEntityMeta:
     @pytest.mark.asyncio
-    async def test_initialize_stores_entity_meta(self):
-        """ProcessManager.initialize() stores entity metadata via adapter."""
+    async def test_initialize_registers_entity_meta_with_and_without_state_machine(self):
+        """ProcessManager.initialize() registers metadata with status_field=None when no SM, and the status_field name when an SM exists."""
         from unittest.mock import AsyncMock
 
         from dazzle_back.runtime.process_manager import ProcessManager
 
+        # Case 1: entity without state machine
         adapter = AsyncMock()
         adapter.register_entity_meta = AsyncMock()
 
-        # Minimal AppSpec mock with one entity
         field = MagicMock()
         field.name = "id"
         entity = MagicMock()
@@ -631,7 +630,6 @@ class TestProcessManagerEntityMeta:
 
         domain = MagicMock()
         domain.entities = [entity]
-
         app_spec = MagicMock()
         app_spec.processes = []
         app_spec.schedules = []
@@ -639,21 +637,14 @@ class TestProcessManagerEntityMeta:
 
         pm = ProcessManager(adapter=adapter, app_spec=app_spec)
         await pm.initialize()
-
         adapter.register_entity_meta.assert_called_once_with(
             "Task",
             {"table_name": "Task", "fields": ["id"], "status_field": None},
         )
 
-    @pytest.mark.asyncio
-    async def test_initialize_stores_status_field(self):
-        """Entity with state machine stores status_field in metadata."""
-        from unittest.mock import AsyncMock
-
-        from dazzle_back.runtime.process_manager import ProcessManager
-
-        adapter = AsyncMock()
-        adapter.register_entity_meta = AsyncMock()
+        # Case 2: entity with state machine
+        adapter2 = AsyncMock()
+        adapter2.register_entity_meta = AsyncMock()
 
         field_id = MagicMock()
         field_id.name = "id"
@@ -663,23 +654,21 @@ class TestProcessManagerEntityMeta:
         sm = MagicMock()
         sm.status_field = "status"
 
-        entity = MagicMock()
-        entity.name = "Order"
-        entity.fields = [field_id, field_status]
-        entity.state_machine = sm
+        entity2 = MagicMock()
+        entity2.name = "Order"
+        entity2.fields = [field_id, field_status]
+        entity2.state_machine = sm
 
-        domain = MagicMock()
-        domain.entities = [entity]
+        domain2 = MagicMock()
+        domain2.entities = [entity2]
+        app_spec2 = MagicMock()
+        app_spec2.processes = []
+        app_spec2.schedules = []
+        app_spec2.domain = domain2
 
-        app_spec = MagicMock()
-        app_spec.processes = []
-        app_spec.schedules = []
-        app_spec.domain = domain
-
-        pm = ProcessManager(adapter=adapter, app_spec=app_spec)
-        await pm.initialize()
-
-        adapter.register_entity_meta.assert_called_once_with(
+        pm2 = ProcessManager(adapter=adapter2, app_spec=app_spec2)
+        await pm2.initialize()
+        adapter2.register_entity_meta.assert_called_once_with(
             "Order",
             {"table_name": "Order", "fields": ["id", "status"], "status_field": "status"},
         )

@@ -299,26 +299,15 @@ Desc
 class TestGenerateCopyTemplate:
     """Tests for copy template generation."""
 
-    def test_template_includes_all_sections(self) -> None:
-        """Generated template includes standard sections."""
-        template = generate_copy_template("TestApp")
-        assert "# Hero" in template
-        assert "# Features" in template
-        assert "# Testimonials" in template
-        assert "# Pricing" in template
-        assert "# FAQ" in template
-        assert "# CTA" in template
-
-    def test_template_uses_app_name(self) -> None:
-        """Template substitutes app name."""
+    def test_template_complete_substitutes_and_parses(self) -> None:
+        """Generated template includes all standard sections, substitutes app name, and re-parses."""
         template = generate_copy_template("MyAwesomeApp")
+        for section in ("# Hero", "# Features", "# Testimonials", "# Pricing", "# FAQ", "# CTA"):
+            assert section in template
         assert "MyAwesomeApp" in template
 
-    def test_template_is_parseable(self) -> None:
-        """Generated template can be parsed back."""
-        template = generate_copy_template("TestApp")
         result = parse_copy_file(template)
-        assert len(result.sections) >= 6  # At least 6 standard sections
+        assert len(result.sections) >= 6
         assert result.get_section("hero") is not None
         assert result.get_section("features") is not None
 
@@ -326,17 +315,11 @@ class TestGenerateCopyTemplate:
 class TestMergeCopyIntoSitespec:
     """Tests for merging copy.md into SiteSpec."""
 
-    def test_empty_copy_returns_original(self) -> None:
-        """Empty copy data returns original sitespec unchanged."""
+    def test_empty_or_none_copy_returns_original(self) -> None:
+        """Empty {} or None copy data returns original sitespec unchanged."""
         sitespec = SiteSpec()
-        result = merge_copy_into_sitespec(sitespec, {})
-        assert result == sitespec
-
-    def test_none_copy_returns_original(self) -> None:
-        """None copy data returns original sitespec unchanged."""
-        sitespec = SiteSpec()
-        result = merge_copy_into_sitespec(sitespec, None)  # type: ignore
-        assert result == sitespec
+        assert merge_copy_into_sitespec(sitespec, {}) == sitespec
+        assert merge_copy_into_sitespec(sitespec, None) == sitespec  # type: ignore
 
     def test_hero_section_merged(self) -> None:
         """Hero section from copy.md is merged into landing page."""
