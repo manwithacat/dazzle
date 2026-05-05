@@ -66,3 +66,38 @@ surface task_list "Tasks":
     )
     surface = next(s for s in appspec.surfaces if s.name == "task_list")
     assert surface.render == "anything_at_all"
+
+
+def test_linker_accepts_known_renderer_on_region() -> None:
+    appspec = _link(
+        """
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+workspace ops "Ops":
+  tasks:
+    source: Task
+    render: fragment
+""",
+        known_renderers={"jinja", "fragment"},
+    )
+    region = appspec.workspaces[0].regions[0]
+    assert region.render == "fragment"
+
+
+def test_linker_rejects_unknown_renderer_on_region() -> None:
+    with pytest.raises(RenderValidationError, match="nope_3000"):
+        _link(
+            """
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+workspace ops "Ops":
+  tasks:
+    source: Task
+    render: nope_3000
+""",
+            known_renderers={"jinja", "fragment"},
+        )

@@ -420,8 +420,9 @@ class WorkspaceRegion(BaseModel):
     limit: int | None = Field(None, ge=1, le=1000)
     display: DisplayMode = DisplayMode.LIST
     # Plan 2: renderer name override at region level. Optional;
-    # falls through to the surface's renderer if unset, then to the
-    # framework default. Validated at link time against the RendererRegistry.
+    # `None` means the framework default applies. Validated at link
+    # time against the RendererRegistry. Resolution order
+    # (region → surface → framework default) is deferred to Plan 3.
     render: str | None = None
     action: str | None = None  # Surface reference
     empty_message: str | None = None

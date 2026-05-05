@@ -8,11 +8,23 @@ up). The DSL `render: <name>` clause resolves through the registry.
 
 import dataclasses
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Protocol, TypeVar, runtime_checkable
 
 from dazzle.render.fragment.errors import PrimitiveRegistrationError
 
 T = TypeVar("T", bound=type)
+
+
+@runtime_checkable
+class Renderer(Protocol):
+    """Structural protocol every registered renderer must satisfy.
+
+    A renderer takes a Fragment-like object and an optional context, and
+    returns an HTML string. The Fragment type is intentionally loose
+    (`object`) at this layer — concrete renderers (FragmentRenderer, the
+    Plan-3 Jinja adapter) narrow it as appropriate."""
+
+    def render(self, fragment: object, ctx: object | None = ...) -> str: ...
 
 
 class PrimitiveRegistry:
@@ -85,9 +97,9 @@ class RendererRegistry:
     """
 
     def __init__(self) -> None:
-        self._handlers: dict[str, object] = {}
+        self._handlers: dict[str, Renderer] = {}
 
-    def register(self, *, name: str, handler: object) -> None:
+    def register(self, *, name: str, handler: Renderer) -> None:
         if name in self._handlers:
             existing = self._handlers[name]
             raise PrimitiveRegistrationError(
@@ -96,7 +108,7 @@ class RendererRegistry:
             )
         self._handlers[name] = handler
 
-    def resolve(self, name: str) -> object | None:
+    def resolve(self, name: str) -> Renderer | None:
         return self._handlers.get(name)
 
     def registered_names(self) -> list[str]:

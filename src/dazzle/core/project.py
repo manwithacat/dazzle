@@ -6,6 +6,8 @@ Provides convenient functions for the common load → parse → build pipeline.
 
 from pathlib import Path
 
+from dazzle_back.runtime.renderers.init import default_renderer_names
+
 from . import ir
 from .fileset import discover_dsl_files
 from .linker import build_appspec
@@ -54,7 +56,7 @@ def load_project(
     manifest = load_manifest(manifest_path)
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
+    return build_appspec(modules, manifest.project_root, known_renderers=default_renderer_names())
 
 
 def load_project_with_manifest(
@@ -89,5 +91,7 @@ def load_project_with_manifest(
     manifest = load_manifest(manifest_path)
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
-    appspec = build_appspec(modules, manifest.project_root)
+    appspec = build_appspec(
+        modules, manifest.project_root, known_renderers=default_renderer_names()
+    )
     return appspec, manifest
