@@ -12,8 +12,14 @@ class _ClassyNode(Protocol):
     kind: str
 
 
-class _TokensProto(Protocol):
-    pass  # accessed dynamically via getattr
+# Per-kind token attribute mapping. Each entry: kind -> token attribute names
+# whose values become CSS modifier classes. Add new kinds here as primitives
+# are introduced. A kind not present in this map gets only the base `dz-<kind>`
+# class — the safe default.
+_KIND_TOKENS: dict[str, tuple[str, ...]] = {
+    "card": ("radius", "border", "padding", "shadow"),
+    "button": ("variant", "size"),
+}
 
 
 def classes_for(node: _ClassyNode, tokens: object) -> list[str]:
@@ -26,22 +32,8 @@ def classes_for(node: _ClassyNode, tokens: object) -> list[str]:
     """
     base = f"dz-{node.kind}"
     out = {base}
-
-    # Discover token modifiers via dataclass-style attribute introspection.
-    # Specific kinds care about specific tokens; the mapping is enumerated here
-    # rather than driven by reflection so the surface stays auditable.
-    if node.kind == "card":
-        for attr in ("radius", "border", "padding", "shadow"):
-            value = getattr(tokens, attr, None)
-            if value is not None:
-                out.add(f"{base}--{attr}-{value}")
-    elif node.kind == "button":
-        for attr in ("variant", "size"):
-            value = getattr(tokens, attr, None)
-            if value is not None:
-                out.add(f"{base}--{attr}-{value}")
-    # Add new kinds here. Each must enumerate the token attrs that affect its
-    # class output. Forgetting to add a kind means it gets only the base class
-    # (safe default).
-
+    for attr in _KIND_TOKENS.get(node.kind, ()):
+        value = getattr(tokens, attr, None)
+        if value is not None:
+            out.add(f"{base}--{attr}-{value}")
     return sorted(out)
