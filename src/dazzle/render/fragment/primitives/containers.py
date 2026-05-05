@@ -65,10 +65,21 @@ class Region:
 class Toolbar:
     """Action bar attached to a surface or region.
 
-    `actions` carries the buttons in display order. Once Button is available
-    (Task 12), the post-init enforces "first action cannot be visibility=hidden"
-    — the type-level replacement for the find_hidden_primary_actions scanner.
+    Invariant: the FIRST action cannot have visibility="hidden". Replaces the
+    find_hidden_primary_actions scanner. The first action is the primary
+    action of the toolbar; hiding it makes the toolbar unfindable.
     """
 
     label: str
     actions: tuple[object, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        if self.actions:
+            first = self.actions[0]
+            visibility = getattr(first, "visibility", "visible")
+            if visibility == "hidden":
+                raise CardSafetyError(
+                    "Toolbar primary action cannot be hidden; first action determines "
+                    "toolbar discoverability. If the action is conditionally available, "
+                    "use visibility='disabled' instead."
+                )
