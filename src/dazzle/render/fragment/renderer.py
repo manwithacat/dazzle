@@ -10,7 +10,21 @@ the test_fragment_exhaustiveness test (Task 24) to fail.
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
-from dazzle.render.fragment.primitives import Fragment, Grid, Heading, Row, Split, Stack, Text
+from dazzle.render.fragment.primitives import (
+    Card,
+    Drawer,
+    Fragment,
+    Grid,
+    Heading,
+    Modal,
+    Region,
+    Row,
+    Split,
+    Stack,
+    Surface,
+    Tabs,
+    Text,
+)
 
 
 class FragmentRenderer:
@@ -48,7 +62,20 @@ class FragmentRenderer:
                 return self._emit_split(fragment, ctx)
             case Grid():
                 return self._emit_grid(fragment, ctx)
-            # Subsequent tasks (19-23) extend the match block.
+            # Containers (Toolbar lands in Task 21 alongside Button)
+            case Surface():
+                return self._emit_surface(fragment, ctx)
+            case Card():
+                return self._emit_card(fragment, ctx)
+            case Region():
+                return self._emit_region(fragment, ctx)
+            case Drawer():
+                return self._emit_drawer(fragment, ctx)
+            case Modal():
+                return self._emit_modal(fragment, ctx)
+            case Tabs():
+                return self._emit_tabs(fragment, ctx)
+            # Subsequent tasks (20-23) extend the match block.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -96,3 +123,71 @@ class FragmentRenderer:
         cls = f"dz-grid dz-grid--columns-{g.columns}"
         body = "".join(self._emit(c, ctx) for c in g.children)  # type: ignore[arg-type]
         return f'<div class="{cls}">{body}</div>'
+
+    def _emit_card(self, c: Card, ctx: RenderContext) -> str:
+        tokens = c.tokens if c.tokens is not None else ctx.tokens.card
+        cls_parts = [
+            "dz-card",
+            f"dz-card--radius-{tokens.radius}",
+            f"dz-card--border-{tokens.border}",
+            f"dz-card--padding-{tokens.padding}",
+            f"dz-card--shadow-{tokens.shadow}",
+        ]
+        cls = " ".join(cls_parts)
+        parts = [f'<div class="{cls}">']
+        if c.header is not None:
+            parts.append(
+                f'<div class="dz-card__header">{self._emit(c.header, ctx)}</div>'  # type: ignore[arg-type]
+            )
+        parts.append(
+            f'<div class="dz-card__body">{self._emit(c.body, ctx)}</div>'  # type: ignore[arg-type]
+        )
+        if c.footer is not None:
+            parts.append(
+                f'<div class="dz-card__footer">{self._emit(c.footer, ctx)}</div>'  # type: ignore[arg-type]
+            )
+        parts.append("</div>")
+        return "".join(parts)
+
+    def _emit_surface(self, s: Surface, ctx: RenderContext) -> str:
+        parts = ['<section class="dz-surface">']
+        if s.header is not None:
+            parts.append(
+                f'<header class="dz-surface__header">{self._emit(s.header, ctx)}</header>'  # type: ignore[arg-type]
+            )
+        parts.append(
+            f'<div class="dz-surface__body">{self._emit(s.body, ctx)}</div>'  # type: ignore[arg-type]
+        )
+        if s.footer is not None:
+            parts.append(
+                f'<footer class="dz-surface__footer">{self._emit(s.footer, ctx)}</footer>'  # type: ignore[arg-type]
+            )
+        parts.append("</section>")
+        return "".join(parts)
+
+    def _emit_region(self, r: Region, ctx: RenderContext) -> str:
+        cls = f"dz-region dz-region--kind-{r.kind}"
+        return f'<section class="{cls}">{self._emit(r.body, ctx)}</section>'  # type: ignore[arg-type]
+
+    def _emit_drawer(self, d: Drawer, ctx: RenderContext) -> str:
+        cls = f"dz-drawer dz-drawer--side-{d.side}"
+        return f'<aside class="{cls}">{self._emit(d.body, ctx)}</aside>'  # type: ignore[arg-type]
+
+    def _emit_modal(self, m: Modal, ctx: RenderContext) -> str:
+        cls = f"dz-modal dz-modal--size-{m.size}"
+        return f'<div class="{cls}" role="dialog">{self._emit(m.body, ctx)}</div>'  # type: ignore[arg-type]
+
+    def _emit_tabs(self, t: Tabs, ctx: RenderContext) -> str:
+        tab_buttons = "".join(
+            f'<button class="dz-tabs__button" data-tab="{ctx.escape_attr(key)}">'
+            f"{ctx.escape(key)}</button>"
+            for key, _panel in t.tabs
+        )
+        panels = "".join(
+            f'<div class="dz-tabs__panel" data-tab="{ctx.escape_attr(key)}">'
+            f"{self._emit(panel, ctx)}</div>"  # type: ignore[arg-type]
+            for key, panel in t.tabs
+        )
+        return (
+            f'<div class="dz-tabs"><div class="dz-tabs__buttons">{tab_buttons}</div>{panels}</div>'
+        )
