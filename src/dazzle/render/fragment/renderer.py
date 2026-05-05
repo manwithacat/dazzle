@@ -11,8 +11,11 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
+    KPI,
     Badge,
+    BarChart,
     Button,
+    CalendarGrid,
     Card,
     Drawer,
     EmptyState,
@@ -22,16 +25,20 @@ from dazzle.render.fragment.primitives import (
     Icon,
     InlineEdit,
     Interactive,
+    KanbanBoard,
     Link,
     Modal,
+    PivotTable,
     Region,
     Row,
     Skeleton,
     Split,
     Stack,
     Surface,
+    Table,
     Tabs,
     Text,
+    Timeline,
     Toolbar,
 )
 
@@ -105,7 +112,22 @@ class FragmentRenderer:
             # Toolbar (deferred from Task 19 — needs Button)
             case Toolbar():
                 return self._emit_toolbar(fragment, ctx)
-            # Subsequent tasks (22-23) extend the match block.
+            # Data
+            case Table():
+                return self._emit_table(fragment, ctx)
+            case KPI():
+                return self._emit_kpi(fragment, ctx)
+            case BarChart():
+                return self._emit_bar_chart(fragment, ctx)
+            case PivotTable():
+                return self._emit_pivot_table(fragment, ctx)
+            case Timeline():
+                return self._emit_timeline(fragment, ctx)
+            case KanbanBoard():
+                return self._emit_kanban_board(fragment, ctx)
+            case CalendarGrid():
+                return self._emit_calendar_grid(fragment, ctx)
+            # Subsequent tasks (23) extend the match block.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -332,3 +354,89 @@ class FragmentRenderer:
         actions_html = "".join(self._emit(a, ctx) for a in t.actions)  # type: ignore[arg-type]
         label = ctx.escape_attr(t.label)
         return f'<div class="dz-toolbar" aria-label="{label}">{actions_html}</div>'
+
+    def _emit_table(self, t: Table, ctx: RenderContext) -> str:
+        head_cells = "".join(f"<th>{ctx.escape(c)}</th>" for c in t.columns)
+        body_rows = "".join(
+            "<tr>" + "".join(f"<td>{ctx.escape(cell)}</td>" for cell in row) + "</tr>"
+            for row in t.rows
+        )
+        return (
+            f'<table class="dz-table">'
+            f"<thead><tr>{head_cells}</tr></thead>"
+            f"<tbody>{body_rows}</tbody>"
+            f"</table>"
+        )
+
+    def _emit_kpi(self, k: KPI, ctx: RenderContext) -> str:
+        cls = f"dz-kpi dz-kpi--trend-{k.trend}"
+        delta_html = f'<span class="dz-kpi__delta">{ctx.escape(k.delta)}</span>' if k.delta else ""
+        return (
+            f'<div class="{cls}">'
+            f'<div class="dz-kpi__label">{ctx.escape(k.label)}</div>'
+            f'<div class="dz-kpi__value">{ctx.escape(k.value)}</div>'
+            f"{delta_html}"
+            f"</div>"
+        )
+
+    def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
+        bars = "".join(
+            f'<div class="dz-bar-chart__bar" data-label="{ctx.escape_attr(label)}">'
+            f'<span class="dz-bar-chart__label">{ctx.escape(label)}</span>'
+            f'<span class="dz-bar-chart__value">{count}</span>'
+            f"</div>"
+            for label, count in b.buckets
+        )
+        return (
+            f'<div class="dz-bar-chart">'
+            f'<div class="dz-bar-chart__title">{ctx.escape(b.label)}</div>'
+            f'<div class="dz-bar-chart__bars">{bars}</div>'
+            f"</div>"
+        )
+
+    def _emit_pivot_table(self, p: PivotTable, ctx: RenderContext) -> str:
+        head = "".join(f"<th>{ctx.escape(c)}</th>" for c in p.columns)
+        body = "".join(
+            "<tr>"
+            + f"<th>{ctx.escape(row)}</th>"
+            + "".join(f"<td>{p.cells.get((row, col), 0)}</td>" for col in p.columns)
+            + "</tr>"
+            for row in p.rows
+        )
+        return (
+            f'<table class="dz-pivot-table">'
+            f"<caption>{ctx.escape(p.label)}</caption>"
+            f"<thead><tr><th></th>{head}</tr></thead>"
+            f"<tbody>{body}</tbody>"
+            f"</table>"
+        )
+
+    def _emit_timeline(self, t: Timeline, ctx: RenderContext) -> str:
+        events = "".join(
+            f'<li class="dz-timeline__event">'
+            f'<time datetime="{ctx.escape_attr(when)}">{ctx.escape(when)}</time>'
+            f'<span class="dz-timeline__label">{ctx.escape(label)}</span>'
+            f"</li>"
+            for label, when in t.events
+        )
+        return f'<ol class="dz-timeline">{events}</ol>'
+
+    def _emit_kanban_board(self, k: KanbanBoard, ctx: RenderContext) -> str:
+        cols = "".join(
+            f'<div class="dz-kanban__column" data-key="{ctx.escape_attr(key)}">'
+            + "".join(self._emit(item, ctx) for item in items)  # type: ignore[arg-type]
+            + "</div>"
+            for key, items in k.columns
+        )
+        return f'<div class="dz-kanban">{cols}</div>'
+
+    def _emit_calendar_grid(self, c: CalendarGrid, ctx: RenderContext) -> str:
+        cls = f"dz-calendar dz-calendar--view-{c.view}"
+        events = "".join(
+            f'<li class="dz-calendar__event">'
+            f'<time datetime="{ctx.escape_attr(when)}">{ctx.escape(when)}</time> '
+            f"{ctx.escape(label)}"
+            f"</li>"
+            for label, when in c.events
+        )
+        return f'<div class="{cls}"><ul>{events}</ul></div>'
