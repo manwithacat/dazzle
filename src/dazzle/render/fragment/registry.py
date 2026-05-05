@@ -70,3 +70,34 @@ def primitive(
         return cls
 
     return decorator
+
+
+class RendererRegistry:
+    """Mutable registry mapping renderer names to handler instances.
+
+    Registration happens at startup; resolution at request-time. The
+    resolved handler is the object whose `render(fragment, ctx)` method
+    the dispatcher calls when an IR node carries `render: <name>`.
+
+    Sibling to `PrimitiveRegistry` (in this module). Reuses
+    `PrimitiveRegistrationError` for duplicate-name rejection so callers
+    can catch one exception type for both registries.
+    """
+
+    def __init__(self) -> None:
+        self._handlers: dict[str, object] = {}
+
+    def register(self, *, name: str, handler: object) -> None:
+        if name in self._handlers:
+            existing = self._handlers[name]
+            raise PrimitiveRegistrationError(
+                f"renderer {name!r} already registered to {existing!r}; "
+                f"cannot re-register to {handler!r}"
+            )
+        self._handlers[name] = handler
+
+    def resolve(self, name: str) -> object | None:
+        return self._handlers.get(name)
+
+    def registered_names(self) -> list[str]:
+        return list(self._handlers.keys())

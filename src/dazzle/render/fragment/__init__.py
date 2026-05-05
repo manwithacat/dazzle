@@ -47,6 +47,7 @@ from dazzle.render.fragment.primitives import (
 from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
     PrimitiveRegistry,
+    RendererRegistry,
     primitive,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -79,6 +80,7 @@ __all__ = [
     # registry
     "primitive",
     "PrimitiveRegistry",
+    "RendererRegistry",
     "DEFAULT_REGISTRY",
     # tokens
     "Tokens",
