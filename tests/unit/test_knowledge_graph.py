@@ -39,31 +39,25 @@ KnowledgeGraphHandlers = _handlers_module.KnowledgeGraphHandlers
 class TestKnowledgeGraphStore:
     """Tests for the KnowledgeGraph store."""
 
-    def test_create_and_get_entity(self) -> None:
-        """Test creating and retrieving an entity."""
+    def test_entity_ops_combined(self) -> None:
+        """Combined: create+get, type inference (8 prefixes), delete,
+        list with filter, inference: prefix maps to inference type."""
         graph = KnowledgeGraph(":memory:")
-        entity = graph.create_entity(
-            entity_id="file:src/main.py",
-            name="main.py",
-            metadata={"lines": 100},
+
+        # Create + get + metadata
+        e = graph.create_entity(
+            entity_id="file:src/main.py", name="main.py", metadata={"lines": 100}
         )
+        assert e.id == "file:src/main.py"
+        assert e.entity_type == "file"
+        assert e.name == "main.py"
+        assert e.metadata == {"lines": 100}
+        retr = graph.get_entity("file:src/main.py")
+        assert retr is not None
+        assert retr.id == e.id and retr.name == e.name
 
-        assert entity.id == "file:src/main.py"
-        assert entity.entity_type == "file"  # Inferred from prefix
-        assert entity.name == "main.py"
-        assert entity.metadata == {"lines": 100}
-
-        # Retrieve
-        retrieved = graph.get_entity("file:src/main.py")
-        assert retrieved is not None
-        assert retrieved.id == entity.id
-        assert retrieved.name == entity.name
-
-    def test_entity_type_inference(self) -> None:
-        """Test that entity types are inferred from ID prefixes."""
-        graph = KnowledgeGraph(":memory:")
-
-        test_cases = [
+        # Type inference for various prefixes
+        for entity_id, expected_type in [
             ("file:foo.py", "file"),
             ("module:foo.bar", "module"),
             ("class:MyClass", "class"),
@@ -72,254 +66,191 @@ class TestKnowledgeGraphStore:
             ("decision:use_redis", "decision"),
             ("pattern:singleton", "pattern"),
             ("unknown_prefix:foo", "unknown"),
-        ]
+        ]:
+            ent = graph.create_entity(entity_id=entity_id, name="test")
+            assert ent.entity_type == expected_type, f"Failed for {entity_id}"
 
-        for entity_id, expected_type in test_cases:
-            entity = graph.create_entity(entity_id=entity_id, name="test")
-            assert entity.entity_type == expected_type, f"Failed for {entity_id}"
+        # Delete
+        del_graph = KnowledgeGraph(":memory:")
+        del_graph.create_entity(entity_id="file:test.py", name="test.py")
+        assert del_graph.get_entity("file:test.py") is not None
+        assert del_graph.delete_entity("file:test.py") is True
+        assert del_graph.get_entity("file:test.py") is None
 
-    def test_delete_entity(self) -> None:
-        """Test deleting an entity."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity(entity_id="file:test.py", name="test.py")
-
-        assert graph.get_entity("file:test.py") is not None
-        deleted = graph.delete_entity("file:test.py")
-        assert deleted is True
-        assert graph.get_entity("file:test.py") is None
-
-    def test_list_entities_with_filter(self) -> None:
-        """Test listing entities with type filter."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity(entity_id="file:a.py", name="a.py")
-        graph.create_entity(entity_id="file:b.py", name="b.py")
-        graph.create_entity(entity_id="class:MyClass", name="MyClass")
-
-        files = graph.list_entities(entity_type="file")
+        # List with filter
+        flt = KnowledgeGraph(":memory:")
+        flt.create_entity(entity_id="file:a.py", name="a.py")
+        flt.create_entity(entity_id="file:b.py", name="b.py")
+        flt.create_entity(entity_id="class:MyClass", name="MyClass")
+        files = flt.list_entities(entity_type="file")
         assert len(files) == 2
-        assert all(e.entity_type == "file" for e in files)
+        assert all(x.entity_type == "file" for x in files)
+        assert len(flt.list_entities(entity_type="class")) == 1
 
-        classes = graph.list_entities(entity_type="class")
-        assert len(classes) == 1
+        # inference: prefix
+        inf = KnowledgeGraph(":memory:")
+        assert inf.create_entity("inference:test_entry", "test_entry").entity_type == "inference"
 
-    def test_create_and_get_relation(self) -> None:
-        """Test creating and retrieving relations."""
+    def test_relations_and_graph_ops_combined(self) -> None:
+        """Combined: create+get relation (in/out), auto-create missing,
+        dependencies/dependents/neighbourhood/transitive, query, stats."""
+        # Create + retrieve relation
         graph = KnowledgeGraph(":memory:")
         graph.create_entity(entity_id="file:a.py", name="a.py")
         graph.create_entity(entity_id="file:b.py", name="b.py")
-
-        relation = graph.create_relation(
-            source_id="file:a.py",
-            target_id="file:b.py",
-            relation_type="imports",
+        rel = graph.create_relation(
+            source_id="file:a.py", target_id="file:b.py", relation_type="imports"
         )
-
-        assert relation.source_id == "file:a.py"
-        assert relation.target_id == "file:b.py"
-        assert relation.relation_type == "imports"
-
-        # Get outgoing relations
+        assert rel.source_id == "file:a.py"
+        assert rel.target_id == "file:b.py"
+        assert rel.relation_type == "imports"
         outgoing = graph.get_relations(entity_id="file:a.py", direction="outgoing")
-        assert len(outgoing) == 1
-        assert outgoing[0].target_id == "file:b.py"
-
-        # Get incoming relations
+        assert len(outgoing) == 1 and outgoing[0].target_id == "file:b.py"
         incoming = graph.get_relations(entity_id="file:b.py", direction="incoming")
-        assert len(incoming) == 1
-        assert incoming[0].source_id == "file:a.py"
+        assert len(incoming) == 1 and incoming[0].source_id == "file:a.py"
 
-    def test_auto_create_missing_entities(self) -> None:
-        """Test that relations auto-create missing entities."""
-        graph = KnowledgeGraph(":memory:")
-
-        # Create relation without pre-creating entities
-        graph.create_relation(
+        # Auto-create missing
+        auto = KnowledgeGraph(":memory:")
+        auto.create_relation(
             source_id="file:a.py",
             target_id="file:b.py",
             relation_type="imports",
             create_missing_entities=True,
         )
+        assert auto.get_entity("file:a.py") is not None
+        assert auto.get_entity("file:b.py") is not None
 
-        # Both entities should exist now
-        assert graph.get_entity("file:a.py") is not None
-        assert graph.get_entity("file:b.py") is not None
+        # Dependencies
+        dg = KnowledgeGraph(":memory:")
+        dg.create_relation("file:a.py", "module:os", "imports")
+        dg.create_relation("file:a.py", "module:sys", "imports")
+        dg.create_relation("file:a.py", "file:b.py", "imports")
+        assert {x.id for x in dg.get_dependencies("file:a.py")} == {
+            "module:os",
+            "module:sys",
+            "file:b.py",
+        }
 
-    def test_get_dependencies(self) -> None:
-        """Test getting entities that this entity depends on."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_relation("file:a.py", "module:os", "imports")
-        graph.create_relation("file:a.py", "module:sys", "imports")
-        graph.create_relation("file:a.py", "file:b.py", "imports")
+        # Dependents
+        dp = KnowledgeGraph(":memory:")
+        dp.create_relation("file:a.py", "module:utils", "imports")
+        dp.create_relation("file:b.py", "module:utils", "imports")
+        dp.create_relation("file:c.py", "module:utils", "imports")
+        assert {x.id for x in dp.get_dependents("module:utils")} == {
+            "file:a.py",
+            "file:b.py",
+            "file:c.py",
+        }
 
-        deps = graph.get_dependencies("file:a.py")
-        dep_ids = {e.id for e in deps}
-        assert dep_ids == {"module:os", "module:sys", "file:b.py"}
+        # Neighbourhood (a->b->c, depth 1 from b)
+        nb = KnowledgeGraph(":memory:")
+        nb.create_relation("file:a.py", "file:b.py", "imports")
+        nb.create_relation("file:b.py", "file:c.py", "imports")
+        nb_result = nb.get_neighbourhood("file:b.py", depth=1)
+        nb_ids = {x.id for x in nb_result["entities"]}
+        for k in ("file:a.py", "file:b.py", "file:c.py"):
+            assert k in nb_ids
 
-    def test_get_dependents(self) -> None:
-        """Test getting entities that depend on this entity."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_relation("file:a.py", "module:utils", "imports")
-        graph.create_relation("file:b.py", "module:utils", "imports")
-        graph.create_relation("file:c.py", "module:utils", "imports")
+        # Transitive
+        tr = KnowledgeGraph(":memory:")
+        tr.create_relation("file:a.py", "file:b.py", "imports")
+        tr.create_relation("file:b.py", "file:c.py", "imports")
+        tr.create_relation("file:c.py", "file:d.py", "imports")
+        direct = tr.get_dependencies("file:a.py", transitive=False)
+        assert len(direct) == 1 and direct[0].id == "file:b.py"
+        assert {x.id for x in tr.get_dependencies("file:a.py", transitive=True)} == {
+            "file:b.py",
+            "file:c.py",
+            "file:d.py",
+        }
 
-        dependents = graph.get_dependents("module:utils")
-        dependent_ids = {e.id for e in dependents}
-        assert dependent_ids == {"file:a.py", "file:b.py", "file:c.py"}
-
-    def test_get_neighbourhood(self) -> None:
-        """Test getting neighbourhood of an entity."""
-        graph = KnowledgeGraph(":memory:")
-        # Create a simple graph: a -> b -> c
-        graph.create_relation("file:a.py", "file:b.py", "imports")
-        graph.create_relation("file:b.py", "file:c.py", "imports")
-
-        # Depth 1 from b should include a and c
-        result = graph.get_neighbourhood("file:b.py", depth=1)
-        entity_ids = {e.id for e in result["entities"]}
-        assert "file:a.py" in entity_ids
-        assert "file:b.py" in entity_ids
-        assert "file:c.py" in entity_ids
-
-    def test_transitive_dependencies(self) -> None:
-        """Test getting transitive dependencies."""
-        graph = KnowledgeGraph(":memory:")
-        # a -> b -> c -> d
-        graph.create_relation("file:a.py", "file:b.py", "imports")
-        graph.create_relation("file:b.py", "file:c.py", "imports")
-        graph.create_relation("file:c.py", "file:d.py", "imports")
-
-        # Direct dependencies of a
-        direct = graph.get_dependencies("file:a.py", transitive=False)
-        assert len(direct) == 1
-        assert direct[0].id == "file:b.py"
-
-        # Transitive dependencies of a
-        transitive = graph.get_dependencies("file:a.py", transitive=True)
-        trans_ids = {e.id for e in transitive}
-        assert trans_ids == {"file:b.py", "file:c.py", "file:d.py"}
-
-    def test_query_entities(self) -> None:
-        """Test searching entities by text."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("file:parser.py", "parser.py")
-        graph.create_entity("file:lexer.py", "lexer.py")
-        graph.create_entity("class:ParserImpl", "ParserImpl")
-
-        results = graph.query("parser")
+        # Query
+        q = KnowledgeGraph(":memory:")
+        q.create_entity("file:parser.py", "parser.py")
+        q.create_entity("file:lexer.py", "lexer.py")
+        q.create_entity("class:ParserImpl", "ParserImpl")
+        results = q.query("parser")
         assert len(results) == 2
-        result_ids = {e.id for e in results}
-        assert "file:parser.py" in result_ids
-        assert "class:ParserImpl" in result_ids
+        assert {x.id for x in results} == {"file:parser.py", "class:ParserImpl"}
 
-    def test_get_stats(self) -> None:
-        """Test getting graph statistics."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("file:a.py", "a.py")
-        graph.create_entity("class:A", "A")
-        graph.create_relation("file:a.py", "class:A", "contains")
-
-        stats = graph.get_stats()
+        # Stats
+        st = KnowledgeGraph(":memory:")
+        st.create_entity("file:a.py", "a.py")
+        st.create_entity("class:A", "A")
+        st.create_relation("file:a.py", "class:A", "contains")
+        stats = st.get_stats()
         assert stats["entity_count"] == 2
         assert stats["relation_count"] == 1
         assert stats["entity_types"]["file"] == 1
         assert stats["entity_types"]["class"] == 1
         assert stats["relation_types"]["contains"] == 1
 
-    def test_inference_type_prefix(self) -> None:
-        """Test that inference: prefix maps to inference type."""
-        graph = KnowledgeGraph(":memory:")
-        entity = graph.create_entity("inference:test_entry", "test_entry")
-        assert entity.entity_type == "inference"
+    def test_aliases_seed_concepts_combined(self) -> None:
+        """Combined: alias create/resolve/clear, seed_meta get/set/overwrite,
+        delete_by_metadata_key, lookup_concept (direct/alias/pattern/not-found),
+        lookup_inference_matches."""
+        # Alias create/resolve
+        a = KnowledgeGraph(":memory:")
+        a.create_entity("concept:state_machine", "state_machine")
+        a.create_alias("transitions", "concept:state_machine")
+        assert a.resolve_alias("transitions") == "concept:state_machine"
+        assert a.resolve_alias("nonexistent") is None
 
-    def test_create_and_resolve_alias(self) -> None:
-        """Test alias creation and resolution."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("concept:state_machine", "state_machine")
-        graph.create_alias("transitions", "concept:state_machine")
+        # Clear aliases
+        c = KnowledgeGraph(":memory:")
+        c.create_entity("concept:a", "a")
+        c.create_alias("alias1", "concept:a")
+        c.create_alias("alias2", "concept:a")
+        assert c.clear_aliases() == 2
+        assert c.resolve_alias("alias1") is None
 
-        resolved = graph.resolve_alias("transitions")
-        assert resolved == "concept:state_machine"
+        # Seed meta get/set/overwrite
+        s = KnowledgeGraph(":memory:")
+        assert s.get_seed_meta("seed_version") is None
+        s.set_seed_meta("seed_version", "0.21.0.1")
+        assert s.get_seed_meta("seed_version") == "0.21.0.1"
+        s.set_seed_meta("seed_version", "0.22.0.1")
+        assert s.get_seed_meta("seed_version") == "0.22.0.1"
 
-        # Non-existent alias
-        assert graph.resolve_alias("nonexistent") is None
+        # Delete by metadata key
+        d = KnowledgeGraph(":memory:")
+        d.create_entity("concept:a", "a", metadata={"source": "framework"})
+        d.create_entity("concept:b", "b", metadata={"source": "framework"})
+        d.create_entity("entity:Task", "Task", metadata={"source": "project"})
+        assert d.delete_by_metadata_key("source", "framework") == 2
+        assert d.get_entity("concept:a") is None
+        assert d.get_entity("entity:Task") is not None
 
-    def test_clear_aliases(self) -> None:
-        """Test clearing all aliases."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("concept:a", "a")
-        graph.create_alias("alias1", "concept:a")
-        graph.create_alias("alias2", "concept:a")
-
-        count = graph.clear_aliases()
-        assert count == 2
-        assert graph.resolve_alias("alias1") is None
-
-    def test_seed_meta(self) -> None:
-        """Test seed metadata get/set."""
-        graph = KnowledgeGraph(":memory:")
-
-        assert graph.get_seed_meta("seed_version") is None
-
-        graph.set_seed_meta("seed_version", "0.21.0.1")
-        assert graph.get_seed_meta("seed_version") == "0.21.0.1"
-
-        # Overwrite
-        graph.set_seed_meta("seed_version", "0.22.0.1")
-        assert graph.get_seed_meta("seed_version") == "0.22.0.1"
-
-    def test_delete_by_metadata_key(self) -> None:
-        """Test bulk deletion by metadata key."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("concept:a", "a", metadata={"source": "framework"})
-        graph.create_entity("concept:b", "b", metadata={"source": "framework"})
-        graph.create_entity("entity:Task", "Task", metadata={"source": "project"})
-
-        deleted = graph.delete_by_metadata_key("source", "framework")
-        assert deleted == 2
-        assert graph.get_entity("concept:a") is None
-        assert graph.get_entity("entity:Task") is not None
-
-    def test_lookup_concept_direct(self) -> None:
-        """Test concept lookup by direct name."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity(
+        # Lookup concept direct
+        ld = KnowledgeGraph(":memory:")
+        ld.create_entity(
             "concept:entity",
             "entity",
             metadata={"source": "framework", "definition": "A domain model"},
         )
+        rd = ld.lookup_concept("entity")
+        assert rd is not None and rd.id == "concept:entity"
 
-        result = graph.lookup_concept("entity")
-        assert result is not None
-        assert result.id == "concept:entity"
+        # Lookup via alias
+        la = KnowledgeGraph(":memory:")
+        la.create_entity("concept:state_machine", "state_machine")
+        la.create_alias("transitions", "concept:state_machine")
+        ra = la.lookup_concept("transitions")
+        assert ra is not None and ra.id == "concept:state_machine"
 
-    def test_lookup_concept_via_alias(self) -> None:
-        """Test concept lookup via alias."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("concept:state_machine", "state_machine")
-        graph.create_alias("transitions", "concept:state_machine")
+        # Lookup pattern
+        lp = KnowledgeGraph(":memory:")
+        lp.create_entity("pattern:crud", "crud", metadata={"source": "framework"})
+        rp = lp.lookup_concept("crud")
+        assert rp is not None and rp.id == "pattern:crud"
 
-        result = graph.lookup_concept("transitions")
-        assert result is not None
-        assert result.id == "concept:state_machine"
+        # Not found
+        ln = KnowledgeGraph(":memory:")
+        assert ln.lookup_concept("nonexistent") is None
 
-    def test_lookup_concept_pattern(self) -> None:
-        """Test concept lookup falls back to patterns."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity("pattern:crud", "crud", metadata={"source": "framework"})
-
-        result = graph.lookup_concept("crud")
-        assert result is not None
-        assert result.id == "pattern:crud"
-
-    def test_lookup_concept_not_found(self) -> None:
-        """Test concept lookup returns None for unknown terms."""
-        graph = KnowledgeGraph(":memory:")
-        assert graph.lookup_concept("nonexistent") is None
-
-    def test_lookup_inference_matches(self) -> None:
-        """Test inference trigger matching."""
-        graph = KnowledgeGraph(":memory:")
-        graph.create_entity(
+        # Inference matches
+        inf = KnowledgeGraph(":memory:")
+        inf.create_entity(
             "inference:field_patterns.status_resolution",
             "status_resolution",
             entity_type="inference",
@@ -329,7 +260,7 @@ class TestKnowledgeGraphStore:
                 "triggers": ["fixed", "resolved", "closed"],
             },
         )
-        graph.create_entity(
+        inf.create_entity(
             "inference:field_patterns.person_email",
             "person_email",
             entity_type="inference",
@@ -339,20 +270,11 @@ class TestKnowledgeGraphStore:
                 "triggers": ["user", "customer", "person"],
             },
         )
-
-        # Should match "resolved"
-        matches = graph.lookup_inference_matches("the ticket is resolved")
-        assert len(matches) == 1
-        assert matches[0].name == "status_resolution"
-
-        # Should match "user"
-        matches = graph.lookup_inference_matches("create a user profile")
-        assert len(matches) == 1
-        assert matches[0].name == "person_email"
-
-        # Should match nothing
-        matches = graph.lookup_inference_matches("something unrelated")
-        assert len(matches) == 0
+        m1 = inf.lookup_inference_matches("the ticket is resolved")
+        assert len(m1) == 1 and m1[0].name == "status_resolution"
+        m2 = inf.lookup_inference_matches("create a user profile")
+        assert len(m2) == 1 and m2[0].name == "person_email"
+        assert len(inf.lookup_inference_matches("something unrelated")) == 0
 
 
 class TestKnowledgeGraphHandlers:

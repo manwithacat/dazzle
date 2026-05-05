@@ -90,15 +90,12 @@ def order_requested_schema() -> StreamSchema:
 class TestRecordKind:
     """Tests for RecordKind enum."""
 
-    def test_all_four_kinds_exist(self):
-        """All four RecordKinds are defined."""
+    def test_record_kind_combined(self):
+        """Combined: all four kinds exist with correct values + count."""
         assert RecordKind.INTENT.value == "intent"
         assert RecordKind.FACT.value == "fact"
         assert RecordKind.OBSERVATION.value == "observation"
         assert RecordKind.DERIVATION.value == "derivation"
-
-    def test_record_kind_count(self):
-        """Exactly four RecordKinds exist."""
         assert len(RecordKind) == 4
 
 
@@ -108,14 +105,16 @@ class TestRecordKind:
 class TestStreamSpec:
     """Tests for StreamSpec model."""
 
-    def test_create_fact_stream(
+    def test_stream_spec_combined(
         self,
         basic_time_semantics: TimeSemantics,
         basic_idempotency: IdempotencyStrategy,
         order_placed_schema: StreamSchema,
+        order_rejected_schema: StreamSchema,
     ):
-        """Can create a valid FACT stream."""
-        stream = StreamSpec(
+        """Combined: create FACT stream, get_schema by name, schema_names."""
+        # Single-schema stream
+        single = StreamSpec(
             name="orders.fact.v1",
             record_kind=RecordKind.FACT,
             schemas=[order_placed_schema],
@@ -125,21 +124,13 @@ class TestStreamSpec:
             idempotency=basic_idempotency,
             invariants=["OrderPlaced represents a completed and irreversible action"],
         )
+        assert single.name == "orders.fact.v1"
+        assert single.record_kind == RecordKind.FACT
+        assert len(single.schemas) == 1
+        assert single.get_schema("OrderPlaced") is not None
 
-        assert stream.name == "orders.fact.v1"
-        assert stream.record_kind == RecordKind.FACT
-        assert len(stream.schemas) == 1
-        assert stream.get_schema("OrderPlaced") is not None
-
-    def test_get_schema_by_name(
-        self,
-        basic_time_semantics: TimeSemantics,
-        basic_idempotency: IdempotencyStrategy,
-        order_placed_schema: StreamSchema,
-        order_rejected_schema: StreamSchema,
-    ):
-        """Can retrieve schemas by name."""
-        stream = StreamSpec(
+        # Multi-schema stream: get_schema + schema_names
+        multi = StreamSpec(
             name="orders.fact.v1",
             record_kind=RecordKind.FACT,
             schemas=[order_placed_schema, order_rejected_schema],
@@ -148,30 +139,10 @@ class TestStreamSpec:
             time_semantics=basic_time_semantics,
             idempotency=basic_idempotency,
         )
-
-        assert stream.get_schema("OrderPlaced") is not None
-        assert stream.get_schema("OrderPlacementRejected") is not None
-        assert stream.get_schema("DoesNotExist") is None
-
-    def test_schema_names(
-        self,
-        basic_time_semantics: TimeSemantics,
-        basic_idempotency: IdempotencyStrategy,
-        order_placed_schema: StreamSchema,
-        order_rejected_schema: StreamSchema,
-    ):
-        """schema_names returns all schema names."""
-        stream = StreamSpec(
-            name="orders.fact.v1",
-            record_kind=RecordKind.FACT,
-            schemas=[order_placed_schema, order_rejected_schema],
-            partition_key="order_id",
-            ordering_scope="per_order",
-            time_semantics=basic_time_semantics,
-            idempotency=basic_idempotency,
-        )
-
-        names = stream.schema_names()
+        assert multi.get_schema("OrderPlaced") is not None
+        assert multi.get_schema("OrderPlacementRejected") is not None
+        assert multi.get_schema("DoesNotExist") is None
+        names = multi.schema_names()
         assert "OrderPlaced" in names
         assert "OrderPlacementRejected" in names
         assert len(names) == 2
@@ -735,37 +706,34 @@ class TestCrossStreamValidation:
 class TestIdempotencyDefaults:
     """Tests for default idempotency strategies."""
 
-    def test_intent_default(self):
-        """INTENT has correct default idempotency."""
-        default = get_default_idempotency(RecordKind.INTENT)
-        assert default.strategy_type == IdempotencyType.DETERMINISTIC_ID
-        assert default.field == "request_id"
+    def test_idempotency_defaults_combined(self):
+        """Combined: per-RecordKind defaults (INTENT/FACT/OBSERVATION/
+        DERIVATION) + defaults are independent copies."""
+        # INTENT
+        i = get_default_idempotency(RecordKind.INTENT)
+        assert i.strategy_type == IdempotencyType.DETERMINISTIC_ID
+        assert i.field == "request_id"
 
-    def test_fact_default(self):
-        """FACT has correct default idempotency."""
-        default = get_default_idempotency(RecordKind.FACT)
-        assert default.strategy_type == IdempotencyType.DETERMINISTIC_ID
-        assert default.field == "record_id"
+        # FACT
+        f = get_default_idempotency(RecordKind.FACT)
+        assert f.strategy_type == IdempotencyType.DETERMINISTIC_ID
+        assert f.field == "record_id"
 
-    def test_observation_default(self):
-        """OBSERVATION has correct default idempotency (dedupe window)."""
-        default = get_default_idempotency(RecordKind.OBSERVATION)
-        assert default.strategy_type == IdempotencyType.DEDUPE_WINDOW
-        assert default.window == "5 minutes"
+        # OBSERVATION
+        o = get_default_idempotency(RecordKind.OBSERVATION)
+        assert o.strategy_type == IdempotencyType.DEDUPE_WINDOW
+        assert o.window == "5 minutes"
 
-    def test_derivation_default(self):
-        """DERIVATION has correct default idempotency."""
-        default = get_default_idempotency(RecordKind.DERIVATION)
-        assert default.strategy_type == IdempotencyType.DETERMINISTIC_ID
-        assert default.field == "derivation_id"
+        # DERIVATION
+        d = get_default_idempotency(RecordKind.DERIVATION)
+        assert d.strategy_type == IdempotencyType.DETERMINISTIC_ID
+        assert d.field == "derivation_id"
 
-    def test_defaults_are_copies(self):
-        """Default strategies are independent copies."""
-        default1 = get_default_idempotency(RecordKind.FACT)
-        default2 = get_default_idempotency(RecordKind.FACT)
-
-        default1.field = "modified"
-        assert default2.field == "record_id"  # Unchanged
+        # Independent copies
+        d1 = get_default_idempotency(RecordKind.FACT)
+        d2 = get_default_idempotency(RecordKind.FACT)
+        d1.field = "modified"
+        assert d2.field == "record_id"
 
 
 # --- StreamSchema Tests ---
@@ -774,16 +742,16 @@ class TestIdempotencyDefaults:
 class TestStreamSchema:
     """Tests for StreamSchema model."""
 
-    def test_qualified_name(self):
-        """qualified_name returns name@version."""
-        schema = StreamSchema(name="OrderPlaced", version="v2")
-        assert schema.qualified_name == "OrderPlaced@v2"
+    def test_stream_schema_combined(self):
+        """Combined: qualified_name + default version."""
+        # Explicit version
+        s = StreamSchema(name="OrderPlaced", version="v2")
+        assert s.qualified_name == "OrderPlaced@v2"
 
-    def test_default_version(self):
-        """Default version is v1."""
-        schema = StreamSchema(name="OrderPlaced")
-        assert schema.version == "v1"
-        assert schema.qualified_name == "OrderPlaced@v1"
+        # Default version
+        d = StreamSchema(name="OrderPlaced")
+        assert d.version == "v1"
+        assert d.qualified_name == "OrderPlaced@v1"
 
 
 # --- DSL Parsing Tests ---

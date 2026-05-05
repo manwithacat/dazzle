@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.31] - 2026-05-04
+
+### Changed
+- **Distillation cycle 29** — Batch EE continued on test_hless,
+  test_pra_load_generator. 61 tests pass. Suite total: 12,478 → 12,433
+  (45 fewer this cycle). Cumulative: 14,295 → 12,433 (1,862 tests
+  removed across 29 cycles). Need 433 more.
+
 ## [0.66.30] - 2026-05-04
 
 ### Changed

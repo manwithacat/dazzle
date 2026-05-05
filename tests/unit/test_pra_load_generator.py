@@ -133,173 +133,134 @@ class TestCreateExtremeSkewSelector:
 class TestPRADataFactory:
     """Tests for PRA data factory."""
 
-    def test_order_placement_requested(self) -> None:
-        """Test order placement intent generation."""
+    def test_payload_shapes_combined(self) -> None:
+        """Combined payload shape tests for: order_placement_requested
+        (v1+v2), payment_requested, order_placed, payment_succeeded,
+        payment_failed, gateway_webhook_received (v1+v2), http_request_observed,
+        account_balance_calculated, daily_revenue_aggregated (v1+v2)."""
         factory = PRADataFactory(seed=42)
-        payload = factory.order_placement_requested()
 
-        assert "request_id" in payload
-        assert "actor_id" in payload
-        assert "account_id" in payload
-        assert "amount_minor" in payload  # Money pattern: amount in minor units
-        assert "currency" in payload
-        assert "occurred_at" in payload
+        # order_placement_requested
+        op = factory.order_placement_requested()
+        for k in (
+            "request_id",
+            "actor_id",
+            "account_id",
+            "amount_minor",
+            "currency",
+            "occurred_at",
+        ):
+            assert k in op
+        assert isinstance(op["request_id"], UUID)
+        assert isinstance(op["amount_minor"], int)
+        assert op["currency"] in ["GBP", "USD", "EUR"]
 
-        assert isinstance(payload["request_id"], UUID)
-        assert isinstance(payload["amount_minor"], int)  # Money uses int for precision
-        assert payload["currency"] in ["GBP", "USD", "EUR"]
+        # order_placement_requested v2
+        op_v2 = factory.order_placement_requested(use_v2=True)
+        assert "idempotency_key" in op_v2
+        assert isinstance(op_v2["idempotency_key"], str)
+        assert len(op_v2["idempotency_key"]) == 32
 
-    def test_order_placement_requested_v2(self) -> None:
-        """Test v2 schema includes idempotency key."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.order_placement_requested(use_v2=True)
+        # payment_requested
+        pr = factory.payment_requested()
+        for k in ("request_id", "order_id", "amount_minor", "currency", "gateway"):
+            assert k in pr
+        assert pr["gateway"] in ["stripe", "adyen", "worldpay", "paypal"]
 
-        assert "idempotency_key" in payload
-        assert isinstance(payload["idempotency_key"], str)
-        assert len(payload["idempotency_key"]) == 32
+        # order_placed
+        op2 = factory.order_placed()
+        for k in ("order_id", "actor_id", "account_id", "causation_id"):
+            assert k in op2
 
-    def test_payment_requested(self) -> None:
-        """Test payment intent generation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.payment_requested()
+        # payment_succeeded
+        ps = factory.payment_succeeded()
+        assert "payment_id" in ps
+        assert "gateway_ref" in ps
+        assert ps["gateway_ref"].startswith(("pi_", "ch_", "txn_", "pay_"))
 
-        assert "request_id" in payload
-        assert "order_id" in payload
-        assert "amount_minor" in payload  # Money pattern
-        assert "currency" in payload
-        assert "gateway" in payload
+        # payment_failed
+        pf = factory.payment_failed()
+        assert "reason" in pf
+        assert "gateway_error_code" in pf
 
-        assert payload["gateway"] in ["stripe", "adyen", "worldpay", "paypal"]
+        # gateway_webhook_received v1
+        gw = factory.gateway_webhook_received()
+        for k in ("observation_id", "gateway_ref", "webhook_type"):
+            assert k in gw
 
-    def test_order_placed(self) -> None:
-        """Test order placed fact generation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.order_placed()
+        # gateway_webhook_received v2
+        gw_v2 = factory.gateway_webhook_received(use_v2=True)
+        assert "signature_valid" in gw_v2
+        assert "idempotency_key" in gw_v2
 
-        assert "order_id" in payload
-        assert "actor_id" in payload
-        assert "account_id" in payload
-        assert "causation_id" in payload
+        # http_request_observed
+        hr = factory.http_request_observed()
+        for k in (
+            "trace_id",
+            "span_id",
+            "http_method",
+            "request_path",
+            "response_status",
+            "duration_ms",
+        ):
+            assert k in hr
 
-    def test_payment_succeeded(self) -> None:
-        """Test payment succeeded fact."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.payment_succeeded()
+        # account_balance_calculated
+        ab = factory.account_balance_calculated()
+        for k in ("calculation_id", "account_id", "balance_minor", "currency", "as_of_sequence"):
+            assert k in ab
 
-        assert "payment_id" in payload
-        assert "gateway_ref" in payload
-        assert payload["gateway_ref"].startswith(("pi_", "ch_", "txn_", "pay_"))
+        # daily_revenue_aggregated
+        dr = factory.daily_revenue_aggregated()
+        for k in (
+            "calculation_id",
+            "revenue_date",
+            "total_revenue_minor",
+            "currency",
+            "order_count",
+        ):
+            assert k in dr
 
-    def test_payment_failed(self) -> None:
-        """Test payment failed fact."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.payment_failed()
+        # daily_revenue_aggregated v2
+        dr_v2 = factory.daily_revenue_aggregated(use_v2=True)
+        assert "average_order_value_minor" in dr_v2
 
-        assert "reason" in payload
-        assert "gateway_error_code" in payload
-
-    def test_gateway_webhook_received(self) -> None:
-        """Test gateway webhook observation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.gateway_webhook_received()
-
-        assert "observation_id" in payload
-        assert "gateway_ref" in payload
-        assert "webhook_type" in payload
-
-    def test_gateway_webhook_received_v2(self) -> None:
-        """Test v2 webhook includes signature_valid."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.gateway_webhook_received(use_v2=True)
-
-        assert "signature_valid" in payload
-        assert "idempotency_key" in payload
-
-    def test_http_request_observed(self) -> None:
-        """Test HTTP request observation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.http_request_observed()
-
-        assert "trace_id" in payload
-        assert "span_id" in payload
-        assert "http_method" in payload
-        assert "request_path" in payload
-        assert "response_status" in payload
-        assert "duration_ms" in payload
-
-    def test_account_balance_calculated(self) -> None:
-        """Test balance derivation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.account_balance_calculated()
-
-        assert "calculation_id" in payload
-        assert "account_id" in payload
-        assert "balance_minor" in payload  # Money pattern
-        assert "currency" in payload
-        assert "as_of_sequence" in payload
-
-    def test_daily_revenue_aggregated(self) -> None:
-        """Test revenue derivation."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.daily_revenue_aggregated()
-
-        assert "calculation_id" in payload
-        assert "revenue_date" in payload
-        assert "total_revenue_minor" in payload  # Money pattern
-        assert "currency" in payload
-        assert "order_count" in payload
-
-    def test_daily_revenue_v2(self) -> None:
-        """Test v2 revenue includes average_order_value_minor."""
-        factory = PRADataFactory(seed=42)
-        payload = factory.daily_revenue_aggregated(use_v2=True)
-
-        assert "average_order_value_minor" in payload  # Money pattern
-
-    def test_should_reject_order_rate(self) -> None:
-        """Test rejection rate follows configuration."""
-        factory = PRADataFactory(seed=42, rejection_rate=0.5)
-
-        rejections = sum(1 for _ in range(1000) if factory.should_reject_order())
-
-        # With 50% rate, expect ~500 rejections
+    def test_distributions_combined(self) -> None:
+        """Combined: should_reject_order rate, payment_outcome distribution,
+        and seed determinism."""
+        # Rejection rate
+        rej_factory = PRADataFactory(seed=42, rejection_rate=0.5)
+        rejections = sum(1 for _ in range(1000) if rej_factory.should_reject_order())
         assert 400 < rejections < 600
 
-    def test_payment_outcome_distribution(self) -> None:
-        """Test payment outcomes follow configured rates."""
-        factory = PRADataFactory(
-            seed=42,
-            payment_failure_rate=0.10,
-            payment_timeout_rate=0.02,
-        )
-
+        # Payment outcome distribution
+        po_factory = PRADataFactory(seed=42, payment_failure_rate=0.10, payment_timeout_rate=0.02)
         outcomes = defaultdict(int)
         for _ in range(1000):
-            outcomes[factory.get_payment_outcome()] += 1
-
-        # ~88% success, ~10% failure, ~2% timeout
+            outcomes[po_factory.get_payment_outcome()] += 1
         assert outcomes["success"] > 800
         assert 50 < outcomes["failure"] < 150
         assert outcomes["timeout"] < 50
 
-    def test_deterministic_with_seed(self) -> None:
-        """Test same seed produces same data."""
-        factory1 = PRADataFactory(seed=42)
-        factory2 = PRADataFactory(seed=42)
-
-        # Same seed should produce same currency
+        # Determinism
+        f1 = PRADataFactory(seed=42)
+        f2 = PRADataFactory(seed=42)
         for _ in range(10):
-            p1 = factory1.order_placement_requested()
-            p2 = factory2.order_placement_requested()
-            assert p1["currency"] == p2["currency"]
+            assert (
+                f1.order_placement_requested()["currency"]
+                == f2.order_placement_requested()["currency"]
+            )
 
 
 class TestLoadProfiles:
     """Tests for load profiles."""
 
-    def test_steady_ramp_phases(self) -> None:
-        """Test SteadyRampProfile phase transitions."""
-        profile = SteadyRampProfile(
+    def test_profiles_combined(self) -> None:
+        """Combined: SteadyRamp phase transitions, Burst, SkewedBurst,
+        FailureInjection metadata, Replay, quick test factory, is_complete,
+        progress percentage."""
+        # SteadyRamp phases
+        sr = SteadyRampProfile(
             warmup_rate=10,
             peak_rate=100,
             warmup_seconds=10,
@@ -307,60 +268,35 @@ class TestLoadProfiles:
             peak_seconds=10,
             cooldown_seconds=10,
         )
+        s = sr.get_state(5)
+        assert s.phase == LoadPhase.WARMUP and s.target_rate == 10
+        s = sr.get_state(15)
+        assert s.phase == LoadPhase.RAMP and 50 < s.target_rate < 60
+        s = sr.get_state(25)
+        assert s.phase == LoadPhase.PEAK and s.target_rate == 100
+        s = sr.get_state(35)
+        assert s.phase == LoadPhase.COOLDOWN
+        s = sr.get_state(45)
+        assert s.phase == LoadPhase.COMPLETE and s.target_rate == 0
 
-        # Warmup
-        state = profile.get_state(5)
-        assert state.phase == LoadPhase.WARMUP
-        assert state.target_rate == 10
-
-        # Ramp (linear interpolation)
-        state = profile.get_state(15)
-        assert state.phase == LoadPhase.RAMP
-        assert 50 < state.target_rate < 60  # ~55 (halfway)
-
-        # Peak
-        state = profile.get_state(25)
-        assert state.phase == LoadPhase.PEAK
-        assert state.target_rate == 100
-
-        # Cooldown
-        state = profile.get_state(35)
-        assert state.phase == LoadPhase.COOLDOWN
-
-        # Complete
-        state = profile.get_state(45)
-        assert state.phase == LoadPhase.COMPLETE
-        assert state.target_rate == 0
-
-    def test_burst_profile(self) -> None:
-        """Test BurstProfile burst phase."""
-        profile = BurstProfile(
+        # Burst profile
+        bp = BurstProfile(
             baseline_rate=100,
             burst_multiplier=10,
             baseline_seconds=10,
             burst_seconds=10,
             recovery_seconds=10,
         )
+        s = bp.get_state(5)
+        assert s.phase == LoadPhase.WARMUP and s.target_rate == 100
+        s = bp.get_state(15)
+        assert s.phase == LoadPhase.PEAK and s.target_rate == 1000
+        assert s.metadata.get("burst_active")
+        s = bp.get_state(25)
+        assert s.phase == LoadPhase.COOLDOWN and s.target_rate == 100
 
-        # Baseline
-        state = profile.get_state(5)
-        assert state.phase == LoadPhase.WARMUP
-        assert state.target_rate == 100
-
-        # Burst
-        state = profile.get_state(15)
-        assert state.phase == LoadPhase.PEAK
-        assert state.target_rate == 1000
-        assert state.metadata.get("burst_active")
-
-        # Recovery
-        state = profile.get_state(25)
-        assert state.phase == LoadPhase.COOLDOWN
-        assert state.target_rate == 100
-
-    def test_skewed_burst_metadata(self) -> None:
-        """Test SkewedBurstProfile includes hot key probability."""
-        profile = SkewedBurstProfile(
+        # SkewedBurst metadata
+        skew = SkewedBurstProfile(
             baseline_rate=100,
             burst_multiplier=10,
             hot_key_probability=0.95,
@@ -368,77 +304,50 @@ class TestLoadProfiles:
             burst_seconds=10,
             recovery_seconds=10,
         )
+        s = skew.get_state(15)
+        assert s.metadata.get("skewed_burst")
+        assert s.metadata.get("hot_key_probability") == 0.95
 
-        # During burst
-        state = profile.get_state(15)
-        assert state.metadata.get("skewed_burst")
-        assert state.metadata.get("hot_key_probability") == 0.95
-
-    def test_failure_injection_metadata(self) -> None:
-        """Test FailureInjectionProfile includes failure info."""
-        profile = FailureInjectionProfile(
+        # FailureInjection metadata
+        fi = FailureInjectionProfile(
             rate=500,
             failure_probability=0.20,
             failure_targets=["database", "gateway"],
             duration_seconds=60,
         )
+        s = fi.get_state(30)
+        assert s.metadata.get("failure_injection")
+        assert s.metadata.get("failure_probability") == 0.20
+        assert "database" in s.metadata.get("failure_targets", [])
 
-        state = profile.get_state(30)
-        assert state.metadata.get("failure_injection")
-        assert state.metadata.get("failure_probability") == 0.20
-        assert "database" in state.metadata.get("failure_targets", [])
+        # Replay
+        rp = ReplayProfile(source_stream="orders_fact", max_rate=10000, estimated_records=100000)
+        s = rp.get_state(5)
+        assert s.metadata.get("replay_mode")
+        assert s.metadata.get("source_stream") == "orders_fact"
+        assert s.target_rate == 10000
 
-    def test_replay_profile(self) -> None:
-        """Test ReplayProfile configuration."""
-        profile = ReplayProfile(
-            source_stream="orders_fact",
-            max_rate=10000,
-            estimated_records=100000,
+        # Quick test factory
+        qt = create_quick_test_profile()
+        assert qt.peak_rate == 100
+        assert qt.total_duration_seconds == 60
+
+        # is_complete
+        ic = SteadyRampProfile(
+            warmup_seconds=10, ramp_seconds=10, peak_seconds=10, cooldown_seconds=10
         )
+        assert not ic.is_complete(20)
+        assert not ic.is_complete(39)
+        assert ic.is_complete(40)
+        assert ic.is_complete(100)
 
-        state = profile.get_state(5)
-        assert state.metadata.get("replay_mode")
-        assert state.metadata.get("source_stream") == "orders_fact"
-        assert state.target_rate == 10000
-
-    def test_quick_test_profile(self) -> None:
-        """Test quick test profile factory."""
-        profile = create_quick_test_profile()
-
-        assert profile.peak_rate == 100
-        assert profile.total_duration_seconds == 60
-
-    def test_is_complete(self) -> None:
-        """Test profile completion detection."""
-        profile = SteadyRampProfile(
-            warmup_seconds=10,
-            ramp_seconds=10,
-            peak_seconds=10,
-            cooldown_seconds=10,
+        # Progress percentage
+        pp = SteadyRampProfile(
+            warmup_seconds=25, ramp_seconds=25, peak_seconds=25, cooldown_seconds=25
         )
-
-        assert not profile.is_complete(20)
-        assert not profile.is_complete(39)
-        assert profile.is_complete(40)
-        assert profile.is_complete(100)
-
-    def test_progress_percentage(self) -> None:
-        """Test progress percentage calculation."""
-        profile = SteadyRampProfile(
-            warmup_seconds=25,
-            ramp_seconds=25,
-            peak_seconds=25,
-            cooldown_seconds=25,
-        )
-
-        state = profile.get_state(0)
-        assert state.progress_pct == 0
-
-        state = profile.get_state(50)
-        assert state.progress_pct == 50
-
-        state = profile.get_state(100)
-        assert state.progress_pct == 100
+        assert pp.get_state(0).progress_pct == 0
+        assert pp.get_state(50).progress_pct == 50
+        assert pp.get_state(100).progress_pct == 100
 
 
 class TestLoadGenerator:
@@ -618,53 +527,44 @@ class TestLoadGenerator:
 class TestGeneratorConfig:
     """Tests for GeneratorConfig."""
 
-    def test_default_config(self) -> None:
-        """Test default configuration values."""
-        config = GeneratorConfig()
+    def test_config_combined(self) -> None:
+        """Combined: default values + custom override."""
+        # Defaults
+        d = GeneratorConfig()
+        assert d.rejection_rate == 0.15
+        assert d.payment_failure_rate == 0.10
+        assert d.payment_timeout_rate == 0.02
+        assert d.actor_count == 100
+        assert d.account_count == 200
+        assert d.hot_key_ratio == 0.1
+        assert d.hot_traffic_share == 0.8
+        assert d.v2_schema_probability == 0.3
+        assert d.duplicate_probability == 0.05
 
-        assert config.rejection_rate == 0.15
-        assert config.payment_failure_rate == 0.10
-        assert config.payment_timeout_rate == 0.02
-        assert config.actor_count == 100
-        assert config.account_count == 200
-        assert config.hot_key_ratio == 0.1
-        assert config.hot_traffic_share == 0.8
-        assert config.v2_schema_probability == 0.3
-        assert config.duplicate_probability == 0.05
-
-    def test_custom_config(self) -> None:
-        """Test custom configuration."""
-        config = GeneratorConfig(
-            seed=42,
-            rejection_rate=0.5,
-            actor_count=50,
-            duplicate_probability=0.1,
-        )
-
-        assert config.seed == 42
-        assert config.rejection_rate == 0.5
-        assert config.actor_count == 50
-        assert config.duplicate_probability == 0.1
+        # Custom
+        c = GeneratorConfig(seed=42, rejection_rate=0.5, actor_count=50, duplicate_probability=0.1)
+        assert c.seed == 42
+        assert c.rejection_rate == 0.5
+        assert c.actor_count == 50
+        assert c.duplicate_probability == 0.1
 
 
 class TestGeneratorStats:
     """Tests for GeneratorStats."""
 
-    def test_total_generated(self) -> None:
-        """Test total calculation."""
-        stats = GeneratorStats(
+    def test_stats_combined(self) -> None:
+        """Combined: total_generated calc + initial stats are zero."""
+        # Total
+        s = GeneratorStats(
             intents_generated=100,
             facts_generated=50,
             observations_generated=25,
             derivations_generated=10,
         )
+        assert s.total_generated == 185
 
-        assert stats.total_generated == 185
-
-    def test_initial_stats(self) -> None:
-        """Test initial stats are zero."""
-        stats = GeneratorStats()
-
-        assert stats.total_generated == 0
-        assert stats.errors == 0
-        assert stats.duplicates_generated == 0
+        # Initial
+        init = GeneratorStats()
+        assert init.total_generated == 0
+        assert init.errors == 0
+        assert init.duplicates_generated == 0

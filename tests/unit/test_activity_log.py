@@ -23,65 +23,69 @@ def activity_log(log_path: Path):
 
 
 class TestAppendAndRead:
-    def test_append_creates_file(self, activity_log, log_path):
-        activity_log.append({"type": "log", "message": "hello"})
-        assert log_path.exists()
+    def test_append_and_read_combined(self, tmp_path):
+        """Combined: file creation, returns seq, seq+epoch+ts, read_since
+        zero/partial/empty/count limit, cursor tracks position."""
+        from dazzle.mcp.server.activity_log import ActivityLog
 
-    def test_append_returns_seq(self, activity_log):
-        s1 = activity_log.append({"type": "log", "message": "one"})
-        s2 = activity_log.append({"type": "log", "message": "two"})
+        # Create + first appends -> seq returned
+        log_path = tmp_path / "a" / "log.jsonl"
+        log = ActivityLog(log_path)
+        s1 = log.append({"type": "log", "message": "one"})
+        s2 = log.append({"type": "log", "message": "two"})
         assert s1 == 1
         assert s2 == 2
+        assert log_path.exists()
 
-    def test_append_adds_seq_and_epoch(self, activity_log, log_path):
-        activity_log.append({"type": "log", "message": "test"})
-        line = log_path.read_text().strip()
-        entry = json.loads(line)
+        # First entry has seq+epoch+ts
+        first_line = log_path.read_text().splitlines()[0]
+        entry = json.loads(first_line)
         assert entry["seq"] == 1
         assert entry["epoch"] == 0
         assert "ts" in entry
 
-    def test_read_since_zero(self, activity_log):
-        activity_log.append({"type": "log", "message": "a"})
-        activity_log.append({"type": "log", "message": "b"})
-        result = activity_log.read_since(cursor_seq=0)
-        assert len(result["entries"]) == 2
-        assert result["entries"][0]["message"] == "a"
-        assert result["entries"][1]["message"] == "b"
+        # read_since zero (uses second log)
+        log2_path = tmp_path / "b" / "log.jsonl"
+        log2 = ActivityLog(log2_path)
+        log2.append({"type": "log", "message": "a"})
+        log2.append({"type": "log", "message": "b"})
+        r0 = log2.read_since(cursor_seq=0)
+        assert len(r0["entries"]) == 2
+        assert r0["entries"][0]["message"] == "a"
+        assert r0["entries"][1]["message"] == "b"
 
-    def test_read_since_partial(self, activity_log):
-        activity_log.append({"type": "log", "message": "a"})
-        activity_log.append({"type": "log", "message": "b"})
-        activity_log.append({"type": "log", "message": "c"})
-        result = activity_log.read_since(cursor_seq=1)
-        assert len(result["entries"]) == 2
-        assert result["entries"][0]["message"] == "b"
+        # read_since partial
+        log2.append({"type": "log", "message": "c"})
+        rp = log2.read_since(cursor_seq=1)
+        assert len(rp["entries"]) == 2
+        assert rp["entries"][0]["message"] == "b"
 
-    def test_read_since_empty(self, activity_log):
-        result = activity_log.read_since(cursor_seq=0)
-        assert result["entries"] == []
-        assert result["has_more"] is False
+        # read_since empty
+        log3_path = tmp_path / "c" / "log.jsonl"
+        log3 = ActivityLog(log3_path)
+        re = log3.read_since(cursor_seq=0)
+        assert re["entries"] == []
+        assert re["has_more"] is False
 
-    def test_read_since_count_limit(self, activity_log):
+        # read_since count limit
+        log4_path = tmp_path / "d" / "log.jsonl"
+        log4 = ActivityLog(log4_path)
         for i in range(10):
-            activity_log.append({"type": "log", "message": f"msg-{i}"})
-        result = activity_log.read_since(cursor_seq=0, count=3)
-        assert len(result["entries"]) == 3
-        assert result["has_more"] is True
+            log4.append({"type": "log", "message": f"msg-{i}"})
+        rc = log4.read_since(cursor_seq=0, count=3)
+        assert len(rc["entries"]) == 3
+        assert rc["has_more"] is True
 
-    def test_cursor_tracks_position(self, activity_log):
+        # Cursor tracks position
+        log5_path = tmp_path / "e" / "log.jsonl"
+        log5 = ActivityLog(log5_path)
         for i in range(5):
-            activity_log.append({"type": "log", "message": f"msg-{i}"})
-
-        # First read
-        r1 = activity_log.read_since(cursor_seq=0, count=2)
-        assert len(r1["entries"]) == 2
-        cursor = r1["cursor"]
-
-        # Continue from cursor
-        r2 = activity_log.read_since(cursor_seq=cursor["seq"], count=10)
-        assert len(r2["entries"]) == 3
-        assert r2["entries"][0]["message"] == "msg-2"
+            log5.append({"type": "log", "message": f"msg-{i}"})
+        first = log5.read_since(cursor_seq=0, count=2)
+        assert len(first["entries"]) == 2
+        next_r = log5.read_since(cursor_seq=first["cursor"]["seq"], count=10)
+        assert len(next_r["entries"]) == 3
+        assert next_r["entries"][0]["message"] == "msg-2"
 
 
 # ── Truncation and epoch ────────────────────────────────────────────────────
@@ -133,48 +137,51 @@ class TestTruncation:
 
 
 class TestClear:
-    def test_clear_empties_log(self, activity_log, log_path):
-        activity_log.append({"type": "log", "message": "data"})
-        activity_log.clear()
-        assert log_path.read_text() == ""
+    def test_clear_combined(self, tmp_path):
+        """Combined: clear empties log, bumps epoch, resets seq."""
+        from dazzle.mcp.server.activity_log import ActivityLog
 
-    def test_clear_bumps_epoch(self, activity_log):
-        assert activity_log.current_epoch == 0
-        activity_log.clear()
-        assert activity_log.current_epoch == 1
-
-    def test_clear_resets_seq(self, activity_log):
-        activity_log.append({"type": "log", "message": "x"})
-        assert activity_log.current_seq == 1
-        activity_log.clear()
-        assert activity_log.current_seq == 0
+        # empties + bumps epoch + resets seq
+        p = tmp_path / "a" / "log.jsonl"
+        log = ActivityLog(p)
+        log.append({"type": "log", "message": "data"})
+        assert log.current_seq == 1
+        assert log.current_epoch == 0
+        log.clear()
+        assert p.read_text() == ""
+        assert log.current_epoch == 1
+        assert log.current_seq == 0
 
 
 # ── Active tool tracking ────────────────────────────────────────────────────
 
 
 class TestActiveToolTracking:
-    def test_tracks_tool_start(self, activity_log):
-        activity_log.append({"type": "tool_start", "tool": "pipeline", "operation": "run"})
-        assert activity_log.active_tool == "pipeline"
+    def test_active_tool_tracking_combined(self, tmp_path):
+        """Combined: tracks tool_start, clears on tool_end, read_since
+        surfaces active tool, read_since clears active tool when complete."""
+        from dazzle.mcp.server.activity_log import ActivityLog
 
-    def test_clears_on_tool_end(self, activity_log):
-        activity_log.append({"type": "tool_start", "tool": "pipeline", "operation": "run"})
-        activity_log.append({"type": "tool_end", "tool": "pipeline", "operation": "run"})
-        assert activity_log.active_tool is None
+        # tool_start tracked
+        log1 = ActivityLog(tmp_path / "a" / "log.jsonl")
+        log1.append({"type": "tool_start", "tool": "pipeline", "operation": "run"})
+        assert log1.active_tool == "pipeline"
 
-    def test_read_since_includes_active_tool(self, activity_log):
-        activity_log.append({"type": "tool_start", "tool": "dsl", "operation": "validate"})
-        result = activity_log.read_since(cursor_seq=0)
-        assert result["active_tool"] is not None
-        assert result["active_tool"]["tool"] == "dsl"
-        assert result["active_tool"]["operation"] == "validate"
+        # cleared on tool_end
+        log1.append({"type": "tool_end", "tool": "pipeline", "operation": "run"})
+        assert log1.active_tool is None
 
-    def test_read_since_no_active_when_complete(self, activity_log):
-        activity_log.append({"type": "tool_start", "tool": "dsl", "operation": "validate"})
-        activity_log.append({"type": "tool_end", "tool": "dsl"})
-        result = activity_log.read_since(cursor_seq=0)
-        assert result["active_tool"] is None
+        # read_since surfaces active tool
+        log2 = ActivityLog(tmp_path / "b" / "log.jsonl")
+        log2.append({"type": "tool_start", "tool": "dsl", "operation": "validate"})
+        r = log2.read_since(cursor_seq=0)
+        assert r["active_tool"] is not None
+        assert r["active_tool"]["tool"] == "dsl"
+        assert r["active_tool"]["operation"] == "validate"
+
+        # active_tool None when tool_end seen
+        log2.append({"type": "tool_end", "tool": "dsl"})
+        assert log2.read_since(cursor_seq=0)["active_tool"] is None
 
 
 # ── Thread safety ────────────────────────────────────────────────────────────
