@@ -10,7 +10,7 @@ the test_fragment_exhaustiveness test (Task 24) to fail.
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
-from dazzle.render.fragment.primitives import Fragment, Heading, Text
+from dazzle.render.fragment.primitives import Fragment, Grid, Heading, Row, Split, Stack, Text
 
 
 class FragmentRenderer:
@@ -39,7 +39,16 @@ class FragmentRenderer:
                 return self._emit_text(fragment, ctx)
             case Heading():
                 return self._emit_heading(fragment, ctx)
-            # Subsequent tasks (18-23) extend the match block.
+            # Layout
+            case Stack():
+                return self._emit_stack(fragment, ctx)
+            case Row():
+                return self._emit_row(fragment, ctx)
+            case Split():
+                return self._emit_split(fragment, ctx)
+            case Grid():
+                return self._emit_grid(fragment, ctx)
+            # Subsequent tasks (19-23) extend the match block.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -57,3 +66,33 @@ class FragmentRenderer:
         body = ctx.escape(h.body)
         cls = f"dz-heading dz-heading--level-{h.level}"
         return f'<h{h.level} class="{cls}">{body}</h{h.level}>'
+
+    def _emit_stack(self, s: Stack, ctx: RenderContext) -> str:
+        cls = f"dz-stack dz-stack--gap-{s.gap}"
+        body = "".join(self._emit(c, ctx) for c in s.children)  # type: ignore[arg-type]
+        return f'<div class="{cls}">{body}</div>'
+
+    def _emit_row(self, r: Row, ctx: RenderContext) -> str:
+        cls = f"dz-row dz-row--gap-{r.gap} dz-row--align-{r.align}"
+        body = "".join(self._emit(c, ctx) for c in r.children)  # type: ignore[arg-type]
+        return f'<div class="{cls}">{body}</div>'
+
+    def _emit_split(self, s: Split, ctx: RenderContext) -> str:
+        # The colon in ratio strings is invalid in CSS class names; replace
+        # with underscore. Both renderers (here and Jinja) must use the same
+        # convention — see classes.py for the shared rule once we move it.
+        ratio_class = s.ratio.replace(":", "_")
+        cls = f"dz-split dz-split--ratio-{ratio_class}"
+        start_html = self._emit(s.start, ctx)  # type: ignore[arg-type]
+        end_html = self._emit(s.end, ctx)  # type: ignore[arg-type]
+        return (
+            f'<div class="{cls}">'
+            f'<div class="dz-split__start">{start_html}</div>'
+            f'<div class="dz-split__end">{end_html}</div>'
+            f"</div>"
+        )
+
+    def _emit_grid(self, g: Grid, ctx: RenderContext) -> str:
+        cls = f"dz-grid dz-grid--columns-{g.columns}"
+        body = "".join(self._emit(c, ctx) for c in g.children)  # type: ignore[arg-type]
+        return f'<div class="{cls}">{body}</div>'
