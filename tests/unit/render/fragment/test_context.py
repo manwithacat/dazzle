@@ -1,3 +1,5 @@
+"""RenderContext and Fragment error hierarchy tests."""
+
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import (
     CardSafetyError,
@@ -27,3 +29,15 @@ def test_render_context_html_escape() -> None:
 def test_card_safety_error_is_fragment_error() -> None:
     assert issubclass(CardSafetyError, FragmentError)
     assert issubclass(HtmxBindingError, FragmentError)
+
+
+def test_primitive_registration_error_is_fragment_error() -> None:
+    from dazzle.render.fragment.errors import PrimitiveRegistrationError
+
+    assert issubclass(PrimitiveRegistrationError, FragmentError)
+
+
+def test_render_context_escape_attr_quotes() -> None:
+    ctx = RenderContext()
+    assert ctx.escape_attr('say "hi"') == "say &quot;hi&quot;"
+    assert ctx.escape_attr("safe") == "safe"

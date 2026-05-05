@@ -23,7 +23,16 @@ class RenderContext:
     tokens: Tokens = field(default_factory=Tokens)
 
     def escape(self, text: str) -> str:
-        """HTML-escape user-facing text. Wraps stdlib `html.escape` so any
-        future changes (e.g. additional attribute-context rules) live in
-        one place."""
+        """HTML-escape text content (between tags). Does NOT escape quotes —
+        use `escape_attr` for content that goes inside an attribute value.
+
+        Wraps stdlib `html.escape` so any future changes (e.g. additional
+        text-context rules) live in one place.
+        """
         return html.escape(text, quote=False)
+
+    def escape_attr(self, text: str) -> str:
+        """HTML-escape text destined for an attribute value (escapes quotes
+        in addition to `&<>`). Use this when emitting attribute strings to
+        prevent breaking out of the attribute context."""
+        return html.escape(text, quote=True)
