@@ -132,10 +132,11 @@ def test_build_admin_entities_combined() -> None:
 class TestCollisionDetection:
     """_check_collisions raises LinkError on name collisions."""
 
-    def test_entity_collision_raises(self) -> None:
-        """Entity name collision with synthetic names raises LinkError."""
+    def test_collision_branches(self) -> None:
+        """Entity collision raises; workspace collision raises; no overlap is silent."""
         from dazzle.core.admin_builder import _check_collisions
 
+        # Entity name collision
         with pytest.raises(LinkError, match="SystemHealth"):
             _check_collisions(
                 existing_entity_names={"SystemHealth", "Task", "User"},
@@ -144,10 +145,7 @@ class TestCollisionDetection:
                 synthetic_workspace_names=set(),
             )
 
-    def test_workspace_collision_raises(self) -> None:
-        """Workspace name collision with synthetic names raises LinkError."""
-        from dazzle.core.admin_builder import _check_collisions
-
+        # Workspace name collision
         with pytest.raises(LinkError, match="_platform_admin"):
             _check_collisions(
                 existing_entity_names=set(),
@@ -156,11 +154,7 @@ class TestCollisionDetection:
                 synthetic_workspace_names={"_platform_admin"},
             )
 
-    def test_no_collision_passes(self) -> None:
-        """No overlap between existing and synthetic names raises no error."""
-        from dazzle.core.admin_builder import _check_collisions
-
-        # Should not raise
+        # No collision: silent pass
         _check_collisions(
             existing_entity_names={"Task", "User", "Project"},
             existing_workspace_names={"my_dashboard"},
@@ -450,13 +444,12 @@ class TestAdminDefaultUX:
     `_lint_list_surface_ux` rule stops flagging them on every adopter.
     """
 
-    def test_admin_metrics_gets_bucket_start_sort(self) -> None:
-        """SystemMetric.bucket_start must match the timestamp suffix
-        set so _admin_metrics gets a newest-first default sort.
-        Regression guard for #824 — `_start` suffix added."""
+    def test_default_admin_ux_per_surface(self) -> None:
+        """Combined #824 sort/filter defaults across _admin_metrics, _admin_events, _admin_logs."""
         from dazzle.core.admin_builder import _default_admin_ux
 
-        ux = _default_admin_ux(
+        # SystemMetric: bucket_start → desc sort
+        ux_metrics = _default_admin_ux(
             [
                 ("name", "Metric"),
                 ("value", "Value"),
@@ -464,18 +457,12 @@ class TestAdminDefaultUX:
                 ("bucket_start", "Time"),
             ]
         )
-        assert ux.sort, "expected bucket_start to produce a sort default"
-        assert ux.sort[0].field == "bucket_start"
-        assert ux.sort[0].direction == "desc"
+        assert ux_metrics.sort, "expected bucket_start to produce a sort default"
+        assert ux_metrics.sort[0].field == "bucket_start"
+        assert ux_metrics.sort[0].direction == "desc"
 
-    def test_admin_events_gets_event_type_filter(self) -> None:
-        """EventTrace.event_type must be recognised as a categorical
-        filter candidate so _admin_events gets a filter default.
-        Regression guard for #824 — `event_type` added to
-        `_CATEGORICAL_FIELD_NAMES`."""
-        from dazzle.core.admin_builder import _default_admin_ux
-
-        ux = _default_admin_ux(
+        # EventTrace: event_type filter + timestamp sort
+        ux_events = _default_admin_ux(
             [
                 ("topic", "Topic"),
                 ("event_type", "Type"),
@@ -483,15 +470,11 @@ class TestAdminDefaultUX:
                 ("timestamp", "Time"),
             ]
         )
-        assert "event_type" in ux.filter
-        assert ux.sort[0].field == "timestamp"
+        assert "event_type" in ux_events.filter
+        assert ux_events.sort[0].field == "timestamp"
 
-    def test_admin_logs_gets_component_filter(self) -> None:
-        """LogEntry.component becomes a categorical filter alongside
-        the existing `level` field. Regression guard for #824."""
-        from dazzle.core.admin_builder import _default_admin_ux
-
-        ux = _default_admin_ux(
+        # LogEntry: level + component filters, timestamp sort
+        ux_logs = _default_admin_ux(
             [
                 ("timestamp", "Time"),
                 ("level", "Level"),
@@ -499,9 +482,9 @@ class TestAdminDefaultUX:
                 ("message", "Message"),
             ]
         )
-        assert "level" in ux.filter
-        assert "component" in ux.filter
-        assert ux.sort[0].field == "timestamp"
+        assert "level" in ux_logs.filter
+        assert "component" in ux_logs.filter
+        assert ux_logs.sort[0].field == "timestamp"
 
 
 def test_synthetic_lint_skips_combined() -> None:

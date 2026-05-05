@@ -81,99 +81,91 @@ class TestEmptySessions:
 
 
 class TestScopeLeakDetection:
-    def test_scope_leak_different_row_counts(self) -> None:
-        """Persona A sees 5 rows, persona B sees 0 rows => scope issue."""
-        teacher_session = _session(
-            "teacher",
+    def test_scope_leak_different_counts_and_populated_vs_empty(self) -> None:
+        """Differing row counts and 'populated vs empty' both surface scope-leak patterns."""
+        # Different row counts (5 vs 0)
+        report = analyse_sessions(
             [
-                _step(
-                    persona="teacher",
-                    target="/app/tasks",
-                    observation="Table loaded with 5 rows visible",
-                    verdict=Verdict.PASS,
+                _session(
+                    "teacher",
+                    [
+                        _step(
+                            persona="teacher",
+                            target="/app/tasks",
+                            observation="Table loaded with 5 rows visible",
+                            verdict=Verdict.PASS,
+                        )
+                    ],
                 ),
-            ],
-        )
-        student_session = _session(
-            "student",
-            [
-                _step(
-                    persona="student",
-                    target="/app/tasks",
-                    observation="Table shows 0 rows, list is empty",
-                    verdict=Verdict.PASS,
+                _session(
+                    "student",
+                    [
+                        _step(
+                            persona="student",
+                            target="/app/tasks",
+                            observation="Table shows 0 rows, list is empty",
+                            verdict=Verdict.PASS,
+                        )
+                    ],
                 ),
-            ],
+            ]
         )
-        report = analyse_sessions([teacher_session, student_session])
         scope_patterns = [p for p in report.cross_persona_patterns if "scope" in p.title.lower()]
         assert len(scope_patterns) >= 1
         pattern = scope_patterns[0]
         assert pattern.id.startswith("CPP-")
         assert set(pattern.affected_personas) == {"teacher", "student"}
 
-    def test_scope_leak_populated_vs_empty(self) -> None:
-        """One persona sees data, another sees 'empty'."""
-        s1 = _session(
-            "admin",
+        # Populated vs explicit "empty" wording
+        report2 = analyse_sessions(
             [
-                _step(persona="admin", target="/app/orders", observation="Showing 12 rows"),
-            ],
+                _session(
+                    "admin",
+                    [_step(persona="admin", target="/app/orders", observation="Showing 12 rows")],
+                ),
+                _session(
+                    "viewer",
+                    [
+                        _step(
+                            persona="viewer",
+                            target="/app/orders",
+                            observation="The list is empty",
+                        )
+                    ],
+                ),
+            ]
         )
-        s2 = _session(
-            "viewer",
-            [
-                _step(persona="viewer", target="/app/orders", observation="The list is empty"),
-            ],
-        )
-        report = analyse_sessions([s1, s2])
-        scope_patterns = [p for p in report.cross_persona_patterns if "scope" in p.title.lower()]
-        assert len(scope_patterns) >= 1
+        assert any("scope" in p.title.lower() for p in report2.cross_persona_patterns)
 
 
 # ---- FK UUID detection ----
 
 
 class TestFkUuidDetection:
-    def test_uuid_in_observation(self) -> None:
-        session = _session(
-            "teacher",
-            [
-                _step(
-                    persona="teacher",
-                    target="/app/tasks/create",
-                    observation="Field 'assigned_to' shows raw UUID instead of display name",
-                    verdict=Verdict.FAIL,
-                ),
-            ],
-        )
-        report = analyse_sessions([session])
-        fk_patterns = [
-            p
-            for p in report.cross_persona_patterns
-            if "uuid" in p.title.lower() or "fk" in p.title.lower()
-        ]
-        assert len(fk_patterns) >= 1
-
-    def test_text_input_for_ref_field(self) -> None:
-        session = _session(
-            "teacher",
-            [
-                _step(
-                    persona="teacher",
-                    target="/app/tasks/create",
-                    observation="Reference field rendered as plain text input, expects manual ID entry",
-                    verdict=Verdict.FAIL,
-                ),
-            ],
-        )
-        report = analyse_sessions([session])
-        fk_patterns = [
-            p
-            for p in report.cross_persona_patterns
-            if "uuid" in p.title.lower() or "fk" in p.title.lower()
-        ]
-        assert len(fk_patterns) >= 1
+    def test_uuid_in_observation_and_text_input_for_ref_field(self) -> None:
+        """Both raw-UUID display and plain-text-input for ref fields produce FK/UUID patterns."""
+        for observation in (
+            "Field 'assigned_to' shows raw UUID instead of display name",
+            "Reference field rendered as plain text input, expects manual ID entry",
+        ):
+            session = _session(
+                "teacher",
+                [
+                    _step(
+                        persona="teacher",
+                        target="/app/tasks/create",
+                        observation=observation,
+                        verdict=Verdict.FAIL,
+                    ),
+                ],
+            )
+            report = analyse_sessions([session])
+            fk_patterns = [
+                p
+                for p in report.cross_persona_patterns
+                if "uuid" in p.title.lower() or "fk" in p.title.lower()
+            ]
+            assert len(fk_patterns) >= 1, observation
 
 
 # ---- Navigation gap detection ----
