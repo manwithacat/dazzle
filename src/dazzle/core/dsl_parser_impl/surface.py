@@ -55,6 +55,7 @@ class SurfaceParserMixin:
         companions: list[ir.CompanionSpec] = []  # v0.61.102 (#923): Part D
         display: str | None = None  # v0.61.126 (#942): VIEW-mode display override
         show_history = False  # #956 cycle 8: opt-in audit-history region
+        render: str | None = None  # Plan 2: optional renderer name
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -88,6 +89,14 @@ class SurfaceParserMixin:
                         f"layout must be 'wizard' or 'single_page', got {layout_token.value!r}"
                     )
                 layout = layout_token.value
+                self.skip_newlines()
+
+            # Plan 2: render: <renderer-name> — opt into a non-default renderer
+            elif self.match(TokenType.RENDER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                render_token = self.expect_identifier_or_keyword()
+                render = render_token.value
                 self.skip_newlines()
 
             # source: ViewName (view reference for field projection)
@@ -231,6 +240,7 @@ class SurfaceParserMixin:
             companions=companions,  # v0.61.102 (#923)
             display=display,  # v0.61.126 (#942)
             show_history=show_history,  # #956 cycle 8
+            render=render,  # Plan 2: optional renderer name
         )
 
     def _parse_related_group(self) -> ir.RelatedGroup:
