@@ -1,11 +1,12 @@
-"""Container primitives — Card, Region, Toolbar.
+"""Container primitives — Card, Region, Toolbar, Surface, Tabs, Drawer, Modal.
 
 The `__post_init__` invariants in this module are what makes the
 contract_checker scanner obsolete. Each invariant here corresponds to a
 named scanner function being retired in Phase 9.
 
-Surface, Drawer, Modal, Tabs come later (Task 13) — they extend the
-container vocabulary but do not introduce new card-safety invariants.
+Surface, Tabs, Drawer, Modal extend the container vocabulary. Surface
+carries one card-safety invariant of its own — its header cannot be a
+Card (the surface IS the chrome).
 """
 
 from dataclasses import dataclass, field
@@ -83,3 +84,69 @@ class Toolbar:
                     "toolbar discoverability. If the action is conditionally available, "
                     "use visibility='disabled' instead."
                 )
+
+
+@dataclass(frozen=True, slots=True)
+class Surface:
+    """Top-level rendered surface — list, detail, form, dashboard, etc.
+
+    Surface has THREE slots and only three: header, body, footer. There is
+    intentionally no `title` slot; the header carries titling. This is the
+    structural invariant that prevents duplicate-title violations at the
+    surface level (regions are constrained the same way in `Region`).
+
+    A Card cannot occupy the header slot — that would re-introduce nested
+    chrome. Body and footer are unconstrained for chrome since their content
+    is typically the "inside" of the surface where Cards are appropriate.
+    """
+
+    body: object
+    header: object | None = None
+    footer: object | None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.header, Card):
+            raise CardSafetyError(
+                "Surface header cannot be a Card; the surface IS the chrome. "
+                "Use plain Text/Heading/Toolbar in the header slot."
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class Tabs:
+    """Tabbed container. Each tab is `(key, Fragment)` — keys must be unique."""
+
+    tabs: tuple[tuple[str, object], ...]
+
+    def __post_init__(self) -> None:
+        if not self.tabs:
+            raise ValueError("Tabs requires at least one tab")
+        seen: set[str] = set()
+        for key, _panel in self.tabs:
+            if key in seen:
+                raise ValueError(f"duplicate tab key {key!r}")
+            seen.add(key)
+
+
+@dataclass(frozen=True, slots=True)
+class Drawer:
+    """Slide-over panel. Anchored to a screen edge."""
+
+    body: object
+    side: Literal["left", "right", "top", "bottom"] = "right"
+
+    def __post_init__(self) -> None:
+        if self.side not in ("left", "right", "top", "bottom"):
+            raise ValueError(f"invalid side {self.side!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class Modal:
+    """Centered overlay dialog."""
+
+    body: object
+    size: Literal["sm", "md", "lg", "xl"] = "md"
+
+    def __post_init__(self) -> None:
+        if self.size not in ("sm", "md", "lg", "xl"):
+            raise ValueError(f"invalid size {self.size!r}")
