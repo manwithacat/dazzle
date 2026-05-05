@@ -86,34 +86,29 @@ class TestRequestRecorder:
         recorder = RequestRecorder([])
         assert recorder.last_request is None
 
-    def test_filter_by_method(self) -> None:
+    def test_filter_facets(self) -> None:
+        """Combined: filter by method, path, status, operation, combined filters."""
         recorder = RequestRecorder(self._make_log())
+
+        # by method
         posts = recorder.filter(method="POST")
         assert len(posts) == 1
         assert posts[0]["operation"] == "create_applicant"
 
-    def test_filter_by_path(self) -> None:
-        recorder = RequestRecorder(self._make_log())
+        # by path (substring)
         matches = recorder.filter(path="/resources/applicants/abc")
         assert len(matches) == 1
         assert matches[0]["method"] == "GET"
 
-    def test_filter_by_status(self) -> None:
-        recorder = RequestRecorder(self._make_log())
-        created = recorder.filter(status=201)
-        assert len(created) == 1
+        # by status
+        assert len(recorder.filter(status=201)) == 1
 
-    def test_filter_by_operation(self) -> None:
-        recorder = RequestRecorder(self._make_log())
-        matches = recorder.filter(operation="create_applicant")
-        assert len(matches) == 1
+        # by operation
+        assert len(recorder.filter(operation="create_applicant")) == 1
 
-    def test_filter_combined(self) -> None:
-        recorder = RequestRecorder(self._make_log())
-        matches = recorder.filter(method="POST", status=201)
-        assert len(matches) == 1
-        matches = recorder.filter(method="GET", status=201)
-        assert len(matches) == 0
+        # combined: AND across facets
+        assert len(recorder.filter(method="POST", status=201)) == 1
+        assert len(recorder.filter(method="GET", status=201)) == 0
 
     def test_assert_called_passes(self) -> None:
         recorder = RequestRecorder(self._make_log())

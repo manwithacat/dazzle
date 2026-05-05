@@ -91,18 +91,12 @@ def audit_logger(mock_conn):
 
 
 class TestAuditLoggerInit:
-    def test_creates_table(self, mock_conn) -> None:
-        """Logger should issue CREATE TABLE on init."""
+    def test_creates_schema_on_init(self, mock_conn) -> None:
+        """Combined: CREATE TABLE + entity/user/timestamp indexes are issued on init."""
         conn, cursor = mock_conn
         AuditLogger(database_url="postgresql://localhost/test")
         executed_sqls = [call[0] for call in cursor._executed]
         assert any("CREATE TABLE IF NOT EXISTS _dazzle_audit_log" in sql for sql in executed_sqls)
-
-    def test_creates_indexes(self, mock_conn) -> None:
-        """Logger should create indexes on init."""
-        conn, cursor = mock_conn
-        AuditLogger(database_url="postgresql://localhost/test")
-        executed_sqls = [call[0] for call in cursor._executed]
         assert any("idx_audit_entity" in sql for sql in executed_sqls)
         assert any("idx_audit_user" in sql for sql in executed_sqls)
         assert any("idx_audit_timestamp" in sql for sql in executed_sqls)

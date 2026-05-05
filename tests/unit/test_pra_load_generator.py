@@ -31,172 +31,91 @@ from dazzle_back.pra.profiles import (
 class TestHotKeySelector:
     """Tests for HotKeySelector."""
 
-    def test_initialization(self) -> None:
-        """Test selector initializes key pools."""
-        selector = HotKeySelector(
-            hot_key_count=10,
-            total_keys=100,
-            seed=42,
-        )
-
+    def test_hot_key_selector_combined(self) -> None:
+        """Combined: initialization (key pools), hot-key selection bias,
+        select_hot/select_cold contracts, is_hot, reset regenerates."""
+        # Initialization
+        selector = HotKeySelector(hot_key_count=10, total_keys=100, seed=42)
         hot_keys = selector.get_hot_keys()
         cold_keys = selector.get_cold_keys()
-
         assert len(hot_keys) == 10
         assert len(cold_keys) == 90
         assert all(isinstance(k, UUID) for k in hot_keys)
 
-    def test_hot_key_selection_bias(self) -> None:
-        """Test that hot keys are selected more frequently."""
-        selector = HotKeySelector(
-            hot_key_count=10,
-            hot_key_probability=0.8,
-            total_keys=100,
-            seed=42,
+        # Hot key selection bias (80% probability)
+        bias_sel = HotKeySelector(
+            hot_key_count=10, hot_key_probability=0.8, total_keys=100, seed=42
         )
-
-        hot_keys = set(selector.get_hot_keys())
-        hot_count = 0
-        iterations = 1000
-
-        for _ in range(iterations):
-            key = selector.select()
-            if key in hot_keys:
-                hot_count += 1
-
-        # With 80% hot probability, expect ~800 hot selections
-        # Allow some variance
+        hot_set = set(bias_sel.get_hot_keys())
+        hot_count = sum(1 for _ in range(1000) if bias_sel.select() in hot_set)
         assert 700 < hot_count < 900
 
-    def test_select_hot_always_hot(self) -> None:
-        """Test select_hot always returns hot key."""
-        selector = HotKeySelector(
-            hot_key_count=5,
-            total_keys=50,
-            seed=42,
-        )
-
-        hot_keys = set(selector.get_hot_keys())
-
+        # select_hot always returns hot
+        small = HotKeySelector(hot_key_count=5, total_keys=50, seed=42)
+        small_hot = set(small.get_hot_keys())
+        small_cold = set(small.get_cold_keys())
         for _ in range(100):
-            key = selector.select_hot()
-            assert key in hot_keys
+            assert small.select_hot() in small_hot
+            assert small.select_cold() in small_cold
 
-    def test_select_cold_always_cold(self) -> None:
-        """Test select_cold always returns cold key."""
-        selector = HotKeySelector(
-            hot_key_count=5,
-            total_keys=50,
-            seed=42,
-        )
+        # is_hot
+        for k in selector.get_hot_keys():
+            assert selector.is_hot(k)
+        for k in selector.get_cold_keys():
+            assert not selector.is_hot(k)
 
-        cold_keys = set(selector.get_cold_keys())
-
-        for _ in range(100):
-            key = selector.select_cold()
-            assert key in cold_keys
-
-    def test_is_hot(self) -> None:
-        """Test is_hot correctly identifies hot keys."""
-        selector = HotKeySelector(
-            hot_key_count=10,
-            total_keys=100,
-            seed=42,
-        )
-
-        for key in selector.get_hot_keys():
-            assert selector.is_hot(key)
-
-        for key in selector.get_cold_keys():
-            assert not selector.is_hot(key)
-
-    def test_reset_regenerates_keys(self) -> None:
-        """Test reset generates new key pools."""
-        selector = HotKeySelector(
-            hot_key_count=10,
-            total_keys=100,
-            seed=42,
-        )
-
+        # Reset regenerates
         original_hot = set(selector.get_hot_keys())
-
         selector.reset(seed=99)
-
-        new_hot = set(selector.get_hot_keys())
-
-        # Different seeds should produce different keys
-        assert original_hot != new_hot
+        assert original_hot != set(selector.get_hot_keys())
 
 
 class TestWeightedKeySelector:
     """Tests for WeightedKeySelector."""
 
-    def test_weighted_selection(self) -> None:
-        """Test keys selected according to weight."""
-        selector = WeightedKeySelector(seed=42)
-
-        # Add keys with very different weights
+    def test_weighted_selector_combined(self) -> None:
+        """Combined: weighted selection (heavy bias), empty -> new UUID,
+        clear resets state."""
         from uuid import uuid4
 
+        # Weighted selection
+        selector = WeightedKeySelector(seed=42)
         heavy = uuid4()
         light = uuid4()
-
         selector.add_key(heavy, weight=100)
         selector.add_key(light, weight=1)
-
-        heavy_count = 0
-        for _ in range(1000):
-            if selector.select() == heavy:
-                heavy_count += 1
-
-        # Heavy key should be selected ~99% of the time
+        heavy_count = sum(1 for _ in range(1000) if selector.select() == heavy)
         assert heavy_count > 950
 
-    def test_empty_selector_returns_uuid(self) -> None:
-        """Test empty selector returns new UUID."""
-        selector = WeightedKeySelector()
-        key = selector.select()
-        assert isinstance(key, UUID)
+        # Empty -> new UUID
+        empty = WeightedKeySelector()
+        assert isinstance(empty.select(), UUID)
 
-    def test_clear(self) -> None:
-        """Test clear removes all keys."""
-        selector = WeightedKeySelector()
-        from uuid import uuid4
-
-        selector.add_key(uuid4(), weight=10)
-        selector.add_key(uuid4(), weight=10)
-
-        assert selector._total_weight == 20
-
-        selector.clear()
-
-        assert selector._total_weight == 0
-        assert len(selector._keys) == 0
+        # Clear
+        clr = WeightedKeySelector()
+        clr.add_key(uuid4(), weight=10)
+        clr.add_key(uuid4(), weight=10)
+        assert clr._total_weight == 20
+        clr.clear()
+        assert clr._total_weight == 0
+        assert len(clr._keys) == 0
 
 
 class TestCreateParetoSelector:
     """Tests for pareto selector factory."""
 
-    def test_pareto_defaults(self) -> None:
-        """Test default 80/20 distribution."""
-        selector = create_pareto_selector(total_keys=100)
+    def test_pareto_combined(self) -> None:
+        """Combined: default 80/20 + custom ratio."""
+        # Defaults
+        sel = create_pareto_selector(total_keys=100)
+        assert len(sel.get_hot_keys()) == 20
+        assert len(sel.get_cold_keys()) == 80
+        assert sel.hot_key_probability == 0.8
 
-        # 20% of 100 = 20 hot keys
-        assert len(selector.get_hot_keys()) == 20
-        assert len(selector.get_cold_keys()) == 80
-        assert selector.hot_key_probability == 0.8
-
-    def test_custom_pareto(self) -> None:
-        """Test custom pareto ratio."""
-        selector = create_pareto_selector(
-            total_keys=100,
-            pareto_ratio=0.1,
-            traffic_share=0.9,
-        )
-
-        # 10% of 100 = 10 hot keys
-        assert len(selector.get_hot_keys()) == 10
-        assert selector.hot_key_probability == 0.9
+        # Custom
+        custom = create_pareto_selector(total_keys=100, pareto_ratio=0.1, traffic_share=0.9)
+        assert len(custom.get_hot_keys()) == 10
+        assert custom.hot_key_probability == 0.9
 
 
 class TestCreateExtremeSkewSelector:

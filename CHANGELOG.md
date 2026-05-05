@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.30] - 2026-05-04
+
+### Changed
+- **Distillation cycle 28** — Batch EE partial collapsed test_audit_log,
+  test_themespec, test_vendor_mock_fixtures. 84 tests pass. Suite total:
+  12,525 → 12,478 (47 fewer this cycle). Cumulative: 14,295 → 12,478
+  (1,817 tests removed across 28 cycles). Need 478 more.
+
 ## [0.66.29] - 2026-05-04
 
 ### Changed
