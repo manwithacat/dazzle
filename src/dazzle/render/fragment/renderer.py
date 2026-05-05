@@ -12,6 +12,7 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
     Badge,
+    Button,
     Card,
     Drawer,
     EmptyState,
@@ -19,6 +20,9 @@ from dazzle.render.fragment.primitives import (
     Grid,
     Heading,
     Icon,
+    InlineEdit,
+    Interactive,
+    Link,
     Modal,
     Region,
     Row,
@@ -28,6 +32,7 @@ from dazzle.render.fragment.primitives import (
     Surface,
     Tabs,
     Text,
+    Toolbar,
 )
 
 
@@ -88,7 +93,19 @@ class FragmentRenderer:
                 return self._emit_empty_state(fragment, ctx)
             case Skeleton():
                 return self._emit_skeleton(fragment, ctx)
-            # Subsequent tasks (21-23) extend the match block.
+            # Interactive
+            case Button():
+                return self._emit_button(fragment, ctx)
+            case Link():
+                return self._emit_link(fragment, ctx)
+            case Interactive():
+                return self._emit_interactive(fragment, ctx)
+            case InlineEdit():
+                return self._emit_inline_edit(fragment, ctx)
+            # Toolbar (deferred from Task 19 — needs Button)
+            case Toolbar():
+                return self._emit_toolbar(fragment, ctx)
+            # Subsequent tasks (22-23) extend the match block.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -227,3 +244,91 @@ class FragmentRenderer:
     def _emit_skeleton(self, s: Skeleton, ctx: RenderContext) -> str:
         lines = "".join('<div class="dz-skeleton__line"></div>' for _ in range(s.lines))
         return f'<div class="dz-skeleton">{lines}</div>'
+
+    @staticmethod
+    def _hx_attrs(
+        *,
+        hx_get: object,
+        hx_post: object,
+        hx_target: object,
+        hx_swap: object | None,
+        hx_trigger: object | None = None,
+        hx_indicator: object | None = None,
+        hx_confirm: object | None = None,
+    ) -> str:
+        """Build the htmx attribute string for an interactive primitive.
+
+        All values are stringified via __str__ which is the contract on the
+        wrapper types (URL, TargetSelector, HxTrigger). hx-confirm is the
+        only field that takes a free-form string."""
+        parts: list[str] = []
+        if hx_get is not None:
+            parts.append(f'hx-get="{hx_get}"')
+        if hx_post is not None:
+            parts.append(f'hx-post="{hx_post}"')
+        if hx_target is not None:
+            parts.append(f'hx-target="{hx_target}"')
+        if hx_swap is not None:
+            parts.append(f'hx-swap="{hx_swap}"')
+        if hx_trigger is not None:
+            parts.append(f'hx-trigger="{hx_trigger}"')
+        if hx_indicator is not None:
+            parts.append(f'hx-indicator="{hx_indicator}"')
+        if hx_confirm is not None:
+            # hx-confirm can contain user-facing text — must be HTML-escaped.
+            from html import escape as _escape
+
+            parts.append(f'hx-confirm="{_escape(str(hx_confirm), quote=True)}"')
+        return " ".join(parts)
+
+    def _emit_button(self, b: Button, ctx: RenderContext) -> str:
+        cls_parts = [
+            "dz-button",
+            f"dz-button--variant-{b.variant}",
+            f"dz-button--visibility-{b.visibility}",
+        ]
+        cls = " ".join(cls_parts)
+        attrs = self._hx_attrs(
+            hx_get=b.hx_get,
+            hx_post=b.hx_post,
+            hx_target=b.hx_target,
+            hx_swap=b.hx_swap,
+            hx_trigger=b.hx_trigger,
+            hx_indicator=b.hx_indicator,
+            hx_confirm=b.hx_confirm,
+        )
+        attr_str = f" {attrs}" if attrs else ""
+        disabled = ' disabled="disabled"' if b.visibility == "disabled" else ""
+        label = ctx.escape(b.label)
+        return f'<button type="button" class="{cls}"{attr_str}{disabled}>{label}</button>'
+
+    def _emit_link(self, link: Link, ctx: RenderContext) -> str:
+        href = str(link.href)
+        return f'<a class="dz-link" href="{href}">{ctx.escape(link.label)}</a>'
+
+    def _emit_interactive(self, iw: Interactive, ctx: RenderContext) -> str:
+        attrs = self._hx_attrs(
+            hx_get=iw.hx_get,
+            hx_post=iw.hx_post,
+            hx_target=iw.hx_target,
+            hx_swap=iw.hx_swap,
+            hx_trigger=iw.hx_trigger,
+        )
+        attr_str = f" {attrs}" if attrs else ""
+        child_html = self._emit(iw.child, ctx)  # type: ignore[arg-type]
+        return f'<div class="dz-interactive"{attr_str}>{child_html}</div>'
+
+    def _emit_inline_edit(self, ie: InlineEdit, ctx: RenderContext) -> str:
+        # InlineEdit value should be escaped — it's user-supplied content.
+        # The placeholder is developer-supplied but escape anyway as a safety net.
+        value = ctx.escape(ie.value)
+        placeholder = ctx.escape_attr(ie.placeholder)
+        return (
+            f'<span class="dz-inline-edit" data-field="{ctx.escape_attr(ie.field_name)}" '
+            f'data-placeholder="{placeholder}">{value}</span>'
+        )
+
+    def _emit_toolbar(self, t: Toolbar, ctx: RenderContext) -> str:
+        actions_html = "".join(self._emit(a, ctx) for a in t.actions)  # type: ignore[arg-type]
+        label = ctx.escape_attr(t.label)
+        return f'<div class="dz-toolbar" aria-label="{label}">{actions_html}</div>'
