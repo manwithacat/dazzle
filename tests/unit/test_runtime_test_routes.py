@@ -37,39 +37,30 @@ from dazzle_back.runtime.test_routes import (
 class TestFixtureData:
     """Tests for FixtureData model."""
 
-    def test_fixture_data_minimal(self) -> None:
-        """Test creating fixture data with minimal fields."""
-        fixture = FixtureData(
-            id="task_1",
-            entity="Task",
-            data={"title": "Test Task"},
-        )
-        assert fixture.id == "task_1"
-        assert fixture.entity == "Task"
-        assert fixture.data == {"title": "Test Task"}
-        assert fixture.refs is None
+    def test_fixture_data_minimal_and_with_refs(self) -> None:
+        """Minimal FixtureData has refs=None; refs round-trip when supplied."""
+        minimal = FixtureData(id="task_1", entity="Task", data={"title": "Test Task"})
+        assert minimal.id == "task_1"
+        assert minimal.entity == "Task"
+        assert minimal.data == {"title": "Test Task"}
+        assert minimal.refs is None
 
-    def test_fixture_data_with_refs(self) -> None:
-        """Test creating fixture data with references."""
-        fixture = FixtureData(
+        with_refs = FixtureData(
             id="task_1",
             entity="Task",
             data={"title": "Test Task"},
             refs={"project_id": "project_1"},
         )
-        assert fixture.refs == {"project_id": "project_1"}
+        assert with_refs.refs == {"project_id": "project_1"}
 
 
 class TestSeedRequest:
     """Tests for SeedRequest model."""
 
-    def test_seed_request_empty(self) -> None:
-        """Test creating seed request with no fixtures."""
-        request = SeedRequest(fixtures=[])
-        assert request.fixtures == []
+    def test_seed_request_empty_and_with_fixtures(self) -> None:
+        """Empty fixtures list and multi-fixture round-trip both work."""
+        assert SeedRequest(fixtures=[]).fixtures == []
 
-    def test_seed_request_with_fixtures(self) -> None:
-        """Test creating seed request with multiple fixtures."""
         request = SeedRequest(
             fixtures=[
                 FixtureData(id="task_1", entity="Task", data={"title": "Task 1"}),
@@ -84,13 +75,10 @@ class TestSeedRequest:
 class TestSeedResponse:
     """Tests for SeedResponse model."""
 
-    def test_seed_response_empty(self) -> None:
-        """Test creating seed response with no created entities."""
-        response = SeedResponse(created={})
-        assert response.created == {}
+    def test_seed_response_empty_and_with_created(self) -> None:
+        """Empty and populated `created` map both serialise correctly."""
+        assert SeedResponse(created={}).created == {}
 
-    def test_seed_response_with_created(self) -> None:
-        """Test creating seed response with created entities."""
         response = SeedResponse(
             created={
                 "task_1": {"id": "uuid-1", "title": "Task 1"},
@@ -104,13 +92,10 @@ class TestSeedResponse:
 class TestSnapshotResponse:
     """Tests for SnapshotResponse model."""
 
-    def test_snapshot_response_empty(self) -> None:
-        """Test creating snapshot response with no entities."""
-        response = SnapshotResponse(entities={})
-        assert response.entities == {}
+    def test_snapshot_response_empty_and_with_entities(self) -> None:
+        """Empty and multi-entity snapshot responses round-trip correctly."""
+        assert SnapshotResponse(entities={}).entities == {}
 
-    def test_snapshot_response_with_entities(self) -> None:
-        """Test creating snapshot response with entity data."""
         response = SnapshotResponse(
             entities={
                 "Task": [
@@ -130,23 +115,17 @@ class TestSnapshotResponse:
 class TestAuthenticateRequest:
     """Tests for AuthenticateRequest model."""
 
-    def test_authenticate_request_defaults(self) -> None:
-        """Test creating authenticate request with defaults."""
-        request = AuthenticateRequest()
-        assert request.username is None
-        assert request.password is None
-        assert request.role is None
+    def test_authenticate_request_defaults_and_values(self) -> None:
+        """Defaults are None; supplied values round-trip."""
+        default = AuthenticateRequest()
+        assert default.username is None
+        assert default.password is None
+        assert default.role is None
 
-    def test_authenticate_request_with_values(self) -> None:
-        """Test creating authenticate request with values."""
-        request = AuthenticateRequest(
-            username="testuser",
-            password="testpass",
-            role="admin",
-        )
-        assert request.username == "testuser"
-        assert request.password == "testpass"
-        assert request.role == "admin"
+        filled = AuthenticateRequest(username="testuser", password="testpass", role="admin")
+        assert filled.username == "testuser"
+        assert filled.password == "testpass"
+        assert filled.role == "admin"
 
 
 class TestAuthenticateResponse:

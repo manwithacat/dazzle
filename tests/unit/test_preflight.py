@@ -83,20 +83,18 @@ class TestStageResult:
         assert result.findings == []
         assert result.artifacts == []
 
-    def test_passed_property(self):
-        """Test passed property."""
+    def test_passed_and_failed_properties(self):
+        """passed/failed properties reflect StageStatus.PASSED/FAILED transitions."""
         result = StageResult(name="test")
         assert result.passed is False
+        assert result.failed is False
 
         result.status = StageStatus.PASSED
         assert result.passed is True
-
-    def test_failed_property(self):
-        """Test failed property."""
-        result = StageResult(name="test")
         assert result.failed is False
 
         result.status = StageStatus.FAILED
+        assert result.passed is False
         assert result.failed is True
 
     def test_add_finding(self):
@@ -147,23 +145,11 @@ class TestPreflightSummary:
         assert summary.critical_count == 0
         assert summary.can_proceed is True
 
-    def test_can_proceed_with_critical(self):
-        """Test can_proceed is False with critical findings."""
-        summary = PreflightSummary(status="failed", critical_count=1)
-
-        assert summary.can_proceed is False
-
-    def test_can_proceed_with_high(self):
-        """Test can_proceed is False with high findings."""
-        summary = PreflightSummary(status="blocked", high_count=1)
-
-        assert summary.can_proceed is False
-
-    def test_can_proceed_with_warn_only(self):
-        """Test can_proceed is True with only warnings."""
-        summary = PreflightSummary(status="passed", warn_count=5)
-
-        assert summary.can_proceed is True
+    def test_can_proceed_branches(self):
+        """can_proceed=False when critical or high findings; True when warnings only."""
+        assert PreflightSummary(status="failed", critical_count=1).can_proceed is False
+        assert PreflightSummary(status="blocked", high_count=1).can_proceed is False
+        assert PreflightSummary(status="passed", warn_count=5).can_proceed is True
 
 
 class TestPreflightReport:
@@ -303,29 +289,18 @@ class TestStageContext:
 class TestPreflightRunner:
     """Tests for PreflightRunner."""
 
-    def test_runner_initialization(self):
-        """Test runner initialization."""
+    def test_runner_initialization_default_and_custom_infra(self):
+        """Default infra_dir is project/infra; explicit infra_dir is honoured; run_id prefix set."""
         with TemporaryDirectory() as tmpdir:
             project = Path(tmpdir).resolve()
-
             runner = PreflightRunner(project_root=project)
-
             assert runner.project_root == project
             assert runner.infra_dir == project / "infra"
             assert runner.run_id.startswith("pf-")
 
-    def test_runner_with_custom_infra_dir(self):
-        """Test runner with custom infra directory."""
-        with TemporaryDirectory() as tmpdir:
-            project = Path(tmpdir).resolve()
-            infra = project / "custom_infra"
-
-            runner = PreflightRunner(
-                project_root=project,
-                infra_dir=infra,
-            )
-
-            assert runner.infra_dir == infra
+            custom_infra = project / "custom_infra"
+            runner2 = PreflightRunner(project_root=project, infra_dir=custom_infra)
+            assert runner2.infra_dir == custom_infra
 
     @patch("dazzle.deploy.preflight.stages.bootstrap.shutil.which")
     def test_runner_run_basic(self, mock_which):

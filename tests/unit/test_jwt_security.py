@@ -142,34 +142,20 @@ class TestAlgorithmSecurity:
 class TestSecretKeySecurity:
     """Test secret key security measures."""
 
-    def test_short_secret_key_rejected(self) -> None:
-        """Should reject secret keys shorter than 32 bytes."""
+    def test_secret_key_length_branches(self) -> None:
+        """Reject <32 byte keys; accept exactly-32 and >32 byte keys."""
         from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
-        config = JWTConfig(algorithm="HS256", secret_key="short-key")
-
+        # Too short: rejected
         with pytest.raises(ValueError) as exc_info:
-            JWTService(config)
-
+            JWTService(JWTConfig(algorithm="HS256", secret_key="short-key"))
         assert "32" in str(exc_info.value) or "bytes" in str(exc_info.value).lower()
 
-    def test_exactly_32_byte_key_accepted(self) -> None:
-        """Should accept exactly 32-byte secret key."""
-        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
+        # Exactly 32 bytes: accepted
+        assert JWTService(JWTConfig(algorithm="HS256", secret_key="x" * 32)) is not None
 
-        config = JWTConfig(algorithm="HS256", secret_key="x" * 32)
-
-        service = JWTService(config)
-        assert service is not None
-
-    def test_longer_key_accepted(self) -> None:
-        """Should accept keys longer than 32 bytes."""
-        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
-
-        config = JWTConfig(algorithm="HS256", secret_key="x" * 64)
-
-        service = JWTService(config)
-        assert service is not None
+        # Longer: accepted
+        assert JWTService(JWTConfig(algorithm="HS256", secret_key="x" * 64)) is not None
 
     def test_auto_generated_key_is_secure(self) -> None:
         """Auto-generated secret key should be at least 32 bytes."""
@@ -189,27 +175,18 @@ class TestSecretKeySecurity:
 class TestTokenLengthSecurity:
     """Test token length limits (DoS prevention)."""
 
-    def test_oversized_token_rejected(self, jwt_service) -> None:
-        """Should reject tokens exceeding maximum length."""
+    def test_oversized_token_rejected_in_both_paths(self, jwt_service) -> None:
+        """Oversized tokens are rejected by both verify_access_token and decode_token_unverified."""
         from dazzle_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
 
-        # Create an oversized token
         oversized_token = "a" * (MAX_TOKEN_LENGTH + 1)
 
         with pytest.raises(JWTError) as exc_info:
             jwt_service.verify_access_token(oversized_token)
-
         assert exc_info.value.code == "token_too_large"
-
-    def test_oversized_token_rejected_unverified_decode(self, jwt_service) -> None:
-        """Should reject oversized tokens even in unverified decode."""
-        from dazzle_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
-
-        oversized_token = "a" * (MAX_TOKEN_LENGTH + 1)
 
         with pytest.raises(JWTError) as exc_info:
             jwt_service.decode_token_unverified(oversized_token)
-
         assert exc_info.value.code == "token_too_large"
 
     def test_normal_token_passes_length_check(self, jwt_service) -> None:
@@ -493,36 +470,23 @@ class TestTimingAttacks:
 class TestAsymmetricAlgorithms:
     """Test asymmetric algorithm configuration."""
 
-    def test_rs256_requires_private_key(self) -> None:
-        """RS256 should require private key."""
+    def test_asymmetric_algorithms_require_keys(self) -> None:
+        """RS256 needs both keys; ES256 needs keys (not provided ⇒ raise)."""
         from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
-        config = JWTConfig(algorithm="RS256", public_key="fake-public-key")
-
+        # RS256 with only public_key: missing private_key
         with pytest.raises(ValueError) as exc_info:
-            JWTService(config)
-
+            JWTService(JWTConfig(algorithm="RS256", public_key="fake-public-key"))
         assert "private_key" in str(exc_info.value).lower()
 
-    def test_rs256_requires_public_key(self) -> None:
-        """RS256 should require public key."""
-        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
-
-        config = JWTConfig(algorithm="RS256", private_key="fake-private-key")
-
+        # RS256 with only private_key: missing public_key
         with pytest.raises(ValueError) as exc_info:
-            JWTService(config)
-
+            JWTService(JWTConfig(algorithm="RS256", private_key="fake-private-key"))
         assert (
             "public_key" in str(exc_info.value).lower()
             or "private_key" in str(exc_info.value).lower()
         )
 
-    def test_es256_requires_keys(self) -> None:
-        """ES256 (ECDSA) should require both keys."""
-        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
-
-        config = JWTConfig(algorithm="ES256")
-
+        # ES256 with no keys
         with pytest.raises(ValueError):
-            JWTService(config)
+            JWTService(JWTConfig(algorithm="ES256"))

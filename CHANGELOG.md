@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.35] - 2026-05-04
+
+### Changed
+- **Distillation cycle 33 (final pre-pause)** — Batch FF tail collapsed
+  test_preflight, test_runtime_test_routes. Suite total: 12,309 → 12,295
+  (14 fewer this cycle). Cumulative cycles 1-33: 14,295 → 12,295 (2,000
+  tests removed across 33 cycles, ~14% reduction). User-initiated pause
+  on distillation. Final state: 295 tests above the < 12,000 target;
+  cluster pickings now require deeper structural work.
+
 ## [0.66.34] - 2026-05-04
 
 ### Changed

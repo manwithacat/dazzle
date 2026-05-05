@@ -515,9 +515,9 @@ document invoice_pdf:
 class TestTemplateParsing:
     """Tests for template construct parsing."""
 
-    def test_basic_template(self):
-        """Test parsing a basic template."""
-        dsl = """
+    def test_basic_template_and_html_body(self):
+        """Basic template parses subject/body; html_body field round-trips when supplied."""
+        dsl_basic = """
 module test
 app test "Test"
 
@@ -525,17 +525,14 @@ template welcome_email:
   subject: "Welcome to our app"
   body: "Hello, thanks for signing up!"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
+        _, _, _, _, _, fragment = parse_dsl(dsl_basic, Path("test.dsl"))
         assert len(fragment.templates) == 1
         tpl = fragment.templates[0]
         assert tpl.name == "welcome_email"
         assert tpl.subject == "Welcome to our app"
         assert tpl.body == "Hello, thanks for signing up!"
 
-    def test_template_with_html_body(self):
-        """Test template with HTML body."""
-        dsl = """
+        dsl_html = """
 module test
 app test "Test"
 
@@ -544,10 +541,8 @@ template welcome_email:
   body: "Plain text version"
   html_body: "<h1>Welcome</h1><p>HTML version</p>"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        tpl = fragment.templates[0]
-        assert tpl.html_body == "<h1>Welcome</h1><p>HTML version</p>"
+        _, _, _, _, _, fragment = parse_dsl(dsl_html, Path("test.dsl"))
+        assert fragment.templates[0].html_body == "<h1>Welcome</h1><p>HTML version</p>"
 
 
 class TestComprehensiveParsing:
