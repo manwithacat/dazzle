@@ -46,3 +46,23 @@ def test_tokens_is_frozen() -> None:
     t = Tokens()
     with pytest.raises(FrozenInstanceError):
         t.card = CardTokens(radius="lg")  # type: ignore[misc]
+
+
+def test_button_tokens_invalid_variant() -> None:
+    with pytest.raises(ValueError, match="invalid variant"):
+        ButtonTokens(variant="rainbow")  # type: ignore[arg-type]
+
+
+def test_table_tokens_invalid_density() -> None:
+    with pytest.raises(ValueError, match="invalid density"):
+        TableTokens(density="dense")  # type: ignore[arg-type]
+
+
+def test_spacing_invalid_base() -> None:
+    with pytest.raises(ValueError, match="invalid spacing base"):
+        Spacing(base="airy")  # type: ignore[arg-type]
+
+
+def test_palette_invalid_role() -> None:
+    with pytest.raises(ValueError, match="invalid palette accent"):
+        Palette(accent="defalt")

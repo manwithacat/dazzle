@@ -10,10 +10,13 @@ from typing import Literal
 
 _RADII = ("none", "sm", "md", "lg")
 _BORDERS = ("none", "subtle", "emphatic")
-_PADDINGS = ("compact", "normal", "comfortable")
+_PADDINGS = ("compact", "normal", "comfortable")  # CardTokens.padding
+_DENSITY_SCALE = ("compact", "normal", "comfortable")  # TableTokens.density
+_SPACING_SCALE = ("compact", "normal", "comfortable")  # Spacing.base
 _SHADOWS = ("none", "low", "elevated")
 _BUTTON_VARIANTS = ("primary", "secondary", "danger", "ghost")
 _SIZES = ("sm", "md", "lg")
+_PALETTE_ROLES = ("default", "primary", "muted", "subtle", "emphatic")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,7 +55,7 @@ class TableTokens:
     striped: bool = False
 
     def __post_init__(self) -> None:
-        if self.density not in _PADDINGS:
+        if self.density not in _DENSITY_SCALE:
             raise ValueError(f"invalid density {self.density!r}")
 
 
@@ -66,6 +69,12 @@ class Palette:
     surface: str = "default"
     danger: str = "default"
 
+    def __post_init__(self) -> None:
+        for attr_name in ("accent", "surface", "danger"):
+            value = getattr(self, attr_name)
+            if value not in _PALETTE_ROLES:
+                raise ValueError(f"invalid palette {attr_name} {value!r}")
+
 
 @dataclass(frozen=True, slots=True)
 class Spacing:
@@ -74,7 +83,7 @@ class Spacing:
     base: Literal["compact", "normal", "comfortable"] = "normal"
 
     def __post_init__(self) -> None:
-        if self.base not in _PADDINGS:
+        if self.base not in _SPACING_SCALE:
             raise ValueError(f"invalid spacing base {self.base!r}")
 
 
