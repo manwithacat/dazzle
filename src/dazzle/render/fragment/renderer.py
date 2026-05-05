@@ -17,8 +17,11 @@ from dazzle.render.fragment.primitives import (
     Button,
     CalendarGrid,
     Card,
+    Combobox,
     Drawer,
     EmptyState,
+    Field,
+    FormStack,
     Fragment,
     Grid,
     Heading,
@@ -34,6 +37,7 @@ from dazzle.render.fragment.primitives import (
     Skeleton,
     Split,
     Stack,
+    Submit,
     Surface,
     Table,
     Tabs,
@@ -127,7 +131,16 @@ class FragmentRenderer:
                 return self._emit_kanban_board(fragment, ctx)
             case CalendarGrid():
                 return self._emit_calendar_grid(fragment, ctx)
-            # Subsequent tasks (23) extend the match block.
+            # Forms
+            case FormStack():
+                return self._emit_form_stack(fragment, ctx)
+            case Field():
+                return self._emit_field(fragment, ctx)
+            case Combobox():
+                return self._emit_combobox(fragment, ctx)
+            case Submit():
+                return self._emit_submit(fragment, ctx)
+            # Task 24 verifies exhaustiveness via property tests.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -440,3 +453,64 @@ class FragmentRenderer:
             for label, when in c.events
         )
         return f'<div class="{cls}"><ul>{events}</ul></div>'
+
+    def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
+        action = str(fs.action)
+        fields_html = "".join(self._emit(f, ctx) for f in fs.fields)  # type: ignore[arg-type]
+        submit_html = self._emit(fs.submit, ctx) if fs.submit is not None else ""
+        return (
+            f'<form class="dz-form-stack" action="{action}" method="{fs.method}">'
+            f"{fields_html}{submit_html}"
+            f"</form>"
+        )
+
+    def _emit_field(self, f: Field, ctx: RenderContext) -> str:
+        # Field labels are developer-supplied; values may be user-supplied —
+        # escape both as a safety net.
+        label = ctx.escape(f.label)
+        name = ctx.escape_attr(f.name)
+        placeholder = ctx.escape_attr(f.placeholder)
+        initial = ctx.escape_attr(f.initial_value)
+        required_attr = " required" if f.required else ""
+
+        if f.kind == "textarea":
+            inner = (
+                f'<textarea class="dz-field__input" name="{name}" '
+                f'placeholder="{placeholder}"{required_attr}>'
+                f"{ctx.escape(f.initial_value)}</textarea>"
+            )
+        elif f.kind == "checkbox":
+            checked = " checked" if f.initial_value == "true" else ""
+            inner = (
+                f'<input class="dz-field__input" type="checkbox" name="{name}"'
+                f"{checked}{required_attr}>"
+            )
+        else:
+            inner = (
+                f'<input class="dz-field__input" type="{f.kind}" name="{name}" '
+                f'value="{initial}" placeholder="{placeholder}"{required_attr}>'
+            )
+        return (
+            f'<label class="dz-field"><span class="dz-field__label">{label}</span>{inner}</label>'
+        )
+
+    def _emit_combobox(self, c: Combobox, ctx: RenderContext) -> str:
+        options = "".join(
+            f'<option value="{ctx.escape_attr(value)}"'
+            + (" selected" if value == c.initial_value else "")
+            + f">{ctx.escape(label)}</option>"
+            for value, label in c.options
+        )
+        required_attr = " required" if c.required else ""
+        label = ctx.escape(c.label)
+        name = ctx.escape_attr(c.name)
+        return (
+            f'<label class="dz-combobox">'
+            f'<span class="dz-combobox__label">{label}</span>'
+            f'<select class="dz-combobox__select" name="{name}"{required_attr}>{options}</select>'
+            f"</label>"
+        )
+
+    def _emit_submit(self, s: Submit, ctx: RenderContext) -> str:
+        cls = f"dz-submit dz-submit--variant-{s.variant}"
+        return f'<button type="submit" class="{cls}">{ctx.escape(s.label)}</button>'
