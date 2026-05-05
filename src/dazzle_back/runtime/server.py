@@ -399,9 +399,11 @@ class DazzleBackendApp:
         )
 
         # Attach runtime service container (v0.49.0, #673)
+        from dazzle_back.runtime.renderers.init import register_default_renderers
         from dazzle_back.runtime.services import RuntimeServices
 
         services = RuntimeServices()
+        register_default_renderers(services)
         self._app.state.services = services
 
         # Security middleware (v0.11.0). v0.61.0 Phase 3: resolve active
