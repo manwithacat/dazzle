@@ -492,6 +492,7 @@ class TokenType(Enum):
     FOR_ENTITY = "for_entity"
     FORMAT = "format"
     LAYOUT = "layout"
+    RENDER = "render"
     PATH = "path"
     CHANGED = "changed"
     TO = "to"
