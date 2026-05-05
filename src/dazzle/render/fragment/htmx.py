@@ -8,7 +8,10 @@ TargetSelector that is constructed has been parsed and is structurally valid.
 import re
 from dataclasses import dataclass
 
-_DANGEROUS_SCHEMES = frozenset({"javascript", "data", "vbscript"})
+# Allowed schemes for htmx URLs. Any URL with a scheme not in this set is
+# rejected. Relative paths (no scheme) are always permitted. This is a strict
+# allowlist — adding a new scheme requires a deliberate code change.
+_ALLOWED_SCHEMES = frozenset({"http", "https", "mailto"})
 _TARGET_KEYWORD = re.compile(r"^(this|closest [a-z][a-z0-9-]*|find [a-z][a-z0-9-]*|next|previous)$")
 _TARGET_ID = re.compile(r"^#[A-Za-z][A-Za-z0-9_-]*$")
 _TARGET_CLASS = re.compile(r"^\.[A-Za-z][A-Za-z0-9_-]*$")
@@ -18,8 +21,12 @@ _TARGET_CLASS = re.compile(r"^\.[A-Za-z][A-Za-z0-9_-]*$")
 class URL:
     """A validated URL for use in htmx attributes.
 
-    Accepts relative paths (`/tasks/42`) and absolute http/https URLs. Rejects
-    `javascript:`, `data:`, and `vbscript:` schemes which are XSS vectors.
+    Accepts relative paths (`/tasks/42`, `?q=1`, `#fragment`) and absolute URLs
+    with a scheme in `_ALLOWED_SCHEMES` (http, https, mailto). Rejects any
+    other scheme — including `javascript:`, `data:`, `vbscript:`, `file:` —
+    which prevents XSS and information-disclosure vectors. Leading whitespace
+    is rejected so `\tjavascript:...` or ` JAVASCRIPT:...` cannot bypass the
+    check via a browser tolerance.
     """
 
     value: str
@@ -27,9 +34,11 @@ class URL:
     def __post_init__(self) -> None:
         if not self.value:
             raise ValueError("URL cannot be empty")
+        if self.value != self.value.strip():
+            raise ValueError(f"URL cannot have leading or trailing whitespace: {self.value!r}")
         if ":" in self.value:
             scheme = self.value.split(":", 1)[0].lower()
-            if scheme in _DANGEROUS_SCHEMES:
+            if scheme not in _ALLOWED_SCHEMES:
                 raise ValueError(f"disallowed scheme {scheme!r} in URL")
 
     def __str__(self) -> str:
@@ -68,8 +77,8 @@ class HxTrigger:
     value: str
 
     def __post_init__(self) -> None:
-        if not self.value:
-            raise ValueError("HxTrigger cannot be empty")
+        if not self.value or not self.value.strip():
+            raise ValueError("HxTrigger cannot be empty or whitespace-only")
 
     def __str__(self) -> str:
         return self.value
