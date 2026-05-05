@@ -91,3 +91,10 @@ def test_kanban_columns() -> None:
 def test_calendar_view_default() -> None:
     c = CalendarGrid()
     assert c.view == "month"
+
+
+def test_pivot_table_cells_immutable_after_construction() -> None:
+    """frozen=True should mean cells is immutable too — wrapped in MappingProxyType."""
+    p = PivotTable(label="x", rows=("r",), columns=("c",), cells={("r", "c"): 0})
+    with pytest.raises(TypeError):
+        p.cells[("r", "c")] = 99  # type: ignore[index]

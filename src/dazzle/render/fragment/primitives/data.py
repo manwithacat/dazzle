@@ -11,6 +11,8 @@ arity must match its column count; a PivotTable's cells must reference
 declared rows and columns; etc.
 """
 
+import types
+import typing
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -61,7 +63,7 @@ class PivotTable:
     label: str
     rows: tuple[str, ...]
     columns: tuple[str, ...]
-    cells: dict[tuple[str, str], int] = field(default_factory=dict)
+    cells: typing.Mapping[tuple[str, str], int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.rows:
@@ -73,6 +75,9 @@ class PivotTable:
                 raise ValueError(f"cell row {r!r} not in declared rows {self.rows}")
             if c not in self.columns:
                 raise ValueError(f"cell column {c!r} not in declared columns {self.columns}")
+        # Wrap in a read-only proxy so callers can't mutate after construction.
+        # Use object.__setattr__ to bypass frozen=True for this one assignment.
+        object.__setattr__(self, "cells", types.MappingProxyType(dict(self.cells)))
 
 
 @dataclass(frozen=True, slots=True)

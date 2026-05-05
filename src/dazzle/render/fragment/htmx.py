@@ -12,7 +12,11 @@ from dataclasses import dataclass
 # rejected. Relative paths (no scheme) are always permitted. This is a strict
 # allowlist — adding a new scheme requires a deliberate code change.
 _ALLOWED_SCHEMES = frozenset({"http", "https", "mailto"})
-_TARGET_KEYWORD = re.compile(r"^(this|closest [a-z][a-z0-9-]*|find [a-z][a-z0-9-]*|next|previous)$")
+_TARGET_KEYWORD = re.compile(
+    r"^(this|next|previous|"
+    r"closest [A-Za-z0-9_.#\[\]=\"'-]+|"
+    r"find [A-Za-z0-9_.#\[\]=\"'-]+)$"
+)
 _TARGET_ID = re.compile(r"^#[A-Za-z][A-Za-z0-9_-]*$")
 _TARGET_CLASS = re.compile(r"^\.[A-Za-z][A-Za-z0-9_-]*$")
 

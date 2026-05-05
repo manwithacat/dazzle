@@ -4,8 +4,10 @@ Single-class renderer. The `render` method match-dispatches on the Fragment
 union; per-primitive emit methods produce HTML strings. The match block is
 the runtime exhaustiveness check — adding a new primitive without adding a
 match arm causes mypy to flag the unreachable case (with `--strict`) and
-the test_fragment_exhaustiveness test (Task 24) to fail.
+the test_fragment_exhaustiveness test to fail.
 """
+
+from html import escape as _escape
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
@@ -82,7 +84,7 @@ class FragmentRenderer:
                 return self._emit_split(fragment, ctx)
             case Grid():
                 return self._emit_grid(fragment, ctx)
-            # Containers (Toolbar lands in Task 21 alongside Button)
+            # Containers
             case Surface():
                 return self._emit_surface(fragment, ctx)
             case Card():
@@ -95,7 +97,7 @@ class FragmentRenderer:
                 return self._emit_modal(fragment, ctx)
             case Tabs():
                 return self._emit_tabs(fragment, ctx)
-            # Content (Text and Heading are in Task 17)
+            # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)
             case Badge():
@@ -113,7 +115,6 @@ class FragmentRenderer:
                 return self._emit_interactive(fragment, ctx)
             case InlineEdit():
                 return self._emit_inline_edit(fragment, ctx)
-            # Toolbar (deferred from Task 19 — needs Button)
             case Toolbar():
                 return self._emit_toolbar(fragment, ctx)
             # Data
@@ -140,7 +141,8 @@ class FragmentRenderer:
                 return self._emit_combobox(fragment, ctx)
             case Submit():
                 return self._emit_submit(fragment, ctx)
-            # Task 24 verifies exhaustiveness via property tests.
+            # Defensive fallback — exhaustiveness is verified by
+            # test_fragment_exhaustiveness via property tests.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -293,33 +295,33 @@ class FragmentRenderer:
     ) -> str:
         """Build the htmx attribute string for an interactive primitive.
 
-        All values are stringified via __str__ which is the contract on the
-        wrapper types (URL, TargetSelector, HxTrigger). hx-confirm is the
-        only field that takes a free-form string."""
+        All values are escaped for attribute context. Wrapper types (URL,
+        TargetSelector, HxTrigger) are validated at construction; this
+        escape pass converts characters like `&` in query strings to their
+        HTML entity form so the output is valid HTML5."""
         parts: list[str] = []
         if hx_get is not None:
-            parts.append(f'hx-get="{hx_get}"')
+            parts.append(f'hx-get="{_escape(str(hx_get), quote=True)}"')
         if hx_post is not None:
-            parts.append(f'hx-post="{hx_post}"')
+            parts.append(f'hx-post="{_escape(str(hx_post), quote=True)}"')
         if hx_target is not None:
-            parts.append(f'hx-target="{hx_target}"')
+            parts.append(f'hx-target="{_escape(str(hx_target), quote=True)}"')
         if hx_swap is not None:
-            parts.append(f'hx-swap="{hx_swap}"')
+            parts.append(f'hx-swap="{_escape(str(hx_swap), quote=True)}"')
         if hx_trigger is not None:
-            parts.append(f'hx-trigger="{hx_trigger}"')
+            parts.append(f'hx-trigger="{_escape(str(hx_trigger), quote=True)}"')
         if hx_indicator is not None:
-            parts.append(f'hx-indicator="{hx_indicator}"')
+            parts.append(f'hx-indicator="{_escape(str(hx_indicator), quote=True)}"')
         if hx_confirm is not None:
-            # hx-confirm can contain user-facing text — must be HTML-escaped.
-            from html import escape as _escape
-
             parts.append(f'hx-confirm="{_escape(str(hx_confirm), quote=True)}"')
         return " ".join(parts)
 
     def _emit_button(self, b: Button, ctx: RenderContext) -> str:
+        tokens = b.tokens if b.tokens is not None else ctx.tokens.button
         cls_parts = [
             "dz-button",
             f"dz-button--variant-{b.variant}",
+            f"dz-button--size-{tokens.size}",
             f"dz-button--visibility-{b.visibility}",
         ]
         cls = " ".join(cls_parts)
@@ -338,7 +340,7 @@ class FragmentRenderer:
         return f'<button type="button" class="{cls}"{attr_str}{disabled}>{label}</button>'
 
     def _emit_link(self, link: Link, ctx: RenderContext) -> str:
-        href = str(link.href)
+        href = ctx.escape_attr(str(link.href))
         return f'<a class="dz-link" href="{href}">{ctx.escape(link.label)}</a>'
 
     def _emit_interactive(self, iw: Interactive, ctx: RenderContext) -> str:
@@ -455,7 +457,7 @@ class FragmentRenderer:
         return f'<div class="{cls}"><ul>{events}</ul></div>'
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
-        action = str(fs.action)
+        action = ctx.escape_attr(str(fs.action))
         fields_html = "".join(self._emit(f, ctx) for f in fs.fields)  # type: ignore[arg-type]
         submit_html = self._emit(fs.submit, ctx) if fs.submit is not None else ""
         return (

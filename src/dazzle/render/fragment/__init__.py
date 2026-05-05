@@ -49,6 +49,7 @@ from dazzle.render.fragment.registry import (
     PrimitiveRegistry,
     primitive,
 )
+from dazzle.render.fragment.renderer import FragmentRenderer
 from dazzle.render.fragment.tokens import (
     ButtonTokens,
     CardTokens,
@@ -61,6 +62,7 @@ from dazzle.render.fragment.tokens import (
 __all__ = [
     # core
     "Fragment",
+    "FragmentRenderer",
     "RenderContext",
     # errors
     "FragmentError",

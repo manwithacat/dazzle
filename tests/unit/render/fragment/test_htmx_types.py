@@ -95,3 +95,18 @@ def test_target_selector_class_form() -> None:
 def test_hx_trigger_rejects_whitespace_only() -> None:
     with pytest.raises(ValueError, match="empty or whitespace"):
         HxTrigger("   ")
+
+
+def test_target_selector_closest_class() -> None:
+    t = TargetSelector("closest .dz-card")
+    assert str(t) == "closest .dz-card"
+
+
+def test_target_selector_closest_id() -> None:
+    t = TargetSelector("closest #region-x")
+    assert str(t) == "closest #region-x"
+
+
+def test_target_selector_find_class() -> None:
+    t = TargetSelector("find .dz-button")
+    assert str(t) == "find .dz-button"
