@@ -85,25 +85,21 @@ class TestRetryPolicySpec:
 class TestPIIPolicySpec:
     """Tests for PIIPolicySpec."""
 
-    def test_default_values(self):
-        """Test default values."""
-        policy = PIIPolicySpec()
+    def test_defaults_and_custom_values(self):
+        """Default scan=False/action=WARN/empty patterns; custom values round-trip."""
+        default = PIIPolicySpec()
+        assert default.scan is False
+        assert default.action == PIIAction.WARN
+        assert default.patterns == []
 
-        assert policy.scan is False
-        assert policy.action == PIIAction.WARN
-        assert policy.patterns == []
-
-    def test_custom_values(self):
-        """Test custom values."""
-        policy = PIIPolicySpec(
+        custom = PIIPolicySpec(
             scan=True,
             action=PIIAction.REDACT,
-            patterns=[r"\d{3}-\d{2}-\d{4}"],  # SSN pattern
+            patterns=[r"\d{3}-\d{2}-\d{4}"],
         )
-
-        assert policy.scan is True
-        assert policy.action == PIIAction.REDACT
-        assert len(policy.patterns) == 1
+        assert custom.scan is True
+        assert custom.action == PIIAction.REDACT
+        assert len(custom.patterns) == 1
 
 
 # =============================================================================
@@ -114,25 +110,17 @@ class TestPIIPolicySpec:
 class TestLoggingPolicySpec:
     """Tests for LoggingPolicySpec."""
 
-    def test_default_values(self):
-        """Test default values (all logging enabled by default)."""
-        policy = LoggingPolicySpec()
+    def test_defaults_and_custom_values(self):
+        """All-on defaults plus disabling all options round-trips."""
+        default = LoggingPolicySpec()
+        assert default.log_prompts is True
+        assert default.log_completions is True
+        assert default.redact_pii is True
 
-        assert policy.log_prompts is True
-        assert policy.log_completions is True
-        assert policy.redact_pii is True
-
-    def test_custom_values(self):
-        """Test disabling logging options."""
-        policy = LoggingPolicySpec(
-            log_prompts=False,
-            log_completions=False,
-            redact_pii=False,
-        )
-
-        assert policy.log_prompts is False
-        assert policy.log_completions is False
-        assert policy.redact_pii is False
+        custom = LoggingPolicySpec(log_prompts=False, log_completions=False, redact_pii=False)
+        assert custom.log_prompts is False
+        assert custom.log_completions is False
+        assert custom.redact_pii is False
 
 
 # =============================================================================
@@ -272,20 +260,16 @@ class TestLLMConfigSpec:
         assert config.logging.log_prompts is False
         assert config.rate_limits == {"claude_sonnet": 60, "gpt4o": 30}
 
-    def test_budget_alert_usd(self):
-        """Test budget_alert_usd field."""
+    def test_budget_alert_default_provider_and_negative_rejection(self):
+        """Positive budget accepted, negative rejected, default_provider field round-trips."""
         config = LLMConfigSpec(budget_alert_usd=Decimal("50.00"))
         assert config.budget_alert_usd == Decimal("50.00")
 
-    def test_budget_alert_usd_rejects_negative(self):
-        """Test budget_alert_usd rejects negative values."""
         with pytest.raises(ValidationError):
             LLMConfigSpec(budget_alert_usd=Decimal("-1"))
 
-    def test_default_provider(self):
-        """Test default_provider field."""
-        config = LLMConfigSpec(default_provider=LLMProvider.ANTHROPIC)
-        assert config.default_provider == LLMProvider.ANTHROPIC
+        config2 = LLMConfigSpec(default_provider=LLMProvider.ANTHROPIC)
+        assert config2.default_provider == LLMProvider.ANTHROPIC
 
 
 # =============================================================================
@@ -445,38 +429,34 @@ class TestArtifactRefSpec:
 class TestEnums:
     """Tests for enum values and string representation."""
 
-    def test_llm_provider_values(self):
-        """Test LLMProvider enum values."""
+    def test_all_enum_string_values(self):
+        """Every LLM-IR enum's .value matches the canonical string in one shot."""
+        # LLMProvider
         assert LLMProvider.ANTHROPIC.value == "anthropic"
         assert LLMProvider.OPENAI.value == "openai"
         assert LLMProvider.GOOGLE.value == "google"
         assert LLMProvider.LOCAL.value == "local"
 
-    def test_model_tier_values(self):
-        """Test ModelTier enum values."""
+        # ModelTier
         assert ModelTier.FAST.value == "fast"
         assert ModelTier.BALANCED.value == "balanced"
         assert ModelTier.QUALITY.value == "quality"
 
-    def test_retry_backoff_values(self):
-        """Test RetryBackoff enum values."""
+        # RetryBackoff
         assert RetryBackoff.LINEAR.value == "linear"
         assert RetryBackoff.EXPONENTIAL.value == "exponential"
 
-    def test_pii_action_values(self):
-        """Test PIIAction enum values."""
+        # PIIAction
         assert PIIAction.WARN.value == "warn"
         assert PIIAction.REDACT.value == "redact"
         assert PIIAction.REJECT.value == "reject"
 
-    def test_artifact_store_values(self):
-        """Test ArtifactStore enum values."""
+        # ArtifactStore
         assert ArtifactStore.LOCAL.value == "local"
         assert ArtifactStore.S3.value == "s3"
         assert ArtifactStore.GCS.value == "gcs"
 
-    def test_artifact_kind_values(self):
-        """Test ArtifactKind enum values."""
+        # ArtifactKind
         assert ArtifactKind.PROMPT.value == "prompt"
         assert ArtifactKind.COMPLETION.value == "completion"
         assert ArtifactKind.TOOL_CALL.value == "tool_call"

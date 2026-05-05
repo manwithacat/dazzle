@@ -185,26 +185,14 @@ class TestDataStackGenerator:
 class TestComputeStackGenerator:
     """Tests for ComputeStackGenerator."""
 
-    def test_stack_name(self):
-        """Test stack name property."""
+    def test_stack_name_and_always_generates(self):
+        """Compute stack name and should_generate=True invariant."""
         spec = create_mock_spec()
         aws_reqs = AWSRequirements()
         config = DeploymentConfig()
-
         with TemporaryDirectory() as tmpdir:
             generator = ComputeStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
             assert generator.stack_name == "Compute"
-
-    def test_should_generate_always_true(self):
-        """Test compute stack is always generated."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = ComputeStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
             assert generator.should_generate() is True
 
     def test_generated_code_has_ecs(self):
@@ -230,49 +218,39 @@ class TestComputeStackGenerator:
 class TestMessagingStackGenerator:
     """Tests for MessagingStackGenerator."""
 
-    def test_stack_name(self):
-        """Test stack name property."""
+    def test_stack_name_and_should_generate_branches(self):
+        """Messaging stack name plus SQS/EventBridge enable + all-disabled disable."""
         spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
         config = DeploymentConfig()
 
         with TemporaryDirectory() as tmpdir:
-            generator = MessagingStackGenerator(spec, aws_reqs, config, Path(tmpdir))
+            base = MessagingStackGenerator(spec, AWSRequirements(), config, Path(tmpdir))
+            assert base.stack_name == "Messaging"
 
-            assert generator.stack_name == "Messaging"
-
-    def test_should_generate_with_sqs(self):
-        """Test should_generate returns true when SQS needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_sqs=True)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = MessagingStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is True
-
-    def test_should_generate_with_eventbridge(self):
-        """Test should_generate returns true when EventBridge needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_eventbridge=True)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = MessagingStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is True
-
-    def test_should_not_generate_when_not_needed(self):
-        """Test should_generate returns false when messaging not needed."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements(needs_sqs=False, needs_eventbridge=False, needs_ses=False)
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            generator = MessagingStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is False
+            assert (
+                MessagingStackGenerator(
+                    spec, AWSRequirements(needs_sqs=True), config, Path(tmpdir)
+                ).should_generate()
+                is True
+            )
+            assert (
+                MessagingStackGenerator(
+                    spec,
+                    AWSRequirements(needs_eventbridge=True),
+                    config,
+                    Path(tmpdir),
+                ).should_generate()
+                is True
+            )
+            assert (
+                MessagingStackGenerator(
+                    spec,
+                    AWSRequirements(needs_sqs=False, needs_eventbridge=False, needs_ses=False),
+                    config,
+                    Path(tmpdir),
+                ).should_generate()
+                is False
+            )
 
     def test_generated_code_has_sqs(self):
         """Test generated code includes SQS when needed."""
@@ -322,40 +300,31 @@ class TestMessagingStackGenerator:
 class TestObservabilityStackGenerator:
     """Tests for ObservabilityStackGenerator."""
 
-    def test_stack_name(self):
-        """Test stack name property."""
+    def test_stack_name_and_dashboard_toggle(self):
+        """Observability name plus dashboard enabled/disabled controls should_generate."""
         spec = create_mock_spec()
         aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
 
         with TemporaryDirectory() as tmpdir:
-            generator = ObservabilityStackGenerator(spec, aws_reqs, config, Path(tmpdir))
+            base_cfg = DeploymentConfig()
+            assert (
+                ObservabilityStackGenerator(spec, aws_reqs, base_cfg, Path(tmpdir)).stack_name
+                == "Observability"
+            )
 
-            assert generator.stack_name == "Observability"
+            cfg_on = DeploymentConfig()
+            cfg_on.observability.create_dashboard = True
+            assert (
+                ObservabilityStackGenerator(spec, aws_reqs, cfg_on, Path(tmpdir)).should_generate()
+                is True
+            )
 
-    def test_should_generate_when_dashboard_enabled(self):
-        """Test should_generate returns true when dashboard enabled."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
-        config.observability.create_dashboard = True
-
-        with TemporaryDirectory() as tmpdir:
-            generator = ObservabilityStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is True
-
-    def test_should_not_generate_when_dashboard_disabled(self):
-        """Test should_generate returns false when dashboard disabled."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
-        config.observability.create_dashboard = False
-
-        with TemporaryDirectory() as tmpdir:
-            generator = ObservabilityStackGenerator(spec, aws_reqs, config, Path(tmpdir))
-
-            assert generator.should_generate() is False
+            cfg_off = DeploymentConfig()
+            cfg_off.observability.create_dashboard = False
+            assert (
+                ObservabilityStackGenerator(spec, aws_reqs, cfg_off, Path(tmpdir)).should_generate()
+                is False
+            )
 
     def test_generated_code_has_dashboard(self):
         """Test generated code includes CloudWatch dashboard."""
@@ -403,8 +372,8 @@ class TestObservabilityStackGenerator:
 class TestStackGeneratorHeader:
     """Tests for stack generator header generation."""
 
-    def test_header_contains_warning(self):
-        """Test header contains auto-generated warning."""
+    def test_header_contains_warning_and_cdk_imports(self):
+        """Generated stack file contains both auto-gen marker and AWS CDK imports."""
         spec = create_mock_spec()
         aws_reqs = AWSRequirements()
         config = DeploymentConfig()
@@ -416,27 +385,8 @@ class TestStackGeneratorHeader:
             generator = NetworkStackGenerator(spec, aws_reqs, config, output_dir)
             generator.generate()
 
-            stack_file = output_dir / "stacks" / "network_stack.py"
-            content = stack_file.read_text()
-
+            content = (output_dir / "stacks" / "network_stack.py").read_text()
             assert "AUTO-GENERATED" in content or "Generated by" in content
-
-    def test_header_contains_aws_cdk_imports(self):
-        """Test header contains AWS CDK imports."""
-        spec = create_mock_spec()
-        aws_reqs = AWSRequirements()
-        config = DeploymentConfig()
-
-        with TemporaryDirectory() as tmpdir:
-            output_dir = Path(tmpdir)
-            (output_dir / "stacks").mkdir()
-
-            generator = NetworkStackGenerator(spec, aws_reqs, config, output_dir)
-            generator.generate()
-
-            stack_file = output_dir / "stacks" / "network_stack.py"
-            content = stack_file.read_text()
-
             assert "from aws_cdk import" in content
             assert "Stack" in content
             assert "Construct" in content

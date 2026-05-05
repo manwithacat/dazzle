@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.34] - 2026-05-04
+
+### Changed
+- **Distillation cycle 32** — Batch FF tail collapsed test_deploy_generators.
+  17 tests pass. Suite total: 12,327 → 12,309 (18 fewer this cycle).
+  Cumulative: 14,295 → 12,309 (1,986 tests removed across 32 cycles).
+  Need 309 more.
+
 ## [0.66.33] - 2026-05-04
 
 ### Changed
