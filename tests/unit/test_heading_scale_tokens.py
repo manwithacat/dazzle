@@ -114,54 +114,30 @@ def test_cta_headline_canonically_defined(design_system_css: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_workspace_title_uses_token(dashboard_css: str) -> None:
-    """`.dz-workspace-title` must consume `--dz-heading-app-page-title`,
-    not the underlying `--text-lg`. Pre-#983 it was hardcoded."""
-    # Widen the window to comfortably cover the comment + the rule body.
+def test_components_consume_tokens_and_landmarks(
+    dashboard_css: str, table_css: str, filterable_table: str
+) -> None:
+    """Combined: workspace+table titles use page-title token, h1 landmark emitted,
+    h1 gated on page_title, visible h2 preserved."""
+    # workspace title uses token
     idx = dashboard_css.find(".dz-workspace-title")
     assert idx != -1
-    block = dashboard_css[idx : idx + 800]
-    assert "var(--dz-heading-app-page-title)" in block
+    assert "var(--dz-heading-app-page-title)" in dashboard_css[idx : idx + 800]
 
-
-def test_table_title_uses_token(table_css: str) -> None:
-    """`.dz-table-title` was `--text-base`; promoting to the
-    canonical app page-title token lifts list-page titles to the
-    same scale as workspace titles. Visible 16px → 18px bump."""
+    # table title uses same token (size bump)
     idx = table_css.find(".dz-table-title")
     assert idx != -1
-    block = table_css[idx : idx + 800]
-    assert "var(--dz-heading-app-page-title)" in block
+    assert "var(--dz-heading-app-page-title)" in table_css[idx : idx + 800]
 
-
-# ---------------------------------------------------------------------------
-# Page-title landmark
-# ---------------------------------------------------------------------------
-
-
-def test_filterable_table_emits_h1_landmark(filterable_table: str) -> None:
-    """Pre-#983 the table emitted only h2 — no h1 in the document
-    accessibility tree on list pages. Add a visually-hidden h1 so
-    screenreaders have a page-title anchor."""
+    # h1 landmark is emitted
     assert '<h1 class="dz-page-title visually-hidden"' in filterable_table
 
-
-def test_landmark_gated_on_page_title_present(filterable_table: str) -> None:
-    """Don't emit an empty h1 when the parent didn't supply one —
-    `{% if page_title %}` guard."""
-    # Find the h1 emission
+    # h1 gated on page_title presence
     h1_idx = filterable_table.find("dz-page-title visually-hidden")
     assert h1_idx != -1
-    # Walk back ~150 chars to find the gating `{% if page_title %}`
-    block = filterable_table[max(0, h1_idx - 200) : h1_idx]
-    assert "{% if page_title %}" in block
+    assert "{% if page_title %}" in filterable_table[max(0, h1_idx - 200) : h1_idx]
 
-
-def test_visible_h2_table_title_unchanged(filterable_table: str) -> None:
-    """The visible h2 stays — promoting it to h1 would conflict
-    with the workspace shell h1 on dashboard pages where a list
-    sits inside the dashboard. The cycle-1 design keeps h2 visible
-    + adds an invisible h1 for accessibility-tree completeness."""
+    # visible h2 unchanged
     assert '<h2 class="dz-table-title">{{ table.title }}</h2>' in filterable_table
 
 

@@ -342,12 +342,16 @@ class TestStoryClustering:
 class TestDesignQuestions:
     """Tests for _generate_design_questions."""
 
-    def test_automated_trigger_question(self):
+    def test_question_generation_for_design_concerns(self):
+        """Combined: trigger, actors/handoff, state machine, exception path questions all surface."""
+        from dazzle.core.ir.stories import StoryException
+
+        # automated trigger
         stories = [_make_story(trigger=StoryTrigger.CRON_DAILY, scope=["Task"])]
         questions = _generate_design_questions(stories, "Task", _make_app_spec())
         assert any("trigger" in q.lower() for q in questions)
 
-    def test_multiple_actors_question(self):
+        # multiple actors
         stories = [
             _make_story("ST-001", actor="Admin", scope=["Task"]),
             _make_story("ST-002", actor="User", scope=["Task"]),
@@ -355,19 +359,16 @@ class TestDesignQuestions:
         questions = _generate_design_questions(stories, "Task", _make_app_spec())
         assert any("actors" in q.lower() or "handoff" in q.lower() for q in questions)
 
-    def test_state_machine_question(self):
+        # state machine question
         sm = MagicMock()
         sm.states = ["draft", "submitted", "approved"]
         entity = _make_entity("Task", state_machine=sm)
         app_spec = _make_app_spec(entities=[entity])
-
         stories = [_make_story(scope=["Task"], trigger=StoryTrigger.STATUS_CHANGED)]
         questions = _generate_design_questions(stories, "Task", app_spec)
         assert any("states" in q.lower() for q in questions)
 
-    def test_exception_path_question(self):
-        from dazzle.core.ir.stories import StoryException
-
+        # exception path question
         stories = [
             _make_story(
                 scope=["Task"],

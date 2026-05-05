@@ -49,26 +49,24 @@ async def test_null_bus_nack(bus):
     await bus.nack("app.Order", "group-1", uuid4(), reason)
 
 
-async def test_null_bus_replay_yields_nothing(bus):
-    events = [e async for e in bus.replay("app.Order")]
-    assert events == []
+async def test_null_bus_read_methods_yield_empty(bus):
+    """Combined: replay, list_topics, list_consumer_groups, get_consumer_status, get_topic_info
+    all return the empty/zero shape on a NullBus."""
+    # replay yields nothing
+    assert [e async for e in bus.replay("app.Order")] == []
 
-
-async def test_null_bus_list_topics(bus):
+    # list_topics empty
     assert await bus.list_topics() == []
 
-
-async def test_null_bus_list_consumer_groups(bus):
+    # list_consumer_groups empty
     assert await bus.list_consumer_groups("app.Order") == []
 
-
-async def test_null_bus_get_consumer_status(bus):
+    # get_consumer_status returns zero counts
     status = await bus.get_consumer_status("app.Order", "group-1")
     assert status.pending_count == 0
     assert status.last_offset == 0
 
-
-async def test_null_bus_get_topic_info(bus):
+    # get_topic_info returns zero events
     info = await bus.get_topic_info("app.Order")
     assert info["event_count"] == 0
 

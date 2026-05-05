@@ -25,19 +25,18 @@ from dazzle_back.specs.endpoint import EndpointSpec, HttpMethod
 class TestSurfaceConverterRBAC:
     """Tests that surface access specs propagate to EndpointSpec.require_roles."""
 
-    def test_no_access_spec_gives_empty_roles(self) -> None:
-        """Surface without access spec produces endpoint with no role requirements."""
+    def test_access_propagation_to_require_roles(self) -> None:
+        """Combined: no access, allow_personas, empty allow_personas all map correctly to require_roles."""
+        # No access spec → empty roles
         surface = SurfaceSpec(
             name="task_list",
             entity_ref="Task",
             mode=SurfaceMode.LIST,
             sections=[],
         )
-        endpoint = convert_surface_to_endpoint(surface, "list_tasks")
-        assert endpoint.require_roles == []
+        assert convert_surface_to_endpoint(surface, "list_tasks").require_roles == []
 
-    def test_access_with_allow_personas_propagates_to_require_roles(self) -> None:
-        """Surface with allow_personas produces endpoint with matching require_roles."""
+        # allow_personas → require_roles
         surface = SurfaceSpec(
             name="admin_dashboard",
             entity_ref="Task",
@@ -48,11 +47,12 @@ class TestSurfaceConverterRBAC:
                 allow_personas=["admin", "manager"],
             ),
         )
-        endpoint = convert_surface_to_endpoint(surface, "list_tasks")
-        assert endpoint.require_roles == ["admin", "manager"]
+        assert convert_surface_to_endpoint(surface, "list_tasks").require_roles == [
+            "admin",
+            "manager",
+        ]
 
-    def test_access_with_empty_allow_personas_gives_empty_roles(self) -> None:
-        """Surface with require_auth but no allow_personas gives no role requirements."""
+        # require_auth but no allow_personas → empty roles
         surface = SurfaceSpec(
             name="task_list",
             entity_ref="Task",
@@ -60,8 +60,7 @@ class TestSurfaceConverterRBAC:
             sections=[],
             access=SurfaceAccessSpec(require_auth=True),
         )
-        endpoint = convert_surface_to_endpoint(surface, "list_tasks")
-        assert endpoint.require_roles == []
+        assert convert_surface_to_endpoint(surface, "list_tasks").require_roles == []
 
     def test_delete_endpoint_inherits_access_from_list_surface(self) -> None:
         """Auto-generated DELETE endpoints inherit access from the list surface."""

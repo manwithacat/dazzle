@@ -147,37 +147,27 @@ class TestHapticBaseHtml:
 
 
 class TestHapticJsHandler:
-    def test_reads_meta_tag_at_boot(self, js: str) -> None:
-        """The boot-time enablement check reads the meta tag the
-        manifest opt-in emits."""
+    def test_haptic_js_boot_and_wiring(self, js: str) -> None:
+        """Combined: meta tag read, navigator.vibrate, window.dzHaptic API,
+        prefers-reduced-motion guard, showToast auto-wire."""
+        # boot reads the meta tag
         assert 'meta[name="dz-haptic"]' in js
 
-    def test_uses_navigator_vibrate(self, js: str) -> None:
-        """The Vibration API is the one cross-browser surface for
-        haptic on the open web."""
+        # uses Vibration API
         assert "navigator.vibrate" in js
 
-    def test_exposes_window_dzhaptic(self, js: str) -> None:
-        """Adopters who want manual triggers (e.g. inside an Alpine
-        handler) need a stable window-level API."""
+        # exposes window.dzHaptic with the documented patterns
         assert "window.dzHaptic" in js
-        assert "tap" in js
-        assert "success" in js
-        assert "error" in js
-        assert "warning" in js
+        for pattern in ("tap", "success", "error", "warning"):
+            assert pattern in js
 
-    def test_honours_prefers_reduced_motion(self, js: str) -> None:
-        """Vibration is a motion-adjacent signal — same accessibility
-        intent as visual motion. Skip when reduce is set."""
+        # honours prefers-reduced-motion: reduce after haptic block
         assert "prefers-reduced-motion: reduce" in js
-        # The `reduce` check appears near the haptic boot block.
         haptic_idx = js.find("dz-haptic")
         reduce_idx = js.find("(prefers-reduced-motion: reduce)", haptic_idx)
         assert reduce_idx != -1
 
-    def test_auto_wires_showtoast_event(self, js: str) -> None:
-        """Auto-fire on showToast events so adopters don't have to
-        manually wire haptic to every toast trigger."""
+        # auto-wires showToast events
         assert 'addEventListener("showToast"' in js
 
     def test_auto_wires_swipe_events(self, js: str) -> None:

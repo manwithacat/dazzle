@@ -77,27 +77,30 @@ class TestViewportAssertion:
 class TestComponentPatterns:
     """Built-in patterns have correct selectors/properties/viewports."""
 
-    def test_drawer_pattern_has_mobile_and_desktop(self) -> None:
+    def test_pattern_assertion_shapes(self) -> None:
+        """Combined: drawer viewports + visibility, grid_1_2_3 has 3 viewports,
+        grid_1_2 + grid_1_3 check grid-template-columns."""
+        # drawer: mobile + desktop in viewports
         viewports = {a.viewport for a in DRAWER_PATTERN.assertions}
         assert "mobile" in viewports
         assert "desktop" in viewports
 
-    def test_drawer_pattern_checks_visibility(self) -> None:
+        # drawer: visibility + display in properties
         props = {a.property for a in DRAWER_PATTERN.assertions}
         assert "visibility" in props
         assert "display" in props
 
-    def test_grid_1_2_3_pattern_has_three_viewports(self) -> None:
-        viewports = {a.viewport for a in GRID_1_2_3_PATTERN.assertions}
-        assert viewports == {"mobile", "tablet", "desktop"}
+        # grid_1_2_3: all three viewports
+        assert {a.viewport for a in GRID_1_2_3_PATTERN.assertions} == {
+            "mobile",
+            "tablet",
+            "desktop",
+        }
 
-    def test_grid_1_2_pattern_checks_columns(self) -> None:
-        for a in GRID_1_2_PATTERN.assertions:
-            assert a.property == "grid-template-columns"
-
-    def test_grid_1_3_pattern_checks_columns(self) -> None:
-        for a in GRID_1_3_PATTERN.assertions:
-            assert a.property == "grid-template-columns"
+        # grid_1_2 + grid_1_3 only check grid-template-columns
+        for pattern in (GRID_1_2_PATTERN, GRID_1_3_PATTERN):
+            for a in pattern.assertions:
+                assert a.property == "grid-template-columns"
 
     def test_stats_pattern_checks_flex_direction(self) -> None:
         for a in STATS_PATTERN.assertions:

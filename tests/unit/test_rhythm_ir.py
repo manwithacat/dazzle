@@ -55,7 +55,9 @@ def test_scene_spec_frozen():
         pass
 
 
-def test_phase_spec():
+def test_phase_spec_and_evaluation_models():
+    """Combined: PhaseSpec, SceneDimensionScore (basic+with-root-cause), SceneEvaluation, Gap."""
+    # PhaseSpec construction
     scenes = [
         SceneSpec(name="browse", surface="course_list"),
         SceneSpec(name="enroll", surface="course_detail"),
@@ -63,6 +65,58 @@ def test_phase_spec():
     phase = PhaseSpec(name="discovery", scenes=scenes)
     assert phase.name == "discovery"
     assert len(phase.scenes) == 2
+
+    # SceneDimensionScore — basic
+    score = SceneDimensionScore(
+        dimension="arrival",
+        score="pass",
+        evidence="Page loaded successfully",
+        root_cause=None,
+    )
+    assert score.dimension == "arrival"
+    assert score.score == "pass"
+
+    # SceneDimensionScore — with root cause
+    score = SceneDimensionScore(
+        dimension="action",
+        score="fail",
+        evidence="Submit button not found",
+        root_cause="Missing story: create_task",
+    )
+    assert score.root_cause == "Missing story: create_task"
+
+    # SceneEvaluation
+    dims = [
+        SceneDimensionScore(dimension="arrival", score="pass", evidence="ok"),
+        SceneDimensionScore(dimension="orientation", score="pass", evidence="ok"),
+        SceneDimensionScore(dimension="action", score="fail", evidence="no button"),
+        SceneDimensionScore(dimension="completion", score="skip", evidence="n/a"),
+        SceneDimensionScore(dimension="confidence", score="skip", evidence="n/a"),
+    ]
+    ev = SceneEvaluation(
+        scene_name="browse",
+        phase_name="discovery",
+        dimensions=dims,
+        gap_type="capability",
+        story_ref="browse_courses",
+    )
+    assert ev.gap_type == "capability"
+    assert len(ev.dimensions) == 5
+
+    # Gap
+    gap = Gap(
+        kind="capability",
+        severity="blocking",
+        scene="browse",
+        phase="discovery",
+        rhythm="onboarding",
+        persona="new_user",
+        story_ref="browse_courses",
+        surface_ref="course_list",
+        description="Story 'browse_courses' is DRAFT",
+    )
+    assert gap.kind == "capability"
+    assert gap.severity == "blocking"
 
 
 def test_rhythm_spec_minimal():
@@ -135,65 +189,6 @@ def test_phase_spec_kind_frozen():
 
 
 # --- Task 4: Evaluation models ---
-
-
-def test_scene_dimension_score_creation():
-    score = SceneDimensionScore(
-        dimension="arrival",
-        score="pass",
-        evidence="Page loaded successfully",
-        root_cause=None,
-    )
-    assert score.dimension == "arrival"
-    assert score.score == "pass"
-
-
-def test_scene_dimension_score_with_root_cause():
-    score = SceneDimensionScore(
-        dimension="action",
-        score="fail",
-        evidence="Submit button not found",
-        root_cause="Missing story: create_task",
-    )
-    assert score.root_cause == "Missing story: create_task"
-
-
-def test_scene_evaluation_creation():
-    dims = [
-        SceneDimensionScore(dimension="arrival", score="pass", evidence="ok"),
-        SceneDimensionScore(dimension="orientation", score="pass", evidence="ok"),
-        SceneDimensionScore(dimension="action", score="fail", evidence="no button"),
-        SceneDimensionScore(dimension="completion", score="skip", evidence="n/a"),
-        SceneDimensionScore(dimension="confidence", score="skip", evidence="n/a"),
-    ]
-    ev = SceneEvaluation(
-        scene_name="browse",
-        phase_name="discovery",
-        dimensions=dims,
-        gap_type="capability",
-        story_ref="browse_courses",
-    )
-    assert ev.gap_type == "capability"
-    assert len(ev.dimensions) == 5
-
-
-# --- Task 5: Gap models ---
-
-
-def test_gap_creation():
-    gap = Gap(
-        kind="capability",
-        severity="blocking",
-        scene="browse",
-        phase="discovery",
-        rhythm="onboarding",
-        persona="new_user",
-        story_ref="browse_courses",
-        surface_ref="course_list",
-        description="Story 'browse_courses' is DRAFT",
-    )
-    assert gap.kind == "capability"
-    assert gap.severity == "blocking"
 
 
 def test_gaps_summary():

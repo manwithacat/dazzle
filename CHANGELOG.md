@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.28] - 2026-05-04
+
+### Changed
+- **Distillation cycle 26** — Batch DD continued on test_heading_scale_tokens,
+  test_mobile_scroll_and_haptic, test_rbac_enforcement, test_triples,
+  test_viewport. 190 tests pass. Suite total: 12,565 → 12,545 (20 fewer).
+  Cumulative: 14,295 → 12,545 (1,750 tests removed across 26 cycles).
+  Need 545 more.
+
 ## [0.66.27] - 2026-05-04
 
 ### Changed

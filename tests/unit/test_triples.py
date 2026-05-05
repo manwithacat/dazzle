@@ -126,29 +126,31 @@ class TestResolveWidgetTypeMap:
 
 
 class TestResolveWidgetIdSuffix:
-    def test_uuid_field_named_id_gives_text_input(self) -> None:
-        """Plain 'id' primary-key field should stay TEXT_INPUT, not SEARCH_SELECT."""
+    def test_uuid_id_suffix_widget_resolution(self) -> None:
+        """Combined: pk-named-id stays TEXT_INPUT, uuid _id suffix → SEARCH_SELECT,
+        str _id NOT affected, uuid without _id stays TEXT_INPUT."""
+        # Plain 'id' primary key → TEXT_INPUT
         field = _make_field("id", FieldTypeKind.UUID, modifiers=[FieldModifier.PK])
         assert resolve_widget(field) == WidgetKind.TEXT_INPUT
 
-    def test_uuid_field_ending_in_underscore_id_gives_search_select(self) -> None:
-        """A uuid FK column like 'client_id' signals a foreign key → SEARCH_SELECT."""
-        field = _make_field("client_id", FieldTypeKind.UUID)
-        assert resolve_widget(field) == WidgetKind.SEARCH_SELECT
+        # uuid FK column 'client_id' → SEARCH_SELECT
+        assert (
+            resolve_widget(_make_field("client_id", FieldTypeKind.UUID)) == WidgetKind.SEARCH_SELECT
+        )
 
-    def test_uuid_field_ending_in_underscore_id_longer_name(self) -> None:
-        field = _make_field("assessment_event_id", FieldTypeKind.UUID)
-        assert resolve_widget(field) == WidgetKind.SEARCH_SELECT
+        # longer name 'assessment_event_id' → SEARCH_SELECT
+        assert (
+            resolve_widget(_make_field("assessment_event_id", FieldTypeKind.UUID))
+            == WidgetKind.SEARCH_SELECT
+        )
 
-    def test_str_field_ending_in_id_not_affected(self) -> None:
-        """The _id suffix rule only applies to UUID fields."""
-        field = _make_field("some_id", FieldTypeKind.STR)
-        assert resolve_widget(field) == WidgetKind.TEXT_INPUT
+        # str field with _id suffix is not affected (rule is uuid-only)
+        assert resolve_widget(_make_field("some_id", FieldTypeKind.STR)) == WidgetKind.TEXT_INPUT
 
-    def test_uuid_field_not_ending_in_underscore_id_gives_text_input(self) -> None:
-        """A uuid field whose name doesn't end in _id stays TEXT_INPUT."""
-        field = _make_field("record_uuid", FieldTypeKind.UUID)
-        assert resolve_widget(field) == WidgetKind.TEXT_INPUT
+        # uuid not ending in _id stays TEXT_INPUT
+        assert (
+            resolve_widget(_make_field("record_uuid", FieldTypeKind.UUID)) == WidgetKind.TEXT_INPUT
+        )
 
 
 # ---------------------------------------------------------------------------
