@@ -17,7 +17,16 @@ from .linker_impl import (
 )
 
 
-def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSpec:
+class RenderValidationError(ValueError):
+    """A render: clause referenced a renderer that is not registered."""
+
+
+def build_appspec(
+    modules: list[ir.ModuleIR],
+    root_module_name: str,
+    *,
+    known_renderers: set[str] | None = None,
+) -> ir.AppSpec:
     """
     Build a complete AppSpec by merging and linking all modules.
 
@@ -175,6 +184,12 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
 
     triples = derive_triples(entities, surfaces, merged_fragment.personas)
 
+    # 10c. Validate render: references against the registered renderer set.
+    # Skipped when no registry is supplied (lint/tests/non-runtime callers).
+    workspaces = [*merged_fragment.workspaces, *admin_workspaces]
+    if known_renderers is not None:
+        _validate_render_references(surfaces, workspaces, known_renderers)
+
     # 11. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
@@ -185,7 +200,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         fk_graph=fk_graph,
         triples=triples,
         surfaces=surfaces,
-        workspaces=[*merged_fragment.workspaces, *admin_workspaces],
+        workspaces=workspaces,
         experiences=merged_fragment.experiences,
         apis=merged_fragment.apis,
         foreign_models=merged_fragment.foreign_models,
@@ -228,6 +243,32 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
             "link_warnings": unused_import_warnings,  # v0.14.1
         },
     )
+
+
+def _validate_render_references(
+    surfaces: list[ir.SurfaceSpec],
+    workspaces: list[ir.WorkspaceSpec],
+    known: set[str],
+) -> None:
+    """Validate that every render: clause names a registered renderer.
+
+    Raises RenderValidationError on the first unknown name, listing the
+    registered renderers so the author sees the available alternatives.
+    """
+    for s in surfaces:
+        if s.render is not None and s.render not in known:
+            raise RenderValidationError(
+                f"surface {s.name!r}: unknown renderer {s.render!r}; "
+                f"registered renderers: {sorted(known)}"
+            )
+    for ws in workspaces:
+        for r in ws.regions:
+            if r.render is not None and r.render not in known:
+                raise RenderValidationError(
+                    f"workspace {ws.name!r} region {r.name!r}: "
+                    f"unknown renderer {r.render!r}; "
+                    f"registered renderers: {sorted(known)}"
+                )
 
 
 def _compile_scope_predicates(
