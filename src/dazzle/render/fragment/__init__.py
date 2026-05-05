@@ -1,1 +1,126 @@
 """Typed Fragment system — frozen-dataclass primitives + HTML renderer."""
+
+from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.errors import (
+    CardSafetyError,
+    FragmentError,
+    HtmxBindingError,
+    PrimitiveRegistrationError,
+)
+from dazzle.render.fragment.escape import RawHTML, Slot
+from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
+from dazzle.render.fragment.primitives import (
+    KPI,
+    Badge,
+    BarChart,
+    Button,
+    CalendarGrid,
+    Card,
+    Combobox,
+    Drawer,
+    EmptyState,
+    Field,
+    FormStack,
+    Fragment,
+    Grid,
+    Heading,
+    Icon,
+    InlineEdit,
+    Interactive,
+    KanbanBoard,
+    Link,
+    Modal,
+    PivotTable,
+    Region,
+    Row,
+    Skeleton,
+    Split,
+    Stack,
+    Submit,
+    Surface,
+    Table,
+    Tabs,
+    Text,
+    Timeline,
+    Toolbar,
+)
+from dazzle.render.fragment.registry import (
+    DEFAULT_REGISTRY,
+    PrimitiveRegistry,
+    primitive,
+)
+from dazzle.render.fragment.tokens import (
+    ButtonTokens,
+    CardTokens,
+    Palette,
+    Spacing,
+    TableTokens,
+    Tokens,
+)
+
+__all__ = [
+    # core
+    "Fragment",
+    "RenderContext",
+    # errors
+    "FragmentError",
+    "CardSafetyError",
+    "HtmxBindingError",
+    "PrimitiveRegistrationError",
+    # escape hatches
+    "RawHTML",
+    "Slot",
+    # htmx wrappers
+    "URL",
+    "TargetSelector",
+    "HxTrigger",
+    # registry
+    "primitive",
+    "PrimitiveRegistry",
+    "DEFAULT_REGISTRY",
+    # tokens
+    "Tokens",
+    "CardTokens",
+    "ButtonTokens",
+    "TableTokens",
+    "Palette",
+    "Spacing",
+    # primitives — layout
+    "Stack",
+    "Row",
+    "Split",
+    "Grid",
+    # primitives — containers
+    "Surface",
+    "Card",
+    "Region",
+    "Toolbar",
+    "Drawer",
+    "Modal",
+    "Tabs",
+    # primitives — content
+    "Text",
+    "Heading",
+    "Icon",
+    "Badge",
+    "EmptyState",
+    "Skeleton",
+    # primitives — interactive
+    "Button",
+    "Link",
+    "InlineEdit",
+    "Interactive",
+    # primitives — data
+    "Table",
+    "KanbanBoard",
+    "CalendarGrid",
+    "Timeline",
+    "KPI",
+    "BarChart",
+    "PivotTable",
+    # primitives — forms
+    "FormStack",
+    "Field",
+    "Combobox",
+    "Submit",
+]

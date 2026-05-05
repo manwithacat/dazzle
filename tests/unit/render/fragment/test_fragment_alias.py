@@ -1,0 +1,55 @@
+"""Verify the Fragment alias names every primitive type. Adding a new
+primitive without adding it here is what we want this test to catch."""
+
+import typing
+
+from dazzle.render.fragment import Fragment
+
+
+def test_fragment_alias_includes_all_primitives() -> None:
+    args = typing.get_args(Fragment)
+    names = {t.__name__ for t in args}
+    expected = {
+        # layout
+        "Stack",
+        "Row",
+        "Split",
+        "Grid",
+        # containers
+        "Surface",
+        "Card",
+        "Region",
+        "Toolbar",
+        "Drawer",
+        "Modal",
+        "Tabs",
+        # content
+        "Text",
+        "Heading",
+        "Icon",
+        "Badge",
+        "EmptyState",
+        "Skeleton",
+        # interactive
+        "Button",
+        "Link",
+        "InlineEdit",
+        "Interactive",
+        # data
+        "Table",
+        "KanbanBoard",
+        "CalendarGrid",
+        "Timeline",
+        "KPI",
+        "BarChart",
+        "PivotTable",
+        # forms
+        "FormStack",
+        "Field",
+        "Combobox",
+        "Submit",
+        # escape
+        "RawHTML",
+        "Slot",
+    }
+    assert names == expected, f"missing: {expected - names}; extra: {names - expected}"
