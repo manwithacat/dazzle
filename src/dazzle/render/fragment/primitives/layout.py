@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 _GAPS = ("none", "sm", "md", "lg")
+_ALIGNS = ("start", "center", "end", "stretch")
+_RATIOS = ("1:2", "1:1", "2:1", "1:3", "3:1")
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +46,7 @@ class Row:
             raise ValueError("Row requires at least one child")
         if self.gap not in _GAPS:
             raise ValueError(f"invalid gap {self.gap!r}")
-        if self.align not in ("start", "center", "end", "stretch"):
+        if self.align not in _ALIGNS:
             raise ValueError(f"invalid align {self.align!r}")
 
 
@@ -57,7 +59,7 @@ class Split:
     ratio: Literal["1:2", "1:1", "2:1", "1:3", "3:1"] = "1:2"
 
     def __post_init__(self) -> None:
-        if self.ratio not in ("1:2", "1:1", "2:1", "1:3", "3:1"):
+        if self.ratio not in _RATIOS:
             raise ValueError(f"invalid ratio {self.ratio!r}")
 
 

@@ -38,6 +38,21 @@ def test_grid_columns_clamp() -> None:
         Grid(children=(_dummy("a"),), columns=13)
 
 
+def test_split_invalid_ratio() -> None:
+    with pytest.raises(ValueError, match="invalid ratio"):
+        Split(start=_dummy("L"), end=_dummy("R"), ratio="2:3")  # type: ignore[arg-type]
+
+
+def test_row_invalid_align() -> None:
+    with pytest.raises(ValueError, match="invalid align"):
+        Row(children=(_dummy("x"),), align="middle")  # type: ignore[arg-type]
+
+
+def test_grid_rejects_empty_children() -> None:
+    with pytest.raises(ValueError, match="at least one child"):
+        Grid(children=())
+
+
 def _dummy(label: str):
     """Stand-in primitive for layout-children testing.
 
