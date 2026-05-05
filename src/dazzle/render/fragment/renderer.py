@@ -11,14 +11,18 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
+    Badge,
     Card,
     Drawer,
+    EmptyState,
     Fragment,
     Grid,
     Heading,
+    Icon,
     Modal,
     Region,
     Row,
+    Skeleton,
     Split,
     Stack,
     Surface,
@@ -75,7 +79,16 @@ class FragmentRenderer:
                 return self._emit_modal(fragment, ctx)
             case Tabs():
                 return self._emit_tabs(fragment, ctx)
-            # Subsequent tasks (20-23) extend the match block.
+            # Content (Text and Heading are in Task 17)
+            case Icon():
+                return self._emit_icon(fragment, ctx)
+            case Badge():
+                return self._emit_badge(fragment, ctx)
+            case EmptyState():
+                return self._emit_empty_state(fragment, ctx)
+            case Skeleton():
+                return self._emit_skeleton(fragment, ctx)
+            # Subsequent tasks (21-23) extend the match block.
             case _:
                 raise FragmentError(
                     f"renderer has no emit for {type(fragment).__name__!r} yet — "
@@ -191,3 +204,26 @@ class FragmentRenderer:
         return (
             f'<div class="dz-tabs"><div class="dz-tabs__buttons">{tab_buttons}</div>{panels}</div>'
         )
+
+    def _emit_icon(self, i: Icon, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(i.name)
+        cls = f"dz-icon dz-icon--size-{i.size}"
+        return f'<span class="{cls}" data-icon="{name}" aria-hidden="true"></span>'
+
+    def _emit_badge(self, b: Badge, ctx: RenderContext) -> str:
+        cls = f"dz-badge dz-badge--variant-{b.variant}"
+        return f'<span class="{cls}">{ctx.escape(b.label)}</span>'
+
+    def _emit_empty_state(self, e: EmptyState, ctx: RenderContext) -> str:
+        action_html = self._emit(e.action, ctx) if e.action is not None else ""  # type: ignore[arg-type]
+        return (
+            f'<div class="dz-empty-state">'
+            f'<h3 class="dz-empty-state__title">{ctx.escape(e.title)}</h3>'
+            f'<p class="dz-empty-state__description">{ctx.escape(e.description)}</p>'
+            f'<div class="dz-empty-state__action">{action_html}</div>'
+            f"</div>"
+        )
+
+    def _emit_skeleton(self, s: Skeleton, ctx: RenderContext) -> str:
+        lines = "".join('<div class="dz-skeleton__line"></div>' for _ in range(s.lines))
+        return f'<div class="dz-skeleton">{lines}</div>'
