@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import Request
 
+from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
 from dazzle_back.runtime.event_bus import EntityEventBus
 from dazzle_back.runtime.presence_tracker import PresenceTracker
 
@@ -26,6 +27,8 @@ class RuntimeServices:
 
     event_bus: EntityEventBus = field(default_factory=EntityEventBus)
     presence_tracker: PresenceTracker = field(default_factory=PresenceTracker)
+    renderer_registry: RendererRegistry = field(default_factory=RendererRegistry)
+    primitive_registry: PrimitiveRegistry = field(default_factory=PrimitiveRegistry)
     event_framework: Any = None  # EventFramework | NullEventFramework | None
     metrics_collector: Any = None
     system_collector: Any = None
