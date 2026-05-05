@@ -1015,6 +1015,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1070,6 +1071,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1134,6 +1136,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1189,6 +1192,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1262,6 +1266,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1366,6 +1371,7 @@
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'related_groups': list([
         ]),
+        'render': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1551,6 +1557,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'render': None,
             'revoke': None,
             'secondary': None,
             'secondary_action': None,
@@ -1620,6 +1627,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'render': None,
             'revoke': None,
             'secondary': None,
             'secondary_action': None,
@@ -1689,6 +1697,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'render': None,
             'revoke': None,
             'secondary': None,
             'secondary_action': None,

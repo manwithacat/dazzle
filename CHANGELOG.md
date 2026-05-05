@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `SurfaceSpec.render: str | None` and `WorkspaceRegion.render: str | None` — optional renderer-name override resolved through the runtime renderer registry. None = framework default (Jinja). Validated at link time when `known_renderers` is supplied to `build_appspec`. (typed Fragment integration, Plan 2)
+
 ## [0.66.36] - 2026-05-04
 
 ### Changed

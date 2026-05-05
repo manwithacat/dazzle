@@ -2591,6 +2591,7 @@ ir_class: SurfaceSpec
     - layout: str = 'wizard'
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
     - related_groups: list[RelatedGroup] = []
+    - render: str | None = None
     - search_fields: list[str] = []
     - sections: list[SurfaceSection] = []
     - show_history: bool = False
@@ -3039,6 +3040,7 @@ ir_class: WorkspaceRegion
     - progress_stages: list[str] = []
     - reference_bands: list[ReferenceBand] = []
     - reference_lines: list[ReferenceLine] = []
+    - render: str | None = None
     - revoke: str | None = None
     - secondary: str | None = None
     - secondary_action: str | None = None
