@@ -328,6 +328,11 @@ class SurfaceSpec(BaseModel):
     # mode. ``"pdf_viewer"`` routes the detail surface to the built-in PDF
     # viewer chrome (see #942 cycle 1b/2a/3). ``None`` = generic detail view.
     display: str | None = None
+    # Plan 2: renderer name. Optional; resolves through the
+    # RendererRegistry on RuntimeServices. None = framework default
+    # (Jinja today; Fragment when a primitive exists for the surface mode
+    # — see linker resolution rules). Validated at link time.
+    render: str | None = None
     # #956 cycle 8: opt-in audit-history region on detail surfaces.
     # When True and the surface's entity has a matching `audit on X:`
     # block, the renderer adds a history panel showing the
