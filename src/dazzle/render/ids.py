@@ -8,6 +8,7 @@ ids in either renderer are forbidden by `tests/unit/test_no_inline_classes.py`
 import re
 from typing import Protocol
 
+# Hyphens are intentionally excluded: they are the segment separator in id_for output.
 _VALID_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _KNOWN_KINDS = frozenset(
     {

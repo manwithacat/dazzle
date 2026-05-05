@@ -33,3 +33,10 @@ def test_id_for_rejects_non_identifier_name() -> None:
     node = _FakeIRNode(kind="surface", name="task list with spaces")
     with pytest.raises(ValueError, match="invalid name"):
         id_for(node)
+
+
+def test_id_for_three_level_chain() -> None:
+    surface = _FakeIRNode(kind="surface", name="dashboard")
+    region = _FakeIRNode(kind="region", name="alerts", parent=surface)
+    fragment = _FakeIRNode(kind="fragment", name="badge", parent=region)
+    assert id_for(fragment) == "fragment-dashboard-alerts-badge"
