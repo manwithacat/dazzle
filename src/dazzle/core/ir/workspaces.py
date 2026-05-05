@@ -419,6 +419,10 @@ class WorkspaceRegion(BaseModel):
     sort: list[SortSpec] = Field(default_factory=list)
     limit: int | None = Field(None, ge=1, le=1000)
     display: DisplayMode = DisplayMode.LIST
+    # Plan 2: renderer name override at region level. Optional;
+    # falls through to the surface's renderer if unset, then to the
+    # framework default. Validated at link time against the RendererRegistry.
+    render: str | None = None
     action: str | None = None  # Surface reference
     empty_message: str | None = None
     group_by: str | BucketRef | None = None  # Field or bucket() ref (single dim)
