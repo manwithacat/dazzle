@@ -314,50 +314,34 @@ class TestOTPStoreCreateOtp:
 class TestOTPStoreVerifyOtp:
     """Tests for OTPStore.verify_otp()."""
 
-    def test_valid_code_returns_true(self, otp_store: OTPStore, user_id: UUID) -> None:
+    def test_verify_otp_branches(self, otp_store: OTPStore, db: InMemoryDB, user_id: UUID) -> None:
+        """Combined: valid code, wrong code, expired, max attempts exceeded, marked used, wrong user."""
+        # valid code → True
         code = otp_store.create_otp(user_id)
         assert otp_store.verify_otp(user_id, code) is True
 
-    def test_wrong_code_returns_false(self, otp_store: OTPStore, user_id: UUID) -> None:
+        # already used (second verify of same code) → False
+        assert otp_store.verify_otp(user_id, code) is False
+
+        # wrong code → False
         otp_store.create_otp(user_id)
         assert otp_store.verify_otp(user_id, "000000") is False
 
-    def test_expired_code_returns_false(
-        self, otp_store: OTPStore, db: InMemoryDB, user_id: UUID
-    ) -> None:
-        """An OTP whose expires_at is in the past should not verify."""
+        # expired code → False (backdate expires_at)
         code = otp_store.create_otp(user_id, ttl=300)
-
-        # Manually backdate the expires_at so it appears expired
         for row in db.tables[OTPStore.TABLE]:
-            row["expires_at"] = (datetime.now(UTC) - timedelta(seconds=60)).isoformat()
-
+            if not row.get("used", False):
+                row["expires_at"] = (datetime.now(UTC) - timedelta(seconds=60)).isoformat()
         assert otp_store.verify_otp(user_id, code) is False
 
-    def test_max_attempts_exceeded_returns_false(
-        self, otp_store: OTPStore, db: InMemoryDB, user_id: UUID
-    ) -> None:
-        """After max_attempts wrong tries, verification fails even with correct code."""
+        # max attempts exceeded → False even on correct code
         code = otp_store.create_otp(user_id, max_attempts=3)
-
-        # Use up all attempts with wrong codes
         otp_store.verify_otp(user_id, "111111")
         otp_store.verify_otp(user_id, "222222")
         otp_store.verify_otp(user_id, "333333")
-
-        # Now even the correct code should fail (attempts >= max_attempts marks it used)
         assert otp_store.verify_otp(user_id, code) is False
 
-    def test_code_marked_used_after_successful_verify(
-        self, otp_store: OTPStore, db: InMemoryDB, user_id: UUID
-    ) -> None:
-        """A successfully verified code is marked used and cannot be reused."""
-        code = otp_store.create_otp(user_id)
-        assert otp_store.verify_otp(user_id, code) is True
-        # Second attempt with same code should fail (already used)
-        assert otp_store.verify_otp(user_id, code) is False
-
-    def test_wrong_user_returns_false(self, otp_store: OTPStore, user_id: UUID) -> None:
+        # wrong user → False
         code = otp_store.create_otp(user_id)
         other_user = uuid4()
         assert otp_store.verify_otp(other_user, code) is False

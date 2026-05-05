@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.29] - 2026-05-04
+
+### Changed
+- **Distillation cycle 27** — Batch DD final on test_dz_richtext,
+  test_otp_store. 114 tests pass. Suite total: 12,545 → 12,525 (20 fewer).
+  Cumulative: 14,295 → 12,525 (1,770 tests removed across 27 cycles).
+  Need 525 more.
+
 ## [0.66.28] - 2026-05-04
 
 ### Changed

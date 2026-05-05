@@ -353,31 +353,22 @@ class TestCycle3PasteSanitiser:
     """Paste pipeline: DOMParser walk + tag-synonym rewrites +
     structural normalisation + dangerous-subtree drop."""
 
-    def test_paste_handler_wired_on_editor(self) -> None:
+    def test_paste_pipeline_wiring(self) -> None:
+        """Combined: handler wired, clipboard read, preventDefault, DOMParser, range insertion."""
         src = JS_PATH.read_text()
+        # handler wired on editor
         assert 'on(editor, "paste"' in src
         assert "handlePaste(editor, e)" in src
-
-    def test_paste_uses_clipboard_data(self) -> None:
-        src = JS_PATH.read_text()
+        # uses clipboardData
         assert 'data.getData("text/html")' in src
         assert 'data.getData("text/plain")' in src
-
-    def test_paste_prevents_default(self) -> None:
-        """We always own insertion — never let the browser drop raw HTML."""
-        src = JS_PATH.read_text()
+        # prevents default
         assert "function handlePaste" in src
         assert "event.preventDefault()" in src
-
-    def test_paste_uses_domparser(self) -> None:
-        src = JS_PATH.read_text()
+        # uses DOMParser
         assert "function pasteSanitise" in src
         assert "new DOMParser().parseFromString" in src
-
-    def test_paste_inserts_via_range(self) -> None:
-        """Insertion goes through Range.insertNode after deleteContents,
-        so existing selection is replaced cleanly."""
-        src = JS_PATH.read_text()
+        # inserts via Range
         assert "range.deleteContents()" in src
         assert "range.insertNode(frag)" in src
 

@@ -141,7 +141,9 @@ def _url(uid: Any) -> str:
 
 @pytest.mark.asyncio
 class TestSiblingUrls:
-    async def test_middle_row_returns_both_prev_and_next(self) -> None:
+    async def test_position_and_sort_direction(self) -> None:
+        """Combined: middle row has prev+next, descending swaps, first row has no prev,
+        last row has no next."""
         ids = _ids("a", "b", "c")
         repo = _FakeRepo(
             [
@@ -150,67 +152,31 @@ class TestSiblingUrls:
                 _Row(id=ids["c"], created_at=30),
             ]
         )
+
+        # middle: prev=a, next=c (ASC)
         prev_url, next_url = await sibling_urls(
-            repo=repo,
-            current_id=ids["b"],
-            sort="created_at",  # ASC: a, b, c
-            url_for=_url,
+            repo=repo, current_id=ids["b"], sort="created_at", url_for=_url
         )
         assert prev_url == f"/app/x/{ids['a']}"
         assert next_url == f"/app/x/{ids['c']}"
 
-    async def test_descending_sort_swaps_neighbours(self) -> None:
-        """With ``sort="-created_at"`` the visual order is c→b→a.
-        Prev of b is c (more-recent above); next is a (older below)."""
-        ids = _ids("a", "b", "c")
-        repo = _FakeRepo(
-            [
-                _Row(id=ids["a"], created_at=10),
-                _Row(id=ids["b"], created_at=20),
-                _Row(id=ids["c"], created_at=30),
-            ]
-        )
+        # descending swaps: prev=c, next=a
         prev_url, next_url = await sibling_urls(
-            repo=repo,
-            current_id=ids["b"],
-            sort="-created_at",
-            url_for=_url,
+            repo=repo, current_id=ids["b"], sort="-created_at", url_for=_url
         )
         assert prev_url == f"/app/x/{ids['c']}"
         assert next_url == f"/app/x/{ids['a']}"
 
-    async def test_first_row_has_no_prev(self) -> None:
-        ids = _ids("a", "b", "c")
-        repo = _FakeRepo(
-            [
-                _Row(id=ids["a"], created_at=10),
-                _Row(id=ids["b"], created_at=20),
-                _Row(id=ids["c"], created_at=30),
-            ]
-        )
+        # first row has no prev
         prev_url, next_url = await sibling_urls(
-            repo=repo,
-            current_id=ids["a"],
-            sort="created_at",
-            url_for=_url,
+            repo=repo, current_id=ids["a"], sort="created_at", url_for=_url
         )
         assert prev_url is None
         assert next_url == f"/app/x/{ids['b']}"
 
-    async def test_last_row_has_no_next(self) -> None:
-        ids = _ids("a", "b", "c")
-        repo = _FakeRepo(
-            [
-                _Row(id=ids["a"], created_at=10),
-                _Row(id=ids["b"], created_at=20),
-                _Row(id=ids["c"], created_at=30),
-            ]
-        )
+        # last row has no next
         prev_url, next_url = await sibling_urls(
-            repo=repo,
-            current_id=ids["c"],
-            sort="created_at",
-            url_for=_url,
+            repo=repo, current_id=ids["c"], sort="created_at", url_for=_url
         )
         assert prev_url == f"/app/x/{ids['b']}"
         assert next_url is None
