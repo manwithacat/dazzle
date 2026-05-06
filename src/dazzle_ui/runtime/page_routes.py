@@ -1059,37 +1059,57 @@ def _build_dispatch_ctx(render_ctx: Any) -> dict[str, Any]:
     """Translate the per-request PageContext into the flat ctx dict shape
     that the renderer registry adapters consume.
 
-    Plan 3 Task 4 only covers LIST surfaces — the only mode the
-    Fragment adapter and the registry-facing ``render_surface`` helper
-    currently support. For other modes the dispatch branch is not
-    selected (see ``_render_response``), so this function is only
-    called when ``render_ctx.table`` is populated.
+    Plan 3 covered LIST; Plan 8 added VIEW. For LIST we extract the
+    ``table`` context; for VIEW we extract the ``detail`` context's
+    sections+fields into a flat ``fields`` list. For other modes the
+    dispatch branch is not selected (see ``_render_response``).
     """
     table = getattr(render_ctx, "table", None)
-    if table is None:
-        return {}
-    columns_out: list[dict[str, Any]] = []
-    for col in getattr(table, "columns", []) or []:
-        columns_out.append(
-            {
-                "key": getattr(col, "key", ""),
-                "label": getattr(col, "label", "") or getattr(col, "key", ""),
-                "type": getattr(col, "type", "text"),
-                "sortable": getattr(col, "sortable", False),
-                "filterable": getattr(col, "filterable", False),
-                "hidden": getattr(col, "hidden", False),
-            }
-        )
-    return {
-        "items": list(getattr(table, "rows", []) or []),
-        "columns": columns_out,
-        "endpoint": getattr(table, "api_endpoint", "") or "",
-        "total": int(getattr(table, "total", 0) or 0),
-        "page": int(getattr(table, "page", 1) or 1),
-        "page_size": int(getattr(table, "page_size", 20) or 20),
-        "region_name": getattr(table, "table_id", "") or "",
-        "empty_message": getattr(table, "empty_message", "") or "No items found.",
-    }
+    if table is not None:
+        columns_out: list[dict[str, Any]] = []
+        for col in getattr(table, "columns", []) or []:
+            columns_out.append(
+                {
+                    "key": getattr(col, "key", ""),
+                    "label": getattr(col, "label", "") or getattr(col, "key", ""),
+                    "type": getattr(col, "type", "text"),
+                    "sortable": getattr(col, "sortable", False),
+                    "filterable": getattr(col, "filterable", False),
+                    "hidden": getattr(col, "hidden", False),
+                }
+            )
+        return {
+            "items": list(getattr(table, "rows", []) or []),
+            "columns": columns_out,
+            "endpoint": getattr(table, "api_endpoint", "") or "",
+            "total": int(getattr(table, "total", 0) or 0),
+            "page": int(getattr(table, "page", 1) or 1),
+            "page_size": int(getattr(table, "page_size", 20) or 20),
+            "region_name": getattr(table, "table_id", "") or "",
+            "empty_message": getattr(table, "empty_message", "") or "No items found.",
+        }
+
+    detail = getattr(render_ctx, "detail", None)
+    if detail is not None:
+        fields_out: list[dict[str, Any]] = []
+        for section in getattr(detail, "sections", []) or []:
+            for f in getattr(section, "fields", []) or []:
+                fields_out.append(
+                    {
+                        "key": getattr(f, "key", "") or getattr(f, "name", ""),
+                        "label": getattr(f, "label", "")
+                        or getattr(f, "key", "")
+                        or getattr(f, "name", ""),
+                        "value": getattr(f, "value", "") or "",
+                        "kind": getattr(f, "type", "text") or "text",
+                    }
+                )
+        return {
+            "fields": fields_out,
+            "region_name": getattr(detail, "entity_name", "") + "_detail",
+        }
+
+    return {}
 
 
 def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str | None:
@@ -1117,10 +1137,13 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     if services is None:
         return None
 
-    # Plan 3 Task 4 only wires LIST mode through dispatch. If the
-    # surface has render: set but no table context (e.g. detail/form),
-    # the adapter would raise NotImplementedError — fall back to legacy.
-    if getattr(render_ctx, "table", None) is None:
+    # Plans 3+8 wire LIST and VIEW through dispatch. If the surface
+    # has render: set but neither table nor detail context (e.g. CREATE/
+    # EDIT/CUSTOM), the adapter would raise NotImplementedError — fall
+    # back to legacy. Plan 9 will extend this when form modes land.
+    has_table = getattr(render_ctx, "table", None) is not None
+    has_detail = getattr(render_ctx, "detail", None) is not None
+    if not (has_table or has_detail):
         return None
 
     from dazzle.render.fragment.errors import FragmentError
