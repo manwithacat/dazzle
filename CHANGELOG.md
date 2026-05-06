@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.40] - 2026-05-06
+
 ### Changed
 - **Fragment audit now walks entity-ref field types (Plan 13).** The previous loop in `coverage.py:_audit_surface` looked at `section.fields`, but `SurfaceSection` exposes `.elements` — so the loop never ran and the audit silently under-reported. The new resolver walks `surface.entity_ref → appspec.domain.entities[*].fields[*].type.kind` and reports `unsupported_field_type` blockers for REF/UUID/JSON/FILE the way the adapter's `_field_to_primitive` docstring always claimed it would. Coverage across the example apps drops from over-reported 78/78 to honest 50/78, with 28 newly-surfaced blockers on REF fields — see `docs/superpowers/plans/migration-roadmap.md` for the per-app matrix and Phase 2A scoping.
 - `tests/integration/test_examples_fragment_smoke.py::test_example_app_audit_runs_cleanly` (renamed from `test_example_app_audit_zero_blockers`) now asserts the audit runs without exception and self-consistency holds, instead of pinning a count that was over-reported. Per-app blocker counts live in the roadmap, where they belong.
