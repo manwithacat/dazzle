@@ -275,6 +275,7 @@ surface task_list "Task List":
 surface task_detail "Task Detail":
   uses entity Task
   mode: view
+  render: fragment
 
   section main "Task Details":
     field title "Title"
