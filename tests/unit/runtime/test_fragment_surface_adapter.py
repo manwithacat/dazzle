@@ -203,25 +203,39 @@ def test_edit_mode_pre_populates_field_values() -> None:
     assert form.submit.label == "Save"
 
 
-def test_form_field_type_mapping() -> None:
-    """Plan 9 — IR FieldTypeKind values map to Field.kind correctly."""
+def test_form_widget_kind_mapping() -> None:
+    """The adapter receives WIDGET kinds (matching FieldContext.type) and
+    emits Fields with the right input type. Issue #1026 surfaced that
+    earlier versions assumed DSL kinds — silently swapping str↔text and
+    breaking enum/bool. v0.66.45 fixed the mapping to widget-kind input.
+
+    Mapping: DSL field type → FieldContext.type (widget) → Field.kind:
+
+        str(N)    → text       → text
+        text      → textarea   → textarea
+        email     → email      → email
+        int/dec   → number     → number
+        bool      → checkbox   → checkbox
+        date      → date       → date
+        datetime  → datetime   → datetime-local
+    """
     from dazzle.render.fragment import Field
 
+    # (widget kind passed via field_dict["kind"], expected Field.kind)
     cases = [
-        ("str", "text"),
-        ("text", "textarea"),
+        ("text", "text"),
+        ("textarea", "textarea"),
         ("email", "email"),
-        ("int", "number"),
-        ("decimal", "number"),
-        ("bool", "checkbox"),
+        ("number", "number"),
+        ("checkbox", "checkbox"),
         ("date", "date"),
         ("datetime", "datetime-local"),
     ]
-    for ir_kind, expected_field_kind in cases:
+    for widget_kind, expected_field_kind in cases:
         full = {
             "name": "f",
             "label": "F",
-            "kind": ir_kind,
+            "kind": widget_kind,
             "required": False,
             "value": "",
         }
@@ -235,10 +249,10 @@ def test_form_field_type_mapping() -> None:
         fragment = FragmentSurfaceAdapter().build(surface, ctx)
         emitted = fragment.body.body.fields[0]
         assert isinstance(emitted, Field), (
-            f"{ir_kind!r}: expected Field, got {type(emitted).__name__}"
+            f"{widget_kind!r}: expected Field, got {type(emitted).__name__}"
         )
         assert emitted.kind == expected_field_kind, (
-            f"{ir_kind!r}: expected kind={expected_field_kind!r}, got {emitted.kind!r}"
+            f"{widget_kind!r}: expected kind={expected_field_kind!r}, got {emitted.kind!r}"
         )
 
 

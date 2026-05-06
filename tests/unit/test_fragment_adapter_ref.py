@@ -1,17 +1,26 @@
-"""Adapter: REF/UUID/JSON field mapping (Plan 14 + Plan 15)."""
+"""Adapter: widget-kind to primitive mapping (Plan 14 + Plan 16).
 
-from dazzle.render.fragment.primitives.forms import Field, RefPicker
+The adapter receives WIDGET kinds (matching `FieldContext.type` from the
+template runtime), NOT DSL FieldType.kind values. Issue #1026 exposed
+that earlier versions assumed DSL kinds — silently swapping str↔text and
+mis-rendering enum/bool. v0.66.45 fixed the mapping.
+"""
+
+from dazzle.render.fragment.primitives.forms import Combobox, Field, RefPicker
 from dazzle_back.runtime.renderers.fragment_adapter import _field_to_primitive
 
+# ─────────────────────────── REF ──────────────────────────────────────
 
-def test_ref_field_with_ref_api_produces_refpicker() -> None:
-    """A field_dict with kind='ref' and a ref_api string produces a
-    RefPicker — the adapter's typed REF branch."""
+
+def test_ref_api_in_field_dict_produces_refpicker() -> None:
+    """A field_dict with a non-empty ref_api produces RefPicker —
+    discriminated by data, not by `kind`. The widget kind passed
+    through (typically "select") is irrelevant once ref_api is set."""
     primitive = _field_to_primitive(
         {
             "name": "assigned_to",
             "label": "Assigned",
-            "kind": "ref",
+            "kind": "select",  # widget kind from FieldContext
             "ref_api": "/user",
             "required": True,
             "value": "abc-123",
@@ -26,65 +35,137 @@ def test_ref_field_with_ref_api_produces_refpicker() -> None:
     assert primitive.initial_label == "Alice"
 
 
-def test_ref_field_without_ref_api_falls_back_to_text_field() -> None:
-    """A REF field where ref_api wasn't threaded through (e.g. older
-    runtime path) falls back to a plain text Field — graceful, not
-    an exception."""
+def test_no_ref_api_no_options_falls_through_to_widget_field() -> None:
+    """Without ref_api or options, the dispatch falls through to the
+    widget→Field mapping. A `kind: "ref"` value (legacy DSL kind) just
+    isn't in the widget map and falls back to plain text Field."""
     primitive = _field_to_primitive(
-        {
-            "name": "assigned_to",
-            "label": "Assigned",
-            "kind": "ref",
-        }
+        {"name": "x", "label": "X", "kind": "ref"}  # DSL kind, not widget
     )
     assert isinstance(primitive, Field)
+    assert primitive.kind == "text"  # safe fallback
 
 
-def test_uuid_field_produces_readonly_text_field() -> None:
-    """UUID fields render as readonly text — system-assigned, visible
-    but not editable. Plan 15 closure."""
+# ─────────────────────────── Enum / Combobox ──────────────────────────
+
+
+def test_select_widget_with_options_produces_combobox() -> None:
+    """The `select` widget kind with options populates a Combobox.
+    This is the production path: FieldContext.type="select" + the page
+    route's `_build_dispatch_ctx` converting FieldContext.options
+    (list of {value,label} dicts) into a list of (value,label) tuples."""
     primitive = _field_to_primitive(
         {
-            "name": "external_id",
-            "label": "External ID",
-            "kind": "uuid",
-            "value": "00000000-0000-0000-0000-000000000abc",
+            "name": "priority",
+            "label": "Priority",
+            "kind": "select",
+            "options": [("low", "Low"), ("high", "High")],
+            "value": "low",
         }
     )
+    assert isinstance(primitive, Combobox)
+    assert primitive.name == "priority"
+    assert primitive.options == (("low", "Low"), ("high", "High"))
+    assert primitive.initial_value == "low"
+
+
+def test_combobox_widget_kind_also_produces_combobox() -> None:
+    """Either `select` or `combobox` widget kinds route to Combobox."""
+    primitive = _field_to_primitive(
+        {
+            "name": "x",
+            "label": "X",
+            "kind": "combobox",
+            "options": [("a", "A")],
+        }
+    )
+    assert isinstance(primitive, Combobox)
+
+
+def test_options_alone_imply_combobox_even_without_select_kind() -> None:
+    """If options are supplied but the widget kind is something else
+    (defensive: a renderer-side decision), still produce a Combobox —
+    the options data is the authoritative signal."""
+    primitive = _field_to_primitive(
+        {
+            "name": "x",
+            "label": "X",
+            "kind": "text",  # widget says text, but options say enum
+            "options": [("a", "A")],
+        }
+    )
+    assert isinstance(primitive, Combobox)
+
+
+# ─────────────────────────── Widget kind → Field.kind ─────────────────
+
+
+def test_text_widget_kind_produces_text_input() -> None:
+    """str(N) DSL fields arrive as widget kind 'text'."""
+    primitive = _field_to_primitive({"name": "title", "label": "Title", "kind": "text"})
     assert isinstance(primitive, Field)
     assert primitive.kind == "text"
-    assert primitive.readonly is True
-    assert primitive.initial_value == "00000000-0000-0000-0000-000000000abc"
 
 
-def test_json_field_produces_textarea() -> None:
-    """JSON fields render as a textarea with the str-coerced value."""
+def test_textarea_widget_kind_produces_textarea() -> None:
+    """text DSL fields arrive as widget kind 'textarea'."""
     primitive = _field_to_primitive(
-        {
-            "name": "metadata",
-            "label": "Metadata",
-            "kind": "json",
-            "value": '{"key": "value"}',
-        }
+        {"name": "description", "label": "Description", "kind": "textarea"}
     )
     assert isinstance(primitive, Field)
     assert primitive.kind == "textarea"
-    assert primitive.initial_value == '{"key": "value"}'
 
 
-def test_json_field_with_dict_value_is_serialised() -> None:
-    """If the backend hands a dict/list rather than a string, the adapter
-    serialises it. Defensive — most paths str-coerce upstream."""
-    primitive = _field_to_primitive(
-        {
-            "name": "metadata",
-            "label": "Metadata",
-            "kind": "json",
-            "value": {"key": "value", "n": 42},
-        }
-    )
+def test_checkbox_widget_kind_produces_checkbox() -> None:
+    """bool DSL fields arrive as widget kind 'checkbox'."""
+    primitive = _field_to_primitive({"name": "completed", "label": "Completed", "kind": "checkbox"})
     assert isinstance(primitive, Field)
-    assert primitive.kind == "textarea"
-    # JSON-formatted output should contain the key:value pair
-    assert "key" in primitive.initial_value
-    assert "value" in primitive.initial_value
+    assert primitive.kind == "checkbox"
+
+
+def test_number_widget_kind_produces_number_input() -> None:
+    """int/decimal/float DSL fields arrive as widget kind 'number'."""
+    primitive = _field_to_primitive({"name": "n", "label": "N", "kind": "number"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "number"
+
+
+def test_email_widget_kind_produces_email_input() -> None:
+    primitive = _field_to_primitive({"name": "e", "label": "E", "kind": "email"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "email"
+
+
+def test_date_widget_kind_produces_date_input() -> None:
+    primitive = _field_to_primitive({"name": "d", "label": "D", "kind": "date"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "date"
+
+
+def test_datetime_widget_kind_produces_datetime_local_input() -> None:
+    """datetime field type maps to widget 'datetime', renders as
+    HTML input type='datetime-local'."""
+    primitive = _field_to_primitive({"name": "d", "label": "D", "kind": "datetime"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "datetime-local"
+
+
+def test_url_widget_kind_produces_url_input() -> None:
+    primitive = _field_to_primitive({"name": "u", "label": "U", "kind": "url"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "url"
+
+
+def test_money_widget_kind_produces_number_input() -> None:
+    """money DSL fields arrive as widget 'money'; render as number."""
+    primitive = _field_to_primitive({"name": "m", "label": "M", "kind": "money"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "number"
+
+
+def test_unknown_widget_kind_falls_back_to_text() -> None:
+    """Any widget kind the adapter doesn't explicitly recognise renders
+    as plain text — graceful, not an exception."""
+    primitive = _field_to_primitive({"name": "x", "label": "X", "kind": "definitely-not-a-widget"})
+    assert isinstance(primitive, Field)
+    assert primitive.kind == "text"

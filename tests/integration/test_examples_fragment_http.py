@@ -151,3 +151,53 @@ def test_simple_task_create_form_has_ref_picker_for_assigned_to() -> None:
     assert "data-ref-api" in body, (
         f"simple_task /task/create RefPicker missing data-ref-api. body[:500]={body[:500]!r}"
     )
+
+
+# ─────────────────── Per-widget regression (issue #1026) ───────────────────
+#
+# Pre-v0.66.45 the adapter expected DSL field-type kinds but the page
+# route always passes WIDGET kinds — silently swapping str↔text and
+# rendering enum/bool as plain text inputs. These cases pin the correct
+# widget per DSL field type at the HTTP layer.
+
+
+def test_simple_task_create_form_str_field_renders_as_text_input() -> None:
+    """`title: str(200)` → <input type="text">, NOT <textarea>."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    body = resp.text
+    assert 'type="text" name="title"' in body, (
+        f"task_create title field is not a text input. body[:500]={body[:500]!r}"
+    )
+
+
+def test_simple_task_create_form_text_field_renders_as_textarea() -> None:
+    """`description: text` → <textarea>, NOT <input type="text">."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    body = resp.text
+    assert '<textarea class="dz-field__input" name="description"' in body, (
+        "task_create description field rendered as input, not textarea."
+    )
+
+
+def test_simple_task_create_form_enum_field_renders_as_select() -> None:
+    """`priority: enum[low,medium,high,urgent]` → <select> with options."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    body = resp.text
+    assert '<select class="dz-combobox__select" name="priority">' in body, (
+        "task_create priority field is not a Combobox <select>."
+    )
+    for value in ("low", "medium", "high", "urgent"):
+        assert f'<option value="{value}"' in body, (
+            f"task_create priority field missing enum option {value!r}."
+        )
+
+
+def test_simple_task_create_form_date_field_renders_as_date_input() -> None:
+    """`due_date: date` → <input type="date">."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    body = resp.text
+    assert 'type="date" name="due_date"' in body, "task_create due_date field is not a date input."

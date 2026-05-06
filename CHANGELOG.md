@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.45] - 2026-05-06
+
+### Fixed
+- **Fragment adapter widget mapping inverted for str/text, broken for enum/bool** (cyfuture pilot finding #1026). `_field_to_primitive` was written assuming the page route would pass DSL `FieldType.kind` values (`"str"`, `"text"`, `"enum"`, `"bool"`) but `_build_dispatch_ctx` actually passes `FieldContext.type` widget kinds (`"text"`, `"textarea"`, `"select"`, `"checkbox"`). The lookup mismatch silently swapped str↔text widgets and rendered enum/bool fields as plain text inputs across every flipped surface in the framework's example apps and in cyfuture's deployment. The adapter now operates on widget kinds with `ref_api`/`options` as semantic discriminators (REF vs enum/select). New regression coverage in `tests/integration/test_examples_fragment_http.py` pins per-widget HTML output for `simple_task.task_create` end-to-end through the production stack.
+
+### Removed
+- **Plan 15 UUID-readonly and JSON-textarea adapter branches** were unreachable from production (page route never passed DSL `kind="uuid"`/`"json"`) — removed alongside the widget-mapping fix. UUID and JSON DSL fields still render acceptably via their FieldContext.type widget mappings (typically text input and textarea respectively); a future plan can reintroduce specialised handling when a real consumer surfaces a need.
+
+### Agent Guidance
+- The fragment adapter operates on **widget kinds** (matching `FieldContext.type` from `dazzle_ui.runtime.template_context` — text/textarea/select/checkbox/number/date/datetime/email/url/money/file), not DSL FieldType.kind values. When adding a new field type to the DSL, the route from DSL → rendered HTML is: (1) FieldType.kind in IR, (2) runtime compiler produces a FieldContext with `type=<widget>`, (3) `_build_dispatch_ctx` passes `field_dict["kind"]=<widget>`, (4) `_field_to_primitive` matches on widget kind to produce a primitive. Test additions should pin step (4) at the HTTP layer (see `test_simple_task_create_form_*` patterns).
+
 ## [0.66.44] - 2026-05-06
 
 ### Fixed

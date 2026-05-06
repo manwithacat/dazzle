@@ -187,95 +187,76 @@ class FragmentSurfaceAdapter:
 def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPicker":
     """Map a field-shape dict to the right Fragment form primitive.
 
-    Plan 9 covers: str, text, email, int, decimal, float, money, bool,
-    date, datetime, url, enum. Plan 14 adds REF (with `ref_api`) →
-    RefPicker. Remaining out-of-scope kinds (uuid, json, file) fall
-    through to a plain text Field — the audit flags them as
-    unsupported_field_type so callers see the gap.
+    The `kind` carried in field_dict is the *widget* kind — matching
+    `FieldContext.type` from `dazzle_ui.runtime.template_context` (text,
+    textarea, select, checkbox, number, date, datetime, email, url,
+    money, file, etc.) — NOT the DSL FieldType.kind. The page route's
+    `_build_dispatch_ctx` reads `field.type` directly off the FieldContext
+    and passes it through as `kind`.
+
+    Disambiguation between enum-vs-ref (both arrive as widget kind
+    `"select"`) uses the data already on the field_dict: presence of
+    `ref_api` ⇒ RefPicker, presence of `options` ⇒ Combobox.
+
+    Until v0.66.44 this function expected DSL kinds and silently swapped
+    widgets (str→textarea, text→input, enum/bool→input) for any DSL-driven
+    call — surfaced by the cyfuture pilot in #1026.
     """
     name = str(field_dict.get("name", ""))
     label = str(field_dict.get("label", name))
     required = bool(field_dict.get("required", False))
     placeholder = str(field_dict.get("placeholder", ""))
     initial_value = str(field_dict.get("value", "") or "")
-    kind = str(field_dict.get("kind", "str")).lower()
+    kind = str(field_dict.get("kind", "text")).lower()
 
-    if kind == "enum":
-        options = tuple((str(v), str(label_)) for v, label_ in field_dict.get("options", []))
-        if not options:
-            options = (("", ""),)  # Combobox requires at least one option
+    # REF: distinguished by presence of a non-empty ref_api in field_dict.
+    ref_api = str(field_dict.get("ref_api", "") or "").strip()
+    if ref_api:
+        return RefPicker(
+            name=name,
+            label=label,
+            ref_api=URL(ref_api),
+            required=required,
+            initial_value=initial_value,
+            initial_label=str(field_dict.get("initial_label", "") or ""),
+        )
+
+    # Enum / select: distinguished by presence of options OR widget kind
+    # explicitly being "select"/"combobox". Both forms reach the same
+    # Combobox primitive; the options tuple is whatever the page route
+    # populated from FieldContext.options.
+    raw_options = field_dict.get("options")
+    if raw_options or kind in ("select", "combobox"):
+        opts = tuple((str(v), str(label_)) for v, label_ in (raw_options or []))
+        if not opts:
+            opts = (("", ""),)  # Combobox requires at least one option
         return Combobox(
             name=name,
             label=label,
-            options=options,
+            options=opts,
             required=required,
             initial_value=initial_value,
         )
 
-    if kind == "ref":
-        ref_api = str(field_dict.get("ref_api", "") or "").strip()
-        if ref_api:
-            return RefPicker(
-                name=name,
-                label=label,
-                ref_api=URL(ref_api),
-                required=required,
-                initial_value=initial_value,
-                initial_label=str(field_dict.get("initial_label", "") or ""),
-            )
-        # No ref_api → graceful fallthrough to text Field.
-
-    if kind == "uuid":
-        # UUIDs are typically system-assigned. Render as a readonly text
-        # input so they're visible but not editable; CREATE forms get an
-        # empty placeholder, EDIT forms show the persisted value.
-        return Field(
-            name=name,
-            label=label,
-            kind="text",
-            required=required,
-            placeholder=placeholder,
-            initial_value=initial_value,
-            readonly=True,
-        )
-
-    if kind == "json":
-        # JSON fields render as a textarea. Value is str-coerced (the
-        # backend usually serialises before reaching the form ctx); if the
-        # caller passes a dict/list, stringify here as a safety net.
-        raw_value = field_dict.get("value", "")
-        if raw_value and not isinstance(raw_value, str):
-            import json as _json
-
-            try:
-                value_str = _json.dumps(raw_value, indent=2)
-            except (TypeError, ValueError):
-                value_str = str(raw_value)
-        else:
-            value_str = str(raw_value or "")
-        return Field(
-            name=name,
-            label=label,
-            kind="textarea",
-            required=required,
-            placeholder=placeholder,
-            initial_value=value_str,
-        )
-
-    field_kind_map: dict[str, str] = {
-        "str": "text",
-        "text": "textarea",
+    # Map widget kind to Field.kind. Field._FIELD_KINDS validates the
+    # result; an unknown widget kind falls back to plain text.
+    widget_to_field_kind: dict[str, str] = {
+        "text": "text",
+        "textarea": "textarea",
         "email": "email",
-        "int": "number",
-        "decimal": "number",
-        "float": "number",
+        "password": "password",
+        "number": "number",
         "money": "number",
-        "bool": "checkbox",
+        "checkbox": "checkbox",
+        "radio": "radio",
         "date": "date",
         "datetime": "datetime-local",
+        "datetime-local": "datetime-local",
+        "time": "time",
         "url": "url",
+        "tel": "tel",
     }
-    field_kind = field_kind_map.get(kind, "text")
+    field_kind = widget_to_field_kind.get(kind, "text")
     return Field(
         name=name,
         label=label,
