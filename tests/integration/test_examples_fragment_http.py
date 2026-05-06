@@ -81,3 +81,56 @@ def test_primary_list_renders_via_fragment_path(app_name: str, primary_list_url:
             f"{app_name} GET {primary_list_url}: response body missing "
             f"Fragment chrome class {marker!r}. body[:500]={body[:500]!r}"
         )
+
+
+# ─────────────────────────── Mode coverage ───────────────────────────
+#
+# Per-mode adapter branches (_build_view, _build_form) pinned at the
+# HTTP layer for simple_task — the canonical reference example.
+
+_FRAGMENT_DETAIL_MARKERS: tuple[str, ...] = (
+    "dz-surface",
+    "dz-region--kind-detail",
+)
+
+_FRAGMENT_FORM_MARKERS: tuple[str, ...] = (
+    "dz-surface",
+    "dz-region--kind-form",
+    "dz-form-stack",
+)
+
+
+def test_simple_task_create_url_renders_form_via_fragment() -> None:
+    """The CREATE form route returns 200 with Fragment form-chrome
+    classes — pins _build_form at the HTTP layer."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    assert resp.status_code == 200, (
+        f"simple_task GET /task/create: status {resp.status_code}, body[:500]={resp.text[:500]!r}"
+    )
+    body = resp.text
+    for marker in _FRAGMENT_FORM_MARKERS:
+        assert marker in body, (
+            f"simple_task GET /task/create: missing Fragment form marker "
+            f"{marker!r}. body[:500]={body[:500]!r}"
+        )
+
+
+def test_simple_task_detail_url_renders_via_fragment_or_404() -> None:
+    """GET /task/<bogus-id> either renders 404 OR a Fragment-chromed
+    detail page (depending on how the route handles missing rows).
+    What's not acceptable is a 500."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/00000000-0000-0000-0000-000000000000")
+    assert resp.status_code in (200, 404), (
+        f"simple_task GET /task/<bogus-id>: status {resp.status_code} "
+        f"(expected 200 or 404), body[:500]={resp.text[:500]!r}"
+    )
+    if resp.status_code == 200:
+        body = resp.text
+        for marker in _FRAGMENT_DETAIL_MARKERS:
+            assert marker in body, (
+                f"simple_task GET /task/<bogus-id> returned 200 but "
+                f"missing Fragment detail marker {marker!r}. "
+                f"body[:500]={body[:500]!r}"
+            )
