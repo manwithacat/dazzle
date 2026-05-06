@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.41] - 2026-05-06
+
 ### Added
 - **`RefPicker` Fragment primitive (Plan 14).** Frozen dataclass for REF-typed form fields, parallel in shape to `Combobox` but carrying `ref_api: URL` instead of static options. Renders as a `<select>` with `data-ref-api` + `x-init="dz.filterRefSelect($el)"`, re-using the existing client-side fetch machinery from the Jinja path. Closes the cross-app `unsupported_field_type=ref` blocker (28 surfaces).
 - Adapter `_field_to_primitive` now routes `kind="ref"` with a `ref_api` to RefPicker; the page route's `_build_dispatch_ctx` threads `ref_api` (and `initial_label` if available) from `FieldContext` into the field dict.
