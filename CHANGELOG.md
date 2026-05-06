@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.39] - 2026-05-06
+
 ### Added
 - `tests/integration/test_examples_fragment_http.py` — TestClient-driven HTTP parity test. 7 cases: every example app's primary list URL returns 200 with Fragment chrome (`dz-surface`, `dz-region--kind-list`); simple_task CREATE form pinned via `dz-region--kind-form` + `dz-form-stack`; simple_task detail-or-404 acceptance. Closes the gap between Plan 11's IR-level smoke (DSL says `fragment`) and "the HTTP response actually came through the Fragment renderer". (Plan 12)
 
