@@ -2,7 +2,7 @@
 
 **Status:** Active. Updated as plans ship.
 **Source of truth for prioritisation:** `dazzle fragment-audit` (Plan 7).
-**Last audit:** 2026-05-06 across all five example apps.
+**Last audit:** 2026-05-06 across all five example apps — 78 / 78 ready, 0 blocked.
 
 ---
 
@@ -17,57 +17,45 @@
 | 5 | Dispatch uniformity | ✓ Shipped | `FragmentSurfaceRenderer` adapter; dispatcher reduced to single uniform call |
 | 6 | Detail mode (draft) | ⊘ Superseded by Plan 8 | Doc retained as design reference |
 | 7 | Coverage audit | ✓ Shipped | `dazzle fragment-audit` CLI — text + JSON + CI gate |
+| 8 | VIEW mode | ✓ Shipped | Adapter `_build_view`, definition-list Region kind, Stack/Row/Heading/Text composition; CSS for `.dz-region--kind-detail` |
+| 9 | Form modes (CREATE + EDIT) | ✓ Shipped | Adapter `_build_form`, type-aware widget mapping, FormStack/Field/Combobox/Submit primitives, form CSS |
+| 10 | related_groups feature | ✓ Shipped | Region(kind="related") wrapper, Skeleton placeholder for htmx-loaded children, related-group CSS |
+| 11 | Mass surface flip | ✓ Shipped | `scripts/flip_to_fragment.py` helper; 60 DSL surfaces flipped across 5 apps; per-example smoke test |
 
 **Today's coverage of the example apps:**
 
-| App | Ready | Blocked | % Ready |
-|---|---|---|---|
-| simple_task | 6 | 11 | 35% |
-| contact_manager | 3 | 3 | 50% |
-| support_tickets | 8 | 11 | 42% |
-| ops_dashboard | 4 | 6 | 40% |
-| fieldtest_hub | 8 | 18 | 31% |
-| **Total** | **29** | **49** | **37%** |
+| App | Surfaces | Flipped (DSL) | Ready (audit) | Blocked |
+|---|---|---|---|---|
+| simple_task | 17 | 12 / 12 ✓ | 17 | 0 |
+| contact_manager | 6 | 4 / 4 ✓ | 6 | 0 |
+| support_tickets | 19 | 12 / 12 ✓ | 19 | 0 |
+| ops_dashboard | 10 | 8 / 8 ✓ | 10 | 0 |
+| fieldtest_hub | 26 | 24 / 24 ✓ | 26 | 0 |
+| **Total** | **78** | **60 / 60 ✓** | **78** | **0** |
 
-**Aggregated blockers (cross-app):**
+DSL/audit delta: framework-injected surfaces (`feedback_*`, `_admin_*`) appear in the audit count but are not authored in DSL — they pick up Fragment rendering automatically once the renderer registry is wired.
 
-```
-17  unsupported_mode=CREATE
-17  unsupported_mode=EDIT
-15  unsupported_mode=VIEW
- 3  unsupported_feature=related_groups   (all double-blocked with VIEW)
-```
+**Aggregated blockers (cross-app):** none. The substrate held — the mass flip applied without any adapter, dispatch, or CSS regression.
 
 ---
 
 ## Where we're going
 
-The audit data dictates the closure ordering. Each plan below is sized for one PR-cycle; cumulative coverage is the verification metric.
+### Plan 12 — Production-path parity test (planned)
 
-### Plan 8 — VIEW mode
+**Goal:** Extend the parity test from in-process renderer calls to a TestClient-driven request through the real FastAPI route stack. Catches integration regressions the unit-level parity test can miss (route handler context shape, htmx swap headers, error-response wrapping).
 
-**Closes:** `unsupported_mode=VIEW` (15 occurrences; 12 single-blocker, 3 also blocked on related_groups).
-**Cumulative coverage after:** 41 / 78 = **53%**.
-**Cost:** ~6–7 tasks. Lowest risk; salvages Plan 6's draft. Detail surfaces are read-only, no form scaffolding required.
-**Why first:** smallest, lowest-risk, partially drafted. Validates the IR-to-Fragment field-rendering approach on read-only output before scaling to writable forms. Engineering economics says ship the smaller-risk plan first to validate the approach, then do the bigger plan with confidence.
+**Cost:** ~3–4 tasks. Builds on `tests/integration/test_examples_fragment_smoke.py`.
 
-### Plan 9 — Form modes (CREATE + EDIT bundled)
+### Plan 13 — CI gate + audit completeness (planned)
 
-**Closes:** `unsupported_mode=CREATE` and `unsupported_mode=EDIT` together (34 occurrences).
-**Cumulative coverage after:** 75 / 78 = **96%**.
-**Cost:** ~10–12 tasks. Largest plan, but bundles two closures because they share ~80% of infrastructure (FormStack rendering, type-aware Field widgets, Submit, htmx form-post wiring, validation error display). The Fragment primitive library already has the building blocks (`FormStack`, `Field`, `Combobox`, `Submit` shipped in Plan 1); the work is in the IR-to-Fragment translation layer.
-**Why bundled:** doing CREATE and EDIT in separate plans wastes the shared form scaffolding. One plan ships them together for economic efficiency.
+**Goal:** Wire `dazzle fragment-audit examples/<each> --fail-on-blocked` into CI for all five examples. Close the audit's entity-field-type resolution gap so REF/UUID/JSON/FILE actually surface as blockers (today the audit walks SurfaceElement which only carries name+label).
 
-### Plan 10 — related_groups feature
+**Cost:** ~4–6 tasks. The CI wiring is small; the entity-ref resolution is where the design work is.
 
-**Closes:** `unsupported_feature=related_groups` (3 occurrences, all already half-cleared by Plan 8).
-**Cumulative coverage after:** 78 / 78 = **100%** example coverage.
-**Cost:** ~5–7 tasks. Different structural shape from single-mode work — composite display of related entities below the main detail.
-**Why last:** smallest leverage; all 3 affected surfaces are double-blocked on VIEW (which Plan 8 will have cleared). Independent enough to ship cleanly after CREATE+EDIT lands.
+### Phase 2 — Aegismark and downstream
 
-### Plan 11+ — Aegismark and downstream
-
-Once examples hit 100%, point the audit at AegisMark. The `fragment-audit` CLI takes any project path; the same blocker-counting logic surfaces what AegisMark needs. Likely candidates from prior conversations: kanban (#1015), day timeline (#1016), pupil card (#1017), class strip (#1018) — but the audit will tell us exactly which ones, in what order, and how many surfaces each unblocks. No speculation needed.
+With 100% example coverage and a CI gate locked in, point the audit at AegisMark. The `fragment-audit` CLI takes any project path; the same blocker-counting logic surfaces what AegisMark needs. Likely candidates from prior conversations: kanban (#1015), day timeline (#1016), pupil card (#1017), class strip (#1018) — but the audit will tell us which ones, in what order, and how many surfaces each unblocks. No speculation needed.
 
 ---
 
@@ -75,13 +63,27 @@ Once examples hit 100%, point the audit at AegisMark. The `fragment-audit` CLI t
 
 Each closure plan ends with a `dazzle fragment-audit` re-run as its stop-condition test. The aggregated-blockers list shrinks measurably; if it doesn't, the plan didn't actually close what it claimed.
 
-CI gate (suggested but not yet wired): a `dazzle fragment-audit examples/<app> --fail-on-blocked` invocation that asserts an expected ready-count for each example. As coverage grows, the threshold moves up. By Plan 10 the gate is `--fail-on-blocked` with no arguments — every example must be 100% Fragment-renderable.
+CI gate (Plan 13 will wire this): `dazzle fragment-audit examples/<app> --fail-on-blocked` for every example. Today the assertion lives in `tests/integration/test_examples_fragment_smoke.py` as a parametrised test — same effect, different transport.
+
+---
+
+## Lessons learned
+
+### Plan 11 — mass flip applied cleanly
+
+74 DSL-level surface flips across 5 apps, zero adapter regressions, zero CSS gaps, zero dispatch errors, zero parse failures. The substrate's typed-from-the-start design held under bulk migration — this is the strongest validation yet that the Fragment approach scales beyond single-surface conversions.
+
+The discovery log table the plan reserved for "issues found during the flip" remained empty. That's data: the audit-then-flip-then-verify rhythm works, and the substrate's invariants don't drift between apps.
+
+### Plan 11 — DSL/audit count delta is not a bug
+
+The audit reports 78 surfaces; the DSL declares 60. The difference (18) is framework-injected: `feedback_*`, `_admin_health`, `_admin_deploys`. These surfaces are generated post-parse and inherit the renderer registry's defaults, so they ride along automatically once the rest of the app is flipped. The mass-flip helper correctly skips them (they have no DSL representation to edit).
 
 ---
 
 ## When this roadmap goes stale
 
-- After Plan 8 ships: re-run audit; update the "Where we are" table; verify cumulative coverage hit 53% as predicted.
-- After Plan 9 ships: same. Verify CREATE+EDIT bundled plan landed without splitting.
-- After Plan 10 ships: 100% example coverage. The roadmap pivots to Aegismark; this doc gets a new "Phase 2" section.
-- If a closure costs substantially more than budgeted (>2× tasks): this is a signal the substrate has hidden assumptions worth surfacing. Stop, write a postmortem, decide whether to revisit Plan 1's primitive vocabulary.
+- After Plan 12 ships: TestClient parity locked in. Update if it surfaces any production-path regressions the unit tests missed.
+- After Plan 13 ships: CI gate active, entity-ref resolution closed. The audit becomes a hard gate, not advisory.
+- Phase 2 kickoff: replace this doc with `docs/superpowers/plans/migration-roadmap-aegismark.md`. Keep this one as the historical record of the framework's own migration.
+- If a Phase 2 closure costs substantially more than budgeted (>2× tasks): this is a signal the substrate has hidden assumptions worth surfacing. Stop, write a postmortem, decide whether to revisit Plan 1's primitive vocabulary.

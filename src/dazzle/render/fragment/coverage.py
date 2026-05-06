@@ -17,10 +17,10 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class BlockerKind(str, Enum):
+class BlockerKind(StrEnum):
     """Why a surface cannot currently be rendered via Fragment."""
 
     UNSUPPORTED_MODE = "unsupported_mode"

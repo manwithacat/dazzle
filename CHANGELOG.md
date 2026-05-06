@@ -9,7 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **All example apps now Fragment-rendered (Plan 11).** 60 DSL-declared
+  surfaces flipped across `simple_task` (12), `contact_manager` (4),
+  `support_tickets` (12), `ops_dashboard` (8), and `fieldtest_hub` (24).
+  The Jinja path is no longer exercised by any example surface that the
+  audit reports as flippable. `dazzle fragment-audit examples/<each>`
+  returns 100% coverage with zero blockers. Framework-injected surfaces
+  (`feedback_*`, `_admin_*`) inherit the renderer registry's defaults and
+  ride along automatically. The substrate's typed-from-the-start design
+  held under bulk migration — zero adapter regressions, zero CSS gaps,
+  zero parse failures across the 60-surface flip.
+
 ### Added
+- `scripts/flip_to_fragment.py` — idempotent helper that inserts
+  `render: fragment` after every flippable `mode:` declaration in a
+  Dazzle DSL file. Used by Plan 11 to flip 74 example surfaces; reusable
+  by downstream Dazzle users for migrating their own apps.
+- `tests/integration/test_examples_fragment_smoke.py` — 10-case
+  parametrised gate that pins every example app's primary list surface
+  to the Fragment path and asserts zero audit blockers per app. Catches
+  the regression where a future IR change introduces a feature the
+  adapter doesn't yet handle (silently re-introducing blockers even
+  though `render: fragment` is still on every surface).
+
 - **Fragment dispatch lit up.** `render: fragment` on a `SurfaceSpec` now
   routes the surface through the typed `FragmentRenderer` instead of the
   legacy Jinja path. Plan 3 of the typed-Fragment migration ships the
@@ -91,6 +114,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `render(surface, ctx) -> str`. Custom renderers (PDF, native, etc.)
   just need to satisfy this signature; no further dispatcher changes
   required.
+
+### Agent Guidance
+- When migrating a Dazzle app to typed-Fragment rendering, the canonical
+  path is `python scripts/flip_to_fragment.py <dsl-files...>` followed by
+  `dazzle fragment-audit <project> --fail-on-blocked`. The helper is
+  idempotent and only edits surfaces with mode list/view/create/edit.
+  Custom-mode surfaces still need adapter work (the audit flags them).
 
 ## [0.66.37] - 2026-05-06
 

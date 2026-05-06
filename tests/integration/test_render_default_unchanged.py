@@ -35,8 +35,10 @@ def _root_module_name(modules) -> str:
 def test_simple_task_links_with_known_renderers() -> None:
     """The example app links cleanly with the default known_renderers set.
 
-    As of P3 Task 5 (2026-05), simple_task.task_list opts into render: fragment;
-    every other surface still uses the default (None → legacy jinja path).
+    As of Plan 11 (2026-05-06), every DSL-declared surface in simple_task
+    opts into `render: fragment`. Framework-injected surfaces (feedback_*,
+    _admin_*) appear in the linker output without a `render` directive
+    (None → renderer registry default).
     """
     modules = _load_simple_task_modules()
     root = _root_module_name(modules)
@@ -46,21 +48,41 @@ def test_simple_task_links_with_known_renderers() -> None:
         known_renderers={"jinja", "fragment"},
     )
     assert appspec is not None
-    # Plan 3 flipped task_list; Plan 8 added task_detail. As more surfaces
-    # flip in subsequent plans, this set grows — keep the list explicit so
-    # an accidental flip elsewhere fails the test.
-    expected_flipped = {"task_list", "task_detail", "task_create", "task_edit"}
     by_name = {s.name: s for s in appspec.surfaces}
+    # Every DSL-declared surface is on the Fragment path.
+    expected_flipped = {
+        "task_list",
+        "task_detail",
+        "task_comments",
+        "comment_detail",
+        "comment_create",
+        "comment_edit",
+        "task_create",
+        "task_edit",
+        "user_list",
+        "user_detail",
+        "user_create",
+        "user_edit",
+    }
     for name in expected_flipped:
         assert name in by_name, f"surface {name} missing from simple_task spec"
         assert by_name[name].render == "fragment", (
             f"expected {name}.render='fragment', got {by_name[name].render!r}"
         )
-    # Every other surface should still be on the default (None).
-    for s in appspec.surfaces:
-        if s.name in expected_flipped:
-            continue
-        assert s.render is None, f"surface {s.name} has unexpected render={s.render!r}"
+    # Framework-injected surfaces don't carry a DSL render directive.
+    framework_injected = {
+        "feedback_create",
+        "feedback_admin",
+        "feedback_edit",
+        "_admin_health",
+        "_admin_deploys",
+    }
+    for name in framework_injected:
+        if name not in by_name:
+            continue  # Tolerate the set drifting if framework changes
+        assert by_name[name].render is None, (
+            f"framework-injected surface {name} unexpectedly has render={by_name[name].render!r}"
+        )
 
 
 def test_simple_task_links_when_render_validation_disabled() -> None:
