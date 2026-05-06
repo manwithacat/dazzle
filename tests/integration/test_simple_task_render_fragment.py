@@ -104,3 +104,61 @@ def test_fragment_path_does_not_emit_outer_doc() -> None:
     assert "<html>" not in lower and "<html " not in lower
     assert "<head>" not in lower and "<head " not in lower
     assert "<body>" not in lower and "<body " not in lower
+
+
+def _detail_ctx() -> dict:
+    """Deterministic detail-mode context."""
+    return {
+        "fields": [
+            {"key": "title", "label": "Title", "value": "Buy milk"},
+            {"key": "status", "label": "Status", "value": "open"},
+            {"key": "priority", "label": "Priority", "value": "high"},
+        ],
+        "region_name": "task_detail_main",
+    }
+
+
+def test_jinja_and_fragment_both_render_detail_fields() -> None:
+    """Plan 8 — VIEW mode parity: both renderers include every field's label and value."""
+    services = _make_services()
+
+    jinja_surface = SurfaceSpec(
+        name="task_detail",
+        title="Task Detail",
+        mode=SurfaceMode.VIEW,
+        entity_ref="Task",
+    )
+    fragment_surface = SurfaceSpec(
+        name="task_detail",
+        title="Task Detail",
+        mode=SurfaceMode.VIEW,
+        entity_ref="Task",
+        render="fragment",
+    )
+
+    jinja_html = dispatch_render(jinja_surface, ctx=_detail_ctx(), services=services)
+    fragment_html = dispatch_render(fragment_surface, ctx=_detail_ctx(), services=services)
+
+    for renderer_name, html in [("jinja", jinja_html), ("fragment", fragment_html)]:
+        assert isinstance(html, str), f"{renderer_name}: not a string"
+        for label in ("Title", "Status", "Priority"):
+            assert label in html, f"{renderer_name}: missing label {label!r}"
+        for value in ("Buy milk", "open", "high"):
+            assert value in html, f"{renderer_name}: missing value {value!r}"
+
+
+def test_fragment_detail_path_uses_detail_region_kind() -> None:
+    """Plan 8 — Fragment-rendered detail surface includes dz-region--kind-detail."""
+    services = _make_services()
+    fragment_html = dispatch_render(
+        SurfaceSpec(
+            name="task_detail",
+            title="Task Detail",
+            mode=SurfaceMode.VIEW,
+            entity_ref="Task",
+            render="fragment",
+        ),
+        ctx=_detail_ctx(),
+        services=services,
+    )
+    assert "dz-region--kind-detail" in fragment_html
