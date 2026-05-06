@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Fragment dispatch lit up.** `render: fragment` on a `SurfaceSpec` now
+  routes the surface through the typed `FragmentRenderer` instead of the
+  legacy Jinja path. Plan 3 of the typed-Fragment migration ships the
+  minimum-viable IR-to-Fragment adapter (mode: LIST only) and flips
+  `simple_task.task_list` as the first proving case. Other surfaces
+  remain on Jinja by default.
+- `dispatch_render(surface, ctx, services)` helper centralises the
+  renderer-routing decision; the request path consults this seam when
+  `surface.render` is set, otherwise stays on the legacy direct path.
+- `JinjaRenderer` adapter (previously a stub) now wraps a minimal
+  `render_surface(surface, ctx) -> str` helper so the registry can route
+  through it for parity testing.
+- `FragmentSurfaceAdapter` translates SurfaceSpec + render context into
+  a Fragment tree for surfaces with `render: fragment`.
+
+### Changed
+- `simple_task.task_list` surface flipped to `render: fragment`. Visible
+  output remains structurally equivalent to the Jinja path (parity test
+  in `tests/integration/test_simple_task_render_fragment.py`).
+- The `Renderer` protocol on `dazzle.render.fragment.registry` relaxed
+  to `render(*args, **kwargs) -> str` so both Fragment-tree consumers
+  and (SurfaceSpec, ctx)-shaped consumers can satisfy it. The dispatcher
+  knows which signature each registered handler uses.
+
 ## [0.66.37] - 2026-05-06
 
 ### Added
