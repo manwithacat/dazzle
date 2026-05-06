@@ -2462,6 +2462,14 @@ text-align: end;
 .dz-region--kind-detail .dz-row > .dz-text {
 color: var(--colour-text);
 }
+.dz-region--kind-related {
+margin-block-start: var(--space-lg);
+padding-block-start: var(--space-md);
+border-block-start: 1px solid var(--colour-border);
+}
+.dz-region--kind-related .dz-heading--level-2 {
+margin-block-end: var(--space-sm);
+}
 .dz-region--kind-form {
 }
 .dz-form-stack {

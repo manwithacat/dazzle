@@ -40,6 +40,8 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-table",
     # Plan 8 — detail-mode region (definition-list layout)
     "dz-region--kind-detail",
+    # Plan 10 — related-group region
+    "dz-region--kind-related",
     # Plan 9 — form-mode region + form primitives
     "dz-region--kind-form",
     "dz-form-stack",

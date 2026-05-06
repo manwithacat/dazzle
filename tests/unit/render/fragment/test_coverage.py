@@ -86,8 +86,9 @@ def test_audit_marks_view_mode_as_ready() -> None:
     assert report.blocked_count == 0
 
 
-def test_audit_marks_related_groups_as_blocked() -> None:
-    """A LIST surface with related_groups uses an unsupported feature."""
+def test_audit_treats_related_groups_as_supported() -> None:
+    """Plan 10 — related_groups is now supported; surfaces with it
+    are not blocked on this feature alone."""
     surface = SurfaceSpec(
         name="x",
         mode=SurfaceMode.LIST,
@@ -101,11 +102,8 @@ def test_audit_marks_related_groups_as_blocked() -> None:
         ],
     )
     report = audit_appspec(_make_appspec([surface]))
-    assert report.blocked_count == 1
-    blockers = report.surfaces[0].blockers
-    assert any(
-        b.kind.value == "unsupported_feature" and b.detail == "related_groups" for b in blockers
-    )
+    assert report.ready_count == 1
+    assert report.blocked_count == 0
 
 
 def test_audit_aggregates_across_surfaces() -> None:

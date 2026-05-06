@@ -179,6 +179,23 @@
     color: var(--colour-text);
   }
 
+  /* ───────────────────────── Related ─────────────────────────
+   * Related-group region — appended to detail surfaces, one per
+   * related entity group (e.g. user_detail showing tasks +
+   * comments). Skeleton placeholder lives here today; htmx-loaded
+   * rows arrive in a later plan.
+   */
+
+  .dz-region--kind-related {
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--colour-border);
+  }
+
+  .dz-region--kind-related .dz-heading--level-2 {
+    margin-block-end: var(--space-sm);
+  }
+
   /* ───────────────────────── Form ────────────────────────────
    * Form-mode region — vertical stack of fields with label-above-input
    * layout. Used by CREATE and EDIT surfaces.

@@ -147,7 +147,7 @@ _SUPPORTED_MODES: frozenset[str] = frozenset({"list", "view", "create", "edit"})
 # Each entry is the SurfaceSpec attribute name; if non-empty, the surface
 # is blocked on that feature.
 _UNSUPPORTED_FEATURES: tuple[str, ...] = (
-    "related_groups",
+    # related_groups closed in Plan 10.
     "companions",
     "search_fields",
     # NB: actions on a SurfaceSpec is empty for most simple surfaces;
