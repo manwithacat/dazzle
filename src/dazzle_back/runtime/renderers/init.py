@@ -11,7 +11,7 @@ to populate `known_renderers=` for link-time validation, before the
 `RuntimeServices` container itself is constructed.
 """
 
-from dazzle_back.runtime.renderers.fragment import FragmentRenderer
+from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
 from dazzle_back.runtime.renderers.jinja import JinjaRenderer
 from dazzle_back.runtime.services import RuntimeServices
 
@@ -29,7 +29,7 @@ def register_default_renderers(services: RuntimeServices) -> None:
     fresh `RuntimeServices` instances rather than reuse and re-register.
     """
     services.renderer_registry.register(name="jinja", handler=JinjaRenderer())
-    services.renderer_registry.register(name="fragment", handler=FragmentRenderer())
+    services.renderer_registry.register(name="fragment", handler=FragmentSurfaceRenderer())
 
 
 def default_renderer_names() -> set[str]:

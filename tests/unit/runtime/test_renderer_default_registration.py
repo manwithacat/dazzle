@@ -3,7 +3,7 @@
 import pytest
 
 from dazzle.render.fragment.errors import PrimitiveRegistrationError
-from dazzle.render.fragment.renderer import FragmentRenderer
+from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
 from dazzle_back.runtime.renderers.init import register_default_renderers
 from dazzle_back.runtime.services import RuntimeServices
 
@@ -14,11 +14,15 @@ def test_register_default_renderers_adds_jinja_and_fragment() -> None:
     assert sorted(services.renderer_registry.registered_names()) == ["fragment", "jinja"]
 
 
-def test_fragment_handler_is_a_FragmentRenderer() -> None:
+def test_fragment_handler_is_a_FragmentSurfaceRenderer() -> None:
+    """Plan 5: registered handler is the (surface, ctx) adapter, not the
+    bare Fragment-tree renderer. The dispatcher calls .render(surface, ctx)
+    uniformly across renderers; the adapter does the IR→Fragment translation
+    internally."""
     services = RuntimeServices()
     register_default_renderers(services)
     handler = services.renderer_registry.resolve("fragment")
-    assert isinstance(handler, FragmentRenderer)
+    assert isinstance(handler, FragmentSurfaceRenderer)
 
 
 def test_default_registration_is_not_idempotent() -> None:
