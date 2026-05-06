@@ -1055,7 +1055,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     prc.ctx_overrides["table"] = req_table
 
 
-def _build_dispatch_ctx(render_ctx: Any) -> dict[str, Any]:
+def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
     """Translate the per-request PageContext into the flat ctx dict shape
     that the renderer registry adapters consume.
 
@@ -1135,9 +1135,23 @@ def _build_dispatch_ctx(render_ctx: Any) -> dict[str, Any]:
                         "kind": getattr(f, "type", "text") or "text",
                     }
                 )
+        # Plan 10: thread surface.related_groups (IR-level) into the ctx
+        related_groups_out: list[dict[str, Any]] = []
+        for rg in getattr(surface, "related_groups", []) or []:
+            display = getattr(rg, "display", None)
+            related_groups_out.append(
+                {
+                    "name": getattr(rg, "name", ""),
+                    "title": getattr(rg, "title", "") or getattr(rg, "name", ""),
+                    "display": display.value
+                    if hasattr(display, "value")
+                    else str(display or "table"),
+                }
+            )
         return {
             "fields": fields_out,
             "region_name": getattr(detail, "entity_name", "") + "_detail",
+            "related_groups": related_groups_out,
         }
 
     return {}
@@ -1181,7 +1195,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     from dazzle.render.fragment.errors import FragmentError
     from dazzle_back.runtime.renderers.dispatch import dispatch_render
 
-    ctx_dict = _build_dispatch_ctx(render_ctx)
+    ctx_dict = _build_dispatch_ctx(render_ctx, surface)
     try:
         return dispatch_render(surface, ctx=ctx_dict, services=services)
     except FragmentError as e:
