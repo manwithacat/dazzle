@@ -141,7 +141,7 @@ class CoverageReport:
 
 # Capability matrix — what FragmentSurfaceAdapter currently supports.
 # Updated when the adapter gains new mode/feature/field-type support.
-_SUPPORTED_MODES: frozenset[str] = frozenset({"list", "view"})
+_SUPPORTED_MODES: frozenset[str] = frozenset({"list", "view", "create", "edit"})
 
 # Surface-level features that block Fragment rendering when present.
 # Each entry is the SurfaceSpec attribute name; if non-empty, the surface
@@ -158,7 +158,7 @@ _UNSUPPORTED_FEATURES: tuple[str, ...] = (
 # everything, so structurally no type is blocked yet — this constant is
 # the seam for future restrictions (e.g. `ref` cells need FK-aware
 # rendering and per-row link generation).
-_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset()
+_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"ref", "uuid", "json", "file"})
 
 
 def _audit_surface(surface: object) -> SurfaceCoverage:

@@ -67,14 +67,14 @@ def test_audit_marks_simple_list_as_ready() -> None:
     assert report.surfaces[0].is_ready
 
 
-def test_audit_marks_create_mode_as_blocked() -> None:
-    """Plan 8 added VIEW; CREATE remains unsupported (Plan 9 closure)."""
-    surface = SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE)
+def test_audit_marks_custom_mode_as_blocked() -> None:
+    """Plan 9 added CREATE+EDIT; CUSTOM remains unsupported (Plan 9 closure)."""
+    surface = SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM)
     report = audit_appspec(_make_appspec([surface]))
     assert report.ready_count == 0
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_mode" and b.detail == "CREATE" for b in blockers)
+    assert any(b.kind.value == "unsupported_mode" and b.detail == "CUSTOM" for b in blockers)
 
 
 def test_audit_marks_view_mode_as_ready() -> None:
@@ -111,14 +111,14 @@ def test_audit_marks_related_groups_as_blocked() -> None:
 def test_audit_aggregates_across_surfaces() -> None:
     """Three surfaces, two blocked on CREATE mode — count is 2."""
     surfaces = [
-        SurfaceSpec(name="a", mode=SurfaceMode.CREATE),
-        SurfaceSpec(name="b", mode=SurfaceMode.CREATE),
+        SurfaceSpec(name="a", mode=SurfaceMode.CUSTOM),
+        SurfaceSpec(name="b", mode=SurfaceMode.CUSTOM),
         SurfaceSpec(name="c", mode=SurfaceMode.LIST),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     assert report.ready_count == 1
     assert report.blocked_count == 2
-    assert report.aggregated_blockers[("unsupported_mode", "CREATE")] == 2
+    assert report.aggregated_blockers[("unsupported_mode", "CUSTOM")] == 2
 
 
 def test_coverage_report_aggregates() -> None:
@@ -129,16 +129,16 @@ def test_coverage_report_aggregates() -> None:
         blockers=(Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="VIEW"),),
     )
     c = SurfaceCoverage(
-        name="task_create",
-        mode="CREATE",
-        blockers=(Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="CREATE"),),
+        name="task_custom",
+        mode="CUSTOM",
+        blockers=(Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="CUSTOM"),),
     )
     report = CoverageReport(surfaces=(a, b, c))
     assert report.ready_count == 1
     assert report.blocked_count == 2
     assert report.aggregated_blockers == {
         ("unsupported_mode", "VIEW"): 1,
-        ("unsupported_mode", "CREATE"): 1,
+        ("unsupported_mode", "CUSTOM"): 1,
     }
 
 
@@ -146,14 +146,14 @@ def test_coverage_report_to_text_basic_shape() -> None:
     """Mix of LIST (ready) and CREATE (blocked) — text output covers both sections."""
     surfaces = [
         SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
-        SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE),
+        SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     text = report.to_text()
     assert "Coverage:" in text
     assert "1 / 2" in text
     assert "task_list" in text
-    assert "task_create" in text
+    assert "task_custom" in text
     assert "✓" in text
     assert "✗" in text
     assert "unsupported_mode" in text
@@ -164,7 +164,7 @@ def test_coverage_report_to_json_shape() -> None:
 
     surfaces = [
         SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
-        SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE),
+        SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     payload = json.loads(report.to_json())
@@ -175,11 +175,11 @@ def test_coverage_report_to_json_shape() -> None:
     assert by_name["task_list"]["is_ready"] is True
     assert by_name["task_list"]["mode"] == "LIST"
     assert by_name["task_list"]["blockers"] == []
-    assert by_name["task_create"]["is_ready"] is False
-    assert by_name["task_create"]["mode"] == "CREATE"
-    assert {"kind": "unsupported_mode", "detail": "CREATE"} in by_name["task_create"]["blockers"]
+    assert by_name["task_custom"]["is_ready"] is False
+    assert by_name["task_custom"]["mode"] == "CUSTOM"
+    assert {"kind": "unsupported_mode", "detail": "CUSTOM"} in by_name["task_custom"]["blockers"]
     assert payload["aggregated_blockers"][0] == {
         "kind": "unsupported_mode",
-        "detail": "CREATE",
+        "detail": "CUSTOM",
         "count": 1,
     }
