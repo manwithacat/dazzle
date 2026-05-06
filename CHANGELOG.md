@@ -32,6 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Jinja path. CSS-presence test in `tests/unit/test_fragment_primitive_css.py`
   pins the coverage; new primitives that get flipped in later plans must
   add to both the CSS file and the test's `_REQUIRED_CLASSES` tuple.
+- **Related groups for FragmentSurfaceAdapter (Plan 10).** Detail
+  surfaces with `related_groups` (e.g. `user_detail` showing tasks +
+  comments) now flip cleanly to `render: fragment`. The adapter
+  appends Region(kind="related") entries after the detail's field
+  stack, each containing the group's heading + a Skeleton placeholder
+  (the actual related-entity rows arrive via a separate htmx fetch,
+  out of scope for this plan). CSS rules under `.dz-region--kind-related`.
+  **Cumulative example coverage hits 100%** (78/78 surfaces flippable
+  across all five example apps; zero aggregated blockers). The
+  migration's Phase 1 target is met. Phase 2 pivots to AegisMark per
+  `docs/superpowers/plans/migration-roadmap.md`.
 - **Form modes (CREATE + EDIT) for FragmentSurfaceAdapter (Plan 9).**
   Bundled closure of the audit's two largest blockers (17 surfaces each
   across the 5 example apps, 34 in total). The adapter produces a

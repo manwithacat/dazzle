@@ -9,7 +9,12 @@ _SIMPLE_TASK = _REPO_ROOT / "examples" / "simple_task"
 
 
 def test_fragment_audit_text_on_simple_task() -> None:
-    """The CLI emits a human-readable report for examples/simple_task."""
+    """The CLI emits a human-readable report for examples/simple_task.
+
+    Plan 10 brought simple_task to 100% Fragment-renderable, so the
+    output now shows the all-ready state — no Blocked section, no
+    Aggregated blockers section. Verifies the structural shape of the
+    100%-ready output."""
     result = subprocess.run(
         [
             "python",
@@ -23,15 +28,14 @@ def test_fragment_audit_text_on_simple_task() -> None:
         cwd=_REPO_ROOT,
         check=False,
     )
-    # Default exit code is 0 (informational); --fail-on-blocked tested below.
     assert result.returncode == 0, f"stderr: {result.stderr!r}"
     out = result.stdout
     assert "Coverage:" in out
     assert "task_list" in out
     assert "task_detail" in out
+    # All surfaces ready → only ✓ entries should appear
     assert "✓" in out
-    assert "✗" in out
-    assert "Aggregated blockers" in out
+    assert "Ready" in out
 
 
 def test_fragment_audit_json_on_simple_task() -> None:
@@ -59,10 +63,12 @@ def test_fragment_audit_json_on_simple_task() -> None:
     assert payload["ready_count"] >= 1  # at least task_list flips
 
 
-def test_fragment_audit_fail_on_blocked_returns_nonzero() -> None:
-    """--fail-on-blocked exits 1 when surfaces are blocked. simple_task
-    currently has blocked surfaces (CREATE/EDIT/VIEW modes), so this is
-    a useful CI-gate test."""
+def test_fragment_audit_fail_on_blocked_returns_zero_when_clean() -> None:
+    """--fail-on-blocked exits 0 when every surface is ready (CI-gate
+    success path). Plan 10 brought all five examples to 100%, so this
+    test pins that state — any future regression that introduces a
+    blocker (e.g. a new IR feature the adapter doesn't handle) will
+    flip the exit code and fail this test."""
     result = subprocess.run(
         [
             "python",
@@ -77,4 +83,4 @@ def test_fragment_audit_fail_on_blocked_returns_nonzero() -> None:
         cwd=_REPO_ROOT,
         check=False,
     )
-    assert result.returncode == 1
+    assert result.returncode == 0, f"stderr: {result.stderr!r}"
