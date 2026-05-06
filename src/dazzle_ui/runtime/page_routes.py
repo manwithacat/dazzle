@@ -1280,7 +1280,32 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # extracts <body> content anyway.  History-restore is the one
     # exception: the browser needs a full document for cache misses.
     is_partial = htmx.is_htmx and not htmx.is_history_restore
-    html = render_page(render_ctx, partial=is_partial, inner_html=inner_html)
+
+    # Plan 17 P3: opt-in Fragment chrome for full-document renders.
+    # When `app.state.fragment_chrome` is truthy AND we're rendering
+    # a complete document (not a partial), bypass the Jinja base.html
+    # and use the typed Page primitive instead. The chrome flag is
+    # set by app authors via `dazzle.toml` or directly on app.state;
+    # default off so existing deployments are unchanged. Partial /
+    # drawer / fragment paths stay on Jinja — Page is full-document
+    # only by design.
+    use_fragment_chrome = bool(
+        getattr(getattr(prc.request, "app", None), "state", None)
+        and getattr(prc.request.app.state, "fragment_chrome", False)
+        and not is_partial
+        and inner_html is not None
+    )
+    if use_fragment_chrome:
+        from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+
+        html = dispatch_render_page(
+            render_ctx,
+            inner_html or "",
+            css_links=("/static/dist/dazzle.min.css",),
+            js_scripts=("/static/dist/dazzle.min.js",),
+        )
+    else:
+        html = render_page(render_ctx, partial=is_partial, inner_html=inner_html)
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
     # <title> never updates from server content. Fire the dz:titleUpdate
