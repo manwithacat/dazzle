@@ -48,6 +48,10 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-field",
     "dz-combobox",
     "dz-submit",
+    # Plan 14 — RefPicker (REF field selector)
+    "dz-ref-picker",
+    "dz-ref-picker__label",
+    "dz-ref-picker__select",
 )
 
 
