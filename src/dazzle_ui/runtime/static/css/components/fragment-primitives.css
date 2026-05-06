@@ -33,6 +33,43 @@
     font-family: var(--font-sans, "Inter", system-ui, sans-serif);
   }
 
+  /* ───────────────────────── AppShell ────────────────────────
+   * Multi-slot application layout — sidebar / header / main / footer.
+   * Mirrors the legacy app_shell.html structure so the same component
+   * CSS in `components/fragments.css` (`.dz-app-shell`, `.dz-app-content`)
+   * applies. The Fragment AppShell adds the missing CSS hooks for
+   * the typed slots (`.dz-app-sidebar`, `.dz-app-header`, `.dz-app-main`,
+   * `.dz-app-footer`) so a Fragment-rendered shell still gets layout
+   * structure even when components/fragments.css isn't loaded.
+   */
+
+  .dz-app-sidebar {
+    /* Composes with the existing dz-sidebar styling when present;
+       on its own, provides a minimal column. Width tracks the
+       legacy template's lg:w-64 (16rem). */
+    flex: 0 0 auto;
+    width: 16rem;
+  }
+
+  .dz-app-header {
+    /* Top bar; vertical rhythm matches the dz-topbar component. */
+    display: flex;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    border-block-end: 1px solid var(--colour-border);
+  }
+
+  .dz-app-main {
+    /* The main content slot — flex-grows to fill the column. */
+    flex: 1 1 auto;
+    padding: var(--space-md);
+  }
+
+  .dz-app-footer {
+    padding: var(--space-sm) var(--space-md);
+    border-block-start: 1px solid var(--colour-border);
+  }
+
   /* ───────────────────────── Surface ─────────────────────────
    * Top-level rendered surface — the typed Fragment equivalent of
    * a workspace's main page or a list/detail page wrapper.

@@ -17,6 +17,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Grid",
         # containers
         "Page",
+        "AppShell",
         "Surface",
         "Card",
         "Region",

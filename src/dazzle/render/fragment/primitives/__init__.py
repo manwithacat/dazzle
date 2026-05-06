@@ -2,6 +2,7 @@
 
 from dazzle.render.fragment.primitives._base import Fragment
 from dazzle.render.fragment.primitives.containers import (
+    AppShell,
     Card,
     Drawer,
     Modal,
@@ -46,6 +47,7 @@ __all__ = [
     "Grid",
     # containers
     "Page",
+    "AppShell",
     "Surface",
     "Card",
     "Region",

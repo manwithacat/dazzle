@@ -11,6 +11,7 @@ from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
 from dazzle.render.fragment.primitives import (
     KPI,
+    AppShell,
     Badge,
     BarChart,
     Button,
@@ -100,6 +101,7 @@ __all__ = [
     "Grid",
     # primitives — containers
     "Page",
+    "AppShell",
     "Surface",
     "Card",
     "Region",

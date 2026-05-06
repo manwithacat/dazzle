@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.47] - 2026-05-07
+
+### Added
+- **`AppShell` Fragment primitive (P17 Phase 5).** Multi-slot layout — sidebar / header / body / footer. Mirrors the legacy `app_shell.html` structure (`dz-app-shell` + `dz-app-content` + `<main id="main-content">`) so existing component CSS continues to apply. The `body` slot is required; the other three are optional. Fills the gap between Fragment chrome (P17 P1-P4) and a feature-complete app layout — apps with `fragment_chrome=True` can now compose `Page` → `AppShell` → `Surface` for an end-to-end Fragment-rendered shell. 11 unit tests pin slot rendering + ordering + Page composition.
+- CSS hooks for `.dz-app-sidebar`, `.dz-app-header`, `.dz-app-main`, `.dz-app-footer` in `fragment-primitives.css` so a Fragment-rendered shell still gets layout structure when the legacy `components/fragments.css` isn't loaded.
+
+### Agent Guidance
+- The AppShell primitive is structural-only — Alpine state (sidebar persistence, dark-mode toggle), nav-item iteration, and topbar widgets live INSIDE the slot fragments the caller provides. Build typed Sidebar / Topbar primitives in follow-ups when the slot shapes stabilise; until then, callers can pass Stack-of-Link primitives or RawHTML escapes for legacy nav markup during the migration window.
+
 ## [0.66.46] - 2026-05-06
 
 ### Added

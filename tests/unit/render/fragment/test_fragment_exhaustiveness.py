@@ -11,6 +11,7 @@ import pytest
 from dazzle.render.fragment import (
     KPI,
     URL,
+    AppShell,
     Badge,
     BarChart,
     Button,
@@ -70,6 +71,8 @@ def _sample_for(primitive_type: type) -> object:
         return Surface(body=Text("body"))
     if primitive_type is Page:
         return Page(title="X", body=Text("x"))
+    if primitive_type is AppShell:
+        return AppShell(body=Text("body"))
     if primitive_type is Card:
         return Card(body=Text("body"))
     if primitive_type is Region:

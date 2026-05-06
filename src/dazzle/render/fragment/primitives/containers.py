@@ -153,6 +153,37 @@ class Modal:
 
 
 @dataclass(frozen=True, slots=True)
+class AppShell:
+    """Multi-slot application layout — sidebar / header / body / footer.
+
+    The structural skeleton an app uses inside `Page.body` to organise
+    its primary navigation, top bar, main content, and footer. Mirrors
+    the `dz-app-shell` / `dz-app-content` structure the legacy
+    `app_shell.html` template produces, but with typed slots instead of
+    Jinja `block` overrides.
+
+    `body` is required; `sidebar`, `header`, `footer` are optional. A
+    minimal use is `AppShell(body=Surface(...))` — just a content
+    column with no chrome around it. A full use composes navigation
+    primitives (Sidebar, Topbar — landing in a follow-up) into the
+    optional slots.
+
+    Renderer behaviour: emits the same CSS class structure as the
+    legacy template, so existing component CSS continues to apply.
+    Alpine state (sidebar persistence, dark-mode toggle) is intentionally
+    NOT bundled into the primitive — that's the responsibility of the
+    caller, who passes the appropriate header content (e.g. a Topbar
+    primitive that wires its own toggle), or a RawHTML escape hatch
+    for legacy Alpine markup during the migration window.
+    """
+
+    body: object
+    sidebar: object | None = None
+    header: object | None = None
+    footer: object | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Page:
     """Full HTML document — `<html>` + `<head>` + `<body>`.
 

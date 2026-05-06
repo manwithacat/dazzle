@@ -14,6 +14,7 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
     KPI,
+    AppShell,
     Badge,
     BarChart,
     Button,
@@ -89,6 +90,8 @@ class FragmentRenderer:
             # Containers
             case Page():
                 return self._emit_page(fragment, ctx)
+            case AppShell():
+                return self._emit_app_shell(fragment, ctx)
             case Surface():
                 return self._emit_surface(fragment, ctx)
             case Card():
@@ -266,6 +269,36 @@ class FragmentRenderer:
             )
         parts.append("</body>")
         parts.append("</html>")
+        return "".join(parts)
+
+    def _emit_app_shell(self, a: AppShell, ctx: RenderContext) -> str:
+        """Emit the `dz-app-shell` layout — sidebar + content (header,
+        main, footer). Mirrors the legacy `app_shell.html` structure
+        so existing component CSS continues to apply.
+
+        Slots are rendered as their primitive type dictates; the
+        primitive itself is structural-only (no Alpine state, no theme
+        switcher — those live inside the slot fragments the caller
+        provides)."""
+        parts: list[str] = ['<div class="dz-app-shell">']
+        if a.sidebar is not None:
+            parts.append(
+                f'<aside class="dz-app-sidebar">{self._emit(a.sidebar, ctx)}</aside>'  # type: ignore[arg-type]
+            )
+        parts.append('<div class="dz-app-content">')
+        if a.header is not None:
+            parts.append(
+                f'<header class="dz-app-header">{self._emit(a.header, ctx)}</header>'  # type: ignore[arg-type]
+            )
+        parts.append(
+            f'<main class="dz-app-main" id="main-content">{self._emit(a.body, ctx)}</main>'  # type: ignore[arg-type]
+        )
+        if a.footer is not None:
+            parts.append(
+                f'<footer class="dz-app-footer">{self._emit(a.footer, ctx)}</footer>'  # type: ignore[arg-type]
+            )
+        parts.append("</div>")
+        parts.append("</div>")
         return "".join(parts)
 
     def _emit_surface(self, s: Surface, ctx: RenderContext) -> str:

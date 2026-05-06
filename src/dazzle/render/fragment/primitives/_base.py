@@ -6,6 +6,7 @@ reaching into this module directly.
 
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives.containers import (
+    AppShell,
     Card,
     Drawer,
     Modal,
@@ -49,6 +50,7 @@ Fragment = (
     | Grid
     # Containers
     | Page
+    | AppShell
     | Surface
     | Card
     | Region

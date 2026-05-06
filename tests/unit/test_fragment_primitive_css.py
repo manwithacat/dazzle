@@ -54,6 +54,11 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-ref-picker__select",
     # P17 P1 — Page primitive emits `<body class="dz-page">`
     "dz-page",
+    # P17 P5 — AppShell layout slots
+    "dz-app-sidebar",
+    "dz-app-header",
+    "dz-app-main",
+    "dz-app-footer",
 )
 
 
