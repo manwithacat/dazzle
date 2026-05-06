@@ -295,6 +295,7 @@ surface task_detail "Task Detail":
 surface task_comments "Task Comments":
   uses entity TaskComment
   mode: list
+  render: fragment
 
   section main "Comments":
     field author "Author"
@@ -312,6 +313,7 @@ surface task_comments "Task Comments":
 surface comment_detail "Comment Detail":
   uses entity TaskComment
   mode: view
+  render: fragment
 
   section main "Comment":
     field task "Task"
@@ -325,6 +327,7 @@ surface comment_detail "Comment Detail":
 surface comment_create "Add Comment":
   uses entity TaskComment
   mode: create
+  render: fragment
 
   section main "New Comment":
     field content "Comment"
@@ -336,6 +339,7 @@ surface comment_create "Add Comment":
 surface comment_edit "Edit Comment":
   uses entity TaskComment
   mode: edit
+  render: fragment
 
   access: persona(admin)
 
@@ -398,6 +402,7 @@ surface task_edit "Edit Task":
 surface user_list "Team Members":
   uses entity User
   mode: list
+  render: fragment
 
   access: persona(admin, manager)
 
@@ -428,6 +433,7 @@ surface user_list "Team Members":
 surface user_detail "Team Member Detail":
   uses entity User
   mode: view
+  render: fragment
 
   access: persona(admin, manager)
 
@@ -454,6 +460,7 @@ surface user_detail "Team Member Detail":
 surface user_create "Add Team Member":
   uses entity User
   mode: create
+  render: fragment
 
   access: persona(admin)
 
@@ -470,6 +477,7 @@ surface user_create "Add Team Member":
 surface user_edit "Edit Team Member":
   uses entity User
   mode: edit
+  render: fragment
 
   access: persona(admin)
 
