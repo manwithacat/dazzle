@@ -158,16 +158,16 @@ jobs:
           fi
         done
 
-    - name: Fragment audit (per example, advisory)
+    - name: Fragment audit (per example, --fail-on-blocked)
       run: |
-        # Plan 13: surfaces the audit's honest field-type coverage. Advisory
-        # mode (|| echo) so existing REF/UUID/JSON/FILE blockers don't break
-        # CI on the commit that surfaces them. A future plan tightens to
-        # --fail-on-blocked once the adapter closes those gaps.
+        # Plan 14 closed the REF gap (the only cross-app blocker); every
+        # example now reports 0 blockers. Tightened from advisory to strict
+        # — any future IR change that introduces an adapter-incomplete
+        # feature will fail CI on the surfacing commit.
         for dir in examples/simple_task examples/contact_manager examples/support_tickets examples/ops_dashboard examples/fieldtest_hub; do
           if [ -d "${dir}/dsl" ]; then
             echo "=== fragment-audit: $dir ==="
-            python -m dazzle fragment-audit "$dir" || echo "Note: audit reported blockers in $dir (advisory)"
+            python -m dazzle fragment-audit "$dir" --fail-on-blocked
           fi
         done
 

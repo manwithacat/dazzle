@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.42] - 2026-05-06
+
+### Changed
+- CI fragment-audit step tightened from advisory (`|| echo`) to strict (`--fail-on-blocked`). Every example now reports 0 blockers post-Plan-14, so the gate fails CI on any future IR change that introduces an adapter-incomplete feature.
+
 ## [0.66.41] - 2026-05-06
 
 ### Added
