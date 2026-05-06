@@ -31,6 +31,7 @@ from dazzle.render.fragment.primitives import (
     Link,
     Modal,
     PivotTable,
+    RefPicker,
     Region,
     Row,
     Skeleton,
@@ -128,5 +129,6 @@ __all__ = [
     "FormStack",
     "Field",
     "Combobox",
+    "RefPicker",
     "Submit",
 ]

@@ -31,7 +31,7 @@ from dazzle.render.fragment.primitives.data import (
     Table,
     Timeline,
 )
-from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, Submit
+from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, RefPicker, Submit
 from dazzle.render.fragment.primitives.interactive import (
     Button,
     InlineEdit,
@@ -78,6 +78,7 @@ Fragment = (
     | FormStack
     | Field
     | Combobox
+    | RefPicker
     | Submit
     # Escape hatches
     | RawHTML
