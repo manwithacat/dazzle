@@ -47,6 +47,7 @@ entity Contact "Contact":
 surface contact_list "Contact List":
   uses entity Contact
   mode: list
+  render: fragment
 
   section main "Contacts":
     field first_name "First Name"
@@ -66,6 +67,7 @@ surface contact_list "Contact List":
 surface contact_detail "Contact Detail":
   uses entity Contact
   mode: view
+  render: fragment
 
   section main "Contact Details":
     field first_name "First Name"
@@ -86,6 +88,7 @@ surface contact_detail "Contact Detail":
 surface contact_create "Create Contact":
   uses entity Contact
   mode: create
+  render: fragment
 
   section identity "Identity":
     field first_name "First Name"
@@ -109,6 +112,7 @@ surface contact_create "Create Contact":
 surface contact_edit "Edit Contact":
   uses entity Contact
   mode: edit
+  render: fragment
 
   section identity "Identity":
     field first_name "First Name"
