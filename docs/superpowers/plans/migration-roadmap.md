@@ -44,6 +44,12 @@ DSL/audit delta: framework-injected surfaces (`feedback_*`, `_admin_*`) appear i
 
 ## Where we're going
 
+### Phase 2C — Runtime render-check tool (planned, deferred)
+
+Cyfuture pilot suggestion (validated 2026-05-06 against v0.66.44): add `dazzle fragment-render --dry <surface>` as an opt-in runtime feedback tool, separate from the static audit. The static audit proves the adapter *can* emit a primitive tree; runtime render proves the resulting HTML survives htmx/Alpine wiring without standing up a browser. Use as a pre-flip per-surface gate, not as a CI step (the static audit stays in CI).
+
+Deferred until a real consumer surfaces a surface that audits clean but breaks at runtime — i.e. don't build until we have a failure mode to design against.
+
 ### Phase 2B — Aegismark and downstream
 
 With 100% example coverage and a CI gate locked in, point the audit at AegisMark. The `fragment-audit` CLI takes any project path; the same blocker-counting logic surfaces what AegisMark needs. Likely candidates from prior conversations: kanban (#1015), day timeline (#1016), pupil card (#1017), class strip (#1018) — but the audit will tell us which ones, in what order, and how many surfaces each unblocks. No speculation needed.
