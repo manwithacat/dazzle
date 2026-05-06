@@ -37,10 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `simple_task.task_list` surface flipped to `render: fragment`. Visible
   output remains structurally equivalent to the Jinja path (parity test
   in `tests/integration/test_simple_task_render_fragment.py`).
-- The `Renderer` protocol on `dazzle.render.fragment.registry` relaxed
-  to `render(*args, **kwargs) -> str` so both Fragment-tree consumers
-  and (SurfaceSpec, ctx)-shaped consumers can satisfy it. The dispatcher
-  knows which signature each registered handler uses.
+- **Dispatch uniformity (Plan 5).** All registered renderers now expose
+  `render(surface, ctx) -> str`. The Fragment path is wrapped in a new
+  `FragmentSurfaceRenderer` adapter that internally builds a Fragment
+  tree via `FragmentSurfaceAdapter` and renders via `FragmentRenderer`.
+  The dispatcher's `if renderer_name == "fragment"` shape-routing is
+  gone — `dispatch_render` is now a single uniform call. The `Renderer`
+  protocol tightened from `render(*args, **kwargs) -> str` to
+  `render(surface, ctx) -> str`. Custom renderers (PDF, native, etc.)
+  just need to satisfy this signature; no further dispatcher changes
+  required.
 
 ## [0.66.37] - 2026-05-06
 
