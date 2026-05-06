@@ -99,6 +99,11 @@ from dazzle.cli.coverage import coverage_command  # noqa: E402
 
 app.command(name="coverage")(coverage_command)
 
+# Fragment-audit command — Fragment-rendering coverage for a single project
+from dazzle.cli.fragment_audit import fragment_audit_command  # noqa: E402
+
+app.command(name="fragment-audit")(fragment_audit_command)
+
 # Sweep command group — unified health check across every example app.
 # `dazzle sweep examples` runs validate + lint + framework coverage snapshot
 # and emits a single report suitable for weekly scheduled runs.
