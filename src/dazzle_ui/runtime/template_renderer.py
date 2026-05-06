@@ -779,3 +779,98 @@ def render_fragment(template_name: str, **kwargs: Any) -> str:
     env = get_jinja_env()
     template = env.get_template(template_name)  # nosemgrep
     return template.render(**kwargs)  # nosemgrep
+
+
+def render_surface(surface: Any, ctx: dict[str, Any]) -> str:
+    """Render a SurfaceSpec to HTML using a minimal context dict.
+
+    This is the registry-facing entry point used by the
+    ``JinjaRenderer`` adapter (Plan 3 Task 1). It accepts a flat ``ctx``
+    dict — ``items``, ``columns``, ``endpoint``, ``total`` etc. — builds
+    a minimal ``PageContext`` and delegates to ``render_page`` with
+    ``content_only=True``.
+
+    The full request-time path in ``page_routes.py`` (auth, scope
+    filtering, persona overrides, drawer/fragment routing, layout
+    selection) is intentionally NOT duplicated here. Callers that need
+    those concerns continue to use the legacy ``render_page`` path
+    directly. This helper is for the typed-Fragment-first conversion: a
+    pure ``(SurfaceSpec, ctx) -> HTML`` function that the renderer
+    registry can dispatch to without dragging FastAPI Request/auth
+    plumbing through the renderer protocol.
+
+    Currently supports ``mode == LIST``. Other modes raise
+    ``NotImplementedError`` until further task work in Plan 3 wires
+    them through the registry.
+
+    Args:
+        surface: ``SurfaceSpec`` to render.
+        ctx: Flat data context. For LIST mode the recognised keys are:
+            - ``items``: list[dict] — table rows
+            - ``columns``: list[dict] — column metadata (key, label, type, ...)
+            - ``endpoint``: str — API endpoint backing the table
+            - ``total``: int — total row count
+            - ``region_name``: str — DOM id for the table
+            - ``page``, ``page_size``: int — pagination
+            - ``empty_message``: str — empty-state copy
+            Unknown keys are ignored.
+
+    Returns:
+        Rendered HTML string.
+
+    Raises:
+        NotImplementedError: when ``surface.mode`` is not LIST.
+    """
+    from dazzle.core.ir.surfaces import SurfaceMode
+    from dazzle_ui.runtime.template_context import (
+        ColumnContext,
+        PageContext,
+        TableContext,
+    )
+
+    mode = getattr(surface, "mode", None)
+    if mode != SurfaceMode.LIST:
+        raise NotImplementedError(
+            f"render_surface currently only supports LIST mode; "
+            f"got {mode!r} for surface {getattr(surface, 'name', '?')!r}. "
+            "Other modes will be added as Plan 3 advances."
+        )
+
+    columns_in = ctx.get("columns") or []
+    columns = [
+        ColumnContext(
+            key=str(c.get("key", "")),
+            label=str(c.get("label") or c.get("key", "")),
+            type=str(c.get("type", "text")),
+            sortable=bool(c.get("sortable", False)),
+            filterable=bool(c.get("filterable", False)),
+            hidden=bool(c.get("hidden", False)),
+        )
+        for c in columns_in
+        if isinstance(c, dict)
+    ]
+
+    entity_name = getattr(surface, "entity_ref", None) or getattr(surface, "name", "") or ""
+    title = getattr(surface, "title", None) or getattr(surface, "name", "") or ""
+
+    table = TableContext(
+        entity_name=str(entity_name),
+        title=str(title),
+        columns=columns,
+        api_endpoint=str(ctx.get("endpoint", "")),
+        rows=list(ctx.get("items") or []),
+        total=int(ctx.get("total", 0) or 0),
+        page=int(ctx.get("page", 1) or 1),
+        page_size=int(ctx.get("page_size", 20) or 20),
+        empty_message=str(ctx.get("empty_message", "No items found.")),
+        table_id=str(ctx.get("region_name", "") or f"{getattr(surface, 'name', 'table')}-table"),
+    )
+
+    page_ctx = PageContext(
+        page_title=str(title),
+        view_name=str(getattr(surface, "name", "") or ""),
+        entity_ref=str(entity_name),
+        table=table,
+    )
+
+    return render_page(page_ctx, content_only=True)
