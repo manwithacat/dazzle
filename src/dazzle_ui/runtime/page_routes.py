@@ -1055,6 +1055,80 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     prc.ctx_overrides["table"] = req_table
 
 
+def _build_dispatch_ctx(render_ctx: Any) -> dict[str, Any]:
+    """Translate the per-request PageContext into the flat ctx dict shape
+    that the renderer registry adapters consume.
+
+    Plan 3 Task 4 only covers LIST surfaces — the only mode the
+    Fragment adapter and the registry-facing ``render_surface`` helper
+    currently support. For other modes the dispatch branch is not
+    selected (see ``_render_response``), so this function is only
+    called when ``render_ctx.table`` is populated.
+    """
+    table = getattr(render_ctx, "table", None)
+    if table is None:
+        return {}
+    columns_out: list[dict[str, Any]] = []
+    for col in getattr(table, "columns", []) or []:
+        columns_out.append(
+            {
+                "key": getattr(col, "key", ""),
+                "label": getattr(col, "label", "") or getattr(col, "key", ""),
+                "type": getattr(col, "type", "text"),
+                "sortable": getattr(col, "sortable", False),
+                "filterable": getattr(col, "filterable", False),
+                "hidden": getattr(col, "hidden", False),
+            }
+        )
+    return {
+        "items": list(getattr(table, "rows", []) or []),
+        "columns": columns_out,
+        "endpoint": getattr(table, "api_endpoint", "") or "",
+        "total": int(getattr(table, "total", 0) or 0),
+        "page": int(getattr(table, "page", 1) or 1),
+        "page_size": int(getattr(table, "page_size", 20) or 20),
+        "region_name": getattr(table, "table_id", "") or "",
+        "empty_message": getattr(table, "empty_message", "") or "No items found.",
+    }
+
+
+def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str | None:
+    """If the surface declares an explicit ``render:`` clause, route the
+    inner-HTML render through the renderer registry. Returns the inner
+    HTML, or None for the legacy direct-template path.
+
+    Default-deny: any failure to resolve the surface, services, or table
+    context falls back to the legacy path. This keeps the change radius
+    contained — only surfaces with an explicit ``render:`` clause AND a
+    well-formed table context can opt in.
+    """
+    surface_name = prc.surface_name
+    if not surface_name:
+        return None
+    appspec = prc.deps.appspec
+    surface = appspec.get_surface(surface_name) if appspec is not None else None
+    if surface is None or surface.render is None:
+        return None
+
+    # Services live on the FastAPI app state. Fall back to legacy path
+    # if they aren't present (e.g. test fixtures with no app shell).
+    services = getattr(getattr(prc.request, "app", None), "state", None)
+    services = getattr(services, "services", None) if services is not None else None
+    if services is None:
+        return None
+
+    # Plan 3 Task 4 only wires LIST mode through dispatch. If the
+    # surface has render: set but no table context (e.g. detail/form),
+    # the adapter would raise NotImplementedError — fall back to legacy.
+    if getattr(render_ctx, "table", None) is None:
+        return None
+
+    from dazzle_back.runtime.renderers.dispatch import dispatch_render
+
+    ctx_dict = _build_dispatch_ctx(render_ctx)
+    return dispatch_render(surface, ctx=ctx_dict, services=services)
+
+
 def _render_response(prc: _PageRequestContext) -> Response:
     """Build the final HTML response, handling HTMX fragment/drawer/full modes."""
     from dazzle_ui.runtime.htmx import HtmxDetails
@@ -1089,17 +1163,23 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # of the shared compiled ctx (#291, #587).
     render_ctx = prc.ctx.model_copy(update=prc.ctx_overrides) if prc.ctx_overrides else prc.ctx
 
+    # Plan 3 Task 4: surfaces with an explicit ``render:`` clause
+    # route through the renderer registry. ``inner_html`` is None for
+    # every surface without ``render:`` set (the overwhelming majority),
+    # which preserves the legacy direct-template path unchanged.
+    inner_html = _maybe_dispatch_inner_html(prc, render_ctx)
+
     # Fragment targeting: nav links target #main-content directly,
     # so return only the content template (no layout wrapper).
     if htmx.wants_fragment:
-        html = render_page(render_ctx, content_only=True)
+        html = render_page(render_ctx, content_only=True, inner_html=inner_html)
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
         return HTMLResponse(content=html, headers=headers)  # nosemgrep
 
     # Drawer targeting: workspace action clicks load detail into
     # a slide-over drawer -- return content-only + open trigger.
     if htmx.wants_drawer:
-        html = render_page(render_ctx, content_only=True)
+        html = render_page(render_ctx, content_only=True, inner_html=inner_html)
         triggers = {
             "dz:drawerOpen": {"url": str(prc.request.url)},
             "dz:titleUpdate": render_ctx.page_title,
@@ -1113,7 +1193,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # extracts <body> content anyway.  History-restore is the one
     # exception: the browser needs a full document for cache misses.
     is_partial = htmx.is_htmx and not htmx.is_history_restore
-    html = render_page(render_ctx, partial=is_partial)
+    html = render_page(render_ctx, partial=is_partial, inner_html=inner_html)
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
     # <title> never updates from server content. Fire the dz:titleUpdate

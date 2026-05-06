@@ -697,6 +697,7 @@ def render_page(
     *,
     partial: bool = False,
     content_only: bool = False,
+    inner_html: str | None = None,
 ) -> str:
     """
     Render a full page from a PageContext.
@@ -711,6 +712,12 @@ def render_page(
             variables so ``base.html`` omits the ``<html><head>`` wrapper.
         content_only: When True, renders only the content template without
             the layout wrapper — used for htmx fragment targeting.
+        inner_html: When provided, skip rendering the content template and
+            use this pre-rendered HTML as the content block (Plan 3 Task 4
+            — dispatch via the renderer registry). The provided HTML is
+            inserted verbatim into the layout's ``content`` block; callers
+            are responsible for any escaping. With ``content_only=True``
+            this short-circuits to returning ``inner_html`` directly.
 
     Returns:
         Rendered HTML string.
@@ -722,9 +729,15 @@ def render_page(
     if partial:
         template_vars["_htmx_partial"] = True
 
-    # Render the content template first (standalone fragment)
-    content_template = env.get_template(context.template)
-    rendered_content = content_template.render(**template_vars)  # nosemgrep
+    if inner_html is not None:
+        # Pre-rendered content path (Plan 3 Task 4): the renderer registry
+        # produced the inner HTML. Skip the Jinja content-template render
+        # and use what was supplied.
+        rendered_content = inner_html
+    else:
+        # Render the content template first (standalone fragment)
+        content_template = env.get_template(context.template)
+        rendered_content = content_template.render(**template_vars)  # nosemgrep
 
     # Fragment targeting: return just the content, no layout wrapper
     if content_only:
