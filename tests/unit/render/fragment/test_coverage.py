@@ -131,3 +131,45 @@ def test_coverage_report_aggregates() -> None:
         ("unsupported_mode", "VIEW"): 1,
         ("unsupported_mode", "CREATE"): 1,
     }
+
+
+def test_coverage_report_to_text_basic_shape() -> None:
+    surfaces = [
+        SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
+        SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW),
+    ]
+    report = audit_appspec(_make_appspec(surfaces))
+    text = report.to_text()
+    assert "Coverage:" in text
+    assert "1 / 2" in text
+    assert "task_list" in text
+    assert "task_detail" in text
+    assert "✓" in text
+    assert "✗" in text
+    assert "unsupported_mode" in text
+
+
+def test_coverage_report_to_json_shape() -> None:
+    import json
+
+    surfaces = [
+        SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
+        SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW),
+    ]
+    report = audit_appspec(_make_appspec(surfaces))
+    payload = json.loads(report.to_json())
+    assert payload["ready_count"] == 1
+    assert payload["blocked_count"] == 1
+    assert payload["total"] == 2
+    by_name = {s["name"]: s for s in payload["surfaces"]}
+    assert by_name["task_list"]["is_ready"] is True
+    assert by_name["task_list"]["mode"] == "LIST"
+    assert by_name["task_list"]["blockers"] == []
+    assert by_name["task_detail"]["is_ready"] is False
+    assert by_name["task_detail"]["mode"] == "VIEW"
+    assert {"kind": "unsupported_mode", "detail": "VIEW"} in by_name["task_detail"]["blockers"]
+    assert payload["aggregated_blockers"][0] == {
+        "kind": "unsupported_mode",
+        "detail": "VIEW",
+        "count": 1,
+    }

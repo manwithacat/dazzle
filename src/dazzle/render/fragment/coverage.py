@@ -76,6 +76,68 @@ class CoverageReport:
                 counter[(b.kind.value, b.detail)] += 1
         return dict(counter)
 
+    def to_text(self) -> str:
+        """Render a human-readable report.
+
+        Format roughly mirrors `dazzle coverage`: header line, ready
+        section, blocked section, aggregated-blockers section.
+        """
+        lines: list[str] = []
+        total = len(self.surfaces)
+        lines.append(f"Coverage: {self.ready_count} / {total} surfaces ready to flip")
+        lines.append("")
+
+        ready = [s for s in self.surfaces if s.is_ready]
+        blocked = [s for s in self.surfaces if not s.is_ready]
+
+        if ready:
+            lines.append(f"Ready ({len(ready)}):")
+            for s in ready:
+                lines.append(f"  ✓ {s.name:30s} mode={s.mode.lower()}")
+            lines.append("")
+
+        if blocked:
+            lines.append(f"Blocked ({len(blocked)}):")
+            for s in blocked:
+                blocker_summary = "; ".join(f"{b.kind.value}={b.detail}" for b in s.blockers)
+                lines.append(f"  ✗ {s.name:30s} mode={s.mode.lower()}: {blocker_summary}")
+            lines.append("")
+
+        if blocked:
+            lines.append("Aggregated blockers (close highest-count first):")
+            agg = self.aggregated_blockers
+            for (kind, detail), count in sorted(agg.items(), key=lambda kv: (-kv[1], kv[0])):
+                lines.append(f"  {count:>3d}  {kind}={detail}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def to_json(self, *, indent: int | None = 2) -> str:
+        """Render the report as JSON. Stable shape for piping into tooling."""
+        import json
+
+        agg = self.aggregated_blockers
+        agg_list = [
+            {"kind": kind, "detail": detail, "count": count}
+            for (kind, detail), count in sorted(agg.items(), key=lambda kv: (-kv[1], kv[0]))
+        ]
+        payload = {
+            "total": len(self.surfaces),
+            "ready_count": self.ready_count,
+            "blocked_count": self.blocked_count,
+            "surfaces": [
+                {
+                    "name": s.name,
+                    "mode": s.mode,
+                    "is_ready": s.is_ready,
+                    "blockers": [{"kind": b.kind.value, "detail": b.detail} for b in s.blockers],
+                }
+                for s in self.surfaces
+            ],
+            "aggregated_blockers": agg_list,
+        }
+        return json.dumps(payload, indent=indent)
+
 
 # Capability matrix — what FragmentSurfaceAdapter currently supports.
 # Updated when the adapter gains new mode/feature/field-type support.
