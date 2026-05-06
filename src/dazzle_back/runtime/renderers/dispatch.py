@@ -1,10 +1,16 @@
-"""Dispatch helper: route a surface render through the right renderer."""
+"""Dispatch helper: route a surface render through the right renderer.
+
+Plan 5 simplified the dispatcher to a single uniform call. Every
+registered renderer exposes `render(surface, ctx) -> str` via its adapter
+(JinjaRenderer wraps the legacy template path; FragmentSurfaceRenderer
+wraps the typed Fragment substrate). The dispatcher's only job is to
+look up the handler by name and call it.
+"""
 
 from typing import Any
 
 from dazzle.core.ir.surfaces import SurfaceSpec
 from dazzle.render.fragment.errors import FragmentError
-from dazzle_back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle_back.runtime.services import RuntimeServices
 
 
@@ -27,10 +33,4 @@ def dispatch_render(
             f"registered renderers: {sorted(services.renderer_registry.registered_names())}"
         )
 
-    if renderer_name == "fragment":
-        # Translate IR + ctx into a Fragment tree, then emit.
-        fragment = FragmentSurfaceAdapter().build(surface, ctx)
-        return handler.render(fragment)
-
-    # Jinja and other (surface, ctx)-shaped renderers go directly.
     return handler.render(surface, ctx)
