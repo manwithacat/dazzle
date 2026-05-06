@@ -100,7 +100,26 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
 
 
 def _load_handler(py_file: Path) -> Callable[..., Any] | None:
-    """Load a Python file and extract the ``handler`` function."""
+    """Load a Python file and extract the ``handler`` function.
+
+    Issue #1020: when the override file re-exports its ``handler`` from
+    another module via ``from X import handler``, the returned callable's
+    ``__module__`` points at the *source* module, not the override file.
+    Multiple alias files all sharing one underlying handler then collapse
+    onto a single dispatch identity — every alias path serves whichever
+    underlying body imported first.
+
+    To preserve the natural re-export idiom while keeping per-file
+    identity, when we detect a re-export we wrap the underlying callable
+    in a thin async forwarder owned by the alias module. The forwarder's
+    ``__module__`` is the alias module name (keyed by file path stem),
+    so each alias has a distinct dispatch entry while still delegating
+    to the shared underlying behaviour.
+    """
+    # Issue #1020: handlers must be keyed by file path, not by
+    # handler.__module__, because `from X import handler` re-exports
+    # preserve the original __module__ and would collapse multiple
+    # alias files onto a single dispatch entry.
     module_name = f"dazzle_routes.{py_file.stem}"
     spec = importlib.util.spec_from_file_location(module_name, py_file)
     if spec is None or spec.loader is None:
@@ -121,7 +140,38 @@ def _load_handler(py_file: Path) -> Callable[..., Any] | None:
         del sys.modules[module_name]
         return None
 
+    # Detect re-export: the resolved handler was defined elsewhere.
+    # Wrap it in a thin forwarder owned by the alias module so each
+    # alias file has its own dispatch identity.
+    func_module = getattr(func, "__module__", None)
+    if func_module and func_module != module_name:
+        func = _make_alias_forwarder(func, module_name)
+
     return func
+
+
+def _make_alias_forwarder(underlying: Callable[..., Any], owner_module: str) -> Callable[..., Any]:
+    """Wrap ``underlying`` in a thin async forwarder owned by ``owner_module``.
+
+    The forwarder preserves the underlying signature (so FastAPI can
+    introspect type hints and dependencies) while giving each alias file
+    its own callable identity for per-handler keying.
+    """
+    import functools
+
+    @functools.wraps(underlying)
+    async def _alias_handler(*args: Any, **kwargs: Any) -> Any:
+        result = underlying(*args, **kwargs)
+        # Support both async and sync underlying handlers — re-exports
+        # in the wild are typically async, but stay tolerant.
+        if hasattr(result, "__await__"):
+            return await result
+        return result
+
+    _alias_handler.__module__ = owner_module
+    # functools.wraps copies __wrapped__ already; FastAPI's signature
+    # introspection follows that to find the real parameters.
+    return _alias_handler
 
 
 def load_extension_routers(
