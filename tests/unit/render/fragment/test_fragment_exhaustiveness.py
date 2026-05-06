@@ -32,6 +32,7 @@ from dazzle.render.fragment import (
     Modal,
     PivotTable,
     RawHTML,
+    RefPicker,
     Region,
     Row,
     Skeleton,
@@ -127,6 +128,8 @@ def _sample_for(primitive_type: type) -> object:
         return Field(name="t", label="T")
     if primitive_type is Combobox:
         return Combobox(name="s", label="S", options=(("a", "A"),))
+    if primitive_type is RefPicker:
+        return RefPicker(name="r", label="R", ref_api=URL("/x"))
     if primitive_type is Submit:
         return Submit(label="Save")
     if primitive_type is RawHTML:

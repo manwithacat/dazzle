@@ -189,25 +189,20 @@ def test_coverage_report_to_json_shape() -> None:
 # ─────────────────── Plan 13 — entity-ref field resolution ───────────────────
 
 
-def test_audit_flags_ref_field_via_entity_resolution() -> None:
-    """A surface with a SurfaceElement pointing at a REF-typed field on
-    the bound entity must report unsupported_field_type=ref. Plan 13
-    closed the audit's under-reporting gap by walking entity_ref →
-    domain.entities → FieldSpec.type.kind."""
-    user = EntitySpec(
-        name="User",
-        fields=[
-            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-        ],
-    )
+def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
+    """A surface with a SurfaceElement pointing at an unsupported-typed
+    field on the bound entity must report unsupported_field_type. Plan
+    13 closed the audit's under-reporting gap by walking entity_ref →
+    domain.entities → FieldSpec.type.kind. Uses `uuid` because Plan 14
+    closed the `ref` gap (RefPicker primitive shipped)."""
     task = EntitySpec(
         name="Task",
         fields=[
             FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
             FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
             FieldSpec(
-                name="assigned_to",
-                type=FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                name="external_uuid",
+                type=FieldType(kind=FieldTypeKind.UUID),
             ),
         ],
     )
@@ -220,7 +215,7 @@ def test_audit_flags_ref_field_via_entity_resolution() -> None:
                 name="main",
                 elements=[
                     SurfaceElement(field_name="title", label="Title"),
-                    SurfaceElement(field_name="assigned_to", label="Assigned"),
+                    SurfaceElement(field_name="external_uuid", label="External UUID"),
                 ],
             )
         ],
@@ -228,14 +223,14 @@ def test_audit_flags_ref_field_via_entity_resolution() -> None:
     appspec = AppSpec(
         name="t",
         title="T",
-        domain=DomainSpec(entities=[user, task]),
+        domain=DomainSpec(entities=[task]),
         surfaces=[surface],
     )
     report = audit_appspec(appspec)
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_field_type" and b.detail == "ref" for b in blockers), (
-        f"Expected ref blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
+    assert any(b.kind.value == "unsupported_field_type" and b.detail == "uuid" for b in blockers), (
+        f"Expected uuid blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
     )
 
 
@@ -274,22 +269,18 @@ def test_audit_skips_field_resolution_when_entity_not_found() -> None:
 
 
 def test_audit_dedupes_same_field_type_across_elements() -> None:
-    """A surface with three REF fields produces one ref blocker, not
-    three — what matters is that the type is unsupported, not the count
-    per surface (cross-surface aggregation handles that)."""
-    user = EntitySpec(
-        name="User",
-        fields=[
-            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-        ],
-    )
+    """A surface with three unsupported-typed fields produces one
+    blocker per type, not three — what matters is that the type is
+    unsupported, not the count per surface (cross-surface aggregation
+    handles that). Uses `uuid` because `ref` was removed from
+    _UNSUPPORTED_FIELD_TYPES in Plan 14 (RefPicker shipped)."""
     task = EntitySpec(
         name="Task",
         fields=[
             FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
-            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
-            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
+            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.UUID)),
         ],
     )
     surface = SurfaceSpec(
@@ -310,13 +301,13 @@ def test_audit_dedupes_same_field_type_across_elements() -> None:
     appspec = AppSpec(
         name="t",
         title="T",
-        domain=DomainSpec(entities=[user, task]),
+        domain=DomainSpec(entities=[task]),
         surfaces=[surface],
     )
     report = audit_appspec(appspec)
-    ref_count = sum(
+    uuid_count = sum(
         1
         for b in report.surfaces[0].blockers
-        if b.kind.value == "unsupported_field_type" and b.detail == "ref"
+        if b.kind.value == "unsupported_field_type" and b.detail == "uuid"
     )
-    assert ref_count == 1
+    assert uuid_count == 1

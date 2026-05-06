@@ -134,3 +134,20 @@ def test_simple_task_detail_url_renders_via_fragment_or_404() -> None:
                 f"missing Fragment detail marker {marker!r}. "
                 f"body[:500]={body[:500]!r}"
             )
+
+
+def test_simple_task_create_form_has_ref_picker_for_assigned_to() -> None:
+    """The CREATE form for Task includes a RefPicker for `assigned_to:
+    ref User`. Plan 14 closure end-to-end: REF field in DSL → adapter
+    produces RefPicker → renderer emits dz-ref-picker chrome →
+    response body contains it."""
+    client = _client_for("simple_task")
+    resp = client.get("/task/create")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "dz-ref-picker" in body, (
+        f"simple_task /task/create missing RefPicker chrome. body[:500]={body[:500]!r}"
+    )
+    assert "data-ref-api" in body, (
+        f"simple_task /task/create RefPicker missing data-ref-api. body[:500]={body[:500]!r}"
+    )
