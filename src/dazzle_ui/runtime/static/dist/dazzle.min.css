@@ -2355,6 +2355,104 @@ font-style: italic;
 }
 }
 @layer components {
+@layer components {
+.dz-surface {
+display: flex;
+flex-direction: column;
+gap: var(--space-md);
+padding: var(--space-md);
+background: var(--colour-surface);
+color: var(--colour-text);
+}
+.dz-surface__header {
+display: flex;
+flex-direction: column;
+gap: var(--space-xs);
+padding-block-end: var(--space-sm);
+border-block-end: 1px solid var(--colour-border);
+}
+.dz-surface__body {
+display: flex;
+flex-direction: column;
+gap: var(--space-md);
+}
+.dz-surface__footer {
+padding-block-start: var(--space-sm);
+border-block-start: 1px solid var(--colour-border);
+}
+.dz-heading {
+margin: 0;
+color: var(--colour-text);
+font-weight: var(--weight-semibold);
+line-height: 1.25;
+}
+.dz-heading--level-1 { font-size: var(--text-xl); }
+.dz-heading--level-2 { font-size: var(--text-lg); }
+.dz-heading--level-3 { font-size: var(--text-base); }
+.dz-heading--level-4 {
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+}
+.dz-heading--level-5 {
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+color: var(--colour-text-muted);
+}
+.dz-heading--level-6 {
+font-size: var(--text-xs);
+font-weight: var(--weight-medium);
+color: var(--colour-text-muted);
+text-transform: uppercase;
+letter-spacing: 0.05em;
+}
+.dz-region {
+display: flex;
+flex-direction: column;
+gap: var(--space-sm);
+}
+.dz-region--kind-list {
+overflow-x: auto;
+}
+.dz-region--kind-list > .dz-table {
+width: 100%;
+border-collapse: collapse;
+background: var(--colour-surface);
+}
+.dz-region--kind-list > .dz-table thead > tr {
+border-block-end: 1px solid var(--colour-border);
+text-align: left;
+}
+.dz-region--kind-list > .dz-table th {
+padding: var(--space-sm) var(--space-md);
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+color: var(--colour-text-muted);
+}
+.dz-region--kind-list > .dz-table > tbody > tr {
+border-block-end: 1px solid var(--colour-border);
+transition: background-color 0.12s ease;
+}
+.dz-region--kind-list > .dz-table > tbody > tr:last-child {
+border-block-end: none;
+}
+.dz-region--kind-list > .dz-table > tbody > tr:hover {
+background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
+}
+.dz-region--kind-list > .dz-table td {
+padding: var(--space-sm) var(--space-md);
+color: var(--colour-text);
+}
+.dz-text {
+color: var(--colour-text);
+}
+.dz-text--tone-default { color: var(--colour-text); }
+.dz-text--tone-muted { color: var(--colour-text-muted); }
+.dz-text--tone-danger { color: var(--colour-danger); }
+.dz-text--tone-success { color: var(--colour-success); }
+.dz-text--tone-warning { color: var(--colour-warning); }
+}
+}
+@layer components {
 .dz-empty-state {
 display: flex;
 flex-direction: column;

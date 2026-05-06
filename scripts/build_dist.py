@@ -43,6 +43,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("components", STATIC / "css" / "components" / "dashboard.css"),
     ("components", STATIC / "css" / "components" / "detail.css"),
     ("components", STATIC / "css" / "components" / "form.css"),
+    ("components", STATIC / "css" / "components" / "fragment-primitives.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
     ("components", STATIC / "css" / "components" / "htmx-states.css"),
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
