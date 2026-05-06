@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through it for parity testing.
 - `FragmentSurfaceAdapter` translates SurfaceSpec + render context into
   a Fragment tree for surfaces with `render: fragment`.
+- **Fragment-rendered surfaces are now styled.** New
+  `components/fragment-primitives.css` provides CSS rules for every class
+  the Fragment renderer emits for `simple_task.task_list` (Surface,
+  Heading, Region.kind=list, Text, Table). Surfaces flipped to
+  `render: fragment` now display with the same visual chrome as the
+  Jinja path. CSS-presence test in `tests/unit/test_fragment_primitive_css.py`
+  pins the coverage; new primitives that get flipped in later plans must
+  add to both the CSS file and the test's `_REQUIRED_CLASSES` tuple.
 
 ### Changed
 - `simple_task.task_list` surface flipped to `render: fragment`. Visible
@@ -33,9 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `render(*args, **kwargs) -> str` so both Fragment-tree consumers
   and (SurfaceSpec, ctx)-shaped consumers can satisfy it. The dispatcher
   knows which signature each registered handler uses.
-
-### Known limitations
-- **Fragment-rendered surfaces produce structurally-correct HTML but the framework CSS does not yet style the `dz-surface`/`dz-heading--level-N`/`dz-region--kind-X` classes the Fragment renderer emits.** A surface flipped to `render: fragment` will function (data renders, htmx targets work) but the visual chrome will look bare until Plan 4+ wires CSS rules for these classes. `simple_task.task_list` is the only flipped surface and is a development example; downstream apps should not flip surfaces to `render: fragment` until Plan 4 ships.
 
 ## [0.66.37] - 2026-05-06
 
