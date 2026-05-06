@@ -2442,6 +2442,26 @@ background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
 padding: var(--space-sm) var(--space-md);
 color: var(--colour-text);
 }
+.dz-region--kind-detail {
+overflow-x: auto;
+}
+.dz-region--kind-detail .dz-stack {
+gap: var(--space-md);
+}
+.dz-region--kind-detail .dz-row {
+display: grid;
+grid-template-columns: minmax(8rem, 12rem) 1fr;
+gap: var(--space-md);
+align-items: baseline;
+}
+.dz-region--kind-detail .dz-row > .dz-heading {
+color: var(--colour-text-muted);
+font-weight: var(--weight-medium);
+text-align: end;
+}
+.dz-region--kind-detail .dz-row > .dz-text {
+color: var(--colour-text);
+}
 .dz-text {
 color: var(--colour-text);
 }

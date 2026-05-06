@@ -149,6 +149,36 @@
     color: var(--colour-text);
   }
 
+  /* Detail kind — definition-list-shaped layout. Each child Row
+     renders as label (Heading level 4) + value (Text). The Stack
+     wrapper provides the row separation; this rule provides the
+     intra-row layout (label-column + value-column). */
+
+  .dz-region--kind-detail {
+    overflow-x: auto;
+  }
+
+  .dz-region--kind-detail .dz-stack {
+    gap: var(--space-md);
+  }
+
+  .dz-region--kind-detail .dz-row {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    gap: var(--space-md);
+    align-items: baseline;
+  }
+
+  .dz-region--kind-detail .dz-row > .dz-heading {
+    color: var(--colour-text-muted);
+    font-weight: var(--weight-medium);
+    text-align: end;
+  }
+
+  .dz-region--kind-detail .dz-row > .dz-text {
+    color: var(--colour-text);
+  }
+
   /* ───────────────────────── Text ────────────────────────────
    * Inline text primitive — used inside cells, in EmptyState
    * descriptions, badges, and as a bare leaf primitive. The tone

@@ -38,6 +38,8 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     # Basic .dz-table styling lives in components/table.css; list-context
     # cascade is added in fragment-primitives.css.
     "dz-table",
+    # Plan 8 — detail-mode region (definition-list layout)
+    "dz-region--kind-detail",
 )
 
 
