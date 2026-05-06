@@ -46,9 +46,9 @@ def test_list_mode_table_columns_match_ctx() -> None:
 
 
 def test_unsupported_mode_raises() -> None:
-    """Plan 8 added VIEW; CREATE remains unsupported (Plan 9 closure)."""
-    surface = SurfaceSpec(name="x", title="X", mode=SurfaceMode.CREATE, entity_ref="Task")
-    with pytest.raises(NotImplementedError, match="CREATE"):
+    """Plan 9 added CREATE+EDIT; CUSTOM remains unsupported."""
+    surface = SurfaceSpec(name="x", title="X", mode=SurfaceMode.CUSTOM, entity_ref="Task")
+    with pytest.raises(NotImplementedError, match="CUSTOM"):
         FragmentSurfaceAdapter().build(surface, {})
 
 
@@ -122,3 +122,147 @@ def test_empty_items_still_produces_well_formed_fragment() -> None:
     }
     fragment = FragmentSurfaceAdapter().build(surface, ctx)
     assert isinstance(fragment, Surface)
+
+
+def test_create_mode_produces_surface_with_form_region() -> None:
+    """Plan 9 — CREATE mode renders an empty form."""
+    from dazzle.render.fragment import (
+        Field,
+        FormStack,
+        Heading,
+        Region,
+        Submit,
+        Surface,
+    )
+
+    surface = SurfaceSpec(
+        name="task_create",
+        title="New Task",
+        mode=SurfaceMode.CREATE,
+        entity_ref="Task",
+    )
+    ctx = {
+        "fields": [
+            {"name": "title", "label": "Title", "kind": "str", "required": True, "value": ""},
+            {
+                "name": "status",
+                "label": "Status",
+                "kind": "enum",
+                "required": True,
+                "value": "",
+                "options": [("open", "Open"), ("done", "Done")],
+            },
+        ],
+        "action": "/api/Task",
+        "method": "POST",
+        "submit_label": "Create",
+    }
+    fragment = FragmentSurfaceAdapter().build(surface, ctx)
+    assert isinstance(fragment, Surface)
+    assert isinstance(fragment.header, Heading)
+    assert fragment.header.body == "New Task"
+    region = fragment.body
+    assert isinstance(region, Region)
+    assert region.kind == "form"
+    form = region.body
+    assert isinstance(form, FormStack)
+    assert str(form.action) == "/api/Task"
+    assert form.method == "POST"
+    assert isinstance(form.fields[0], Field)
+    assert form.fields[0].name == "title"
+    assert form.fields[0].required is True
+    assert isinstance(form.submit, Submit)
+    assert form.submit.label == "Create"
+
+
+def test_edit_mode_pre_populates_field_values() -> None:
+    """Plan 9 — EDIT mode populates initial_value from row data."""
+    surface = SurfaceSpec(
+        name="task_edit",
+        title="Edit Task",
+        mode=SurfaceMode.EDIT,
+        entity_ref="Task",
+    )
+    ctx = {
+        "fields": [
+            {
+                "name": "title",
+                "label": "Title",
+                "kind": "str",
+                "required": True,
+                "value": "Buy milk",
+            },
+        ],
+        "action": "/api/Task/42",
+        "method": "POST",
+        "submit_label": "Save",
+    }
+    fragment = FragmentSurfaceAdapter().build(surface, ctx)
+    form = fragment.body.body
+    assert form.fields[0].initial_value == "Buy milk"
+    assert form.submit.label == "Save"
+
+
+def test_form_field_type_mapping() -> None:
+    """Plan 9 — IR FieldTypeKind values map to Field.kind correctly."""
+    from dazzle.render.fragment import Field
+
+    cases = [
+        ("str", "text"),
+        ("text", "textarea"),
+        ("email", "email"),
+        ("int", "number"),
+        ("decimal", "number"),
+        ("bool", "checkbox"),
+        ("date", "date"),
+        ("datetime", "datetime-local"),
+    ]
+    for ir_kind, expected_field_kind in cases:
+        full = {
+            "name": "f",
+            "label": "F",
+            "kind": ir_kind,
+            "required": False,
+            "value": "",
+        }
+        ctx = {
+            "fields": [full],
+            "action": "/x",
+            "method": "POST",
+            "submit_label": "Save",
+        }
+        surface = SurfaceSpec(name="x", mode=SurfaceMode.CREATE, entity_ref="X")
+        fragment = FragmentSurfaceAdapter().build(surface, ctx)
+        emitted = fragment.body.body.fields[0]
+        assert isinstance(emitted, Field), (
+            f"{ir_kind!r}: expected Field, got {type(emitted).__name__}"
+        )
+        assert emitted.kind == expected_field_kind, (
+            f"{ir_kind!r}: expected kind={expected_field_kind!r}, got {emitted.kind!r}"
+        )
+
+
+def test_enum_field_becomes_combobox() -> None:
+    """Plan 9 — enum fields render as Combobox."""
+    from dazzle.render.fragment import Combobox
+
+    ctx = {
+        "fields": [
+            {
+                "name": "status",
+                "label": "Status",
+                "kind": "enum",
+                "required": True,
+                "value": "",
+                "options": [("open", "Open"), ("done", "Done")],
+            },
+        ],
+        "action": "/x",
+        "method": "POST",
+        "submit_label": "Save",
+    }
+    surface = SurfaceSpec(name="x", mode=SurfaceMode.CREATE, entity_ref="X")
+    fragment = FragmentSurfaceAdapter().build(surface, ctx)
+    emitted = fragment.body.body.fields[0]
+    assert isinstance(emitted, Combobox)
+    assert emitted.options == (("open", "Open"), ("done", "Done"))

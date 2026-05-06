@@ -13,12 +13,17 @@ from typing import Any
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.render.fragment import (
+    URL,
+    Combobox,
     EmptyState,
+    Field,
+    FormStack,
     Fragment,
     Heading,
     Region,
     Row,
     Stack,
+    Submit,
     Surface,
     Table,
     Text,
@@ -33,9 +38,11 @@ class FragmentSurfaceAdapter:
             return self._build_list(surface, ctx)
         if surface.mode == SurfaceMode.VIEW:
             return self._build_view(surface, ctx)
+        if surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
+            return self._build_form(surface, ctx, mode=surface.mode)
         raise NotImplementedError(
             f"FragmentSurfaceAdapter does not yet support mode {surface.mode.name!r}; "
-            f"Plans 3+8 cover LIST and VIEW. CREATE/EDIT/CUSTOM land in Plan 9+."
+            f"Plans 3+8+9 cover LIST/VIEW/CREATE/EDIT. CUSTOM lands later."
         )
 
     def _build_list(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
@@ -97,6 +104,102 @@ class FragmentSurfaceAdapter:
             header=Heading(title, level=1),
             body=Region(kind="detail", body=body),
         )
+
+    def _build_form(
+        self,
+        surface: SurfaceSpec,
+        ctx: dict[str, Any],
+        *,
+        mode: SurfaceMode,
+    ) -> Surface:
+        """CREATE/EDIT form surface — FormStack with type-aware widgets.
+
+        Both modes share infrastructure; the only differences are:
+        - initial_value (empty in CREATE, from row in EDIT — both flow
+          through ctx["fields"][i]["value"], so the adapter is uniform)
+        - Submit label and action URL (carried via ctx["submit_label"]
+          and ctx["action"])
+        """
+        title = surface.title or surface.name.replace("_", " ").title()
+        fields_in: list[dict[str, Any]] = ctx.get("fields", [])
+        action = ctx.get("action", "") or "/"
+        method = ctx.get("method", "POST")
+        submit_label = ctx.get(
+            "submit_label",
+            "Save" if mode == SurfaceMode.EDIT else "Create",
+        )
+
+        body: Fragment
+        if not fields_in:
+            body = EmptyState(
+                title="No fields",
+                description="This form has no inputs.",
+            )
+        else:
+            primitives = tuple(_field_to_primitive(f) for f in fields_in)
+            method_lit = method if method in ("GET", "POST") else "POST"
+            body = FormStack(
+                action=URL(action),
+                fields=primitives,
+                method=method_lit,  # type: ignore[arg-type]
+                submit=Submit(label=submit_label),
+            )
+
+        return Surface(
+            header=Heading(title, level=1),
+            body=Region(kind="form", body=body),
+        )
+
+
+def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox":
+    """Map a field-shape dict to the right Fragment form primitive.
+
+    Plan 9 covers: str, text, email, int, decimal, float, money, bool,
+    date, datetime, url, enum. Out-of-scope kinds (ref, uuid, json, file)
+    fall through to a plain text Field — the audit flags them as
+    unsupported_field_type so callers see the gap (Plan 11+).
+    """
+    name = str(field_dict.get("name", ""))
+    label = str(field_dict.get("label", name))
+    required = bool(field_dict.get("required", False))
+    placeholder = str(field_dict.get("placeholder", ""))
+    initial_value = str(field_dict.get("value", "") or "")
+    kind = str(field_dict.get("kind", "str")).lower()
+
+    if kind == "enum":
+        options = tuple((str(v), str(label_)) for v, label_ in field_dict.get("options", []))
+        if not options:
+            options = (("", ""),)  # Combobox requires at least one option
+        return Combobox(
+            name=name,
+            label=label,
+            options=options,
+            required=required,
+            initial_value=initial_value,
+        )
+
+    field_kind_map: dict[str, str] = {
+        "str": "text",
+        "text": "textarea",
+        "email": "email",
+        "int": "number",
+        "decimal": "number",
+        "float": "number",
+        "money": "number",
+        "bool": "checkbox",
+        "date": "date",
+        "datetime": "datetime-local",
+        "url": "url",
+    }
+    field_kind = field_kind_map.get(kind, "text")
+    return Field(
+        name=name,
+        label=label,
+        kind=field_kind,  # type: ignore[arg-type]
+        required=required,
+        placeholder=placeholder,
+        initial_value=initial_value,
+    )
 
 
 def _format_cell(value: Any, kind: str) -> str:
