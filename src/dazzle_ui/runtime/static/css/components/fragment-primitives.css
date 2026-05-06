@@ -179,6 +179,92 @@
     color: var(--colour-text);
   }
 
+  /* ───────────────────────── Form ────────────────────────────
+   * Form-mode region — vertical stack of fields with label-above-input
+   * layout. Used by CREATE and EDIT surfaces.
+   */
+
+  .dz-region--kind-form {
+    /* Region container; FormStack inside provides actual layout. */
+  }
+
+  .dz-form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    max-width: 40rem;
+  }
+
+  .dz-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .dz-field__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--colour-text);
+  }
+
+  .dz-field__input {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-base);
+    color: var(--colour-text);
+    background: var(--colour-surface);
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .dz-field__input:focus {
+    outline: 2px solid var(--colour-accent);
+    outline-offset: 1px;
+  }
+
+  .dz-combobox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .dz-combobox__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--colour-text);
+  }
+
+  .dz-combobox__select {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-base);
+    color: var(--colour-text);
+    background: var(--colour-surface);
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .dz-submit {
+    align-self: flex-start;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--colour-brand-contrast);
+    background: var(--colour-brand);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .dz-submit--variant-secondary {
+    background: var(--colour-surface);
+    color: var(--colour-text);
+    border: 1px solid var(--colour-border);
+  }
+
+  .dz-submit--variant-danger {
+    background: var(--colour-danger);
+    color: var(--colour-brand-contrast);
+  }
+
   /* ───────────────────────── Text ────────────────────────────
    * Inline text primitive — used inside cells, in EmptyState
    * descriptions, badges, and as a bare leaf primitive. The tone
