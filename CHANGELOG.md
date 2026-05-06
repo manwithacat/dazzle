@@ -32,6 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Jinja path. CSS-presence test in `tests/unit/test_fragment_primitive_css.py`
   pins the coverage; new primitives that get flipped in later plans must
   add to both the CSS file and the test's `_REQUIRED_CLASSES` tuple.
+- **`dazzle fragment-audit` CLI command (Plan 7).** Walks any AppSpec
+  and reports per-surface Fragment-rendering coverage: ✓ ready / ✗
+  blocked, with typed blocker reasons (unsupported mode, unsupported
+  feature, unsupported field type) and aggregated counts. Text and
+  JSON output (`--json`); `--fail-on-blocked` exit code 1 for CI gate
+  use. Drives prioritisation of subsequent migration plans — close
+  whichever blocker affects the most surfaces first. On
+  `examples/simple_task` today: 6/17 surfaces ready to flip; the
+  highest-leverage closures are CREATE+EDIT mode support (8 surfaces)
+  and VIEW mode (3 surfaces).
 
 ### Changed
 - `simple_task.task_list` surface flipped to `render: fragment`. Visible
