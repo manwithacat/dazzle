@@ -529,6 +529,7 @@ workspace incident_review "Incident Review":
 surface system_list "Systems":
   uses entity System
   mode: list
+  render: fragment
 
   section main "Monitored Systems":
     field name "Name"
@@ -547,6 +548,7 @@ surface system_list "Systems":
 surface system_detail "System Detail":
   uses entity System
   mode: view
+  render: fragment
 
   section main "System Details":
     field name "Name"
@@ -561,6 +563,7 @@ surface system_detail "System Detail":
 surface system_create "Register System":
   uses entity System
   mode: create
+  render: fragment
   access: persona(admin)
   section main "New System":
     field name "Name"
@@ -571,6 +574,7 @@ surface system_create "Register System":
 surface system_edit "Edit System":
   uses entity System
   mode: edit
+  render: fragment
   access: persona(admin)
   section main "Edit System":
     field name "Name"
@@ -582,6 +586,7 @@ surface system_edit "Edit System":
 surface alert_create "Create Alert":
   uses entity Alert
   mode: create
+  render: fragment
   section main "New Alert":
     field system "System"
     field severity "Severity"
@@ -592,6 +597,7 @@ surface alert_create "Create Alert":
 surface alert_list "Alerts":
   uses entity Alert
   mode: list
+  render: fragment
 
   section main "Active Alerts":
     field system "System"
@@ -610,6 +616,7 @@ surface alert_list "Alerts":
 surface alert_detail "Alert Detail":
   uses entity Alert
   mode: view
+  render: fragment
 
   section main "Alert":
     field system "System"
@@ -625,6 +632,7 @@ surface alert_detail "Alert Detail":
 surface alert_ack "Acknowledge Alert":
   uses entity Alert
   mode: edit
+  render: fragment
 
   section main "Acknowledge":
     field status "Status"
