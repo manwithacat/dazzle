@@ -295,6 +295,31 @@ def render_in_app_shell(
         merged_context.update(context)
 
     env = get_jinja_env()
+
+    # Issue #1019: when the request is a boosted htmx swap targeting
+    # #main-content, the response must be the inner content only.
+    # Returning the full document causes idiomorph to relocate <main>
+    # into its own subtree (HierarchyRequestError) and duplicates the
+    # view-transition-name on every sidebar nav.
+    if _is_boosted_main_content_swap(request):
+        from fastapi.responses import HTMLResponse
+
+        tmpl = env.get_template(template)
+        # Render only the `content` block — the inner of <main id="main-content">.
+        # Project templates extend `layouts/app_shell.html` and provide a
+        # `{% block content %}…{% endblock %}` body, so this gives us
+        # exactly what should land inside the existing #main-content.
+        ctx = tmpl.new_context(merged_context)
+        if "content" in tmpl.blocks:
+            fragment = "".join(tmpl.blocks["content"](ctx))
+        else:
+            # Fallback: template has no `content` block (e.g. test stubs
+            # or a project that bypassed the convention). Render the
+            # whole template — at worst we ship slightly more chrome,
+            # but we never crash the boosted nav.
+            fragment = tmpl.render(merged_context)
+        return HTMLResponse(content=fragment)
+
     templates = Jinja2Templates(env=env)
     # Starlette deprecated the old `TemplateResponse(name, ctx)` form
     # in favour of `TemplateResponse(request, name, ctx)`. Pass the
@@ -302,3 +327,23 @@ def render_in_app_shell(
     # request-context-dependent template features (e.g. url_for)
     # have access to it.
     return templates.TemplateResponse(request, template, merged_context)
+
+
+def _is_boosted_main_content_swap(request: Any) -> bool:
+    """Detect the htmx-boosted nav-into-#main-content combo (#1019).
+
+    True when:
+      - ``HX-Boosted: true`` (sidebar nav with hx-boost), AND
+      - ``HX-Target`` resolves to the main shell slot
+        (``main-content`` or ``#main-content``).
+
+    Anything else — non-boosted requests, boosted requests targeting a
+    drawer / OOB region, or requests without htmx headers — falls
+    through to the full-document path."""
+    headers = getattr(request, "headers", None)
+    if headers is None:
+        return False
+    if headers.get("hx-boosted") != "true":
+        return False
+    target = headers.get("hx-target") or ""
+    return target in ("main-content", "#main-content")
