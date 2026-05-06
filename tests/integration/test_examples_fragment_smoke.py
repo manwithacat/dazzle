@@ -62,16 +62,23 @@ def test_example_app_primary_list_is_fragment(app_name: str, primary_list: str) 
 
 
 @pytest.mark.parametrize("app_name,_primary", _APPS)
-def test_example_app_audit_zero_blockers(app_name: str, _primary: str) -> None:
-    """Plan 11 closure: every example reports zero audit blockers.
+def test_example_app_audit_runs_cleanly(app_name: str, _primary: str) -> None:
+    """The audit produces a coherent report for every example.
 
-    Catches regressions where a future IR change introduces a feature the
-    adapter doesn't handle yet — this would silently re-introduce blockers
-    even though `render: fragment` is still on every surface."""
+    Plan 13 made the audit honest — it now flags unsupported_field_type
+    blockers (REF/UUID/JSON/FILE) that earlier plans masked. This test
+    no longer asserts blocked_count == 0; it asserts the audit runs
+    without exception, every surface gets a coverage entry, and JSON
+    serialisation round-trips. The actual blocker counts are tracked
+    in the CHANGELOG + roadmap, where they belong — those numbers are
+    expected to shrink as future plans extend the adapter."""
+    import json
+
     appspec = load_project_appspec(_EXAMPLES / app_name)
     report = audit_appspec(appspec)
-    assert report.blocked_count == 0, (
-        f"{app_name}: {report.blocked_count} blocked surface(s); "
-        f"aggregated_blockers={dict(report.aggregated_blockers)}"
-    )
-    assert report.ready_count == len(report.surfaces)
+    assert len(report.surfaces) > 0
+    assert report.ready_count + report.blocked_count == len(report.surfaces)
+    payload = json.loads(report.to_json())
+    assert payload["total"] == len(report.surfaces)
+    assert payload["ready_count"] == report.ready_count
+    assert payload["blocked_count"] == report.blocked_count
