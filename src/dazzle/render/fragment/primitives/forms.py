@@ -68,6 +68,35 @@ class Combobox:
 
 
 @dataclass(frozen=True, slots=True)
+class RefPicker:
+    """Reference-field picker — selectable list of related entity rows.
+
+    Distinct from Combobox: where Combobox carries a static option tuple
+    (sufficient for enum), RefPicker carries a `ref_api` URL pointing
+    at the related entity's list endpoint. Options are populated
+    client-side at render time by the existing `dz.filterRefSelect`
+    machinery in `dz-alpine.js`.
+
+    `initial_label` lets EDIT forms display the currently-selected
+    record's display field without an extra round-trip on render —
+    the form-ctx builder fills it from the persisted row.
+    """
+
+    name: str
+    label: str
+    ref_api: URL
+    required: bool = False
+    initial_value: str = ""
+    initial_label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("RefPicker requires a non-empty name")
+        if not self.label:
+            raise ValueError("RefPicker requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
 class Submit:
     label: str
     variant: Literal["primary", "secondary", "danger"] = "primary"
