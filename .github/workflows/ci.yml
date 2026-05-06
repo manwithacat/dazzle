@@ -158,6 +158,19 @@ jobs:
           fi
         done
 
+    - name: Fragment audit (per example, advisory)
+      run: |
+        # Plan 13: surfaces the audit's honest field-type coverage. Advisory
+        # mode (|| echo) so existing REF/UUID/JSON/FILE blockers don't break
+        # CI on the commit that surfaces them. A future plan tightens to
+        # --fail-on-blocked once the adapter closes those gaps.
+        for dir in examples/simple_task examples/contact_manager examples/support_tickets examples/ops_dashboard examples/fieldtest_hub; do
+          if [ -d "${dir}/dsl" ]; then
+            echo "=== fragment-audit: $dir ==="
+            python -m dazzle fragment-audit "$dir" || echo "Note: audit reported blockers in $dir (advisory)"
+          fi
+        done
+
     - name: Framework artefact coverage gate
       run: |
         # Locks the "every shipped artefact has a live consumer" invariant
