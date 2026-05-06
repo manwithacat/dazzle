@@ -34,6 +34,7 @@ from dazzle.render.fragment.primitives import (
     Link,
     Modal,
     PivotTable,
+    RefPicker,
     Region,
     Row,
     Skeleton,
@@ -139,6 +140,8 @@ class FragmentRenderer:
                 return self._emit_field(fragment, ctx)
             case Combobox():
                 return self._emit_combobox(fragment, ctx)
+            case RefPicker():
+                return self._emit_ref_picker(fragment, ctx)
             case Submit():
                 return self._emit_submit(fragment, ctx)
             # Defensive fallback — exhaustiveness is verified by
@@ -510,6 +513,31 @@ class FragmentRenderer:
             f'<label class="dz-combobox">'
             f'<span class="dz-combobox__label">{label}</span>'
             f'<select class="dz-combobox__select" name="{name}"{required_attr}>{options}</select>'
+            f"</label>"
+        )
+
+    def _emit_ref_picker(self, r: RefPicker, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(r.name)
+        label = ctx.escape(r.label)
+        ref_api = ctx.escape_attr(r.ref_api.value)
+        initial_value = ctx.escape_attr(r.initial_value)
+        required_attr = " required" if r.required else ""
+        if r.initial_value:
+            initial_option = (
+                f'<option value="{initial_value}" selected>'
+                f"{ctx.escape(r.initial_label or r.initial_value)}</option>"
+            )
+        else:
+            initial_option = ""
+        return (
+            f'<label class="dz-ref-picker">'
+            f'<span class="dz-ref-picker__label">{label}</span>'
+            f'<select class="dz-ref-picker__select" name="{name}" '
+            f'data-ref-api="{ref_api}" '
+            f'data-selected-value="{initial_value}" '
+            f'x-init="dz.filterRefSelect($el)"{required_attr}>'
+            f"{initial_option}"
+            f"</select>"
             f"</label>"
         )
 
