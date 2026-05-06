@@ -20,6 +20,7 @@ from dazzle.render.fragment import (
     FormStack,
     Fragment,
     Heading,
+    RefPicker,
     Region,
     Row,
     Skeleton,
@@ -183,13 +184,14 @@ class FragmentSurfaceAdapter:
         )
 
 
-def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox":
+def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPicker":
     """Map a field-shape dict to the right Fragment form primitive.
 
     Plan 9 covers: str, text, email, int, decimal, float, money, bool,
-    date, datetime, url, enum. Out-of-scope kinds (ref, uuid, json, file)
-    fall through to a plain text Field — the audit flags them as
-    unsupported_field_type so callers see the gap (Plan 11+).
+    date, datetime, url, enum. Plan 14 adds REF (with `ref_api`) →
+    RefPicker. Remaining out-of-scope kinds (uuid, json, file) fall
+    through to a plain text Field — the audit flags them as
+    unsupported_field_type so callers see the gap.
     """
     name = str(field_dict.get("name", ""))
     label = str(field_dict.get("label", name))
@@ -209,6 +211,19 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox":
             required=required,
             initial_value=initial_value,
         )
+
+    if kind == "ref":
+        ref_api = str(field_dict.get("ref_api", "") or "").strip()
+        if ref_api:
+            return RefPicker(
+                name=name,
+                label=label,
+                ref_api=URL(ref_api),
+                required=required,
+                initial_value=initial_value,
+                initial_label=str(field_dict.get("initial_label", "") or ""),
+            )
+        # No ref_api → graceful fallthrough to text Field.
 
     field_kind_map: dict[str, str] = {
         "str": "text",

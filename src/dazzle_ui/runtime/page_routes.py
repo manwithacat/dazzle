@@ -1111,6 +1111,14 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in options
                 ]
+            # Plan 14: thread ref_api into Fragment dispatch ctx so the
+            # adapter's REF branch can produce a RefPicker primitive.
+            ref_api = str(getattr(field, "ref_api", "") or "")
+            if ref_api:
+                entry["ref_api"] = ref_api
+            initial_label_value = str(getattr(field, "initial_label", "") or "")
+            if initial_label_value:
+                entry["initial_label"] = initial_label_value
             fields_out.append(entry)
         is_edit = str(getattr(form, "mode", "create")).lower() == "edit"
         return {
