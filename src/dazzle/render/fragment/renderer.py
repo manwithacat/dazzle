@@ -33,6 +33,7 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     Link,
     Modal,
+    Page,
     PivotTable,
     RefPicker,
     Region,
@@ -86,6 +87,8 @@ class FragmentRenderer:
             case Grid():
                 return self._emit_grid(fragment, ctx)
             # Containers
+            case Page():
+                return self._emit_page(fragment, ctx)
             case Surface():
                 return self._emit_surface(fragment, ctx)
             case Card():
@@ -217,6 +220,52 @@ class FragmentRenderer:
                 f'<div class="dz-card__footer">{self._emit(c.footer, ctx)}</div>'  # type: ignore[arg-type]
             )
         parts.append("</div>")
+        return "".join(parts)
+
+    def _emit_page(self, p: Page, ctx: RenderContext) -> str:
+        """Emit `<!DOCTYPE html><html>...<head>...</head><body>...</body></html>`.
+
+        Page chrome is intentionally rendered as a single string —
+        unlike content primitives, the document outer is structurally
+        fixed and not composable. Conditional asset/theme decisions
+        belong in the PageBuilder (Phase 2), not in the renderer.
+        """
+        parts: list[str] = ["<!DOCTYPE html>"]
+        theme_attr = f' data-theme="{ctx.escape_attr(p.theme)}"' if p.theme else ""
+        lang_attr = f' lang="{ctx.escape_attr(p.lang)}"'
+        parts.append(f"<html{lang_attr}{theme_attr}>")
+
+        # ── <head> ──
+        parts.append("<head>")
+        parts.append('<meta charset="UTF-8">')
+        parts.append('<meta name="viewport" content="width=device-width, initial-scale=1.0">')
+        for name, content in p.meta:
+            parts.append(
+                f'<meta name="{ctx.escape_attr(name)}" content="{ctx.escape_attr(content)}">'
+            )
+        parts.append(f"<title>{ctx.escape(p.title)}</title>")
+        parts.append(f'<link rel="icon" href="{ctx.escape_attr(p.favicon)}" type="image/svg+xml">')
+        parts.append(f"<style>@layer {ctx.escape(p.cascade_layer_order)};</style>")
+        for css_url in p.css_links:
+            parts.append(f'<link rel="stylesheet" href="{ctx.escape_attr(css_url)}">')
+        for js_url in p.js_scripts:
+            parts.append(f'<script defer src="{ctx.escape_attr(js_url)}"></script>')
+        parts.append("</head>")
+
+        # ── <body> ──
+        parts.append('<body class="dz-page">')
+        parts.append(self._emit(p.body, ctx))  # type: ignore[arg-type]
+        if p.toast_container:
+            parts.append('<div id="dz-toast" class="dz-toast-stack" aria-live="polite"></div>')
+        if p.modal_slot:
+            parts.append('<div id="dz-modal-slot"></div>')
+        if p.page_announcer:
+            parts.append(
+                '<div id="dz-page-announcer" aria-live="assertive" '
+                'aria-atomic="true" class="visually-hidden"></div>'
+            )
+        parts.append("</body>")
+        parts.append("</html>")
         return "".join(parts)
 
     def _emit_surface(self, s: Surface, ctx: RenderContext) -> str:

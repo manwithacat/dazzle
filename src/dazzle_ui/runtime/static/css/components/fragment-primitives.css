@@ -17,6 +17,22 @@
 
 @layer components {
 
+  /* ───────────────────────── Page ────────────────────────────
+   * Top-level body class emitted by the Page primitive. The page
+   * primitive wraps `<html>`/`<head>`/`<body>` for typed-Fragment
+   * chrome rendering; this rule provides the body-level baseline so
+   * Page-rendered pages cohabit cleanly with the existing Jinja
+   * shells until the chrome migration completes.
+   */
+
+  .dz-page {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--colour-bg, var(--colour-surface));
+    color: var(--colour-text);
+    font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+  }
+
   /* ───────────────────────── Surface ─────────────────────────
    * Top-level rendered surface — the typed Fragment equivalent of
    * a workspace's main page or a list/detail page wrapper.

@@ -150,3 +150,64 @@ class Modal:
     def __post_init__(self) -> None:
         if self.size not in ("sm", "md", "lg", "xl"):
             raise ValueError(f"invalid size {self.size!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class Page:
+    """Full HTML document — `<html>` + `<head>` + `<body>`.
+
+    Top-level chrome primitive. Most surfaces compose their inner
+    content inside a Surface or Region; the Page primitive is what
+    wraps that content into a deliverable HTML document.
+
+    Slots:
+        body — the main content (typically a Surface, Stack of Surfaces,
+            or workspace layout). Required.
+        title — `<title>` text (also drives the page tab title).
+        lang — `<html lang="...">` value. Defaults to "en".
+        theme — optional theme identifier; rendered as `data-theme`
+            attribute on `<html>` for CSS theme cascading.
+        css_links — tuple of stylesheet URLs to include in `<head>`.
+            Order is preserved (cascade-relevant).
+        js_scripts — tuple of script URLs to include (deferred) in
+            `<head>`. Order is preserved.
+        favicon — favicon URL (rendered as `<link rel="icon">`).
+        meta — tuple of (name, content) pairs for `<meta>` tags.
+            charset and viewport are always emitted; this tuple is
+            additional/custom metadata.
+        cascade_layer_order — CSS `@layer` declaration. Drives the
+            cascade priority (e.g. "base, framework, app, overrides").
+
+    Body-level slots (rendered after the main body):
+        toast_container — emit the `dz-toast-stack` markup if True.
+        modal_slot — emit the `dz-modal-slot` placeholder if True.
+        page_announcer — emit the a11y `dz-page-announcer` div if True.
+
+    Example:
+        Page(
+            title="Tasks — My App",
+            theme="linear-dark",
+            css_links=("/static/dist/dazzle.min.css",),
+            js_scripts=("/static/dist/dazzle.min.js",),
+            body=Surface(header=Heading("Tasks", level=1), body=...),
+        )
+    """
+
+    title: str
+    body: object
+    lang: str = "en"
+    theme: str | None = None
+    css_links: tuple[str, ...] = ()
+    js_scripts: tuple[str, ...] = ()
+    favicon: str = "/static/assets/dazzle-favicon.svg"
+    meta: tuple[tuple[str, str], ...] = ()
+    cascade_layer_order: str = "base, framework, app, overrides"
+    toast_container: bool = True
+    modal_slot: bool = True
+    page_announcer: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.title:
+            raise ValueError("Page requires a non-empty title")
+        if not self.lang:
+            raise ValueError("Page requires a non-empty lang")

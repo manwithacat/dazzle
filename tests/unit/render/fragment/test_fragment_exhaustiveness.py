@@ -30,6 +30,7 @@ from dazzle.render.fragment import (
     KanbanBoard,
     Link,
     Modal,
+    Page,
     PivotTable,
     RawHTML,
     RefPicker,
@@ -67,6 +68,8 @@ def _sample_for(primitive_type: type) -> object:
         return Grid(children=(Text("a"),))
     if primitive_type is Surface:
         return Surface(body=Text("body"))
+    if primitive_type is Page:
+        return Page(title="X", body=Text("x"))
     if primitive_type is Card:
         return Card(body=Text("body"))
     if primitive_type is Region:

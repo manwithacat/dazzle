@@ -5,6 +5,7 @@ from dazzle.render.fragment.primitives.containers import (
     Card,
     Drawer,
     Modal,
+    Page,
     Region,
     Surface,
     Tabs,
@@ -44,6 +45,7 @@ __all__ = [
     "Split",
     "Grid",
     # containers
+    "Page",
     "Surface",
     "Card",
     "Region",

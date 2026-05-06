@@ -9,6 +9,7 @@ from dazzle.render.fragment.primitives.containers import (
     Card,
     Drawer,
     Modal,
+    Page,
     Region,
     Surface,
     Tabs,
@@ -47,6 +48,7 @@ Fragment = (
     | Split
     | Grid
     # Containers
+    | Page
     | Surface
     | Card
     | Region

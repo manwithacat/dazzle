@@ -52,6 +52,8 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-ref-picker",
     "dz-ref-picker__label",
     "dz-ref-picker__select",
+    # P17 P1 — Page primitive emits `<body class="dz-page">`
+    "dz-page",
 )
 
 

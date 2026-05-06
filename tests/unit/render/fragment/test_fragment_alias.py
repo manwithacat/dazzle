@@ -16,6 +16,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Split",
         "Grid",
         # containers
+        "Page",
         "Surface",
         "Card",
         "Region",

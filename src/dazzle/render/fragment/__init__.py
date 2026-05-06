@@ -30,6 +30,7 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     Link,
     Modal,
+    Page,
     PivotTable,
     RefPicker,
     Region,
@@ -98,6 +99,7 @@ __all__ = [
     "Split",
     "Grid",
     # primitives — containers
+    "Page",
     "Surface",
     "Card",
     "Region",
