@@ -67,14 +67,23 @@ def test_audit_marks_simple_list_as_ready() -> None:
     assert report.surfaces[0].is_ready
 
 
-def test_audit_marks_view_mode_as_blocked() -> None:
-    """VIEW mode is not yet supported by the adapter."""
-    surface = SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW)
+def test_audit_marks_create_mode_as_blocked() -> None:
+    """Plan 8 added VIEW; CREATE remains unsupported (Plan 9 closure)."""
+    surface = SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE)
     report = audit_appspec(_make_appspec([surface]))
     assert report.ready_count == 0
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_mode" and b.detail == "VIEW" for b in blockers)
+    assert any(b.kind.value == "unsupported_mode" and b.detail == "CREATE" for b in blockers)
+
+
+def test_audit_marks_view_mode_as_ready() -> None:
+    """Plan 8 — VIEW mode is now supported, so a VIEW surface with no
+    other blockers is ready to flip."""
+    surface = SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW)
+    report = audit_appspec(_make_appspec([surface]))
+    assert report.ready_count == 1
+    assert report.blocked_count == 0
 
 
 def test_audit_marks_related_groups_as_blocked() -> None:
@@ -100,16 +109,16 @@ def test_audit_marks_related_groups_as_blocked() -> None:
 
 
 def test_audit_aggregates_across_surfaces() -> None:
-    """Three surfaces, two blocked on VIEW mode — count is 2."""
+    """Three surfaces, two blocked on CREATE mode — count is 2."""
     surfaces = [
-        SurfaceSpec(name="a", mode=SurfaceMode.VIEW),
-        SurfaceSpec(name="b", mode=SurfaceMode.VIEW),
+        SurfaceSpec(name="a", mode=SurfaceMode.CREATE),
+        SurfaceSpec(name="b", mode=SurfaceMode.CREATE),
         SurfaceSpec(name="c", mode=SurfaceMode.LIST),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     assert report.ready_count == 1
     assert report.blocked_count == 2
-    assert report.aggregated_blockers[("unsupported_mode", "VIEW")] == 2
+    assert report.aggregated_blockers[("unsupported_mode", "CREATE")] == 2
 
 
 def test_coverage_report_aggregates() -> None:
@@ -134,16 +143,17 @@ def test_coverage_report_aggregates() -> None:
 
 
 def test_coverage_report_to_text_basic_shape() -> None:
+    """Mix of LIST (ready) and CREATE (blocked) — text output covers both sections."""
     surfaces = [
         SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
-        SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW),
+        SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     text = report.to_text()
     assert "Coverage:" in text
     assert "1 / 2" in text
     assert "task_list" in text
-    assert "task_detail" in text
+    assert "task_create" in text
     assert "✓" in text
     assert "✗" in text
     assert "unsupported_mode" in text
@@ -154,7 +164,7 @@ def test_coverage_report_to_json_shape() -> None:
 
     surfaces = [
         SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
-        SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW),
+        SurfaceSpec(name="task_create", mode=SurfaceMode.CREATE),
     ]
     report = audit_appspec(_make_appspec(surfaces))
     payload = json.loads(report.to_json())
@@ -165,11 +175,11 @@ def test_coverage_report_to_json_shape() -> None:
     assert by_name["task_list"]["is_ready"] is True
     assert by_name["task_list"]["mode"] == "LIST"
     assert by_name["task_list"]["blockers"] == []
-    assert by_name["task_detail"]["is_ready"] is False
-    assert by_name["task_detail"]["mode"] == "VIEW"
-    assert {"kind": "unsupported_mode", "detail": "VIEW"} in by_name["task_detail"]["blockers"]
+    assert by_name["task_create"]["is_ready"] is False
+    assert by_name["task_create"]["mode"] == "CREATE"
+    assert {"kind": "unsupported_mode", "detail": "CREATE"} in by_name["task_create"]["blockers"]
     assert payload["aggregated_blockers"][0] == {
         "kind": "unsupported_mode",
-        "detail": "VIEW",
+        "detail": "CREATE",
         "count": 1,
     }

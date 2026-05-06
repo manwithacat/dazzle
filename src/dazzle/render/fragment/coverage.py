@@ -141,7 +141,7 @@ class CoverageReport:
 
 # Capability matrix — what FragmentSurfaceAdapter currently supports.
 # Updated when the adapter gains new mode/feature/field-type support.
-_SUPPORTED_MODES: frozenset[str] = frozenset({"list"})
+_SUPPORTED_MODES: frozenset[str] = frozenset({"list", "view"})
 
 # Surface-level features that block Fragment rendering when present.
 # Each entry is the SurfaceSpec attribute name; if non-empty, the surface

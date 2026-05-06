@@ -46,15 +46,19 @@ def test_simple_task_links_with_known_renderers() -> None:
         known_renderers={"jinja", "fragment"},
     )
     assert appspec is not None
-    # task_list is the first (and currently only) surface flipped to fragment.
+    # Plan 3 flipped task_list; Plan 8 added task_detail. As more surfaces
+    # flip in subsequent plans, this set grows — keep the list explicit so
+    # an accidental flip elsewhere fails the test.
+    expected_flipped = {"task_list", "task_detail"}
     by_name = {s.name: s for s in appspec.surfaces}
-    assert "task_list" in by_name, "task_list surface missing from simple_task spec"
-    assert by_name["task_list"].render == "fragment", (
-        f"expected task_list.render='fragment', got {by_name['task_list'].render!r}"
-    )
+    for name in expected_flipped:
+        assert name in by_name, f"surface {name} missing from simple_task spec"
+        assert by_name[name].render == "fragment", (
+            f"expected {name}.render='fragment', got {by_name[name].render!r}"
+        )
     # Every other surface should still be on the default (None).
     for s in appspec.surfaces:
-        if s.name == "task_list":
+        if s.name in expected_flipped:
             continue
         assert s.render is None, f"surface {s.name} has unexpected render={s.render!r}"
 

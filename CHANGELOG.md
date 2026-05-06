@@ -32,6 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Jinja path. CSS-presence test in `tests/unit/test_fragment_primitive_css.py`
   pins the coverage; new primitives that get flipped in later plans must
   add to both the CSS file and the test's `_REQUIRED_CLASSES` tuple.
+- **VIEW mode for FragmentSurfaceAdapter (Plan 8).** `mode: view`
+  surfaces now flip cleanly to `render: fragment`. The adapter produces
+  a Surface with a Region(kind="detail") containing a Stack of
+  (Heading-label, Text-value) Rows. CSS rules under
+  `.dz-region--kind-detail` lay out the definition-list-shaped pairs.
+  `simple_task.task_detail` flipped as the proving surface. The
+  `dazzle fragment-audit` capability matrix now lists `view` alongside
+  `list` as a supported mode; cumulative example coverage rises from
+  37% to 53% (29→41 of 78 surfaces ready). Remaining blockers across
+  the five examples: 17 CREATE + 17 EDIT (Plan 9) + 3 related_groups
+  (Plan 10).
 - **`dazzle fragment-audit` CLI command (Plan 7).** Walks any AppSpec
   and reports per-surface Fragment-rendering coverage: ✓ ready / ✗
   blocked, with typed blocker reasons (unsupported mode, unsupported
