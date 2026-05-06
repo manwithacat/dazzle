@@ -22,33 +22,38 @@
 | 10 | related_groups feature | ✓ Shipped | Region(kind="related") wrapper, Skeleton placeholder for htmx-loaded children, related-group CSS |
 | 11 | Mass surface flip | ✓ Shipped | `scripts/flip_to_fragment.py` helper; 60 DSL surfaces flipped across 5 apps; per-example smoke test |
 | 12 | Production-path parity | ✓ Shipped | TestClient HTTP test for every example's primary list + simple_task VIEW/CREATE — pins Fragment chrome at the response layer |
+| 13 | Audit completeness + CI gate | ✓ Shipped | entity_ref-based field-type resolution; per-example CI step (advisory); smoke + CLI tests relaxed to match honest audit |
 
-**Today's coverage of the example apps:**
+**Today's coverage of the example apps (post-Plan-13 honesty):**
 
-| App | Surfaces | Flipped (DSL) | Ready (audit) | Blocked |
-|---|---|---|---|---|
-| simple_task | 17 | 12 / 12 ✓ | 17 | 0 |
-| contact_manager | 6 | 4 / 4 ✓ | 6 | 0 |
-| support_tickets | 19 | 12 / 12 ✓ | 19 | 0 |
-| ops_dashboard | 10 | 8 / 8 ✓ | 10 | 0 |
-| fieldtest_hub | 26 | 24 / 24 ✓ | 26 | 0 |
-| **Total** | **78** | **60 / 60 ✓** | **78** | **0** |
+| App | Surfaces | Flipped (DSL) | Was (pre-Plan-13) | Now (honest) | Field-type blockers |
+|---|---|---|---|---|---|
+| simple_task | 17 | 12 / 12 ✓ | 17/17 | 11/17 | ref(6) |
+| contact_manager | 6 | 4 / 4 ✓ | 6/6 | 6/6 | — |
+| support_tickets | 19 | 12 / 12 ✓ | 19/19 | 12/19 | ref(7) |
+| ops_dashboard | 10 | 8 / 8 ✓ | 10/10 | 7/10 | ref(3) |
+| fieldtest_hub | 26 | 24 / 24 ✓ | 26/26 | 14/26 | ref(12) |
+| **Total** | **78** | **60 / 60 ✓** | **78/78** | **50/78** | **ref(28)** |
+
+The 28 ref-blocked surfaces still RENDER through the Fragment path — `_field_to_primitive` falls through to a plain text Field for unsupported kinds. The blocker means "the widget the user sees is wrong" (text input where a Combobox is needed), not "the page crashes." Phase 2 closes this by extending the adapter; the audit now counts honestly.
 
 DSL/audit delta: framework-injected surfaces (`feedback_*`, `_admin_*`) appear in the audit count but are not authored in DSL — they pick up Fragment rendering automatically once the renderer registry is wired.
 
-**Aggregated blockers (cross-app):** none. The substrate held — the mass flip applied without any adapter, dispatch, or CSS regression.
+**Aggregated blockers (cross-app):** 28 surfaces blocked on `unsupported_field_type=ref` — all on the same adapter gap. No other field types surface (no UUID/JSON/FILE elements appear in section.elements across the examples).
 
 ---
 
 ## Where we're going
 
-### Plan 13 — CI gate + audit completeness (planned)
+### Phase 2A — REF field adapter coverage (next)
 
-**Goal:** Wire `dazzle fragment-audit examples/<each> --fail-on-blocked` into CI for all five examples. Close the audit's entity-field-type resolution gap so REF/UUID/JSON/FILE actually surface as blockers (today the audit walks SurfaceElement which only carries name+label).
+Plan 13's honest audit exposes one cross-app gap: 28 surfaces blocked on `unsupported_field_type=ref`. Closing this is highest-leverage: brings cumulative coverage from 50/78 (64%) to 78/78 (100% honest).
 
-**Cost:** ~4–6 tasks. The CI wiring is small; the entity-ref resolution is where the design work is.
+**Adapter work:** `_field_to_primitive` in `src/dazzle_back/runtime/renderers/fragment_adapter.py` currently routes REF fields to a plain text Field. The closure: dereference `FieldType.ref_entity`, render a Combobox seeded from the related entity's primary key + display field. Mirrors what the enum branch does (Combobox with type-aware option list), but with options sourced from a backend lookup instead of a static enum.
 
-### Phase 2 — Aegismark and downstream
+**Cost:** ~4–6 tasks. The Combobox primitive already exists (Plan 1); the work is in (a) the adapter branch, (b) seeding options for CREATE forms (deferred lookup vs eager fetch), and (c) the LIST cell rendering (FK display field instead of UUID).
+
+### Phase 2B — Aegismark and downstream
 
 With 100% example coverage and a CI gate locked in, point the audit at AegisMark. The `fragment-audit` CLI takes any project path; the same blocker-counting logic surfaces what AegisMark needs. Likely candidates from prior conversations: kanban (#1015), day timeline (#1016), pupil card (#1017), class strip (#1018) — but the audit will tell us which ones, in what order, and how many surfaces each unblocks. No speculation needed.
 
@@ -69,6 +74,12 @@ CI gate (Plan 13 will wire this): `dazzle fragment-audit examples/<app> --fail-o
 74 DSL-level surface flips across 5 apps, zero adapter regressions, zero CSS gaps, zero dispatch errors, zero parse failures. The substrate's typed-from-the-start design held under bulk migration — this is the strongest validation yet that the Fragment approach scales beyond single-surface conversions.
 
 The discovery log table the plan reserved for "issues found during the flip" remained empty. That's data: the audit-then-flip-then-verify rhythm works, and the substrate's invariants don't drift between apps.
+
+### Plan 13 — the audit was lying
+
+The dead `section.fields` loop (line 180-189 of `coverage.py`) never ran — `SurfaceSection.elements` is the right attribute name, not `.fields`. Five plans of audit-driven prioritisation operated on a 78/78 number that was structurally wrong. The honest number is 50/78, with all 28 newly-surfaced blockers on a single class (REF fields).
+
+The lesson: TDD any new resolver against a synthetic appspec FIRST; never trust an audit you haven't proven walks the IR you think it walks. The CI gate is now in place per-example (advisory mode); next plan tightens to `--fail-on-blocked` after the adapter closes the REF gap.
 
 ### Plan 12 — services-on-app-state is the load-bearing fixture
 

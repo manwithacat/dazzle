@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Fragment audit now walks entity-ref field types (Plan 13).** The previous loop in `coverage.py:_audit_surface` looked at `section.fields`, but `SurfaceSection` exposes `.elements` — so the loop never ran and the audit silently under-reported. The new resolver walks `surface.entity_ref → appspec.domain.entities[*].fields[*].type.kind` and reports `unsupported_field_type` blockers for REF/UUID/JSON/FILE the way the adapter's `_field_to_primitive` docstring always claimed it would. Coverage across the example apps drops from over-reported 78/78 to honest 50/78, with 28 newly-surfaced blockers on REF fields — see `docs/superpowers/plans/migration-roadmap.md` for the per-app matrix and Phase 2A scoping.
+- `tests/integration/test_examples_fragment_smoke.py::test_example_app_audit_runs_cleanly` (renamed from `test_example_app_audit_zero_blockers`) now asserts the audit runs without exception and self-consistency holds, instead of pinning a count that was over-reported. Per-app blocker counts live in the roadmap, where they belong.
+- `tests/integration/test_fragment_audit_cli.py::test_fragment_audit_fail_on_blocked_returns_consistent_exit_code` (renamed) accepts both 0 and non-zero exit under `--fail-on-blocked`, so the test doesn't need rewriting whenever adapter coverage closes a blocker.
+
+### Added
+- CI gate: `.github/workflows/ci.yml` now runs `python -m dazzle fragment-audit` against every example app on every push (advisory mode — pre-existing field-type blockers don't fail CI; a future plan tightens to `--fail-on-blocked` once the adapter closes them).
+
+### Agent Guidance
+- The Fragment audit's source of truth is `src/dazzle/render/fragment/coverage.py`. When adding a new field-type the adapter handles, remove it from `_UNSUPPORTED_FIELD_TYPES`. When adding a new mode, extend `_SUPPORTED_MODES`. When adding a surface-level feature blocker, append to `_UNSUPPORTED_FEATURES` (or remove if newly handled). The audit is structural — it resolves field types via `entity_ref → domain.entities`, never invokes the renderer.
+
 ## [0.66.39] - 2026-05-06
 
 ### Added
