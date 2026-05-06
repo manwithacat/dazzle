@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.44] - 2026-05-06
+
+### Fixed
+- **Scenario parser silent-advance on unrecognised tokens** (cyfuture pilot finding). The `else:` branches in `dsl_parser_impl/scenario.py` previously consumed unknown tokens without raising; an unmigrated `for persona X:` would be silently swallowed and the next token (`persona`) would re-dispatch as a top-level PersonaSpec, producing a phantom that surfaced as a misleading `Duplicate persona ... in modules 'X' and 'X'` linker error. The parser now raises an actionable error pointing at PR #998's grammar migration when the unknown token is `for`. Other unknown tokens are still tolerated (forward-compat for new keywords).
+
+### Added
+- `SurfaceCoverage.source: str` (audit JSON: `surfaces[i].source`) — distinguishes `"declared"` from `"framework_injected"` (names starting with `_admin_` or `_platform_`). Cyfuture pilot ask: lets consumers filter framework noise out of their own coverage stats.
+
 ## [0.66.43] - 2026-05-06
 
 ### Added

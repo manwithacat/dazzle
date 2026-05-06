@@ -47,6 +47,7 @@ class SurfaceCoverage:
     name: str
     mode: str  # SurfaceMode.value as a string
     blockers: tuple[Blocker, ...]
+    source: str = "declared"  # "declared" | "framework_injected"
 
     @property
     def is_ready(self) -> bool:
@@ -131,6 +132,7 @@ class CoverageReport:
                     "mode": s.mode,
                     "is_ready": s.is_ready,
                     "blockers": [{"kind": b.kind.value, "detail": b.detail} for b in s.blockers],
+                    "source": s.source,
                 }
                 for s in self.surfaces
             ],
@@ -219,10 +221,16 @@ def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
                     seen_kinds.add(kind)
                     blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_FIELD_TYPE, detail=kind))
 
+    name_str = getattr(surface, "name", "<anonymous>")
+    # Framework-injected surfaces use a `_admin_` or `_platform_` prefix
+    # (admin_builder.py:744). Cyfuture pilot asked for this distinction
+    # so consumers can ignore framework noise in their own coverage stats.
+    source = "framework_injected" if name_str.startswith(("_admin_", "_platform_")) else "declared"
     return SurfaceCoverage(
-        name=getattr(surface, "name", "<anonymous>"),
+        name=name_str,
         mode=mode_value.upper(),
         blockers=tuple(blockers),
+        source=source,
     )
 
 

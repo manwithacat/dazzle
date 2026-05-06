@@ -2210,7 +2210,7 @@ persona admin "Admin":
 
 scenario test_scenario "Test":
   description: "Test scenario"
-  for persona admin:
+  as persona admin:
     start_route: "/"
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
@@ -2290,7 +2290,7 @@ persona admin "Admin":
 
 scenario smoke_test "Demo":
   description: "Demo"
-  for persona admin:
+  as persona admin:
     start_route: "/"
 
 """

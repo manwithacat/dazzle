@@ -267,6 +267,34 @@ def test_audit_skips_field_resolution_when_entity_not_found() -> None:
     assert report.ready_count == 1
 
 
+def test_audit_marks_admin_surface_as_framework_injected() -> None:
+    """Cyfuture pilot ask: distinguish declared surfaces from framework-
+    injected ones. Names starting with `_admin_` or `_platform_` are
+    auto-injected by the framework (see admin_builder.py:744)."""
+    declared = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
+    injected = SurfaceSpec(name="_admin_health", mode=SurfaceMode.LIST)
+    appspec = _make_appspec([declared, injected])
+    report = audit_appspec(appspec)
+    by_name = {s.name: s for s in report.surfaces}
+    assert by_name["task_list"].source == "declared"
+    assert by_name["_admin_health"].source == "framework_injected"
+
+
+def test_coverage_report_to_json_includes_source_field() -> None:
+    """JSON shape carries `source` per surface so consumers can filter
+    framework noise out of their own coverage stats."""
+    import json
+
+    declared = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
+    injected = SurfaceSpec(name="_admin_health", mode=SurfaceMode.LIST)
+    appspec = _make_appspec([declared, injected])
+    report = audit_appspec(appspec)
+    payload = json.loads(report.to_json())
+    by_name = {s["name"]: s for s in payload["surfaces"]}
+    assert by_name["task_list"]["source"] == "declared"
+    assert by_name["_admin_health"]["source"] == "framework_injected"
+
+
 def test_audit_dedupes_same_field_type_across_elements() -> None:
     """A surface with three unsupported-typed fields produces one
     blocker per type, not three — what matters is that the type is

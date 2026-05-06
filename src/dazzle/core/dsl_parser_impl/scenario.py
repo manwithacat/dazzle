@@ -28,6 +28,29 @@ class ScenarioParserMixin:
         file: Any
         _parse_construct_header: Any
 
+    def _skip_unknown_or_raise_for_renamed_keyword(self) -> None:
+        """Tolerate unknown tokens for forward-compat, but catch the
+        cyfuture-pilot footgun: an unmigrated `for ...:` would otherwise
+        be silently consumed here and re-dispatch the next token as a
+        top-level construct, producing a misleading downstream error
+        (typically "Duplicate persona" with the same module name on
+        both sides). Raise with an actionable hint when the unknown
+        token is `for`.
+        """
+        tok = self.current_token()
+        if tok.type == TokenType.FOR:
+            raise make_parse_error(
+                "`for` is not valid here. PR #998 renamed `for ...:` → "
+                "`as ...:` in persona/scope binding contexts. Run:\n"
+                "  sed -i '' -E 's/^([[:space:]]+)for/\\1as/' <dsl-file>",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        # Unknown but not a renamed-keyword footgun: tolerate.
+        self.advance()
+        self.skip_newlines()
+
     def parse_persona(self) -> ir.PersonaSpec:
         """
         Parse persona declaration.
@@ -144,9 +167,7 @@ class ScenarioParserMixin:
                 self.skip_newlines()
 
             else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
+                self._skip_unknown_or_raise_for_renamed_keyword()
 
         self.expect(TokenType.DEDENT)
 
@@ -223,9 +244,7 @@ class ScenarioParserMixin:
                 demo_fixtures.extend(self._parse_inline_demo())
 
             else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
+                self._skip_unknown_or_raise_for_renamed_keyword()
 
         self.expect(TokenType.DEDENT)
 
@@ -277,9 +296,7 @@ class ScenarioParserMixin:
                 self.skip_newlines()
 
             else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
+                self._skip_unknown_or_raise_for_renamed_keyword()
 
         self.expect(TokenType.DEDENT)
 
