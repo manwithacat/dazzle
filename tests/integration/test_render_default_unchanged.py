@@ -33,7 +33,11 @@ def _root_module_name(modules) -> str:
 
 
 def test_simple_task_links_with_known_renderers() -> None:
-    """The example app has no render: clauses; linking must succeed."""
+    """The example app links cleanly with the default known_renderers set.
+
+    As of P3 Task 5 (2026-05), simple_task.task_list opts into render: fragment;
+    every other surface still uses the default (None → legacy jinja path).
+    """
     modules = _load_simple_task_modules()
     root = _root_module_name(modules)
     appspec = build_appspec(
@@ -42,8 +46,16 @@ def test_simple_task_links_with_known_renderers() -> None:
         known_renderers={"jinja", "fragment"},
     )
     assert appspec is not None
-    # No surface in simple_task should declare a render override.
+    # task_list is the first (and currently only) surface flipped to fragment.
+    by_name = {s.name: s for s in appspec.surfaces}
+    assert "task_list" in by_name, "task_list surface missing from simple_task spec"
+    assert by_name["task_list"].render == "fragment", (
+        f"expected task_list.render='fragment', got {by_name['task_list'].render!r}"
+    )
+    # Every other surface should still be on the default (None).
     for s in appspec.surfaces:
+        if s.name == "task_list":
+            continue
         assert s.render is None, f"surface {s.name} has unexpected render={s.render!r}"
 
 

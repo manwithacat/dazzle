@@ -234,6 +234,7 @@ scenario overdue_crisis "Overdue Tasks":
 surface task_list "Task List":
   uses entity Task
   mode: list
+  render: fragment
 
   section main "Tasks":
     field title "Title"
