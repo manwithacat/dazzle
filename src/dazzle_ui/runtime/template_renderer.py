@@ -867,9 +867,78 @@ def render_surface(surface: Any, ctx: dict[str, Any]) -> str:
             f"</div></section>"
         )
 
+    if mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
+        # Plan 9: minimal HTML form for CREATE/EDIT parity testing.
+        # Production form path stays on form.html.
+        from html import escape as _escape
+
+        title = getattr(surface, "title", None) or getattr(surface, "name", "") or ""
+        title = title.replace("_", " ").title() if title == getattr(surface, "name", "") else title
+        fields = ctx.get("fields") or []
+        action = ctx.get("action", "") or ""
+        method_in = ctx.get("method", "POST") or "POST"
+        submit_label = ctx.get(
+            "submit_label",
+            "Save" if mode == SurfaceMode.EDIT else "Create",
+        )
+        inputs: list[str] = []
+        for f in fields:
+            name = _escape(str(f.get("name", "")))
+            label = _escape(str(f.get("label", name)))
+            value = _escape(str(f.get("value", "") or ""))
+            req = " required" if f.get("required") else ""
+            kind = str(f.get("kind", "str")).lower()
+            if kind == "enum":
+                opts = "".join(
+                    f'<option value="{_escape(str(v))}"'
+                    f"{' selected' if str(v) == str(f.get('value', '')) else ''}>"
+                    f"{_escape(str(label_))}</option>"
+                    for v, label_ in f.get("options", [])
+                )
+                inputs.append(f'<label>{label}<select name="{name}"{req}>{opts}</select></label>')
+            elif kind == "text":
+                inputs.append(
+                    f'<label>{label}<textarea name="{name}"{req}>{value}</textarea></label>'
+                )
+            elif kind == "bool":
+                checked = " checked" if value == "true" else ""
+                inputs.append(
+                    f'<label>{label}<input type="checkbox" name="{name}"{checked}{req}></label>'
+                )
+            else:
+                input_kind = {
+                    "str": "text",
+                    "email": "email",
+                    "int": "number",
+                    "decimal": "number",
+                    "float": "number",
+                    "money": "number",
+                    "date": "date",
+                    "datetime": "datetime-local",
+                    "url": "url",
+                }.get(kind, "text")
+                inputs.append(
+                    f'<label>{label}<input type="{input_kind}" name="{name}" '
+                    f'value="{value}"{req}></label>'
+                )
+        body_html = (
+            f'<form class="dz-form-stack" action="{_escape(str(action))}" '
+            f'method="{_escape(str(method_in))}">'
+            + "".join(inputs)
+            + f'<button type="submit">{_escape(str(submit_label))}</button>'
+            + "</form>"
+        )
+        return (
+            f'<section class="dz-surface">'
+            f'<header class="dz-surface__header"><h1>{_escape(str(title))}</h1></header>'
+            f'<div class="dz-surface__body">'
+            f'<section class="dz-region dz-region--kind-form">{body_html}</section>'
+            f"</div></section>"
+        )
+
     if mode != SurfaceMode.LIST:
         raise NotImplementedError(
-            f"render_surface currently only supports LIST and VIEW modes; "
+            f"render_surface currently only supports LIST/VIEW/CREATE/EDIT; "
             f"got {mode!r} for surface {getattr(surface, 'name', '?')!r}. "
             "Other modes land in Plan 9+."
         )

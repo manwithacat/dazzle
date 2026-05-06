@@ -59,3 +59,56 @@ def test_jinja_renderer_renders_a_minimal_view_surface() -> None:
     assert "Buy milk" in html
     assert "Status" in html
     assert "open" in html
+
+
+def test_jinja_renderer_renders_minimal_create_form() -> None:
+    """Plan 9 — render_surface emits an HTML form for CREATE mode."""
+    surface = SurfaceSpec(
+        name="task_create",
+        title="New Task",
+        mode=SurfaceMode.CREATE,
+        entity_ref="Task",
+    )
+    ctx = {
+        "fields": [
+            {"name": "title", "label": "Title", "kind": "str", "required": True, "value": ""},
+        ],
+        "action": "/api/Task",
+        "method": "POST",
+        "submit_label": "Create",
+    }
+    html = JinjaRenderer().render(surface, ctx)
+    assert isinstance(html, str)
+    assert "<form" in html
+    assert 'action="/api/Task"' in html
+    assert 'method="POST"' in html
+    assert "Title" in html
+    assert "Create" in html
+
+
+def test_jinja_renderer_renders_minimal_edit_form() -> None:
+    """Plan 9 — render_surface emits an HTML form for EDIT mode with values."""
+    surface = SurfaceSpec(
+        name="task_edit",
+        title="Edit Task",
+        mode=SurfaceMode.EDIT,
+        entity_ref="Task",
+    )
+    ctx = {
+        "fields": [
+            {
+                "name": "title",
+                "label": "Title",
+                "kind": "str",
+                "required": True,
+                "value": "Buy milk",
+            },
+        ],
+        "action": "/api/Task/42",
+        "method": "POST",
+        "submit_label": "Save",
+    }
+    html = JinjaRenderer().render(surface, ctx)
+    assert "Buy milk" in html
+    assert 'action="/api/Task/42"' in html
+    assert "Save" in html

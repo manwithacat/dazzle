@@ -1089,6 +1089,37 @@ def _build_dispatch_ctx(render_ctx: Any) -> dict[str, Any]:
             "empty_message": getattr(table, "empty_message", "") or "No items found.",
         }
 
+    form = getattr(render_ctx, "form", None)
+    if form is not None:
+        fields_out: list[dict[str, Any]] = []
+        initial_values = getattr(form, "initial_values", {}) or {}
+        for field in getattr(form, "fields", []) or []:
+            fname = getattr(field, "name", "")
+            kind = getattr(field, "type", None) or "str"
+            entry = {
+                "name": fname,
+                "label": getattr(field, "label", "") or fname,
+                "kind": str(kind).lower(),
+                "required": bool(getattr(field, "required", False)),
+                "value": initial_values.get(fname, "") or "",
+                "placeholder": getattr(field, "placeholder", "") or "",
+            }
+            options = getattr(field, "options", None)
+            if options:
+                # Each option dict has {"value": ..., "label": ...}
+                entry["options"] = [
+                    (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
+                    for o in options
+                ]
+            fields_out.append(entry)
+        is_edit = str(getattr(form, "mode", "create")).lower() == "edit"
+        return {
+            "fields": fields_out,
+            "action": getattr(form, "action_url", "") or "",
+            "method": str(getattr(form, "method", "POST") or "POST").upper(),
+            "submit_label": "Save" if is_edit else "Create",
+        }
+
     detail = getattr(render_ctx, "detail", None)
     if detail is not None:
         fields_out: list[dict[str, Any]] = []
@@ -1143,7 +1174,8 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     # back to legacy. Plan 9 will extend this when form modes land.
     has_table = getattr(render_ctx, "table", None) is not None
     has_detail = getattr(render_ctx, "detail", None) is not None
-    if not (has_table or has_detail):
+    has_form = getattr(render_ctx, "form", None) is not None
+    if not (has_table or has_detail or has_form):
         return None
 
     from dazzle.render.fragment.errors import FragmentError
