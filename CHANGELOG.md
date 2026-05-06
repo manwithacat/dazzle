@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and (SurfaceSpec, ctx)-shaped consumers can satisfy it. The dispatcher
   knows which signature each registered handler uses.
 
+### Known limitations
+- **Fragment-rendered surfaces produce structurally-correct HTML but the framework CSS does not yet style the `dz-surface`/`dz-heading--level-N`/`dz-region--kind-X` classes the Fragment renderer emits.** A surface flipped to `render: fragment` will function (data renders, htmx targets work) but the visual chrome will look bare until Plan 4+ wires CSS rules for these classes. `simple_task.task_list` is the only flipped surface and is a development example; downstream apps should not flip surfaces to `render: fragment` until Plan 4 ships.
+
 ## [0.66.37] - 2026-05-06
 
 ### Added

@@ -1123,10 +1123,20 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     if getattr(render_ctx, "table", None) is None:
         return None
 
+    from dazzle.render.fragment.errors import FragmentError
     from dazzle_back.runtime.renderers.dispatch import dispatch_render
 
     ctx_dict = _build_dispatch_ctx(render_ctx)
-    return dispatch_render(surface, ctx=ctx_dict, services=services)
+    try:
+        return dispatch_render(surface, ctx=ctx_dict, services=services)
+    except FragmentError as e:
+        logger.warning(
+            "dispatch_render failed for surface %r (render=%r); falling back to legacy path: %s",
+            surface.name,
+            surface.render,
+            e,
+        )
+        return None
 
 
 def _render_response(prc: _PageRequestContext) -> Response:
