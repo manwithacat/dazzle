@@ -17,15 +17,15 @@ T = TypeVar("T", bound=type)
 
 @runtime_checkable
 class Renderer(Protocol):
-    """Structural protocol every registered renderer must satisfy.
+    """Structural protocol for registered renderers.
 
-    A renderer takes a Fragment-like object and an optional context, and
-    returns an HTML string. The parameter types are `Any` so concrete
-    implementations can narrow them (e.g. `FragmentRenderer.render(fragment: Fragment, ctx: RenderContext)`)
-    without violating Liskov — `object` would require contravariant
-    acceptance, which the typed FragmentRenderer can't supply."""
+    Renderers exist in two shapes — Fragment-tree consumers (FragmentRenderer)
+    and IR+context consumers (JinjaRenderer, future PDF/native adapters).
+    The dispatcher (`dispatch_render` in `dazzle_back.runtime.renderers.dispatch`)
+    knows which signature each registered handler uses; the protocol stays
+    flexible to accommodate both shapes."""
 
-    def render(self, fragment: Any, ctx: Any = ...) -> str: ...
+    def render(self, *args: Any, **kwargs: Any) -> str: ...
 
 
 class PrimitiveRegistry:
