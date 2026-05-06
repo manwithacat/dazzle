@@ -1,11 +1,14 @@
 """Unit tests for the Fragment coverage audit."""
 
 from dazzle.core.ir.appspec import AppSpec
-from dazzle.core.ir.domain import DomainSpec
+from dazzle.core.ir.domain import DomainSpec, EntitySpec
+from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.surfaces import (
     RelatedDisplayMode,
     RelatedGroup,
+    SurfaceElement,
     SurfaceMode,
+    SurfaceSection,
     SurfaceSpec,
 )
 from dazzle.render.fragment.coverage import (
@@ -181,3 +184,139 @@ def test_coverage_report_to_json_shape() -> None:
         "detail": "CUSTOM",
         "count": 1,
     }
+
+
+# ─────────────────── Plan 13 — entity-ref field resolution ───────────────────
+
+
+def test_audit_flags_ref_field_via_entity_resolution() -> None:
+    """A surface with a SurfaceElement pointing at a REF-typed field on
+    the bound entity must report unsupported_field_type=ref. Plan 13
+    closed the audit's under-reporting gap by walking entity_ref →
+    domain.entities → FieldSpec.type.kind."""
+    user = EntitySpec(
+        name="User",
+        fields=[
+            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
+        ],
+    )
+    task = EntitySpec(
+        name="Task",
+        fields=[
+            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+            FieldSpec(
+                name="assigned_to",
+                type=FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+            ),
+        ],
+    )
+    surface = SurfaceSpec(
+        name="task_create",
+        mode=SurfaceMode.CREATE,
+        entity_ref="Task",
+        sections=[
+            SurfaceSection(
+                name="main",
+                elements=[
+                    SurfaceElement(field_name="title", label="Title"),
+                    SurfaceElement(field_name="assigned_to", label="Assigned"),
+                ],
+            )
+        ],
+    )
+    appspec = AppSpec(
+        name="t",
+        title="T",
+        domain=DomainSpec(entities=[user, task]),
+        surfaces=[surface],
+    )
+    report = audit_appspec(appspec)
+    assert report.blocked_count == 1
+    blockers = report.surfaces[0].blockers
+    assert any(b.kind.value == "unsupported_field_type" and b.detail == "ref" for b in blockers), (
+        f"Expected ref blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
+    )
+
+
+def test_audit_skips_field_resolution_when_no_entity_ref() -> None:
+    """A surface without entity_ref can't be checked against an entity.
+    The audit must skip field-type resolution rather than raising."""
+    surface = SurfaceSpec(
+        name="dashboard",
+        mode=SurfaceMode.LIST,
+        entity_ref=None,
+        sections=[],
+    )
+    appspec = _make_appspec([surface])
+    report = audit_appspec(appspec)
+    assert report.ready_count == 1
+
+
+def test_audit_skips_field_resolution_when_entity_not_found() -> None:
+    """Stale entity_ref pointing at a non-existent entity must not crash
+    the audit. The linker would have flagged this earlier; the audit's
+    job is to be robust to malformed input, not validate it."""
+    surface = SurfaceSpec(
+        name="x",
+        mode=SurfaceMode.LIST,
+        entity_ref="NoSuchEntity",
+        sections=[
+            SurfaceSection(
+                name="main",
+                elements=[SurfaceElement(field_name="any", label="Any")],
+            ),
+        ],
+    )
+    appspec = _make_appspec([surface])
+    report = audit_appspec(appspec)
+    assert report.ready_count == 1
+
+
+def test_audit_dedupes_same_field_type_across_elements() -> None:
+    """A surface with three REF fields produces one ref blocker, not
+    three — what matters is that the type is unsupported, not the count
+    per surface (cross-surface aggregation handles that)."""
+    user = EntitySpec(
+        name="User",
+        fields=[
+            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
+        ],
+    )
+    task = EntitySpec(
+        name="Task",
+        fields=[
+            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
+            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
+            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.REF, ref_entity="User")),
+        ],
+    )
+    surface = SurfaceSpec(
+        name="t",
+        mode=SurfaceMode.LIST,
+        entity_ref="Task",
+        sections=[
+            SurfaceSection(
+                name="main",
+                elements=[
+                    SurfaceElement(field_name="a", label="A"),
+                    SurfaceElement(field_name="b", label="B"),
+                    SurfaceElement(field_name="c", label="C"),
+                ],
+            )
+        ],
+    )
+    appspec = AppSpec(
+        name="t",
+        title="T",
+        domain=DomainSpec(entities=[user, task]),
+        surfaces=[surface],
+    )
+    report = audit_appspec(appspec)
+    ref_count = sum(
+        1
+        for b in report.surfaces[0].blockers
+        if b.kind.value == "unsupported_field_type" and b.detail == "ref"
+    )
+    assert ref_count == 1

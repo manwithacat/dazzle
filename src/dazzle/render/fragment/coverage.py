@@ -161,7 +161,36 @@ _UNSUPPORTED_FEATURES: tuple[str, ...] = (
 _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"ref", "uuid", "json", "file"})
 
 
-def _audit_surface(surface: object) -> SurfaceCoverage:
+def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:
+    """Look up `field_name` on the entity named `entity_name` in
+    `appspec.domain.entities`. Returns the FieldType.kind value as a
+    lowercase string (e.g. 'ref', 'uuid', 'str'), or None if the entity
+    isn't found or the field doesn't exist on it.
+
+    The audit's job is to surface adapter gaps, not validate the IR —
+    a missing entity or field returns None and the caller proceeds
+    without flagging. The linker enforces structural validity earlier.
+    """
+    domain = getattr(appspec, "domain", None)
+    if domain is None:
+        return None
+    for entity in getattr(domain, "entities", []) or []:
+        if getattr(entity, "name", None) != entity_name:
+            continue
+        for field_spec in getattr(entity, "fields", []) or []:
+            if getattr(field_spec, "name", None) != field_name:
+                continue
+            ft = getattr(field_spec, "type", None)
+            kind_obj = getattr(ft, "kind", None) if ft is not None else None
+            if kind_obj is None:
+                return None
+            kind_value = getattr(kind_obj, "value", None)
+            return str(kind_value or kind_obj).lower()
+        return None
+    return None
+
+
+def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
     """Inspect one surface against the capability matrix."""
     blockers: list[Blocker] = []
 
@@ -177,16 +206,18 @@ def _audit_surface(surface: object) -> SurfaceCoverage:
         if value:
             blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_FEATURE, detail=feature_attr))
 
-    for section in getattr(surface, "sections", []) or []:
-        for field_spec in getattr(section, "fields", []) or []:
-            ft = getattr(field_spec, "type", None) or getattr(field_spec, "field_type", None)
-            if ft and str(ft).lower() in _UNSUPPORTED_FIELD_TYPES:
-                blockers.append(
-                    Blocker(
-                        kind=BlockerKind.UNSUPPORTED_FIELD_TYPE,
-                        detail=str(ft).lower(),
-                    )
-                )
+    entity_ref = getattr(surface, "entity_ref", None)
+    if entity_ref:
+        seen_kinds: set[str] = set()
+        for section in getattr(surface, "sections", []) or []:
+            for element in getattr(section, "elements", []) or []:
+                field_name = getattr(element, "field_name", None)
+                if not field_name:
+                    continue
+                kind = _resolve_field_kind(appspec, entity_ref, field_name)
+                if kind and kind in _UNSUPPORTED_FIELD_TYPES and kind not in seen_kinds:
+                    seen_kinds.add(kind)
+                    blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_FIELD_TYPE, detail=kind))
 
     return SurfaceCoverage(
         name=getattr(surface, "name", "<anonymous>"),
@@ -198,9 +229,9 @@ def _audit_surface(surface: object) -> SurfaceCoverage:
 def audit_appspec(appspec: object) -> CoverageReport:
     """Walk every surface in `appspec` and report Fragment-rendering coverage.
 
-    `appspec` is duck-typed — anything with a `.surfaces` iterable of
-    SurfaceSpec-shaped objects works. The audit doesn't mutate or
-    instantiate; it just inspects IR features.
+    `appspec` must expose `.surfaces` and `.domain.entities` for the
+    field-type resolution to work; both are standard AppSpec shape.
+    Anything missing falls back to "no resolution" — robust to partial input.
     """
-    surfaces = tuple(_audit_surface(s) for s in getattr(appspec, "surfaces", []))
+    surfaces = tuple(_audit_surface(appspec, s) for s in getattr(appspec, "surfaces", []))
     return CoverageReport(surfaces=surfaces)
