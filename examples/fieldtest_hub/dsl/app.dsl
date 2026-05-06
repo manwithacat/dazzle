@@ -319,6 +319,7 @@ entity Task "Task":
 surface device_list "Device Dashboard":
   uses entity Device
   mode: list
+  render: fragment
 
   section main "Devices":
     field name "Name"
@@ -358,6 +359,7 @@ surface device_list "Device Dashboard":
 surface device_detail "Device Detail":
   uses entity Device
   mode: view
+  render: fragment
 
   section main "Device Information":
     field name "Name"
@@ -385,6 +387,7 @@ surface device_detail "Device Detail":
 surface device_create "Register Device":
   uses entity Device
   mode: create
+  render: fragment
 
   section identity "Identity":
     field name "Device Name"
@@ -411,6 +414,7 @@ surface device_create "Register Device":
 surface device_edit "Edit Device":
   uses entity Device
   mode: edit
+  render: fragment
 
   section identity "Identity":
     field name "Device Name"
@@ -435,6 +439,7 @@ surface device_edit "Edit Device":
 surface tester_list "Tester Directory":
   uses entity Tester
   mode: list
+  render: fragment
 
   section main "Testers":
     field name "Name"
@@ -464,6 +469,7 @@ surface tester_list "Tester Directory":
 surface tester_detail "Tester Detail":
   uses entity Tester
   mode: view
+  render: fragment
 
   section main "Tester Information":
     field name "Name"
@@ -492,6 +498,7 @@ surface tester_detail "Tester Detail":
 surface tester_create "Register Tester":
   uses entity Tester
   mode: create
+  render: fragment
 
   section identity "Identity":
     field name "Name"
@@ -515,6 +522,7 @@ surface tester_create "Register Tester":
 surface tester_edit "Edit Tester":
   uses entity Tester
   mode: edit
+  render: fragment
 
   section identity "Identity":
     field name "Name"
@@ -537,6 +545,7 @@ surface tester_edit "Edit Tester":
 surface issue_report_list "Issue Board":
   uses entity IssueReport
   mode: list
+  render: fragment
 
   section main "Issue Reports":
     field device_id "Device"
@@ -577,6 +586,7 @@ surface issue_report_list "Issue Board":
 surface issue_report_detail "Issue Detail":
   uses entity IssueReport
   mode: view
+  render: fragment
 
   section main "Issue Information":
     field device_id "Device"
@@ -606,6 +616,7 @@ surface issue_report_detail "Issue Detail":
 surface issue_report_create "Report Issue":
   uses entity IssueReport
   mode: create
+  render: fragment
 
   section target "Affected Device":
     field device_id "Device"
@@ -632,6 +643,7 @@ surface issue_report_create "Report Issue":
 surface issue_report_edit "Update Issue":
   uses entity IssueReport
   mode: edit
+  render: fragment
 
   section classification "Classification":
     field category "Category"
@@ -659,6 +671,7 @@ surface issue_report_edit "Update Issue":
 surface test_session_list "Test Sessions":
   uses entity TestSession
   mode: list
+  render: fragment
 
   section main "Test Sessions":
     field device_id "Device"
@@ -687,6 +700,7 @@ surface test_session_list "Test Sessions":
 surface test_session_create "Log Test Session":
   uses entity TestSession
   mode: create
+  render: fragment
 
   section participants "Participants":
     field device_id "Device"
@@ -711,6 +725,7 @@ surface test_session_create "Log Test Session":
 surface test_session_detail "Test Session Detail":
   uses entity TestSession
   mode: view
+  render: fragment
 
   section main "Session":
     field device_id "Device"
@@ -727,6 +742,7 @@ surface test_session_detail "Test Session Detail":
 surface test_session_edit "Edit Test Session":
   uses entity TestSession
   mode: edit
+  render: fragment
 
   section main "Edit Test Session":
     field duration_minutes "Duration (minutes)"
@@ -741,6 +757,7 @@ surface test_session_edit "Edit Test Session":
 surface firmware_release_list "Firmware Releases":
   uses entity FirmwareRelease
   mode: list
+  render: fragment
 
   section main "Firmware Releases":
     field version "Version"
@@ -768,6 +785,7 @@ surface firmware_release_list "Firmware Releases":
 surface firmware_release_detail "Firmware Detail":
   uses entity FirmwareRelease
   mode: view
+  render: fragment
 
   section main "Firmware Information":
     field version "Version"
@@ -787,6 +805,7 @@ surface firmware_release_detail "Firmware Detail":
 surface firmware_release_create "Create Firmware Release":
   uses entity FirmwareRelease
   mode: create
+  render: fragment
 
   section identity "Release":
     field version "Version"
@@ -810,6 +829,7 @@ surface firmware_release_create "Create Firmware Release":
 surface firmware_release_edit "Edit Firmware Release":
   uses entity FirmwareRelease
   mode: edit
+  render: fragment
 
   section identity "Release":
     field version "Version"
@@ -832,6 +852,7 @@ surface firmware_release_edit "Edit Firmware Release":
 surface task_list "Tasks":
   uses entity Task
   mode: list
+  render: fragment
 
   section main "Tasks":
     field type "Type"
@@ -854,6 +875,7 @@ surface task_list "Tasks":
 surface task_detail "Task Detail":
   uses entity Task
   mode: view
+  render: fragment
 
   section main "Task Information":
     field type "Type"
@@ -875,6 +897,7 @@ surface task_detail "Task Detail":
 surface task_create "Create Task":
   uses entity Task
   mode: create
+  render: fragment
 
   section main "New Task":
     field type "Type"
@@ -893,6 +916,7 @@ surface task_create "Create Task":
 surface task_edit "Edit Task":
   uses entity Task
   mode: edit
+  render: fragment
 
   section main "Edit Task":
     field type "Type"
