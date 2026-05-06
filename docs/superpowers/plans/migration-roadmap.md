@@ -21,6 +21,7 @@
 | 9 | Form modes (CREATE + EDIT) | ✓ Shipped | Adapter `_build_form`, type-aware widget mapping, FormStack/Field/Combobox/Submit primitives, form CSS |
 | 10 | related_groups feature | ✓ Shipped | Region(kind="related") wrapper, Skeleton placeholder for htmx-loaded children, related-group CSS |
 | 11 | Mass surface flip | ✓ Shipped | `scripts/flip_to_fragment.py` helper; 60 DSL surfaces flipped across 5 apps; per-example smoke test |
+| 12 | Production-path parity | ✓ Shipped | TestClient HTTP test for every example's primary list + simple_task VIEW/CREATE — pins Fragment chrome at the response layer |
 
 **Today's coverage of the example apps:**
 
@@ -40,12 +41,6 @@ DSL/audit delta: framework-injected surfaces (`feedback_*`, `_admin_*`) appear i
 ---
 
 ## Where we're going
-
-### Plan 12 — Production-path parity test (planned)
-
-**Goal:** Extend the parity test from in-process renderer calls to a TestClient-driven request through the real FastAPI route stack. Catches integration regressions the unit-level parity test can miss (route handler context shape, htmx swap headers, error-response wrapping).
-
-**Cost:** ~3–4 tasks. Builds on `tests/integration/test_examples_fragment_smoke.py`.
 
 ### Plan 13 — CI gate + audit completeness (planned)
 
@@ -74,6 +69,14 @@ CI gate (Plan 13 will wire this): `dazzle fragment-audit examples/<app> --fail-o
 74 DSL-level surface flips across 5 apps, zero adapter regressions, zero CSS gaps, zero dispatch errors, zero parse failures. The substrate's typed-from-the-start design held under bulk migration — this is the strongest validation yet that the Fragment approach scales beyond single-surface conversions.
 
 The discovery log table the plan reserved for "issues found during the flip" remained empty. That's data: the audit-then-flip-then-verify rhythm works, and the substrate's invariants don't drift between apps.
+
+### Plan 12 — services-on-app-state is the load-bearing fixture
+
+The HTTP parity test initially failed because the bare FastAPI app didn't have `app.state.services` attached. `_maybe_dispatch_inner_html` (page_routes.py:1180) reads services from app state to route through the renderer registry; without it, dispatch silently returns None and the legacy template path runs. Result: 200 responses with full page chrome but zero Fragment classes — a green-looking failure mode that would have shipped if the test asserted only status code.
+
+The fix mirrors what `DazzleBackendApp.build()` does at server.py:405-407 — `RuntimeServices()` + `register_default_renderers()` + `app.state.services = services`. This is now part of `_client_for()` in the test fixture and documented inline. Future tests that mount page routes directly need the same wiring.
+
+Surfaced URL pattern: create surfaces are at `/<entity>/create`, not `/<entity>/new`. Pinned the test cases against the real route shape via in-process route introspection.
 
 ### Plan 11 — DSL/audit count delta is not a bug
 

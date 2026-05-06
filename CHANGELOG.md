@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `tests/integration/test_examples_fragment_http.py` — TestClient-driven HTTP parity test. 7 cases: every example app's primary list URL returns 200 with Fragment chrome (`dz-surface`, `dz-region--kind-list`); simple_task CREATE form pinned via `dz-region--kind-form` + `dz-form-stack`; simple_task detail-or-404 acceptance. Closes the gap between Plan 11's IR-level smoke (DSL says `fragment`) and "the HTTP response actually came through the Fragment renderer". (Plan 12)
+
+### Agent Guidance
+- Tests that mount page routes directly via `create_page_routes` MUST attach `RuntimeServices` + `register_default_renderers` to `app.state.services` — `_maybe_dispatch_inner_html` reads from there to route through the Fragment renderer. Without it, dispatch silently returns None and the legacy template path runs (a green-looking failure mode). Mirrors `DazzleBackendApp.build()` at `server.py:405-407`. The canonical fixture lives in `tests/integration/test_examples_fragment_http.py::_client_for`.
+
 ## [0.66.38] - 2026-05-06
 
 ### Changed
