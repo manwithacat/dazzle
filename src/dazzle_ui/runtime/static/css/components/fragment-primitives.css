@@ -1,0 +1,169 @@
+/*
+ * fragment-primitives.css — visual chrome for typed Fragment renderer output.
+ *
+ * The Fragment renderer (src/dazzle/render/fragment/renderer.py) emits a
+ * deterministic class vocabulary derived from the typed primitive types.
+ * Each class needs a matching rule here so flipped surfaces (those with
+ * `render: fragment` in DSL) render with the same visual treatment as
+ * their Jinja-path equivalents.
+ *
+ * Rules use the framework's design tokens — never hardcoded colours,
+ * spaces, or radii — so theme overrides and token-sheet swaps cascade
+ * automatically.
+ *
+ * Plan 4 scope: simple_task.task_list (Surface + Heading + Region.list +
+ * Text + Table). Plan 5+ extends as more surfaces flip.
+ */
+
+@layer components {
+
+  /* ───────────────────────── Surface ─────────────────────────
+   * Top-level rendered surface — the typed Fragment equivalent of
+   * a workspace's main page or a list/detail page wrapper.
+   * Slots: header (titles), body (content), footer (optional).
+   */
+
+  .dz-surface {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--colour-surface);
+    color: var(--colour-text);
+  }
+
+  .dz-surface__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--colour-border);
+  }
+
+  .dz-surface__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .dz-surface__footer {
+    padding-block-start: var(--space-sm);
+    border-block-start: 1px solid var(--colour-border);
+  }
+
+  /* ───────────────────────── Heading ─────────────────────────
+   * Level-parameterised heading. Level 1 is the page-title weight;
+   * 2-3 are section headings; 4-6 are sub-headings used inside
+   * regions and panels. Sizing pulls from the same scale as the
+   * Jinja-path heading variants.
+   */
+
+  .dz-heading {
+    margin: 0;
+    color: var(--colour-text);
+    font-weight: var(--weight-semibold);
+    line-height: 1.25;
+  }
+
+  .dz-heading--level-1 { font-size: var(--text-xl); }
+  .dz-heading--level-2 { font-size: var(--text-lg); }
+  .dz-heading--level-3 { font-size: var(--text-base); }
+  .dz-heading--level-4 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .dz-heading--level-5 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--colour-text-muted);
+  }
+  .dz-heading--level-6 {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--colour-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ───────────────────────── Region ──────────────────────────
+   * A semantic content region inside a Surface. The `kind`
+   * modifier drives the layout: list (table-shaped), detail
+   * (definition-list-shaped), form (FormStack), dashboard
+   * (Grid), kanban, calendar, report.
+   *
+   * Plan 4 scope: list only. Other kinds get base treatment but
+   * no kind-specific styling until later plans.
+   */
+
+  .dz-region {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .dz-region--kind-list {
+    /* List-mode region wraps a Table primitive. The table itself
+       inherits its core styling from table.css; this rule provides
+       the list-context spacing and any list-specific cascade
+       (e.g. dz-table inside .dz-region--kind-list gets the same
+       row-hover treatment as the Jinja .dz-list-table path). */
+    overflow-x: auto;
+  }
+
+  .dz-region--kind-list > .dz-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--colour-surface);
+  }
+
+  .dz-region--kind-list > .dz-table thead > tr {
+    border-block-end: 1px solid var(--colour-border);
+    text-align: left;
+  }
+
+  .dz-region--kind-list > .dz-table th {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--colour-text-muted);
+  }
+
+  .dz-region--kind-list > .dz-table > tbody > tr {
+    border-block-end: 1px solid var(--colour-border);
+    transition: background-color 0.12s ease;
+  }
+
+  .dz-region--kind-list > .dz-table > tbody > tr:last-child {
+    border-block-end: none;
+  }
+
+  .dz-region--kind-list > .dz-table > tbody > tr:hover {
+    /* No --colour-surface-hover token exists yet; light/dark fallback
+       picks a subtle tint that works in both modes. Promote to a token
+       when more surfaces need it. */
+    background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
+  }
+
+  .dz-region--kind-list > .dz-table td {
+    padding: var(--space-sm) var(--space-md);
+    color: var(--colour-text);
+  }
+
+  /* ───────────────────────── Text ────────────────────────────
+   * Inline text primitive — used inside cells, in EmptyState
+   * descriptions, badges, and as a bare leaf primitive. The tone
+   * modifier controls colour role (default/muted/danger/success/
+   * warning); other tones map to existing token roles.
+   */
+
+  .dz-text {
+    color: var(--colour-text);
+  }
+
+  .dz-text--tone-default { color: var(--colour-text); }
+  .dz-text--tone-muted   { color: var(--colour-text-muted); }
+  .dz-text--tone-danger  { color: var(--colour-danger); }
+  .dz-text--tone-success { color: var(--colour-success); }
+  .dz-text--tone-warning { color: var(--colour-warning); }
+
+}  /* @layer components */
